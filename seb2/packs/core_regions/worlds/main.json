@@ -1,0 +1,15 @@
+{
+  "id": "main",
+  "name": "Main World",
+  "initial_scene_key": "start",
+  "scenes": [
+    {
+      "key": "start",
+      "path": "packs/core_regions/scenes/start.json",
+      "map_location": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ]
+}

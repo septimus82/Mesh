@@ -1,0 +1,257 @@
+{
+  "quests": [
+    {
+      "id": "ridge_fetch_supplies",
+      "title": "Supplies for the Ridge",
+      "description": "The Ridge Outpost is running low on supplies. Retrieve the lost shipment.",
+      "stages": [
+        {
+          "id": "collect_supplies",
+          "title": "Find the Supplies",
+          "text": "Locate the missing supply crate near the old road.",
+          "complete_on": {
+            "type": "collectible_picked",
+            "payload": {
+              "collectible_name": "RidgeSupplies"
+            }
+          }
+        },
+        {
+          "id": "return_supplies",
+          "title": "Return to Merchant",
+          "text": "Bring the supplies back to the Ridge Merchant.",
+          "complete_on": {
+            "type": "dialogue_choice",
+            "payload": {
+              "entity": "RidgeMerchant",
+              "choice_id": "ridge_turnin"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "xp": 100,
+          "gold": 50
+        }
+      }
+    },
+    {
+      "id": "ridge_kill_bandits",
+      "title": "Bandit Trouble",
+      "description": "Bandits are harassing travelers. Thin their numbers.",
+      "stages": [
+        {
+          "id": "kill_bandits",
+          "title": "Defeat Bandits",
+          "text": "Defeat 5 Bandits in the Ridge Dungeon.",
+          "requirements": {
+            "counters": {
+              "bandits_killed": 5
+            }
+          }
+        },
+        {
+          "id": "report_success",
+          "title": "Report to Guard",
+          "text": "Tell the Ridge Guard that the bandits have been dealt with.",
+          "complete_on": {
+            "type": "dialogue_choice",
+            "payload": {
+              "entity": "RidgeGuard",
+              "choice_id": "ridge_bandit_complete"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "xp": 150,
+          "gold": 75
+        }
+      }
+    },
+    {
+      "id": "hollow_fetch_herbs",
+      "title": "Healing Herbs",
+      "description": "The Hollow Grove Elder needs rare herbs for a potion.",
+      "stages": [
+        {
+          "id": "collect_herbs",
+          "title": "Gather Herbs",
+          "text": "Find 3 Ghost Orchids in the grove.",
+          "requirements": {
+            "counters": {
+              "herbs_collected": 3
+            }
+          }
+        },
+        {
+          "id": "return_herbs",
+          "title": "Return to Elder",
+          "text": "Bring the herbs to the Hollow Elder.",
+          "complete_on": {
+            "type": "dialogue_choice",
+            "payload": {
+              "entity": "HollowElder",
+              "choice_id": "hollow_herb_turnin"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "xp": 120,
+          "gold": 100
+        }
+      }
+    },
+    {
+      "id": "hollow_kill_spiders",
+      "title": "Spider Infestation",
+      "description": "Giant spiders are overrunning the deep grove.",
+      "stages": [
+        {
+          "id": "kill_spiders",
+          "title": "Clear Spiders",
+          "text": "Defeat 8 Giant Spiders.",
+          "requirements": {
+            "counters": {
+              "spiders_killed": 8
+            }
+          }
+        },
+        {
+          "id": "report_success",
+          "title": "Report to Guard",
+          "text": "Inform the Hollow Guard that the spiders are gone.",
+          "complete_on": {
+            "type": "dialogue_choice",
+            "payload": {
+              "entity": "HollowGuard",
+              "choice_id": "hollow_spider_complete"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "xp": 200,
+          "gold": 125
+        }
+      }
+    },
+    {
+      "id": "Ashen_fetch_quest",
+      "title": "Ashen Relics",
+      "description": "Recover the ancient relics from the Ashen Dungeon.",
+      "stages": [
+        {
+          "id": "collect_relics",
+          "title": "Find the Relic",
+          "text": "Search the Ashen Dungeon for the Ancient Relic.",
+          "complete_on": {
+            "type": "collectible_picked",
+            "payload": {
+              "collectible_name": "AshenRelic"
+            }
+          }
+        },
+        {
+          "id": "return_relic",
+          "title": "Return to Elder",
+          "text": "Bring the relic to the Ashen Elder.",
+          "complete_on": {
+            "type": "dialogue_choice",
+            "payload": {
+              "entity": "Ashen_Elder",
+              "choice_id": "ashen_relic_turnin"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "xp": 250,
+          "gold": 150
+        }
+      }
+    },
+    {
+      "id": "Ashen_kill_quest",
+      "title": "Ashen Hunt",
+      "description": "The ranged enemies are dangerous. Eliminate them.",
+      "stages": [
+        {
+          "id": "kill_ranged",
+          "title": "Defeat Ranged Enemies",
+          "text": "Defeat 3 Ashen Ranged Enemies.",
+          "requirements": {
+            "counters": {
+              "Ashen_Ranged_Enemy_killed": 3
+            }
+          }
+        },
+        {
+          "id": "report_hunt",
+          "title": "Report to Guard",
+          "text": "Tell the Ashen Guard the threat is reduced.",
+          "complete_on": {
+            "type": "dialogue_choice",
+            "payload": {
+              "entity": "Ashen_Guard",
+              "choice_id": "ashen_hunt_complete"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "xp": 300,
+          "gold": 175
+        }
+      }
+    },
+    {
+      "id": "demo_ridge_intro",
+      "title": "Rusted Key",
+      "description": "Scout Lysa asked you to recover a rusted key from the outpost interior.",
+      "start_toast": "Ridge Intro: Find the Rusted Key",
+      "complete_toast": "Ridge Intro: Return the Rusted Key",
+      "stages": [
+        {
+          "id": "find_key",
+          "title": "Find the Rusted Key",
+          "text": "Search the Ridge Outpost interior for a Rusted Key.",
+          "complete_on": {
+            "type": "collected",
+            "payload": {
+              "collectible": "RustedKey"
+            }
+          }
+        },
+        {
+          "id": "return_key",
+          "title": "Return to Scout Lysa",
+          "text": "Bring the Rusted Key back to Scout Lysa in the hub.",
+          "complete_on": {
+            "type": "dialogue_choice",
+            "payload": {
+              "entity": "RidgeScout",
+              "choice_id": "demo_ridge_intro_turnin"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "set_flags": {
+          "demo_ridge_intro_complete": true
+        },
+        "inc_counters": {
+          "xp": 40,
+          "gold": 15
+        }
+      }
+    }
+  ]
+}

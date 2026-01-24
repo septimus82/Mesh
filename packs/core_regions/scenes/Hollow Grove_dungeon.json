@@ -1,0 +1,231 @@
+{
+  "description": "An indoor room with an entrance and an exit.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "hollow_grove_dungeon_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "hollow_grove_dungeon_entrance_50_300_0_0",
+      "name": "Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "Spawn_From_Interior",
+          "target_scene": "scenes/outside.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "hollow_grove_dungeon_exit_700_300_0_0",
+      "name": "Exit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Combat": {},
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 0.05,
+              "item_id": "rusty_sword"
+            },
+            {
+              "chance": 0.05,
+              "item_id": "iron_sword"
+            },
+            {
+              "chance": 0.05,
+              "item_id": "leather_cap"
+            },
+            {
+              "chance": 0.05,
+              "item_id": "chain_coif"
+            },
+            {
+              "chance": 0.2,
+              "item_id": "healing_potion"
+            },
+            {
+              "chance": 0.5,
+              "gold": 15,
+              "max_quantity": 25,
+              "min_quantity": 10
+            }
+          ],
+          "seed": 2001
+        },
+        "Health": {
+          "hp": 35,
+          "max_hp": 35
+        }
+      },
+      "behaviours": [
+        "Health",
+        "Combat",
+        "DropTable"
+      ],
+      "id": "hollow_grove_dungeon_hollow_enemy_500_300_0_0",
+      "name": "Hollow_Enemy",
+      "sprite": "assets/placeholder.png",
+      "tag": "enemy",
+      "x": 500,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "item_id": "shadow_blade"
+            },
+            {
+              "chance": 1.0,
+              "gold": 150,
+              "max_quantity": 200,
+              "min_quantity": 100
+            }
+          ],
+          "seed": 9002
+        },
+        "EnemyAI": {
+          "detect_radius": 400.0,
+          "speed": 180.0
+        },
+        "Health": {
+          "hp": 60,
+          "max_hp": 60
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "hollow_grove_dungeon_hollow_boss_600_300_0_0",
+      "name": "Hollow_Boss",
+      "sprite": "assets/sprites/boss_hollow.png",
+      "tag": "enemy",
+      "x": 600,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "OfferPerkChoice": {
+          "once": true,
+          "pool": [
+            "sharp_edge"
+          ],
+          "speaker": "Grove Shrine",
+          "text": "The roots whisper of hidden strength."
+        }
+      },
+      "behaviours": [
+        "OfferPerkChoice"
+      ],
+      "id": "hollow_grove_dungeon_perkshrine_400_300_0_0",
+      "name": "PerkShrine",
+      "sprite": "assets/placeholder.png",
+      "tag": "interactable",
+      "x": 400,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "active_sprite": "",
+          "event_id": "hollow_puzzle_unlock",
+          "one_shot": false
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "hollow_grove_dungeon_hollow_puzzle_switch_400_400_0_0",
+      "name": "hollow_puzzle_switch",
+      "sprite": "assets/switch_off.png",
+      "tag": "interactable",
+      "x": 400,
+      "y": 400
+    },
+    {
+      "behaviour_config": {
+        "DoorLock": {
+          "open_sprite": "",
+          "starts_locked": true,
+          "unlock_event": "hollow_puzzle_unlock"
+        }
+      },
+      "behaviours": [
+        "DoorLock"
+      ],
+      "id": "hollow_grove_dungeon_hollow_puzzle_door_500_400_0_0",
+      "name": "hollow_puzzle_door",
+      "sprite": "assets/door_locked.png",
+      "tag": "solid",
+      "x": 500,
+      "y": 400
+    },
+    {
+      "behaviour_config": {
+        "RewardChest": {
+          "gold": 50,
+          "item_id": "",
+          "unlock_event": "hollow_puzzle_unlock"
+        }
+      },
+      "behaviours": [
+        "RewardChest"
+      ],
+      "id": "hollow_grove_dungeon_hollow_puzzle_reward_500_500_0_0",
+      "name": "hollow_puzzle_reward",
+      "sprite": "assets/chest.png",
+      "tag": "interactable",
+      "x": 500,
+      "y": 500
+    }
+  ],
+  "layers": [
+    {
+      "entities": {
+        "1": {
+          "behaviours": {
+            "SceneTransition": {
+              "spawn_point": "default",
+              "target_scene": "packs/core_regions/scenes/Hollow Grove_hub.json"
+            }
+          },
+          "tags": [
+            "auto_wired"
+          ],
+          "type": "prop",
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "entities"
+    }
+  ],
+  "name": "Hollow Grove Dungeon",
+  "schema_version": 1,
+  "version": 1
+}

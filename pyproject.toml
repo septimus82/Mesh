@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mesh-engine"
+version = "0.4.0"
+description = "Mesh Game Engine"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "arcade>=2.6.17",
+    "pillow",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "mypy",
+    "pytest>=8.0",
+]
+
+[project.scripts]
+mesh = "mesh_cli:main"
+
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.packages.find]
+include = ["engine*", "mesh_cli*"]
+
+# Runtime data is included via MANIFEST.in + include-package-data = true
+# See MANIFEST.in for the complete list of included assets
+
+[tool.ruff]
+line-length = 120
+select = ["E", "F", "I", "W"]
+ignore = ["E501", "E701", "E722", "E741", "F841"]
+exclude = [
+    "tests",
+    "build",
+    "dist",
+    ".git",
+    "__pycache__",
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_untyped_defs = false
+check_untyped_defs = false
+ignore_missing_imports = true
+no_implicit_optional = true
+exclude = [
+    "tests",
+    "build",
+    "dist",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.ai_audit",
+    "engine.ai_bundle",
+    "engine.ai_debug_overlay",
+    "engine.behaviours.*",
+    "engine.console_controller",
+    "engine.editor_controller",
+    "engine.game",
+    "engine.scene_controller",
+    "engine.tilemap",
+]
+disallow_untyped_defs = false
+ignore_errors = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "slow: long-running tests",
+    "integration: integration tests (filesystem-heavy, multi-module)",
+    "e2e: end-to-end / engine runtime tests",
+]

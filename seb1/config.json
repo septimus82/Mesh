@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "project_name": "seb1",
+  "width": 1280,
+  "height": 720,
+  "title": "seb1",
+  "start_scene": "packs/core_regions/scenes/start.json",
+  "main_menu_scene": null,
+  "world_file": "packs/core_regions/worlds/main.json",
+  "lighting_enabled": true
+}

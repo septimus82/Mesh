@@ -1,0 +1,90 @@
+{
+  "description": "An indoor room with an entrance and an exit.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "hollow_grove_interior_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "hollow_grove_interior_entrance_50_300_0_0",
+      "name": "Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "Spawn_From_Interior",
+          "target_scene": "scenes/outside.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "hollow_grove_interior_exit_700_300_0_0",
+      "name": "Exit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "quest_giver"
+        },
+        "QuestGiver": {
+          "quest_id": "hollow_fetch_herbs"
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "QuestGiver"
+      ],
+      "id": "hollow_grove_interior_hollow_grove_elder_300_300_0_0",
+      "name": "Hollow Grove_Elder",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [
+        "quest_giver"
+      ],
+      "x": 300,
+      "y": 300
+    }
+  ],
+  "layers": [
+    {
+      "entities": {
+        "1": {
+          "behaviours": {
+            "SceneTransition": {
+              "spawn_point": "default",
+              "target_scene": "packs/core_regions/scenes/Hollow Grove_hub.json"
+            }
+          },
+          "tags": [
+            "auto_wired"
+          ],
+          "type": "prop",
+          "x": 0,
+          "y": -200
+        }
+      },
+      "name": "entities"
+    }
+  ],
+  "name": "Hollow Grove Interior",
+  "schema_version": 1,
+  "version": 1
+}

@@ -1,0 +1,36 @@
+{
+  "perks": [
+    {
+      "id": "vitality_boost",
+      "name": "Vitality Boost",
+      "description": "Increases maximum health by 20.",
+      "effects": {
+        "max_hp": 20.0
+      }
+    },
+    {
+      "id": "sharp_edge",
+      "name": "Sharp Edge",
+      "description": "Increases damage dealt by 10%.",
+      "effects": {
+        "damage_pct": 0.1
+      }
+    },
+    {
+      "id": "scavenger",
+      "name": "Scavenger",
+      "description": "Increases gold found by 15%.",
+      "effects": {
+        "gold_bonus_pct": 0.15
+      }
+    },
+    {
+      "id": "quick_learner",
+      "name": "Quick Learner",
+      "description": "Increases experience gained by 10%.",
+      "effects": {
+        "xp_bonus_pct": 0.1
+      }
+    }
+  ]
+}

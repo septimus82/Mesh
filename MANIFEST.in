@@ -1,0 +1,76 @@
+# ============================================================================
+# MANIFEST.in - Runtime assets for Mesh Engine distribution
+# ============================================================================
+# This file controls what gets included in sdist/wheel builds.
+# All paths are relative to the project root.
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Core configuration
+# ----------------------------------------------------------------------------
+include config.json
+include plan.json
+include plan_schema.json
+
+# ----------------------------------------------------------------------------
+# Content packs (scenes, data, assets, macros, stamps, brushes)
+# ----------------------------------------------------------------------------
+recursive-include packs *.json
+recursive-include packs *.png
+recursive-include packs *.wav
+recursive-include packs *.ogg
+recursive-include packs *.mp3
+
+# ----------------------------------------------------------------------------
+# Core assets (sprites, tilemaps, sounds, music, data)
+# ----------------------------------------------------------------------------
+recursive-include assets *.json
+recursive-include assets *.png
+recursive-include assets *.wav
+recursive-include assets *.ogg
+recursive-include assets *.mp3
+
+# ----------------------------------------------------------------------------
+# Scene definitions
+# ----------------------------------------------------------------------------
+recursive-include scenes *.json
+
+# ----------------------------------------------------------------------------
+# World definitions
+# ----------------------------------------------------------------------------
+recursive-include worlds *.json
+
+# ----------------------------------------------------------------------------
+# Plans (AI authoring workflows)
+# ----------------------------------------------------------------------------
+recursive-include plans *.json
+
+# ----------------------------------------------------------------------------
+# Localization
+# ----------------------------------------------------------------------------
+recursive-include locales *.json
+
+# ----------------------------------------------------------------------------
+# Documentation (optional but useful for installed packages)
+# ----------------------------------------------------------------------------
+recursive-include docs *.md
+recursive-include docs *.json
+
+# ----------------------------------------------------------------------------
+# Exclude development/build artifacts
+# ----------------------------------------------------------------------------
+global-exclude __pycache__/*
+global-exclude *.py[cod]
+global-exclude .git/*
+global-exclude .mesh/*
+global-exclude *.patch
+global-exclude *~
+prune build
+prune dist
+prune artifacts
+prune traces
+prune replays
+prune saves
+prune .pytest_cache
+prune .mypy_cache
+prune .ruff_cache

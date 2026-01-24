@@ -1,0 +1,233 @@
+{
+  "collision_rules": {
+    "player:terrain": true
+  },
+  "description": "A dark cellar infested with rats.",
+  "entities": [
+    {
+      "animations": {
+        "idle": {
+          "fps": 4,
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "loop": true
+        },
+        "interact": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": false
+        },
+        "walk": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": true
+        }
+      },
+      "behaviour_config": {
+        "CameraFollow": {
+          "padding": 12,
+          "zoom": 1.0
+        }
+      },
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "cellar_player_64_128_0_0",
+      "name": "Player",
+      "sprite": "assets/sprites/animated_player.png",
+      "sprite_sheet": {
+        "columns": 4,
+        "frame_height": 64,
+        "frame_width": 64,
+        "rows": 2
+      },
+      "tag": "player",
+      "x": 64,
+      "y": 128
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "cellar_return",
+          "target_scene": "scenes/door_interior.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "cellar_exitdoor_32_128_0_0",
+      "layer": "background",
+      "name": "ExitDoor",
+      "x": 32,
+      "y": 128
+    },
+    {
+      "behaviour_config": {
+        "Collectible": {
+          "auto_remove": true,
+          "collect_by_name": "Player"
+        }
+      },
+      "behaviours": [
+        "Collectible"
+      ],
+      "id": "cellar_golden_rat_statue_320_128_0_0",
+      "name": "Golden Rat Statue",
+      "scale": 0.5,
+      "x": 320,
+      "y": 128
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "collectible_picked",
+          "payload_field": "collectible_name",
+          "payload_value": "Golden Rat Statue",
+          "set_flags": {
+            "has_golden_rat_statue": true
+          }
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "cellar_questlogic_0_0_0_0",
+      "layer": "background",
+      "name": "QuestLogic",
+      "scale": 0.0,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "forbid_flags": [
+            "demo.reached_cellar"
+          ],
+          "once": true,
+          "payload_field": "zone",
+          "payload_value": "DemoObjectiveCellarZone",
+          "require_flags": [
+            "demo.objective_started"
+          ],
+          "set_flags": {
+            "demo.reached_cellar": true
+          },
+          "toast": "Objective complete!",
+          "toast_seconds": 3.0
+        },
+        "TriggerZone": {
+          "on_trigger": "demo_objective_cellar_reached",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "DemoObjectiveCellarZone"
+        }
+      },
+      "behaviours": [
+        "TriggerZone",
+        "SetGameStateOnEvent"
+      ],
+      "id": "cellar_demoobjectivezone_64_128_0_0",
+      "layer": "background",
+      "name": "DemoObjectiveCellarZone",
+      "scale": 0.0,
+      "tag": "trigger",
+      "x": 64,
+      "y": 128
+    },
+    {
+      "behaviour_config": {
+        "Health": {
+          "max_hp": 10.0
+        },
+        "Patrol": {
+          "points": [
+            [
+              200,
+              100
+            ],
+            [
+              200,
+              150
+            ]
+          ],
+          "speed": 40.0
+        }
+      },
+      "behaviours": [
+        "Patrol",
+        "Health"
+      ],
+      "id": "cellar_rat1_200_100_0_0",
+      "name": "Rat1",
+      "scale": 0.5,
+      "tag": "enemy",
+      "x": 200,
+      "y": 100
+    },
+    {
+      "behaviour_config": {
+        "IncrementCounterOnEvent": {
+          "amount": 1.0,
+          "counter": "rats_killed",
+          "event_type": "died",
+          "payload_field": "name",
+          "payload_value": "Rat1",
+          "quest_id": "cellar_exterminator",
+          "scope": "quest"
+        }
+      },
+      "behaviours": [
+        "IncrementCounterOnEvent"
+      ],
+      "id": "cellar_questlogic_exterminator_0_0_0_0",
+      "layer": "background",
+      "name": "QuestLogic_Exterminator",
+      "scale": 0.0,
+      "x": 0,
+      "y": 0
+    },
+    {
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "id": "cellar_themedenemy_9999_9999_0_0",
+      "layer": "entities",
+      "mesh_name": "ThemedEnemy",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 9999.0,
+      "y": 9999.0
+    }
+  ],
+  "name": "Cellar",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "black",
+    "region_theme": "crypt",
+    "encounter_set_id": "crypt_encounters",
+    "use_theme_spawns": true,
+    "encounter_budget": 10,
+    "encounter_budget_profile": "normal",
+    "encounter_seed": 23456,
+    "allow_mini_bosses": false,
+    "world_height": 256,
+    "world_width": 384
+  },
+  "version": 1
+}

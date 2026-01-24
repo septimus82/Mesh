@@ -1,0 +1,198 @@
+{
+  "description": "Chapter 1 clearing: payoff beat after the gate path.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter1_clearing_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter1_clearing_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch1_clearing_start",
+          "trigger_radius": 56.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter1_clearing_clearingstartzone_180_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter1_clearing_clearingstartzone_180_300_0_0",
+      "name": "ClearingStartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 180,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch1_clearing_goal",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter1_clearing_clearinggoalzone_560_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter1_clearing_clearinggoalzone_560_300_0_0",
+      "name": "ClearingGoalZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 560,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch1_clearing_choice_a",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter1_clearing_clearingchoiceazone_260_220_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter1_clearing_clearingchoiceazone_260_220_0_0",
+      "name": "ClearingChoiceAZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 260,
+      "y": 220
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch1_clearing_goal_a",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter1_clearing_clearinggoalazone_520_220_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter1_clearing_clearinggoalazone_520_220_0_0",
+      "name": "ClearingGoalAZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 220
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch1_clearing_choice_b",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter1_clearing_clearingchoicebzone_260_380_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter1_clearing_clearingchoicebzone_260_380_0_0",
+      "name": "ClearingChoiceBZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 260,
+      "y": 380
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch1_clearing_goal_b",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter1_clearing_clearinggoalbzone_520_380_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter1_clearing_clearinggoalbzone_520_380_0_0",
+      "name": "ClearingGoalBZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 380
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch1_clearing_depart",
+          "trigger_radius": 52.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter1_clearing_clearingdepartzone_720_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter1_clearing_clearingdepartzone_720_300_0_0",
+      "name": "ClearingDepartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 720,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter1_Overlook.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter1_clearing_tooverlook_820_300_0_0",
+      "name": "ToOverlook",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 820,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter1_GatePath.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter1_clearing_returntogatepath_60_300_0_0",
+      "name": "ReturnToGatePath",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Chapter 1 - Clearing",
+  "schema_version": 1,
+  "version": 1
+}

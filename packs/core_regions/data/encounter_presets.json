@@ -1,0 +1,22 @@
+{
+  "presets": [
+    {
+      "id": "easy"
+    },
+    {
+      "id": "normal"
+    },
+    {
+      "id": "hard"
+    },
+    {
+      "id": "example_preset",
+      "encounter_budget": 12,
+      "boss_budget_reserve": 0,
+      "elite_cap": 2,
+      "allow_elites": true,
+      "mini_boss_cap": 1,
+      "allow_mini_bosses": true
+    }
+  ]
+}

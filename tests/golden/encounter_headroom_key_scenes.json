@@ -1,0 +1,56 @@
+[
+  {
+    "budget": 8.0,
+    "difficulty": "easy",
+    "effective_budget": 8.0,
+    "headroom": 5.0,
+    "scene_path": "packs/core_regions/scenes/Ashen_hub.json",
+    "total_spawn_cost": 3.0,
+    "utilization": 0.375
+  },
+  {
+    "budget": 12.5,
+    "difficulty": "hard",
+    "effective_budget": 12.5,
+    "headroom": 0.5,
+    "scene_path": "packs/core_regions/scenes/Ashen_hub.json",
+    "total_spawn_cost": 12.0,
+    "utilization": 0.96
+  },
+  {
+    "budget": 8.0,
+    "difficulty": "easy",
+    "effective_budget": 8.0,
+    "headroom": 7.0,
+    "scene_path": "packs/core_regions/scenes/Ashen_interior.json",
+    "total_spawn_cost": 1.0,
+    "utilization": 0.125
+  },
+  {
+    "budget": 12.5,
+    "difficulty": "hard",
+    "effective_budget": 12.5,
+    "headroom": 11.5,
+    "scene_path": "packs/core_regions/scenes/Ashen_interior.json",
+    "total_spawn_cost": 1.0,
+    "utilization": 0.08
+  },
+  {
+    "budget": 8.0,
+    "difficulty": "easy",
+    "effective_budget": 8.0,
+    "headroom": 6.0,
+    "scene_path": "scenes/door_field.json",
+    "total_spawn_cost": 2.0,
+    "utilization": 0.25
+  },
+  {
+    "budget": 12.5,
+    "difficulty": "hard",
+    "effective_budget": 12.5,
+    "headroom": 10.5,
+    "scene_path": "scenes/door_field.json",
+    "total_spawn_cost": 2.0,
+    "utilization": 0.16
+  }
+]

@@ -1,0 +1,202 @@
+[
+  {
+    "id": "player",
+    "tags": ["player"],
+    "metadata": { "author": "core" },
+    "display_name": "Player",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["PlayerController"]
+    }
+  },
+  {
+    "id": "theme_enemy_placeholder",
+    "tags": ["enemy", "placeholder"],
+    "metadata": { "author": "core" },
+    "display_name": "Theme Enemy Placeholder",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": []
+    }
+  },
+  {
+    "id": "plant_minion",
+    "tags": ["enemy", "plant"],
+    "metadata": { "author": "core" },
+    "display_name": "Plant Minion",
+    "entity": {
+      "encounter_cost": 2,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 10 } }
+    }
+  },
+  {
+    "id": "slime_blob",
+    "tags": ["enemy", "slime"],
+    "metadata": { "author": "core" },
+    "display_name": "Slime Blob",
+    "entity": {
+      "encounter_cost": 1,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 5 } }
+    }
+  },
+  {
+    "id": "fire_imp",
+    "tags": ["enemy", "fire"],
+    "metadata": { "author": "core" },
+    "display_name": "Fire Imp",
+    "entity": {
+      "encounter_cost": 2,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 8 } }
+    }
+  },
+  {
+    "id": "magma_cube",
+    "tags": ["enemy", "fire"],
+    "metadata": { "author": "core" },
+    "display_name": "Magma Cube",
+    "entity": {
+      "encounter_cost": 3,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 15 } }
+    }
+  },
+  {
+    "id": "shadow_stalker",
+    "tags": ["enemy", "shadow"],
+    "metadata": { "author": "core" },
+    "display_name": "Shadow Stalker",
+    "entity": {
+      "encounter_cost": 4,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 12 } }
+    }
+  },
+  {
+    "id": "void_wisp",
+    "tags": ["enemy", "void"],
+    "metadata": { "author": "core" },
+    "display_name": "Void Wisp",
+    "entity": {
+      "encounter_cost": 1,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 4 } }
+    }
+  },
+  {
+    "id": "rat_scurrier",
+    "tags": ["enemy", "beast"],
+    "metadata": { "author": "core" },
+    "display_name": "Rat Scurrier",
+    "entity": {
+      "encounter_cost": 1,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 6 } }
+    }
+  },
+  {
+    "id": "bone_dart",
+    "tags": ["enemy", "undead"],
+    "metadata": { "author": "core" },
+    "display_name": "Bone Dart",
+    "entity": {
+      "encounter_cost": 2,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 10 } }
+    }
+  },
+  {
+    "id": "torch_wisp",
+    "tags": ["enemy", "fire"],
+    "metadata": { "author": "core" },
+    "display_name": "Torch Wisp",
+    "entity": {
+      "encounter_cost": 2,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 8 } }
+    }
+  },
+  {
+    "id": "ember_imp",
+    "tags": ["enemy", "fire"],
+    "metadata": { "author": "core" },
+    "display_name": "Ember Imp",
+    "entity": {
+      "encounter_cost": 1,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 7 } }
+    }
+  },
+  {
+    "id": "anvil_guard",
+    "tags": ["enemy", "construct"],
+    "metadata": { "author": "core" },
+    "display_name": "Anvil Guard",
+    "entity": {
+      "encounter_cost": 4,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 14 } }
+    }
+  },
+  {
+    "id": "glass_spitter",
+    "tags": ["enemy", "construct"],
+    "metadata": { "author": "core" },
+    "display_name": "Glass Spitter",
+    "entity": {
+      "encounter_cost": 2,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 9 } }
+    }
+  },
+  {
+    "id": "rust_drone",
+    "tags": ["enemy", "construct"],
+    "metadata": { "author": "core" },
+    "display_name": "Rust Drone",
+    "entity": {
+      "encounter_cost": 3,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 11 } }
+    }
+  },
+  {
+    "id": "cinder_larva",
+    "tags": ["enemy", "fire"],
+    "metadata": { "author": "core" },
+    "display_name": "Cinder Larva",
+    "entity": {
+      "encounter_cost": 1,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 6 } }
+    }
+  },
+  {
+    "id": "rift_leech",
+    "tags": ["enemy", "void"],
+    "metadata": { "author": "core" },
+    "display_name": "Rift Leech",
+    "entity": {
+      "encounter_cost": 1,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["EnemyAI"],
+      "behaviour_config": { "Health": { "max": 7 } }
+    }
+  }
+]

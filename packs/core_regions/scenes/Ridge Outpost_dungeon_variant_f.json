@@ -1,0 +1,279 @@
+{
+  "description": "Prefab showcase: variant patch set. Uses existing variant_ids.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "ridge_outpost_dungeon_variant_f_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "ridge_outpost_dungeon_variant_f_entrance_50_300_0_0",
+      "name": "Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "target_scene": "packs/core_regions/scenes/Ridge Outpost_hub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "ridge_outpost_dungeon_variant_f_exit_1000_300_0_0",
+      "name": "Exit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1000,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Combat": {},
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "item_id": "rusty_sword"
+            },
+            {
+              "chance": 0.5,
+              "gold": 10,
+              "max_quantity": 15,
+              "min_quantity": 5
+            }
+          ],
+          "seed": 1001
+        },
+        "Health": {
+          "hp": 20,
+          "max_hp": 20
+        }
+      },
+      "behaviours": [
+        "Health",
+        "Combat",
+        "DropTable"
+      ],
+      "id": "ridge_outpost_dungeon_variant_f_ridge_enemy_1_250_300_0_0",
+      "name": "Ridge_Enemy_1",
+      "sprite": "assets/placeholder.png",
+      "tag": "enemy",
+      "x": 250,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Combat": {},
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 0.3,
+              "item_id": "healing_potion"
+            },
+            {
+              "chance": 0.5,
+              "gold": 5,
+              "max_quantity": 8,
+              "min_quantity": 2
+            }
+          ],
+          "seed": 1002
+        },
+        "Health": {
+          "hp": 20,
+          "max_hp": 20
+        }
+      },
+      "behaviours": [
+        "Health",
+        "Combat",
+        "DropTable"
+      ],
+      "id": "ridge_outpost_dungeon_variant_f_ridge_enemy_2_350_300_0_0",
+      "name": "Ridge_Enemy_2",
+      "sprite": "assets/placeholder.png",
+      "tag": "enemy",
+      "x": 350,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Collectible": {
+          "auto_remove": true,
+          "collect_by_name": "Player"
+        }
+      },
+      "behaviours": [
+        "Collectible"
+      ],
+      "id": "ridge_outpost_dungeon_variant_f_ridgesupplies_150_300_0_0",
+      "name": "RidgeSupplies",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 150,
+      "y": 300
+    },
+    {
+      "id": "ridge_outpost_dungeon_variant_f_eliteslime_600_300_0_0",
+      "mesh_name": "EliteSlime",
+      "prefab_id": "slime_blob",
+      "variant_id": "elite_variant_b",
+      "x": 600,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "item_id": "warden_mace"
+            },
+            {
+              "chance": 1.0,
+              "gold": 10
+            }
+          ],
+          "seed": 9001
+        },
+        "EnemyAI": {
+          "detect_radius": 250.0,
+          "speed": 60.0
+        },
+        "Health": {
+          "hp": 100,
+          "max_hp": 100
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "ridge_outpost_dungeon_variant_f_ridge_boss_900_300_0_0",
+      "mesh_name": "Ridge_Boss",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "tags": [
+        "boss"
+      ],
+      "variant_id": "boss_variant_b",
+      "x": 900,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "OfferPerkChoice": {
+          "once": true,
+          "pool": [
+            "vitality_boost"
+          ],
+          "speaker": "Ridge Shrine",
+          "text": "The ancient stone hums with power."
+        }
+      },
+      "behaviours": [
+        "OfferPerkChoice"
+      ],
+      "id": "ridge_outpost_dungeon_variant_f_perkshrine_450_300_0_0",
+      "name": "PerkShrine",
+      "sprite": "assets/placeholder.png",
+      "tag": "interactable",
+      "x": 450,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "active_sprite": "",
+          "event_id": "ridge_puzzle_unlock",
+          "one_shot": false
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "ridge_outpost_dungeon_variant_f_ridge_puzzle_switch_450_400_0_0",
+      "name": "ridge_puzzle_switch",
+      "sprite": "assets/placeholder.png",
+      "tag": "interactable",
+      "x": 450,
+      "y": 400
+    },
+    {
+      "behaviour_config": {
+        "DoorLock": {
+          "open_sprite": "",
+          "starts_locked": true,
+          "unlock_event": "ridge_puzzle_unlock"
+        }
+      },
+      "behaviours": [
+        "DoorLock"
+      ],
+      "id": "ridge_outpost_dungeon_variant_f_ridge_puzzle_door_550_400_0_0",
+      "name": "ridge_puzzle_door",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "tag": "solid",
+      "x": 550,
+      "y": 400
+    },
+    {
+      "behaviour_config": {
+        "RewardChest": {
+          "gold": 50,
+          "item_id": "",
+          "unlock_event": "ridge_puzzle_unlock"
+        }
+      },
+      "behaviours": [
+        "RewardChest"
+      ],
+      "id": "ridge_outpost_dungeon_variant_f_ridge_puzzle_reward_550_500_0_0",
+      "name": "ridge_puzzle_reward",
+      "sprite": "assets/placeholder.png",
+      "tag": "interactable",
+      "x": 550,
+      "y": 500
+    }
+  ],
+  "layers": [
+    {
+      "entities": {
+        "1": {
+          "behaviours": {
+            "SceneTransition": {
+              "spawn_point": "default",
+              "target_scene": "packs/core_regions/scenes/Ridge Outpost_hub.json"
+            }
+          },
+          "tags": [
+            "auto_wired"
+          ],
+          "type": "prop",
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "entities"
+    }
+  ],
+  "name": "Ridge Outpost Dungeon (Variant F)",
+  "schema_version": 1,
+  "version": 1
+}

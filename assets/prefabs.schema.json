@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "entity"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]+$",
+        "description": "Unique identifier for the prefab"
+      },
+      "base": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]+$",
+        "description": "ID of the base prefab to inherit from"
+      },
+      "display_name": {
+        "type": "string",
+        "description": "Human-readable name for tools"
+      },
+      "category": {
+        "type": "string",
+        "description": "Category for organization in tools"
+      },
+      "tags": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Tags for filtering"
+      },
+      "metadata": {
+        "type": "object",
+        "description": "Additional metadata for the prefab",
+        "additionalProperties": true
+      },
+      "entity": {
+        "type": "object",
+        "description": "The base entity data",
+        "properties": {
+          "sprite": { "type": ["string", "null"] },
+          "behaviours": { "type": "array", "items": { "type": "string" } },
+          "behaviour_config": { "type": "object" },
+          "solid": { "type": "boolean" },
+          "layer": { "type": "string" },
+          "scale": { "type": "number" },
+          "rotation": { "type": "number" },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

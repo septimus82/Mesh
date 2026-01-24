@@ -1,0 +1,122 @@
+{
+  "description": "Prologue exterior slice: find the cabin.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_prologue_exterior_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_prologue_exterior_spawndefault_80_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 80,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Prologue_Fork.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_prologue_exterior_forktrail_40_300_0_0",
+      "name": "ForkTrail",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 40,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_prologue_step3_complete",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_prologue_exterior_prologuestep3completezone_110_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_prologue_exterior_prologuestep3completezone_110_300_0_0",
+      "name": "PrologueStep3CompleteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 110,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_prologue_step1_start",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_prologue_exterior_prologuestep1startzone_160_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_prologue_exterior_prologuestep1startzone_160_300_0_0",
+      "name": "PrologueStep1StartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 160,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_prologue_step1_complete",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_prologue_exterior_prologuestep1completezone_540_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_prologue_exterior_prologuestep1completezone_540_300_0_0",
+      "name": "PrologueStep1CompleteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 540,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Prologue_Cabin.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_prologue_exterior_cabindoor_600_300_0_0",
+      "name": "CabinDoor",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 600,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Prologue - Exterior",
+  "schema_version": 1,
+  "version": 1
+}

@@ -1,0 +1,218 @@
+{
+  "description": "An outdoor area with a player spawn and one exit.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "ashen_hub_player_400_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 400,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "Spawn_From_Overworld",
+          "target_scene": "scenes/target.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "ashen_hub_exit_to_somewhere_700_300_0_0",
+      "name": "Exit_To_Somewhere",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "merchant"
+        },
+        "Vendor": {
+          "shop_id": "ashen_shop",
+          "stock": [
+            {
+              "item_id": "iron_sword",
+              "price": 50,
+              "quantity": 1
+            },
+            {
+              "item_id": "chain_coif",
+              "price": 50,
+              "quantity": 1
+            },
+            {
+              "item_id": "healing_potion",
+              "price": 5,
+              "quantity": 10
+            }
+          ]
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "Vendor"
+      ],
+      "id": "ashen_hub_ashen_merchant_300_300_0_0",
+      "name": "Ashen_Merchant",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [],
+      "x": 300,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "guard"
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "ashen_hub_ashen_guard_300_300_0_0",
+      "name": "Ashen_Guard",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [],
+      "x": 300,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "merchant"
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "ashen_hub_ashen_merchant_300_300_0_0_2",
+      "name": "Ashen_Merchant",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [],
+      "x": 300,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "guard"
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "ashen_hub_ashen_guard_300_300_0_0_2",
+      "name": "Ashen_Guard",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [],
+      "x": 300,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "merchant"
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "ashen_hub_ashen_merchant_300_300_0_0_3",
+      "name": "Ashen_Merchant",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [],
+      "x": 300,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "guard"
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "ashen_hub_ashen_guard_300_300_0_0_3",
+      "name": "Ashen_Guard",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [],
+      "x": 300,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "default",
+          "target_scene": "packs/core_regions/scenes/Ashen_interior.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "ashen_hub_prop_300_0_0_0",
+      "tags": [
+        "auto_wired"
+      ],
+      "type": "prop",
+      "x": 300,
+      "y": 0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "default",
+          "target_scene": "packs/core_regions/scenes/Ashen_dungeon.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "ashen_hub_prop_300_0_0_0_2",
+      "tags": [
+        "auto_wired"
+      ],
+      "type": "prop",
+      "x": 300,
+      "y": 0
+    },
+    {
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "id": "ashen_hub_themedenemy_500_100_0_0",
+      "mesh_name": "ThemedEnemy",
+      "prefab_id": "theme_enemy_placeholder",
+      "tag": "enemy",
+      "x": 500,
+      "y": 100
+    }
+  ],
+  "layers": [],
+  "name": "Ashen Hub",
+  "schema_version": 1,
+  "settings": {
+    "allow_mini_bosses": true,
+    "encounter_budget": 10,
+    "encounter_budget_profile": "normal",
+    "encounter_seed": 10101,
+    "encounter_set_id": "void_encounters",
+    "region_theme": "void",
+    "theme_spawn_variant_id": "mini_boss",
+    "use_theme_spawns": true
+  },
+  "version": 1
+}

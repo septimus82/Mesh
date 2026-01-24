@@ -1,0 +1,23 @@
+{
+  "strict": {
+    "description": "Strict check for CI/CD. No regressions allowed.",
+    "max_elite_delta": 0,
+    "max_spawn_delta": 0,
+    "max_cost_overrun": 0.0,
+    "fail_on_overrun": true
+  },
+  "standard": {
+    "description": "Standard check for daily development.",
+    "max_elite_delta": 1,
+    "max_spawn_delta": 2,
+    "max_cost_overrun": 10.0,
+    "fail_on_overrun": true
+  },
+  "lenient": {
+    "description": "Lenient check for experimental branches.",
+    "max_elite_delta": 5,
+    "max_spawn_delta": 10,
+    "max_cost_overrun": 100.0,
+    "fail_on_overrun": false
+  }
+}

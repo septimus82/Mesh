@@ -1,0 +1,65 @@
+{
+  "allowed_actions": {
+    "add_npc": {
+      "description": "Add an NPC to an existing scene.",
+      "optional_args": {
+        "name": "string (NPC name)",
+        "quest_id": "string (Quest ID to offer)",
+        "tags": "list[string] (e.g. ['guard', 'important'])"
+      },
+      "required_args": {
+        "role": "string (e.g., 'guard', 'merchant', 'quest_giver')",
+        "scene_path": "string (path to scene file)",
+        "x": "integer",
+        "y": "integer"
+      }
+    },
+    "add_npc_dialogue": {
+      "description": "Set dialogue for an NPC in a scene.",
+      "optional_args": {
+        "dialogue_id": "string (Optional ID for the dialogue)",
+        "speaker_alias": "string (Optional speaker name override)"
+      },
+      "required_args": {
+        "lines": "list[string] (Dialogue lines)",
+        "npc_name": "string (Name of the NPC)",
+        "scene_path": "string (path to scene file)"
+      }
+    },
+    "add_puzzle_switch_door": {
+      "description": "Add a switch-door puzzle to a scene.",
+      "required_args": {
+        "door": "object (x, y)",
+        "scene_path": "string (path to scene file)",
+        "switch": "object (x, y)"
+      }
+    },
+    "add_transition": {
+      "description": "Add a transition trigger to a scene.",
+      "required_args": {
+        "scene_path": "string (path to source scene)",
+        "target_scene": "string (path to target scene)",
+        "x": "integer",
+        "y": "integer"
+      }
+    },
+    "create_quest": {
+      "description": "Add a new quest definition.",
+      "required_args": {
+        "id": "string (unique ID)",
+        "path": "string (path to quests.json)",
+        "title": "string",
+        "type": "string (e.g., 'main', 'side')"
+      }
+    },
+    "create_scene": {
+      "description": "Create a new scene file from a template.",
+      "required_args": {
+        "path": "string (e.g., 'scenes/my_scene.json')",
+        "template": "string (e.g., 'empty', 'dungeon', 'hub')"
+      }
+    }
+  },
+  "description": "Simplified Plan Schema for AI Authoring",
+  "version": 1
+}

@@ -1,0 +1,58 @@
+{
+  "wizard": "ai-generated",
+  "version": 1,
+  "inputs": {
+    "prompt": "Polish the existing region_showcase scenes with flavor NPCs and hints as described in the task.",
+    "target_pack": "core_regions"
+  },
+  "actions": [
+    {
+      "type": "add_npc",
+      "args": {
+        "scene_path": "scenes/showcase_hub.json",
+        "role": "guard",
+        "name": "Showcase Greeter",
+        "x": 12,
+        "y": 12,
+        "tags": ["guard"]
+      },
+      "description": "Add a greeter NPC to the hub to explain the region."
+    },
+    {
+      "type": "add_npc",
+      "args": {
+        "scene_path": "scenes/showcase_hub.json",
+        "role": "guard",
+        "name": "Groundskeeper",
+        "x": 18,
+        "y": 12,
+        "tags": ["guard"]
+      },
+      "description": "Add a groundskeeper NPC to the hub."
+    },
+    {
+      "type": "add_npc",
+      "args": {
+        "scene_path": "scenes/showcase_interior.json",
+        "role": "guard",
+        "name": "Merchant Assistant",
+        "x": 8,
+        "y": 5,
+        "tags": ["guard"]
+      },
+      "description": "Add an assistant to the merchant who hints at the artifact."
+    },
+    {
+      "type": "add_npc",
+      "args": {
+        "scene_path": "scenes/showcase_dungeon.json",
+        "role": "guard",
+        "name": "Lost Explorer",
+        "x": 10,
+        "y": 10,
+        "tags": ["guard"]
+      },
+      "description": "Add an explorer NPC to the dungeon who hints at the puzzle."
+    }
+  ]
+}

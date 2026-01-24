@@ -1,0 +1,18 @@
+{
+  "operations": [
+    {
+      "type": "set_behaviour_params",
+      "scene_path": "scenes/door_field.json",
+      "entity_id": "Enemy_1",
+      "behaviour_name": "Health",
+      "params": { "max_health": 50, "regen_per_second": 1 }
+    },
+    {
+      "type": "set_behaviour_params",
+      "scene_path": "scenes/door_field.json",
+      "entity_id": "Enemy_1",
+      "behaviour_name": "Patrol",
+      "params": { "speed": 90 }
+    }
+  ]
+}

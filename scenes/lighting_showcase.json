@@ -1,0 +1,492 @@
+{
+  "name": "Lighting Showcase",
+  "description": "Comprehensive demonstration of all lighting features: static lights, dynamic lights, flickering, cookies, light shafts, shadows, and occluders.",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "black",
+    "lighting_enabled": true,
+    "lighting_shadows_mode": "hard",
+    "lighting_ambient_color": [8, 8, 12, 220],
+    "music": null
+  },
+  "lights": [
+    {
+      "id": "warm_torch_1",
+      "type": "point",
+      "x": 128,
+      "y": 320,
+      "radius": 180,
+      "color": "#ffcc66",
+      "mode": "soft",
+      "enabled": true,
+      "flicker_enabled": true,
+      "flicker_speed": 6.0,
+      "flicker_amount": 0.15,
+      "flicker_seed": 1001
+    },
+    {
+      "id": "warm_torch_2",
+      "type": "point",
+      "x": 384,
+      "y": 320,
+      "radius": 180,
+      "color": "#ffcc66",
+      "mode": "soft",
+      "enabled": true,
+      "flicker_enabled": true,
+      "flicker_speed": 5.5,
+      "flicker_amount": 0.18,
+      "flicker_seed": 1002
+    },
+    {
+      "id": "cool_moonlight",
+      "type": "point",
+      "x": 640,
+      "y": 400,
+      "radius": 300,
+      "color": "#aaccff",
+      "mode": "soft",
+      "enabled": true,
+      "flicker_enabled": false
+    },
+    {
+      "id": "red_danger_light",
+      "type": "point",
+      "x": 900,
+      "y": 160,
+      "radius": 140,
+      "color": "#ff4444",
+      "mode": "hard",
+      "enabled": true,
+      "flicker_enabled": true,
+      "flicker_speed": 12.0,
+      "flicker_amount": 0.3,
+      "flicker_seed": 2001
+    },
+    {
+      "id": "green_magic_glow",
+      "type": "point",
+      "x": 256,
+      "y": 96,
+      "radius": 120,
+      "color": "#44ff88",
+      "mode": "soft",
+      "enabled": true,
+      "flicker_enabled": true,
+      "flicker_speed": 3.0,
+      "flicker_amount": 0.1,
+      "flicker_seed": 3001
+    },
+    {
+      "id": "purple_crystal",
+      "type": "point",
+      "x": 512,
+      "y": 96,
+      "radius": 100,
+      "color": "#cc66ff",
+      "mode": "soft",
+      "enabled": true,
+      "flicker_enabled": true,
+      "flicker_speed": 2.0,
+      "flicker_amount": 0.08,
+      "flicker_seed": 4001
+    },
+    {
+      "id": "bright_spotlight",
+      "type": "point",
+      "x": 768,
+      "y": 320,
+      "radius": 200,
+      "color": "#ffffff",
+      "mode": "hard",
+      "enabled": true
+    },
+    {
+      "id": "small_candle_1",
+      "type": "point",
+      "x": 80,
+      "y": 160,
+      "radius": 60,
+      "color": "#ffaa44",
+      "mode": "soft",
+      "enabled": true,
+      "flicker_enabled": true,
+      "flicker_speed": 8.0,
+      "flicker_amount": 0.25,
+      "flicker_seed": 5001
+    },
+    {
+      "id": "small_candle_2",
+      "type": "point",
+      "x": 180,
+      "y": 160,
+      "radius": 60,
+      "color": "#ffaa44",
+      "mode": "soft",
+      "enabled": true,
+      "flicker_enabled": true,
+      "flicker_speed": 7.5,
+      "flicker_amount": 0.28,
+      "flicker_seed": 5002
+    },
+    {
+      "id": "blue_ambient_fill",
+      "type": "point",
+      "x": 500,
+      "y": 240,
+      "radius": 400,
+      "color": "#223355",
+      "mode": "soft",
+      "enabled": true
+    }
+  ],
+  "occluders": [
+    {
+      "id": "pillar_left",
+      "type": "rect",
+      "x": 200,
+      "y": 200,
+      "width": 32,
+      "height": 128
+    },
+    {
+      "id": "pillar_center",
+      "type": "rect",
+      "x": 400,
+      "y": 200,
+      "width": 32,
+      "height": 128
+    },
+    {
+      "id": "pillar_right",
+      "type": "rect",
+      "x": 600,
+      "y": 200,
+      "width": 32,
+      "height": 128
+    },
+    {
+      "id": "wall_top",
+      "type": "rect",
+      "x": 100,
+      "y": 400,
+      "width": 300,
+      "height": 24
+    },
+    {
+      "id": "wall_bottom",
+      "type": "rect",
+      "x": 100,
+      "y": 80,
+      "width": 300,
+      "height": 24
+    },
+    {
+      "id": "corner_wedge",
+      "type": "poly",
+      "points": [
+        [700, 100],
+        [780, 100],
+        [700, 180]
+      ]
+    },
+    {
+      "id": "diagonal_wall",
+      "type": "poly",
+      "points": [
+        [850, 250],
+        [950, 250],
+        [950, 350],
+        [850, 300]
+      ]
+    },
+    {
+      "id": "small_box_1",
+      "type": "rect",
+      "x": 300,
+      "y": 300,
+      "width": 40,
+      "height": 40
+    },
+    {
+      "id": "small_box_2",
+      "type": "rect",
+      "x": 500,
+      "y": 350,
+      "width": 40,
+      "height": 40
+    }
+  ],
+  "entities": [
+    {
+      "id": "lighting_showcase_spawn_default",
+      "name": "default",
+      "spawn_id": "default",
+      "tag": "spawn_point",
+      "layer": "background",
+      "behaviours": [],
+      "x": 128,
+      "y": 240
+    },
+    {
+      "id": "visited_trigger",
+      "name": "visited_trigger",
+      "tag": "trigger",
+      "x": 128,
+      "y": 240,
+      "behaviours": ["TriggerZone", "SetGameStateOnEvent"],
+      "behaviour_config": {
+        "TriggerZone": {
+          "zone_id": "zone_lighting_showcase_1",
+          "trigger_radius": 500,
+          "trigger_target": "Player",
+          "on_trigger": "start_tour_visit"
+        },
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "visited_trigger",
+          "inc_counters": { "visited_lighting": 1 },
+          "once": true,
+          "message": "Quest Updated: Visited Lighting Lab",
+          "toast": "Visited Lighting Lab"
+        }
+      }
+    },
+    {
+      "id": "lighting_showcase_player",
+      "name": "Player",
+      "tag": "player",
+      "sprite": "assets/sprites/animated_player.png",
+      "sprite_sheet": {
+        "columns": 4,
+        "frame_height": 64,
+        "frame_width": 64,
+        "rows": 2
+      },
+      "animations": {
+        "idle": { "fps": 4, "frames": [0, 1, 2, 3], "loop": true },
+        "walk": { "fps": 8, "frames": [4, 5, 6, 7], "loop": true }
+      },
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow",
+        "LightSource"
+      ],
+      "behaviour_config": {
+        "CameraFollow": {
+          "padding": 12,
+          "zoom": 1.0
+        },
+        "LightSource": {
+          "radius": 200,
+          "color": "#ffffee",
+          "mode": "soft",
+          "offset_x": 0,
+          "offset_y": 8,
+          "enabled": true,
+          "flicker_enabled": true,
+          "flicker_speed": 4.0,
+          "flicker_amount": 0.08
+        }
+      },
+      "x": 128,
+      "y": 240
+    },
+    {
+      "id": "lighting_showcase_torch_entity_1",
+      "name": "Wall Torch 1",
+      "tag": "prop",
+      "layer": "entities",
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["LightSource"],
+      "behaviour_config": {
+        "LightSource": {
+          "radius": 160,
+          "color": "#ff9933",
+          "mode": "soft",
+          "offset_x": 0,
+          "offset_y": 16,
+          "enabled": true,
+          "flicker_enabled": true,
+          "flicker_speed": 7.0,
+          "flicker_amount": 0.2,
+          "shafts_enabled": true,
+          "shafts_length_px": 180,
+          "shafts_width_px": 100,
+          "shafts_rotation_deg": -45,
+          "shafts_alpha": 0.25
+        }
+      },
+      "x": 896,
+      "y": 400
+    },
+    {
+      "id": "lighting_showcase_torch_entity_2",
+      "name": "Wall Torch 2",
+      "tag": "prop",
+      "layer": "entities",
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["LightSource"],
+      "behaviour_config": {
+        "LightSource": {
+          "radius": 160,
+          "color": "#ff9933",
+          "mode": "soft",
+          "offset_x": 0,
+          "offset_y": 16,
+          "enabled": true,
+          "flicker_enabled": true,
+          "flicker_speed": 6.5,
+          "flicker_amount": 0.22,
+          "shafts_enabled": true,
+          "shafts_length_px": 180,
+          "shafts_width_px": 100,
+          "shafts_rotation_deg": 45,
+          "shafts_alpha": 0.25
+        }
+      },
+      "x": 1024,
+      "y": 400
+    },
+    {
+      "id": "lighting_showcase_magic_orb",
+      "name": "Magic Orb",
+      "tag": "prop",
+      "layer": "entities",
+      "sprite": "assets/placeholder.png",
+      "scale": 0.5,
+      "behaviours": ["LightSource"],
+      "behaviour_config": {
+        "LightSource": {
+          "radius": 100,
+          "color": "#66ffff",
+          "mode": "soft",
+          "enabled": true,
+          "flicker_enabled": true,
+          "flicker_speed": 2.5,
+          "flicker_amount": 0.12
+        }
+      },
+      "x": 640,
+      "y": 160
+    },
+    {
+      "id": "lighting_showcase_fire_pit",
+      "name": "Fire Pit",
+      "tag": "prop",
+      "layer": "entities",
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["LightSource"],
+      "behaviour_config": {
+        "LightSource": {
+          "radius": 220,
+          "color": "#ff6622",
+          "mode": "soft",
+          "enabled": true,
+          "flicker_enabled": true,
+          "flicker_speed": 10.0,
+          "flicker_amount": 0.35,
+          "shafts_enabled": true,
+          "shafts_length_px": 300,
+          "shafts_width_px": 200,
+          "shafts_rotation_deg": 90,
+          "shafts_alpha": 0.15,
+          "shafts_noise_speed": 0.12,
+          "shafts_noise_amount": 0.25
+        }
+      },
+      "x": 480,
+      "y": 480
+    },
+    {
+      "id": "lighting_showcase_crystal_cluster",
+      "name": "Crystal Cluster",
+      "tag": "prop",
+      "layer": "entities",
+      "sprite": "assets/placeholder.png",
+      "scale": 0.75,
+      "behaviours": ["LightSource"],
+      "behaviour_config": {
+        "LightSource": {
+          "radius": 80,
+          "color": "#ff44ff",
+          "mode": "hard",
+          "enabled": true,
+          "flicker_enabled": true,
+          "flicker_speed": 1.5,
+          "flicker_amount": 0.05
+        }
+      },
+      "x": 960,
+      "y": 480
+    },
+    {
+      "id": "lighting_showcase_lantern_moving",
+      "name": "Patrol Lantern",
+      "tag": "prop",
+      "layer": "entities",
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["LightSource"],
+      "behaviour_config": {
+        "LightSource": {
+          "radius": 140,
+          "color": "#ffdd88",
+          "mode": "soft",
+          "enabled": true,
+          "flicker_enabled": true,
+          "flicker_speed": 5.0,
+          "flicker_amount": 0.15
+        }
+      },
+      "x": 200,
+      "y": 500
+    },
+    {
+      "id": "lighting_showcase_exit",
+      "name": "Exit Door",
+      "tag": "exit",
+      "layer": "entities",
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["SceneTransition"],
+      "behaviour_config": {
+        "SceneTransition": {
+          "target_scene": "scenes/cellar.json",
+          "spawn_id": "default"
+        }
+      },
+      "x": 1100,
+      "y": 300
+    },
+    {
+      "id": "lighting_showcase_info_sign",
+      "name": "Info Sign",
+      "tag": "prop",
+      "layer": "entities",
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["Dialogue"],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "speaker": "Sign",
+            "start": "root",
+            "nodes": {
+              "root": {
+                "speaker": "Info Sign",
+                "text": "Welcome to the Lighting Showcase! This scene demonstrates:\n\n• Static point lights (warm torches, cool moonlight)\n• Dynamic entity lights (player lantern, magic orbs)\n• Flickering effects (candles, torches, fire)\n• Light shafts (wall torches, fire pit)\n• Shadow occluders (pillars, walls, boxes)\n• Hard vs soft light modes\n• Colored lighting (red, green, purple, cyan)\n• Moving light sources (patrol lantern)",
+                "choices": [
+                  { "id": "close", "text": "Close", "end": true }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "x": 64,
+      "y": 400
+    }
+  ],
+  "collision_rules": {
+    "player:terrain": true
+  }
+}

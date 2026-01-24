@@ -1,0 +1,13 @@
+{
+  "UI_LOADING": "LOADING…",
+  "UI_SAVED_PRESET": "Saved: {slot}",
+  "UI_APPLIED_PRESET": "Applied: {slot}",
+  "UI_SETTINGS_SAVED": "Settings saved",
+  "UI_SCENE_SAVED": "Scene saved",
+  "UI_UNSAVED_CHANGES": "Unsaved changes",
+  "UI_SAVE": "Save",
+  "UI_DISCARD": "Discard",
+  "UI_CANCEL": "Cancel",
+  "UI_LIGHT_EDITOR": "Light Editor",
+  "UI_OCCLUDER_EDITOR": "Occluder Editor"
+}

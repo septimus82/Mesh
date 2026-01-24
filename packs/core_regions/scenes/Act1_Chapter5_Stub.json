@@ -1,0 +1,86 @@
+{
+  "description": "Act 1 Chapter 5 finale stub scene gated by Chapter 4 completion.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter5_stub_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter5_stub_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_chapter5_start",
+          "trigger_radius": 56.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter5_stub_chapter5startzone_180_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter5_stub_chapter5startzone_180_300_0_0",
+      "name": "Chapter5StartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 180,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_chapter5_checkpoint",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter5_stub_chapter5checkpointzone_520_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter5_stub_chapter5checkpointzone_520_300_0_0",
+      "name": "Chapter5CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter4_Fork.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter5_stub_chapter5returndoor_60_300_0_0",
+      "name": "Chapter5ReturnDoor",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Chapter 5 - Finale (Stub)",
+  "schema_version": 1,
+  "version": 1
+}

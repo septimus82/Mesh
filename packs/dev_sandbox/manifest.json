@@ -1,0 +1,8 @@
+{
+  "name": "dev_sandbox",
+  "type": "test",
+  "version": "0.1.0",
+  "description": "Sandbox for development and testing scenes.",
+  "wip": true,
+  "audit_exempt": true
+}

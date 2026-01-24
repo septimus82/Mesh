@@ -1,0 +1,141 @@
+{
+  "description": "Act 1 Chapter 3 stub scene gated by Chapter 2 completion.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter3_stub_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter3_stub_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_chapter3_start",
+          "trigger_radius": 56.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter3_stub_chapter3startzone_180_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter3_stub_chapter3startzone_180_300_0_0",
+      "name": "Chapter3StartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 180,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_chapter3_checkpoint",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter3_stub_chapter3checkpointzone_520_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter3_stub_chapter3checkpointzone_520_300_0_0",
+      "name": "Chapter3CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch3_note",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter3_stub_chapter3notezone_420_240_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter3_stub_chapter3notezone_420_240_0_0",
+      "name": "Chapter3NoteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 420,
+      "y": 240
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch3_exit",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter3_stub_chapter3exitzone_720_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter3_stub_chapter3exitzone_720_300_0_0",
+      "name": "Chapter3ExitZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 720,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter4_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter3_stub_tochapter4_840_300_0_0",
+      "name": "ToChapter4",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 840,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter2_RuinedGate.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter3_stub_returndoor_60_300_0_0",
+      "name": "ReturnDoor",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Chapter 3 - Stub",
+  "schema_version": 1,
+  "version": 1
+}

@@ -1,0 +1,550 @@
+{
+  "collision_rules": {
+    "player:hazard": true,
+    "player:terrain": true
+  },
+  "description": "Outdoor area that links to door_interior.json via SceneTransition.",
+  "entities": [
+    {
+      "behaviours": [],
+      "id": "door_field_fieldreturnmarker_192_120_0_0",
+      "layer": "background",
+      "name": "FieldReturnMarker",
+      "spawn_id": "field_return",
+      "tag": "spawn_point",
+      "x": 192.0,
+      "y": 120.0
+    },
+    {
+      "behaviours": [],
+      "id": "door_field_fieldentrymarker_96_120_0_0",
+      "layer": "background",
+      "name": "FieldEntryMarker",
+      "spawn_id": "field_entry",
+      "tag": "spawn_point",
+      "x": 96.0,
+      "y": 120.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "quest_stage_started",
+          "payload_field": "stage_id",
+          "payload_value": "collect_supply_crate",
+          "set_flags": {
+            "field_supplies_active": true
+          }
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "id": "door_field_questhookstagestart_20_28_0_0",
+      "layer": "background",
+      "name": "QuestHookStageStart",
+      "x": 20.0,
+      "y": 28.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "quest_stage_completed",
+          "payload_field": "stage_id",
+          "payload_value": "collect_supply_crate",
+          "set_flags": {
+            "field_supplies_has_crate": true
+          }
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "id": "door_field_questhookcrateready_36_28_0_0",
+      "layer": "background",
+      "name": "QuestHookCrateReady",
+      "x": 36.0,
+      "y": 28.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "clear_flags": [
+            "field_supplies_active",
+            "field_supplies_has_crate"
+          ],
+          "event_type": "quest_completed",
+          "payload_field": "quest_id",
+          "payload_value": "field_supplies"
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "id": "door_field_questhookquestcomplete_52_28_0_0",
+      "layer": "background",
+      "name": "QuestHookQuestComplete",
+      "x": 52.0,
+      "y": 28.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_transition",
+          "inc_counters": {
+            "door_uses": 1
+          },
+          "message": "Flag visited_interior set by {entity}",
+          "payload_field": "target_scene",
+          "payload_value": "scenes/door_interior.json",
+          "set_flags": {
+            "visited_interior": true
+          }
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "id": "door_field_interiorvisittracker_24_24_0_0",
+      "layer": "background",
+      "name": "InteriorVisitTracker",
+      "x": 24.0,
+      "y": 24.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "dialogue_choice",
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "demo_objective_start",
+          "set_flags": {
+            "demo.objective_started": true
+          },
+          "toast": "Objective: Enter the cellar",
+          "toast_seconds": 3.0
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "id": "door_field_demoobjectivehook_68_28_0_0",
+      "layer": "background",
+      "name": "DemoObjectiveHook",
+      "x": 68.0,
+      "y": 28.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "dialogue_choice",
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "demo_objective_upper_hall",
+          "set_flags": {
+            "demo.objective_upper_started": true
+          },
+          "toast": "Optional: Visit the upper hall",
+          "toast_seconds": 3.0
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "id": "door_field_demoobjectiveupperhook_72_28_0_0",
+      "layer": "background",
+      "name": "DemoObjectiveUpperHallHook",
+      "x": 72.0,
+      "y": 28.0
+    },
+    {
+      "animations": {
+        "idle": {
+          "fps": 4,
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "loop": true
+        },
+        "interact": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": false
+        },
+        "walk": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": true
+        }
+      },
+      "behaviour_config": {
+        "CameraFollow": {
+          "padding": 16,
+          "zoom": 1.0
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "PlayerController"
+        },
+        {
+          "params": {},
+          "type": "CameraFollow"
+        }
+      ],
+      "id": "door_field_fieldplayer_368_216_0_0",
+      "name": "FieldPlayer",
+      "sprite": "assets/sprites/animated_player.png",
+      "sprite_sheet": {
+        "columns": 4,
+        "frame_height": 64,
+        "frame_width": 64,
+        "rows": 2
+      },
+      "tag": "player",
+      "x": 368.0,
+      "y": 216.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "forbid_flags": [
+                      "demo.objective_started"
+                    ],
+                    "id": "demo_objective_start",
+                    "next": null,
+                    "once": true,
+                    "text": "Start demo route"
+                  },
+                  {
+                    "forbid_flags": [
+                      "demo.objective_upper_started"
+                    ],
+                    "id": "demo_objective_upper_hall",
+                    "next": null,
+                    "once": true,
+                    "text": "Optional: visit the upper hall"
+                  },
+                  {
+                    "end": true,
+                    "text": "Close"
+                  }
+                ],
+                "text": "Demo route: step through the interior door first.\nThen take the stairs down into the cellar."
+              }
+            },
+            "speaker": "Notice",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "Dialogue"
+        }
+      ],
+      "id": "door_field_demoroutesign_336_216_0_0",
+      "name": "DemoRouteSign",
+      "sprite": "assets/placeholder.png",
+      "x": 336.0,
+      "y": 216.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "interior_entry",
+          "target_scene": "scenes/door_interior.json"
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SceneTransition"
+        }
+      ],
+      "id": "door_field_fielddoor_240_120_0_0",
+      "name": "FieldDoor",
+      "x": 240.0,
+      "y": 120.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "accepted": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "accept_ack",
+                    "text": "I'll grab it."
+                  }
+                ],
+                "text": "There's a crate near the door. Bring it back so I can inventory it."
+              },
+              "completed": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "completed_close",
+                    "text": "See you around."
+                  }
+                ],
+                "text": "Thanks again for the assist. The new rations are already spoken for."
+              },
+              "demo_objective": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "demo_objective_ack",
+                    "text": "Got it."
+                  }
+                ],
+                "text": "Demo route: step through the interior door first.\nThen take the stairs down into the cellar."
+              },
+              "intro": {
+                "choices": [
+                  {
+                    "forbid_flags": [
+                      "field_supplies_active",
+                      "field_supplies_complete"
+                    ],
+                    "id": "warden_offer_accept",
+                    "next": "accepted",
+                    "once": true,
+                    "text": "Need a hand with supplies?"
+                  },
+                  {
+                    "end": true,
+                    "forbid_flags": [
+                      "field_supplies_has_crate"
+                    ],
+                    "id": "status_waiting",
+                    "require_flags": [
+                      "field_supplies_active"
+                    ],
+                    "text": "I'm still looking for that crate."
+                  },
+                  {
+                    "id": "warden_turnin",
+                    "next": "turnin_ack",
+                    "require_flags": [
+                      "field_supplies_has_crate"
+                    ],
+                    "text": "Here's the crate you asked for."
+                  },
+                  {
+                    "id": "post_complete",
+                    "next": "completed",
+                    "require_flags": [
+                      "field_supplies_complete"
+                    ],
+                     "text": "Those rations holding up?"
+                   },
+                  {
+                    "forbid_flags": [
+                      "demo.objective_started"
+                    ],
+                    "id": "demo_objective_start",
+                    "next": "demo_objective",
+                    "once": true,
+                    "text": "Where should I go for the demo?"
+                  },
+                  {
+                    "forbid_flags": [
+                      "demo.objective_upper_started"
+                    ],
+                    "id": "demo_objective_upper_hall",
+                    "next": null,
+                    "once": true,
+                    "text": "Anything optional I should check out?"
+                  },
+                  {
+                    "end": true,
+                    "id": "idle_goodbye",
+                    "text": "Just passing by."
+                  }
+                ],
+                "text": "The outpost is down to a single crate of supplies. I could use another set of hands."
+              },
+              "turnin_ack": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "turnin_done",
+                    "text": "Happy to help."
+                  }
+                ],
+                "text": "Perfect timing. The recruits would have gone hungry without you."
+              }
+            },
+            "speaker": "Field Warden",
+            "start": "intro"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "Dialogue"
+        }
+      ],
+      "id": "door_field_fieldwarden_150_150_0_0",
+      "name": "FieldWarden",
+      "x": 150.0,
+      "y": 150.0
+    },
+    {
+      "behaviour_config": {
+        "Collectible": {
+          "auto_remove": true,
+          "collect_by_name": "FieldPlayer"
+        },
+        "ConditionalActivator": {
+          "refresh_rate": 0.1,
+          "require_flags": [
+            "field_supplies_active"
+          ]
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "ConditionalActivator"
+        },
+        {
+          "params": {},
+          "type": "Collectible"
+        }
+      ],
+      "id": "door_field_supplycrate_320_140_0_0",
+      "name": "SupplyCrate",
+      "x": 320.0,
+      "y": 140.0
+    },
+    {
+      "behaviour_config": {
+        "ConditionalActivator": {
+          "require_flags": [
+            "visited_interior"
+          ]
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "ConditionalActivator"
+        }
+      ],
+      "id": "door_field_rewardchest_360_140_0_0",
+      "name": "RewardChest",
+      "x": 360.0,
+      "y": 140.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "default",
+          "target_scene": "door_interior"
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SceneTransition"
+        }
+      ],
+      "id": "door_field_interiordoor_120_120_0_0",
+      "layer": "background",
+      "name": "InteriorDoor",
+      "x": 120.0,
+      "y": 120.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "upper_entry",
+          "target_scene": "scenes/upper_hall.json"
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SceneTransition"
+        }
+      ],
+      "id": "door_field_upperhalldoor_420_300_0_0",
+      "layer": "background",
+      "name": "UpperHallDoor",
+      "require_flags": [
+        "demo.objective_started"
+      ],
+      "x": 420.0,
+      "y": 300.0
+    },
+    {
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "id": "door_field_themedenemy_288_256_0_0",
+      "layer": "entities",
+      "mesh_name": "ThemedEnemy",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 288.0,
+      "y": 256.0
+    }
+  ],
+  "name": "Door Field",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "dark_spring_green",
+    "region_theme": "moss",
+    "encounter_set_id": "moss_encounters",
+    "use_theme_spawns": true,
+    "encounter_budget": 10,
+    "encounter_budget_profile": "normal",
+    "encounter_seed": 12345,
+    "world_height": 384,
+    "world_width": 512
+  },
+  "version": 1
+}

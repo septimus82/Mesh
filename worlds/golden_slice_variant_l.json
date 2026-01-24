@@ -1,0 +1,14 @@
+{
+  "id": "golden_slice_variant_l",
+  "scenes": {
+    "Ridge Outpost_dungeon": {
+      "label": "Ridge Outpost_dungeon (L)",
+      "path": "packs/core_regions/scenes/Ridge Outpost_dungeon_variant_l.json",
+      "tags": [
+        "dungeon"
+      ]
+    }
+  },
+  "start_scene": "Ridge Outpost_dungeon",
+  "start_spawn": "default"
+}

@@ -1,0 +1,128 @@
+{
+  "fire_imp": {
+    "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 8
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "encounter_cost": 2,
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "fire_imp",
+    "tags": [
+      "enemy",
+      "fire"
+    ]
+  },
+  "magma_cube": {
+    "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 15
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "encounter_cost": 3,
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "magma_cube",
+    "tags": [
+      "enemy",
+      "fire"
+    ]
+  },
+  "plant_minion": {
+    "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 10
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "encounter_cost": 2,
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "plant_minion",
+    "tags": [
+      "enemy",
+      "plant"
+    ]
+  },
+  "player": {
+    "entity": {
+      "behaviours": [
+        "PlayerController"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "player",
+    "tags": [
+      "player"
+    ]
+  },
+  "shadow_stalker": {
+    "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 12
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "encounter_cost": 4,
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "shadow_stalker",
+    "tags": [
+      "enemy",
+      "shadow"
+    ]
+  },
+  "slime_blob": {
+    "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 5
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "encounter_cost": 1,
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "slime_blob",
+    "tags": [
+      "enemy",
+      "slime"
+    ]
+  },
+  "void_wisp": {
+    "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 4
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "encounter_cost": 1,
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "void_wisp",
+    "tags": [
+      "enemy",
+      "void"
+    ]
+  }
+}

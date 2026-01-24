@@ -1,0 +1,86 @@
+{
+  "description": "Act 1 Chapter 2 stub scene gated by Chapter 1 completion.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter2_stub_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter2_stub_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_chapter2_start",
+          "trigger_radius": 56.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_stub_chapter2startzone_180_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_stub_chapter2startzone_180_300_0_0",
+      "name": "Chapter2StartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 180,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_chapter2_checkpoint",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_stub_chapter2checkpointzone_520_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_stub_chapter2checkpointzone_520_300_0_0",
+      "name": "Chapter2CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter2_RuinedGate.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter2_stub_toruinedgate_640_300_0_0",
+      "name": "ToRuinedGate",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 640,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Chapter 2 - Stub",
+  "schema_version": 1,
+  "version": 1
+}

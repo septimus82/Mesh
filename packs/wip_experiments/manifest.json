@@ -1,0 +1,7 @@
+{
+  "name": "wip_experiments",
+  "type": "dlc",
+  "version": "0.0.1",
+  "wip": true,
+  "audit_exempt": true
+}

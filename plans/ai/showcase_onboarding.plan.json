@@ -1,0 +1,59 @@
+{
+  "wizard": "ai-generated",
+  "version": 1,
+  "inputs": {
+    "prompt": "Make the existing Showcase region easier to understand for a first-time player",
+    "context_files": [
+      ".mesh/context/showcase_hub.context.json",
+      ".mesh/context/showcase_interior.context.json",
+      ".mesh/context/showcase_dungeon.context.json"
+    ]
+  },
+  "actions": [
+    {
+      "type": "add_npc_dialogue",
+      "args": {
+        "scene_path": "scenes/showcase_hub.json",
+        "npc_name": "Showcase Greeter",
+        "lines": [
+          "Welcome to the Mesh Engine Showcase Region!",
+          "This area is designed to demonstrate the engine's capabilities.",
+          "To the north is the Interior, where you can find a Merchant to prepare.",
+          "To the east lies the Dungeon. Beware, it contains a dangerous Boss and a hidden Artifact."
+        ],
+        "speaker_alias": "Greeter"
+      },
+      "description": "Update Greeter dialogue to explain the region layout."
+    },
+    {
+      "type": "add_npc_dialogue",
+      "args": {
+        "scene_path": "scenes/showcase_interior.json",
+        "npc_name": "Showcase Merchant",
+        "lines": [
+          "Welcome! You look like you're heading for the dungeon.",
+          "You should stock up on potions before you go.",
+          "I've heard there's a 'Fetch the Artifact' job (showcase_fetch) available.",
+          "And if you're brave enough, the 'Defeat the Boss' bounty (showcase_kill) pays well."
+        ],
+        "speaker_alias": "Merchant"
+      },
+      "description": "Update Merchant dialogue to hint at quests and preparation."
+    },
+    {
+      "type": "add_npc_dialogue",
+      "args": {
+        "scene_path": "scenes/showcase_dungeon.json",
+        "npc_name": "Lost Explorer",
+        "lines": [
+          "Shh! Keep it down.",
+          "There's a massive Boss deeper in this dungeon.",
+          "I've been stuck here trying to figure out this door.",
+          "I think there's a switch hidden somewhere nearby that opens it."
+        ],
+        "speaker_alias": "Explorer"
+      },
+      "description": "Update Lost Explorer dialogue to hint at the puzzle and boss."
+    }
+  ]
+}

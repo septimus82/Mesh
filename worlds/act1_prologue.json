@@ -1,0 +1,89 @@
+{
+  "id": "act1_prologue",
+  "start_scene": "act1_prologue_exterior",
+  "start_spawn": "default",
+  "scenes": {
+    "act1_prologue_cabin": {
+      "path": "packs/core_regions/scenes/Act1_Prologue_Cabin.json",
+      "label": "Prologue Cabin",
+      "tags": [
+        "interior"
+      ]
+    },
+    "act1_prologue_exterior": {
+      "path": "packs/core_regions/scenes/Act1_Prologue_Exterior.json",
+      "label": "Prologue Trailhead",
+      "tags": [
+        "start"
+      ]
+    },
+    "act1_prologue_fork": {
+      "path": "packs/core_regions/scenes/Act1_Prologue_Fork.json",
+      "label": "Prologue Fork",
+      "tags": [
+        "branching"
+      ]
+    },
+    "act1_prologue_convergence": {
+      "path": "packs/core_regions/scenes/Act1_Prologue_Convergence.json",
+      "label": "Prologue Convergence",
+      "tags": [
+        "act1"
+      ]
+    },
+    "act1_chapter1_stub": {
+      "path": "packs/core_regions/scenes/Act1_Chapter1_Stub.json",
+      "label": "Act 1 Chapter 1 (Stub)",
+      "tags": [
+        "chapter1"
+      ]
+    }
+  },
+  "links": [
+    {
+      "from": "act1_prologue_exterior",
+      "to": "act1_prologue_cabin",
+      "via": "CabinDoor"
+    },
+    {
+      "from": "act1_prologue_cabin",
+      "to": "act1_prologue_exterior",
+      "via": "ExitDoor"
+    },
+    {
+      "from": "act1_prologue_exterior",
+      "to": "act1_prologue_fork",
+      "via": "ForkTrail"
+    },
+    {
+      "from": "act1_prologue_fork",
+      "to": "act1_prologue_exterior",
+      "via": "ReturnDoor"
+    },
+    {
+      "from": "act1_prologue_fork",
+      "to": "act1_prologue_convergence",
+      "via": "ToConvergenceA"
+    },
+    {
+      "from": "act1_prologue_fork",
+      "to": "act1_prologue_convergence",
+      "via": "ToConvergenceB"
+    },
+    {
+      "from": "act1_prologue_convergence",
+      "to": "act1_prologue_fork",
+      "via": "ReturnDoor"
+    },
+    {
+      "from": "act1_prologue_convergence",
+      "to": "act1_chapter1_stub",
+      "via": "ToChapter1"
+    },
+    {
+      "from": "act1_chapter1_stub",
+      "to": "act1_prologue_convergence",
+      "via": "Chapter1ReturnDoor"
+    }
+  ]
+}

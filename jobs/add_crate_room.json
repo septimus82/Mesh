@@ -1,0 +1,26 @@
+{
+  "operations": [
+    {
+      "type": "add_entity_from_prefab",
+      "scene_path": "scenes/door_field.json",
+      "prefab_name": "Crate",
+      "x": 160,
+      "y": 160
+    },
+    {
+      "type": "add_entity_from_prefab",
+      "scene_path": "scenes/door_field.json",
+      "prefab_name": "Crate",
+      "x": 200,
+      "y": 160
+    },
+    {
+      "type": "paint_tiles",
+      "scene_path": "scenes/door_field.json",
+      "ops": [
+        { "layer": "ground", "col": 5, "row": 3, "gid": 2 },
+        { "layer": "ground", "col": 6, "row": 3, "gid": 2 }
+      ]
+    }
+  ]
+}

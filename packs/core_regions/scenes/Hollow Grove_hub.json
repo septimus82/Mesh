@@ -1,0 +1,149 @@
+{
+  "description": "An outdoor area with a player spawn and one exit.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "hollow_grove_hub_player_400_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 400,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "Spawn_From_Overworld",
+          "target_scene": "scenes/target.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "hollow_grove_hub_exit_to_somewhere_700_300_0_0",
+      "name": "Exit_To_Somewhere",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "merchant"
+        },
+        "QuestGiver": {
+          "quest_id": "hollow_fetch_herbs"
+        },
+        "Vendor": {
+          "shop_id": "hollow_shop",
+          "stock": [
+            {
+              "item_id": "rusty_sword",
+              "price": 10,
+              "quantity": 1
+            },
+            {
+              "item_id": "iron_sword",
+              "price": 50,
+              "quantity": 1
+            },
+            {
+              "item_id": "leather_cap",
+              "price": 10,
+              "quantity": 1
+            },
+            {
+              "item_id": "chain_coif",
+              "price": 50,
+              "quantity": 1
+            },
+            {
+              "item_id": "healing_potion",
+              "price": 5,
+              "quantity": 10
+            }
+          ]
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "QuestGiver",
+        "Vendor"
+      ],
+      "id": "hollow_grove_hub_hollow_grove_merchant_300_300_0_0",
+      "name": "Hollow Grove_Merchant",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [
+        "merchant"
+      ],
+      "x": 300,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "guard"
+        },
+        "QuestGiver": {
+          "quest_id": "hollow_kill_spiders"
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "QuestGiver"
+      ],
+      "id": "hollow_grove_hub_hollow_grove_guard_300_300_0_0",
+      "name": "Hollow Grove_Guard",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [
+        "guard"
+      ],
+      "x": 300,
+      "y": 300
+    }
+  ],
+  "layers": [
+    {
+      "entities": {
+        "1": {
+          "behaviours": {
+            "SceneTransition": {
+              "spawn_point": "default",
+              "target_scene": "packs/core_regions/scenes/Hollow Grove_interior.json"
+            }
+          },
+          "tags": [
+            "auto_wired"
+          ],
+          "type": "prop",
+          "x": 300,
+          "y": 0
+        },
+        "2": {
+          "behaviours": {
+            "SceneTransition": {
+              "spawn_point": "default",
+              "target_scene": "packs/core_regions/scenes/Hollow Grove_dungeon.json"
+            }
+          },
+          "tags": [
+            "auto_wired"
+          ],
+          "type": "prop",
+          "x": 300,
+          "y": 0
+        }
+      },
+      "name": "entities"
+    }
+  ],
+  "name": "Hollow Grove Hub",
+  "schema_version": 1,
+  "version": 1
+}

@@ -1,0 +1,52 @@
+{
+  "wizard": "ai-generated",
+  "version": 1,
+  "inputs": {
+    "prompt": "Add dialogue to Showcase Greeter, Merchant Assistant, and Lost Explorer",
+    "target_pack": "core_regions"
+  },
+  "actions": [
+    {
+      "type": "add_npc_dialogue",
+      "args": {
+        "scene_path": "scenes/showcase_hub.json",
+        "npc_name": "Showcase Greeter",
+        "lines": [
+          "Welcome to the Mesh Showcase!",
+          "This area is where we test new features.",
+          "The left door leads to the merchant; the right door leads to the dungeon."
+        ],
+        "dialogue_id": "greeter_intro"
+      },
+      "description": "Add intro dialogue to the Greeter."
+    },
+    {
+      "type": "add_npc_dialogue",
+      "args": {
+        "scene_path": "scenes/showcase_interior.json",
+        "npc_name": "Merchant Assistant",
+        "lines": [
+          "The boss is busy right now.",
+          "Did you hear about the artifact lost in the dungeon?",
+          "I bet it's worth a fortune."
+        ],
+        "dialogue_id": "assistant_gossip"
+      },
+      "description": "Add gossip dialogue to the Merchant Assistant."
+    },
+    {
+      "type": "add_npc_dialogue",
+      "args": {
+        "scene_path": "scenes/showcase_dungeon.json",
+        "npc_name": "Lost Explorer",
+        "lines": [
+          "Shh! The boss is just ahead.",
+          "I saw a switch nearby, but the door is locked.",
+          "Maybe there's a trick to it?"
+        ],
+        "dialogue_id": "explorer_hint"
+      },
+      "description": "Add hint dialogue to the Lost Explorer."
+    }
+  ]
+}

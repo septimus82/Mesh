@@ -1,0 +1,86 @@
+{
+  "quests": [
+    {
+      "id": "sniper_threat",
+      "title": "The Sniper Threat",
+      "description": "Eliminate the sniper harassing the supply lines.",
+      "stages": [
+        {
+          "id": "defeat_sniper",
+          "title": "Defeat the Sniper",
+          "text": "Travel to the Forest (Level 2) and defeat the Sniper.",
+          "start_on_event": {
+            "type": "dialogue_choice",
+            "payload": {
+              "entity": "Guard",
+              "choice_id": "guard_accept_quest"
+            }
+          },
+          "complete_on": {
+            "type": "died",
+            "payload": {
+              "name": "Sniper"
+            }
+          }
+        },
+        {
+          "id": "report_success",
+          "title": "Report Success",
+          "text": "Return to the Guard and report your success.",
+          "complete_on": {
+            "type": "dialogue_choice",
+            "payload": {
+              "entity": "Guard",
+              "choice_id": "guard_complete_quest"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "add_items": {
+          "coin": 50
+        }
+      }
+    },
+    {
+      "id": "rat_catcher",
+      "title": "Rat Catcher",
+      "description": "Retrieve the Golden Rat Statue from the cellar.",
+      "stages": [
+        {
+          "id": "find_statue",
+          "title": "Find the Statue",
+          "text": "Search the cellar for the Golden Rat Statue.",
+          "start_on_event": {
+            "type": "dialogue_choice",
+            "payload": {
+              "entity": "Guard",
+              "choice_id": "guard_rat_accept"
+            }
+          },
+          "complete_on": {
+            "type": "collectible_picked",
+            "payload": {
+              "collectible_name": "Golden Rat Statue"
+            }
+          }
+        },
+        {
+          "id": "return",
+          "title": "Report Back",
+          "text": "Return the statue to the guard.",
+          "complete_on": {
+            "type": "dialogue_choice",
+            "payload": {
+              "entity": "Guard",
+              "choice_id": "guard_rat_complete"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": { "gold": 50 }
+      }
+    }
+  ]
+}

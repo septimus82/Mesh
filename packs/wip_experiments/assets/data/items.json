@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "id": "iron_sword",
+      "name": "Iron Sword",
+      "description": "A standard issue iron sword. Increases damage.",
+      "icon": "assets/sprites/sword.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["equipment", "weapon"],
+      "effects": {
+        "damage_bonus": 1.0
+      }
+    },
+    {
+      "id": "coin",
+      "name": "Gold Coin",
+      "description": "Currency of the realm.",
+      "icon": "assets/sprites/coin.png",
+      "stackable": true,
+      "max_stack": 999,
+      "tags": ["currency"],
+      "effects": {}
+    }
+  ]
+}

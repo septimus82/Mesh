@@ -1,0 +1,13 @@
+{
+  "id": "basic_room_10x8",
+  "width": 10,
+  "height": 8,
+  "tiles": [
+    { "layer_id": "Ground", "x": 0, "y": 0, "w": 10, "h": 8, "tile": 5 },
+    { "layer_id": "Walls", "x": 0, "y": 0, "w": 10, "h": 1, "tile": 9 }
+  ],
+  "entities": [
+    { "prefab_id": "torch_wisp", "x": 2, "y": 2, "id_suffix": "torch1" },
+    { "prefab_id": "torch_wisp", "x": 7, "y": 2, "id_suffix": "torch2" }
+  ]
+}

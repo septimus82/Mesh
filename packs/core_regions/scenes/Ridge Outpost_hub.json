@@ -1,0 +1,1563 @@
+{
+  "description": "An outdoor area with a player spawn and one exit.",
+  "lights": [
+    {
+      "x": 450,
+      "y": 350,
+      "radius": 300,
+      "color": [255, 200, 150],
+      "mode": "soft"
+    }
+  ],
+  "occluders": [
+    {
+      "x": 500,
+      "y": 300,
+      "width": 50,
+      "height": 100
+    }
+  ],
+  "entities": [
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "allow_interact": true,
+          "spawn_point": "Entrance",
+          "target_scene": "packs/core_regions/scenes/Ridge Outpost_dungeon.json"
+        }
+      },
+      "behaviours": [
+        {
+          "type": "SceneTransition",
+          "params": {}
+        }
+      ],
+      "id": "ridge_outpost_hub_exit_to_somewhere_700_300_0_0",
+      "name": "Exit_To_Somewhere",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 700.0,
+      "y": 300.0,
+      "sprite_sheet": {},
+      "scale": 1.0,
+      "rotation": 0.0,
+      "layer": "entities",
+      "solid": false,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "follow_target": null,
+      "follow_speed": 100.0,
+      "animations": {},
+      "animation_state": "idle",
+      "animation_frame_rate": 8.0,
+      "animation_blend": 0.0,
+      "animation_root_motion": false,
+      "dialogue": {},
+      "dialogue_lines": [],
+      "trigger_radius": null,
+      "trigger_target": null,
+      "on_trigger": null
+    },
+    {
+      "behaviours": [
+        {
+          "type": "PlayerController",
+          "params": {}
+        },
+        {
+          "type": "Health",
+          "params": {}
+        },
+        {
+          "type": "Combat",
+          "params": {}
+        },
+        {
+          "type": "CameraFollow",
+          "params": {}
+        },
+        {
+          "type": "LightSource",
+          "params": {}
+        }
+      ],
+      "id": "ridge_outpost_hub_player_400_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 400.0,
+      "y": 300.0,
+      "sprite_sheet": {},
+      "scale": 1.0,
+      "rotation": 0.0,
+      "layer": "entities",
+      "behaviour_config": {
+        "PlayerController": {},
+        "Health": {},
+        "Combat": {},
+        "CameraFollow": {},
+        "LightSource": {
+          "radius": 320.0,
+          "color": "#ffffff",
+          "mode": "soft",
+          "offset_x": 0.0,
+          "offset_y": 0.0,
+          "enabled": true,
+          "flicker_enabled": false
+        }
+      },
+      "solid": false,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "follow_target": null,
+      "follow_speed": 100.0,
+      "animations": {},
+      "animation_state": "idle",
+      "animation_frame_rate": 8.0,
+      "animation_blend": 0.0,
+      "animation_root_motion": false,
+      "dialogue": {},
+      "dialogue_lines": [],
+      "trigger_radius": null,
+      "trigger_target": null,
+      "on_trigger": null
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "merchant_hint": {
+              "choices": [
+                {
+                  "end": true,
+                  "id": "guide_ack",
+                  "text": "I'll check it out."
+                }
+              ],
+              "text": "The merchant over there needs help with supplies. You should talk to him."
+            },
+            "start": {
+              "choices": [
+                {
+                  "id": "guide_thanks",
+                  "next": "merchant_hint",
+                  "text": "Thanks!"
+                }
+              ],
+              "text": "Welcome to the Ridge! Use WASD to move and SPACE to attack."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        {
+          "type": "Dialogue",
+          "params": {}
+        }
+      ],
+      "id": "ridge_outpost_hub_ridge_guide_450_300_0_0",
+      "name": "Ridge_Guide",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 450.0,
+      "y": 300.0,
+      "sprite_sheet": {},
+      "scale": 1.0,
+      "rotation": 0.0,
+      "layer": "entities",
+      "solid": false,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "follow_target": null,
+      "follow_speed": 100.0,
+      "animations": {},
+      "animation_state": "idle",
+      "animation_frame_rate": 8.0,
+      "animation_blend": 0.0,
+      "animation_root_motion": false,
+      "dialogue": {},
+      "dialogue_lines": [],
+      "trigger_radius": null,
+      "trigger_target": null,
+      "on_trigger": null
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "event": {
+                    "type": "demo_ridge_intro_start"
+                  },
+                  "forbid_flags": [
+                    "demo_ridge_intro_complete"
+                  ],
+                  "id": "demo_ridge_intro_start",
+                  "text": "I'll find it."
+                },
+                {
+                  "end": true,
+                  "event": {
+                    "type": "demo_ridge_intro_turnin"
+                  },
+                  "id": "demo_ridge_intro_turnin",
+                  "require_flags": [
+                    "demo_ridge_found_key"
+                  ],
+                  "text": "I found the key."
+                }
+              ],
+              "text": "I'm missing the Rusted Key from the interior storeroom. Can you fetch it?"
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        {
+          "type": "Dialogue",
+          "params": {}
+        }
+      ],
+      "id": "ridge_outpost_hub_ridgescout_480_300_0_0",
+      "mesh_name": "RidgeScout",
+      "name": "Scout Lysa",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 480.0,
+      "y": 300.0,
+      "sprite_sheet": {},
+      "scale": 1.0,
+      "rotation": 0.0,
+      "layer": "entities",
+      "solid": false,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "follow_target": null,
+      "follow_speed": 100.0,
+      "animations": {},
+      "animation_state": "idle",
+      "animation_frame_rate": 8.0,
+      "animation_blend": 0.0,
+      "animation_root_motion": false,
+      "dialogue": {},
+      "dialogue_lines": [],
+      "trigger_radius": null,
+      "trigger_target": null,
+      "on_trigger": null
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "event": {
+                    "type": "ridge_kill_bandits_start"
+                  },
+                  "id": "ridge_bandits_accept",
+                  "text": "Any work for me?"
+                },
+                {
+                  "end": true,
+                  "id": "ridge_bandit_complete",
+                  "text": "The bandits are dealt with."
+                }
+              ],
+              "text": "Bandits again? What news from the dungeon?"
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        },
+        "QuestGiver": {
+          "listen_event": "ridge_kill_bandits_start",
+          "quest_id": "ridge_kill_bandits"
+        }
+      },
+      "behaviours": [
+        {
+          "type": "Dialogue",
+          "params": {}
+        },
+        {
+          "type": "QuestGiver",
+          "params": {}
+        }
+      ],
+      "id": "ridge_outpost_hub_ridgeguard_520_300_0_0",
+      "name": "RidgeGuard",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [
+        "guard"
+      ],
+      "x": 520.0,
+      "y": 300.0,
+      "sprite_sheet": {},
+      "scale": 1.0,
+      "rotation": 0.0,
+      "layer": "entities",
+      "solid": false,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "follow_target": null,
+      "follow_speed": 100.0,
+      "animations": {},
+      "animation_state": "idle",
+      "animation_frame_rate": 8.0,
+      "animation_blend": 0.0,
+      "animation_root_motion": false,
+      "dialogue": {},
+      "dialogue_lines": [],
+      "trigger_radius": null,
+      "trigger_target": null,
+      "on_trigger": null
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "event": {
+                    "type": "ridge_fetch_supplies_start"
+                  },
+                  "id": "ridge_accept_supplies",
+                  "text": "Not yet. What do you need?"
+                },
+                {
+                  "end": true,
+                  "id": "ridge_turnin",
+                  "text": "Yes - here they are."
+                },
+                {
+                  "end": true,
+                  "event": {
+                    "payload": {
+                      "shop_id": "ridge_shop"
+                    },
+                    "type": "open_shop"
+                  },
+                  "id": "merchant_trade",
+                  "text": "Let me see your wares."
+                }
+              ],
+              "text": "Back from the road? Did you find my supplies?"
+            }
+          },
+          "once": false,
+          "dialogue": {},
+          "dialogue_lines": []
+        },
+        "QuestGiver": {
+          "listen_event": "ridge_fetch_supplies_start",
+          "quest_id": "ridge_fetch_supplies"
+        },
+        "Vendor": {
+          "listen_event": "open_shop",
+          "shop_id": "ridge_shop",
+          "stock": [
+            {
+              "item_id": "rusty_sword",
+              "price": 10,
+              "quantity": 1
+            },
+            {
+              "item_id": "leather_cap",
+              "price": 10,
+              "quantity": 1
+            },
+            {
+              "item_id": "healing_potion",
+              "price": 5,
+              "quantity": 10
+            }
+          ]
+        }
+      },
+      "behaviours": [
+        {
+          "type": "Dialogue",
+          "params": {}
+        },
+        {
+          "type": "QuestGiver",
+          "params": {}
+        },
+        {
+          "type": "Vendor",
+          "params": {}
+        }
+      ],
+      "id": "ridge_outpost_hub_ridgemerchant_300_300_0_0",
+      "name": "RidgeMerchant",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [
+        "merchant"
+      ],
+      "x": 300.0,
+      "y": 300.0,
+      "sprite_sheet": {},
+      "scale": 1.0,
+      "rotation": 0.0,
+      "layer": "entities",
+      "solid": false,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "follow_target": null,
+      "follow_speed": 100.0,
+      "animations": {},
+      "animation_state": "idle",
+      "animation_frame_rate": 8.0,
+      "animation_blend": 0.0,
+      "animation_root_motion": false,
+      "dialogue": {},
+      "dialogue_lines": [],
+      "trigger_radius": null,
+      "trigger_target": null,
+      "on_trigger": null
+    },
+    {
+      "behaviour_config": {
+        "QuestProgressOnEvent": {
+          "action": "start",
+          "event_type": "dialogue_choice",
+          "once": true,
+          "payload_equals": {
+            "choice_id": "demo_ridge_intro_start",
+            "entity": "RidgeScout"
+          },
+          "quest_id": "demo_ridge_intro",
+          "stage_id": "find_key"
+        }
+      },
+      "behaviours": [
+        {
+          "type": "QuestProgressOnEvent",
+          "params": {}
+        }
+      ],
+      "id": "ridge_outpost_hub_demoqueststart_m1000_m1000_0_0",
+      "name": "DemoQuestStart",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0,
+      "sprite_sheet": {},
+      "scale": 1.0,
+      "rotation": 0.0,
+      "layer": "entities",
+      "solid": false,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "follow_target": null,
+      "follow_speed": 100.0,
+      "animations": {},
+      "animation_state": "idle",
+      "animation_frame_rate": 8.0,
+      "animation_blend": 0.0,
+      "animation_root_motion": false,
+      "dialogue": {},
+      "dialogue_lines": [],
+      "trigger_radius": null,
+      "trigger_target": null,
+      "on_trigger": null
+    },
+    {
+      "behaviour_config": {
+        "QuestProgressOnEvent": {
+          "action": "complete_stage",
+          "event_type": "dialogue_choice",
+          "once": true,
+          "payload_equals": {
+            "choice_id": "demo_ridge_intro_turnin",
+            "entity": "RidgeScout"
+          },
+          "quest_id": "demo_ridge_intro",
+          "stage_id": "return_key"
+        }
+      },
+      "behaviours": [
+        {
+          "type": "QuestProgressOnEvent",
+          "params": {}
+        }
+      ],
+      "id": "ridge_outpost_hub_demoquestturnin_m1000_m1000_0_0",
+      "name": "DemoQuestTurnIn",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0,
+      "sprite_sheet": {},
+      "scale": 1.0,
+      "rotation": 0.0,
+      "layer": "entities",
+      "solid": false,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "follow_target": null,
+      "follow_speed": 100.0,
+      "animations": {},
+      "animation_state": "idle",
+      "animation_frame_rate": 8.0,
+      "animation_blend": 0.0,
+      "animation_root_motion": false,
+      "dialogue": {},
+      "dialogue_lines": [],
+      "trigger_radius": null,
+      "trigger_target": null,
+      "on_trigger": null
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "quest_completed",
+          "message": "Quest complete: {quest_title}",
+          "once": true,
+          "payload_field": "quest_id",
+          "payload_value": "ridge_fetch_supplies",
+          "set_flags": {
+            "ridge_fetch_supplies_completed": true
+          }
+        }
+      },
+      "behaviours": [
+        {
+          "type": "SetGameStateOnEvent",
+          "params": {}
+        }
+      ],
+      "id": "ridge_outpost_hub_ridgequestcompletionmessages_m1000_m1000_0_0",
+      "name": "RidgeQuestCompletionMessages",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0,
+      "sprite_sheet": {},
+      "scale": 1.0,
+      "rotation": 0.0,
+      "layer": "entities",
+      "solid": false,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "follow_target": null,
+      "follow_speed": 100.0,
+      "animations": {},
+      "animation_state": "idle",
+      "animation_frame_rate": 8.0,
+      "animation_blend": 0.0,
+      "animation_root_motion": false,
+      "dialogue": {},
+      "dialogue_lines": [],
+      "trigger_radius": null,
+      "trigger_target": null,
+      "on_trigger": null
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "quest_stage_started",
+          "message": "Quest updated: {stage_title}",
+          "payload_field": "quest_id",
+          "payload_value": "ridge_fetch_supplies",
+          "set_flags": {
+            "ridge_fetch_supplies_started": true
+          }
+        }
+      },
+      "behaviours": [
+        {
+          "type": "SetGameStateOnEvent",
+          "params": {}
+        }
+      ],
+      "id": "ridge_outpost_hub_ridgequeststagemessages_m1000_m1000_0_0",
+      "name": "RidgeQuestStageMessages",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0,
+      "sprite_sheet": {},
+      "scale": 1.0,
+      "rotation": 0.0,
+      "layer": "entities",
+      "solid": false,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "follow_target": null,
+      "follow_speed": 100.0,
+      "animations": {},
+      "animation_state": "idle",
+      "animation_frame_rate": 8.0,
+      "animation_blend": 0.0,
+      "animation_root_motion": false,
+      "dialogue": {},
+      "dialogue_lines": [],
+      "trigger_radius": null,
+      "trigger_target": null,
+      "on_trigger": null
+    }
+  ],
+  "occluders": [
+    {
+      "height": 128,
+      "id": "hub_occ_1",
+      "type": "rect",
+      "width": 64,
+      "x": 480,
+      "y": 260
+    },
+    {
+      "height": 64,
+      "id": "hub_occ_2",
+      "type": "rect",
+      "width": 96,
+      "x": 600,
+      "y": 280
+    }
+  ],
+  "layers": [
+    {
+      "entities": {
+        "1": {
+          "behaviours": {
+            "SceneTransition": {
+              "spawn_point": "default",
+              "target_scene": "packs/core_regions/scenes/Ridge Outpost_interior.json"
+            }
+          },
+          "tags": [
+            "auto_wired"
+          ],
+          "type": "prop",
+          "x": 300,
+          "y": 0
+        },
+        "2": {
+          "behaviours": {
+            "SceneTransition": {
+              "spawn_point": "default",
+              "target_scene": "packs/core_regions/scenes/Ridge Outpost_dungeon.json"
+            }
+          },
+          "tags": [
+            "auto_wired"
+          ],
+          "type": "prop",
+          "x": 300,
+          "y": 0
+        }
+      },
+      "name": "entities"
+    }
+  ],
+  "name": "Ridge Outpost Hub",
+  "schema_version": 1,
+  "version": 1,
+  "settings": {
+    "background_color": "dark_blue_gray",
+    "lighting_shadows_mode": "hard",
+    "music": null,
+    "music_volume": 1.0
+  },
+  "state": {
+    "flags": {
+      "auto_opened_quest_log": true,
+      "hint_shown_controls": true,
+      "hint_shown_quest_log": true
+    },
+    "counters": {
+      "gold": 0
+    },
+    "values": {
+      "hud_last_quest_progress": {
+        "Ashen_fetch_quest": {
+          "completed": false,
+          "stage_id": "collect_relics"
+        },
+        "Ashen_kill_quest": {
+          "completed": false,
+          "stage_id": "kill_ranged"
+        },
+        "cellar_exterminator": {
+          "completed": false,
+          "stage_id": "kill_rats"
+        },
+        "hollow_fetch_herbs": {
+          "completed": false,
+          "stage_id": "collect_herbs"
+        },
+        "hollow_kill_spiders": {
+          "completed": false,
+          "stage_id": "kill_spiders"
+        },
+        "ridge_fetch_supplies": {
+          "completed": false,
+          "stage_id": "collect_supplies"
+        },
+        "ridge_kill_bandits": {
+          "completed": false,
+          "stage_id": "kill_bandits"
+        }
+      },
+      "quests": {
+        "Ashen_fetch_quest": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_relics",
+          "status": "active"
+        },
+        "Ashen_kill_quest": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_ranged",
+          "status": "active"
+        },
+        "cellar_exterminator": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_rats",
+          "status": "active"
+        },
+        "field_supplies": {
+          "awaiting_stage": "collect_supply_crate",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "hollow_fetch_herbs": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_herbs",
+          "status": "active"
+        },
+        "hollow_kill_spiders": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_spiders",
+          "status": "active"
+        },
+        "quest_act1_ack_route_a": {
+          "awaiting_stage": "ack_upper",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ack_route_b": {
+          "awaiting_stage": "ack_lower",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_arrival": {
+          "awaiting_stage": "arrival",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_complete": {
+          "awaiting_stage": "complete_ch1",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_depart_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_depart_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_gate_route": {
+          "awaiting_stage": "gate_route",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_gate_switch": {
+          "awaiting_stage": "gate_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_complete_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_complete_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ruin_route": {
+          "awaiting_stage": "reach_ruin_marker",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ruin_switch": {
+          "awaiting_stage": "flip_ruin_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_exit": {
+          "awaiting_stage": "move_forward",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_note": {
+          "awaiting_stage": "find_note",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_complete_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_complete_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter1_start": {
+          "awaiting_stage": "first_steps",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter2_start": {
+          "awaiting_stage": "chapter2_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter3_start": {
+          "awaiting_stage": "chapter3_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter4_start": {
+          "awaiting_stage": "chapter4_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter5_start": {
+          "awaiting_stage": "chapter5_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_convergence_a": {
+          "awaiting_stage": "reach_crossroads",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_convergence_b": {
+          "awaiting_stage": "reach_crossroads",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_prologue_complete": {
+          "awaiting_stage": "handoff",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_route_a": {
+          "awaiting_stage": "route_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_route_b": {
+          "awaiting_stage": "route_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_optional_note": {
+          "awaiting_stage": "find_note",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step1": {
+          "awaiting_stage": "find_cabin",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step2": {
+          "awaiting_stage": "light_hearth",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step3": {
+          "awaiting_stage": "return_trailhead",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "rat_catcher": {
+          "awaiting_stage": "find_statue",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_g_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_k_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_k_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_n_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_n_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_fetch_supplies": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_supplies",
+          "status": "active"
+        },
+        "ridge_kill_bandits": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_bandits",
+          "status": "active"
+        },
+        "ridge_variant_g_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_h_relay": {
+          "awaiting_stage": "reactivate_relay",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_i_cache": {
+          "awaiting_stage": "secure_cache",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_k_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_k_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_l_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "sniper_threat": {
+          "awaiting_stage": "defeat_sniper",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        }
+      },
+      "time_of_day_hours": 20.0
+    },
+    "variables": {
+      "hud_last_quest_progress": {
+        "Ashen_fetch_quest": {
+          "completed": false,
+          "stage_id": "collect_relics"
+        },
+        "Ashen_kill_quest": {
+          "completed": false,
+          "stage_id": "kill_ranged"
+        },
+        "cellar_exterminator": {
+          "completed": false,
+          "stage_id": "kill_rats"
+        },
+        "hollow_fetch_herbs": {
+          "completed": false,
+          "stage_id": "collect_herbs"
+        },
+        "hollow_kill_spiders": {
+          "completed": false,
+          "stage_id": "kill_spiders"
+        },
+        "ridge_fetch_supplies": {
+          "completed": false,
+          "stage_id": "collect_supplies"
+        },
+        "ridge_kill_bandits": {
+          "completed": false,
+          "stage_id": "kill_bandits"
+        }
+      },
+      "quests": {
+        "Ashen_fetch_quest": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_relics",
+          "status": "active"
+        },
+        "Ashen_kill_quest": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_ranged",
+          "status": "active"
+        },
+        "cellar_exterminator": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_rats",
+          "status": "active"
+        },
+        "field_supplies": {
+          "awaiting_stage": "collect_supply_crate",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "hollow_fetch_herbs": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_herbs",
+          "status": "active"
+        },
+        "hollow_kill_spiders": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_spiders",
+          "status": "active"
+        },
+        "quest_act1_ack_route_a": {
+          "awaiting_stage": "ack_upper",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ack_route_b": {
+          "awaiting_stage": "ack_lower",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_arrival": {
+          "awaiting_stage": "arrival",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_complete": {
+          "awaiting_stage": "complete_ch1",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_depart_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_depart_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_gate_route": {
+          "awaiting_stage": "gate_route",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_gate_switch": {
+          "awaiting_stage": "gate_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_complete_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_complete_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ruin_route": {
+          "awaiting_stage": "reach_ruin_marker",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ruin_switch": {
+          "awaiting_stage": "flip_ruin_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_exit": {
+          "awaiting_stage": "move_forward",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_note": {
+          "awaiting_stage": "find_note",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_complete_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_complete_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter1_start": {
+          "awaiting_stage": "first_steps",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter2_start": {
+          "awaiting_stage": "chapter2_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter3_start": {
+          "awaiting_stage": "chapter3_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter4_start": {
+          "awaiting_stage": "chapter4_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter5_start": {
+          "awaiting_stage": "chapter5_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_convergence_a": {
+          "awaiting_stage": "reach_crossroads",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_convergence_b": {
+          "awaiting_stage": "reach_crossroads",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_prologue_complete": {
+          "awaiting_stage": "handoff",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_route_a": {
+          "awaiting_stage": "route_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_route_b": {
+          "awaiting_stage": "route_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_optional_note": {
+          "awaiting_stage": "find_note",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step1": {
+          "awaiting_stage": "find_cabin",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step2": {
+          "awaiting_stage": "light_hearth",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step3": {
+          "awaiting_stage": "return_trailhead",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "rat_catcher": {
+          "awaiting_stage": "find_statue",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_g_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_k_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_k_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_n_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_n_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_fetch_supplies": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_supplies",
+          "status": "active"
+        },
+        "ridge_kill_bandits": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_bandits",
+          "status": "active"
+        },
+        "ridge_variant_g_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_h_relay": {
+          "awaiting_stage": "reactivate_relay",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_i_cache": {
+          "awaiting_stage": "secure_cache",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_k_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_k_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_l_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "sniper_threat": {
+          "awaiting_stage": "defeat_sniper",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        }
+      },
+      "time_of_day_hours": 20.0
+    },
+    "chapter": 1,
+    "main_quest_id": null,
+    "playtime_seconds": 34.67940750007983,
+    "level": 1,
+    "xp": 0,
+    "equipment": {
+      "accessory": null,
+      "armor": null,
+      "weapon": null
+    },
+    "perks": [],
+    "quests": {
+      "quests": {},
+      "schema_version": 1
+    }
+  }
+}

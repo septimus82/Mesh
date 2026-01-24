@@ -1,0 +1,132 @@
+{
+  "description": "An indoor room with an entrance and an exit.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "ridge_outpost_interior_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "ridge_outpost_interior_entrance_50_300_0_0",
+      "name": "Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "once": true,
+          "remove_on_collect": true
+        },
+        "QuestProgressOnEvent": {
+          "action": "complete_stage",
+          "event_type": "collected",
+          "once": true,
+          "payload_field": "collectible",
+          "payload_value": "RustedKey",
+          "quest_id": "demo_ridge_intro",
+          "stage_id": "find_key"
+        },
+        "SetGameStateOnEvent": {
+          "event_type": "collected",
+          "payload_field": "collectible",
+          "payload_value": "RustedKey",
+          "set_flags": {
+            "demo_ridge_found_key": true
+          },
+          "toast": "Picked up: {collectible}",
+          "toast_seconds": 3.0
+        }
+      },
+      "behaviours": [
+        "PickupCollectible",
+        "QuestProgressOnEvent",
+        "SetGameStateOnEvent"
+      ],
+      "id": "ridge_outpost_interior_rusted_key_450_300_0_0",
+      "mesh_name": "RustedKey",
+      "name": "Rusted Key",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 450,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "Spawn_From_Interior",
+          "target_scene": "scenes/outside.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "ridge_outpost_interior_exit_700_300_0_0",
+      "name": "Exit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "quest_giver"
+        },
+        "QuestGiver": {
+          "quest_id": "ridge_fetch_supplies"
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "QuestGiver"
+      ],
+      "id": "ridge_outpost_interior_ridge_outpost_elder_300_300_0_0",
+      "name": "Ridge Outpost_Elder",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [
+        "quest_giver"
+      ],
+      "x": 300,
+      "y": 300
+    }
+  ],
+  "layers": [
+    {
+      "entities": {
+        "1": {
+          "behaviours": {
+            "SceneTransition": {
+              "spawn_point": "default",
+              "target_scene": "packs/core_regions/scenes/Ridge Outpost_hub.json"
+            }
+          },
+          "tags": [
+            "auto_wired"
+          ],
+          "type": "prop",
+          "x": 0,
+          "y": -200
+        }
+      },
+      "name": "entities"
+    }
+  ],
+  "name": "Ridge Outpost Interior",
+  "schema_version": 1,
+  "version": 1
+}

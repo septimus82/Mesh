@@ -1,0 +1,146 @@
+{
+  "wizard": "ai-generated",
+  "version": 1,
+  "inputs": {
+    "prompt": "Create a showcase region with a hub, interior, and dungeon, populated with NPCs, quests, and puzzles.",
+    "target_pack": "core_regions"
+  },
+  "actions": [
+    {
+      "type": "create_scene",
+      "args": {
+        "path": "scenes/showcase_hub.json",
+        "template": "overworld"
+      },
+      "description": "Create the main hub scene."
+    },
+    {
+      "type": "create_scene",
+      "args": {
+        "path": "scenes/showcase_interior.json",
+        "template": "empty"
+      },
+      "description": "Create an interior scene for the merchant."
+    },
+    {
+      "type": "create_scene",
+      "args": {
+        "path": "scenes/showcase_dungeon.json",
+        "template": "dungeon"
+      },
+      "description": "Create a dungeon scene with a puzzle and boss."
+    },
+    {
+      "type": "add_npc",
+      "args": {
+        "scene_path": "scenes/showcase_hub.json",
+        "role": "quest_giver",
+        "x": 10,
+        "y": 10,
+        "name": "Showcase Guide"
+      },
+      "description": "Add a quest giver to the hub."
+    },
+    {
+      "type": "add_npc",
+      "args": {
+        "scene_path": "scenes/showcase_interior.json",
+        "role": "merchant",
+        "x": 5,
+        "y": 5,
+        "name": "Showcase Merchant"
+      },
+      "description": "Add a merchant to the interior."
+    },
+    {
+      "type": "add_npc",
+      "args": {
+        "scene_path": "scenes/showcase_dungeon.json",
+        "role": "guard",
+        "x": 15,
+        "y": 15,
+        "name": "Dungeon Boss"
+      },
+      "description": "Add a boss (guard) to the dungeon."
+    },
+    {
+      "type": "add_transition",
+      "args": {
+        "scene_path": "scenes/showcase_hub.json",
+        "target_scene": "scenes/showcase_interior.json",
+        "x": 20,
+        "y": 10
+      },
+      "description": "Link Hub to Interior."
+    },
+    {
+      "type": "add_transition",
+      "args": {
+        "scene_path": "scenes/showcase_interior.json",
+        "target_scene": "scenes/showcase_hub.json",
+        "x": 2,
+        "y": 5
+      },
+      "description": "Link Interior back to Hub."
+    },
+    {
+      "type": "add_transition",
+      "args": {
+        "scene_path": "scenes/showcase_hub.json",
+        "target_scene": "scenes/showcase_dungeon.json",
+        "x": 10,
+        "y": 20
+      },
+      "description": "Link Hub to Dungeon."
+    },
+    {
+      "type": "add_transition",
+      "args": {
+        "scene_path": "scenes/showcase_dungeon.json",
+        "target_scene": "scenes/showcase_hub.json",
+        "x": 2,
+        "y": 2
+      },
+      "description": "Link Dungeon back to Hub."
+    },
+    {
+      "type": "add_transition",
+      "args": {
+        "scene_path": "scenes/showcase_hub.json",
+        "target_scene": "scenes/door_field.json",
+        "x": 0,
+        "y": 10
+      },
+      "description": "Link Hub to Main World (Door Field)."
+    },
+    {
+      "type": "create_quest",
+      "args": {
+        "path": "assets/data/quests.json",
+        "id": "showcase_fetch",
+        "title": "Fetch the Artifact",
+        "type": "side"
+      },
+      "description": "Create a fetch quest."
+    },
+    {
+      "type": "create_quest",
+      "args": {
+        "path": "assets/data/quests.json",
+        "id": "showcase_kill",
+        "title": "Defeat the Boss",
+        "type": "side"
+      },
+      "description": "Create a kill quest."
+    },
+    {
+      "type": "add_puzzle_switch_door",
+      "args": {
+        "scene_path": "scenes/showcase_dungeon.json",
+        "switch": { "x": 5, "y": 5 },
+        "door": { "x": 6, "y": 5 }
+      },
+      "description": "Add a switch-door puzzle to the dungeon."
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "wizard": "new-questline",
+  "version": 1,
+  "inputs": {
+    "subcommand": "new-questline",
+    "name_prefix": "test",
+    "name": null,
+    "perks": null,
+    "apply": false,
+    "scene": null,
+    "pack": null,
+    "plan": "plan.json",
+    "dry_run": true,
+    "into_world": null,
+    "link_from": null,
+    "profile": "safe",
+    "npc_role": null,
+    "quest_type": null,
+    "vars": null,
+    "run": null,
+    "list": false,
+    "with_boss": false,
+    "with_puzzle": false,
+    "template": null,
+    "theme": null,
+    "encounter_set": null,
+    "preset": null,
+    "difficulty": "normal"
+  },
+  "actions": [
+    {
+      "type": "create_scene",
+      "args": {
+        "path": "scenes\\test_scene.json",
+        "template": "empty"
+      },
+      "description": "Create scene 'test_scene.json'"
+    },
+    {
+      "type": "add_npc",
+      "args": {
+        "scene_path": "scenes\\test_scene.json",
+        "name": "test_NPC",
+        "role": "quest_giver",
+        "quest_id": "test_quest"
+      },
+      "description": "Add NPC 'test_NPC' to scene"
+    },
+    {
+      "type": "create_quest",
+      "args": {
+        "path": "assets\\data\\quests.json",
+        "id": "test_quest",
+        "title": "Test Quest",
+        "type": null
+      },
+      "description": "Create quest 'test_quest'"
+    },
+    {
+      "type": "polish_scene",
+      "args": {
+        "path": "scenes\\test_scene.json",
+        "compact_only": false
+      },
+      "description": "Polish scene"
+    },
+    {
+      "type": "validate",
+      "args": {
+        "scene_path": "scenes\\test_scene.json",
+        "check_refs": false
+      },
+      "description": "Validate scene"
+    }
+  ]
+}

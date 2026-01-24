@@ -1,0 +1,37 @@
+{
+  "operations": [
+    {
+      "type": "add_entity_from_prefab",
+      "scene_path": "scenes/door_field.json",
+      "prefab_name": "NPC",
+      "x": 140,
+      "y": 200
+    },
+    {
+      "type": "set_behaviour_params",
+      "scene_path": "scenes/door_field.json",
+      "entity_id": "NPC_1",
+      "behaviour_name": "Dialogue",
+      "params": {
+        "dialogue": {
+          "start": "hello",
+          "nodes": {
+            "hello": {
+              "text": "Welcome to the outpost.",
+              "choices": [
+                { "id": "ask", "text": "Need anything?", "next": "quest" },
+                { "id": "bye", "text": "See you later.", "end": true }
+              ]
+            },
+            "quest": {
+              "text": "We're low on supplies. Can you fetch a crate?",
+              "choices": [
+                { "id": "ok", "text": "On it.", "end": true }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ]
+}

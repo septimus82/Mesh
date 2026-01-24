@@ -1,0 +1,14 @@
+{
+  "defaults": {
+    "anchor": "player",
+    "spawn_id": "upper_hall_entry",
+    "target_scene": "scenes/upper_hall.json"
+  },
+  "id": "door_to_upper_hall",
+  "macro_id": "macro.door_transition",
+  "metadata": {
+    "author": "core_regions",
+    "source": "handwritten"
+  },
+  "type": "macro"
+}

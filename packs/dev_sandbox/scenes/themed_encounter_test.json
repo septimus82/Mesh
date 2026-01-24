@@ -1,0 +1,30 @@
+{
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController"
+      ],
+      "id": "themed_encounter_test_player_100_300_0_0",
+      "mesh_name": "Player",
+      "prefab_id": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "id": "themed_encounter_test_themedenemy_400_300_0_0",
+      "mesh_name": "ThemedEnemy",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 400,
+      "y": 300
+    }
+  ],
+  "settings": {
+    "region_theme": "moss",
+    "use_theme_spawns": true,
+    "world_height": 600,
+    "world_width": 800
+  }
+}

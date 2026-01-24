@@ -1,0 +1,304 @@
+{
+  "name": "Showcase Hub",
+  "description": "Central hub linking to all major feature demos.",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "#202028",
+    "lighting_enabled": true,
+    "lighting_ambient_color": [40, 40, 50, 255]
+  },
+  "entities": [
+    {
+      "id": "hub_spawn_default",
+      "name": "default",
+      "spawn_id": "default",
+      "tag": "spawn_point",
+      "layer": "background",
+      "x": 640,
+      "y": 360
+    },
+    {
+      "id": "hub_player",
+      "name": "Player",
+      "tag": "player",
+      "sprite": "assets/sprites/animated_player.png",
+      "behaviours": ["PlayerController", "CameraFollow", "LightSource"],
+      "behaviour_config": {
+        "LightSource": {
+            "radius": 120,
+            "color": "#ffffff",
+            "mode": "soft",
+            "flicker_enabled": true, 
+            "flicker_amount": 0.05
+        }
+      },
+      "x": 640,
+      "y": 360
+    },
+    {
+      "id": "showcase_guide",
+      "name": "Showcase Guide",
+      "tag": "npc",
+      "solid": true,
+      "sprite": "assets/sprites/quest_giver.png",
+      "behaviours": ["Dialogue"],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "speaker": "Guide",
+            "start": "intro",
+            "nodes": {
+              "intro": {
+                "text": "Welcome to the Developer Gallery! Interested in a tour?",
+                "choices": [
+                    { "text": "Yes, show me around.", "end": true, "emit_event": "dialogue_choice", "payload": { "entity": "ShowcaseGuide", "choice_id": "guide_intro_accept" } },
+                    { "text": "Not now.", "end": true }
+                ]
+              },
+               "debrief": {
+                "text": "Did you see the lighting lab?",
+                "choices": [
+                    { "text": "It was bright.", "end": true, "emit_event": "dialogue_choice", "payload": { "entity": "ShowcaseGuide", "choice_id": "guide_debrief" } }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "x": 680,
+      "y": 400
+    },
+    {
+      "id": "hub_welcome_sign",
+      "name": "Welcome Sign",
+      "tag": "prop",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["Dialogue"],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "speaker": "System",
+            "start": "root",
+            "nodes": {
+              "root": {
+                "text": "Welcome to the Mesh Engine Developer Gallery.\n\nHere you can access isolated demos for various engine subsystems.\n\nWalk into a portal to load the demo.",
+                "choices": [{ "text": "Got it", "end": true }]
+              }
+            }
+          }
+        }
+      },
+      "x": 600,
+      "y": 420
+    },
+
+    {
+      "id": "portal_lighting",
+      "name": "Lighting Lab Portal",
+      "tag": "exit",
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["SceneTransition", "LightSource", "TriggerZone"],
+      "behaviour_config": {
+        "TriggerZone": {
+          "trigger_radius": 30,
+          "trigger_target": "Player",
+          "on_trigger": "enter_portal_lighting"
+        },
+        "SceneTransition": {
+          "target_scene": "scenes/lighting_showcase.json",
+          "spawn_id": "default",
+          "event_type": "enter_portal_lighting"
+        },
+        "LightSource": {
+            "radius": 100,
+            "color": "#ffcc00",
+            "mode": "soft",
+            "flicker_enabled": true
+        }
+      },
+      "x": 640,
+      "y": 600
+    },
+    {
+      "id": "sign_lighting",
+      "name": "Lighting Sign",
+      "tag": "prop",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["Dialogue"],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "speaker": "Sign",
+            "start": "root",
+            "nodes": {
+              "root": {
+                "text": "LIGHTING LAB\n\nFeatures: Dynamic lights, shadows, occluders, cookies, shafts.",
+                "choices": [{ "text": "Close", "end": true }]
+              }
+            }
+          }
+        }
+      },
+      "x": 700,
+      "y": 600
+    },
+
+    {
+      "id": "portal_combat",
+      "name": "Combat Arena Portal",
+      "tag": "exit",
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["SceneTransition", "LightSource", "TriggerZone"],
+      "behaviour_config": {
+        "TriggerZone": {
+          "trigger_radius": 30,
+          "trigger_target": "Player",
+          "on_trigger": "enter_portal_combat"
+        },
+        "SceneTransition": {
+          "target_scene": "scenes/combat_tutorial_demo.json",
+          "spawn_id": "default",
+          "event_type": "enter_portal_combat"
+        },
+        "LightSource": {
+            "radius": 100,
+            "color": "#ff3333",
+            "mode": "soft",
+            "flicker_enabled": true
+        }
+      },
+      "x": 1100,
+      "y": 360
+    },
+    {
+      "id": "sign_combat",
+      "name": "Combat Sign",
+      "tag": "prop",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["Dialogue"],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "speaker": "Sign",
+            "start": "root",
+            "nodes": {
+              "root": {
+                "text": "COMBAT ARENA\n\nFeatures: Attack animations, hitboxes, health systems, enemy AI.",
+                "choices": [{ "text": "Close", "end": true }]
+              }
+            }
+          }
+        }
+      },
+      "x": 1100,
+      "y": 300
+    },
+
+    {
+      "id": "portal_stealth",
+      "name": "Stealth Range Portal",
+      "tag": "exit",
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["SceneTransition", "LightSource", "TriggerZone"],
+      "behaviour_config": {
+        "TriggerZone": {
+          "trigger_radius": 30,
+          "trigger_target": "Player",
+          "on_trigger": "enter_portal_stealth"
+        },
+        "SceneTransition": {
+          "target_scene": "scenes/guard_patrol_chase_demo.json",
+          "spawn_id": "default",
+          "event_type": "enter_portal_stealth"
+        },
+        "LightSource": {
+            "radius": 100,
+            "color": "#33ff33",
+            "mode": "soft",
+            "flicker_enabled": true
+        }
+      },
+      "x": 640,
+      "y": 120
+    },
+    {
+      "id": "sign_stealth",
+      "name": "Stealth Sign",
+      "tag": "prop",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["Dialogue"],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "speaker": "Sign",
+            "start": "root",
+            "nodes": {
+              "root": {
+                "text": "STEALTH RANGE\n\nFeatures: Vision cones, patrol paths, chase behavior, suspicion states.",
+                "choices": [{ "text": "Close", "end": true }]
+              }
+            }
+          }
+        }
+      },
+      "x": 580,
+      "y": 120
+    },
+
+    {
+      "id": "portal_dungeon",
+      "name": "Dungeon Test Portal",
+      "tag": "exit",
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["SceneTransition", "LightSource", "TriggerZone"],
+      "behaviour_config": {
+        "TriggerZone": {
+          "trigger_radius": 30,
+          "trigger_target": "Player",
+          "on_trigger": "enter_portal_dungeon"
+        },
+        "SceneTransition": {
+          "target_scene": "scenes/showcase_dungeon.json",
+          "spawn_id": "default",
+          "event_type": "enter_portal_dungeon"
+        },
+        "LightSource": {
+            "radius": 100,
+            "color": "#aa33ff",
+            "mode": "soft",
+            "flicker_enabled": true
+        }
+      },
+      "x": 180,
+      "y": 360
+    },
+    {
+      "id": "sign_dungeon",
+      "name": "Dungeon Sign",
+      "tag": "prop",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["Dialogue"],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "speaker": "Sign",
+            "start": "root",
+            "nodes": {
+              "root": {
+                "text": "DUNGEON TEST\n\nFeatures: Boss placeholder, multi-room layout, door transitions.",
+                "choices": [{ "text": "Close", "end": true }]
+              }
+            }
+          }
+        }
+      },
+      "x": 180,
+      "y": 420
+    }
+  ]
+}

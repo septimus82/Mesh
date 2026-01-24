@@ -1,0 +1,75 @@
+{
+  "description": "A crumbled ruins area with ancient structures.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "preset_test_hub_player_400_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 400,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "preset_test_hub_ruins_entrance_50_300_0_0",
+      "name": "Ruins_Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "Spawn_From_Ruins",
+          "target_scene": "scenes/target.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "preset_test_hub_to_dungeon_750_300_0_0",
+      "name": "To_Dungeon",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 750,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "quest_giver"
+        },
+        "QuestGiver": {
+          "quest_id": "preset_test_explore_quest"
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "QuestGiver"
+      ],
+      "id": "preset_test_hub_preset_test_explorer_300_300_0_0",
+      "name": "preset_test_Explorer",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [],
+      "x": 300,
+      "y": 300
+    }
+  ],
+  "layers": [],
+  "name": "Preset Test Hub",
+  "schema_version": 1,
+  "settings": {
+    "ambient_audio": "forest_ambience",
+    "lighting_hint": "green_dim",
+    "region_template": "ruins",
+    "region_theme": "moss",
+    "scene_kind": "hub"
+  },
+  "version": 1
+}

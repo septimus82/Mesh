@@ -1,0 +1,164 @@
+{
+  "collision_rules": {
+    "player:terrain": true
+  },
+  "description": "Optional vault room unlocked by the upper hall lever.",
+  "entities": [
+    {
+      "animations": {
+        "idle": {
+          "fps": 4,
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "loop": true
+        },
+        "interact": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": false
+        },
+        "walk": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": true
+        }
+      },
+      "behaviour_config": {
+        "CameraFollow": {
+          "padding": 12,
+          "zoom": 1.0
+        }
+      },
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "upper_hall_vault_uppervaultplayer_96_96_0_0",
+      "name": "UpperVaultPlayer",
+      "sprite": "assets/sprites/animated_player.png",
+      "sprite_sheet": {
+        "columns": 4,
+        "frame_height": 64,
+        "frame_width": 64,
+        "rows": 2
+      },
+      "tag": "player",
+      "x": 96.0,
+      "y": 96.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_vault_vaultentrymarker_96_96_0_0",
+      "layer": "background",
+      "name": "VaultEntryMarker",
+      "scale": 0.1,
+      "spawn_id": "vault_entry",
+      "tag": "spawn_point",
+      "x": 96.0,
+      "y": 96.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "upper_entry",
+          "target_scene": "scenes/upper_hall.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "upper_hall_vault_returndoor_96_64_0_0",
+      "name": "VaultReturnDoor",
+      "x": 96.0,
+      "y": 64.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "forbid_flags": [
+            "demo.reached_upper_hall_vault"
+          ],
+          "once": true,
+          "payload_field": "zone",
+          "payload_value": "DemoObjectiveUpperHallVaultZone",
+          "require_flags": [
+            "demo.objective_upper_started"
+          ],
+          "set_flags": {
+            "demo.reached_upper_hall_vault": true
+          }
+        },
+        "TriggerZone": {
+          "on_trigger": "demo_objective_reached_upper_hall_vault",
+          "trigger_radius": 72.0,
+          "trigger_target": "UpperVaultPlayer",
+          "zone_id": "DemoObjectiveUpperHallVaultZone"
+        }
+      },
+      "behaviours": [
+        "TriggerZone",
+        "SetGameStateOnEvent"
+      ],
+      "id": "upper_hall_vault_demoobjectivezone_140_140_0_0",
+      "layer": "background",
+      "name": "DemoObjectiveUpperHallVaultZone",
+      "scale": 0.0,
+      "tag": "trigger",
+      "x": 140.0,
+      "y": 140.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "text": "Close"
+                  }
+                ],
+                "text": "A small vault room. (Content placeholder.)"
+              }
+            },
+            "speaker": "Notice",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "upper_hall_vault_notice_200_192_0_0",
+      "name": "UpperHallVaultNotice",
+      "sprite": "assets/placeholder.png",
+      "x": 200.0,
+      "y": 192.0
+    }
+  ],
+  "name": "Upper Hall Vault",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "dark_slate_blue",
+    "world_height": 256,
+    "world_width": 320
+  },
+  "version": 1
+}

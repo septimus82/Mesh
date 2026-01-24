@@ -1,0 +1,249 @@
+{
+  "description": "An indoor room with an entrance and an exit.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "ashen_dungeon_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "ashen_dungeon_entrance_50_300_0_0",
+      "name": "Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "Spawn_From_Interior",
+          "target_scene": "scenes/outside.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "ashen_dungeon_exit_700_300_0_0",
+      "name": "Exit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "default",
+          "target_scene": "packs/core_regions/scenes/Ashen_hub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "ashen_dungeon_prop_0_0_0_0",
+      "tags": [
+        "auto_wired"
+      ],
+      "type": "prop",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "behaviour_config": {
+        "Combat": {},
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 0.1,
+              "item_id": "iron_sword"
+            },
+            {
+              "chance": 0.1,
+              "item_id": "chain_coif"
+            },
+            {
+              "chance": 0.3,
+              "item_id": "healing_potion"
+            },
+            {
+              "chance": 0.5,
+              "gold": 30,
+              "max_quantity": 40,
+              "min_quantity": 20
+            }
+          ],
+          "seed": 3001
+        },
+        "Health": {
+          "hp": 30,
+          "max_hp": 30
+        },
+        "RangedAttackAI": {
+          "attack_cooldown": 1.5,
+          "attack_range": 250.0
+        }
+      },
+      "behaviours": [
+        "RangedAttackAI",
+        "Health",
+        "Combat",
+        "DropTable"
+      ],
+      "id": "ashen_dungeon_ashen_ranged_enemy_500_300_0_0",
+      "name": "Ashen_Ranged_Enemy",
+      "sprite": "assets/placeholder.png",
+      "tag": "enemy",
+      "x": 500,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Combat": {},
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "item_id": "cinder_staff"
+            },
+            {
+              "chance": 1.0,
+              "gold": 200,
+              "max_quantity": 250,
+              "min_quantity": 150
+            }
+          ],
+          "seed": 9003
+        },
+        "Health": {
+          "hp": 40,
+          "max_hp": 40
+        },
+        "RangedAttackAI": {
+          "attack_cooldown": 1.0,
+          "attack_range": 300.0,
+          "projectile_speed": 400.0
+        }
+      },
+      "behaviours": [
+        "RangedAttackAI",
+        "Health",
+        "Combat",
+        "DropTable"
+      ],
+      "id": "ashen_dungeon_ashen_boss_600_300_0_0",
+      "name": "Ashen_Boss",
+      "sprite": "assets/sprites/boss_ashen.png",
+      "tag": "enemy",
+      "x": 600,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "OfferPerkChoice": {
+          "once": true,
+          "pool": [
+            "scavenger",
+            "quick_learner"
+          ],
+          "speaker": "Ashen Shrine",
+          "text": "The ashes swirl, revealing secrets."
+        }
+      },
+      "behaviours": [
+        "OfferPerkChoice"
+      ],
+      "id": "ashen_dungeon_perkshrine_400_300_0_0",
+      "name": "PerkShrine",
+      "sprite": "assets/placeholder.png",
+      "tag": "interactable",
+      "x": 400,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "active_sprite": "",
+          "event_id": "ashen_puzzle_unlock",
+          "one_shot": false
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "ashen_dungeon_ashen_puzzle_switch_400_400_0_0",
+      "name": "ashen_puzzle_switch",
+      "sprite": "assets/switch_off.png",
+      "tag": "interactable",
+      "x": 400,
+      "y": 400
+    },
+    {
+      "behaviour_config": {
+        "DoorLock": {
+          "open_sprite": "",
+          "starts_locked": true,
+          "unlock_event": "ashen_puzzle_unlock"
+        }
+      },
+      "behaviours": [
+        "DoorLock"
+      ],
+      "id": "ashen_dungeon_ashen_puzzle_door_500_400_0_0",
+      "name": "ashen_puzzle_door",
+      "sprite": "assets/door_locked.png",
+      "tag": "solid",
+      "x": 500,
+      "y": 400
+    },
+    {
+      "behaviour_config": {
+        "RewardChest": {
+          "gold": 50,
+          "item_id": "",
+          "unlock_event": "ashen_puzzle_unlock"
+        }
+      },
+      "behaviours": [
+        "RewardChest"
+      ],
+      "id": "ashen_dungeon_ashen_puzzle_reward_500_500_0_0",
+      "name": "ashen_puzzle_reward",
+      "sprite": "assets/chest.png",
+      "tag": "interactable",
+      "x": 500,
+      "y": 500
+    },
+    {
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "id": "ashen_dungeon_themedenemy_400_200_0_0",
+      "mesh_name": "ThemedEnemy",
+      "prefab_id": "theme_enemy_placeholder",
+      "tag": "enemy",
+      "x": 400,
+      "y": 200
+    }
+  ],
+  "layers": [],
+  "name": "Ashen Dungeon",
+  "schema_version": 1,
+  "settings": {
+    "region_theme": "forge",
+    "encounter_set_id": "forge_encounters",
+    "use_theme_spawns": true,
+    "encounter_budget": 10,
+    "encounter_budget_profile": "normal",
+    "encounter_seed": 1337
+  },
+  "version": 1
+}

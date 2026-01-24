@@ -1,0 +1,79 @@
+{
+  "description": "A minimal empty scene.",
+  "entities": [
+    {
+      "behaviour_config": {
+        "Vendor": {
+          "inventory": [
+            "potion",
+            "sword"
+          ]
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "Vendor"
+      ],
+      "dialogue": {
+        "lines": [
+          "Welcome! You look like you're heading for the dungeon.",
+          "You should stock up on potions before you go.",
+          "I've heard there's a 'Fetch the Artifact' job (showcase_fetch) available.",
+          "And if you're brave enough, the 'Defeat the Boss' bounty (showcase_kill) pays well."
+        ],
+        "speaker": "Merchant"
+      },
+      "id": "showcase_interior_showcase_merchant_5_5_0_0",
+      "name": "Showcase Merchant",
+      "sprite": "assets/sprites/merchant.png",
+      "tag": "npc",
+      "x": 5,
+      "y": 5
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "allow_interact": true,
+          "spawn_id": "default",
+          "target_scene": "scenes/showcase_hub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "showcase_interior_transition_2_5_0_0",
+      "name": "Transition",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 2,
+      "y": 5
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "dialogue": {
+        "id": "assistant_gossip",
+        "lines": [
+          "The boss is busy right now.",
+          "Did you hear about the artifact lost in the dungeon?",
+          "I bet it's worth a fortune."
+        ],
+        "speaker": "Guard"
+      },
+      "id": "showcase_interior_merchant_assistant_8_5_0_0",
+      "name": "Merchant Assistant",
+      "sprite": "assets/sprites/guard.png",
+      "tag": "npc",
+      "tags": [
+        "guard"
+      ],
+      "x": 8,
+      "y": 5
+    }
+  ],
+  "layers": [],
+  "name": "Showcase Interior",
+  "schema_version": 1,
+  "version": 1
+}

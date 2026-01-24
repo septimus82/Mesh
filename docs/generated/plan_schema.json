@@ -1,0 +1,128 @@
+{
+  "actions": {
+    "add_npc": {
+      "args": {
+        "name": {
+          "required": true,
+          "type": "string"
+        },
+        "scene_path": {
+          "required": true,
+          "type": "string"
+        },
+        "x": {
+          "default": 300,
+          "type": "integer"
+        },
+        "y": {
+          "default": 300,
+          "type": "integer"
+        }
+      },
+      "description": "Add an NPC to a scene"
+    },
+    "create_quest": {
+      "args": {
+        "id": {
+          "required": true,
+          "type": "string"
+        },
+        "path": {
+          "required": true,
+          "type": "string"
+        },
+        "title": {
+          "required": true,
+          "type": "string"
+        },
+        "type": {
+          "required": true,
+          "type": "string"
+        }
+      },
+      "description": "Create a new quest entry"
+    },
+    "create_scene": {
+      "args": {
+        "path": {
+          "required": true,
+          "type": "string"
+        },
+        "template": {
+          "choices": [
+            "empty",
+            "topdown",
+            "dialogue-playground"
+          ],
+          "required": true,
+          "type": "string"
+        }
+      },
+      "description": "Create a new scene from a template"
+    },
+    "init_pack": {
+      "args": {
+        "id": {
+          "required": true,
+          "type": "string"
+        },
+        "path": {
+          "required": true,
+          "type": "string"
+        },
+        "wip": {
+          "default": true,
+          "type": "boolean"
+        }
+      },
+      "description": "Initialize a new content pack"
+    },
+    "polish_scene": {
+      "args": {
+        "compact_only": {
+          "default": false,
+          "type": "boolean"
+        },
+        "path": {
+          "required": true,
+          "type": "string"
+        }
+      },
+      "description": "Polish a scene file"
+    },
+    "validate": {
+      "args": {
+        "check_refs": {
+          "default": false,
+          "type": "boolean"
+        },
+        "scene_path": {
+          "required": true,
+          "type": "string"
+        }
+      },
+      "description": "Validate a scene"
+    },
+    "wire_world": {
+      "args": {
+        "link_from": {
+          "required": false,
+          "type": "string"
+        },
+        "scene_id": {
+          "required": true,
+          "type": "string"
+        },
+        "scene_path": {
+          "required": true,
+          "type": "string"
+        },
+        "world_path": {
+          "required": true,
+          "type": "string"
+        }
+      },
+      "description": "Add a scene to the world map"
+    }
+  }
+}

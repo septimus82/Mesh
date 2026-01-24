@@ -1,0 +1,59 @@
+{
+  "description": "A dark, multi-layered dungeon environment.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "deeptest_entry_player_400_500_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 400,
+      "y": 500
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "Spawn_From_Depths",
+          "target_scene": "scenes/surface.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "deeptest_entry_ladder_up_400_550_0_0",
+      "name": "Ladder_Up",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 400,
+      "y": 550
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "Spawn_From_Upper",
+          "target_scene": "scenes/deeper.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "deeptest_entry_ladder_down_400_50_0_0",
+      "name": "Ladder_Down",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 400,
+      "y": 50
+    }
+  ],
+  "layers": [],
+  "name": "Deeptest Entry",
+  "schema_version": 1,
+  "settings": {
+    "region_template": "deep-dungeon",
+    "scene_kind": "interior"
+  },
+  "version": 1
+}

@@ -1,0 +1,30 @@
+{
+  "rows": [
+    {
+      "boss_budget_reserve": 0.0,
+      "difficulty": "easy",
+      "elite_cost_share": 0.0,
+      "elite_count": 0,
+      "encounter_budget": 8.0,
+      "encounter_preset_id": "easy",
+      "mini_boss_cost_share": 0.0,
+      "mini_boss_count": 0,
+      "spawn_count": 1,
+      "total_spawn_cost": 2.0
+    },
+    {
+      "boss_budget_reserve": 0.0,
+      "difficulty": "hard",
+      "elite_cost_share": 0.0,
+      "elite_count": 0,
+      "encounter_budget": 12.5,
+      "encounter_preset_id": "hard",
+      "mini_boss_cost_share": 0.0,
+      "mini_boss_count": 0,
+      "spawn_count": 1,
+      "total_spawn_cost": 2.0
+    }
+  ],
+  "scene_path": "scenes/door_field.json"
+}
+

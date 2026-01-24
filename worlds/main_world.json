@@ -1,0 +1,353 @@
+{
+  "brush_audit_cases": [
+    {
+      "anchor": "tl",
+      "brush_path": "packs/core_regions/brushes/corner_ruins_a.json",
+      "clip": false,
+      "layer_id": "Ground",
+      "origin": {
+        "x": 1,
+        "y": 1
+      },
+      "scene_path": "scenes/stamp_audit_sandbox.json"
+    }
+  ],
+  "id": "main",
+  "links": [
+    {
+      "from": "door_field",
+      "to": "main_menu",
+      "via": "MenuExit"
+    },
+    {
+      "from": "main_menu",
+      "to": "door_field",
+      "via": "StartGame"
+    },
+    {
+      "from": "door_field",
+      "to": "door_interior",
+      "via": "InteriorDoor"
+    },
+    {
+      "from": "door_field",
+      "to": "upper_hall",
+      "via": "UpperHallDoor"
+    },
+    {
+      "from": "door_interior",
+      "to": "door_field",
+      "via": "FieldDoor"
+    },
+    {
+      "from": "upper_hall",
+      "to": "door_field",
+      "via": "ReturnDoor"
+    },
+    {
+      "from": "upper_hall",
+      "to": "upper_hall_vault",
+      "via": "UpperHallVaultDoor"
+    },
+    {
+      "from": "upper_hall",
+      "to": "guard_patrol_chase_demo",
+      "via": "GuardPatrolChaseDemoDoor"
+    },
+    {
+      "from": "guard_patrol_chase_demo",
+      "to": "upper_hall",
+      "via": "GuardPatrolChaseDemoReturnDoor"
+    },
+    {
+      "from": "upper_hall",
+      "to": "guard_patrol_chase_duo_demo",
+      "via": "GuardPatrolChaseDuoDemoDoor"
+    },
+    {
+      "from": "guard_patrol_chase_duo_demo",
+      "to": "upper_hall",
+      "via": "GuardPatrolChaseDuoDemoReturnDoor"
+    },
+    {
+      "from": "upper_hall",
+      "to": "combat_tutorial_demo",
+      "via": "CombatTutorialDemoDoor"
+    },
+    {
+      "from": "combat_tutorial_demo",
+      "to": "upper_hall",
+      "via": "CombatTutorialDemoReturnDoor"
+    },
+    {
+      "from": "upper_hall",
+      "to": "micro_stealth_completion_room",
+      "via": "MicroStealthCompletionDoor"
+    },
+    {
+      "from": "micro_stealth_completion_room",
+      "to": "upper_hall",
+      "via": "MicroStealthCompletionReturnDoor"
+    },
+    {
+      "from": "upper_hall_vault",
+      "to": "upper_hall",
+      "via": "VaultReturnDoor"
+    },
+    {
+      "from": "upper_hall",
+      "to": "side_room_01",
+      "via": "SideRoomDoor"
+    },
+    {
+      "from": "side_room_01",
+      "to": "upper_hall",
+      "via": "SideRoomReturnDoor"
+    },
+    {
+      "from": "side_room_01",
+      "to": "reward_nook_01",
+      "via": "RewardNookDoor"
+    },
+    {
+      "from": "reward_nook_01",
+      "to": "side_room_01",
+      "via": "RewardNookReturnDoor"
+    },
+    {
+      "from": "door_interior",
+      "to": "cellar",
+      "via": "CellarDoor"
+    },
+    {
+      "from": "cellar",
+      "to": "door_interior",
+      "via": "ExitDoor"
+    },
+    {
+      "from": "Ridge Outpost_hub",
+      "to": "Ridge Outpost_interior"
+    },
+    {
+      "from": "Ridge Outpost_interior",
+      "to": "Ridge Outpost_hub"
+    },
+    {
+      "from": "Ridge Outpost_hub",
+      "to": "Ridge Outpost_dungeon"
+    },
+    {
+      "from": "Ridge Outpost_dungeon",
+      "to": "Ridge Outpost_hub"
+    },
+    {
+      "from": "Hollow Grove_hub",
+      "to": "Hollow Grove_interior"
+    },
+    {
+      "from": "Hollow Grove_interior",
+      "to": "Hollow Grove_hub"
+    },
+    {
+      "from": "Hollow Grove_hub",
+      "to": "Hollow Grove_dungeon"
+    },
+    {
+      "from": "Hollow Grove_dungeon",
+      "to": "Hollow Grove_hub"
+    },
+    {
+      "from": "Ashen_hub",
+      "to": "Ashen_interior"
+    },
+    {
+      "from": "Ashen_interior",
+      "to": "Ashen_hub"
+    },
+    {
+      "from": "Ashen_hub",
+      "to": "Ashen_dungeon"
+    },
+    {
+      "from": "Ashen_dungeon",
+      "to": "Ashen_hub"
+    }
+  ],
+  "macro_audit_cases": [
+    {
+      "args": {},
+      "macro_path": "packs/core_regions/macros/door_to_upper_hall.json",
+      "scene_path": "scenes/door_field.json"
+    },
+    {
+      "args": {},
+      "macro_path": "packs/core_regions/macros/objective_find_cellar.json",
+      "scene_path": "scenes/door_interior.json"
+    }
+  ],
+  "progression_required_scene_paths": [
+    "scenes/cellar.json",
+    "scenes/door_interior.json"
+  ],
+  "room_audit_cases": [
+    {
+      "anchor": "player",
+      "args": {
+        "spawn_id": "upper_entry",
+        "target_scene": "upper_hall"
+      },
+      "door_macro": "packs/core_regions/macros/door_to_upper_hall.json",
+      "from_scene": "scenes/door_field.json",
+      "stamp_path": "packs/core_regions/stamps/basic_room_10x8.json",
+      "to_scene": "scenes/upper_hall.json"
+    },
+    {
+      "anchor": "player",
+      "args": {
+        "spawn_id": "side_room_01_entry",
+        "target_scene": "side_room_01"
+      },
+      "door_macro": "packs/core_regions/macros/door_to_side_room_01.json",
+      "from_scene": "scenes/upper_hall.json",
+      "stamp_path": "packs/core_regions/stamps/basic_room_10x8.json",
+      "to_scene": "scenes/side_room_01.json"
+    },
+    {
+      "anchor": "player",
+      "args": {
+        "spawn_id": "reward_nook_01_entry",
+        "target_scene": "reward_nook_01"
+      },
+      "door_macro": "packs/core_regions/macros/door_to_reward_nook_01.json",
+      "from_scene": "scenes/side_room_01.json",
+      "stamp_path": "packs/core_regions/stamps/basic_room_10x8.json",
+      "to_scene": "scenes/reward_nook_01.json"
+    }
+  ],
+  "scenes": {
+    "Ashen_dungeon": {
+      "path": "packs\\core_regions\\scenes\\Ashen_dungeon.json"
+    },
+    "Ashen_hub": {
+      "path": "packs\\core_regions\\scenes\\Ashen_hub.json"
+    },
+    "Ashen_interior": {
+      "path": "packs\\core_regions\\scenes\\Ashen_interior.json"
+    },
+    "Hollow Grove_dungeon": {
+      "path": "packs\\core_regions\\scenes\\Hollow Grove_dungeon.json"
+    },
+    "Hollow Grove_hub": {
+      "path": "packs\\core_regions\\scenes\\Hollow Grove_hub.json"
+    },
+    "Hollow Grove_interior": {
+      "path": "packs\\core_regions\\scenes\\Hollow Grove_interior.json"
+    },
+    "Ridge Outpost_dungeon": {
+      "path": "packs\\core_regions\\scenes\\Ridge Outpost_dungeon.json"
+    },
+    "Ridge Outpost_hub": {
+      "path": "packs\\core_regions\\scenes\\Ridge Outpost_hub.json"
+    },
+    "Ridge Outpost_interior": {
+      "path": "packs\\core_regions\\scenes\\Ridge Outpost_interior.json"
+    },
+    "cellar": {
+      "label": "Cellar",
+      "path": "scenes/cellar.json",
+      "tags": [
+        "dungeon"
+      ]
+    },
+    "door_field": {
+      "label": "Door Field",
+      "path": "scenes/door_field.json",
+      "tags": [
+        "start"
+      ]
+    },
+    "door_interior": {
+      "label": "Door Interior",
+      "path": "scenes/door_interior.json",
+      "tags": [
+        "interior"
+      ]
+    },
+    "guard_patrol_chase_demo": {
+      "label": "Guard Patrol Chase Demo",
+      "path": "scenes/guard_patrol_chase_demo.json",
+      "tags": [
+        "demo"
+      ]
+    },
+    "guard_patrol_chase_duo_demo": {
+      "label": "Guard Patrol Chase Duo Demo",
+      "path": "scenes/guard_patrol_chase_duo_demo.json",
+      "tags": [
+        "demo"
+      ]
+    },
+    "combat_tutorial_demo": {
+      "label": "Combat Tutorial Demo",
+      "path": "scenes/combat_tutorial_demo.json",
+      "tags": [
+        "demo"
+      ]
+    },
+    "main_menu": {
+      "label": "Main Menu",
+      "path": "scenes/main_menu.json",
+      "tags": [
+        "menu"
+      ]
+    },
+    "micro_stealth_completion_room": {
+      "label": "Micro Stealth Completion",
+      "path": "scenes/micro_stealth_completion_room.json",
+      "tags": [
+        "demo"
+      ]
+    },
+    "reward_nook_01": {
+      "path": "scenes/reward_nook_01.json"
+    },
+    "side_room_01": {
+      "path": "scenes/side_room_01.json"
+    },
+    "upper_hall": {
+      "label": "Upper Hall",
+      "path": "scenes/upper_hall.json",
+      "tags": [
+        "optional"
+      ]
+    },
+    "upper_hall_vault": {
+      "label": "Upper Hall Vault",
+      "path": "scenes/upper_hall_vault.json",
+      "tags": [
+        "optional"
+      ]
+    },
+    "lighting_showcase": {
+      "label": "Lighting Showcase",
+      "path": "scenes/lighting_showcase.json",
+      "tags": [
+        "demo",
+        "lighting"
+      ]
+    }
+  },
+  "stamp_audit_cases": [
+    {
+      "id_prefix": "audit",
+      "origin": {
+        "x": 1,
+        "y": 1
+      },
+      "scene_path": "scenes/stamp_audit_sandbox.json",
+      "stamp_path": "packs/core_regions/stamps/basic_room_10x8.json"
+    }
+  ],
+  "start_scene": "door_field",
+  "start_spawn": "default"
+}

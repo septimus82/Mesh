@@ -1,0 +1,40 @@
+{
+  "entities": [
+    {
+      "id": "encounter_group_test_entity_100_100_0_0",
+      "prefab_id": "player",
+      "x": 100,
+      "y": 100
+    },
+    {
+      "encounter_group": "default",
+      "id": "encounter_group_test_entity_200_200_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 200,
+      "y": 200
+    },
+    {
+      "encounter_group": "boss_guard",
+      "id": "encounter_group_test_entity_300_200_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 300,
+      "y": 200
+    }
+  ],
+  "settings": {
+    "encounter_budget_profile": "normal",
+    "encounter_group_allow_elites": {
+      "boss_guard": false,
+      "default": true
+    },
+    "encounter_group_budgets": {
+      "boss_guard": 100,
+      "default": 10
+    },
+    "encounter_seed": 12345,
+    "region_theme": "moss",
+    "use_theme_spawns": true,
+    "world_height": 600,
+    "world_width": 800
+  }
+}

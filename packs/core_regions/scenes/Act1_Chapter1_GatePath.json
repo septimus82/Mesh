@@ -1,0 +1,120 @@
+{
+  "description": "Chapter 1 gate path: flip the switch to proceed.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter1_gatepath_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter1_gatepath_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch1_gate_start",
+          "trigger_radius": 56.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter1_gatepath_gatepathstartzone_180_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter1_gatepath_gatepathstartzone_180_300_0_0",
+      "name": "GatePathStartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 180,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "event_id": "act1_ch1_gate_unlock",
+          "one_shot": true
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "act1_chapter1_gatepath_gateswitchinteract_360_300_0_0",
+      "name": "GateSwitchInteract",
+      "sprite": "assets/placeholder.png",
+      "tag": "puzzle",
+      "x": 360,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch1_gate_goal",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter1_gatepath_gatepathgoalzone_560_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter1_gatepath_gatepathgoalzone_560_300_0_0",
+      "name": "GatePathGoalZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 560,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter1_Clearing.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter1_gatepath_toclearing_640_300_0_0",
+      "name": "ToClearing",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 640,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter1_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter1_gatepath_returndoor_60_300_0_0",
+      "name": "ReturnDoor",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Chapter 1 - Gate Path",
+  "schema_version": 1,
+  "version": 1
+}

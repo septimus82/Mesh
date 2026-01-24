@@ -1,0 +1,8 @@
+{
+  "steps": [
+    {"dump_state": true}
+  ],
+  "expect": {
+    "gold_at_least": 0
+  }
+}

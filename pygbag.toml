@@ -1,0 +1,18 @@
+[pygbag]
+title = "Mesh Engine"
+app_name = "Mesh Demo"
+entrypoint = "web_main.py"
+output = "build/web"
+include = [
+  "packs/**",
+  "assets/**",
+  "config.json",
+  "scenes/**",
+  "worlds/**"
+]
+exclude = [
+  ".git/**",
+  "artifacts/**",
+  "__pycache__/**",
+  "tests/**"
+]

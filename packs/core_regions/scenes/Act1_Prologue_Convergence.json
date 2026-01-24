@@ -1,0 +1,122 @@
+{
+  "description": "Act 1 slice: routes converge and press onward.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_prologue_convergence_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_prologue_convergence_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_convergence_start",
+          "trigger_radius": 56.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_prologue_convergence_convergencestartzone_140_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_prologue_convergence_convergencestartzone_140_300_0_0",
+      "name": "ConvergenceStartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 140,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_convergence_goal",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_prologue_convergence_convergencegoalzone_560_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_prologue_convergence_convergencegoalzone_560_300_0_0",
+      "name": "ConvergenceGoalZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 560,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_handoff",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_prologue_convergence_act1handoffzone_640_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_prologue_convergence_act1handoffzone_640_300_0_0",
+      "name": "Act1HandoffZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 640,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter1_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_prologue_convergence_tochapter1_700_300_0_0",
+      "name": "ToChapter1",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Prologue_Fork.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_prologue_convergence_returndoor_60_300_0_0",
+      "name": "ReturnDoor",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Prologue - Convergence",
+  "schema_version": 1,
+  "version": 1
+}

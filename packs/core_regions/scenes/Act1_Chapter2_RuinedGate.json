@@ -1,0 +1,215 @@
+{
+  "description": "Chapter 2 slice: flip a switch to unlock the ruined gate route.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter2_ruinedgate_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter2_ruinedgate_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_ruin_start",
+          "trigger_radius": 56.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_ruinedgate_ruinedgatestartzone_200_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_ruinedgate_ruinedgatestartzone_200_300_0_0",
+      "name": "RuinedGateStartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 200,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "event_id": "act1_ch2_ruin_unlock",
+          "one_shot": true
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "act1_chapter2_ruinedgate_ruinedgateswitchinteract_360_300_0_0",
+      "name": "RuinedGateSwitchInteract",
+      "sprite": "assets/placeholder.png",
+      "tag": "puzzle",
+      "x": 360,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_ruin_goal",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_ruinedgate_ruinedgategoalzone_560_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_ruinedgate_ruinedgategoalzone_560_300_0_0",
+      "name": "RuinedGateGoalZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 560,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_choice_a",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_ruinedgate_ch2choiceazone_640_240_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_ruinedgate_ch2choiceazone_640_240_0_0",
+      "name": "Ch2ChoiceAZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 640,
+      "y": 240
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_goal_a",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_ruinedgate_ch2goalazone_760_240_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_ruinedgate_ch2goalazone_760_240_0_0",
+      "name": "Ch2GoalAZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 760,
+      "y": 240
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_choice_b",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_ruinedgate_ch2choicebzone_640_360_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_ruinedgate_ch2choicebzone_640_360_0_0",
+      "name": "Ch2ChoiceBZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 640,
+      "y": 360
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_goal_b",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_ruinedgate_ch2goalbzone_760_360_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_ruinedgate_ch2goalbzone_760_360_0_0",
+      "name": "Ch2GoalBZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 760,
+      "y": 360
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_depart",
+          "trigger_radius": 52.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_ruinedgate_ch2departzone_880_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_ruinedgate_ch2departzone_880_300_0_0",
+      "name": "Ch2DepartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 880,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter3_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter2_ruinedgate_tochapter3_960_300_0_0",
+      "name": "ToChapter3",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 960,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter2_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter2_ruinedgate_returndoor_60_300_0_0",
+      "name": "ReturnDoor",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Chapter 2 - Ruined Gate",
+  "schema_version": 1,
+  "version": 1
+}

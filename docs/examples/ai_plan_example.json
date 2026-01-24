@@ -1,0 +1,28 @@
+{
+  "wizard": "ai-generated",
+  "version": 1,
+  "inputs": {
+    "prompt": "Example plan"
+  },
+  "actions": [
+    {
+      "type": "create_scene",
+      "args": {
+        "path": "scenes/ai_example.json",
+        "template": "empty"
+      },
+      "description": "Create example scene"
+    },
+    {
+      "type": "add_npc",
+      "args": {
+        "scene": "scenes/ai_example.json",
+        "npc_id": "example_npc",
+        "prefab_id": "npc_guard",
+        "x": 100,
+        "y": 100
+      },
+      "description": "Add example NPC"
+    }
+  ]
+}

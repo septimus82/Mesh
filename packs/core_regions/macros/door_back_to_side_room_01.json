@@ -1,0 +1,15 @@
+{
+  "defaults": {
+    "anchor": "player",
+    "spawn_id": "side_return",
+    "target_scene": "scenes/side_room_01.json"
+  },
+  "id": "door_back_to_side_room_01",
+  "macro_id": "macro.door_transition",
+  "metadata": {
+    "author": "core_regions",
+    "source": "handwritten"
+  },
+  "type": "macro"
+}
+

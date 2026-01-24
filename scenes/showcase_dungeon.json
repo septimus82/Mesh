@@ -1,0 +1,155 @@
+{
+  "description": "A dungeon level with entrance and boss placeholder.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "showcase_dungeon_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "showcase_dungeon_dungeon_entrance_50_300_0_0",
+      "name": "Dungeon_Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Health": {
+          "max_hp": 100.0
+        },
+        "Patrol": {
+          "points": [
+            [
+              700,
+              300
+            ],
+            [
+              700,
+              400
+            ]
+          ]
+        }
+      },
+      "behaviours": [
+        "Health",
+        "Patrol"
+      ],
+      "id": "showcase_dungeon_boss_placeholder_700_300_0_0",
+      "name": "Boss_Placeholder",
+      "sprite": "assets/placeholder.png",
+      "tag": "enemy",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "dialogue": {
+        "lines": [
+          "Halt!",
+          "Move along citizen."
+        ],
+        "speaker": "Guard"
+      },
+      "id": "showcase_dungeon_dungeon_boss_15_15_0_0",
+      "name": "Dungeon Boss",
+      "sprite": "assets/sprites/guard.png",
+      "tag": "npc",
+      "x": 15,
+      "y": 15
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "allow_interact": true,
+          "spawn_id": "default",
+          "target_scene": "scenes/showcase_hub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "showcase_dungeon_transition_2_2_0_0",
+      "name": "Transition",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 2,
+      "y": 2
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "active_sprite": "",
+          "event_id": "puzzle_f0b80c53_unlock",
+          "one_shot": false
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "showcase_dungeon_puzzle_f0b80c53_switch_5_5_0_0",
+      "name": "puzzle_f0b80c53_switch",
+      "sprite": "assets/switch_off.png",
+      "tag": "interactable",
+      "x": 5,
+      "y": 5
+    },
+    {
+      "behaviour_config": {
+        "DoorLock": {
+          "open_sprite": "",
+          "starts_locked": true,
+          "unlock_event": "puzzle_f0b80c53_unlock"
+        }
+      },
+      "behaviours": [
+        "DoorLock"
+      ],
+      "id": "showcase_dungeon_puzzle_f0b80c53_door_6_5_0_0",
+      "name": "puzzle_f0b80c53_door",
+      "sprite": "assets/door_locked.png",
+      "tag": "solid",
+      "x": 6,
+      "y": 5
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "dialogue": {
+        "id": "explorer_hint",
+        "lines": [
+          "Shh! Keep it down.",
+          "There's a massive Boss deeper in this dungeon.",
+          "I've been stuck here trying to figure out this door.",
+          "I think there's a switch hidden somewhere nearby that opens it."
+        ],
+        "speaker": "Explorer"
+      },
+      "id": "showcase_dungeon_lost_explorer_10_10_0_0",
+      "name": "Lost Explorer",
+      "sprite": "assets/sprites/guard.png",
+      "tag": "npc",
+      "tags": [
+        "guard"
+      ],
+      "x": 10,
+      "y": 10
+    }
+  ],
+  "layers": [],
+  "name": "Showcase Dungeon",
+  "schema_version": 1,
+  "version": 1
+}

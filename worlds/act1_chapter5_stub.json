@@ -1,0 +1,29 @@
+{
+  "id": "act1_chapter5_stub",
+  "start_scene": "act1_chapter5_stub",
+  "start_spawn": "default",
+  "scenes": {
+    "act1_chapter5_stub": {
+      "path": "packs/core_regions/scenes/Act1_Chapter5_Stub.json",
+      "label": "Act 1 Chapter 5 (Finale Stub)",
+      "tags": [
+        "start"
+      ]
+    },
+    "act1_chapter4_fork": {
+      "path": "packs/core_regions/scenes/Act1_Chapter4_Fork.json",
+      "label": "Act 1 Chapter 4 Fork",
+      "tags": [
+        "branch",
+        "payoff"
+      ]
+    }
+  },
+  "links": [
+    {
+      "from": "act1_chapter5_stub",
+      "to": "act1_chapter4_fork",
+      "via": "Chapter5ReturnDoor"
+    }
+  ]
+}

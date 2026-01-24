@@ -1,0 +1,183 @@
+{
+  "description": "Golden Slice 2 - Variant K: puzzle-lite switch gate slice in a second location.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "hollowmere_outskirts_variant_k_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "hollowmere_outskirts_variant_k_entrance_50_300_0_0",
+      "name": "Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "variant_k2_start",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "hollowmere_outskirts_variant_k_variantkstartzone2_140_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "hollowmere_outskirts_variant_k_variantkstartzone2_140_300_0_0",
+      "name": "VariantKStartZone2",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 140,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "active_sprite": "",
+          "event_id": "ridge2_variant_k_unlock",
+          "one_shot": true
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "hollowmere_outskirts_variant_k_ridge_variant_k_switch_520_300_0_0",
+      "name": "ridge_variant_k_switch",
+      "sprite": "assets/placeholder.png",
+      "tag": "interactable",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DoorLock": {
+          "open_sprite": "",
+          "starts_locked": true,
+          "unlock_event": "ridge2_variant_k_unlock"
+        }
+      },
+      "behaviours": [
+        "DoorLock"
+      ],
+      "id": "hollowmere_outskirts_variant_k_ridge2_variant_k_door_640_300_0_0",
+      "name": "ridge2_variant_k_door",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "tag": "solid",
+      "x": 640,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "item_id": "warden_mace"
+            },
+            {
+              "chance": 1.0,
+              "gold": 10
+            }
+          ],
+          "seed": 9701
+        },
+        "EnemyAI": {
+          "detect_radius": 250.0,
+          "speed": 60.0
+        },
+        "Health": {
+          "hp": 100,
+          "max_hp": 100
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "hollowmere_outskirts_variant_k_hollowmere_boss_900_300_0_0",
+      "mesh_name": "Hollowmere_Boss",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "tags": [
+        "boss"
+      ],
+      "variant_id": "boss_variant_b",
+      "x": 900,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "variant_k2_goal",
+          "trigger_radius": 56.0,
+          "trigger_target": "Player",
+          "zone_id": "hollowmere_outskirts_variant_k_variantkgoalzone2_980_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "hollowmere_outskirts_variant_k_variantkgoalzone2_980_300_0_0",
+      "name": "VariantKGoalZone2",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 980,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "target_scene": "packs/core_regions/scenes/Hollow Grove_hub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "hollowmere_outskirts_variant_k_exit_1000_300_0_0",
+      "name": "Exit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1000,
+      "y": 300
+    }
+  ],
+  "layers": [
+    {
+      "entities": {
+        "1": {
+          "behaviours": {
+            "SceneTransition": {
+              "spawn_point": "default",
+              "target_scene": "packs/core_regions/scenes/Hollow Grove_hub.json"
+            }
+          },
+          "tags": [
+            "auto_wired"
+          ],
+          "type": "prop",
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "entities"
+    }
+  ],
+  "name": "Hollowmere Outskirts (Variant K2)",
+  "schema_version": 1,
+  "version": 1
+}

@@ -1,0 +1,63 @@
+{
+  "description": "A dungeon level with entrance and boss placeholder.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "ruinstest_dungeon_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "ruinstest_dungeon_dungeon_entrance_50_300_0_0",
+      "name": "Dungeon_Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Health": {
+          "max_hp": 100.0
+        },
+        "Patrol": {
+          "points": [
+            [
+              700,
+              300
+            ],
+            [
+              700,
+              400
+            ]
+          ]
+        }
+      },
+      "behaviours": [
+        "Health",
+        "Patrol"
+      ],
+      "id": "ruinstest_dungeon_boss_placeholder_700_300_0_0",
+      "name": "Boss_Placeholder",
+      "sprite": "assets/placeholder.png",
+      "tag": "enemy",
+      "x": 700,
+      "y": 300
+    }
+  ],
+  "layers": [],
+  "name": "Ruinstest Dungeon",
+  "schema_version": 1,
+  "settings": {
+    "region_template": "ruins",
+    "scene_kind": "dungeon"
+  },
+  "version": 1
+}

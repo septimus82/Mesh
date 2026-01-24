@@ -1,0 +1,23 @@
+{
+    "settings": {
+        "region_theme": "forest",
+        "use_theme_spawns": true,
+        "encounter_budget": 10,
+        "encounter_budget_profile": "normal",
+        "encounter_seed": 12345
+    },
+    "entities": [
+        {
+            "prefab_id": "goblin",
+            "encounter_group": "group_a",
+            "x": 100,
+            "y": 100
+        },
+        {
+            "prefab_id": "goblin",
+            "encounter_group": "group_b",
+            "x": 200,
+            "y": 200
+        }
+    ]
+}

@@ -1,0 +1,46 @@
+{
+  "id": "act1_chapter3_stub",
+  "start_scene": "act1_chapter3_stub",
+  "start_spawn": "default",
+  "scenes": {
+    "act1_chapter3_stub": {
+      "path": "packs/core_regions/scenes/Act1_Chapter3_Stub.json",
+      "label": "Act 1 Chapter 3 (Stub)",
+      "tags": [
+        "start"
+      ]
+    },
+    "act1_chapter2_ruined_gate": {
+      "path": "packs/core_regions/scenes/Act1_Chapter2_RuinedGate.json",
+      "label": "Act 1 Chapter 2 Ruined Gate",
+      "tags": [
+        "puzzle",
+        "payoff"
+      ]
+    },
+    "act1_chapter4_stub": {
+      "path": "packs/core_regions/scenes/Act1_Chapter4_Stub.json",
+      "label": "Act 1 Chapter 4 (Stub)",
+      "tags": [
+        "start"
+      ]
+    }
+  },
+  "links": [
+    {
+      "from": "act1_chapter3_stub",
+      "to": "act1_chapter2_ruined_gate",
+      "via": "ReturnDoor"
+    },
+    {
+      "from": "act1_chapter3_stub",
+      "to": "act1_chapter4_stub",
+      "via": "ToChapter4"
+    },
+    {
+      "from": "act1_chapter4_stub",
+      "to": "act1_chapter3_stub",
+      "via": "Chapter4ReturnDoor"
+    }
+  ]
+}

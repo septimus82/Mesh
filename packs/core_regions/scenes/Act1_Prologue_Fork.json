@@ -1,0 +1,158 @@
+{
+  "description": "Prologue fork slice: choose a route.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_prologue_fork_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_prologue_fork_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_fork_choice_a",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_prologue_fork_act1forkchoiceazone_240_240_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_prologue_fork_act1forkchoiceazone_240_240_0_0",
+      "name": "Act1ForkChoiceAZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 240,
+      "y": 240
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_fork_choice_b",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_prologue_fork_act1forkchoicebzone_240_360_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_prologue_fork_act1forkchoicebzone_240_360_0_0",
+      "name": "Act1ForkChoiceBZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 240,
+      "y": 360
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_fork_goal_a",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_prologue_fork_act1forkgoalazone_520_220_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_prologue_fork_act1forkgoalazone_520_220_0_0",
+      "name": "Act1ForkGoalAZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 220
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Prologue_Convergence.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_prologue_fork_toconvergencea_580_220_0_0",
+      "name": "ToConvergenceA",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 580,
+      "y": 220
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_fork_goal_b",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_prologue_fork_act1forkgoalbzone_520_380_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_prologue_fork_act1forkgoalbzone_520_380_0_0",
+      "name": "Act1ForkGoalBZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 380
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Prologue_Convergence.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_prologue_fork_toconvergenceb_580_380_0_0",
+      "name": "ToConvergenceB",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 580,
+      "y": 380
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Prologue_Exterior.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_prologue_fork_returndoor_60_300_0_0",
+      "name": "ReturnDoor",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Prologue - Fork",
+  "schema_version": 1,
+  "version": 1
+}

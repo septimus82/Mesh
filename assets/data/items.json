@@ -1,0 +1,156 @@
+{
+  "items": [
+    {
+      "id": "supply_crate",
+      "name": "Supply Crate",
+      "description": "A heavy crate filled with basic field supplies.",
+      "icon": "assets/sprites/crate.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["quest"],
+      "effects": {
+        "quest_flag": "field_supplies_crate"
+      }
+    },
+    {
+      "id": "healing_potion",
+      "name": "Healing Potion",
+      "description": "Restores a small amount of health when consumed.",
+      "icon": "assets/sprites/potion.png",
+      "stackable": true,
+      "max_stack": 10,
+      "tags": ["consumable"],
+      "effects": {
+        "heal": 2.0
+      }
+    },
+    {
+      "id": "golden_rat_statue",
+      "name": "Golden Rat Statue",
+      "description": "A heavy golden statue of a rat. Valuable.",
+      "icon": "assets/placeholder.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["quest", "treasure"],
+      "effects": {}
+    },
+    {
+      "id": "rusty_sword",
+      "name": "Rusty Sword",
+      "description": "A dull blade, better than nothing.",
+      "icon": "assets/sprites/sword_rusty.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["equipment", "weapon"],
+      "effects": {
+        "tier": 1,
+        "damage": 5
+      }
+    },
+    {
+      "id": "leather_cap",
+      "name": "Leather Cap",
+      "description": "Basic head protection.",
+      "icon": "assets/sprites/cap_leather.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["equipment", "armor"],
+      "effects": {
+        "tier": 1,
+        "defense": 2
+      }
+    },
+    {
+      "id": "iron_sword",
+      "name": "Iron Sword",
+      "description": "A standard soldier's weapon.",
+      "icon": "assets/sprites/sword_iron.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["equipment", "weapon"],
+      "effects": {
+        "tier": 2,
+        "damage": 10
+      }
+    },
+    {
+      "id": "chain_coif",
+      "name": "Chain Coif",
+      "description": "Sturdy chainmail headgear.",
+      "icon": "assets/sprites/coif_chain.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["equipment", "armor"],
+      "effects": {
+        "tier": 2,
+        "defense": 5
+      }
+    },
+    {
+      "id": "warden_mace",
+      "name": "Warden's Mace",
+      "description": "A heavy mace wielded by the Iron Warden.",
+      "icon": "assets/sprites/mace_warden.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["equipment", "weapon"],
+      "effects": {
+        "tier": 2,
+        "damage": 12
+      }
+    },
+    {
+      "id": "shadow_blade",
+      "name": "Shadow Blade",
+      "description": "A dark blade that seems to absorb light.",
+      "icon": "assets/sprites/sword_shadow.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["equipment", "weapon"],
+      "effects": {
+        "tier": 3,
+        "damage": 15
+      }
+    },
+    {
+      "id": "cinder_staff",
+      "name": "Cinder Staff",
+      "description": "A staff glowing with inner fire.",
+      "icon": "assets/sprites/staff_cinder.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["equipment", "weapon"],
+      "effects": {
+        "tier": 3,
+        "damage": 18
+      }
+    },
+    {
+      "id": "iron_ring",
+      "name": "Iron Ring",
+      "description": "A simple iron band that provides minor protection.",
+      "icon": "assets/placeholder.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["equipment", "accessory"],
+      "effects": {
+        "tier": 1,
+        "defense": 1,
+        "max_hp": 5
+      }
+    },
+    {
+      "id": "swift_boots",
+      "name": "Swift Boots",
+      "description": "Enchanted boots that hasten the wearer.",
+      "icon": "assets/placeholder.png",
+      "stackable": false,
+      "max_stack": 1,
+      "tags": ["equipment", "accessory"],
+      "effects": {
+        "tier": 2,
+        "speed": 0.5
+      }
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+request_scene_change called with scene_path='packs/core_regions/scenes/Ridge Outpost_hub.json'
+
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "D:\Games\Mesh\mesh_cli\__main__.py", line 5, in <module>
+    raise SystemExit(main())
+  File "D:\Games\Mesh\mesh_cli\main.py", line 17, in main
+    return int(legacy_main(argv))
+  File "D:\Games\Mesh\mesh_cli\legacy_impl.py", line 2012, in main
+    return pipeline_commands.handle(args)
+  File "D:\Games\Mesh\mesh_cli\pipeline.py", line 73, in handle
+    return _handle_run_preset(args)
+  File "D:\Games\Mesh\mesh_cli\pipeline.py", line 107, in _handle_run_preset
+    result = preset_commands.run_preset_command(args)
+  File "D:\Games\Mesh\engine\tooling\preset_commands.py", line 88, in run_preset_command
+    ret = mesh_cli.main([cmd] + cmd_args)
+  File "D:\Games\Mesh\mesh_cli\main.py", line 17, in main
+    return int(legacy_main(argv))
+  File "D:\Games\Mesh\mesh_cli\legacy_impl.py", line 1842, in main
+    return _handle_demo(args)
+  File "D:\Games\Mesh\mesh_cli\legacy_impl.py", line 1388, in _handle_demo
+    return misc_commands._handle_demo(args)
+  File "D:\Games\Mesh\mesh_cli\misc.py", line 115, in _handle_demo
+    return int(launch_demo(start_scene=scene_override))
+  File "D:\Games\Mesh\engine\tooling\demo_runner.py", line 29, in launch_demo
+    window.run()
+  File "D:\Games\Mesh\engine\game.py", line 652, in run
+    engine.optional_arcade.arcade.run()
+  File "C:\Users\slebb\AppData\Local\Programs\Python\Python313\Lib\site-packages\arcade\window_commands.py", line 152, in run
+    pyglet.app.run(None)
+  File "C:\Users\slebb\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyglet\app\__init__.py", line 79, in run
+    event_loop.run(interval)
+  File "C:\Users\slebb\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyglet\app\base.py", line 165, in run
+    platform_event_loop.step(timeout)
+  File "C:\Users\slebb\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyglet\app\win32.py", line 89, in step
+    _user32.DispatchMessageW(ctypes.byref(msg))
+  File "C:\Users\slebb\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyglet\window\win32\__init__.py", line 871, in f
+    result = event_handler(msg, wParam, lParam)
+  File "C:\Users\slebb\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyglet\window\win32\__init__.py", line 943, in _event_key
+    self.dispatch_event(ev, symbol, modifiers)
+  File "C:\Users\slebb\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyglet\window\__init__.py", line 685, in dispatch_event
+    super().dispatch_event(*args)
+  File "C:\Users\slebb\AppData\Local\Programs\Python\Python313\Lib\site-packages\pyglet\event.py", line 371, in dispatch_event
+    if getattr(self, event_type)(*args):
+  File "D:\Games\Mesh\engine\game.py", line 779, in on_key_press
+    game_input_dispatch.on_key_press(self, key, modifiers)
+  File "D:\Games\Mesh\engine\game_runtime\input_dispatch.py", line 30, in on_key_press
+    if window.ui_controller.on_key_press(key, modifiers):
+  File "D:\Games\Mesh\engine\ui_controller.py", line 216, in on_key_press
+    if element.on_key_press(key, modifiers):
+  File "D:\Games\Mesh\engine\ui_overlays\menus.py", line 813, in on_key_press
+    self._activate_current()
+  File "D:\Games\Mesh\engine\ui_overlays\menus.py", line 1003, in _activate_current
+    self._handle_start_game()
+  File "D:\Games\Mesh\engine\ui_overlays\menus.py", line 856, in _handle_start_game
+    self._handle_start_game_impl()
+  File "D:\Games\Mesh\engine\ui_overlays\menus.py", line 904, in _handle_start_game_impl
+    requester(target_scene)
+  File "D:\Games\Mesh\engine\game.py", line 485, in request_scene_change
+    game_scene_flow.request_scene_change(self, scene_path)
+  File "D:\Games\Mesh\engine\game_runtime\scene_flow.py", line 32, in request_scene_change
+    window.scene_controller.request_scene_change(scene_path)
+  File "D:\Games\Mesh\engine\scene_controller.py", line 433, in request_scene_change
+    _request_scene_change_runtime(self, scene_path)
+  File "D:\Games\Mesh\engine\scene_runtime\transitions.py", line 38, in request_scene_change
+    traceback.print_stack(file=f)

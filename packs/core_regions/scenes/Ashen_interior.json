@@ -1,0 +1,105 @@
+{
+  "description": "An indoor room with an entrance and an exit.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "ashen_interior_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "ashen_interior_entrance_50_300_0_0",
+      "name": "Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "Spawn_From_Interior",
+          "target_scene": "scenes/outside.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "ashen_interior_exit_700_300_0_0",
+      "name": "Exit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "role": "quest_giver"
+        },
+        "QuestGiver": {
+          "quest_id": "ashen_fetch_relic"
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "QuestGiver"
+      ],
+      "id": "ashen_interior_ashen_elder_300_300_0_0",
+      "name": "Ashen_Elder",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [],
+      "x": 300,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "default",
+          "target_scene": "packs/core_regions/scenes/Ashen_hub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "ashen_interior_prop_0_m200_0_0",
+      "tags": [
+        "auto_wired"
+      ],
+      "type": "prop",
+      "x": 0,
+      "y": -200
+    },
+    {
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "id": "ashen_interior_themedenemy_300_100_0_0",
+      "mesh_name": "ThemedEnemy",
+      "prefab_id": "theme_enemy_placeholder",
+      "tag": "enemy",
+      "x": 300,
+      "y": 100
+    }
+  ],
+  "layers": [],
+  "name": "Ashen Interior",
+  "schema_version": 1,
+  "settings": {
+    "encounter_budget": 10,
+    "encounter_budget_profile": "normal",
+    "encounter_seed": 1,
+    "encounter_set_id": "magma_encounters",
+    "region_theme": "magma",
+    "use_theme_spawns": true
+  },
+  "version": 1
+}

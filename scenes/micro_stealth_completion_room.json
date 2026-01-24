@@ -1,0 +1,137 @@
+{
+  "description": "Micro stealth dungeon completion room (gated ultimate reward).",
+  "entities": [
+    {
+      "behaviours": [],
+      "id": "micro_stealth_completion_room_spawn_default_160_128_0_0",
+      "layer": "background",
+      "name": "default",
+      "spawn_id": "default",
+      "tag": "spawn_point",
+      "x": 160.0,
+      "y": 128.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "open_micro_stealth_ultimate_reward",
+                    "text": "Open ultimate reward"
+                  }
+                ],
+                "speaker": "Chest",
+                "text": "The ultimate reward. It only appears once both guard demo rewards are claimed."
+              }
+            },
+            "speaker": "Chest",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "forbid_flags": [
+        "demo.guard_patrol_demo_spotted",
+        "demo.guard_patrol_chase_duo_demo_spotted",
+        "demo.micro_stealth_ultimate_reward_claimed"
+      ],
+      "id": "micro_stealth_completion_room_ultimatechest_160_160_0_0",
+      "mesh_name": "UltimateRewardChest",
+      "name": "UltimateRewardChest",
+      "require_flags": [
+        "demo.guard_patrol_demo_reward_claimed",
+        "demo.guard_patrol_chase_duo_demo_reward_claimed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 160.0,
+      "y": 160.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "dialogue_choice",
+          "forbid_flags": [
+            "demo.micro_stealth_ultimate_reward_claimed"
+          ],
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "open_micro_stealth_ultimate_reward",
+          "require_flags": [
+            "demo.guard_patrol_demo_reward_claimed",
+            "demo.guard_patrol_chase_duo_demo_reward_claimed"
+          ],
+          "set_flags": {
+            "demo.micro_stealth_ultimate_reward_claimed": true
+          },
+          "toast": "Ultimate reward claimed!",
+          "toast_seconds": 3.0
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "id": "micro_stealth_completion_room_choiceflag_demo_micro_stealth_ultimate_reward_claimed_open_micro_stealth_ultimate_reward_0_0",
+      "layer": "background",
+      "name": "MicroStealthUltimateRewardHook",
+      "x": 16.0,
+      "y": 16.0
+    },
+    {
+      "behaviours": [],
+      "id": "micro_stealth_completion_room_ultimateclaimed_192_160_0_0",
+      "layer": "background",
+      "mesh_name": "UltimateRewardClaimed",
+      "name": "UltimateRewardClaimed",
+      "require_flags": [
+        "demo.micro_stealth_ultimate_reward_claimed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 192.0,
+      "y": 160.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "upper_return",
+          "target_scene": "scenes/upper_hall.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "micro_stealth_completion_room_returndoor_160_96_0_0",
+      "name": "MicroStealthCompletionReturnDoor",
+      "x": 160.0,
+      "y": 96.0
+    }
+  ],
+  "name": "micro_stealth_completion_room",
+  "schema_version": 1,
+  "tilemap": {
+    "collision_layer_id": "platforms",
+    "layers": [
+      {
+        "name": "ground",
+        "z": -100
+      },
+      {
+        "name": "platforms",
+        "z": -50
+      }
+    ],
+    "path": "assets/tilemaps/demo_map.json"
+  },
+  "version": 1
+}

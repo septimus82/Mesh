@@ -1,0 +1,41 @@
+{
+  "description": "A scene with a perk shrine.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController"
+      ],
+      "id": "test_shrine_cli_player_200_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 200,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "OfferPerkChoice": {
+          "once": true,
+          "pool": [
+            "vitality_boost"
+          ],
+          "speaker": "Ancient Shrine",
+          "text": "Touch the shrine to receive a blessing."
+        }
+      },
+      "behaviours": [
+        "OfferPerkChoice"
+      ],
+      "id": "test_shrine_cli_shrine_400_300_0_0",
+      "name": "Shrine",
+      "sprite": "assets/placeholder.png",
+      "tag": "interactable",
+      "x": 400,
+      "y": 300
+    }
+  ],
+  "layers": [],
+  "name": "Test Shrine Cli",
+  "schema_version": 1,
+  "version": 1
+}

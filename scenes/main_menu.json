@@ -1,0 +1,27 @@
+{
+  "entities": [
+    {
+      "behaviours": [
+        "MainMenuBehaviour"
+      ],
+      "id": "main_menu_mainmenucontroller_0_0_0_0",
+      "layer": "ui",
+      "name": "MainMenuController",
+      "x": 0,
+      "y": 0
+    }
+  ],
+  "layers": [
+    {
+      "name": "ui"
+    }
+  ],
+  "name": "Main Menu",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "black",
+    "world_height": 600,
+    "world_width": 800
+  },
+  "version": 1
+}

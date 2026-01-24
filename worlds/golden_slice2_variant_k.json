@@ -1,0 +1,15 @@
+{
+  "id": "golden_slice2_variant_k",
+  "start_scene": "Hollowmere_outskirts",
+  "start_spawn": "default",
+  "scenes": {
+    "Hollowmere_outskirts": {
+      "path": "packs/core_regions/scenes/Hollowmere_outskirts_variant_k.json",
+      "label": "Hollowmere Outskirts (K2)",
+      "tags": [
+        "dungeon"
+      ]
+    }
+  }
+}
+

@@ -1,0 +1,599 @@
+{
+  "description": "Two-guard PatrolChase overlap demo (content-only slice).",
+  "settings": {
+    "lighting_shadows_mode": "hard"
+  },
+  "entities": [
+    {
+      "behaviours": [],
+      "id": "guard_patrol_chase_duo_demo_spawn_default_80_80_0_0",
+      "layer": "background",
+      "name": "default",
+      "spawn_id": "default",
+      "tag": "spawn_point",
+      "x": 80.0,
+      "y": 80.0
+    },
+    {
+      "id": "guard_patrol_chase_duo_demo_player_80_80_0_0",
+      "mesh_name": "Player",
+      "prefab_id": "player",
+      "tag": "player",
+      "x": 80.0,
+      "y": 80.0
+    },
+    {
+      "behaviour_config": {
+        "LightSource": {
+          "color": "#ffe7b0",
+          "enabled": true,
+          "flicker_enabled": false,
+          "mode": "soft",
+          "radius": 320.0
+        }
+      },
+      "behaviours": [
+        "LightSource"
+      ],
+      "id": "guard_patrol_chase_duo_demo_torch_224_160_0_0",
+      "layer": "background",
+      "mesh_name": "Torch",
+      "name": "Torch",
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 224.0,
+      "y": 160.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "forbid_flags": [
+            "demo.guard_patrol_duo_hint_seen"
+          ],
+          "once": true,
+          "payload_field": "zone",
+          "payload_value": "GuardPatrolDuoHintZone",
+          "set_flags": {
+            "demo.guard_patrol_duo_hint_seen": true
+          },
+          "toast": "Tip: two guards can overlap. Break line of sight to disengage safely.",
+          "toast_seconds": 4.0
+        },
+        "TriggerZone": {
+          "on_trigger": "demo_guard_patrol_duo_hint",
+          "trigger_radius": 24.0,
+          "trigger_target": "GuardA",
+          "zone_id": "GuardPatrolDuoHintZone"
+        }
+      },
+      "behaviours": [
+        "TriggerZone",
+        "SetGameStateOnEvent"
+      ],
+      "forbid_flags": [
+        "demo.guard_patrol_duo_hint_seen"
+      ],
+      "id": "guard_patrol_chase_duo_demo_hintzone_80_80_0_0",
+      "layer": "background",
+      "mesh_name": "GuardPatrolDuoHintZone",
+      "name": "GuardPatrolDuoHintZone",
+      "tag": "trigger",
+      "x": 80.0,
+      "y": 80.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "forbid_flags": [
+            "demo.guard_patrol_chase_duo_demo_spotted"
+          ],
+          "once": true,
+          "payload_field": "zone",
+          "payload_value": "GuardPatrolChaseDuoDemoSpottedZone",
+          "set_flags": {
+            "demo.guard_patrol_chase_duo_demo_spotted": true
+          },
+          "toast": "Spotted! Reset and try again.",
+          "toast_seconds": 3.0
+        },
+        "TriggerZone": {
+          "on_trigger": "demo_guard_patrol_duo_spotted",
+          "zone_id": "GuardPatrolChaseDuoDemoSpottedZone",
+          "trigger_radius": 24.0,
+          "trigger_target": "Player"
+        }
+      },
+      "behaviours": [
+        "TriggerZone",
+        "SetGameStateOnEvent"
+      ],
+      "forbid_flags": [
+        "demo.guard_patrol_chase_duo_demo_spotted"
+      ],
+      "id": "guard_patrol_chase_duo_demo_spottedzone_160_112_0_0",
+      "layer": "background",
+      "mesh_name": "GuardPatrolChaseDuoDemoSpottedZone",
+      "name": "GuardPatrolChaseDuoDemoSpottedZone",
+      "tag": "trigger",
+      "x": 160.0,
+      "y": 112.0
+    },
+    {
+      "behaviours": [],
+      "id": "guard_patrol_chase_duo_demo_waypoint_a1_80_80_0_0",
+      "layer": "background",
+      "name": "WaypointA1",
+      "sprite": "assets/placeholder.png",
+      "tag": "patrol_waypoint_a",
+      "x": 80.0,
+      "y": 80.0
+    },
+    {
+      "behaviours": [],
+      "id": "guard_patrol_chase_duo_demo_waypoint_a2_304_80_0_0",
+      "layer": "background",
+      "name": "WaypointA2",
+      "sprite": "assets/placeholder.png",
+      "tag": "patrol_waypoint_a",
+      "x": 304.0,
+      "y": 80.0
+    },
+    {
+      "behaviours": [],
+      "id": "guard_patrol_chase_duo_demo_waypoint_a3_304_208_0_0",
+      "layer": "background",
+      "name": "WaypointA3",
+      "sprite": "assets/placeholder.png",
+      "tag": "patrol_waypoint_a",
+      "x": 304.0,
+      "y": 208.0
+    },
+    {
+      "behaviours": [],
+      "id": "guard_patrol_chase_duo_demo_waypoint_b1_112_112_0_0",
+      "layer": "background",
+      "name": "WaypointB1",
+      "sprite": "assets/placeholder.png",
+      "tag": "patrol_waypoint_b",
+      "x": 112.0,
+      "y": 112.0
+    },
+    {
+      "behaviours": [],
+      "id": "guard_patrol_chase_duo_demo_waypoint_b2_240_112_0_0",
+      "layer": "background",
+      "name": "WaypointB2",
+      "sprite": "assets/placeholder.png",
+      "tag": "patrol_waypoint_b",
+      "x": 240.0,
+      "y": 112.0
+    },
+    {
+      "behaviours": [],
+      "id": "guard_patrol_chase_duo_demo_waypoint_b3_240_240_0_0",
+      "layer": "background",
+      "name": "WaypointB3",
+      "sprite": "assets/placeholder.png",
+      "tag": "patrol_waypoint_b",
+      "x": 240.0,
+      "y": 240.0
+    },
+    {
+      "behaviour_config": {
+        "PatrolChase": {
+          "acquire_radius_tiles": 8,
+          "cooldown_ticks": 30,
+          "give_up_ticks": 20,
+          "leash_radius_tiles": 12,
+          "los_required": true,
+          "patrol_speed": 80.0,
+          "patrol_tag": "patrol_waypoint_a",
+          "resume_waypoint_mode": "nearest",
+          "return_to_patrol": true,
+          "stop_range_tiles": 1,
+          "target_tag": "player"
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "PatrolChase"
+        }
+      ],
+      "id": "guard_patrol_chase_duo_demo_guard_a_80_80_0_0",
+      "mesh_name": "GuardA",
+      "name": "GuardA",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [
+        "npc",
+        "guard"
+      ],
+      "x": 80.0,
+      "y": 80.0
+    },
+    {
+      "behaviour_config": {
+        "PatrolChase": {
+          "acquire_radius_tiles": 8,
+          "cooldown_ticks": 30,
+          "give_up_ticks": 20,
+          "leash_radius_tiles": 12,
+          "los_required": true,
+          "patrol_speed": 80.0,
+          "patrol_tag": "patrol_waypoint_b",
+          "resume_waypoint_mode": "nearest",
+          "return_to_patrol": true,
+          "stop_range_tiles": 1,
+          "target_tag": "player"
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "PatrolChase"
+        }
+      ],
+      "id": "guard_patrol_chase_duo_demo_guard_b_112_112_0_0",
+      "mesh_name": "GuardB",
+      "name": "GuardB",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "tags": [
+        "npc",
+        "guard"
+      ],
+      "x": 112.0,
+      "y": 112.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "complete_guard_patrol_duo_demo",
+                    "text": "Pull lever"
+                  }
+                ],
+                "speaker": "Lever",
+                "text": "A second lever. Pull it to complete the duo guard tutorial."
+              }
+            },
+            "speaker": "Lever",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "forbid_flags": [
+        "demo.guard_patrol_chase_duo_demo_complete",
+        "demo.guard_patrol_chase_duo_demo_spotted"
+      ],
+      "id": "guard_patrol_chase_duo_demo_objectivelever_336_208_0_0",
+      "mesh_name": "ObjectiveLever",
+      "name": "ObjectiveLever",
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 336.0,
+      "y": 208.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "reset_guard_patrol_duo_demo",
+                    "text": "Reset"
+                  }
+                ],
+                "speaker": "Reset",
+                "text": "Reset the demo and try again."
+              }
+            },
+            "speaker": "Reset",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        },
+        "SetGameStateOnEvent": {
+          "clear_flags": [
+            "demo.guard_patrol_chase_duo_demo_spotted"
+          ],
+          "event_type": "dialogue_choice",
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "reset_guard_patrol_duo_demo",
+          "require_flags": [
+            "demo.guard_patrol_chase_duo_demo_spotted"
+          ]
+        },
+        "SceneTransition": {
+          "allow_interact": false,
+          "event_field": "choice_id",
+          "event_type": "dialogue_choice",
+          "event_value": "reset_guard_patrol_duo_demo",
+          "spawn_id": "default",
+          "target_scene": "scenes/guard_patrol_chase_duo_demo.json"
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "SetGameStateOnEvent",
+        "SceneTransition"
+      ],
+      "id": "guard_patrol_chase_duo_demo_resetbutton_112_80_0_0",
+      "layer": "background",
+      "mesh_name": "ResetButton",
+      "name": "ResetButton",
+      "require_flags": [
+        "demo.guard_patrol_chase_duo_demo_spotted"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 112.0,
+      "y": 80.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "dialogue_choice",
+          "forbid_flags": [
+            "demo.guard_patrol_chase_duo_demo_complete"
+          ],
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "complete_guard_patrol_duo_demo",
+          "set_flags": {
+            "demo.guard_patrol_chase_duo_demo_complete": true
+          },
+          "toast": "Objective complete: Cleared the duo guard patrol demo",
+          "toast_seconds": 3.0
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "id": "guard_patrol_chase_duo_demo_choiceflag_demo_guard_patrol_chase_duo_demo_complete_complete_guard_patrol_duo_demo_0_0",
+      "layer": "background",
+      "name": "GuardPatrolDuoDemoCompleteHook",
+      "x": 16.0,
+      "y": 24.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "open_guard_patrol_duo_demo_chest",
+                    "text": "Open chest"
+                  }
+                ],
+                "speaker": "Chest",
+                "text": "A small chest. It only appears after you complete the duo tutorial."
+              }
+            },
+            "speaker": "Chest",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "forbid_flags": [
+        "demo.guard_patrol_chase_duo_demo_reward_claimed"
+      ],
+      "id": "guard_patrol_chase_duo_demo_rewardchest_112_176_0_0",
+      "mesh_name": "RewardChest",
+      "name": "RewardChest",
+      "require_flags": [
+        "demo.guard_patrol_chase_duo_demo_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 112.0,
+      "y": 176.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "dialogue_choice",
+          "forbid_flags": [
+            "demo.guard_patrol_chase_duo_demo_reward_claimed"
+          ],
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "open_guard_patrol_duo_demo_chest",
+          "require_flags": [
+            "demo.guard_patrol_chase_duo_demo_complete"
+          ],
+          "set_flags": {
+            "demo.guard_patrol_chase_duo_demo_reward_claimed": true
+          },
+          "toast": "Reward claimed!",
+          "toast_seconds": 3.0
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "id": "guard_patrol_chase_duo_demo_choiceflag_demo_guard_patrol_chase_duo_demo_reward_claimed_open_guard_patrol_duo_demo_chest_0_0",
+      "layer": "background",
+      "name": "GuardPatrolDuoDemoRewardHook",
+      "x": 24.0,
+      "y": 24.0
+    },
+    {
+      "behaviours": [],
+      "id": "guard_patrol_chase_duo_demo_rewardclaimed_144_176_0_0",
+      "layer": "background",
+      "mesh_name": "RewardClaimed",
+      "name": "RewardClaimed",
+      "require_flags": [
+        "demo.guard_patrol_chase_duo_demo_reward_claimed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 144.0,
+      "y": 176.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "upper_return",
+          "target_scene": "scenes/upper_hall.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "guard_patrol_chase_duo_demo_returndoor_96_80_0_0",
+      "name": "GuardPatrolChaseDuoDemoReturnDoor",
+      "x": 96.0,
+      "y": 80.0
+    }
+  ],
+  "name": "guard_patrol_chase_duo_demo",
+  "schema_version": 1,
+  "tilemap": {
+    "collision_layer_id": "platforms",
+    "layers": [
+      {
+        "name": "ground",
+        "z": -100
+      },
+      {
+        "name": "platforms",
+        "z": -50
+      }
+    ],
+    "overrides": {
+      "layers": {
+        "platforms": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "path": "assets/tilemaps/demo_map.json"
+  },
+  "version": 1
+}

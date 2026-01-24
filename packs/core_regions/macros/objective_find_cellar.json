@@ -1,0 +1,24 @@
+{
+  "defaults": {
+    "anchor": "player",
+    "forbid_flags": [
+      "demo.reached_interior"
+    ],
+    "radius": 48,
+    "require_flags": [
+      "demo.objective_started"
+    ],
+    "set_flag": "demo.reached_interior",
+    "toast": "Objective: Find the cellar",
+    "toast_seconds": 2.0,
+    "zone_id": "demo_reached_interior_zone"
+  },
+  "id": "objective_find_cellar",
+  "macro_id": "macro.objective_zone",
+  "metadata": {
+    "author": "core_regions",
+    "source": "handwritten"
+  },
+  "type": "macro"
+}
+

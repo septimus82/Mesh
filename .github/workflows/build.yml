@@ -1,0 +1,317 @@
+name: Build Mesh Engine
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  fast-headless:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .[dev]
+    - name: Fast headless gate
+      env:
+        MESH_TEST_BLOCK_ARCADE: "1"
+      run: |
+        python -m compileall -q engine mesh_cli tooling tests
+        python -m pytest -q -W error --strict-markers -m "fast"
+    - name: Stage pytest fast logs
+      if: failure()
+      run: |
+        New-Item -ItemType Directory -Force -Path artifacts\pytest_logs | Out-Null
+        if (Test-Path artifacts\pytest_fast.log) { Copy-Item artifacts\pytest_fast.log artifacts\pytest_logs\ }
+        if (Test-Path .mesh\metrics\pytest_durations_fast.json) { Copy-Item .mesh\metrics\pytest_durations_fast.json artifacts\pytest_logs\ }
+    - name: Upload pytest fast logs
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-logs-fast-${{ matrix.python-version }}
+        path: artifacts/pytest_logs
+
+  integration-gl:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .[dev]
+    - name: Tier1 (fast + integration + verify-all)
+      run: |
+        python -m tooling.test_tiers tier1
+    - name: Stage pytest tier1 log
+      if: failure()
+      run: |
+        New-Item -ItemType Directory -Force -Path artifacts\pytest_logs | Out-Null
+        if (Test-Path artifacts\pytest_tier1.log) { Copy-Item artifacts\pytest_tier1.log artifacts\pytest_logs\ }
+    - name: Upload pytest tier1 log
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-logs-tier1-${{ matrix.python-version }}
+        path: artifacts/pytest_logs
+
+  full-suite:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .[dev]
+    - name: Full suite (pytest_full)
+      run: |
+        python -m tooling.pytest_full
+    - name: Stage pytest full log
+      if: failure()
+      run: |
+        New-Item -ItemType Directory -Force -Path artifacts\pytest_logs | Out-Null
+        if (Test-Path artifacts\pytest_full.log) { Copy-Item artifacts\pytest_full.log artifacts\pytest_logs\ }
+    - name: Upload pytest full log
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-logs-full-${{ matrix.python-version }}
+        path: artifacts/pytest_logs
+    - name: Upload pytest_full log
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-full-${{ matrix.python-version }}
+        path: artifacts/pytest_full.log
+
+  check:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .[dev]
+    - name: Headless tooling gate
+      run: |
+        python -m pytest -q tests/test_mesh_cli_headless_imports.py
+        python -m mesh_cli verify-all --artifacts artifacts
+    - name: Release Contract (asset audit)
+      run: |
+        New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+        python -m mesh_cli release-contract --repo-root . --artifacts artifacts --report artifacts/release_report.json
+    - name: Upload asset audit artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: asset-audit-${{ matrix.python-version }}
+        path: |
+          artifacts/asset_audit.json
+          artifacts/release_report.json
+    - name: Content Contract (strict)
+      timeout-minutes: 10
+      run: |
+        New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+        python -m mesh_cli content-contract --with-prefabs --with-behaviours --log artifacts/content_contract.log
+    - name: Upload content contract log
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: content-contract-${{ matrix.python-version }}
+        path: artifacts/content_contract.log
+    - name: Run Gates
+      run: |
+        python -m pytest -q -W error
+        python -m mesh_cli verify-demo
+        python -m mesh_cli verify-replays
+        python -m mesh_cli verify-strict
+    - name: Stage pytest tier2 log
+      if: failure()
+      run: |
+        New-Item -ItemType Directory -Force -Path artifacts\pytest_logs | Out-Null
+        if (Test-Path artifacts\pytest_tier2.log) { Copy-Item artifacts\pytest_tier2.log artifacts\pytest_logs\ }
+    - name: Upload pytest tier2 log
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-logs-tier2-${{ matrix.python-version }}
+        path: artifacts/pytest_logs
+    - name: Perf run (coarse gate)
+      run: |
+        New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+        python -m mesh_cli perf-run --replay replays/00_smoke_dump_state.json --frames 300 --warmup 30 --out artifacts/perf.json --headless --fail-p95-frame-ms 5000 --fail-max-frame-ms 10000
+    - name: Upload perf report
+      uses: actions/upload-artifact@v3
+      with:
+        name: perf-report-${{ matrix.python-version }}
+        path: artifacts/perf.json
+
+  canary:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .[dev]
+    - name: Canary: minipack shippable
+      run: |
+        python -m pytest -q tests/test_minipack_fixture_is_shippable.py
+    - name: Canary: release contract
+      run: |
+        New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+        python -m mesh_cli release-contract --repo-root . --artifacts artifacts --report artifacts/release_report.json
+    - name: Canary: replay hash determinism
+      run: |
+        python -m mesh_cli replay-hash --replay replays/00_smoke_dump_state.json --frames 300 --warmup 30 --out artifacts/canary/replay_hash.json --expect replays/00_smoke_dump_state.hash.json
+    - name: Upload canary artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: canary-${{ matrix.python-version }}
+        path: artifacts/canary
+    - name: Upload canary asset audit artifacts
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: canary-asset-audit-${{ matrix.python-version }}
+        path: |
+          artifacts/asset_audit.json
+          artifacts/release_report.json
+
+  integrity:
+    runs-on: windows-latest
+    needs: check
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        cache: 'pip'
+    - name: Install build tooling
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install build
+    - name: Build wheel
+      run: |
+        python -m build --wheel
+    - name: Install wheel into clean venv and run verify-all
+      run: |
+        $work = Join-Path $env:RUNNER_TEMP "mesh_wheel_smoke"
+        $venv = Join-Path $work ".venv"
+        $art = Join-Path $work "artifacts"
+        New-Item -ItemType Directory -Force -Path $work | Out-Null
+        python -m venv $venv
+        & (Join-Path $venv "Scripts/python.exe") -m pip install --upgrade pip
+        & (Join-Path $venv "Scripts/python.exe") -m pip install (Get-ChildItem dist -Filter "*.whl" | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
+        & (Join-Path $venv "Scripts/python.exe") -m pip install pytest
+        Set-Location $work
+        $env:MESH_REPO_ROOT = $env:GITHUB_WORKSPACE
+        & (Join-Path $venv "Scripts/python.exe") -m mesh_cli verify-all --artifacts $art
+    - name: Validate JSON artifacts
+      run: |
+        $work = Join-Path $env:RUNNER_TEMP "mesh_wheel_smoke"
+        $venv = Join-Path $work ".venv"
+        $art = Join-Path $work "artifacts"
+        & (Join-Path $venv "Scripts/python.exe") -c @'
+import json
+from pathlib import Path
+
+art = Path(r"""$art""")
+required = {
+    "verify_all_summary.json": ["ok", "steps", "artifacts"],
+    "doctor_assets.json": ["ok", "errors", "warnings", "fixes"],
+    "scenes_index.json": ["ok", "scenes"],
+    "worlds_index.json": ["ok", "worlds"],
+    "replays_summary.json": ["failed", "passed", "total", "results"],
+}
+
+missing = [name for name in required if not (art / name).exists()]
+if missing:
+    raise SystemExit(f"missing artifacts: {', '.join(missing)}")
+
+for name, keys in required.items():
+    data = json.loads((art / name).read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise SystemExit(f"{name}: expected JSON object, got {type(data).__name__}")
+    for k in keys:
+        if k not in data:
+            raise SystemExit(f"{name}: missing key {k!r}")
+print("ok")
+'@
+
+  release:
+    needs: check
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        cache: 'pip'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install .[dev]
+    - name: Run Distribution Build
+      run: |
+        mesh dist --profile release --world worlds/main_world.json
+    - name: Verify Goldens Strict
+      run: |
+        mesh replay-goldens --strict --world worlds/main_world.json
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: mesh-dist
+        path: dist/

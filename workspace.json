@@ -1,0 +1,23 @@
+{
+  "asset_browser_filter": "",
+  "asset_browser_kind": "All",
+  "asset_browser_open": false,
+  "command_palette_open": false,
+  "dock_left_w": 320,
+  "dock_right_w": 321,
+  "entity_panels_open": false,
+  "ghost_originals_alpha": 90,
+  "ghost_originals_dim_scale": 0.65,
+  "ghost_originals_enabled": true,
+  "last_camera_center": [
+    439.35188097312715,
+    648.1776208901404
+  ],
+  "last_scene_id": null,
+  "left_dock_tab": "Outliner",
+  "light_occluder_tool": "light",
+  "outliner_focus": "outliner",
+  "right_dock_tab": "Inspector",
+  "scene_browser_open": false,
+  "scene_switcher_open": false
+}

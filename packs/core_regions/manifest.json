@@ -1,0 +1,9 @@
+{
+  "id": "core_regions",
+  "name": "Core Regions",
+  "version": "0.1.0",
+  "type": "dlc",
+  "wip": false,
+  "overrides": [],
+  "requires": []
+}

@@ -1,0 +1,2953 @@
+{
+  "arguments": [],
+  "description": "Mesh Engine CLI",
+  "subcommands": {
+    "add-puzzle": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "door_x",
+          "help": "Door X coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--door-x"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "door_y",
+          "help": "Door Y coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--door-y"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "gold",
+          "help": "Reward gold amount",
+          "nargs": null,
+          "option_strings": [
+            "--gold"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "item",
+          "help": "Reward item ID",
+          "nargs": null,
+          "option_strings": [
+            "--item"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "prefix",
+          "help": "ID prefix for puzzle entities",
+          "nargs": null,
+          "option_strings": [
+            "--prefix"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "reward_x",
+          "help": "Reward X coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--reward-x"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "reward_y",
+          "help": "Reward Y coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--reward-y"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "scene_path",
+          "help": "Path to scene file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "switch_x",
+          "help": "Switch X coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--switch-x"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "switch_y",
+          "help": "Switch Y coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--switch-y"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py add-puzzle [-h] [--prefix PREFIX] [--switch-x SWITCH_X] [--switch-y SWITCH_Y] [--door-x DOOR_X] [--door-y DOOR_Y] [--reward-x REWARD_X] [--reward-y REWARD_Y] [--item ITEM] [--gold GOLD] scene_path"
+    },
+    "ai-apply": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "job_path",
+          "help": "Path to job file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py ai-apply [-h] job_path"
+    },
+    "ai-audit": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "json",
+          "help": "Output as JSON",
+          "nargs": null,
+          "option_strings": [
+            "--json"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py ai-audit [-h] [--json]"
+    },
+    "ai-bundle": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "goal",
+          "help": "Goal description",
+          "nargs": null,
+          "option_strings": [
+            "--goal"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "out",
+          "help": "Output file",
+          "nargs": null,
+          "option_strings": [
+            "--out"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "scenes",
+          "help": "Scene paths",
+          "nargs": "+",
+          "option_strings": [
+            "--scenes"
+          ],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py ai-bundle [-h] --scenes SCENES [SCENES ...] --goal GOAL --out OUT"
+    },
+    "ai-export-context": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "out",
+          "help": "Output JSON file path",
+          "nargs": null,
+          "option_strings": [
+            "--out"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "scene_paths",
+          "help": "Paths to scene files",
+          "nargs": "+",
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py ai-export-context [-h] [--out OUT] scene_paths [scene_paths ...]"
+    },
+    "ai-generate-plan": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "out",
+          "help": "Output file",
+          "nargs": null,
+          "option_strings": [
+            "--out"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "prompt",
+          "help": "Prompt text",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py ai-generate-plan [-h] --out OUT prompt"
+    },
+    "ai-history": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "json",
+          "help": "Output as JSON",
+          "nargs": null,
+          "option_strings": [
+            "--json"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "20",
+          "dest": "limit",
+          "help": "Limit number of entries",
+          "nargs": null,
+          "option_strings": [
+            "--limit"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "plan",
+          "help": "Filter by plan path",
+          "nargs": null,
+          "option_strings": [
+            "--plan"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "scene",
+          "help": "Filter by scene ID",
+          "nargs": null,
+          "option_strings": [
+            "--scene"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py ai-history [-h] [--scene SCENE] [--plan PLAN] [--limit LIMIT] [--json]"
+    },
+    "apply-plan": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "ai_safe",
+          "help": "Run AI safety checks (lint-ai + test-ai) before applying",
+          "nargs": null,
+          "option_strings": [
+            "--ai-safe"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "dry_run",
+          "help": "Dry run",
+          "nargs": null,
+          "option_strings": [
+            "--dry-run"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "no_lint",
+          "help": "Skip linting",
+          "nargs": null,
+          "option_strings": [
+            "--no-lint"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "plan_path",
+          "help": "Path to plan file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "run_tests",
+          "help": "Run tests after apply",
+          "nargs": null,
+          "option_strings": [
+            "--run-tests"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py apply-plan [-h] [--no-lint] [--dry-run] [--run-tests] [--ai-safe] plan_path"
+    },
+    "audit-content": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "allow_packs",
+          "help": "Comma-separated list of pack IDs to allow unused assets from",
+          "nargs": null,
+          "option_strings": [
+            "--allow-packs"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "baseline",
+          "help": "Path to baseline lockfile for delta comparison",
+          "nargs": null,
+          "option_strings": [
+            "--baseline"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "fail_on_unused",
+          "help": "Fail if any unused content is found",
+          "nargs": null,
+          "option_strings": [
+            "--fail-on-unused"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "ignore",
+          "help": "Comma-separated list of glob patterns to ignore",
+          "nargs": null,
+          "option_strings": [
+            "--ignore"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "json",
+          "help": "Output JSON report",
+          "nargs": null,
+          "option_strings": [
+            "--json"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_assets",
+          "help": "Max allowed unused assets",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-assets"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_audio",
+          "help": "Max allowed unused audio files",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-audio"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_data",
+          "help": "Max allowed unused data files",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-data"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_delta",
+          "help": "Max allowed increase in unused assets vs baseline",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-delta"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_items",
+          "help": "Max allowed unused items",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-items"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_prefabs",
+          "help": "Max allowed unused prefabs",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-prefabs"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_quests",
+          "help": "Max allowed unused quests",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-quests"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_textures",
+          "help": "Max allowed unused textures",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-textures"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "output",
+          "help": "Output file for JSON report",
+          "nargs": null,
+          "option_strings": [
+            "--output"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "world_path",
+          "help": "Path to world file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py audit-content [-h] [--json] [--output OUTPUT] [--ignore IGNORE] [--allow-packs ALLOW_PACKS] [--fail-on-unused] [--max-unused-assets MAX_UNUSED_ASSETS] [--max-unused-prefabs MAX_UNUSED_PREFABS] [--max-unused-items MAX_UNUSED_ITEMS] [--max-unused-quests MAX_UNUSED_QUESTS] [--max-unused-textures MAX_UNUSED_TEXTURES] [--max-unused-audio MAX_UNUSED_AUDIO] [--max-unused-data MAX_UNUSED_DATA] [--baseline BASELINE] [--max-unused-delta MAX_UNUSED_DELTA] world_path"
+    },
+    "audit-trend": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "json",
+          "help": "Output JSON",
+          "nargs": null,
+          "option_strings": [
+            "--json"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "locks",
+          "help": "Comma-separated list of lockfiles or patterns",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py audit-trend [-h] [--json] locks"
+    },
+    "auto-wire-transitions": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "apply",
+          "help": "Apply changes",
+          "nargs": null,
+          "option_strings": [
+            "--apply"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "world_path",
+          "help": "World file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py auto-wire-transitions [-h] [--apply] world_path"
+    },
+    "build-demo": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "diff_from",
+          "help": "Path to old lockfile for changelog generation",
+          "nargs": null,
+          "option_strings": [
+            "--diff-from"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "strict_audit",
+          "help": "Fail build if audit thresholds are exceeded",
+          "nargs": null,
+          "option_strings": [
+            "--strict-audit"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py build-demo [-h] [--diff-from DIFF_FROM] [--strict-audit]"
+    },
+    "changelog": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "new_lock",
+          "help": "Path to new lockfile",
+          "nargs": null,
+          "option_strings": [
+            "--to"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "old_lock",
+          "help": "Path to old lockfile",
+          "nargs": null,
+          "option_strings": [
+            "--from"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "out",
+          "help": "Output markdown file",
+          "nargs": null,
+          "option_strings": [
+            "--out"
+          ],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py changelog [-h] --from OLD_LOCK --to NEW_LOCK --out OUT"
+    },
+    "check": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "frozen",
+          "help": "Fail if content packs do not match content.lock.json",
+          "nargs": null,
+          "option_strings": [
+            "--frozen"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "full",
+          "help": "Run full test suite",
+          "nargs": null,
+          "option_strings": [
+            "--full"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "replay_trace",
+          "help": "Optional trace file to replay",
+          "nargs": null,
+          "option_strings": [
+            "--replay-trace"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "worlds/main_world.json",
+          "dest": "world",
+          "help": "World file to validate",
+          "nargs": null,
+          "option_strings": [
+            "--world"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py check [-h] [--world WORLD] [--full] [--replay-trace REPLAY_TRACE] [--frozen]"
+    },
+    "cli-smoke": {
+      "arguments": [],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py cli-smoke [-h]"
+    },
+    "cli-snapshot": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "out",
+          "help": "Output JSON file path",
+          "nargs": null,
+          "option_strings": [
+            "--out"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "verify",
+          "help": "Verify against existing snapshot",
+          "nargs": null,
+          "option_strings": [
+            "--verify"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py cli-snapshot [-h] [--out OUT] [--verify]"
+    },
+    "demo": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "overlay",
+          "help": "Show debug overlay",
+          "nargs": null,
+          "option_strings": [
+            "--overlay"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "world",
+          "help": "World file to load",
+          "nargs": null,
+          "option_strings": [
+            "--world"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py demo [-h] [--world WORLD] [--overlay]"
+    },
+    "diff-content": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "json",
+          "help": "Output JSON",
+          "nargs": null,
+          "option_strings": [
+            "--json"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "new_lock",
+          "help": "Path to new lockfile (default: current state)",
+          "nargs": null,
+          "option_strings": [
+            "--to"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "old_lock",
+          "help": "Path to old lockfile",
+          "nargs": null,
+          "option_strings": [
+            "--from"
+          ],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py diff-content [-h] --from OLD_LOCK [--to NEW_LOCK] [--json]"
+    },
+    "dist": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "out",
+          "help": "Output directory",
+          "nargs": null,
+          "option_strings": [
+            "--out"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "profile",
+          "help": "Release profile",
+          "nargs": null,
+          "option_strings": [
+            "--profile"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "world",
+          "help": "World file to build",
+          "nargs": null,
+          "option_strings": [
+            "--world"
+          ],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py dist [-h] --profile PROFILE --world WORLD [--out OUT]"
+    },
+    "docs": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "verify",
+          "help": "Verify docs are up to date",
+          "nargs": null,
+          "option_strings": [
+            "--verify"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py docs [-h] [--verify]"
+    },
+    "doctor": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "json",
+          "help": "Output JSON",
+          "nargs": null,
+          "option_strings": [
+            "--json"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py doctor [-h] [--json]"
+    },
+    "drift-check": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "json",
+          "help": "Output JSON",
+          "nargs": null,
+          "option_strings": [
+            "--json"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "new_path",
+          "help": "New report or file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "old_path",
+          "help": "Baseline report or file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "out",
+          "help": "Output file path",
+          "nargs": null,
+          "option_strings": [
+            "--out"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "preset",
+          "help": "Preset name (strict, standard, lenient)",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py drift-check [-h] [--json] [--out OUT] preset old_path new_path"
+    },
+    "edit-scene": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "add_transition",
+          "help": "Target scene for new transition",
+          "nargs": null,
+          "option_strings": [
+            "--add-transition"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": [
+            "true",
+            "false"
+          ],
+          "default": "None",
+          "dest": "allow_elites",
+          "help": "Set allow elites",
+          "nargs": null,
+          "option_strings": [
+            "--allow-elites"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "at",
+          "help": "Coordinates x,y",
+          "nargs": null,
+          "option_strings": [
+            "--at"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "boss_reserve",
+          "help": "Set boss budget reserve",
+          "nargs": null,
+          "option_strings": [
+            "--boss-reserve"
+          ],
+          "required": false,
+          "type": "<class 'float'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "budget",
+          "help": "Set encounter budget",
+          "nargs": null,
+          "option_strings": [
+            "--budget"
+          ],
+          "required": false,
+          "type": "<class 'float'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "elite_cap",
+          "help": "Set elite cap",
+          "nargs": null,
+          "option_strings": [
+            "--elite-cap"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "path",
+          "help": "Path to scene file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "spawn_id",
+          "help": "Spawn ID in target scene",
+          "nargs": null,
+          "option_strings": [
+            "--spawn-id"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py edit-scene [-h] [--budget BUDGET] [--elite-cap ELITE_CAP] [--allow-elites {true,false}] [--boss-reserve BOSS_RESERVE] [--add-transition ADD_TRANSITION] [--at AT] [--spawn-id SPAWN_ID] path"
+    },
+    "encounter-report": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "difficulty",
+          "help": "Comma-separated list of difficulties (default: easy,normal,hard)",
+          "nargs": null,
+          "option_strings": [
+            "--difficulty"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "fail_on_overrun",
+          "help": "Fail if any cost overrun increases",
+          "nargs": null,
+          "option_strings": [
+            "--fail-on-overrun"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "json",
+          "help": "Output JSON to stdout",
+          "nargs": null,
+          "option_strings": [
+            "--json"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_cost_overrun",
+          "help": "Fail if cost overrun exceeds this",
+          "nargs": null,
+          "option_strings": [
+            "--max-cost-overrun"
+          ],
+          "required": false,
+          "type": "<class 'float'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_elite_delta",
+          "help": "Fail if elite count delta exceeds this",
+          "nargs": null,
+          "option_strings": [
+            "--max-elite-delta"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_spawn_delta",
+          "help": "Fail if spawn count delta exceeds this",
+          "nargs": null,
+          "option_strings": [
+            "--max-spawn-delta"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "only_dungeons",
+          "help": "Only process dungeon scenes",
+          "nargs": null,
+          "option_strings": [
+            "--only-dungeons"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "out",
+          "help": "Output file path",
+          "nargs": null,
+          "option_strings": [
+            "--out"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "path",
+          "help": "World file, scene file, directory, or 'diff <old> <new>'",
+          "nargs": "+",
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "themes",
+          "help": "Comma-separated list of themes to filter",
+          "nargs": null,
+          "option_strings": [
+            "--themes"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py encounter-report [-h] [--json] [--out OUT] [--themes THEMES] [--difficulty DIFFICULTY] [--only-dungeons] [--max-elite-delta MAX_ELITE_DELTA] [--max-spawn-delta MAX_SPAWN_DELTA] [--max-cost-overrun MAX_COST_OVERRUN] [--fail-on-overrun] path [path ...]"
+    },
+    "index": {
+      "arguments": [],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py index [-h]"
+    },
+    "index-content": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "refresh",
+          "help": "Force refresh",
+          "nargs": null,
+          "option_strings": [
+            "--refresh"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py index-content [-h] [--refresh]"
+    },
+    "init-content-pack": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "pack_id",
+          "help": "ID of the new pack",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": [
+            "mod",
+            "dlc",
+            "demo",
+            "test"
+          ],
+          "default": "mod",
+          "dest": "type",
+          "help": "Pack type",
+          "nargs": null,
+          "option_strings": [
+            "--type"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "wip",
+          "help": "Mark pack as Work In Progress",
+          "nargs": null,
+          "option_strings": [
+            "--wip"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py init-content-pack [-h] [--type {mod,dlc,demo,test}] [--wip] pack_id"
+    },
+    "list-overrides": {
+      "arguments": [],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py list-overrides [-h]"
+    },
+    "lock-packs": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "out",
+          "help": "Output path (default: content.lock.json)",
+          "nargs": null,
+          "option_strings": [
+            "--out"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "update_audit_snapshot",
+          "help": "Only update the audit snapshot in existing lockfile",
+          "nargs": null,
+          "option_strings": [
+            "--update-audit-snapshot"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py lock-packs [-h] [--out OUT] [--update-audit-snapshot]"
+    },
+    "migrate": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "path",
+          "help": "Path to content",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "write",
+          "help": "Write changes to file",
+          "nargs": null,
+          "option_strings": [
+            "--write"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py migrate [-h] [--write] path"
+    },
+    "new-behaviour": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "name",
+          "help": "Behaviour name",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py new-behaviour [-h] name"
+    },
+    "new-npc": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "into",
+          "help": "Target scene",
+          "nargs": null,
+          "option_strings": [
+            "--into"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "role",
+          "help": "NPC role",
+          "nargs": null,
+          "option_strings": [
+            "--role"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "x",
+          "help": "X coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--x"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "y",
+          "help": "Y coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--y"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py new-npc [-h] --role ROLE --into INTO [--x X] [--y Y]"
+    },
+    "new-prefab": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "entity_name",
+          "help": "Entity to extract",
+          "nargs": null,
+          "option_strings": [
+            "--entity-name"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "from_scene",
+          "help": "Source scene",
+          "nargs": null,
+          "option_strings": [
+            "--from-scene"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "prefab_id",
+          "help": "ID for new prefab",
+          "nargs": null,
+          "option_strings": [
+            "--prefab-id"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "remove_source",
+          "help": "Remove original entity",
+          "nargs": null,
+          "option_strings": [
+            "--remove-source"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py new-prefab [-h] --prefab-id PREFAB_ID --from-scene FROM_SCENE --entity-name ENTITY_NAME [--remove-source]"
+    },
+    "new-quest": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "name",
+          "help": "Quest ID",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "target",
+          "help": "Target entity/item",
+          "nargs": null,
+          "option_strings": [
+            "--target"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py new-quest [-h] [--target TARGET] name"
+    },
+    "new-scene": {
+      "arguments": [
+        {
+          "choices": [
+            "standard",
+            "bossed",
+            "gauntlet"
+          ],
+          "default": "None",
+          "dest": "encounter_layout",
+          "help": "Encounter layout preset",
+          "nargs": null,
+          "option_strings": [
+            "--encounter-layout"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "name",
+          "help": "Scene name",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "empty",
+          "dest": "template",
+          "help": "Scene template",
+          "nargs": null,
+          "option_strings": [
+            "--template"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py new-scene [-h] [--template TEMPLATE] [--encounter-layout {standard,bossed,gauntlet}] name"
+    },
+    "packs": {
+      "arguments": [],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py packs [-h]"
+    },
+    "place-npc": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "into",
+          "help": "Target scene",
+          "nargs": null,
+          "option_strings": [
+            "--into"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "role",
+          "help": "NPC role",
+          "nargs": null,
+          "option_strings": [
+            "--role"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "x",
+          "help": "X coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--x"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "y",
+          "help": "Y coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--y"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py place-npc [-h] --role ROLE --into INTO [--x X] [--y Y]"
+    },
+    "place-prefab": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "as_placeholder",
+          "help": "Use placeholder sprite",
+          "nargs": null,
+          "option_strings": [
+            "--as-placeholder"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "from_encounter_set",
+          "help": "Pick random prefab from encounter set",
+          "nargs": null,
+          "option_strings": [
+            "--from-encounter-set"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "into",
+          "help": "Target scene",
+          "nargs": null,
+          "option_strings": [
+            "--into"
+          ],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "prefab_id",
+          "help": "Prefab ID",
+          "nargs": null,
+          "option_strings": [
+            "--prefab-id"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "x",
+          "help": "X coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--x"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "0",
+          "dest": "y",
+          "help": "Y coordinate",
+          "nargs": null,
+          "option_strings": [
+            "--y"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py place-prefab [-h] [--prefab-id PREFAB_ID] --into INTO [--x X] [--y Y] [--from-encounter-set FROM_ENCOUNTER_SET] [--as-placeholder]"
+    },
+    "plan": {
+      "arguments": [],
+      "description": null,
+      "subcommands": {
+        "diff": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": "False",
+              "dest": "json",
+              "help": "Output JSON",
+              "nargs": null,
+              "option_strings": [
+                "--json"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "plan_a",
+              "help": "First plan",
+              "nargs": null,
+              "option_strings": [],
+              "required": true,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "plan_b",
+              "help": "Second plan",
+              "nargs": null,
+              "option_strings": [],
+              "required": true,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: mesh_cli.py plan diff [-h] [--json] plan_a plan_b"
+        },
+        "history": {
+          "arguments": [],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: mesh_cli.py plan history [-h]"
+        },
+        "lint": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": "False",
+              "dest": "json",
+              "help": "Output JSON",
+              "nargs": null,
+              "option_strings": [
+                "--json"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "plan_path",
+              "help": "Path to plan file",
+              "nargs": null,
+              "option_strings": [],
+              "required": true,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: mesh_cli.py plan lint [-h] [--json] plan_path"
+        },
+        "lint-ai": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": "False",
+              "dest": "json",
+              "help": "Output JSON",
+              "nargs": null,
+              "option_strings": [
+                "--json"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "plan_path",
+              "help": "Path to plan file",
+              "nargs": null,
+              "option_strings": [],
+              "required": true,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: mesh_cli.py plan lint-ai [-h] [--json] plan_path"
+        },
+        "schema": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "ai_out",
+              "help": "Output AI-focused schema JSON file path",
+              "nargs": null,
+              "option_strings": [
+                "--ai-out"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "out",
+              "help": "Output JSON file path",
+              "nargs": null,
+              "option_strings": [
+                "--out"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "False",
+              "dest": "verify",
+              "help": "Verify against existing snapshot",
+              "nargs": null,
+              "option_strings": [
+                "--verify"
+              ],
+              "required": false,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: mesh_cli.py plan schema [-h] [--out OUT] [--ai-out AI_OUT] [--verify]"
+        },
+        "show": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "id",
+              "help": "History ID",
+              "nargs": null,
+              "option_strings": [],
+              "required": true,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: mesh_cli.py plan show [-h] id"
+        },
+        "summarize": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "plan_path",
+              "help": "Path to plan file",
+              "nargs": null,
+              "option_strings": [],
+              "required": true,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: mesh_cli.py plan summarize [-h] plan_path"
+        },
+        "test": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "junit",
+              "help": "Output JUnit report",
+              "nargs": null,
+              "option_strings": [
+                "--junit"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "min_coverage",
+              "help": "Minimum coverage ratio",
+              "nargs": null,
+              "option_strings": [
+                "--min-coverage"
+              ],
+              "required": false,
+              "type": "<class 'float'>"
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "out",
+              "help": "Output report path",
+              "nargs": null,
+              "option_strings": [
+                "--out"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "plan_path",
+              "help": "Path to plan file",
+              "nargs": null,
+              "option_strings": [],
+              "required": true,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "False",
+              "dest": "sandbox",
+              "help": "Run in sandbox",
+              "nargs": null,
+              "option_strings": [
+                "--sandbox"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "False",
+              "dest": "sandbox_full",
+              "help": "Run in full sandbox",
+              "nargs": null,
+              "option_strings": [
+                "--sandbox-full"
+              ],
+              "required": false,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: mesh_cli.py plan test [-h] [--sandbox] [--sandbox-full] [--out OUT] [--junit JUNIT] [--min-coverage MIN_COVERAGE] plan_path"
+        },
+        "test-ai": {
+          "arguments": [
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "junit",
+              "help": "Output JUnit report",
+              "nargs": null,
+              "option_strings": [
+                "--junit"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "out",
+              "help": "Output report path",
+              "nargs": null,
+              "option_strings": [
+                "--out"
+              ],
+              "required": false,
+              "type": null
+            },
+            {
+              "choices": null,
+              "default": "None",
+              "dest": "plan_path",
+              "help": "Path to plan file",
+              "nargs": null,
+              "option_strings": [],
+              "required": true,
+              "type": null
+            }
+          ],
+          "description": null,
+          "subcommands": {},
+          "usage": "usage: mesh_cli.py plan test-ai [-h] [--out OUT] [--junit JUNIT] plan_path"
+        }
+      },
+      "usage": "usage: mesh_cli.py plan [-h] {lint,lint-ai,diff,history,show,test,test-ai,summarize,schema} ..."
+    },
+    "play": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "scene_path",
+          "help": "Override start scene",
+          "nargs": null,
+          "option_strings": [
+            "--scene-path"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py play [-h] [--scene-path SCENE_PATH]"
+    },
+    "polish": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "compact_scenes",
+          "help": "Compact scene files",
+          "nargs": null,
+          "option_strings": [
+            "--compact-scenes"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "export_graph",
+          "help": "Export world graph",
+          "nargs": null,
+          "option_strings": [
+            "--export-graph"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "path",
+          "help": "Path to content",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "update_lock_audit",
+          "help": "Update lock audit",
+          "nargs": null,
+          "option_strings": [
+            "--update-lock-audit"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py polish [-h] [--compact-scenes] [--export-graph] [--update-lock-audit] path"
+    },
+    "prefab": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "prefab_args",
+          "help": "Arguments for prefab tool",
+          "nargs": "...",
+          "option_strings": [],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py prefab [-h] ..."
+    },
+    "recipes": {
+      "arguments": [],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py recipes [-h]"
+    },
+    "release-check": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "allow_packs",
+          "help": "Comma-separated list of pack IDs to allow unused assets from",
+          "nargs": null,
+          "option_strings": [
+            "--allow-packs"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "baseline",
+          "help": "Path to baseline lockfile for delta comparison",
+          "nargs": null,
+          "option_strings": [
+            "--baseline"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "diff_from",
+          "help": "Path to old lockfile for changelog generation",
+          "nargs": null,
+          "option_strings": [
+            "--diff-from"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "emit_changelog",
+          "help": "Path to write changelog markdown",
+          "nargs": null,
+          "option_strings": [
+            "--emit-changelog"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "ignore",
+          "help": "Comma-separated list of glob patterns to ignore in audit",
+          "nargs": null,
+          "option_strings": [
+            "--ignore"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_assets",
+          "help": "Max allowed unused assets (default: 0)",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-assets"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_delta",
+          "help": "Max allowed increase in unused assets vs baseline",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-delta"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_items",
+          "help": "Max allowed unused items (default: 0)",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-items"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_prefabs",
+          "help": "Max allowed unused prefabs (default: 0)",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-prefabs"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "max_unused_quests",
+          "help": "Max allowed unused quests (default: 0)",
+          "nargs": null,
+          "option_strings": [
+            "--max-unused-quests"
+          ],
+          "required": false,
+          "type": "<class 'int'>"
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "profile",
+          "help": "Validation profile (sets default thresholds)",
+          "nargs": null,
+          "option_strings": [
+            "--profile"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "require_golden_replays",
+          "help": "Require golden traces to pass",
+          "nargs": null,
+          "option_strings": [
+            "--require-golden_replays"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "world_path",
+          "help": "Path to world file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py release-check [-h] [--profile PROFILE] [--max-unused-assets MAX_UNUSED_ASSETS] [--max-unused-prefabs MAX_UNUSED_PREFABS] [--max-unused-items MAX_UNUSED_ITEMS] [--max-unused-quests MAX_UNUSED_QUESTS] [--ignore IGNORE] [--allow-packs ALLOW_PACKS] [--baseline BASELINE] [--max-unused-delta MAX_UNUSED_DELTA] [--diff-from DIFF_FROM] [--emit-changelog EMIT_CHANGELOG] [--require-golden_replays] world_path"
+    },
+    "replay-goldens": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "strict",
+          "help": "Check content fingerprint",
+          "nargs": null,
+          "option_strings": [
+            "--strict"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "world",
+          "help": "World file to use for fingerprint check",
+          "nargs": null,
+          "option_strings": [
+            "--world"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py replay-goldens [-h] [--world WORLD] [--strict]"
+    },
+    "run-preset": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "name",
+          "help": "Preset name",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py run-preset [-h] name"
+    },
+    "selftest": {
+      "arguments": [],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py selftest [-h]"
+    },
+    "tidy-scene": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "scene_path",
+          "help": "Path to scene file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py tidy-scene [-h] scene_path"
+    },
+    "trace": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "assert_file",
+          "help": "Assertions file",
+          "nargs": null,
+          "option_strings": [
+            "--assert-file"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "overlay",
+          "help": "Show overlay",
+          "nargs": null,
+          "option_strings": [
+            "--overlay"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "record",
+          "help": "Record to file",
+          "nargs": null,
+          "option_strings": [
+            "--record"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "replay",
+          "help": "Replay from file",
+          "nargs": null,
+          "option_strings": [
+            "--replay"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "world",
+          "help": "World file",
+          "nargs": null,
+          "option_strings": [
+            "--world"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py trace [-h] [--record RECORD] [--replay REPLAY] [--world WORLD] [--overlay] [--assert-file ASSERT_FILE]"
+    },
+    "undo-last-plan": {
+      "arguments": [],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py undo-last-plan [-h]"
+    },
+    "validate": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "scene_path",
+          "help": "Path to scene file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py validate [-h] scene_path"
+    },
+    "validate-all": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "check_orphans",
+          "help": "Check for orphan files",
+          "nargs": null,
+          "option_strings": [
+            "--check-orphans"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "check_reachability",
+          "help": "Check scene reachability",
+          "nargs": null,
+          "option_strings": [
+            "--check-reachability"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "check_refs",
+          "help": "Check for missing asset references",
+          "nargs": null,
+          "option_strings": [
+            "--check-refs"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": ".",
+          "dest": "path",
+          "help": "Root path",
+          "nargs": null,
+          "option_strings": [
+            "--path"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "strict",
+          "help": "Enforce strict validation (no unknown fields)",
+          "nargs": null,
+          "option_strings": [
+            "--strict"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "strict_compact",
+          "help": "Enforce compact format",
+          "nargs": null,
+          "option_strings": [
+            "--strict-compact"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py validate-all [-h] [--path PATH] [--strict] [--strict-compact] [--check-reachability] [--check-orphans] [--check-refs]"
+    },
+    "validate-events": {
+      "arguments": [],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py validate-events [-h]"
+    },
+    "validate-packs": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "strict_overrides",
+          "help": "Fail on undeclared overrides",
+          "nargs": null,
+          "option_strings": [
+            "--strict-overrides"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py validate-packs [-h] [--strict-overrides]"
+    },
+    "validate-refs": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "strict_overrides",
+          "help": "Treat overrides as errors",
+          "nargs": null,
+          "option_strings": [
+            "--strict-overrides"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "world_path",
+          "help": "Path to world file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py validate-refs [-h] [--strict-overrides] world_path"
+    },
+    "validate-world": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "no_events",
+          "help": "Skip event validation",
+          "nargs": null,
+          "option_strings": [
+            "--no-events"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "world_path",
+          "help": "Path to world file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py validate-world [-h] [--no-events] world_path"
+    },
+    "where": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "asset_key",
+          "help": "Relative path to asset",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py where [-h] asset_key"
+    },
+    "wizard": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "apply",
+          "help": "Execute the plan",
+          "nargs": null,
+          "option_strings": [
+            "--apply"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": [
+            "easy",
+            "normal",
+            "hard"
+          ],
+          "default": "normal",
+          "dest": "difficulty",
+          "help": "Encounter difficulty",
+          "nargs": null,
+          "option_strings": [
+            "--difficulty"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "dry_run",
+          "help": "Print plan without executing",
+          "nargs": null,
+          "option_strings": [
+            "--dry-run"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "encounter_set",
+          "help": "Encounter Set ID",
+          "nargs": null,
+          "option_strings": [
+            "--encounter-set"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "into_world",
+          "help": "World file to wire into",
+          "nargs": null,
+          "option_strings": [
+            "--into-world"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "link_from",
+          "help": "Scene ID to link from",
+          "nargs": null,
+          "option_strings": [
+            "--link-from"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "list",
+          "help": "List macros",
+          "nargs": null,
+          "option_strings": [
+            "--list"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "name",
+          "help": "Name for the new content",
+          "nargs": null,
+          "option_strings": [
+            "--name"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "name_prefix",
+          "help": "Prefix for generated IDs",
+          "nargs": null,
+          "option_strings": [
+            "--name-prefix"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "npc_role",
+          "help": "Role for new NPC",
+          "nargs": null,
+          "option_strings": [
+            "--npc-role"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "pack",
+          "help": "Content pack ID",
+          "nargs": null,
+          "option_strings": [
+            "--pack"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "perks",
+          "help": "List of perk IDs to include (comma separated)",
+          "nargs": null,
+          "option_strings": [
+            "--perks"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "plan",
+          "help": "Output plan path",
+          "nargs": null,
+          "option_strings": [
+            "--plan"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "preset",
+          "help": "Wizard preset ID",
+          "nargs": null,
+          "option_strings": [
+            "--preset"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "safe",
+          "dest": "profile",
+          "help": "Execution profile",
+          "nargs": null,
+          "option_strings": [
+            "--profile"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "quest_type",
+          "help": "Type of quest",
+          "nargs": null,
+          "option_strings": [
+            "--quest-type"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "run",
+          "help": "Run a macro",
+          "nargs": null,
+          "option_strings": [
+            "--run"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "scene",
+          "help": "Scene template or path",
+          "nargs": null,
+          "option_strings": [
+            "--scene"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": [
+            "new-region",
+            "macro",
+            "shrine",
+            "new-perk-shrine",
+            "new-questline",
+            "new-puzzle"
+          ],
+          "default": "None",
+          "dest": "subcommand",
+          "help": "Wizard command to run",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "template",
+          "help": "Region template (hub-interior-dungeon, ruins, deep-dungeon)",
+          "nargs": null,
+          "option_strings": [
+            "--template"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "theme",
+          "help": "Region theme ID",
+          "nargs": null,
+          "option_strings": [
+            "--theme"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "vars",
+          "help": "Variables for macro",
+          "nargs": "*",
+          "option_strings": [
+            "--vars"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "with_boss",
+          "help": "Include boss",
+          "nargs": null,
+          "option_strings": [
+            "--with-boss"
+          ],
+          "required": false,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "False",
+          "dest": "with_puzzle",
+          "help": "Include puzzle",
+          "nargs": null,
+          "option_strings": [
+            "--with-puzzle"
+          ],
+          "required": false,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py wizard [-h] [--name-prefix NAME_PREFIX] [--name NAME] [--perks PERKS] [--apply] [--scene SCENE] [--pack PACK] [--plan PLAN] [--dry-run] [--into-world INTO_WORLD] [--link-from LINK_FROM] [--profile PROFILE] [--npc-role NPC_ROLE] [--quest-type QUEST_TYPE] [--vars [VARS ...]] [--run RUN] [--list] [--with-boss] [--with-puzzle] [--template TEMPLATE] [--theme THEME] [--encounter-set ENCOUNTER_SET] [--preset PRESET] [--difficulty {easy,normal,hard}] {new-region,macro,shrine,new-perk-shrine,new-questline,new-puzzle}"
+    },
+    "world-graph": {
+      "arguments": [
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "output",
+          "help": "Output DOT file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        },
+        {
+          "choices": null,
+          "default": "None",
+          "dest": "world_path",
+          "help": "World file",
+          "nargs": null,
+          "option_strings": [],
+          "required": true,
+          "type": null
+        }
+      ],
+      "description": null,
+      "subcommands": {},
+      "usage": "usage: mesh_cli.py world-graph [-h] world_path output"
+    }
+  },
+  "usage": "usage: mesh_cli.py [-h] {play,demo,check,docs,wizard,index,ai-audit,new-scene,new-behaviour,new-quest,new-npc,place-npc,new-prefab,place-prefab,add-puzzle,tidy-scene,polish,migrate,validate,validate-world,validate-events,validate-all,selftest,doctor,recipes,run-preset,cli-smoke,plan,apply-plan,undo-last-plan,ai-generate-plan,ai-apply,ai-export-context,ai-bundle,ai-history,auto-wire-transitions,world-graph,trace,drift-check,build-demo,index-content,list-overrides,where,validate-refs,diff-content,changelog,audit-content,audit-trend,validate-packs,packs,lock-packs,init-content-pack,release-check,cli-snapshot,dist,replay-goldens,encounter-report,edit-scene,prefab} ..."
+}

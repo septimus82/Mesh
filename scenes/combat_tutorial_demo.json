@@ -1,0 +1,562 @@
+{
+  "description": "Combat tutorial demo: ChaseTarget + stop_range_tiles (content-only slice).",
+  "entities": [
+    {
+      "behaviours": [],
+      "id": "combat_tutorial_demo_spawn_default_80_80_0_0",
+      "layer": "background",
+      "name": "default",
+      "spawn_id": "default",
+      "tag": "spawn_point",
+      "x": 80.0,
+      "y": 80.0
+    },
+    {
+      "id": "combat_tutorial_demo_player_80_80_0_0",
+      "mesh_name": "Player",
+      "prefab_id": "player",
+      "tag": "player",
+      "x": 80.0,
+      "y": 80.0
+    },
+    {
+      "behaviour_config": {
+        "LightSource": {
+          "color": "#ffe7b0",
+          "enabled": true,
+          "flicker_enabled": false,
+          "mode": "soft",
+          "radius": 320.0
+        }
+      },
+      "behaviours": [
+        "LightSource"
+      ],
+      "id": "combat_tutorial_demo_torch_224_160_0_0",
+      "layer": "background",
+      "mesh_name": "Torch",
+      "name": "Torch",
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 224.0,
+      "y": 160.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "reset_combat_tutorial_run",
+                    "text": "Reset run"
+                  },
+                  {
+                    "end": true,
+                    "id": "reset_combat_tutorial_cancel",
+                    "text": "Cancel"
+                  }
+                ],
+                "speaker": "Reset",
+                "text": "Reset the combat tutorial run?"
+              }
+            },
+            "speaker": "Reset",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        },
+        "SceneTransition": {
+          "allow_interact": false,
+          "event_field": "choice_id",
+          "event_type": "dialogue_choice",
+          "event_value": "reset_combat_tutorial_run",
+          "spawn_id": "default",
+          "target_scene": "scenes/combat_tutorial_demo.json"
+        },
+        "SetGameStateOnEvent": {
+          "clear_flags": [
+            "demo.combat_tutorial_complete",
+            "demo.combat_tutorial_v2_complete",
+            "demo.combat_tutorial_v2_phase1_done",
+            "demo.combat_tutorial_v2_phase2_done",
+            "demo.combat_tutorial_v3_failed"
+          ],
+          "event_type": "dialogue_choice",
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "reset_combat_tutorial_run",
+          "require_flags": [
+            "demo.combat_tutorial_v3_failed"
+          ]
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "SetGameStateOnEvent",
+        "SceneTransition"
+      ],
+      "id": "combat_tutorial_demo_resetbutton_144_80_0_0",
+      "layer": "background",
+      "mesh_name": "CombatTutorialResetButton",
+      "name": "CombatTutorialResetButton",
+      "require_flags": [
+        "demo.combat_tutorial_v3_failed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 144.0,
+      "y": 80.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "forbid_flags": [
+            "demo.combat_tutorial_v3_failed"
+          ],
+          "once": true,
+          "payload_field": "zone",
+          "payload_value": "CombatTutorialFailZone",
+          "set_flags": {
+            "demo.combat_tutorial_v3_failed": true
+          },
+          "toast": "Failed! Reset and try again.",
+          "toast_seconds": 3.0
+        },
+        "TriggerZone": {
+          "on_trigger": "demo_combat_tutorial_v3_failed",
+          "zone_id": "CombatTutorialFailZone",
+          "trigger_radius": 24.0,
+          "trigger_target": "Player"
+        }
+      },
+      "behaviours": [
+        "TriggerZone",
+        "SetGameStateOnEvent"
+      ],
+      "forbid_flags": [
+        "demo.combat_tutorial_v3_failed"
+      ],
+      "id": "combat_tutorial_demo_failzone_240_128_0_0",
+      "layer": "background",
+      "mesh_name": "CombatTutorialFailZone",
+      "name": "CombatTutorialFailZone",
+      "tag": "trigger",
+      "x": 240.0,
+      "y": 128.0
+    },
+    {
+      "behaviour_config": {
+        "ChaseTarget": {
+          "acquire_radius_tiles": 8,
+          "cooldown_ticks": 30,
+          "give_up_ticks": 20,
+          "leash_radius_tiles": 12,
+          "los_required": false,
+          "stop_range_tiles": 1,
+          "target_tag": "player"
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "ChaseTarget"
+        }
+      ],
+      "id": "combat_tutorial_demo_trainingdummy_208_128_0_0",
+      "mesh_name": "TrainingDummy",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "tags": [
+        "enemy",
+        "dummy"
+      ],
+      "x": 208.0,
+      "y": 128.0
+    },
+    {
+      "behaviour_config": {
+        "ChaseTarget": {
+          "acquire_radius_tiles": 8,
+          "cooldown_ticks": 30,
+          "give_up_ticks": 20,
+          "leash_radius_tiles": 12,
+          "los_required": true,
+          "stop_range_tiles": 1,
+          "target_tag": "player"
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "ChaseTarget"
+        }
+      ],
+      "id": "combat_tutorial_demo_trainingdummyb_304_128_0_0",
+      "mesh_name": "TrainingDummyB",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "tags": [
+        "enemy",
+        "dummy"
+      ],
+      "x": 304.0,
+      "y": 128.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "forbid_flags": [
+            "demo.combat_tutorial_v2_phase1_done"
+          ],
+          "once": true,
+          "payload_field": "zone",
+          "payload_value": "CombatTutorialV2Phase1Zone",
+          "set_flags": {
+            "demo.combat_tutorial_v2_phase1_done": true
+          },
+          "toast": "Phase 1 complete: Reach the arena",
+          "toast_seconds": 3.0
+        },
+        "TriggerZone": {
+          "on_trigger": "demo_combat_tutorial_v2_phase1",
+          "zone_id": "CombatTutorialV2Phase1Zone",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player"
+        }
+      },
+      "behaviours": [
+        "TriggerZone",
+        "SetGameStateOnEvent"
+      ],
+      "forbid_flags": [
+        "demo.combat_tutorial_v2_phase1_done"
+      ],
+      "id": "combat_tutorial_demo_completezone_336_208_0_0",
+      "layer": "background",
+      "mesh_name": "CombatTutorialV2Phase1Zone",
+      "name": "CombatTutorialV2Phase1Zone",
+      "tag": "trigger",
+      "x": 336.0,
+      "y": 208.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "forbid_flags": [
+            "demo.combat_tutorial_v2_phase2_done",
+            "demo.combat_tutorial_v3_failed"
+          ],
+          "once": true,
+          "payload_field": "zone",
+          "payload_value": "CombatTutorialV2Phase2Zone",
+          "require_flags": [
+            "demo.combat_tutorial_v2_phase1_done"
+          ],
+          "set_flags": {
+            "demo.combat_tutorial_v2_phase2_done": true
+          },
+          "toast": "Phase 2 complete: Break line of sight",
+          "toast_seconds": 3.0
+        },
+        "TriggerZone": {
+          "on_trigger": "demo_combat_tutorial_v2_phase2",
+          "zone_id": "CombatTutorialV2Phase2Zone",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player"
+        }
+      },
+      "behaviours": [
+        "TriggerZone",
+        "SetGameStateOnEvent"
+      ],
+      "forbid_flags": [
+        "demo.combat_tutorial_v2_phase2_done",
+        "demo.combat_tutorial_v3_failed"
+      ],
+      "id": "combat_tutorial_demo_phase2zone_336_80_0_0",
+      "layer": "background",
+      "mesh_name": "CombatTutorialV2Phase2Zone",
+      "name": "CombatTutorialV2Phase2Zone",
+      "require_flags": [
+        "demo.combat_tutorial_v2_phase1_done"
+      ],
+      "tag": "trigger",
+      "x": 336.0,
+      "y": 80.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "forbid_flags": [
+            "demo.combat_tutorial_v2_complete",
+            "demo.combat_tutorial_v3_failed"
+          ],
+          "once": true,
+          "payload_field": "zone",
+          "payload_value": "CombatTutorialV2CompleteZone",
+          "require_flags": [
+            "demo.combat_tutorial_v2_phase2_done"
+          ],
+          "set_flags": {
+            "demo.combat_tutorial_complete": true,
+            "demo.combat_tutorial_v2_complete": true
+          },
+          "toast": "Combat tutorial complete!",
+          "toast_seconds": 3.0
+        },
+        "TriggerZone": {
+          "on_trigger": "demo_combat_tutorial_v2_complete",
+          "zone_id": "CombatTutorialV2CompleteZone",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player"
+        }
+      },
+      "behaviours": [
+        "TriggerZone",
+        "SetGameStateOnEvent"
+      ],
+      "forbid_flags": [
+        "demo.combat_tutorial_v2_complete",
+        "demo.combat_tutorial_v3_failed"
+      ],
+      "id": "combat_tutorial_demo_v2completezone_144_208_0_0",
+      "layer": "background",
+      "mesh_name": "CombatTutorialV2CompleteZone",
+      "name": "CombatTutorialV2CompleteZone",
+      "require_flags": [
+        "demo.combat_tutorial_v2_phase2_done"
+      ],
+      "tag": "trigger",
+      "x": 144.0,
+      "y": 208.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "open_combat_tutorial_chest",
+                    "text": "Open chest"
+                  }
+                ],
+                "speaker": "Chest",
+                "text": "A small reward chest for finishing the combat tutorial."
+              }
+            },
+            "speaker": "Chest",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "forbid_flags": [
+        "demo.combat_tutorial_reward_claimed",
+        "demo.combat_tutorial_v3_failed"
+      ],
+      "id": "combat_tutorial_demo_rewardchest_112_176_0_0",
+      "mesh_name": "RewardChest",
+      "name": "RewardChest",
+      "require_flags": [
+        "demo.combat_tutorial_v2_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 112.0,
+      "y": 176.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "dialogue_choice",
+          "forbid_flags": [
+            "demo.combat_tutorial_reward_claimed"
+          ],
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "open_combat_tutorial_chest",
+          "require_flags": [
+            "demo.combat_tutorial_v2_complete"
+          ],
+          "set_flags": {
+            "demo.combat_tutorial_reward_claimed": true
+          },
+          "toast": "Reward claimed!",
+          "toast_seconds": 3.0
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "id": "combat_tutorial_demo_choiceflag_demo_combat_tutorial_reward_claimed_open_combat_tutorial_chest_0_0",
+      "layer": "background",
+      "name": "CombatTutorialRewardHook",
+      "x": 16.0,
+      "y": 16.0
+    },
+    {
+      "behaviours": [],
+      "id": "combat_tutorial_demo_rewardclaimed_144_176_0_0",
+      "layer": "background",
+      "mesh_name": "RewardClaimed",
+      "name": "RewardClaimed",
+      "require_flags": [
+        "demo.combat_tutorial_reward_claimed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 144.0,
+      "y": 176.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "upper_return",
+          "target_scene": "scenes/upper_hall.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "combat_tutorial_demo_returndoor_96_80_0_0",
+      "name": "CombatTutorialDemoReturnDoor",
+      "x": 96.0,
+      "y": 80.0
+    }
+  ],
+  "name": "combat_tutorial_demo",
+  "schema_version": 1,
+  "tilemap": {
+    "collision_layer_id": "platforms",
+    "layers": [
+      {
+        "name": "ground",
+        "z": -100
+      },
+      {
+        "name": "platforms",
+        "z": -50
+      }
+    ],
+    "overrides": {
+      "layers": {
+        "platforms": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "path": "assets/tilemaps/demo_map.json"
+  },
+  "version": 1
+}

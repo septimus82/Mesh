@@ -1,0 +1,15 @@
+{
+  "defaults": {
+    "anchor": "player",
+    "spawn_id": "reward_nook_01_entry",
+    "target_scene": "reward_nook_01"
+  },
+  "id": "door_to_reward_nook_01",
+  "macro_id": "macro.door_transition",
+  "metadata": {
+    "author": "core_regions",
+    "source": "handwritten"
+  },
+  "type": "macro"
+}
+

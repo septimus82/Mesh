@@ -1,0 +1,697 @@
+{
+  "collision_rules": {
+    "player:terrain": true
+  },
+  "description": "Optional branch room for the demo objective (themed spawns + trigger beat).",
+  "entities": [
+    {
+      "animations": {
+        "idle": {
+          "fps": 4,
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "loop": true
+        },
+        "interact": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": false
+        },
+        "walk": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": true
+        }
+      },
+      "behaviour_config": {
+        "CameraFollow": {
+          "padding": 12,
+          "zoom": 1.0
+        }
+      },
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "upper_hall_upperplayer_96_96_0_0",
+      "name": "UpperPlayer",
+      "sprite": "assets/sprites/animated_player.png",
+      "sprite_sheet": {
+        "columns": 4,
+        "frame_height": 64,
+        "frame_width": 64,
+        "rows": 2
+      },
+      "tag": "player",
+      "x": 96.0,
+      "y": 96.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_upperentrymarker_96_96_0_0",
+      "layer": "background",
+      "name": "UpperEntryMarker",
+      "scale": 0.1,
+      "spawn_id": "upper_entry",
+      "tag": "spawn_point",
+      "x": 96.0,
+      "y": 96.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_spawn_upper_return_96_96_0_0",
+      "layer": "background",
+      "name": "upper_return",
+      "spawn_id": "upper_return",
+      "tag": "spawn_point",
+      "x": 96.0,
+      "y": 96.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "field_return",
+          "target_scene": "scenes/door_field.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "upper_hall_returndoor_96_64_0_0",
+      "name": "ReturnDoor",
+      "x": 96.0,
+      "y": 64.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "default",
+          "target_scene": "scenes/guard_patrol_chase_demo.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "upper_hall_guardpatrolchasedemodoor_256_64_0_0",
+      "name": "GuardPatrolChaseDemoDoor",
+      "x": 256.0,
+      "y": 64.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_guardpatrolchasedemo_complete_272_64_0_0",
+      "layer": "background",
+      "mesh_name": "GuardPatrolDemoComplete",
+      "name": "GuardPatrolDemoComplete",
+      "require_flags": [
+        "demo.guard_patrol_demo_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 272.0,
+      "y": 64.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_guardpatrolchasedemo_reward_288_64_0_0",
+      "layer": "background",
+      "mesh_name": "GuardPatrolDemoRewardClaimed",
+      "name": "GuardPatrolDemoRewardClaimed",
+      "require_flags": [
+        "demo.guard_patrol_demo_reward_claimed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 288.0,
+      "y": 64.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "default",
+          "target_scene": "scenes/guard_patrol_chase_duo_demo.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "upper_hall_guardpatrolchaseduodemodoor_224_64_0_0",
+      "name": "GuardPatrolChaseDuoDemoDoor",
+      "x": 224.0,
+      "y": 64.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_guardpatrolchaseduodemo_complete_240_64_0_0",
+      "layer": "background",
+      "mesh_name": "GuardPatrolChaseDuoDemoComplete",
+      "name": "GuardPatrolChaseDuoDemoComplete",
+      "require_flags": [
+        "demo.guard_patrol_chase_duo_demo_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 240.0,
+      "y": 64.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_guardpatrolchaseduodemo_reward_256_80_0_0",
+      "layer": "background",
+      "mesh_name": "GuardPatrolChaseDuoDemoRewardClaimed",
+      "name": "GuardPatrolChaseDuoDemoRewardClaimed",
+      "require_flags": [
+        "demo.guard_patrol_chase_duo_demo_reward_claimed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 256.0,
+      "y": 80.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "default",
+          "target_scene": "scenes/micro_stealth_completion_room.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "upper_hall_microstealthcompletiondoor_192_64_0_0",
+      "name": "MicroStealthCompletionDoor",
+      "x": 192.0,
+      "y": 64.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "default",
+          "target_scene": "scenes/combat_tutorial_demo.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "upper_hall_combattutorialdemodoor_160_64_0_0",
+      "name": "CombatTutorialDemoDoor",
+      "x": 160.0,
+      "y": 64.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_combattutorial_complete_160_80_0_0",
+      "layer": "background",
+      "mesh_name": "CombatTutorialComplete",
+      "name": "CombatTutorialComplete",
+      "require_flags": [
+        "demo.combat_tutorial_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 160.0,
+      "y": 80.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_combattutorial_reward_176_80_0_0",
+      "layer": "background",
+      "mesh_name": "CombatTutorialRewardClaimed",
+      "name": "CombatTutorialRewardClaimed",
+      "require_flags": [
+        "demo.combat_tutorial_reward_claimed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 176.0,
+      "y": 80.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_combattutorial_v2_complete_192_80_0_0",
+      "layer": "background",
+      "mesh_name": "CombatTutorialV2Complete",
+      "name": "CombatTutorialV2Complete",
+      "require_flags": [
+        "demo.combat_tutorial_v2_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 192.0,
+      "y": 80.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_microstealth_ultimate_claimed_208_64_0_0",
+      "layer": "background",
+      "mesh_name": "MicroStealthUltimateClaimed",
+      "name": "MicroStealthUltimateClaimed",
+      "require_flags": [
+        "demo.micro_stealth_ultimate_reward_claimed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 208.0,
+      "y": 64.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "forbid_flags": [
+            "demo.reached_upper_hall"
+          ],
+          "once": true,
+          "payload_field": "zone",
+          "payload_value": "DemoObjectiveUpperHallZone",
+          "require_flags": [
+            "demo.objective_upper_started"
+          ],
+          "set_flags": {
+            "demo.reached_upper_hall": true
+          },
+          "toast": "Optional complete: Reached the upper hall",
+          "toast_seconds": 3.0
+        },
+        "TriggerZone": {
+          "on_trigger": "demo_objective_reached_upper_hall",
+          "trigger_radius": 72.0,
+          "trigger_target": "UpperPlayer",
+          "zone_id": "DemoObjectiveUpperHallZone"
+        }
+      },
+      "behaviours": [
+        "TriggerZone",
+        "SetGameStateOnEvent"
+      ],
+      "id": "upper_hall_demoobjectivezone_160_160_0_0",
+      "layer": "background",
+      "name": "DemoObjectiveUpperHallZone",
+      "scale": 0.0,
+      "tag": "trigger",
+      "x": 160.0,
+      "y": 160.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "text": "Close"
+                  }
+                ],
+                "text": "Micro Stealth Board:\n- Complete Tutorial\n- Complete Duo\n- Claim Ultimate"
+              }
+            },
+            "speaker": "Board",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "upper_hall_microstealthboardsign_64_208_0_0",
+      "layer": "background",
+      "mesh_name": "MicroStealthBoardSign",
+      "name": "MicroStealthBoardSign",
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 64.0,
+      "y": 208.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "reset_all_demos_confirm",
+                    "text": "Reset all demos"
+                  },
+                  {
+                    "end": true,
+                    "id": "reset_all_demos_cancel",
+                    "text": "Cancel"
+                  }
+                ],
+                "speaker": "Reset",
+                "text": "Reset all demo progress flags?"
+              }
+            },
+            "speaker": "Reset",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        },
+        "SceneTransition": {
+          "allow_interact": false,
+          "event_field": "choice_id",
+          "event_type": "dialogue_choice",
+          "event_value": "reset_all_demos_confirm",
+          "spawn_id": "upper_return",
+          "target_scene": "scenes/upper_hall.json"
+        },
+        "SetGameStateOnEvent": {
+          "clear_flags": [
+            "demo.combat_tutorial_complete",
+            "demo.combat_tutorial_hint_seen",
+            "demo.combat_tutorial_reward_claimed",
+            "demo.combat_tutorial_v2_complete",
+            "demo.combat_tutorial_v2_phase1_done",
+            "demo.combat_tutorial_v2_phase2_done",
+            "demo.combat_tutorial_v3_failed",
+            "demo.guard_patrol_chase_duo_demo_complete",
+            "demo.guard_patrol_chase_duo_demo_hint_seen",
+            "demo.guard_patrol_chase_duo_demo_reward_claimed",
+            "demo.guard_patrol_chase_duo_demo_spotted",
+            "demo.guard_patrol_demo_complete",
+            "demo.guard_patrol_demo_hint_seen",
+            "demo.guard_patrol_demo_reward_claimed",
+            "demo.guard_patrol_demo_spotted",
+            "demo.micro_stealth_ultimate_reward_claimed"
+          ],
+          "event_type": "dialogue_choice",
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "reset_all_demos_confirm"
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "SetGameStateOnEvent",
+        "SceneTransition"
+      ],
+      "id": "upper_hall_resetdemosstation_64_176_0_0",
+      "layer": "background",
+      "mesh_name": "ResetDemosStation",
+      "name": "ResetDemosStation",
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 64.0,
+      "y": 176.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_microstealthboard_tutorialcomplete_96_208_0_0",
+      "layer": "background",
+      "mesh_name": "MicroStealthBoard_TutorialComplete",
+      "name": "MicroStealthBoard_TutorialComplete",
+      "require_flags": [
+        "demo.guard_patrol_demo_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 96.0,
+      "y": 208.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_microstealthboard_tutorialreward_128_208_0_0",
+      "layer": "background",
+      "mesh_name": "MicroStealthBoard_TutorialReward",
+      "name": "MicroStealthBoard_TutorialReward",
+      "require_flags": [
+        "demo.guard_patrol_demo_reward_claimed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 128.0,
+      "y": 208.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_microstealthboard_duocomplete_160_208_0_0",
+      "layer": "background",
+      "mesh_name": "MicroStealthBoard_DuoComplete",
+      "name": "MicroStealthBoard_DuoComplete",
+      "require_flags": [
+        "demo.guard_patrol_chase_duo_demo_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 160.0,
+      "y": 208.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_microstealthboard_duoreward_192_208_0_0",
+      "layer": "background",
+      "mesh_name": "MicroStealthBoard_DuoReward",
+      "name": "MicroStealthBoard_DuoReward",
+      "require_flags": [
+        "demo.guard_patrol_chase_duo_demo_reward_claimed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 192.0,
+      "y": 208.0
+    },
+    {
+      "behaviours": [],
+      "id": "upper_hall_microstealthboard_ultimateclaimed_224_208_0_0",
+      "layer": "background",
+      "mesh_name": "MicroStealthBoard_UltimateClaimed",
+      "name": "MicroStealthBoard_UltimateClaimed",
+      "require_flags": [
+        "demo.micro_stealth_ultimate_reward_claimed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "prop",
+      "x": 224.0,
+      "y": 208.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "text": "Close"
+                  }
+                ],
+                "text": "Upper Hall: optional branch room. Clear the zone marker for a beat."
+              }
+            },
+            "speaker": "Notice",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "upper_hall_notice_200_192_0_0",
+      "name": "UpperHallNotice",
+      "sprite": "assets/placeholder.png",
+      "x": 200.0,
+      "y": 192.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "forbid_flags": [
+                      "demo.upper_hall_lever_pulled"
+                    ],
+                    "id": "demo_upper_hall_pull_lever",
+                    "text": "Pull the lever"
+                  },
+                  {
+                    "end": true,
+                    "require_flags": [
+                      "demo.upper_hall_lever_pulled"
+                    ],
+                    "text": "Already pulled"
+                  },
+                  {
+                    "end": true,
+                    "text": "Leave"
+                  }
+                ],
+                "text": "A rusty lever sticks out from the wall."
+              }
+            },
+            "speaker": "Lever",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "upper_hall_lever_260_200_0_0",
+      "name": "UpperHallLever",
+      "sprite": "assets/placeholder.png",
+      "x": 260.0,
+      "y": 200.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "dialogue_choice",
+          "forbid_flags": [
+            "demo.upper_hall_lever_pulled"
+          ],
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "demo_upper_hall_pull_lever",
+          "set_flags": {
+            "demo.upper_hall_lever_pulled": true
+          },
+          "toast": "Pulled the lever",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "upper_hall_leverhook_24_24_0_0",
+      "layer": "background",
+      "name": "UpperHallLeverHook",
+      "x": 24.0,
+      "y": 24.0
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "locked": {
+                "choices": [
+                  {
+                    "end": true,
+                    "text": "Leave"
+                  }
+                ],
+                "text": "Locked."
+              },
+              "root": {
+                "choices": [
+                  {
+                    "end": true,
+                    "forbid_flags": [
+                      "demo.upper_hall_lever_pulled"
+                    ],
+                    "id": "demo_upper_hall_vault_locked",
+                    "next": "locked",
+                    "text": "Open door"
+                  },
+                  {
+                    "end": true,
+                    "id": "demo_upper_hall_vault_open",
+                    "require_flags": [
+                      "demo.upper_hall_lever_pulled"
+                    ],
+                    "text": "Open door"
+                  },
+                  {
+                    "end": true,
+                    "text": "Leave"
+                  }
+                ],
+                "text": "A reinforced door blocks the way into a small vault."
+              }
+            },
+            "speaker": "Door",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        },
+        "SceneTransition": {
+          "allow_interact": false,
+          "event_field": "choice_id",
+          "event_type": "dialogue_choice",
+          "event_value": "demo_upper_hall_vault_open",
+          "spawn_id": "vault_entry",
+          "target_scene": "scenes/upper_hall_vault.json"
+        }
+      },
+      "behaviours": [
+        "Dialogue",
+        "SceneTransition"
+      ],
+      "id": "upper_hall_upperhallvaultdoor_288_96_0_0",
+      "name": "UpperHallVaultDoor",
+      "x": 288.0,
+      "y": 96.0
+    },
+    {
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "id": "upper_hall_themedenemy_240_160_0_0",
+      "mesh_name": "UpperThemedEnemy",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 240.0,
+      "y": 160.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "allow_interact": true,
+          "spawn_id": "side_room_01_entry",
+          "target_scene": "side_room_01",
+          "spawn_point": "side_room_01_entry"
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SceneTransition"
+        }
+      ],
+      "id": "upper_hall_transition_side_room_01_96_96_0_0",
+      "name": "TransitionTo_side_room_01",
+      "tag": "trigger",
+      "x": 96.0,
+      "y": 96.0
+    }
+  ],
+  "name": "Upper Hall",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "dark_slate_blue",
+    "encounter_budget": 10,
+    "encounter_budget_profile": "normal",
+    "encounter_seed": 424242,
+    "encounter_set_id": "ruins_encounters",
+    "region_theme": "ruins",
+    "use_theme_spawns": true,
+    "world_height": 256,
+    "world_width": 320
+  },
+  "version": 1
+}

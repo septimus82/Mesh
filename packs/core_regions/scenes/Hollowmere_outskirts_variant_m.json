@@ -1,0 +1,203 @@
+{
+  "description": "Scaffolded Golden Slice variant M2 (branching_choice).",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "hollowmere_outskirts_variant_m_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "hollowmere_outskirts_variant_m_entrance_50_300_0_0",
+      "name": "Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "variant_m2_start",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "hollowmere_outskirts_variant_m_variantmstartzone2_140_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "hollowmere_outskirts_variant_m_variantmstartzone2_140_300_0_0",
+      "name": "VariantMStartZone2",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 140,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "variant_m2_choice_a",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "hollowmere_outskirts_variant_m_variantmchoiceazone2_420_260_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "hollowmere_outskirts_variant_m_variantmchoiceazone2_420_260_0_0",
+      "name": "VariantMChoiceAZone2",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 420,
+      "y": 260
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "variant_m2_choice_b",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "hollowmere_outskirts_variant_m_variantmchoicebzone2_420_340_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "hollowmere_outskirts_variant_m_variantmchoicebzone2_420_340_0_0",
+      "name": "VariantMChoiceBZone2",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 420,
+      "y": 340
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "variant_m2_goal_a",
+          "trigger_radius": 56.0,
+          "trigger_target": "Player",
+          "zone_id": "hollowmere_outskirts_variant_m_variantmgoalazone2_980_260_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "hollowmere_outskirts_variant_m_variantmgoalazone2_980_260_0_0",
+      "name": "VariantMGoalAZone2",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 980,
+      "y": 260
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "variant_m2_goal_b",
+          "trigger_radius": 56.0,
+          "trigger_target": "Player",
+          "zone_id": "hollowmere_outskirts_variant_m_variantmgoalbzone2_980_340_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "hollowmere_outskirts_variant_m_variantmgoalbzone2_980_340_0_0",
+      "name": "VariantMGoalBZone2",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 980,
+      "y": 340
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "item_id": "warden_mace"
+            },
+            {
+              "chance": 1.0,
+              "gold": 10
+            }
+          ],
+          "seed": 9909
+        },
+        "EnemyAI": {
+          "detect_radius": 250.0,
+          "speed": 60.0
+        },
+        "Health": {
+          "hp": 100,
+          "max_hp": 100
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "hollowmere_outskirts_variant_m_hollowmere_boss_900_300_0_0",
+      "mesh_name": "Hollowmere_Boss",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "tags": [
+        "boss"
+      ],
+      "variant_id": "boss_variant_b",
+      "x": 900,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "target_scene": "packs/core_regions/scenes/Hollow Grove_hub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "hollowmere_outskirts_variant_m_exit_1000_300_0_0",
+      "name": "Exit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1000,
+      "y": 300
+    }
+  ],
+  "layers": [
+    {
+      "entities": {
+        "1": {
+          "behaviours": {
+            "SceneTransition": {
+              "spawn_point": "default",
+              "target_scene": "packs/core_regions/scenes/Hollow Grove_hub.json"
+            }
+          },
+          "tags": [
+            "auto_wired"
+          ],
+          "type": "prop",
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "entities"
+    }
+  ],
+  "name": "Hollowmere Outskirts (Variant M2)",
+  "schema_version": 1,
+  "version": 1
+}

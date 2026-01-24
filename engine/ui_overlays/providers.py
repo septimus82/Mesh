@@ -1,0 +1,802 @@
+from typing import Any, Sequence, Dict, List, Tuple, cast
+import engine.optional_arcade as optional_arcade
+
+def encounter_debug_provider(window: Any) -> Any:
+    from engine.encounter_report import compute_current_scene_encounter_report
+    scene = getattr(window, "scene_controller", None)
+    if scene is None:
+        return None
+    return compute_current_scene_encounter_report(scene)
+
+def scene_dirty_provider(window: Any) -> dict[str, Any]:
+    return {
+        "enabled": bool(getattr(window, "show_debug", False)),
+        "dirty": bool(getattr(window, "scene_dirty", False)),
+        "reason": str(getattr(window, "scene_dirty_reason", "") or ""),
+        "counter": int(getattr(window, "scene_dirty_counter", 0) or 0),
+        "undo": int(len(getattr(window, "undo_stack", []) or [])),
+        "redo": int(len(getattr(window, "redo_stack", []) or [])),
+    }
+
+def entity_select_provider(window: Any) -> dict[str, Any]:
+    enabled = bool(getattr(window, "show_debug", False))
+    state = getattr(window, "entity_select_state", None)
+    ids = getattr(state, "selected_ids", None) if state is not None else None
+    if not isinstance(ids, list):
+        ids = []
+    selected_ids = sorted({str(i).strip() for i in ids if isinstance(i, str) and str(i).strip()})
+    primary_id = getattr(state, "primary_id", None) if state is not None else None
+    primary_id = str(primary_id).strip() if isinstance(primary_id, str) and str(primary_id).strip() else (selected_ids[0] if selected_ids else "")
+
+    clipboard = getattr(window, "entity_clipboard", None)
+    clipboard_primary = ""
+    clipboard_count = 0
+    if isinstance(clipboard, dict):
+        entities = clipboard.get("entities")
+        if isinstance(entities, list) and entities:
+            clipboard_count = len(entities)
+            cp = clipboard.get("primary_id")
+            if isinstance(cp, str) and cp.strip():
+                clipboard_primary = cp.strip()
+
+    transform_action = str(getattr(window, "last_transform_action", "") or "").strip()
+    transform_count = int(getattr(window, "last_transform_count", 0) or 0)
+    show_transform = (
+        bool(transform_action)
+        and transform_count > 0
+        and int(getattr(window, "last_transform_counter", 0) or 0)
+        == int(getattr(window, "scene_dirty_counter", 0) or 0)
+    )
+
+    props_action = str(getattr(window, "last_props_action", "") or "").strip()
+    props_changed = int(getattr(window, "last_props_changed", 0) or 0)
+    show_props = (
+        bool(props_action)
+        and props_changed > 0
+        and int(getattr(window, "last_props_counter", 0) or 0)
+        == int(getattr(window, "scene_dirty_counter", 0) or 0)
+    )
+
+    config_action = str(getattr(window, "last_config_action", "") or "").strip()
+    config_changed = int(getattr(window, "last_config_changed", 0) or 0)
+    show_config = (
+        bool(config_action)
+        and config_changed > 0
+        and int(getattr(window, "last_config_counter", 0) or 0)
+        == int(getattr(window, "scene_dirty_counter", 0) or 0)
+    )
+
+    if not (enabled and selected_ids):
+        return {
+            "enabled": enabled,
+            "selected_ids": [],
+            "primary_id": "",
+            "primary": None,
+            "clipboard_count": clipboard_count,
+            "clipboard_primary": clipboard_primary,
+            "transform_action": transform_action if show_transform else "",
+            "transform_count": transform_count if show_transform else 0,
+            "props_action": props_action if show_props else "",
+            "props_changed": props_changed if show_props else 0,
+            "config_action": config_action if show_config else "",
+            "config_changed": config_changed if show_config else 0,
+        }
+
+    sc = getattr(window, "scene_controller", None)
+    sprite = getattr(sc, "debug_find_sprite_by_entity_id", lambda _eid: None)(primary_id) if sc is not None else None
+
+    prefab_id = getattr(state, "selected_prefab_id", "")
+    if isinstance(sprite, optional_arcade.arcade.Sprite):
+        entity_data = getattr(sprite, "mesh_entity_data", None)
+        if isinstance(entity_data, dict):
+            pid = entity_data.get("prefab_id")
+            if isinstance(pid, str) and pid.strip():
+                prefab_id = pid
+
+    x = float(getattr(sprite, "center_x", 0.0)) if isinstance(sprite, optional_arcade.arcade.Sprite) else None
+    y = float(getattr(sprite, "center_y", 0.0)) if isinstance(sprite, optional_arcade.arcade.Sprite) else None
+    return {
+        "enabled": enabled,
+        "selected_ids": selected_ids,
+        "primary_id": primary_id,
+        "primary": {
+            "id": str(primary_id),
+            "prefab_id": str(prefab_id or ""),
+            "pos": {"x": x, "y": y} if isinstance(x, float) and isinstance(y, float) else {},
+        },
+        "dup_count": int(getattr(window, "last_duplicate_count", 0) or 0)
+        if int(getattr(window, "last_duplicate_counter", 0) or 0) == int(getattr(window, "scene_dirty_counter", 0) or 0)
+        else 0,
+        "dup_primary": str(getattr(window, "last_duplicate_primary", "") or "")
+        if int(getattr(window, "last_duplicate_counter", 0) or 0) == int(getattr(window, "scene_dirty_counter", 0) or 0)
+        else "",
+        "clipboard_count": clipboard_count,
+        "clipboard_primary": clipboard_primary,
+        "transform_action": transform_action if show_transform else "",
+        "transform_count": transform_count if show_transform else 0,
+        "props_action": props_action if show_props else "",
+        "props_changed": props_changed if show_props else 0,
+        "config_action": config_action if show_config else "",
+        "config_changed": config_changed if show_config else 0,
+    }
+
+def scene_inspector_provider(window: Any) -> dict[str, Any]:
+    scene = getattr(window, "scene_controller", None)
+    scene_path = getattr(scene, "current_scene_path", None)
+
+    player_sprite = scene._find_player_sprite() if scene is not None else None
+    player_payload: dict[str, Any] = {}
+    if player_sprite is not None:
+        player_payload = {"x": float(player_sprite.center_x), "y": float(player_sprite.center_y)}
+
+    hover_payload: dict[str, Any] = {}
+    if scene is not None:
+        mx = getattr(window, "_mouse_x", None)
+        my = getattr(window, "_mouse_y", None)
+        if isinstance(mx, (int, float)) and isinstance(my, (int, float)) and hasattr(window, "screen_to_world"):
+            try:
+                world_x, world_y = window.screen_to_world(float(mx), float(my))
+            except Exception:  # noqa: BLE001
+                world_x, world_y = None, None
+            if isinstance(world_x, (int, float)) and isinstance(world_y, (int, float)):
+                candidates: list[optional_arcade.arcade.Sprite] = []
+                layers = getattr(scene, "layers", {}) or {}
+                for layer in layers.values():
+                    try:
+                        hits = optional_arcade.arcade.get_sprites_at_point((float(world_x), float(world_y)), layer)
+                    except Exception:  # noqa: BLE001
+                        hits = []
+                    if hits:
+                        candidates.extend(hits)
+                sprite = candidates[-1] if candidates else None
+                if sprite is not None:
+                    entity_data = getattr(sprite, "mesh_entity_data", None)
+                    if not isinstance(entity_data, dict):
+                        entity_data = {}
+                    hover_payload = {
+                        "id": entity_data.get("id") or entity_data.get("entity_id"),
+                        "prefab_id": entity_data.get("prefab_id"),
+                        "mesh_name": entity_data.get("mesh_name") or getattr(sprite, "mesh_name", None),
+                        "pos": {"x": float(sprite.center_x), "y": float(sprite.center_y)},
+                    }
+                    prefab_id = hover_payload.get("prefab_id")
+                    if isinstance(prefab_id, str) and prefab_id.strip():
+                        try:
+                            from engine.prefabs import get_prefab_manager
+
+                            manager = get_prefab_manager()
+                            manager.load()
+                            source = manager.prefab_sources.get(prefab_id)
+                        except Exception:  # noqa: BLE001
+                            source = None
+                        if isinstance(source, str) and source.strip():
+                            hover_payload["prefab_source"] = source
+
+    flags_state = getattr(getattr(window, "game_state_controller", None), "state", None)
+    flags_dict = getattr(flags_state, "flags", {}) if flags_state is not None else {}
+    if not isinstance(flags_dict, dict):
+        flags_dict = {}
+    flags_total = len(flags_dict)
+    true_keys = sorted(str(k) for k, v in flags_dict.items() if bool(v))
+    flags_payload = {
+        "total": flags_total,
+        "on": len(true_keys),
+        "keys": true_keys[:5],
+    }
+
+    return {
+        "scene_path": str(scene_path or "-"),
+        "player": player_payload,
+        "hover": hover_payload,
+        "flags": flags_payload,
+    }
+
+def tile_paint_provider(window: Any) -> dict[str, Any]:
+    from engine.tile_paint_mode import compute_tile_paint_tool, world_to_tile
+
+    state = getattr(window, "tile_paint_state", None)
+    enabled = bool(getattr(window, "show_debug", False)) and bool(getattr(state, "enabled", False))
+    layer_id = str(getattr(state, "layer_id", "") or "-")
+    tile_id = int(getattr(state, "tile_id", 0)) if state is not None else 0
+
+    world_x = None
+    world_y = None
+    tx = None
+    ty = None
+    try:
+        world_x, world_y = window.screen_to_world(float(window.mouse_x), float(window.mouse_y))
+    except Exception:  # noqa: BLE001
+        world_x, world_y = None, None
+
+    sc = getattr(window, "scene_controller", None)
+    instance = getattr(sc, "tilemap_instance", None) if sc is not None else None
+    if instance is not None and isinstance(world_x, (int, float)) and isinstance(world_y, (int, float)):
+        map_w, map_h = getattr(instance, "map_size", (0, 0))
+        tile_w, tile_h = getattr(instance, "tile_size", (0, 0))
+        hit = world_to_tile(
+            map_width=int(map_w),
+            map_height=int(map_h),
+            tile_width=int(tile_w),
+            tile_height=int(tile_h),
+            world_x=float(world_x),
+            world_y=float(world_y),
+        )
+        if hit is not None:
+            tx, ty = hit
+
+    mods = int(getattr(window, "_debug_last_modifiers", 0) or 0)
+    tool = compute_tile_paint_tool(
+        shift=bool(mods & optional_arcade.arcade.key.MOD_SHIFT),
+        ctrl=bool(mods & optional_arcade.arcade.key.MOD_CTRL),
+        alt=bool(mods & optional_arcade.arcade.key.MOD_ALT),
+    )
+
+    slots_raw = getattr(window, "tile_quick_slots", None)
+    slots: dict[int, int] = {}
+    if isinstance(slots_raw, dict):
+        for k, v in slots_raw.items():
+            if isinstance(k, int) and 1 <= int(k) <= 9 and isinstance(v, int):
+                slots[int(k)] = int(v)
+
+    recent_raw = getattr(window, "tile_recent", None)
+    recent: list[int] = []
+    if isinstance(recent_raw, list):
+        recent = [int(v) for v in recent_raw if isinstance(v, int)]
+
+    return {
+        "enabled": enabled,
+        "layer_id": layer_id,
+        "tile_id": int(tile_id),
+        "tool": tool,
+        "slots": slots,
+        "recent": recent,
+        "hover": {"tx": tx, "ty": ty, "world_x": world_x, "world_y": world_y},
+    }
+
+def entity_paint_provider(window: Any) -> dict[str, Any]:
+    from engine.entity_paint_mode import get_filtered_prefab_ids, get_selected_prefab_id, load_prefab_infos
+    from engine.tile_paint_mode import world_to_tile
+
+    state = getattr(window, "entity_paint_state", None)
+    enabled = bool(getattr(window, "show_debug", False)) and bool(getattr(state, "enabled", False))
+    if state is None:
+        return {"enabled": False}
+
+    if enabled and not getattr(state, "prefabs", ()):
+        state.prefabs = load_prefab_infos()
+        state.selected_index = 0
+
+    prefab_ids = get_filtered_prefab_ids(state) if enabled else []
+    selected = get_selected_prefab_id(state) if enabled else None
+    if selected is None and prefab_ids:
+        selected = prefab_ids[0]
+
+    idx = 0
+    if selected is not None and prefab_ids:
+        try:
+            idx = prefab_ids.index(selected)
+        except ValueError:
+            idx = int(getattr(state, "selected_index", 0) or 0) % len(prefab_ids)
+    prefab_index = (idx + 1) if prefab_ids else 0
+
+    world_x = None
+    world_y = None
+    mx = getattr(window, "_mouse_x", None)
+    my = getattr(window, "_mouse_y", None)
+    if isinstance(mx, (int, float)) and isinstance(my, (int, float)) and hasattr(window, "screen_to_world"):
+        try:
+            world_x, world_y = window.screen_to_world(float(mx), float(my))
+        except Exception:  # noqa: BLE001
+            world_x, world_y = None, None
+
+    tx = None
+    ty = None
+    scene = getattr(window, "scene_controller", None)
+    instance = getattr(scene, "tilemap_instance", None) if scene is not None else None
+    if isinstance(world_x, (int, float)) and isinstance(world_y, (int, float)):
+        map_w = map_h = tile_w = tile_h = None
+        if instance is not None:
+            mw, mh = getattr(instance, "map_size", (None, None))
+            tw, th = getattr(instance, "tile_size", (None, None))
+            if all(isinstance(v, int) and v > 0 for v in (mw, mh, tw, th)):
+                map_w, map_h, tile_w, tile_h = int(mw or 0), int(mh or 0), int(tw or 0), int(th or 0)
+        if map_w is None:
+            payload: Dict[str, Any] = getattr(scene, "get_authored_scene_payload", lambda: {})()
+            tilemap = payload.get("tilemap") if isinstance(payload, dict) and isinstance(payload.get("tilemap"), dict) else None
+            mw = tilemap.get("width") if isinstance(tilemap, dict) else None
+            mh = tilemap.get("height") if isinstance(tilemap, dict) else None
+            tw = tilemap.get("tilewidth") if isinstance(tilemap, dict) else None
+            th = tilemap.get("tileheight") if isinstance(tilemap, dict) else None
+            if all(isinstance(v, int) and v > 0 for v in (mw, mh, tw, th)):
+                map_w, map_h, tile_w, tile_h = int(mw or 0), int(mh or 0), int(tw or 0), int(th or 0)
+        if map_w is not None and map_h is not None and tile_w is not None and tile_h is not None:
+            hit = world_to_tile(
+                map_width=int(map_w),
+                map_height=int(map_h),
+                tile_width=int(tile_w),
+                tile_height=int(tile_h),
+                world_x=float(world_x),
+                world_y=float(world_y),
+            )
+            if hit is not None:
+                tx, ty = int(hit[0]), int(hit[1])
+
+    hover_entity: dict[str, Any] = {}
+    if enabled:
+        try:
+            from engine.tooling_runtime.authoring_snippets import (
+                get_effective_hover_payload,
+                get_scene_inspector_payload,
+            )
+
+            inspector = get_scene_inspector_payload(window)
+            inspector = get_effective_hover_payload(window, inspector)
+            hover = inspector.get("hover") if isinstance(inspector, dict) and isinstance(inspector.get("hover"), dict) else None
+            if isinstance(hover, dict):
+                hover_entity = {
+                    "id": hover.get("id"),
+                    "prefab_id": hover.get("prefab_id"),
+                    "name": hover.get("mesh_name"),
+                }
+        except Exception:  # noqa: BLE001
+            hover_entity = {}
+
+    return {
+        "enabled": enabled,
+        "prefab_id": str(selected) if isinstance(selected, str) else None,
+        "prefab_index": int(prefab_index) if prefab_ids else 0,
+        "prefab_count": int(len(prefab_ids)),
+        "filter_mode": str(getattr(state, "filter_mode", "all")),
+        "persist_armed": bool(getattr(state, "persist_armed", False)),
+        "hover": {"world_x": world_x, "world_y": world_y, "tx": tx, "ty": ty},
+        "hover_entity": hover_entity,
+        "slots": {
+            int(k): str(v).strip()
+            for k, v in (getattr(window, "prefab_quick_slots", {}) or {}).items()
+            if isinstance(k, int) and 1 <= int(k) <= 9 and isinstance(v, str) and str(v).strip()
+        },
+        "recent": [
+            str(v).strip()
+            for v in (getattr(window, "prefab_recent", []) or [])
+            if isinstance(v, str) and str(v).strip()
+        ],
+    }
+
+def capture_provider(window: Any) -> dict[str, Any]:
+    from engine.capture_mode import iter_layer_ids_sorted_by_z_id
+    from engine.tile_paint_mode import world_to_tile
+
+    state = getattr(window, "capture_state", None)
+    if state is None:
+        return {"enabled": False}
+    enabled = bool(getattr(window, "show_debug", False)) and bool(getattr(state, "enabled", False))
+
+    sc = getattr(window, "scene_controller", None)
+    payload = getattr(sc, "_loaded_scene_data", None) if sc is not None else None
+
+    layer_ids = iter_layer_ids_sorted_by_z_id(payload) if isinstance(payload, dict) else []
+
+    rect_obj = getattr(state, "rect", None)
+    rect_payload = None
+    if rect_obj is not None:
+        rect_payload = {
+            "x0": int(rect_obj.x0),
+            "y0": int(rect_obj.y0),
+            "x1": int(rect_obj.x1),
+            "y1": int(rect_obj.y1),
+            "w": int(rect_obj.w),
+            "h": int(rect_obj.h),
+        }
+
+    hover: Dict[str, Any] = {"tx": None, "ty": None, "tile_id": None, "layer_id": str(getattr(state, "layer_id", "") or "-")}
+    instance = getattr(sc, "tilemap_instance", None) if sc is not None else None
+    if instance is not None:
+        map_w, map_h = getattr(instance, "map_size", (0, 0))
+        tile_w, tile_h = getattr(instance, "tile_size", (0, 0))
+        try:
+            wx, wy = window.screen_to_world(float(window.mouse_x), float(window.mouse_y))
+        except Exception:  # noqa: BLE001
+            wx, wy = None, None
+        if isinstance(wx, (int, float)) and isinstance(wy, (int, float)):
+            hit = world_to_tile(
+                map_width=int(map_w),
+                map_height=int(map_h),
+                tile_width=int(tile_w),
+                tile_height=int(tile_h),
+                world_x=float(wx),
+                world_y=float(wy),
+            )
+            if hit is not None:
+                tx, ty = hit
+                hover["tx"] = int(tx)
+                hover["ty"] = int(ty)
+                if isinstance(payload, dict) and str(getattr(state, "layer_id", "") or "").strip():
+                    entry = None
+                    tilemap = payload.get("tilemap") if isinstance(payload.get("tilemap"), dict) else None
+                    raw_layers = tilemap.get("tile_layers") if isinstance(tilemap, dict) else None
+                    if isinstance(raw_layers, list):
+                        for e in raw_layers:
+                            if isinstance(e, dict) and e.get("id") == str(getattr(state, "layer_id", "")).strip():
+                                entry = e
+                                break
+                    tiles = entry.get("tiles") if isinstance(entry, dict) else None
+                    if (
+                        isinstance(tiles, list)
+                        and len(tiles) == int(map_w) * int(map_h)
+                        and all(isinstance(v, int) for v in tiles)
+                    ):
+                        idx = int(ty) * int(map_w) + int(tx)
+                        hover["tile_id"] = int(tiles[idx])
+
+    return {
+        "enabled": enabled,
+        "mode": str(getattr(state, "mode", "stamp")),
+        "rect": rect_payload,
+        "layers": len(layer_ids),
+        "include_entities": bool(getattr(state, "include_entities", True)),
+        "persist_armed": bool(getattr(window, "capture_persist_armed", False)),
+        "persist_status": str(getattr(window, "capture_persist_status", "") or ""),
+        "hover": hover,
+    }
+
+def command_palette_provider(window: Any) -> dict[str, Any]:
+    import json
+    from engine.command_palette import build_default_commands, filter_commands, filter_options
+    from engine.palette_mode import get_state
+
+    enabled = bool(getattr(window, "show_debug", False)) and bool(getattr(window, "command_palette_enabled", False))
+    if not enabled:
+        return {"enabled": False}
+    query = str(getattr(window, "command_palette_query", "") or "")
+    idx = int(getattr(window, "command_palette_index", 0) or 0)
+
+    commands = build_default_commands(window)
+    filtered = filter_commands(commands, query)
+    if not filtered:
+        return {
+            "enabled": True,
+            "query": query,
+            "rows": [],
+            "selected_row": 0,
+            "prompt_active": bool(getattr(window, "command_palette_prompt_active", False)),
+            "prompt_text": str(getattr(window, "command_palette_prompt_text", "") or ""),
+            "prompt_kind": str(getattr(window, "command_palette_prompt_kind", "text") or "text"),
+            "prompt_query": str(getattr(window, "command_palette_prompt_query", "") or ""),
+            "prompt_selected_row": int(getattr(window, "command_palette_prompt_index", 0) or 0),
+            "prompt_placeholder": str(getattr(window, "command_palette_prompt_placeholder", "") or ""),
+            "prompt_title": str(getattr(window, "command_palette_prompt_title", "") or ""),
+        }
+
+    idx = max(0, min(int(idx), len(filtered) - 1))
+
+    page_start = 0 if idx < 10 else (idx - 9)
+    if page_start > max(0, len(filtered) - 10):
+        page_start = max(0, len(filtered) - 10)
+    page = filtered[page_start : page_start + 10]
+    page_index = idx - page_start
+    selected_cmd = filtered[idx]
+
+    active_mode = "none"
+    try:
+        if bool(get_state().enabled):
+            active_mode = "palette"
+    except Exception:  # noqa: BLE001
+        active_mode = "none"
+    if bool(getattr(getattr(window, "capture_state", None), "enabled", False)):
+        active_mode = "capture"
+    if bool(getattr(getattr(window, "entity_paint_state", None), "enabled", False)):
+        active_mode = "entity_paint"
+    if bool(getattr(getattr(window, "tile_paint_state", None), "enabled", False)):
+        active_mode = "tile_paint"
+
+    section_order: list[str] = []
+    for c in page:
+        section = str(getattr(c, "section", "") or "").strip() or "Other"
+        if section not in section_order:
+            section_order.append(section)
+
+    rows: list[dict[str, Any]] = []
+    last_section = None
+    for c in page:
+        section = str(getattr(c, "section", "") or "").strip() or "Other"
+        if section != last_section:
+            rows.append({"kind": "section", "title": section})
+            last_section = section
+        enabled_cmd = True
+        disabled_reason = ""
+        try:
+            enabled_cmd, disabled_reason = c.is_enabled(window)
+        except Exception:  # noqa: BLE001
+            enabled_cmd, disabled_reason = True, ""
+        rows.append(
+            {
+                "kind": "command",
+                "id": c.id,
+                "title": c.title,
+                "hotkey_hint": c.hotkey_hint,
+                "enabled": bool(enabled_cmd),
+                "disabled_reason": str(disabled_reason or "").strip(),
+            }
+        )
+
+    # selected_row is within the command rows (not headers)
+    selected_row = int(page_index)
+
+    prompt_active = bool(getattr(window, "command_palette_prompt_active", False))
+    prompt_text = str(getattr(window, "command_palette_prompt_text", "") or "")
+    prompt_kind = str(getattr(window, "command_palette_prompt_kind", "text") or "text")
+    prompt_query = str(getattr(window, "command_palette_prompt_query", "") or "")
+    prompt_index = int(getattr(window, "command_palette_prompt_index", 0) or 0)
+    prompt_placeholder = str(getattr(window, "command_palette_prompt_placeholder", "") or "")
+    prompt_title = str(getattr(window, "command_palette_prompt_title", "") or "")
+    prompt_command_id = str(getattr(window, "command_palette_prompt_command_id", "") or "")
+
+    prompt_rows: list[dict[str, Any]] = []
+    prompt_selected_row = 0
+    prompt_no_matches = False
+    prompt_match_count = 0
+    if prompt_active and prompt_kind.strip().lower() == "pick":
+        by_id = {c.id: c for c in commands}
+        cmd = by_id.get(prompt_command_id)
+        provider = None
+        steps = getattr(window, "command_palette_prompt_steps", ())
+        step_index = int(getattr(window, "command_palette_prompt_step_index", 0) or 0)
+        if isinstance(steps, tuple) and steps:
+            current = steps[step_index] if 0 <= step_index < len(steps) else None
+            provider = getattr(current, "options_provider", None)
+        if provider is None:
+            provider = getattr(getattr(cmd, "prompt", None), "options_provider", None) if cmd is not None else None
+        options = provider(window) if callable(provider) else []
+        filtered_opts = filter_options(options, prompt_query)
+        prompt_match_count = len(filtered_opts)
+        if not filtered_opts:
+            prompt_no_matches = True
+            prompt_rows = []
+            prompt_selected_row = 0
+        else:
+            idx2 = max(0, min(int(prompt_index), len(filtered_opts) - 1))
+            page_start = 0 if idx2 < 8 else (idx2 - 7)
+            if page_start > max(0, len(filtered_opts) - 8):
+                page_start = max(0, len(filtered_opts) - 8)
+            prompt_page = filtered_opts[page_start : page_start + 8]
+            prompt_selected_row = idx2 - page_start
+            prompt_rows = [{"value": v, "label": l} for (v, l) in prompt_page]
+
+    preview_line = ""
+    preview_line2 = ""
+    macro_id = str(getattr(selected_cmd, "macro_id", "") or "").strip()
+    if not prompt_active and macro_id:
+        sc = getattr(window, "scene_controller", None)
+        if sc is not None:
+            last_args = getattr(window, "last_macro_args", None)
+            last_args = last_args if isinstance(last_args, dict) else {}
+            defaults = getattr(selected_cmd, "macro_defaults", None)
+            defaults = defaults if isinstance(defaults, dict) else None
+            args = defaults if defaults is not None else last_args.get(macro_id)
+            if isinstance(args, dict):
+                # Anchor resolution.
+                anchor = str(args.get("anchor") or "cursor").strip().lower() or "cursor"
+                primary_id = ""
+                selected_ids: list[str] = []
+                state = getattr(window, "entity_select_state", None)
+                ids = getattr(state, "selected_ids", None) if state is not None else None
+                if isinstance(ids, list):
+                    selected_ids = [str(v).strip() for v in ids if isinstance(v, str) and str(v).strip()]
+                pid = getattr(state, "primary_id", None) if state is not None else None
+                primary_id = (
+                    str(pid).strip()
+                    if isinstance(pid, str) and str(pid).strip()
+                    else (sorted(selected_ids)[0] if selected_ids else "")
+                )
+
+                pos = None
+                if anchor == "primary":
+                    if selected_ids and primary_id:
+                        authored: Any = getattr(sc, "get_authored_scene_payload", lambda: {})()
+                        if isinstance(authored, dict):
+                            ents = authored.get("entities")
+                            if isinstance(ents, list):
+                                for e in ents:
+                                    if isinstance(e, dict) and str(e.get("id") or "") == primary_id:
+                                        try:
+                                            pos = (float(e.get("x", 0.0)), float(e.get("y", 0.0)))
+                                        except Exception:  # noqa: BLE001
+                                            pos = (0.0, 0.0)
+                                        break
+                    if pos is None:
+                        preview_line = "PREVIEW unavailable reason=no_selection"
+                elif anchor == "cursor":
+                    input_ctrl = getattr(window, "input_controller", None)
+                    mx = getattr(input_ctrl, "mouse_x", None) if input_ctrl is not None else None
+                    my = getattr(input_ctrl, "mouse_y", None) if input_ctrl is not None else None
+                    to_world = getattr(window, "screen_to_world", None)
+                    if callable(to_world) and isinstance(mx, (int, float)) and isinstance(my, (int, float)):
+                        try:
+                            cx, cy = to_world(float(mx), float(my))
+                            pos = (float(cx), float(cy))
+                        except Exception:  # noqa: BLE001
+                            pos = None
+
+                if pos is None and not preview_line:
+                    authored = getattr(sc, "get_authored_scene_payload", lambda: {})()
+                    player_pos = None
+                    if isinstance(authored, dict):
+                        ents = authored.get("entities")
+                        if isinstance(ents, list):
+                            for e in ents:
+                                if isinstance(e, dict) and str(e.get("prefab_id") or "") == "player":
+                                    try:
+                                        player_pos = (float(e.get("x", 0.0)), float(e.get("y", 0.0)))
+                                    except Exception:  # noqa: BLE001
+                                        player_pos = (0.0, 0.0)
+                                    break
+                    pos = player_pos or (0.0, 0.0)
+
+                if not preview_line:
+                    preview = None
+                    if macro_id == "macro.objective_zone":
+                        zone_id = str(args.get("zone_id") or "").strip()
+                        set_flag = str(args.get("set_flag") or "").strip()
+                        radius = args.get("radius")
+                        if not zone_id or not set_flag or radius in (None, ""):
+                            preview_line = "PREVIEW unavailable reason=missing_args"
+                        elif pos:
+                            previewer = getattr(sc, "debug_preview_macro_objective_zone", None)
+                            if callable(previewer):
+                                preview = previewer(
+                                    center_x=float(pos[0]),
+                                    center_y=float(pos[1]),
+                                    zone_id=zone_id,
+                                    set_flag=set_flag,
+                                    radius=float(radius or 0),
+                                    toast=str(args.get("toast") or "").strip() or None,
+                                )
+                    elif macro_id == "macro.door_transition":
+                        target_scene = str(args.get("target_scene") or "").strip()
+                        spawn_id = str(args.get("spawn_id") or "").strip()
+                        if not target_scene or not spawn_id:
+                            preview_line = "PREVIEW unavailable reason=missing_args"
+                        elif pos:
+                            previewer = getattr(sc, "debug_preview_macro_door_transition", None)
+                            if callable(previewer):
+                                cx = float(pos[0])
+                                cy = float(pos[1])
+                                preview = previewer(
+                                    center_x=cx,
+                                    center_y=cy,
+                                    target_scene=target_scene,
+                                    spawn_id=spawn_id,
+                                    primary_id=primary_id or None,
+                                )
+                    elif macro_id == "macro.dialogue_choice_flag":
+                        speaker_id = str(args.get("speaker_id") or "").strip()
+                        choice_id = str(args.get("choice_id") or "").strip()
+                        choice_text = str(args.get("choice_text") or "").strip()
+                        set_flag = str(args.get("set_flag") or "").strip()
+                        if not speaker_id or not choice_id or not choice_text or not set_flag:
+                            preview_line = "PREVIEW unavailable reason=missing_args"
+                        else:
+                            previewer = getattr(sc, "debug_preview_macro_dialogue_choice_flag", None)
+                            if callable(previewer):
+                                preview = previewer(
+                                    speaker_id=speaker_id,
+                                    choice_id=choice_id,
+                                    choice_text=choice_text,
+                                    set_flag=set_flag,
+                                    toast=str(args.get("toast") or "").strip() or None,
+                                )
+
+                    if isinstance(preview, dict):
+                        create_n = int(preview.get("will_create", 0) or 0)
+                        update_n = int(preview.get("will_update", 0) or 0)
+                        create_ids = preview.get("create_ids") if isinstance(preview.get("create_ids"), list) else []
+                        update_ids = preview.get("update_ids") if isinstance(preview.get("update_ids"), list) else []
+                        ids_combined = []
+                        for v in list(create_ids) + list(update_ids):  # type: ignore
+                            if isinstance(v, str) and v.strip():
+                                ids_combined.append(v.strip())
+                        first_ids = ",".join(sorted(ids_combined)[:3])
+                        preview_line = f"PREVIEW create={create_n} update={update_n} (first ids: {first_ids})"
+
+                if defaults is not None:
+                    last = last_args.get(macro_id)
+                    if isinstance(last, dict) and last:
+                        preview_line2 = "LAST " + json.dumps(last, sort_keys=True)
+
+    return {
+        "enabled": True,
+        "query": query,
+        "rows": rows,
+        "selected_row": selected_row,
+        "preview_line": preview_line,
+        "preview_line2": preview_line2,
+        "dirty": bool(getattr(window, "scene_dirty", False)),
+        "rev": int(getattr(window, "scene_dirty_counter", 0) or 0),
+        "armed": bool(getattr(window, "scene_persist_armed", False)),
+        "undo": len(getattr(window, "undo_stack", []) or []),
+        "redo": len(getattr(window, "redo_stack", []) or []),
+        "active_mode": active_mode,
+        "prompt_active": prompt_active,
+        "prompt_text": prompt_text,
+        "prompt_kind": prompt_kind,
+        "prompt_query": prompt_query,
+        "prompt_rows": prompt_rows,
+        "prompt_selected_row": prompt_selected_row,
+        "prompt_no_matches": prompt_no_matches,
+        "prompt_match_count": prompt_match_count,
+        "prompt_placeholder": prompt_placeholder,
+        "prompt_title": prompt_title,
+    }
+
+
+def editor_command_palette_provider(window: Any) -> dict[str, Any]:
+    from engine.editor_commands import filter_commands, get_all_commands
+
+    editor = getattr(window, "editor_controller", None)
+    enabled = bool(editor and getattr(editor, "active", False) and getattr(editor, "command_palette_active", False))
+    if not enabled:
+        return {"enabled": False}
+
+    query = str(getattr(editor, "command_palette_query", "") or "")
+    idx = int(getattr(editor, "command_palette_index", 0) or 0)
+
+    commands = filter_commands(get_all_commands(window), query)
+    if not commands:
+        return {"enabled": True, "query": query, "rows": [], "selected_row": 0}
+
+    page = commands[:8]
+    selected = max(0, min(idx, len(page) - 1))
+    rows = [
+        {
+            "kind": "command",
+            "id": c.id,
+            "title": c.title,
+            "hotkey_hint": "",
+            "enabled": True,
+            "disabled_reason": "",
+        }
+        for c in page
+    ]
+    return {
+        "enabled": True,
+        "query": query,
+        "rows": rows,
+        "selected_row": int(selected),
+    }
+
+def interact_prompt_provider(window: Any) -> Any:
+    from engine.interaction import DEFAULT_INTERACT_MAX_DIST, pick_interactable
+
+    scene = getattr(window, "scene_controller", None)
+    if scene is None:
+        return None
+    finder = getattr(scene, "_find_player_sprite", None)
+    if not callable(finder):
+        return None
+    try:
+        player_sprite = finder()
+    except Exception:  # noqa: BLE001
+        player_sprite = None
+    if player_sprite is None:
+        return None
+
+    try:
+        entities = list(window.all_sprites)
+    except Exception:  # noqa: BLE001
+        return None
+    getter = getattr(window, "get_flag", None)
+    return pick_interactable(
+        entities,
+        player_pos=(float(player_sprite.center_x), float(player_sprite.center_y)),
+        max_dist=DEFAULT_INTERACT_MAX_DIST,
+        exclude_entity=player_sprite,
+        get_flag=getter if callable(getter) else None,
+    )
+
+def objective_tracker_provider(window: Any) -> Sequence[str]:
+    from engine.ui import compute_objective_tracker_lines
+    demo_complete_visible = bool(getattr(getattr(window, "demo_complete_overlay", None), "visible", False))
+    getter = getattr(window, "get_flag", None)
+    if not callable(getter):
+        return []
+    return compute_objective_tracker_lines(getter, demo_complete_visible=demo_complete_visible)

@@ -1,0 +1,114 @@
+{
+  "description": "A dungeon level with entrance and boss placeholder.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "gauntlet_test_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "gauntlet_test_dungeon_entrance_50_300_0_0",
+      "name": "Dungeon_Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Health": {
+          "max_hp": 100.0
+        },
+        "Patrol": {
+          "points": [
+            [
+              700,
+              300
+            ],
+            [
+              700,
+              400
+            ]
+          ]
+        }
+      },
+      "behaviours": [
+        "Health",
+        "Patrol"
+      ],
+      "id": "gauntlet_test_boss_placeholder_700_300_0_0",
+      "name": "Boss_Placeholder",
+      "sprite": "assets/placeholder.png",
+      "tag": "enemy",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "encounter_group": "wave_1",
+      "id": "gauntlet_test_entity_200_100_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 200,
+      "y": 100
+    },
+    {
+      "encounter_group": "wave_1",
+      "id": "gauntlet_test_entity_300_100_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 300,
+      "y": 100
+    },
+    {
+      "encounter_group": "wave_2",
+      "id": "gauntlet_test_entity_200_200_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 200,
+      "y": 200
+    },
+    {
+      "encounter_group": "wave_2",
+      "id": "gauntlet_test_entity_300_200_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 300,
+      "y": 200
+    },
+    {
+      "encounter_group": "wave_3",
+      "id": "gauntlet_test_entity_200_300_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 200,
+      "y": 300
+    },
+    {
+      "encounter_group": "wave_3",
+      "id": "gauntlet_test_entity_300_300_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 300,
+      "y": 300
+    }
+  ],
+  "layers": [],
+  "name": "Gauntlet Test",
+  "schema_version": 1,
+  "settings": {
+    "ambient_audio": "forest_ambience",
+    "encounter_budget": 10,
+    "encounter_budget_profile": "normal",
+    "encounter_group_budgets": {
+      "wave_1": 3,
+      "wave_2": 3,
+      "wave_3": 4
+    },
+    "lighting_hint": "green_dim",
+    "region_theme": "moss",
+    "use_theme_spawns": true
+  },
+  "version": 1
+}

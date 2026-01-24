@@ -1,0 +1,130 @@
+{
+  "description": "A dungeon level with entrance and boss placeholder.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "preset_test_dungeon_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "preset_test_dungeon_dungeon_entrance_50_300_0_0",
+      "name": "Dungeon_Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 100,
+              "max_quantity": 100,
+              "min_quantity": 50
+            },
+            {
+              "chance": 1.0,
+              "table_id": "nature_drops"
+            }
+          ],
+          "seed": 12345
+        },
+        "EnemyAI": {
+          "damage": 10.0,
+          "detect_radius": 400.0,
+          "speed": 80.0
+        },
+        "Health": {
+          "current_health": 100,
+          "max_health": 100
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "preset_test_dungeon_preset_test_boss_600_300_0_0",
+      "name": "Preset_Test_Boss",
+      "sprite": "assets/placeholder.png",
+      "tag": "enemy",
+      "x": 600,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "active_sprite": "",
+          "event_id": "preset_test_dungeon_puzzle_unlock",
+          "one_shot": false
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "preset_test_dungeon_preset_test_dungeon_puzzle_switch_600_600_0_0",
+      "name": "preset_test_dungeon_puzzle_switch",
+      "sprite": "assets/switch_off.png",
+      "tag": "interactable",
+      "x": 600,
+      "y": 600
+    },
+    {
+      "behaviour_config": {
+        "DoorLock": {
+          "open_sprite": "",
+          "starts_locked": true,
+          "unlock_event": "preset_test_dungeon_puzzle_unlock"
+        }
+      },
+      "behaviours": [
+        "DoorLock"
+      ],
+      "id": "preset_test_dungeon_preset_test_dungeon_puzzle_door_700_600_0_0",
+      "name": "preset_test_dungeon_puzzle_door",
+      "sprite": "assets/door_locked.png",
+      "tag": "solid",
+      "x": 700,
+      "y": 600
+    },
+    {
+      "behaviour_config": {
+        "RewardChest": {
+          "gold": 100,
+          "item_id": "",
+          "unlock_event": "preset_test_dungeon_puzzle_unlock"
+        }
+      },
+      "behaviours": [
+        "RewardChest"
+      ],
+      "id": "preset_test_dungeon_preset_test_dungeon_puzzle_reward_700_700_0_0",
+      "name": "preset_test_dungeon_puzzle_reward",
+      "sprite": "assets/chest.png",
+      "tag": "interactable",
+      "x": 700,
+      "y": 700
+    }
+  ],
+  "layers": [],
+  "name": "Preset Test Dungeon",
+  "schema_version": 1,
+  "settings": {
+    "ambient_audio": "forest_ambience",
+    "lighting_hint": "green_dim",
+    "region_template": "ruins",
+    "region_theme": "moss",
+    "scene_kind": "dungeon"
+  },
+  "version": 1
+}

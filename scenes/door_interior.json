@@ -1,0 +1,309 @@
+{
+  "collision_rules": {
+    "player:terrain": true
+  },
+  "description": "Tiny interior room that links back to door_field.json.",
+  "entities": [
+    {
+      "animations": {
+        "idle": {
+          "fps": 4,
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "loop": true
+        },
+        "interact": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": false
+        },
+        "walk": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": true
+        }
+      },
+      "behaviour_config": {
+        "CameraFollow": {
+          "padding": 12,
+          "zoom": 1.0
+        }
+      },
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "door_interior_interiorplayer_160_96_0_0",
+      "name": "InteriorPlayer",
+      "sprite": "assets/sprites/animated_player.png",
+      "sprite_sheet": {
+        "columns": 4,
+        "frame_height": 64,
+        "frame_width": 64,
+        "rows": 2
+      },
+      "tag": "player",
+      "x": 160,
+      "y": 96
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "field_return",
+          "target_scene": "scenes/door_field.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "door_interior_interiordoor_160_80_0_0",
+      "name": "InteriorDoor",
+      "x": 160,
+      "y": 80
+    },
+    {
+      "id": "door_interior_interiorentrymarker_160_96_0_0",
+      "layer": "background",
+      "name": "InteriorEntryMarker",
+      "scale": 0.1,
+      "spawn_id": "interior_entry",
+      "tag": "spawn_point",
+      "x": 160,
+      "y": 96
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "forbid_flags": [
+            "demo.reached_interior"
+          ],
+          "once": true,
+          "payload_field": "zone",
+          "payload_value": "DemoObjectiveInteriorZone",
+          "require_flags": [
+            "demo.objective_started"
+          ],
+          "set_flags": {
+            "demo.reached_interior": true
+          },
+          "toast": "Objective: Find the cellar",
+          "toast_seconds": 3.0
+        },
+        "TriggerZone": {
+          "on_trigger": "demo_objective_reached_interior",
+          "trigger_radius": 72.0,
+          "trigger_target": "Player",
+          "zone_id": "DemoObjectiveInteriorZone"
+        }
+      },
+      "behaviours": [
+        "TriggerZone",
+        "SetGameStateOnEvent"
+      ],
+      "id": "door_interior_demoobjectivezone_160_96_0_0",
+      "layer": "background",
+      "name": "DemoObjectiveInteriorZone",
+      "scale": 0.0,
+      "tag": "trigger",
+      "x": 160,
+      "y": 96
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "accept": {
+                "choices": [
+                  {
+                    "next": null,
+                    "text": "On it."
+                  }
+                ],
+                "text": "Really? You're a lifesaver! Bring it back to me."
+              },
+              "complete": {
+                "choices": [
+                  {
+                    "id": "guard_rat_complete",
+                    "next": null,
+                    "text": "You're welcome."
+                  }
+                ],
+                "text": "My statue! Thank you so much. Here is a reward."
+              },
+              "root": {
+                "choices": [
+                  {
+                    "next": "rumors",
+                    "text": "Heard any rumors?"
+                  },
+                  {
+                    "next": "complete",
+                    "require_flags": [
+                      "has_golden_rat_statue"
+                    ],
+                    "text": "I found the statue."
+                  },
+                  {
+                    "next": null,
+                    "text": "Goodbye."
+                  }
+                ],
+                "text": "Hello citizen. Keep your nose clean."
+              },
+              "rumors": {
+                "choices": [
+                  {
+                    "id": "guard_rat_accept",
+                    "next": "accept",
+                    "text": "I'll get it for you."
+                  },
+                  {
+                    "next": "root",
+                    "text": "Sounds dangerous."
+                  }
+                ],
+                "text": "Just that the cellar is overrun with rats. And I lost my lucky statue down there."
+              }
+            },
+            "start": "root"
+          }
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "door_interior_guard_200_150_0_0",
+      "name": "Guard",
+      "x": 200,
+      "y": 150
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "default",
+          "target_scene": "cellar"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "door_interior_cellardoor_100_80_0_0",
+      "layer": "background",
+      "name": "CellarDoor",
+      "x": 100,
+      "y": 80
+    },
+    {
+      "behaviours": [],
+      "id": "door_interior_cellarreturnmarker_120_80_0_0",
+      "layer": "background",
+      "name": "CellarReturnMarker",
+      "spawn_id": "cellar_return",
+      "tag": "spawn_point",
+      "x": 120,
+      "y": 80
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "id": "merchant_trade",
+                    "next": null,
+                    "text": "Trade"
+                  },
+                  {
+                    "next": null,
+                    "text": "Bye"
+                  }
+                ],
+                "text": "Welcome to my shop."
+              }
+            },
+            "start": "root"
+          }
+        },
+        "EmitEventOnEvent": {
+          "emit_event": "open_shop",
+          "emit_payload": {
+            "shop_id": "interior_shop"
+          },
+          "listen_event": "dialogue_choice",
+          "payload_field": "choice_id",
+          "payload_value": "merchant_trade"
+        },
+        "Vendor": {
+          "listen_event": "open_shop",
+          "shop_id": "interior_shop",
+          "stock": [
+            {
+              "item_id": "healing_potion",
+              "price": 10,
+              "quantity": -1
+            },
+            {
+              "item_id": "golden_rat_statue",
+              "price": 100,
+              "quantity": 0
+            }
+          ]
+        }
+      },
+      "behaviours": [
+        "Vendor",
+        "Dialogue",
+        "EmitEventOnEvent"
+      ],
+      "id": "door_interior_merchant_250_150_0_0",
+      "name": "Merchant",
+      "x": 250,
+      "y": 150
+    },
+    {
+      "behaviours": [
+        "EnemyAI"
+      ],
+      "id": "door_interior_themedenemy_9999_9999_0_0",
+      "layer": "entities",
+      "mesh_name": "ThemedEnemy",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 9999.0,
+      "y": 9999.0
+    }
+  ],
+  "name": "Door Interior",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "dark_slate_gray",
+    "region_theme": "ruins",
+    "encounter_set_id": "ruins_encounters",
+    "use_theme_spawns": true,
+    "encounter_budget": 10,
+    "encounter_budget_profile": "normal",
+    "encounter_seed": 5,
+    "allow_mini_bosses": true,
+    "world_height": 256,
+    "world_width": 384
+  },
+  "version": 1
+}

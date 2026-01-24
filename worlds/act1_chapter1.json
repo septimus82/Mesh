@@ -1,0 +1,80 @@
+{
+  "id": "act1_chapter1",
+  "start_scene": "act1_chapter1_stub",
+  "start_spawn": "default",
+  "scenes": {
+    "act1_chapter1_stub": {
+      "path": "packs/core_regions/scenes/Act1_Chapter1_Stub.json",
+      "label": "Act 1 Chapter 1",
+      "tags": [
+        "start"
+      ]
+    },
+    "act1_chapter1_gatepath": {
+      "path": "packs/core_regions/scenes/Act1_Chapter1_GatePath.json",
+      "label": "Act 1 Chapter 1 Gate Path",
+      "tags": [
+        "puzzle"
+      ]
+    },
+    "act1_chapter1_clearing": {
+      "path": "packs/core_regions/scenes/Act1_Chapter1_Clearing.json",
+      "label": "Act 1 Chapter 1 Clearing",
+      "tags": [
+        "payoff"
+      ]
+    },
+    "act1_chapter1_overlook": {
+      "path": "packs/core_regions/scenes/Act1_Chapter1_Overlook.json",
+      "label": "Act 1 Chapter 1 Overlook",
+      "tags": [
+        "payoff"
+      ]
+    },
+    "act1_chapter2_stub": {
+      "path": "packs/core_regions/scenes/Act1_Chapter2_Stub.json",
+      "label": "Act 1 Chapter 2 (Stub)",
+      "tags": [
+        "start"
+      ]
+    }
+  },
+  "links": [
+    {
+      "from": "act1_chapter1_stub",
+      "to": "act1_chapter1_gatepath",
+      "via": "ToGatePath"
+    },
+    {
+      "from": "act1_chapter1_gatepath",
+      "to": "act1_chapter1_clearing",
+      "via": "ToClearing"
+    },
+    {
+      "from": "act1_chapter1_clearing",
+      "to": "act1_chapter1_gatepath",
+      "via": "ReturnToGatePath"
+    },
+    {
+      "from": "act1_chapter1_clearing",
+      "to": "act1_chapter1_overlook",
+      "via": "ToOverlook"
+    },
+    {
+      "from": "act1_chapter1_overlook",
+      "to": "act1_chapter1_clearing",
+      "via": "ReturnToClearing"
+    },
+    {
+      "from": "act1_chapter1_overlook",
+      "to": "act1_chapter2_stub",
+      "via": "ToChapter2"
+    },
+    {
+      "from": "act1_chapter1_gatepath",
+      "to": "act1_chapter1_stub",
+      "via": "ReturnDoor"
+    }
+  ]
+}
+

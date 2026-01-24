@@ -1,0 +1,49 @@
+{
+  "entities": [
+    {
+      "id": "budget_test_entity_100_100_0_0",
+      "prefab_id": "player",
+      "x": 100,
+      "y": 100
+    },
+    {
+      "id": "budget_test_entity_200_200_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 200,
+      "y": 200
+    },
+    {
+      "id": "budget_test_entity_300_200_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 300,
+      "y": 200
+    },
+    {
+      "id": "budget_test_entity_400_200_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 400,
+      "y": 200
+    },
+    {
+      "id": "budget_test_entity_500_200_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 500,
+      "y": 200
+    },
+    {
+      "id": "budget_test_entity_600_200_0_0",
+      "prefab_id": "theme_enemy_placeholder",
+      "x": 600,
+      "y": 200
+    }
+  ],
+  "settings": {
+    "encounter_budget": 3,
+    "encounter_budget_profile": "normal",
+    "encounter_seed": 12345,
+    "region_theme": "moss",
+    "use_theme_spawns": true,
+    "world_height": 600,
+    "world_width": 800
+  }
+}

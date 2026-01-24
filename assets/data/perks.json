@@ -1,0 +1,36 @@
+{
+  "perks": [
+    {
+      "id": "vitality_boost",
+      "name": "Vitality Boost",
+      "description": "Increases Max HP by 20.",
+      "effects": {
+        "max_hp": 20.0
+      }
+    },
+    {
+      "id": "sharp_blade",
+      "name": "Sharp Blade",
+      "description": "Increases damage by 15%.",
+      "effects": {
+        "damage_pct": 0.15
+      }
+    },
+    {
+      "id": "gold_digger",
+      "name": "Gold Digger",
+      "description": "Increases gold gain by 25%.",
+      "effects": {
+        "gold_bonus_pct": 0.25
+      }
+    },
+    {
+      "id": "fast_learner",
+      "name": "Fast Learner",
+      "description": "Increases XP gain by 20%.",
+      "effects": {
+        "xp_bonus_pct": 0.20
+      }
+    }
+  ]
+}

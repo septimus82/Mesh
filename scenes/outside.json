@@ -1,0 +1,21 @@
+{
+  "description": "Placeholder scene used by pack scaffolds.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "outside_player_100_100_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 100
+    }
+  ],
+  "layers": [],
+  "name": "Outside",
+  "schema_version": 1,
+  "version": 1
+}

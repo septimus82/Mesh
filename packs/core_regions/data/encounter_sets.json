@@ -1,0 +1,102 @@
+{
+  "encounter_sets": [
+    {
+      "id": "moss_encounters",
+      "enemy_tags": ["plant", "slime"],
+      "enemy_prefab_ids": [
+        "plant_minion",
+        "slime_blob",
+        {"prefab_id": "rat_scurrier", "variant_id": "overbudget"},
+        {"prefab_id": "void_wisp", "variant_id": "overbudget"},
+        {"prefab_id": "bone_dart", "variant_id": "overbudget"},
+        {"prefab_id": "torch_wisp", "variant_id": "overbudget"},
+        {"prefab_id": "glass_spitter", "variant_id": "overbudget"},
+        {"prefab_id": "rust_drone", "variant_id": "overbudget"}
+      ],
+      "drop_table_id": "nature_drops",
+      "ambient_audio_key": "forest_ambience"
+    },
+    {
+      "id": "magma_encounters",
+      "enemy_tags": ["fire_elemental", "bat"],
+      "enemy_prefab_ids": [
+        "cinder_larva",
+        "cinder_larva",
+        "fire_imp",
+        "ember_imp",
+        "torch_wisp",
+        "magma_cube",
+        {"prefab_id": "magma_cube", "variant_id": "elite"},
+        {"prefab_id": "anvil_guard", "variant_id": "elite"},
+        "fire_imp"
+      ],
+      "drop_table_id": "fire_drops",
+      "ambient_audio_key": "lava_rumble"
+    },
+    {
+      "id": "void_encounters",
+      "min_unique_prefabs": 2,
+      "enemy_tags": ["shadow", "ghost"],
+      "enemy_prefab_ids": [
+        "rift_leech",
+        "shadow_stalker",
+        "shadow_stalker",
+        "shadow_stalker",
+        "shadow_stalker",
+        "shadow_stalker",
+        "shadow_stalker",
+        "shadow_stalker"
+      ],
+      "drop_table_id": "void_drops",
+      "ambient_audio_key": "void_hum"
+    },
+    {
+      "id": "crypt_encounters",
+      "enemy_tags": ["crypt", "undead"],
+      "enemy_prefab_ids": [
+        {"prefab_id": "plant_minion", "variant_id": "elite"},
+        {"prefab_id": "plant_minion", "variant_id": "mini_boss"},
+        {"prefab_id": "slime_blob", "variant_id": "mini_boss"},
+        {"prefab_id": "slime_blob", "variant_id": "elite"},
+        {"prefab_id": "rat_scurrier", "variant_id": "elite"},
+        {"prefab_id": "bone_dart", "variant_id": "elite"},
+        {"prefab_id": "torch_wisp", "variant_id": "elite"},
+        {"prefab_id": "rust_drone", "variant_id": "elite"}
+      ],
+      "drop_table_id": "void_drops",
+      "ambient_audio_key": "void_hum"
+    },
+    {
+      "id": "ruins_encounters",
+      "enemy_tags": ["ruins", "construct"],
+      "enemy_prefab_ids": [
+        "rat_scurrier",
+        "slime_blob",
+        {"prefab_id": "bone_dart", "variant_id": "elite"},
+        {"prefab_id": "slime_blob", "variant_id": "mini_boss"},
+        {"prefab_id": "glass_spitter", "variant_id": "overbudget"},
+        {"prefab_id": "rust_drone", "variant_id": "overbudget"},
+        {"prefab_id": "torch_wisp", "variant_id": "overbudget"},
+        {"prefab_id": "shadow_stalker", "variant_id": "overbudget"}
+      ],
+      "drop_table_id": "nature_drops",
+      "ambient_audio_key": "forest_ambience"
+    },
+    {
+      "id": "forge_encounters",
+      "enemy_tags": ["forge", "construct"],
+      "enemy_prefab_ids": [
+        "ember_imp",
+        "rat_scurrier",
+        {"prefab_id": "anvil_guard", "variant_id": "elite"},
+        {"prefab_id": "anvil_guard", "variant_id": "mini_boss"},
+        {"prefab_id": "slime_blob", "variant_id": "mini_boss"},
+        "glass_spitter",
+        "rust_drone",
+        "bone_dart"
+      ],
+      "drop_table_id": "fire_drops",
+      "ambient_audio_key": "lava_rumble"
+    }
+  ]
+}

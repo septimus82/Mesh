@@ -1,0 +1,94 @@
+[
+  {
+    "id": "mossy",
+    "base_prefab_id": "*",
+    "hp_mult": 1.2,
+    "damage_mult": 0.9,
+    "tags_add": ["mossy", "nature"],
+    "tags_remove": ["clean"],
+    "sprite_override": "assets/sprites/mossy_enemy.png"
+  },
+  {
+    "id": "overbudget",
+    "base_prefab_id": "*",
+    "cost_mult": 20.0,
+    "tags_add": ["overbudget"]
+  },
+  {
+    "id": "elite",
+    "base_prefab_id": "*",
+    "hp_mult": 2.0,
+    "damage_mult": 1.5,
+    "speed_mult": 1.1,
+    "cost_mult": 2.0,
+    "tags_add": ["elite"],
+    "sprite_override": "assets/sprites/goblin.png",
+    "is_elite": true
+  },
+  {
+    "id": "mini_boss",
+    "base_prefab_id": "*",
+    "hp_mult": 2.7,
+    "damage_mult": 1.8,
+    "speed_mult": 1.1,
+    "cost_mult": 3.0,
+    "tags_add": ["mini_boss"],
+    "sprite_override": "assets/sprites/goblin.png",
+    "is_mini_boss": true
+  },
+  {
+    "id": "boss",
+    "base_prefab_id": "*",
+    "hp_mult": 3.0,
+    "damage_mult": 2.0,
+    "speed_mult": 1.0,
+    "cost_mult": 4.0,
+    "tags_add": ["boss"],
+    "sprite_override": "assets/sprites/goblin.png",
+    "is_boss": true
+  },
+  {
+    "id": "boss_variant_b",
+    "base_prefab_id": "slime_blob",
+    "hp_mult": 3.5,
+    "damage_mult": 1.8,
+    "speed_mult": 1.1,
+    "cost_mult": 4.0,
+    "tags_add": ["boss"],
+    "sprite_override": "assets/sprites/goblin.png",
+    "is_boss": true
+  },
+  {
+    "id": "elite_variant_b",
+    "base_prefab_id": "slime_blob",
+    "hp_mult": 2.2,
+    "damage_mult": 1.4,
+    "speed_mult": 1.2,
+    "cost_mult": 2.0,
+    "tags_add": ["elite"],
+    "sprite_override": "assets/sprites/goblin.png",
+    "is_elite": true
+  },
+  {
+    "id": "boss_variant_c",
+    "base_prefab_id": "slime_blob",
+    "hp_mult": 4.0,
+    "damage_mult": 2.5,
+    "speed_mult": 1.2,
+    "cost_mult": 5.0,
+    "tags_add": ["boss"],
+    "sprite_override": "assets/sprites/goblin.png",
+    "is_boss": true
+  },
+  {
+    "id": "elite_variant_c",
+    "base_prefab_id": "slime_blob",
+    "hp_mult": 2.5,
+    "damage_mult": 1.6,
+    "speed_mult": 1.3,
+    "cost_mult": 2.5,
+    "tags_add": ["elite"],
+    "sprite_override": "assets/sprites/goblin.png",
+    "is_elite": true
+  }
+]

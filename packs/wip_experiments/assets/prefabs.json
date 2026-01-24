@@ -1,0 +1,64 @@
+[
+  {
+    "id": "crate",
+    "display_name": "Crate",
+    "entity": {
+      "name": "Crate",
+      "sprite": "assets/sprites/crate.png",
+      "solid": true,
+      "layer": "entities",
+      "behaviours": [
+        "hitbox"
+      ]
+    }
+  },
+  {
+    "id": "enemy_basic",
+    "display_name": "Basic Enemy",
+    "entity": {
+      "name": "Enemy",
+      "sprite": "assets/sprites/enemy.png",
+      "solid": true,
+      "layer": "entities",
+      "behaviours": [
+        "enemy_ai",
+        "health",
+        "hitbox",
+        "damage_on_touch"
+      ]
+    }
+  },
+  {
+    "id": "player_spawn",
+    "display_name": "Player Spawn",
+    "entity": {
+      "name": "SpawnPoint",
+      "sprite": "assets/sprites/marker.png",
+      "layer": "entities",
+      "tag": "spawn_point",
+      "behaviours": []
+    }
+  },
+  {
+    "id": "animated_player",
+    "display_name": "Animated Player",
+    "entity": {
+      "name": "Animated Player",
+      "sprite": "assets/sprites/animated_player.png",
+      "solid": true,
+      "layer": "entities",
+      "behaviours": []
+    }
+  },
+  {
+    "id": "goblin",
+    "display_name": "Goblin",
+    "entity": {
+      "name": "Goblin",
+      "sprite": "assets/sprites/goblin.png",
+      "solid": true,
+      "layer": "entities",
+      "behaviours": []
+    }
+  }
+]

@@ -1,0 +1,135 @@
+{
+  "id": "golden_slice_variant_d",
+  "start_scene": "door_field",
+  "start_spawn": "default",
+  "scenes": {
+    "door_field": {
+      "path": "scenes/door_field.json",
+      "label": "Door Field",
+      "tags": [
+        "start"
+      ]
+    },
+    "door_interior": {
+      "path": "scenes/door_interior.json",
+      "label": "Door Interior",
+      "tags": [
+        "interior"
+      ]
+    },
+    "cellar": {
+      "path": "scenes/cellar.json",
+      "label": "Cellar",
+      "tags": [
+        "dungeon"
+      ]
+    },
+    "main_menu": {
+      "path": "scenes/main_menu.json",
+      "label": "Main Menu",
+      "tags": [
+        "menu"
+      ]
+    },
+    "Ridge Outpost_hub": {
+      "path": "packs\\core_regions\\scenes\\Ridge Outpost_hub.json"
+    },
+    "Ridge Outpost_interior": {
+      "path": "packs\\core_regions\\scenes\\Ridge Outpost_interior.json"
+    },
+    "Ridge Outpost_dungeon": {
+      "path": "packs\\core_regions\\scenes\\Ridge Outpost_dungeon_variant_d.json"
+    },
+    "Hollow Grove_hub": {
+      "path": "packs\\core_regions\\scenes\\Hollow Grove_hub.json"
+    },
+    "Hollow Grove_interior": {
+      "path": "packs\\core_regions\\scenes\\Hollow Grove_interior.json"
+    },
+    "Hollow Grove_dungeon": {
+      "path": "packs\\core_regions\\scenes\\Hollow Grove_dungeon.json"
+    }
+  },
+  "links": [
+    {
+      "from": "door_field",
+      "to": "door_interior",
+      "trigger": "door_1"
+    },
+    {
+      "from": "door_interior",
+      "to": "door_field",
+      "trigger": "exit_1"
+    },
+    {
+      "from": "door_field",
+      "to": "cellar",
+      "trigger": "cellar_door"
+    },
+    {
+      "from": "cellar",
+      "to": "door_field",
+      "trigger": "exit_1"
+    },
+    {
+      "from": "door_field",
+      "to": "Ridge Outpost_hub",
+      "trigger": "ridge_path"
+    },
+    {
+      "from": "Ridge Outpost_hub",
+      "to": "door_field",
+      "trigger": "return_path"
+    },
+    {
+      "from": "Ridge Outpost_hub",
+      "to": "Ridge Outpost_interior",
+      "trigger": "inn_door"
+    },
+    {
+      "from": "Ridge Outpost_interior",
+      "to": "Ridge Outpost_hub",
+      "trigger": "exit_door"
+    },
+    {
+      "from": "Ridge Outpost_hub",
+      "to": "Ridge Outpost_dungeon",
+      "trigger": "dungeon_entrance"
+    },
+    {
+      "from": "Ridge Outpost_dungeon",
+      "to": "Ridge Outpost_hub",
+      "trigger": "dungeon_exit"
+    },
+    {
+      "from": "door_field",
+      "to": "Hollow Grove_hub",
+      "trigger": "grove_path"
+    },
+    {
+      "from": "Hollow Grove_hub",
+      "to": "door_field",
+      "trigger": "return_path"
+    },
+    {
+      "from": "Hollow Grove_hub",
+      "to": "Hollow Grove_interior",
+      "trigger": "tree_door"
+    },
+    {
+      "from": "Hollow Grove_interior",
+      "to": "Hollow Grove_hub",
+      "trigger": "exit_door"
+    },
+    {
+      "from": "Hollow Grove_hub",
+      "to": "Hollow Grove_dungeon",
+      "trigger": "cave_entrance"
+    },
+    {
+      "from": "Hollow Grove_dungeon",
+      "to": "Hollow Grove_hub",
+      "trigger": "cave_exit"
+    }
+  ]
+}

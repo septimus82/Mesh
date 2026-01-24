@@ -1,0 +1,160 @@
+{
+  "description": "Act 1 Chapter 4 fork scene (branching choice + reconverge).",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter4_fork_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter4_fork_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch4_choice_a",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter4_fork_ch4choiceazone_240_360_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter4_fork_ch4choiceazone_240_360_0_0",
+      "name": "Ch4ChoiceAZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 240,
+      "y": 360
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch4_goal_a",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter4_fork_ch4goalazone_460_360_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter4_fork_ch4goalazone_460_360_0_0",
+      "name": "Ch4GoalAZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 460,
+      "y": 360
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch4_choice_b",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter4_fork_ch4choicebzone_240_240_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter4_fork_ch4choicebzone_240_240_0_0",
+      "name": "Ch4ChoiceBZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 240,
+      "y": 240
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch4_goal_b",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter4_fork_ch4goalbzone_460_240_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter4_fork_ch4goalbzone_460_240_0_0",
+      "name": "Ch4GoalBZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 460,
+      "y": 240
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch4_depart",
+          "trigger_radius": 56.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter4_fork_ch4departzone_700_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter4_fork_ch4departzone_700_300_0_0",
+      "name": "Ch4DepartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter5_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter4_fork_tochapter5_820_300_0_0",
+      "name": "ToChapter5",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 820,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter4_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter4_fork_returndoor_60_300_0_0",
+      "name": "ReturnDoor",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Chapter 4 - Fork",
+  "schema_version": 1,
+  "version": 1
+}

@@ -1,0 +1,45 @@
+{
+  "description": "An outdoor area with a player spawn and one exit.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "CameraFollow"
+      ],
+      "id": "preset_test_path_player_400_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 400,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "Spawn_From_Overworld",
+          "target_scene": "scenes/target.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "preset_test_path_exit_to_somewhere_700_300_0_0",
+      "name": "Exit_To_Somewhere",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 700,
+      "y": 300
+    }
+  ],
+  "layers": [],
+  "name": "Preset Test Path",
+  "schema_version": 1,
+  "settings": {
+    "ambient_audio": "forest_ambience",
+    "lighting_hint": "green_dim",
+    "region_template": "ruins",
+    "region_theme": "moss",
+    "scene_kind": "path"
+  },
+  "version": 1
+}

@@ -1,0 +1,142 @@
+{
+  "id": "golden_slice_variant_b",
+  "start_scene": "door_field",
+  "start_spawn": "default",
+  "scenes": {
+    "door_field": {
+      "path": "scenes/door_field.json",
+      "label": "Door Field",
+      "tags": [
+        "start"
+      ]
+    },
+    "door_interior": {
+      "path": "scenes/door_interior.json",
+      "label": "Door Interior",
+      "tags": [
+        "interior"
+      ]
+    },
+    "cellar": {
+      "path": "scenes/cellar.json",
+      "label": "Cellar",
+      "tags": [
+        "dungeon"
+      ]
+    },
+    "main_menu": {
+      "path": "scenes/main_menu.json",
+      "label": "Main Menu",
+      "tags": [
+        "menu"
+      ]
+    },
+    "Ridge Outpost_hub": {
+      "path": "packs\\core_regions\\scenes\\Ridge Outpost_hub.json"
+    },
+    "Ridge Outpost_interior": {
+      "path": "packs\\core_regions\\scenes\\Ridge Outpost_interior.json"
+    },
+    "Ridge Outpost_dungeon": {
+      "path": "packs\\core_regions\\scenes\\Ridge Outpost_dungeon_variant_b.json"
+    },
+    "Hollow Grove_hub": {
+      "path": "packs\\core_regions\\scenes\\Hollow Grove_hub.json"
+    },
+    "Hollow Grove_interior": {
+      "path": "packs\\core_regions\\scenes\\Hollow Grove_interior.json"
+    },
+    "Hollow Grove_dungeon": {
+      "path": "packs\\core_regions\\scenes\\Hollow Grove_dungeon.json"
+    },
+    "Ashen_hub": {
+      "path": "packs\\core_regions\\scenes\\Ashen_hub.json"
+    },
+    "Ashen_interior": {
+      "path": "packs\\core_regions\\scenes\\Ashen_interior.json"
+    },
+    "Ashen_dungeon": {
+      "path": "packs\\core_regions\\scenes\\Ashen_dungeon.json"
+    }
+  },
+  "links": [
+    {
+      "from": "door_field",
+      "to": "main_menu",
+      "via": "MenuExit"
+    },
+    {
+      "from": "main_menu",
+      "to": "door_field",
+      "via": "StartGame"
+    },
+    {
+      "from": "door_field",
+      "to": "door_interior",
+      "via": "InteriorDoor"
+    },
+    {
+      "from": "door_interior",
+      "to": "door_field",
+      "via": "FieldDoor"
+    },
+    {
+      "from": "door_interior",
+      "to": "cellar",
+      "via": "CellarDoor"
+    },
+    {
+      "from": "cellar",
+      "to": "door_interior",
+      "via": "ExitDoor"
+    },
+    {
+      "from": "Ridge Outpost_hub",
+      "to": "Ridge Outpost_interior"
+    },
+    {
+      "from": "Ridge Outpost_interior",
+      "to": "Ridge Outpost_hub"
+    },
+    {
+      "from": "Ridge Outpost_hub",
+      "to": "Ridge Outpost_dungeon"
+    },
+    {
+      "from": "Ridge Outpost_dungeon",
+      "to": "Ridge Outpost_hub"
+    },
+    {
+      "from": "Hollow Grove_hub",
+      "to": "Hollow Grove_interior"
+    },
+    {
+      "from": "Hollow Grove_interior",
+      "to": "Hollow Grove_hub"
+    },
+    {
+      "from": "Hollow Grove_hub",
+      "to": "Hollow Grove_dungeon"
+    },
+    {
+      "from": "Hollow Grove_dungeon",
+      "to": "Hollow Grove_hub"
+    },
+    {
+      "from": "Ashen_hub",
+      "to": "Ashen_interior"
+    },
+    {
+      "from": "Ashen_interior",
+      "to": "Ashen_hub"
+    },
+    {
+      "from": "Ashen_hub",
+      "to": "Ashen_dungeon"
+    },
+    {
+      "from": "Ashen_dungeon",
+      "to": "Ashen_hub"
+    }
+  ]
+}

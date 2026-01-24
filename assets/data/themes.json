@@ -1,0 +1,51 @@
+{
+  "moss": {
+    "description": "Overgrown ruins with mossy stone and nature reclaiming the structure.",
+    "default_variant_id": "mossy",
+    "encounter_set_id": "moss_encounters",
+    "default_enemy_tags": ["plant", "slime"],
+    "default_drop_table_id": "nature_drops",
+    "ambient_audio_key": "forest_ambience",
+    "lighting_hint": "green_dim"
+  },
+  "magma": {
+    "description": "Volcanic underground with heat and fire.",
+    "encounter_set_id": "magma_encounters",
+    "default_enemy_tags": ["fire_elemental", "bat"],
+    "default_drop_table_id": "fire_drops",
+    "ambient_audio_key": "lava_rumble",
+    "lighting_hint": "red_glow"
+  },
+  "void": {
+    "description": "Ethereal void space.",
+    "encounter_set_id": "void_encounters",
+    "default_enemy_tags": ["shadow", "ghost"],
+    "default_drop_table_id": "void_drops",
+    "ambient_audio_key": "void_hum",
+    "lighting_hint": "purple_dark"
+  },
+  "crypt": {
+    "description": "Cold stone corridors and forgotten crypts.",
+    "encounter_set_id": "crypt_encounters",
+    "default_enemy_tags": ["crypt", "undead"],
+    "default_drop_table_id": "void_drops",
+    "ambient_audio_key": "void_hum",
+    "lighting_hint": "blue_dim"
+  },
+  "ruins": {
+    "description": "Crumbling ruins with lingering danger.",
+    "encounter_set_id": "ruins_encounters",
+    "default_enemy_tags": ["ruins", "construct"],
+    "default_drop_table_id": "nature_drops",
+    "ambient_audio_key": "forest_ambience",
+    "lighting_hint": "gray_dim"
+  },
+  "forge": {
+    "description": "Hot forge halls and clanging constructs.",
+    "encounter_set_id": "forge_encounters",
+    "default_enemy_tags": ["forge", "construct"],
+    "default_drop_table_id": "fire_drops",
+    "ambient_audio_key": "lava_rumble",
+    "lighting_hint": "red_glow"
+  }
+}

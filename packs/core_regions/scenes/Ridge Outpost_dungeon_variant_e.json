@@ -1,0 +1,174 @@
+{
+  "description": "Lantern halls: occluders showcase. Best with lighting-shadowmask-demo.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "ridge_outpost_dungeon_variant_e_player_100_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "ridge_outpost_dungeon_variant_e_entrance_50_300_0_0",
+      "name": "Entrance",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 50,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "default",
+          "target_scene": "packs/core_regions/scenes/Ridge Outpost_hub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "ridge_outpost_dungeon_variant_e_exit_700_300_0_0",
+      "name": "Exit",
+      "sprite": "assets/placeholder.png",
+      "tag": "exit",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 10
+            }
+          ],
+          "seed": 12345
+        },
+        "EnemyAI": {
+          "type": "boss"
+        }
+      },
+      "behaviours": [
+        "EnemyAI",
+        "Health",
+        "Combat",
+        "DropTable"
+      ],
+      "id": "ridge_outpost_dungeon_variant_e_boss_600_300_0_0",
+      "name": "Boss",
+      "sprite": "assets/placeholder.png",
+      "tag": "enemy",
+      "tags": [
+        "boss"
+      ],
+      "x": 600,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "EnemyAI": {
+          "type": "elite"
+        }
+      },
+      "behaviours": [
+        "EnemyAI",
+        "Health",
+        "Combat"
+      ],
+      "id": "ridge_outpost_dungeon_variant_e_elite_400_300_0_0",
+      "name": "Elite",
+      "sprite": "assets/placeholder.png",
+      "tag": "enemy",
+      "x": 400,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "RewardChest": {
+          "item_id": "health_potion"
+        }
+      },
+      "behaviours": [
+        "RewardChest"
+      ],
+      "id": "ridge_outpost_dungeon_variant_e_reward_650_300_0_0",
+      "name": "Reward",
+      "sprite": "assets/placeholder.png",
+      "tag": "interactable",
+      "x": 650,
+      "y": 300
+    }
+  ],
+  "layers": [
+    {
+      "entities": {
+        "1": {
+          "behaviours": {
+            "SceneTransition": {
+              "spawn_point": "default",
+              "target_scene": "packs/core_regions/scenes/Ridge Outpost_hub.json"
+            }
+          },
+          "tags": [
+            "auto_wired"
+          ],
+          "type": "prop",
+          "x": 0,
+          "y": 0
+        }
+      },
+      "name": "entities"
+    }
+  ],
+  "name": "Ridge Outpost Dungeon (Variant E)",
+  "occluders": [
+    {
+      "height": 200,
+      "id": "hallway_wall",
+      "type": "rect",
+      "width": 20,
+      "x": 200,
+      "y": 200
+    },
+    {
+      "height": 30,
+      "id": "boss_pillar",
+      "type": "rect",
+      "width": 30,
+      "x": 550,
+      "y": 250
+    },
+    {
+      "id": "corner_wedge",
+      "points": [
+        [
+          300,
+          100
+        ],
+        [
+          350,
+          100
+        ],
+        [
+          300,
+          150
+        ]
+      ],
+      "type": "poly"
+    }
+  ],
+  "settings": {
+    "background_color": "black",
+    "music": "assets/music/dungeon_theme.mp3",
+    "region_theme": "moss"
+  },
+  "version": 1
+}

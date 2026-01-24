@@ -1,0 +1,121 @@
+{
+  "events": [
+    {
+      "name": "collectible_picked",
+      "description": "Fired when a collectible is picked up by an entity.",
+      "payload": {
+        "collectible_name": "string",
+        "collector": "string",
+        "position": "tuple[float, float]"
+      }
+    },
+    {
+      "name": "damage_applied",
+      "description": "Fired when damage is dealt to an entity.",
+      "payload": {
+        "source": "string",
+        "target": "string",
+        "amount": "float"
+      }
+    },
+    {
+      "name": "dialogue_choice",
+      "description": "Fired when a player selects a dialogue choice.",
+      "payload": {
+        "entity": "string",
+        "choice_id": "string"
+      }
+    },
+    {
+      "name": "dialogue_started",
+      "description": "Fired when a dialogue sequence begins.",
+      "payload": {
+        "entity": "string",
+        "owner": "string",
+        "trigger": "string",
+        "actor": "string"
+      }
+    },
+    {
+      "name": "died",
+      "description": "Fired when an entity's health reaches zero.",
+      "payload": {
+        "actor": "object",
+        "name": "string"
+      }
+    },
+    {
+      "name": "entered_zone",
+      "description": "Fired when an entity enters a trigger zone.",
+      "payload": {
+        "zone": "string",
+        "entity": "string"
+      }
+    },
+    {
+      "name": "open_shop",
+      "description": "Fired to open the vendor UI.",
+      "payload": {
+        "shop_id": "string"
+      }
+    },
+    {
+      "name": "quest_completed",
+      "description": "Fired when a quest is fully completed.",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "name": "quest_stage_completed",
+      "description": "Fired when a quest stage is completed.",
+      "payload": {
+        "quest_id": "string",
+        "stage_id": "string"
+      }
+    },
+    {
+      "name": "quest_stage_started",
+      "description": "Fired when a quest stage becomes active.",
+      "payload": {
+        "quest_id": "string",
+        "stage_id": "string"
+      }
+    },
+    {
+      "name": "act1_ch1_gate_unlock",
+      "description": "Fired when the Act 1 Chapter 1 gate switch is activated.",
+      "payload": {
+        "source": "object"
+      }
+    },
+    {
+      "name": "act1_ch2_ruin_unlock",
+      "description": "Fired when the Act 1 Chapter 2 ruined gate switch is activated.",
+      "payload": {
+        "source": "object"
+      }
+    },
+    {
+      "name": "ridge2_variant_k_unlock",
+      "description": "Fired when the Golden Slice 2 Variant K puzzle switch is activated.",
+      "payload": {
+        "source": "object"
+      }
+    },
+    {
+      "name": "ridge2_variant_n_unlock",
+      "description": "Fired when the Golden Slice puzzle switch for variant N2 is activated.",
+      "payload": {
+        "source": "object"
+      }
+    },
+    {
+      "name": "ridge_variant_k_unlock",
+      "description": "Fired when the Variant K puzzle switch is activated.",
+      "payload": {
+        "source": "object"
+      }
+    }
+  ]
+}
