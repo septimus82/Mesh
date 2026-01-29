@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 
+from engine import json_io
 ASSETS_DIR = Path("assets")
 SPRITES_DIR = ASSETS_DIR / "sprites"
 PREFABS_FILE = ASSETS_DIR / "prefabs.json"
@@ -84,8 +85,7 @@ def scan_and_import():
     all_prefabs = existing_prefabs + new_entries
 
     try:
-        with open(PREFABS_FILE, "w", encoding="utf-8") as f:
-            json.dump(all_prefabs, f, indent=2)
+        json_io.write_json_atomic(PREFABS_FILE, all_prefabs)
         print(f"Successfully added {len(new_entries)} new prefabs to {PREFABS_FILE}")
     except Exception as e:
         print(f"Failed to write prefabs file: {e}")

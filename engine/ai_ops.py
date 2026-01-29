@@ -8,11 +8,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
 
+from . import json_io
 from .editor_palette import load_prefab_palette
 from .scene_loader import SceneLoader
 
 
-def _load_json(path: Path) -> dict[str, Any]:
+def _load_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
@@ -22,8 +23,7 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    json_io.write_json_atomic(path, payload)
 
 
 def _deep_merge(dest: dict[str, Any], src: dict[str, Any]) -> dict[str, Any]:
@@ -673,4 +673,7 @@ class AIOps:
 
 def load_job(path: str | Path) -> dict[str, Any]:
     job_path = Path(path)
-    return _load_json(job_path)
+    payload = _load_json(job_path)
+    if not isinstance(payload, dict):
+        raise ValueError(f"Job root must be an object: {job_path}")
+    return payload

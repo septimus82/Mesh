@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import json
 import os
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 import engine.optional_arcade as optional_arcade
 
+from . import json_io
 
 DEFAULT_SETTINGS_PATH = Path("artifacts") / "settings.json"
 SETTINGS_PATH_ENV = "MESH_SETTINGS_PATH"
@@ -82,31 +82,7 @@ def load_settings(path: str | Path | None = None) -> SettingsV1:
 
 
 def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-
-    tmp_fd: int | None = None
-    tmp_path: Path | None = None
-    try:
-        tmp_fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=str(path.parent))
-        tmp_path = Path(tmp_name)
-        with os.fdopen(tmp_fd, "w", encoding="utf-8", newline="\n") as f:
-            tmp_fd = None
-            f.write(text)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp_path, path)
-    finally:
-        if tmp_fd is not None:
-            try:
-                os.close(tmp_fd)
-            except Exception:
-                pass
-        if tmp_path is not None and tmp_path.exists():
-            try:
-                tmp_path.unlink()
-            except Exception:
-                pass
+    json_io.write_json_atomic(path, payload)
 
 
 def save_settings(path: str | Path | None, settings: SettingsV1) -> None:

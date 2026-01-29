@@ -7,6 +7,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Callable, TypedDict
 
+from engine import json_io
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
 from engine.tooling import plan_history, polish, scaffold
@@ -63,7 +64,7 @@ class BackupManager:
     def finish_backup(self):
         if self.current_backup_path:
             manifest_path = self.current_backup_path / "manifest.json"
-            manifest_path.write_text(json.dumps(self.manifest, indent=2), encoding="utf-8")
+            json_io.write_json_atomic(manifest_path, self.manifest)
 
     def restore_last_backup(self) -> bool:
         if not self.backup_root.exists():
@@ -152,8 +153,10 @@ class PlanExecutor:
             self._writer(path, content)
             return
 
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
+        json_io.write_text_atomic(path, content, encoding="utf-8")
+
+    def _dump_json(self, payload: Any) -> str:
+        return json_io.dumps_stable(payload) + "\n"
 
     def undo_last(self) -> bool:
         return self.backup_mgr.restore_last_backup()
@@ -179,7 +182,7 @@ class PlanExecutor:
 
         if not self.dry_run and not capture_mode:
             # Generate a plan ID hash
-            plan_id = hashlib.md5(json.dumps(asdict(plan), sort_keys=True).encode()).hexdigest()[:8]
+            plan_id = hashlib.md5(json_io.dumps_stable(asdict(plan)).encode()).hexdigest()[:8]
             self.backup_mgr.start_backup(plan_id)
 
         print(f"[Mesh][Executor] Executing plan ({len(plan.actions)} actions)...")
@@ -331,11 +334,11 @@ class PlanExecutor:
 
         self._track_file(manifest)
         if not manifest.exists():
-            content = json.dumps({
+            content = self._dump_json({
                 "id": args["id"],
                 "name": args["id"],
                 "wip": args.get("wip", True)
-            }, indent=2)
+            })
             self._write_file(manifest, content)
 
     def _create_scene(self, args: Dict[str, Any]):
@@ -347,7 +350,7 @@ class PlanExecutor:
         # Use generate_scene_data instead of create_scene to support write seam
         scene_data = scaffold.generate_scene_data(str(path), args["template"], args)
         if scene_data:
-            content = json.dumps(scene_data, indent=2, sort_keys=False)
+            content = self._dump_json(scene_data)
             self._write_file(path, content)
             print(f"[Mesh][Scaffold] Created new scene at '{path}' using template '{args['template']}'")
         else:
@@ -394,7 +397,7 @@ class PlanExecutor:
 
         data.setdefault("entities", []).append(npc)
 
-        self._write_file(path, json.dumps(data, indent=2))
+        self._write_file(path, self._dump_json(data))
 
     def _create_quest(self, args: Dict[str, Any]):
         path = Path(args["path"])
@@ -416,7 +419,7 @@ class PlanExecutor:
                 "type": args["type"],
                 "steps": []
             })
-            self._write_file(path, json.dumps(data, indent=2))
+            self._write_file(path, self._dump_json(data))
 
     def _wire_world(self, args: Dict[str, Any]):
         world_path = Path(args["world_path"])
@@ -445,7 +448,7 @@ class PlanExecutor:
                 world["links"].append({"from": link_from, "to": scene_id})
                 world["links"].append({"from": scene_id, "to": link_from})
 
-        self._write_file(world_path, json.dumps(world, indent=2))
+        self._write_file(world_path, self._dump_json(world))
 
     def _polish_scene(self, args: Dict[str, Any]):
         path = Path(args["path"])
@@ -454,14 +457,14 @@ class PlanExecutor:
         if args.get("compact_only"):
             # Use shared logic
             compacted = polish.generate_polished_scene_data(path)
-            self._write_file(path, json.dumps(compacted, indent=2))
+            self._write_file(path, self._dump_json(compacted))
         else:
             # We need to polish (compact + validate) but using our writer.
             # 1. Generate data
             compacted = polish.generate_polished_scene_data(path)
             
             # 2. Write (via seam)
-            self._write_file(path, json.dumps(compacted, indent=2))
+            self._write_file(path, self._dump_json(compacted))
             
             # 3. Validate (if not dry run, or if we can validate in-memory?)
             # Validation usually reads from disk. If we are in dry-run, the file on disk is OLD.
@@ -578,7 +581,7 @@ class PlanExecutor:
                 }
             })
 
-        self._write_file(path, json.dumps(data, indent=2))
+        self._write_file(path, self._dump_json(data))
 
     def _add_transition(self, args: Dict[str, Any]):
         path = Path(args["scene_path"])
@@ -605,7 +608,7 @@ class PlanExecutor:
             }
         })
 
-        self._write_file(path, json.dumps(data, indent=2))
+        self._write_file(path, self._dump_json(data))
 
     def _add_npc_dialogue(self, args: Dict[str, Any]):
         path = Path(args["scene_path"])
@@ -646,7 +649,7 @@ class PlanExecutor:
             print(f"[PlanExecutor] Warning: NPC '{npc_name}' not found in '{path}'. Dialogue not added.")
             return
 
-        self._write_file(path, json.dumps(data, indent=2))
+        self._write_file(path, self._dump_json(data))
 
     def _collect_action_targets(self, plan: Plan) -> set[str]:
         """Collect all file paths targeted by plan actions."""

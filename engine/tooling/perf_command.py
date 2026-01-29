@@ -9,6 +9,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from engine import json_io
 from engine.config import EngineConfig
 from engine.tooling.replay_script import load_replay_script, run_replay_script_with_window
 
@@ -102,27 +103,41 @@ def handle_perf_run(args: argparse.Namespace) -> int:
 
     window = window_ref[0]
 
-    # Warmup
-    if args.warmup > 0:
-        print(f"[Mesh][Perf] Warming up ({args.warmup} frames)...")
-        for _ in range(args.warmup):
+    snapshot = None
+    duration = 0.0
+    frames = args.frames
+    try:
+        # Warmup
+        if args.warmup > 0:
+            print(f"[Mesh][Perf] Warming up ({args.warmup} frames)...")
+            for _ in range(args.warmup):
+                window.on_update(1.0 / 60.0)
+                window.on_draw()
+
+        # Measurement
+        print(f"[Mesh][Perf] Measuring ({frames} frames)...")
+        
+        start_time = time.time()
+        for _ in range(frames):
             window.on_update(1.0 / 60.0)
             window.on_draw()
+        duration = time.time() - start_time
 
-    # Measurement
-    frames = args.frames
-    print(f"[Mesh][Perf] Measuring ({frames} frames)...")
-    
-    start_time = time.time()
-    for _ in range(frames):
-        window.on_update(1.0 / 60.0)
-        window.on_draw()
-    duration = time.time() - start_time
+        print(f"[Mesh][Perf] Run complete in {duration:.2f}s.")
 
-    print(f"[Mesh][Perf] Run complete in {duration:.2f}s.")
+        # Collect stats
+        snapshot = window.perf_stats.snapshot()
+    finally:
+        # Always close window to prevent subprocess hang
+        try:
+            if hasattr(window, "close") and callable(window.close):
+                window.close()
+        except Exception as close_exc:
+            print(f"[Mesh][Perf] Warning: failed to close window: {close_exc}")
 
-    # Collect stats
-    snapshot = window.perf_stats.snapshot()
+    if snapshot is None:
+        print("[Mesh][Perf] Failed to collect performance stats.")
+        return 1
     
     # Report to stdout
     print("\nPerformance Summary:")
@@ -171,7 +186,6 @@ def handle_perf_run(args: argparse.Namespace) -> int:
     # Output JSON
     if args.out:
         out_path = Path(args.out)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
         
         output_data = asdict(snapshot)
         output_data["meta"] = {
@@ -185,8 +199,7 @@ def handle_perf_run(args: argparse.Namespace) -> int:
             "evaluation": evaluation,
         }
         
-        with out_path.open("w", encoding="utf-8") as f:
-            json.dump(output_data, f, indent=2)
+        json_io.write_json_atomic(out_path, output_data)
         print(f"\n[Mesh][Perf] Report written to {out_path}")
 
     if failed_checks:
@@ -198,9 +211,6 @@ def handle_perf_run(args: argparse.Namespace) -> int:
             print(f"  {metric}: {value} > {limit}")
         return 2
 
-    # Explicitly close to avoid hanging in headless?
-    # window.close() # Arcade window close likely needed if we are bypassing app.run()
-    
     return 0
 
 

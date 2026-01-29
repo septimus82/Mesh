@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from . import json_io
 from .logging_tools import get_logger
 
 _LOG = get_logger("engine.project_templates")
@@ -47,8 +48,7 @@ def apply_template(root: Path, template_id: str) -> None:
 
 
 def _write_json(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    json_io.write_json_atomic(path, data)
 
 
 def _apply_blank(root: Path) -> None:

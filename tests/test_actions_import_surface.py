@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import subprocess
 import sys
+
+from tests.subprocess_tools import run_checked
 
 
 def test_importing_actions_has_no_stdout_noise_and_exports_surface() -> None:
@@ -22,11 +23,8 @@ assert hasattr(actions, "dispatch_action")
 assert hasattr(actions, "validate_bound_actions")
 assert hasattr(actions, "list_actions")
 """
-    proc = subprocess.run(
+    proc = run_checked(
         [sys.executable, "-c", script],
-        capture_output=True,
-        text=True,
-        check=False,
     )
     assert proc.returncode == 0, proc.stderr or proc.stdout
     assert proc.stdout == ""

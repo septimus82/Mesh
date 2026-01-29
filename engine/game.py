@@ -62,6 +62,7 @@ from .ui import (
     GameOverScreen,
     GoldenSliceDemoHUDStripOverlay,
     GoldenSliceVariantPickerOverlay,
+    HD2DPreviewIndicatorOverlay,
     HelpOverlay,
     InspectorOverlay,
     InteractPromptOverlay,
@@ -88,9 +89,13 @@ from .ui_overlays.editor_shell_overlay import EditorShellOverlay
 from .editor.editor_cursor_hint_overlay import EditorCursorHintOverlay
 from .ui_overlays.scene_switcher_overlay import SceneSwitcherOverlay
 from .ui_overlays.scene_browser_overlay import SceneBrowserOverlay
+from .ui_overlays.project_explorer_overlay import ProjectExplorerOverlay
 from .ui_overlays.asset_browser_overlay import AssetBrowserOverlay
 from .ui_overlays.undo_history_overlay import UndoHistoryOverlay
+from .ui_overlays.problems_panel_overlay import ProblemsPanelOverlay
+from .ui_overlays.find_everything_overlay import FindEverythingOverlay
 from .ui_overlays.component_inspector_overlay import ComponentInspectorOverlay
+from .ui_overlays.hd2d_settings_panel_overlay import Hd2dSettingsPanelOverlay
 from .editor.editor_gizmo_overlay import EditorGizmoOverlay
 from .editor.selection_outline_overlay import SelectionOutlineOverlay
 from .editor.marquee_select_overlay import MarqueeSelectOverlay
@@ -325,6 +330,9 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.scene_dirty_overlay = SceneDirtyOverlay(self, provider=ui_providers.scene_dirty_provider)
         self.register_ui_element(self.scene_dirty_overlay)
 
+        self.hd2d_preview_indicator_overlay = HD2DPreviewIndicatorOverlay(self, provider=ui_providers.hd2d_preview_indicator_provider)
+        self.register_ui_element(self.hd2d_preview_indicator_overlay)
+
         self.hot_reload_overlay = HotReloadOverlay(self)
         self.register_ui_element(self.hot_reload_overlay)
 
@@ -379,11 +387,15 @@ class GameWindow(engine.optional_arcade.arcade.Window):
 
         self.entity_panels_overlay = EntityPanelsOverlay(self); self.register_ui_element(self.entity_panels_overlay)
         self.component_inspector_overlay = ComponentInspectorOverlay(self); self.register_ui_element(self.component_inspector_overlay)
+        self.hd2d_settings_panel_overlay = Hd2dSettingsPanelOverlay(self, provider=ui_providers.hd2d_settings_panel_provider); self.register_ui_element(self.hd2d_settings_panel_overlay)
         self.editor_status_bar_overlay = EditorStatusBarOverlay(self); self.register_ui_element(self.editor_status_bar_overlay)
         self.scene_switcher_overlay = SceneSwitcherOverlay(self); self.register_ui_element(self.scene_switcher_overlay)
         self.scene_browser_overlay = SceneBrowserOverlay(self); self.register_ui_element(self.scene_browser_overlay)
+        self.project_explorer_overlay = ProjectExplorerOverlay(self); self.register_ui_element(self.project_explorer_overlay)
         self.asset_browser_overlay = AssetBrowserOverlay(self); self.register_ui_element(self.asset_browser_overlay)
         self.undo_history_overlay = UndoHistoryOverlay(self); self.register_ui_element(self.undo_history_overlay)
+        self.problems_panel_overlay = ProblemsPanelOverlay(self); self.register_ui_element(self.problems_panel_overlay)
+        self.find_everything_overlay = FindEverythingOverlay(self); self.register_ui_element(self.find_everything_overlay)
 
         self.interact_prompt_overlay = InteractPromptOverlay(self, provider=ui_providers.interact_prompt_provider); self.register_ui_element(self.interact_prompt_overlay)
         self.objective_tracker_overlay = ObjectiveTrackerOverlay(self, provider=ui_providers.objective_tracker_provider); self.register_ui_element(self.objective_tracker_overlay)

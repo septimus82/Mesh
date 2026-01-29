@@ -59,6 +59,7 @@ from .ui_overlays.debug import (
     DevConsole,
     EncounterDebugOverlay,
     EntityInspector,
+    HD2DPreviewIndicatorOverlay,
     HotReloadOverlay,
     PaletteOverlay,
     SceneDirtyOverlay,
@@ -66,6 +67,9 @@ from .ui_overlays.debug import (
     format_encounter_debug_text,
     format_scene_dirty_overlay_lines,
     format_scene_inspector_text,
+)
+from .ui_overlays.hd2d_settings_panel_overlay import (
+    Hd2dSettingsPanelOverlay,
 )
 from .ui_overlays.editors import (
     CaptureOverlay,

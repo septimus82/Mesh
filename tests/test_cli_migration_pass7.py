@@ -1,10 +1,13 @@
-import pytest
-import subprocess
 import sys
+
+import pytest
+
+from tests.subprocess_tools import run_checked
+
 
 def run_cli_help(command):
     cmd = [sys.executable, "-m", "mesh_cli"] + command + ["--help"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd)
     return result
 
 def test_authoring_commands_help():

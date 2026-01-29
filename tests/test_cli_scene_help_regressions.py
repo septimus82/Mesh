@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import re
-import subprocess
 import sys
 from pathlib import Path
+
+from tests.subprocess_tools import run_checked
 
 
 def test_scene_help_text_is_stable() -> None:
     repo_root = Path(__file__).resolve().parent.parent
-    cp = subprocess.run(
+    cp = run_checked(
         [sys.executable, "-m", "mesh_cli", "scene", "--help"],
-        capture_output=True,
-        text=True,
         cwd=str(repo_root),
         check=True,
     )

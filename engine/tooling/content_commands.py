@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from engine import json_io
 from engine.config import load_config
 from engine.content_audit import audit_world
 from engine.content_diff import diff_locks
@@ -308,7 +309,7 @@ def audit_content_command(args: argparse.Namespace) -> None:
 
     if args.json:
         if args.output:
-            Path(args.output).write_text(json.dumps(report, indent=2), encoding="utf-8")
+            json_io.write_json_atomic(args.output, report)
         else:
             print(json.dumps(report, indent=2))
 
@@ -368,7 +369,7 @@ def audit_content_command(args: argparse.Namespace) -> None:
             print(f"  - {item['id']}")
 
     if args.output:
-        Path(args.output).write_text(json.dumps(report, indent=2), encoding="utf-8")
+        json_io.write_json_atomic(args.output, report)
         print(f"\nFull report written to {args.output}")
 
     if _check_thresholds(args, stats, audit_policy, deltas):

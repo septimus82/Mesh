@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from engine import ai_history
+from engine import json_io
 from engine.ai_audit import run_ai_audit
 from engine.ai_bundle import build_ai_bundle
 from engine.tooling import ai_plan_command, plan_history, plan_linter
@@ -209,8 +210,7 @@ def _handle_ai_generate_plan(args: argparse.Namespace) -> int:
 
     plan = ai_plan_command.generate_plan_skeleton(args.prompt, allow_todos=bool(getattr(args, "allow_todos", False)))
 
-    with open(args.out, "w", encoding="utf-8") as f:
-        json.dump(plan, f, indent=2)
+    json_io.write_json_atomic(args.out, plan)
 
     print(f"[Mesh][AI] Plan written to '{args.out}'")
     return 0
@@ -222,11 +222,8 @@ def _handle_ai_export_context(args: argparse.Namespace) -> int:
         context = export_ai_context(paths)
 
         if args.out:
-            out_path = Path(args.out)
-            out_path.parent.mkdir(parents=True, exist_ok=True)
-            with out_path.open("w", encoding="utf-8") as f:
-                json.dump(context, f, indent=2)
-            print(f"[Mesh][AI] Context exported to {out_path}")
+            json_io.write_json_atomic(args.out, context)
+            print(f"[Mesh][AI] Context exported to {args.out}")
         else:
             print(json.dumps(context, indent=2))
 
@@ -240,8 +237,7 @@ def _handle_ai_bundle(args: argparse.Namespace) -> int:
     scene_paths = [Path(p) for p in args.scenes]
     try:
         bundle = build_ai_bundle(scene_paths, args.goal)
-        with open(args.out, "w", encoding="utf-8") as f:
-            json.dump(bundle, f, indent=2)
+        json_io.write_json_atomic(args.out, bundle)
         print(f"[Mesh][AI] Bundle written to '{args.out}'")
         return 0
     except Exception as e:

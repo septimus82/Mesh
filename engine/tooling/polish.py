@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from engine import json_io
 from engine.content_audit import audit_world
 from engine.content_lock import read_lock, write_lock
 from engine.scene_loader import SceneLoader
@@ -30,8 +31,7 @@ def polish_scene(path: Path, strict_compact: bool = True) -> bool:
         compacted = generate_polished_scene_data(path)
 
         # 2. Write back
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(compacted, f, indent=2, sort_keys=False)
+        json_io.write_json_atomic(path, compacted)
 
         # 3. Validate
         validator = UnifiedValidator(Path("."))

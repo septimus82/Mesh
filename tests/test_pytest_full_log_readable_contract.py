@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from tests.subprocess_tools import run_checked
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
@@ -24,13 +25,10 @@ def test_pytest_full_log_is_utf8_and_has_durations(tmp_path: Path) -> None:
 
     env = os.environ.copy()
     env["MESH_PYTEST_FULL_REPO_ROOT"] = str(fake_repo)
-    result = subprocess.run(
+    result = run_checked(
         [sys.executable, "-m", "tooling.pytest_full", "--timeout-s", "60"],
         cwd=repo_root,
         env=env,
-        capture_output=True,
-        text=True,
-        check=False,
     )
 
     assert result.returncode == 0, result.stderr + result.stdout

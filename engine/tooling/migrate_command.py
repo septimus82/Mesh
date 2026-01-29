@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
+from engine import json_io
 from engine.migrations import migrate_payload
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
@@ -93,8 +94,7 @@ def handle_migrate(args: argparse.Namespace) -> int:
         else:
             final_data = migrated
 
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(final_data, f, indent=2)
+        json_io.write_json_atomic(path, final_data)
         print(f"[Mesh][Migrate] Saved to {path}")
     else:
         print("[Mesh][Migrate] Migration successful (dry run)")

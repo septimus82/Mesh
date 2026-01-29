@@ -29,6 +29,21 @@ Any additional top-level keys are ignored but reported as warnings by the valida
 | `background_color` | string | `dark_blue_gray` | Must match a name from `arcade.color`. |
 | `world_width` | number | unset | Optional virtual bounds for the world. When omitted and a tilemap is present, the loader derives it from `tilemap.width * tilemap.tilewidth`. |
 | `world_height` | number | unset | Optional virtual bounds for the world. When omitted and a tilemap is present, the loader derives it from `tilemap.height * tilemap.tileheight`. |
+| `render_sort_mode` | string | `"y_sort"` | Controls entity draw ordering: `"y_sort"` (default) or `"explicit_z"`. See _HD-2D Render Sorting_ below. |
+| `shadows_enabled` | bool | `true` | Enable HD-2D sprite drop shadows. Set to `false` to disable all shadows in the scene. |
+| `shadows_contact_enabled` | bool | `true` | Enable contact shadows (smaller, darker layer under base shadow). Only applies when `shadows_enabled` is true. |
+| `shadows_ao_enabled` | bool | `false` | Enable AO (ambient occlusion) shadow ring (larger, subtle halo). Optional, off by default. |
+| `depth_tint_enabled` | bool | `false` | Enable depth-based sprite tinting for atmospheric depth. |
+| `depth_tint_strength` | number | `0.35` | Tint intensity (0 = none, 1 = full effect). |
+| `depth_tint_near_color` | array | `[255,255,255,255]` | RGBA color for near objects (neutral by default). |
+| `depth_tint_far_color` | array | `[180,180,200,255]` | RGBA color for far objects (subtle blue/dark by default). |
+| `depth_tint_layer_range` | array | `[-10, 10]` | Expected render_layer range for normalization. |
+| `depth_tint_z_range` | array | `[-100, 100]` | Expected depth_z range for normalization. |
+| `outline_enabled` | bool | `false` | Enable faux sprite outline/rim light. |
+| `outline_color_rgba` | array | `[0,0,0,90]` | RGBA outline color (alpha drives base strength). |
+| `outline_strength` | number | `0.5` | Outline strength multiplier (0.0 to 1.0). |
+| `outline_radius_px` | number | `1` | Outline radius in pixels. |
+| `outline_near_factor` | number | `0.6` | Depth boost factor (near sprites get stronger outlines). |
 | `camera` | object | unset | Optional advanced camera settings (see below). |
 
 Unknown settings fields are preserved in memory so future systems can read them.
@@ -67,7 +82,168 @@ Each entry in `areas` is an object with:
 - `lerp_factor`: Optional smoothing override while inside the area.
 - `padding`: Extra inset applied on top of the global padding while inside the area.
 
-## Background Layers
+## HD-2D Render Sorting
+
+Mesh Engine supports HD-2D style deterministic render ordering for entities. This ensures consistent draw order across frames and sessions.
+
+### Sort Modes
+
+Set `settings.render_sort_mode` to control how entities are sorted:
+
+| Mode | Sort Key | Use Case |
+| ---- | -------- | -------- |
+| `y_sort` (default) | `(render_layer, y_position, entity_id)` | Classic top-down RPGs where lower y = further back. |
+| `explicit_z` | `(render_layer, depth_z, y_position, entity_id)` | HD-2D / 2.5D games with manual depth control. |
+
+### Entity Render Fields
+
+- **`render_layer`** (int, default `0`): Primary depth tier. Lower values draw first (further back). Use for separating ground, characters, and foreground elements.
+- **`depth_z`** (float, default `0.0`): Fine depth value within a render layer. Only affects ordering in `explicit_z` mode. Useful for layering objects at the same y-position.
+
+Example:
+
+```json
+"settings": { "render_sort_mode": "explicit_z" },
+"entities": [
+  { "name": "floor_tile", "sprite": "assets/tile.png", "x": 100, "y": 50, "render_layer": -10, "depth_z": 0 },
+  { "name": "hero", "sprite": "assets/hero.png", "x": 100, "y": 50, "render_layer": 0, "depth_z": 0 },
+  { "name": "tree_canopy", "sprite": "assets/tree.png", "x": 100, "y": 50, "render_layer": 10, "depth_z": 0 }
+]
+```
+
+### Sprite Drop Shadows
+
+HD-2D scenes automatically render multi-layer blob shadows under sprites to enhance depth perception and grounding. Shadows are drawn BEFORE sprites in the deterministic render order.
+
+**Multi-Layer Shadow System:**
+1. **AO Shadow** (optional): Large, very low alpha ambient occlusion halo
+2. **Base Shadow**: Standard blob shadow
+3. **Contact Shadow** (default on): Smaller, darker, closer to feet for enhanced grounding
+
+**Shadow Behavior:**
+- Nearer entities (higher `render_layer` / `depth_z`) get larger, darker shadows
+- Farther entities (lower `render_layer` / `depth_z`) get smaller, lighter shadows
+- Shadows are ellipses positioned below the sprite center
+
+**Scene-Level Control:**
+- `settings.shadows_enabled`: Set to `false` to disable all shadows (default `true`)
+- `settings.shadows_contact_enabled`: Enable contact shadows (default `true`)
+- `settings.shadows_ao_enabled`: Enable AO shadow ring (default `false`)
+
+**Per-Entity Control (Base Shadow):**
+- `shadow_enabled`: Set to `false` to hide all shadows for this entity (default `true`)
+- `shadow_scale`: Multiplier for shadow size (default `1.0`)
+- `shadow_alpha`: Override shadow opacity from 0.0 to 1.0 (default computed from depth)
+- `shadow_offset_y`: Override shadow Y offset in pixels (default computed from depth)
+
+**Per-Entity Control (Contact/AO Shadows):**
+- `shadow_contact_enabled`: Override scene setting for contact shadow (default follows scene)
+- `shadow_contact_scale`: Override contact shadow scale (default `0.55` of base)
+- `shadow_contact_alpha`: Override contact shadow alpha (default `1.35×` base alpha)
+- `shadow_ao_enabled`: Override scene setting for AO shadow (default follows scene)
+
+Example with shadow customization:
+
+```json
+"settings": {
+  "shadows_enabled": true,
+  "shadows_contact_enabled": true,
+  "shadows_ao_enabled": false
+},
+"entities": [
+  { "name": "flying_enemy", "x": 100, "y": 200, "shadow_offset_y": -20, "shadow_scale": 0.5 },
+  { "name": "ghost", "x": 150, "y": 200, "shadow_enabled": false },
+  { "name": "heavy_robot", "x": 200, "y": 200, "shadow_contact_scale": 0.7, "shadow_ao_enabled": true }
+]
+```
+
+### Depth-Based Tinting
+
+HD-2D scenes can optionally apply depth-based tinting to sprites for atmospheric depth effects. Farther objects (lower `render_layer` / `depth_z`) appear darker/desaturated, while nearer objects remain vivid.
+
+**Scene-Level Control:**
+- `depth_tint_enabled`: Set to `true` to enable (default `false`)
+- `depth_tint_strength`: Intensity from 0.0 to 1.0 (default `0.35`)
+- `depth_tint_near_color`: RGBA for near objects (default white `[255,255,255,255]`)
+- `depth_tint_far_color`: RGBA for far objects (default subtle blue `[180,180,200,255]`)
+
+**Per-Entity Control:**
+- `depth_tint_enabled`: Override scene setting for this entity
+- `depth_tint_strength`: Override tint strength for this entity
+
+Example:
+
+```json
+"settings": {
+  "depth_tint_enabled": true,
+  "depth_tint_strength": 0.4,
+  "depth_tint_far_color": [150, 150, 180, 255]
+},
+"entities": [
+  { "name": "important_npc", "x": 100, "y": 200, "depth_tint_enabled": false },
+  { "name": "background_decor", "x": 50, "y": 100, "render_layer": -5, "depth_tint_strength": 0.8 }
+]
+```
+
+### Faux Sprite Outline (Rim Light)
+
+HD-2D scenes can optionally draw a subtle outline behind sprites for readability. The outline draws multiple offset passes before the main sprite and fades with depth.
+
+**Scene-Level Control:**
+- `outline_enabled`: Set to `true` to enable (default `false`)
+- `outline_color_rgba`: RGBA color for the outline
+- `outline_strength`: 0.0 to 1.0 strength multiplier
+- `outline_radius_px`: Pixel radius for offset passes
+- `outline_near_factor`: Strength boost for near sprites
+
+**Per-Entity Control:**
+- `outline_enabled`: Override scene setting for this entity
+- `outline_color_rgba`: Override outline color
+- `outline_strength`: Override outline strength
+- `outline_radius_px`: Override outline radius
+
+## Background Planes (HD-2D Parallax)
+
+Scenes can define image-based parallax background planes via `background_planes`. Planes are rendered behind all entities and tilemap layers, sorted deterministically by `(z, id)`.
+
+Each entry is an object with:
+
+| Field | Type | Required | Default | Description |
+| ----- | ---- | -------- | ------- | ----------- |
+| `id` | string | **yes** | — | Unique identifier within the scene. |
+| `path` | string | **yes** | — | Image path (relative to repo root). |
+| `z` | int | **yes** | — | Depth value. Lower values draw earlier (further "behind"). |
+| `parallax` | number | no | `1.0` | Movement factor (clamped to `[0, 2]`). |
+| `offset_x` | number | no | `0` | Horizontal offset in pixels. |
+| `offset_y` | number | no | `0` | Vertical offset in pixels. |
+| `repeat_x` | bool | no | `false` | Tile horizontally to fill the viewport. |
+| `repeat_y` | bool | no | `false` | Tile vertically to fill the viewport. |
+
+### Parallax Formula
+
+Parallax is applied in screen space using the scene camera center:
+
+```
+screen_offset_px = -camera_center_world * parallax * zoom + offset
+```
+
+- `parallax=1.0` tracks the camera normally (moves 1:1 with the world).
+- `parallax=0.0` locks the layer to the screen (static backdrop).
+- Values between create the classic parallax depth effect.
+
+Example:
+
+```json
+"background_planes": [
+  { "id": "Sky", "path": "assets/bg/sky.png", "z": -1000, "parallax": 0.0, "repeat_x": true },
+  { "id": "Mountains", "path": "assets/bg/mountains.png", "z": -900, "parallax": 0.3, "repeat_x": true },
+  { "id": "Trees", "path": "assets/bg/trees.png", "z": -800, "parallax": 0.6, "repeat_x": true }
+]
+```
+
+> **Migration note:** The legacy `background_layers` key is still supported for backwards compatibility but `background_planes` is preferred for new scenes.
+
+## Background Layers (Legacy)
 
 Scenes can optionally define image-based parallax background layers via `background_layers`. Layers are rendered behind the tilemap and entity layers, sorted deterministically by `(z, id)`.
 
@@ -336,6 +512,22 @@ Each entry in `entities` describes a sprite. The loader clones `DEFAULT_ENTITY` 
 | `scale` | number | no | `1.0` | Sprite scaling factor. |
 | `rotation` | number | no | `0` | Degrees, clockwise. |
 | `layer` | string | no | `"entities"` | Must match a layer name or one will be created. |
+| `render_layer` | integer | no | `0` | Draw order tier for HD-2D sorting. Lower values draw earlier (further back). |
+| `depth_z` | number | no | `0.0` | Fine depth value within a render layer (used by `explicit_z` mode). |
+| `shadow_enabled` | bool | no | `true` | Enable drop shadow for this entity. Set to `false` to hide shadow. |
+| `shadow_scale` | number | no | `1.0` | Multiplier for shadow size (0.5 = half size, 2.0 = double). |
+| `shadow_alpha` | number | no | auto | Override shadow opacity (0.0 to 1.0). Default is computed from depth. |
+| `shadow_offset_y` | number | no | auto | Override shadow Y offset in pixels. Default is computed from depth. |
+| `shadow_contact_enabled` | bool | no | scene | Enable contact shadow for this entity. Defaults to scene setting. |
+| `shadow_contact_scale` | number | no | `0.55` | Contact shadow scale relative to base (smaller = tighter). |
+| `shadow_contact_alpha` | number | no | auto | Override contact shadow alpha (0.0 to 1.0). Default is 1.35× base. |
+| `shadow_ao_enabled` | bool | no | scene | Enable AO shadow for this entity. Defaults to scene setting (usually false). |
+| `depth_tint_enabled` | bool | no | `true` | Enable depth tinting for this entity (when scene tinting is on). |
+| `depth_tint_strength` | number | no | scene | Override tint strength for this entity (0.0 to 1.0). |
+| `outline_enabled` | bool | no | scene | Enable faux outline for this entity. Defaults to scene setting. |
+| `outline_color_rgba` | array | no | scene | Override outline color (RGBA). |
+| `outline_strength` | number | no | scene | Override outline strength (0.0 to 1.0). |
+| `outline_radius_px` | number | no | scene | Override outline radius in pixels. |
 | `tag` | string\|null | no | `null` | Arbitrary label used by collision filtering and DevTools. |
 | `solid` | bool | no | `false` | Solid sprites are added to `GameWindow.solid_sprites` for movement blocking. |
 | `behaviours` | array | no | `[]` | Behaviour declarations (see below). |

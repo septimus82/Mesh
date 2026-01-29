@@ -1,0 +1,26 @@
+{
+  "description": "A minimal empty scene.",
+  "entities": [
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "dialogue": {
+        "lines": [
+          "I have a task for you.",
+          "Will you help me?"
+        ],
+        "speaker": "Quest Giver"
+      },
+      "name": "test_NPC",
+      "sprite": "assets/sprites/quest_giver.png",
+      "tag": "npc",
+      "x": 300,
+      "y": 300
+    }
+  ],
+  "layers": [],
+  "name": "Test Scene",
+  "schema_version": 1,
+  "version": 1
+}

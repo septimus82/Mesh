@@ -222,6 +222,10 @@ def format_scene_inspector_text(payload: dict[str, Any] | None) -> str:
     else:
         keys_text = "-"
 
+    # HD-2D info
+    render_sort_mode = str(payload.get("render_sort_mode") or "y_sort")
+    background_planes_count = int(payload.get("background_planes_count") or 0)
+
     lines = [
         "Scene Inspector (F10)",
         f"scene: {scene_path}",
@@ -229,6 +233,7 @@ def format_scene_inspector_text(payload: dict[str, Any] | None) -> str:
         f"hover: {hover_text}",
         f"prefab: id={hover_prefab_text} source={prefab_source_text}",
         f"flags: on={flags_count_text} keys={keys_text}",
+        f"render: sort={render_sort_mode} bg_planes={background_planes_count}",
     ]
     return "\n".join(lines)
 
@@ -339,6 +344,101 @@ class SceneDirtyOverlay(UIElement):
             top,
             optional_arcade.arcade.color.WHITE,
             12,
+            anchor_y="top",
+            font_name=("Consolas", "Courier New", "Courier"),
+        )
+
+
+class HD2DDepthDebugOverlay(UIElement):
+    """Overlay showing HD-2D render ordering debug info.
+
+    Shows render_sort_mode, sprite count, plane count,
+    and optionally per-entity render key components.
+    """
+
+    def __init__(self, window: "GameWindow", *, provider: Any | None = None) -> None:
+        super().__init__(window)
+        self.visible = False
+        self.provider = provider
+        self.show_details = True  # Show per-entity info
+
+    def toggle(self) -> bool:
+        """Toggle overlay visibility."""
+        self.visible = not self.visible
+        return self.visible
+
+    def toggle_details(self) -> bool:
+        """Toggle per-entity detail display."""
+        self.show_details = not self.show_details
+        return self.show_details
+
+    def draw(self) -> None:
+        if not self.visible:
+            return
+
+        from engine.hd2d_debug_model import format_hd2d_debug_text, format_hd2d_summary
+
+        payload: dict[str, Any] | None = None
+        if callable(self.provider):
+            try:
+                value = self.provider(self.window)
+            except Exception:  # noqa: BLE001
+                value = None
+        else:
+            value = None
+
+        if isinstance(value, dict):
+            payload = value
+        else:
+            payload = {}
+
+        sort_mode = str(payload.get("sort_mode") or "y_sort")
+        sprite_count = int(payload.get("sprite_count") or 0)
+        plane_count = int(payload.get("plane_count") or 0)
+        sprite_infos = payload.get("sprite_infos") or []
+
+        if self.show_details:
+            text = format_hd2d_debug_text(
+                sort_mode=sort_mode,
+                sprite_count=sprite_count,
+                plane_count=plane_count,
+                sprite_infos=sprite_infos,
+                max_entries=10,
+            )
+        else:
+            text = "HD-2D Depth Debug\n" + format_hd2d_summary(
+                sort_mode=sort_mode,
+                sprite_count=sprite_count,
+                plane_count=plane_count,
+            )
+
+        # Count lines for dynamic height
+        line_count = text.count("\n") + 1
+        line_height = 16.0
+        padding = 24.0
+        height = line_count * line_height + padding
+
+        width = 340.0
+        right = float(self.window.width) - 20.0
+        left = right - width
+        top = float(self.window.height) - 20.0
+        bottom = top - height
+
+        _draw_rectangle_filled(
+            center_x=(left + right) / 2.0,
+            center_y=(top + bottom) / 2.0,
+            width=width,
+            height=height,
+            color=(0, 0, 0, 180),
+        )
+        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.CYAN, 2)
+
+        optional_arcade.arcade.draw_text(
+            text,
+            left + 10.0,
+            top - 10.0,
+            optional_arcade.arcade.color.LIGHT_CYAN,
+            11,
             anchor_y="top",
             font_name=("Consolas", "Courier New", "Courier"),
         )
@@ -830,3 +930,62 @@ class PaletteOverlay(UIElement):
                     anchor_y="top",
                     font_name=("Consolas", "Courier New", "Courier"),
                 )
+
+
+class HD2DPreviewIndicatorOverlay(UIElement):
+    """Overlay showing an indicator when HD-2D look preset preview is active.
+
+    Displays text like "HD2D Preview: Soft (Esc cancel, Enter apply)"
+    at the top-center of the screen.
+    """
+
+    def __init__(self, window: "GameWindow", *, provider: Any | None = None) -> None:
+        super().__init__(window)
+        self.provider = provider
+
+    def draw(self) -> None:
+        payload: dict[str, Any] | None = None
+        if callable(self.provider):
+            try:
+                payload = self.provider(self.window)
+            except Exception:  # noqa: BLE001
+                payload = None
+
+        if not isinstance(payload, dict) or not payload.get("visible"):
+            return
+
+        from engine.editor.hd2d_preview_indicator_model import format_hd2d_preview_indicator_text
+
+        preset_id = payload.get("preset_id")
+        text = format_hd2d_preview_indicator_text(preset_id)
+        if not text:
+            return
+
+        width = float(getattr(self.window, "width", 1280) or 1280)
+        top = float(getattr(self.window, "height", 720) or 720) - 60.0
+
+        # Draw semi-transparent background pill
+        text_width = len(text) * 8  # Rough estimate
+        pill_width = text_width + 20
+        pill_height = 24
+        center_x = width / 2
+
+        _draw_rectangle_filled(
+            center_x=center_x,
+            center_y=top,
+            width=pill_width,
+            height=pill_height,
+            color=(40, 40, 60, 220),
+        )
+
+        # Draw text centered
+        optional_arcade.arcade.draw_text(
+            text,
+            center_x,
+            top,
+            optional_arcade.arcade.color.CYAN,
+            12,
+            anchor_x="center",
+            anchor_y="center",
+            font_name=("Consolas", "Courier New", "Courier"),
+        )

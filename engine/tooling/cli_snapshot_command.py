@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
+from engine import json_io
 
 def extract_parser_info(parser: argparse.ArgumentParser) -> Dict[str, Any]:
     """Extract structure from an ArgumentParser."""
@@ -54,7 +55,7 @@ def cli_snapshot_command(args: argparse.Namespace) -> None:
     parser = create_parser()
     snapshot = extract_parser_info(parser)
 
-    output_json = json.dumps(snapshot, indent=2, sort_keys=True)
+    output_json = json_io.dumps_stable(snapshot)
 
     if args.out:
         out_path = Path(args.out)
@@ -87,7 +88,7 @@ def cli_snapshot_command(args: argparse.Namespace) -> None:
             else:
                 print("[Mesh][Snapshot] CLI snapshot verified.")
         else:
-            out_path.write_text(output_json, encoding="utf-8")
+            json_io.write_json_atomic(out_path, snapshot)
             print(f"[Mesh][Snapshot] Wrote CLI snapshot to {out_path}")
     else:
         print(output_json)

@@ -49,11 +49,13 @@ class TestDockTabRects:
         tab_rects = compute_dock_tab_rects(layout)
 
         assert isinstance(tab_rects, DockTabRects)
+        assert "Project" in tab_rects.left_tab_rects
         assert "Scene" in tab_rects.left_tab_rects
         assert "Outliner" in tab_rects.left_tab_rects
         assert "Inspector" in tab_rects.right_tab_rects
         assert "Assets" in tab_rects.right_tab_rects
         assert "History" in tab_rects.right_tab_rects
+        assert "Problems" in tab_rects.right_tab_rects
 
     def test_left_tabs_within_left_dock(self):
         """Left tab rects should be within the left dock area."""
@@ -124,6 +126,18 @@ class TestHitTestDockTab:
         result = hit_test_dock_tab(x, y, layout)
 
         assert result == ("left", "Scene")
+
+    def test_hit_left_tab_project(self):
+        """Clicking on Project tab returns ('left', 'Project')."""
+        layout = compute_editor_shell_layout(1920, 1080)
+        tab_rects = compute_dock_tab_rects(layout)
+        project_rect = tab_rects.left_tab_rects["Project"]
+
+        x = project_rect.center_x
+        y = project_rect.center_y
+        result = hit_test_dock_tab(x, y, layout)
+
+        assert result == ("left", "Project")
 
     def test_hit_left_tab_outliner(self):
         """Clicking on Outliner tab returns ('left', 'Outliner')."""
@@ -498,8 +512,8 @@ class TestDockTabIntegration:
         tab_rects = compute_dock_tab_rects(layout)
 
         # Should still have all tabs
-        assert len(tab_rects.left_tab_rects) == 2
-        assert len(tab_rects.right_tab_rects) == 3
+        assert len(tab_rects.left_tab_rects) == 3
+        assert len(tab_rects.right_tab_rects) == 4
 
         # Tabs should still be clickable (have positive area)
         for rect in tab_rects.left_tab_rects.values():

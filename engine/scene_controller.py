@@ -68,7 +68,24 @@ from .tilemap_batch_arcade import TilemapBatcher
 from .background_layers import BackgroundLayer, draw_background_layers, parse_background_layers
 from .culling import Rect, is_sprite_visible, sprite_bounds
 from .pathfinding import NavGrid, NavGridCache, build_nav_grid_from_tilemap_instance
+from .parallax_model import BackgroundPlane, parse_background_planes, sort_background_planes
 from .render_queue import DrawSpriteCmd
+from .render_sort_model import compute_sprite_render_sort_key
+from .sprite_shadow_model import compute_sprite_multi_shadow
+from .editor.sprite_outline_model import (
+    OutlineSettings,
+    DEFAULT_OUTLINE_SETTINGS,
+    compute_sprite_outline_draw_calls,
+    parse_outline_settings,
+    should_draw_outline,
+)
+from .depth_tint_model import (
+    DepthTintSettings,
+    DEFAULT_DEPTH_TINT_SETTINGS,
+    parse_depth_tint_settings,
+    compute_sprite_tint,
+    apply_tint_to_sprite_color,
+)
 from .ui import (
     AnimationStateOverlay,
     CharacterPanel,
@@ -118,8 +135,16 @@ class SceneController:
         self._tilemap_batch_state: TilemapBatchState | None = None
         self._tilemap_batcher: TilemapBatcher | None = None
         self._background_layers: list[BackgroundLayer] = []
+        self._background_planes: list[BackgroundPlane] = []
+        self._background_plane_texture_cache: dict[str, Any] = {}
         self._nav_grid_cache: NavGridCache[NavGrid] = NavGridCache()
         self._render_culled_count: int = 0
+        self._render_sort_mode: str = "y_sort"  # "y_sort" or "explicit_z"
+        self._shadows_enabled: bool = True  # HD-2D sprite drop shadows
+        self._shadows_contact_enabled: bool = True  # HD-2D contact shadows (double-layer)
+        self._shadows_ao_enabled: bool = False  # HD-2D AO shadow ring (optional)
+        self._depth_tint_settings: DepthTintSettings = DEFAULT_DEPTH_TINT_SETTINGS  # HD-2D depth tinting
+        self._outline_settings: OutlineSettings = DEFAULT_OUTLINE_SETTINGS  # HD-2D faux sprite outlines
 
         self._scene_event_unsubscribes: list[Callable[[], None]] = []
 
@@ -230,6 +255,8 @@ class SceneController:
         # Keep a stable authored copy for debug authoring tools (avoid persisting runtime-only mutations).
         self._loaded_scene_source_data = copy.deepcopy(scene) if isinstance(scene, dict) else {}
         self._background_layers = parse_background_layers(scene)
+        self._background_planes = parse_background_planes(scene)
+        self._background_plane_texture_cache.clear()  # Clear texture cache on scene load
 
         try:
             recorder = getattr(self.window, "record_recent_scene", None)
@@ -241,6 +268,19 @@ class SceneController:
         self._apply_theme_runtime(scene)
 
         self.scene_settings = scene.get("settings", {})
+        # Load render sort mode from scene settings
+        raw_sort_mode = self.scene_settings.get("render_sort_mode", "y_sort")
+        self._render_sort_mode = str(raw_sort_mode) if raw_sort_mode in ("y_sort", "explicit_z") else "y_sort"
+        # Load shadows enabled setting (default True)
+        self._shadows_enabled = bool(self.scene_settings.get("shadows_enabled", True))
+        # Load contact shadows setting (default True when shadows enabled)
+        self._shadows_contact_enabled = bool(self.scene_settings.get("shadows_contact_enabled", True))
+        # Load AO shadows setting (default False - subtle, opt-in)
+        self._shadows_ao_enabled = bool(self.scene_settings.get("shadows_ao_enabled", False))
+        # Load depth tint settings (default disabled)
+        self._depth_tint_settings = parse_depth_tint_settings(self.scene_settings)
+        # Load outline settings (default disabled)
+        self._outline_settings = parse_outline_settings(self.scene_settings)
         self._apply_scene_settings(self.scene_settings)
         self._apply_scene_state(scene.get("state"))
         self._configure_camera_from_scene(self.scene_settings)
@@ -380,6 +420,13 @@ class SceneController:
         record_recent = getattr(editor, "record_recent_scene", None) if editor is not None else None
         if callable(record_recent):
             record_recent(self.current_scene_path)
+        # Auto-apply HD2D defaults if configured and scene lacks HD2D keys
+        auto_apply_hd2d = getattr(editor, "maybe_auto_apply_hd2d_defaults", None) if editor is not None else None
+        if callable(auto_apply_hd2d):
+            try:
+                auto_apply_hd2d()
+            except Exception:  # noqa: BLE001
+                pass
         self._rebuild_ui_for_scene()
         maybe_enqueue_controls_hint_toast(self.window, scene_id=self.current_scene_path, seconds=4.0)
         maybe_enqueue_preset_mode_toast(self.window, scene_id=self.current_scene_path, seconds=4.0)
@@ -551,6 +598,22 @@ class SceneController:
             finally:
                 self.window.camera.use()
 
+        # Draw HD-2D background planes (parallax_model)
+        if self._background_planes:
+            try:
+                camera_x, camera_y = base_camera_pos
+                zoom = float(self.window.camera_controller.zoom_state.current)
+                self.window.camera_controller.gui_camera.use()
+                self._draw_background_planes(
+                    camera_x=float(camera_x),
+                    camera_y=float(camera_y),
+                    viewport_w=float(self.window.width),
+                    viewport_h=float(self.window.height),
+                    zoom=zoom,
+                )
+            finally:
+                self.window.camera.use()
+
         tile_layers = self._tilemap_draw_layers
         tile_stats = TilemapBatchStats()
         if tile_layers:
@@ -566,8 +629,7 @@ class SceneController:
                 self._submit_layers_to_render_queue(render_queue, camera_rect=camera_rect, use_culling=use_culling)
                 render_queue.flush()
             else:
-                for layer in self._layer_draw_order():
-                    layer.draw()
+                self._draw_layers_with_shadows()
             for tile_layer in tile_layers:
                 if tile_layer.z >= 0:
                     tile_stats.add(
@@ -592,12 +654,142 @@ class SceneController:
             self._submit_layers_to_render_queue(render_queue, camera_rect=camera_rect, use_culling=use_culling)
             render_queue.flush()
         else:
-            for layer in self._layer_draw_order():
-                layer.draw()
+            self._draw_layers_with_shadows()
         for layer in self._tilemap_foreground_layers:
             layer.draw()
         self._set_tilemap_perf_counters(tile_stats)
         self._set_render_cull_counter()
+
+    def _draw_layers_with_shadows(self) -> None:
+        """Draw all layers with HD-2D sprite shadows and depth tinting (non-batched path).
+
+        Collects all sprites, sorts by HD-2D render key, draws shadows first,
+        then draws sprites with optional depth tinting in sorted order.
+        """
+        # Collect and sort all sprites
+        all_sprites: list[Any] = []
+        for layer in self._layer_draw_order():
+            all_sprites.extend(layer)
+
+        sort_mode = self._render_sort_mode
+        sorted_sprites = sorted(
+            all_sprites,
+            key=lambda s: compute_sprite_render_sort_key(s, sort_mode=sort_mode),
+        )
+
+        # Draw shadows first (no culling in non-batched path)
+        if self._shadows_enabled:
+            self._draw_sprite_shadows(sorted_sprites, camera_rect=None, use_culling=False)
+
+        # Draw sprites in sorted order with optional depth tinting and outlines
+        tint_enabled = self._depth_tint_settings.enabled
+        for sprite in sorted_sprites:
+            try:
+                self._draw_sprite_outline(sprite)
+                if tint_enabled:
+                    self._draw_sprite_with_tint(sprite)
+                else:
+                    sprite.draw()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def _draw_sprite_with_tint(self, sprite: Any) -> None:
+        """Draw a single sprite with depth tinting applied (non-batched path).
+
+        Temporarily modifies sprite.color, draws, then restores.
+        Headless-safe: falls back to normal draw if color manipulation fails.
+        """
+        tint = compute_sprite_tint(
+            sprite,
+            self._depth_tint_settings,
+            sort_mode=self._render_sort_mode,
+        )
+
+        if tint is None:
+            # No tint needed, draw normally
+            sprite.draw()
+            return
+
+        # Save original color
+        original_color = getattr(sprite, "color", None)
+
+        try:
+            # Compute tinted color
+            tinted = apply_tint_to_sprite_color(original_color, tint)
+            # Apply tint temporarily
+            sprite.color = tinted  # type: ignore[attr-defined]
+            sprite.draw()
+        finally:
+            # Restore original color
+            try:
+                if original_color is None:
+                    # Reset to default white
+                    sprite.color = (255, 255, 255, 255)  # type: ignore[attr-defined]
+                else:
+                    sprite.color = original_color  # type: ignore[attr-defined]
+            except Exception:  # noqa: BLE001
+                pass
+
+    def _draw_sprite_outline(self, sprite: Any) -> None:
+        """Draw faux sprite outline behind the sprite (non-batched path)."""
+        entity_data = getattr(sprite, "mesh_entity_data", None) or {}
+        if not should_draw_outline(entity_data, self._outline_settings.enabled):
+            return
+
+        try:
+            render_layer = int(entity_data.get("render_layer", 0))
+        except (TypeError, ValueError):
+            render_layer = 0
+        try:
+            depth_z = float(entity_data.get("depth_z", 0.0))
+        except (TypeError, ValueError):
+            depth_z = 0.0
+
+        center_x = float(getattr(sprite, "center_x", 0.0))
+        center_y = float(getattr(sprite, "center_y", 0.0))
+        draw_calls = compute_sprite_outline_draw_calls(
+            center_x,
+            center_y,
+            render_layer,
+            depth_z,
+            self._outline_settings,
+            entity_data=entity_data,
+        )
+        if not draw_calls:
+            return
+
+        original_color = getattr(sprite, "color", None)
+        original_alpha = getattr(sprite, "alpha", None)
+        original_x = getattr(sprite, "center_x", None)
+        original_y = getattr(sprite, "center_y", None)
+
+        try:
+            for call in draw_calls:
+                sprite.center_x = call.x
+                sprite.center_y = call.y
+                try:
+                    sprite.color = call.color  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+                try:
+                    sprite.alpha = int(call.alpha)  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+                sprite.draw()
+        finally:
+            try:
+                if original_x is not None:
+                    sprite.center_x = original_x
+                if original_y is not None:
+                    sprite.center_y = original_y
+                if original_color is None:
+                    sprite.color = (255, 255, 255, 255)  # type: ignore[attr-defined]
+                else:
+                    sprite.color = original_color  # type: ignore[attr-defined]
+                if original_alpha is not None:
+                    sprite.alpha = original_alpha  # type: ignore[attr-defined]
+            except Exception:  # noqa: BLE001
+                pass
 
     def _submit_layers_to_render_queue(
         self,
@@ -606,13 +798,295 @@ class SceneController:
         camera_rect: Rect | None,
         use_culling: bool,
     ) -> None:
-        for layer_index, layer in enumerate(self._layer_draw_order()):
-            self._submit_layer_to_render_queue(
-                layer,
+        # Collect all sprites from all layers and sort by HD-2D render key
+        all_sprites: list[Any] = []
+        for layer in self._layer_draw_order():
+            all_sprites.extend(layer)
+
+        # Sort by render_layer + y-sort or explicit_z
+        sort_mode = self._render_sort_mode
+        sorted_sprites = sorted(
+            all_sprites,
+            key=lambda s: compute_sprite_render_sort_key(s, sort_mode=sort_mode),
+        )
+
+        # Draw shadows BEFORE sprites (in same sorted order) for HD-2D depth
+        if self._shadows_enabled:
+            self._draw_sprite_shadows(sorted_sprites, camera_rect=camera_rect, use_culling=use_culling)
+
+        # Submit sprites in sorted order
+        for sprite in sorted_sprites:
+            self._submit_sprite_outline(
+                sprite,
                 render_queue,
-                layer_index,
                 camera_rect=camera_rect,
                 use_culling=use_culling,
+            )
+            self._submit_sprite_to_render_queue(
+                sprite,
+                render_queue,
+                camera_rect=camera_rect,
+                use_culling=use_culling,
+            )
+
+    def _draw_sprite_shadows(
+        self,
+        sorted_sprites: list[Any],
+        *,
+        camera_rect: Rect | None,
+        use_culling: bool,
+    ) -> None:
+        """Draw multi-layer blob shadows for sprites (HD-2D effect).
+
+        Shadows are drawn BEFORE sprites in the same sorted order.
+        Draw order: AO (if enabled) -> base -> contact (if enabled)
+        Uses arcade.draw_ellipse_filled if available, otherwise no-op.
+        Headless-safe: gracefully skips if drawing unavailable.
+        """
+        # Check if ellipse drawing is available (headless-safe)
+        draw_ellipse_filled = getattr(optional_arcade.arcade, "draw_ellipse_filled", None)
+        if draw_ellipse_filled is None:
+            return
+
+        # Shadow color (dark gray with alpha from params)
+        shadow_base_color = (20, 20, 20)
+
+        for sprite in sorted_sprites:
+            # Compute multi-layer shadow params using pure model
+            multi_shadow = compute_sprite_multi_shadow(
+                sprite,
+                contact_enabled=self._shadows_contact_enabled,
+                ao_enabled=self._shadows_ao_enabled,
+            )
+            if multi_shadow is None:
+                continue
+
+            # Basic culling check using base shadow ellipse
+            if use_culling and camera_rect is not None:
+                shadow_rect = sprite_bounds(
+                    multi_shadow.base_ellipse.cx,
+                    multi_shadow.base_ellipse.cy,
+                    multi_shadow.base_ellipse.width,
+                    multi_shadow.base_ellipse.height,
+                )
+                if not is_sprite_visible(camera_rect, shadow_rect):
+                    continue
+
+            try:
+                # Draw AO shadow first (if enabled) - largest, lightest
+                if multi_shadow.ao_ellipse is not None and multi_shadow.ao_alpha > 0:
+                    ao_alpha = int(multi_shadow.ao_alpha * 255)
+                    ao_color = (*shadow_base_color, ao_alpha)
+                    draw_ellipse_filled(
+                        multi_shadow.ao_ellipse.cx,
+                        multi_shadow.ao_ellipse.cy,
+                        multi_shadow.ao_ellipse.width,
+                        multi_shadow.ao_ellipse.height,
+                        ao_color,
+                    )
+
+                # Draw base shadow
+                base_alpha = int(multi_shadow.base_alpha * 255)
+                base_color = (*shadow_base_color, base_alpha)
+                draw_ellipse_filled(
+                    multi_shadow.base_ellipse.cx,
+                    multi_shadow.base_ellipse.cy,
+                    multi_shadow.base_ellipse.width,
+                    multi_shadow.base_ellipse.height,
+                    base_color,
+                )
+
+                # Draw contact shadow last (if enabled) - smallest, darkest
+                if multi_shadow.contact_ellipse is not None and multi_shadow.contact_alpha > 0:
+                    contact_alpha = int(multi_shadow.contact_alpha * 255)
+                    contact_color = (*shadow_base_color, contact_alpha)
+                    draw_ellipse_filled(
+                        multi_shadow.contact_ellipse.cx,
+                        multi_shadow.contact_ellipse.cy,
+                        multi_shadow.contact_ellipse.width,
+                        multi_shadow.contact_ellipse.height,
+                        contact_color,
+                    )
+            except Exception:  # noqa: BLE001
+                # Graceful fallback if drawing fails
+                pass
+
+    def _submit_sprite_to_render_queue(
+        self,
+        sprite: Any,
+        render_queue: Any,
+        *,
+        camera_rect: Rect | None,
+        use_culling: bool,
+    ) -> None:
+        """Submit a single sprite to the render queue."""
+        texture = getattr(sprite, "texture", None)
+        texture_key = getattr(sprite, "mesh_texture_key", None)
+        if texture_key is None:
+            name = getattr(texture, "name", None)
+            if name:
+                texture_key = ("texture", str(name))
+            else:
+                texture_key = ("texture_id", id(texture) if texture is not None else id(sprite))
+
+        scale = getattr(sprite, "scale", 1.0)
+        if isinstance(scale, tuple) and scale:
+            scale_value = float(scale[0])
+        else:
+            scale_value = float(scale)
+
+        alpha = getattr(sprite, "alpha", 255)
+        rotation = getattr(sprite, "angle", 0.0)
+        center_x = float(getattr(sprite, "center_x", 0.0))
+        center_y = float(getattr(sprite, "center_y", 0.0))
+
+        if use_culling and camera_rect is not None:
+            width = getattr(sprite, "width", None)
+            height = getattr(sprite, "height", None)
+            sprite_rect = None
+            if isinstance(width, (int, float)) and isinstance(height, (int, float)):
+                if float(width) > 0.0 and float(height) > 0.0:
+                    sprite_rect = sprite_bounds(center_x, center_y, float(width), float(height))
+            if sprite_rect is None:
+                tex_w = getattr(texture, "width", None)
+                tex_h = getattr(texture, "height", None)
+                if isinstance(tex_w, (int, float)) and isinstance(tex_h, (int, float)):
+                    if float(tex_w) > 0.0 and float(tex_h) > 0.0:
+                        sprite_rect = sprite_bounds(
+                            center_x,
+                            center_y,
+                            float(tex_w),
+                            float(tex_h),
+                            scale=scale_value,
+                        )
+            if sprite_rect is not None and not is_sprite_visible(camera_rect, sprite_rect):
+                self._render_culled_count += 1
+                return
+
+        # Use render_layer from entity data for layer index if available
+        entity_data = getattr(sprite, "mesh_entity_data", None) or {}
+        render_layer = entity_data.get("render_layer", 0)
+        try:
+            layer_index = int(render_layer)
+        except (TypeError, ValueError):
+            layer_index = 0
+
+        # Compute final color with optional depth tinting
+        sprite_color = getattr(sprite, "color", None)
+        if self._depth_tint_settings.enabled:
+            tint = compute_sprite_tint(
+                sprite,
+                self._depth_tint_settings,
+                sort_mode=self._render_sort_mode,
+            )
+            if tint is not None:
+                sprite_color = apply_tint_to_sprite_color(sprite_color, tint)
+
+        render_queue.submit(
+            DrawSpriteCmd(
+                texture_key=texture_key,
+                texture=texture,
+                x=center_x,
+                y=center_y,
+                scale=scale_value,
+                alpha=float(alpha),
+                rotation=float(rotation),
+                layer=layer_index,
+                blend_mode="normal",
+                color=sprite_color,
+            )
+        )
+
+    def _submit_sprite_outline(
+        self,
+        sprite: Any,
+        render_queue: Any,
+        *,
+        camera_rect: Rect | None,
+        use_culling: bool,
+    ) -> None:
+        entity_data = getattr(sprite, "mesh_entity_data", None) or {}
+        if not should_draw_outline(entity_data, self._outline_settings.enabled):
+            return
+
+        try:
+            render_layer = int(entity_data.get("render_layer", 0))
+        except (TypeError, ValueError):
+            render_layer = 0
+        try:
+            depth_z = float(entity_data.get("depth_z", 0.0))
+        except (TypeError, ValueError):
+            depth_z = 0.0
+
+        center_x = float(getattr(sprite, "center_x", 0.0))
+        center_y = float(getattr(sprite, "center_y", 0.0))
+        draw_calls = compute_sprite_outline_draw_calls(
+            center_x,
+            center_y,
+            render_layer,
+            depth_z,
+            self._outline_settings,
+            entity_data=entity_data,
+        )
+        if not draw_calls:
+            return
+
+        if use_culling and camera_rect is not None:
+            width = getattr(sprite, "width", None)
+            height = getattr(sprite, "height", None)
+            sprite_rect = None
+            if isinstance(width, (int, float)) and isinstance(height, (int, float)):
+                if float(width) > 0.0 and float(height) > 0.0:
+                    sprite_rect = sprite_bounds(center_x, center_y, float(width), float(height))
+            if sprite_rect is None:
+                texture = getattr(sprite, "texture", None)
+                tex_w = getattr(texture, "width", None)
+                tex_h = getattr(texture, "height", None)
+                if isinstance(tex_w, (int, float)) and isinstance(tex_h, (int, float)):
+                    if float(tex_w) > 0.0 and float(tex_h) > 0.0:
+                        sprite_rect = sprite_bounds(
+                            center_x,
+                            center_y,
+                            float(tex_w),
+                            float(tex_h),
+                            scale=float(getattr(sprite, "scale", 1.0) or 1.0),
+                        )
+            if sprite_rect is not None and not is_sprite_visible(camera_rect, sprite_rect):
+                return
+
+        texture = getattr(sprite, "texture", None)
+        texture_key = getattr(sprite, "mesh_texture_key", None)
+        if texture_key is None:
+            name = getattr(texture, "name", None)
+            if name:
+                texture_key = ("texture", str(name))
+            else:
+                texture_key = ("texture_id", id(texture) if texture is not None else id(sprite))
+
+        scale = getattr(sprite, "scale", 1.0)
+        if isinstance(scale, tuple) and scale:
+            scale_value = float(scale[0])
+        else:
+            scale_value = float(scale)
+
+        rotation = getattr(sprite, "angle", 0.0)
+        alpha = float(getattr(sprite, "alpha", 255))
+
+        for call in draw_calls:
+            outline_alpha = float(call.alpha) * (alpha / 255.0)
+            render_queue.submit(
+                DrawSpriteCmd(
+                    texture_key=texture_key,
+                    texture=texture,
+                    x=call.x,
+                    y=call.y,
+                    scale=scale_value,
+                    alpha=outline_alpha,
+                    rotation=float(rotation),
+                    layer=int(render_layer),
+                    blend_mode="normal",
+                    color=call.color,
+                )
             )
 
     def _submit_layer_to_render_queue(
@@ -624,64 +1098,130 @@ class SceneController:
         camera_rect: Rect | None,
         use_culling: bool,
     ) -> None:
+        # Legacy method kept for compatibility - now unused in HD-2D path
         for sprite in layer:
-            texture = getattr(sprite, "texture", None)
-            texture_key = getattr(sprite, "mesh_texture_key", None)
-            if texture_key is None:
-                name = getattr(texture, "name", None)
-                if name:
-                    texture_key = ("texture", str(name))
-                else:
-                    texture_key = ("texture_id", id(texture) if texture is not None else id(sprite))
-
-            scale = getattr(sprite, "scale", 1.0)
-            if isinstance(scale, tuple) and scale:
-                scale_value = float(scale[0])
-            else:
-                scale_value = float(scale)
-
-            alpha = getattr(sprite, "alpha", 255)
-            rotation = getattr(sprite, "angle", 0.0)
-            center_x = float(getattr(sprite, "center_x", 0.0))
-            center_y = float(getattr(sprite, "center_y", 0.0))
-
-            if use_culling and camera_rect is not None:
-                width = getattr(sprite, "width", None)
-                height = getattr(sprite, "height", None)
-                sprite_rect = None
-                if isinstance(width, (int, float)) and isinstance(height, (int, float)):
-                    if float(width) > 0.0 and float(height) > 0.0:
-                        sprite_rect = sprite_bounds(center_x, center_y, float(width), float(height))
-                if sprite_rect is None:
-                    tex_w = getattr(texture, "width", None)
-                    tex_h = getattr(texture, "height", None)
-                    if isinstance(tex_w, (int, float)) and isinstance(tex_h, (int, float)):
-                        if float(tex_w) > 0.0 and float(tex_h) > 0.0:
-                            sprite_rect = sprite_bounds(
-                                center_x,
-                                center_y,
-                                float(tex_w),
-                                float(tex_h),
-                                scale=scale_value,
-                            )
-                if sprite_rect is not None and not is_sprite_visible(camera_rect, sprite_rect):
-                    self._render_culled_count += 1
-                    continue
-
-            render_queue.submit(
-                DrawSpriteCmd(
-                    texture_key=texture_key,
-                    texture=texture,
-                    x=center_x,
-                    y=center_y,
-                    scale=scale_value,
-                    alpha=float(alpha),
-                    rotation=float(rotation),
-                    layer=int(layer_index),
-                    blend_mode="normal",
-                    color=getattr(sprite, "color", None),
-                )
+            self._submit_sprite_to_render_queue(
+                sprite,
+                render_queue,
+                camera_rect=camera_rect,
+                use_culling=use_culling,
             )
+
+    def _draw_background_planes(
+        self,
+        *,
+        camera_x: float,
+        camera_y: float,
+        viewport_w: float,
+        viewport_h: float,
+        zoom: float = 1.0,
+    ) -> None:
+        """Draw HD-2D background planes with parallax.
+
+        Uses the parallax_model module for offset calculations.
+        Draws to GUI camera coordinates (screen space).
+        Headless-safe: no-op if Arcade drawing unavailable.
+        """
+        # Check if drawing is available (headless-safe)
+        draw_texture_rectangle = getattr(optional_arcade.arcade, "draw_texture_rectangle", None)
+        if draw_texture_rectangle is None:
+            return
+
+        from .parallax_model import compute_parallax_offset_with_zoom
+
+        planes = sort_background_planes(self._background_planes)
+        if not planes:
+            return
+
+        center_x = float(viewport_w) / 2.0
+        center_y = float(viewport_h) / 2.0
+
+        for plane in planes:
+            # Load texture with cache
+            texture = self._get_background_plane_texture(plane.asset_path)
+            if texture is None:
+                continue
+
+            # Compute parallax offset
+            offset_x, offset_y = compute_parallax_offset_with_zoom(
+                camera_x, camera_y, plane.parallax, zoom
+            )
+
+            # Apply plane's static offset
+            base_x = center_x + offset_x + plane.offset_x
+            base_y = center_y + offset_y + plane.offset_y
+
+            tex_w = max(1.0, float(texture.width))
+            tex_h = max(1.0, float(texture.height))
+
+            # Compute alpha (0-255 for arcade)
+            alpha = int(max(0, min(255, plane.alpha * 255)))
+
+            if not plane.repeat_x and not plane.repeat_y:
+                # Single draw
+                draw_texture_rectangle(
+                    base_x, base_y, tex_w, tex_h, texture, alpha=alpha
+                )
+                continue
+
+            # Tiled drawing
+            x_range = (0, 0)
+            y_range = (0, 0)
+            if plane.repeat_x:
+                left_needed = -tex_w / 2.0
+                right_needed = float(viewport_w) + tex_w / 2.0
+                n_min = int((left_needed - base_x) // tex_w) - 1
+                n_max = int((right_needed - base_x) // tex_w) + 1
+                x_range = (n_min, n_max)
+            if plane.repeat_y:
+                bottom_needed = -tex_h / 2.0
+                top_needed = float(viewport_h) + tex_h / 2.0
+                m_min = int((bottom_needed - base_y) // tex_h) - 1
+                m_max = int((top_needed - base_y) // tex_h) + 1
+                y_range = (m_min, m_max)
+
+            for xi in range(x_range[0], x_range[1] + 1):
+                for yi in range(y_range[0], y_range[1] + 1):
+                    dx = float(xi) * tex_w if plane.repeat_x else 0.0
+                    dy = float(yi) * tex_h if plane.repeat_y else 0.0
+                    draw_texture_rectangle(
+                        base_x + dx, base_y + dy, tex_w, tex_h, texture, alpha=alpha
+                    )
+
+    def _get_background_plane_texture(self, asset_path: str) -> Any:
+        """Get texture for a background plane, using cache.
+
+        Headless-safe: returns None if texture loading unavailable.
+        """
+        # Check cache first
+        if asset_path in self._background_plane_texture_cache:
+            return self._background_plane_texture_cache[asset_path]
+
+        texture = None
+
+        # Try assets manager first
+        assets = getattr(self.window, "assets", None)
+        if assets is not None:
+            try:
+                texture = assets.get_texture(asset_path)
+            except Exception:
+                pass
+
+        # Fallback to direct load
+        if texture is None:
+            try:
+                from .paths import resolve_path
+                load_texture = getattr(optional_arcade.arcade, "load_texture", None)
+                if load_texture is not None:
+                    resolved = resolve_path(asset_path)
+                    if resolved.exists():
+                        texture = load_texture(str(resolved))
+            except Exception:
+                pass
+
+        # Cache result (even if None to avoid repeated failures)
+        self._background_plane_texture_cache[asset_path] = texture
+        return texture
 
     def _draw_tilemap_layer(
         self,

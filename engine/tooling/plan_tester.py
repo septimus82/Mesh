@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List
 
+from engine import json_io
 from engine.game_state_controller import GameStateController
 from engine.paths import get_content_roots, set_content_roots
 from engine.scene_loader import SceneLoader
@@ -30,10 +31,11 @@ class TestReport:
 
     @property
     def coverage_ratio(self) -> float:
-        total = self.coverage.get("actions_total", 0)
+        total = int(self.coverage.get("actions_total", 0) or 0)
         if total == 0:
             return 1.0
-        return self.coverage.get("actions_covered", 0) / total
+        covered = int(self.coverage.get("actions_covered", 0) or 0)
+        return covered / total
 
 class MockGame:
     def __init__(self):
@@ -501,7 +503,7 @@ def run_test_ai(plan_path: str, out: str | None = None, junit: str | None = None
     report = tester.run_tests_in_sandbox(plan, full_sandbox=False)
 
     if out:
-        Path(out).write_text(json.dumps(asdict(report), indent=2))
+        json_io.write_json_atomic(out, asdict(report))
 
     if report.passed:
         print(f"[Mesh][Tester] Plan verified! Coverage: {report.coverage_ratio:.1%}")

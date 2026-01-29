@@ -3,6 +3,7 @@ import json
 import shutil
 from pathlib import Path
 
+from engine import json_io
 from engine.tooling import build_demo_command, check, cli_snapshot_command, plan_schema_command, release_command
 from engine.version import ENGINE_VERSION
 
@@ -138,8 +139,7 @@ def handle_dist(args: argparse.Namespace) -> int:
         ]
     }
 
-    with open(dist_dir / "dist_manifest.json", "w") as f:
-        json.dump(dist_manifest, f, indent=2)
+    json_io.write_json_atomic(dist_dir / "dist_manifest.json", dist_manifest)
 
     print(f"\n[Mesh][Dist] Distribution complete: {dist_dir}")
     return 0

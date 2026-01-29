@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+from engine import json_io
 from engine.prefabs import get_prefab_manager
 
 
@@ -15,7 +16,7 @@ def main():
         resolved = manager.get_prefab(pid)
         output[pid] = resolved
 
-    Path("prefabs.golden.json").write_text(json.dumps(output, indent=2, sort_keys=True), encoding="utf-8")
+    json_io.write_json_atomic("prefabs.golden.json", output)
     print("Generated prefabs.golden.json")
 
 if __name__ == "__main__":

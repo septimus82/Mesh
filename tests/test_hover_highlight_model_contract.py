@@ -659,7 +659,7 @@ class TestResolveHoverHighlights:
             window_h=720,
             hovered_menu_title="Edit",
             hovered_menu_title_rect=(60, 695, 50, 25),
-            hovered_menu_item_id="edit_undo",
+            hovered_menu_item_id="editor.history.undo",
             hovered_menu_item_rect=(60, 650, 150, 25),
             hovered_top_bar_control_id="M",
             hovered_context_item_id="copy",

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
 from .logging_tools import get_logger
+from . import json_io
 
 _LOG = get_logger("engine.project_scaffold")
 
@@ -71,7 +71,7 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
         "lighting_enabled": True
     }
     
-    (root / "config.json").write_text(json.dumps(config, indent=2), encoding="utf-8")
+    json_io.write_json_atomic(root / "config.json", config)
     
     # Create a simple placeholder world
     world = {
@@ -86,7 +86,7 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
             }
         ]
     }
-    (root / "packs/core_regions/worlds/main.json").write_text(json.dumps(world, indent=2), encoding="utf-8")
+    json_io.write_json_atomic(root / "packs/core_regions/worlds/main.json", world)
 
     # Apply template (writes start.json and others)
     apply_template(root, template_id)

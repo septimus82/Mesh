@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, cast
 
+from engine import json_io
 from engine.paths import resolve_path
 
 
@@ -317,9 +318,8 @@ class AutoWireController:
     def _save_changes(self) -> None:
         for sid, scene in self.modified_scenes.items():
             path = self.scene_paths[sid]
-            content = json.dumps(scene, indent=2)
+            content = json_io.dumps_stable(scene) + "\n"
             if self._writer is not None:
                 self._writer(path, content)
             else:
-                with open(path, "w", encoding="utf-8") as f:
-                    f.write(content)
+                json_io.write_text_atomic(path, content, encoding="utf-8")

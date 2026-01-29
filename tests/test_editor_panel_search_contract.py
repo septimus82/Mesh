@@ -47,6 +47,8 @@ class StubController:
     _outliner_search: str = ""
     _assets_search: str = ""
     _history_search: str = ""
+    _problems_search: str = ""
+    _project_search: str = ""
     asset_browser_filter: str = ""
     _history_cursor_index: int = 0
     undo_stack: list[dict] = None  # type: ignore[assignment]
@@ -122,6 +124,13 @@ def test_ctrl_f_focuses_active_panel(monkeypatch: pytest.MonkeyPatch) -> None:
     assert controller._search_focus == "outliner"
     assert controller.entity_panels_filter_active is True
 
+    controller._left_dock_tab = "Project"
+    controller.entity_panels_active = False
+    controller.clear_search_focus()
+
+    editor_input.handle_input(controller, arcade_stub.key.F, arcade_stub.key.MOD_CTRL)
+    assert controller._search_focus == "project"
+
     controller._left_dock_tab = "Scene"
     controller.entity_panels_active = False
     controller._right_dock_tab = "Assets"
@@ -137,6 +146,14 @@ def test_ctrl_f_focuses_active_panel(monkeypatch: pytest.MonkeyPatch) -> None:
 
     editor_input.handle_input(controller, arcade_stub.key.F, arcade_stub.key.MOD_CTRL)
     assert controller._search_focus == "history"
+
+    controller._left_dock_tab = "Scene"
+    controller.entity_panels_active = False
+    controller._right_dock_tab = "Problems"
+    controller.clear_search_focus()
+
+    editor_input.handle_input(controller, arcade_stub.key.F, arcade_stub.key.MOD_CTRL)
+    assert controller._search_focus == "problems"
 
 
 def test_typing_updates_search_only_when_focused(monkeypatch: pytest.MonkeyPatch) -> None:

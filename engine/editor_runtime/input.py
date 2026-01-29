@@ -3,6 +3,19 @@ from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 import engine.optional_arcade as optional_arcade
 
+from engine.editor.editor_actions import get_editor_actions, run_editor_action
+from engine.editor.shortcut_resolver_model import (
+    build_shortcut_map,
+    build_shortcut_map_by_scope,
+    normalize_shortcut_event,
+    resolve_shortcut_scoped,
+)
+from engine.editor.editor_focus_model import (
+    collect_editor_state,
+    compute_active_shortcut_scopes,
+    derive_focus_target,
+    is_text_input_active,
+)
 from engine.editor.state import (
     TRANSFORM_MODE_MOVE,
     TRANSFORM_MODE_ROTATE,
@@ -16,36 +29,82 @@ from ..logging_tools import get_logger
 from .state import apply_selection
 
 logger = get_logger(__name__)
+_shortcut_conflicts_warned: set[str] = set()
 
 
 def _is_text_input_active(controller: "EditorController") -> bool:
-    """Check if the editor is currently in a text input mode.
+    snapshot = _get_focus_snapshot(controller)
+    return bool(snapshot.get("text_input_active", False))
 
-    This is used to skip certain keybinds (like Ctrl+C/V) when the user
-    is typing in a filter or rename field.
+
+def _get_active_shortcut_scopes(controller: "EditorController") -> list[str]:
+    snapshot = _get_focus_snapshot(controller)
+    scopes = snapshot.get("scopes")
+    return list(scopes) if isinstance(scopes, tuple) else list(scopes or [])
+
+
+def _get_focus_snapshot(controller: "EditorController") -> dict[str, Any]:
+    focus_ctl = getattr(controller, "focus", None)
+    if focus_ctl is not None:
+        getter = getattr(focus_ctl, "get_focus_snapshot", None)
+        if callable(getter):
+            result = getter()
+            if isinstance(result, dict):
+                return result
+    state_dict = collect_editor_state(controller)
+    focus_target = derive_focus_target(state_dict)
+    return {
+        "focus_target": focus_target,
+        "text_input_active": is_text_input_active(focus_target, state_dict),
+        "scopes": compute_active_shortcut_scopes(focus_target, state_dict),
+    }
+
+
+def _handle_editor_action_shortcut(controller: "EditorController", key: int, modifiers: int) -> bool:
+    """Handle shortcut dispatch using scoped resolution.
+    
+    Uses shortcut scopes to resolve conflicts:
+    - Scoped shortcuts (like inline rename) take priority when their scope is active
+    - Global shortcuts are the fallback
     """
-    if getattr(controller, "palette_filter_active", False) is True:
-        return True
-    if getattr(controller, "hierarchy_filter_active", False) is True:
-        return True
-    if getattr(controller, "hierarchy_rename_active", False) is True:
-        return True
-    if getattr(controller, "animation_edit_active", False) is True:
-        return True
-    if getattr(controller, "inspector_edit_active", False) is True:
-        return True
-    if getattr(controller, "command_palette_active", False) is True:
-        return True
-    if getattr(controller, "entity_panels_filter_active", False) is True:
-        return True
-    search_focus = None
-    state_dict = getattr(controller, "__dict__", None)
-    if isinstance(state_dict, dict):
-        search_focus = state_dict.get("_search_focus")
-    else:
-        search_focus = getattr(controller, "_search_focus", None)
-    if isinstance(search_focus, str) and search_focus:
-        return True
+    shortcut = normalize_shortcut_event(key, modifiers)
+    if not shortcut:
+        return False
+    # Skip single alphanumeric characters without modifiers (let text input handle them)
+    if "+" not in shortcut and len(shortcut) == 1 and shortcut.isalnum():
+        return False
+    
+    window = getattr(controller, "window", None)
+    if window is not None and getattr(window, "editor_controller", None) is None:
+        try:
+            window.editor_controller = controller
+        except Exception:
+            pass
+    
+    actions = get_editor_actions(controller, window)
+    scope_maps = build_shortcut_map_by_scope(actions)
+    active_scopes = _get_active_shortcut_scopes(controller)
+    
+    # Resolve using scoped priority
+    action_id = resolve_shortcut_scoped(scope_maps, shortcut, active_scopes)
+    if not action_id:
+        return False
+    
+    # Check if action is enabled
+    if not _action_is_enabled(actions, action_id, controller, window):
+        return False
+    
+    return run_editor_action(action_id, controller, window)
+
+
+def _action_is_enabled(actions: list[Any], action_id: str, controller: Any, window: Any) -> bool:
+    """Check if an action is enabled by its ID."""
+    for action in actions:
+        if getattr(action, "id", None) == action_id:
+            enabled_fn = getattr(action, "enabled", None)
+            if callable(enabled_fn):
+                return bool(enabled_fn(controller, window))
+            return True
     return False
 
 
@@ -77,6 +136,18 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
         history_result = getattr(controller, "_history_handle_mouse_click", None)
         if callable(history_result):
             handled = history_result(x, y, button)
+            if handled:
+                return True
+
+        problems_result = getattr(controller, "_problems_handle_mouse_click", None)
+        if callable(problems_result):
+            handled = problems_result(x, y, button)
+            if handled:
+                return True
+
+        project_result = getattr(controller, "_project_explorer_handle_mouse_click", None)
+        if callable(project_result):
+            handled = project_result(x, y, button, modifiers)
             if handled:
                 return True
 
@@ -267,6 +338,11 @@ def handle_input(controller: EditorController, key: int, modifiers: int) -> bool
                 backspace()
             return True
         if key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN):
+            panel = getattr(controller, "_search_focus", None)
+            if panel == "problems":
+                handler = getattr(controller, "_handle_problems_input", None)
+                if callable(handler):
+                    handler(key, modifiers)
             return True
         if key in (
             optional_arcade.arcade.key.UP,
@@ -282,8 +358,16 @@ def handle_input(controller: EditorController, key: int, modifiers: int) -> bool
                 handler = getattr(controller, "_handle_asset_browser_input", None)
             elif panel == "history":
                 handler = getattr(controller, "_handle_history_input", None)
+            elif panel == "problems":
+                handler = getattr(controller, "_handle_problems_input", None)
             if callable(handler):
                 handler(key, modifiers)
+            return True
+        return True
+
+    if getattr(controller, "_find_everything_open", False):
+        handler = getattr(controller, "_handle_find_everything_input", None)
+        if callable(handler) and handler(key, modifiers):
             return True
         return True
 
@@ -307,22 +391,7 @@ def handle_input(controller: EditorController, key: int, modifiers: int) -> bool
                 controller.place_asset_at(wx, wy)
             return True
 
-    if key == optional_arcade.arcade.key.O and (modifiers & optional_arcade.arcade.key.MOD_CTRL) and (modifiers & optional_arcade.arcade.key.MOD_SHIFT):
-        toggle = getattr(controller, "toggle_scene_browser", None)
-        if callable(toggle):
-            toggle()
-        return True
-
-    if key == optional_arcade.arcade.key.O and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
-        toggle = getattr(controller, "toggle_scene_switcher", None)
-        if callable(toggle):
-            toggle()
-        return True
-
-    if key == optional_arcade.arcade.key.A and (modifiers & optional_arcade.arcade.key.MOD_CTRL) and (modifiers & optional_arcade.arcade.key.MOD_SHIFT):
-        toggle = getattr(controller, "toggle_asset_browser", None)
-        if callable(toggle):
-            toggle()
+    if _handle_editor_action_shortcut(controller, key, modifiers):
         return True
 
     if getattr(controller, "scene_browser_active", False):
@@ -343,13 +412,9 @@ def handle_input(controller: EditorController, key: int, modifiers: int) -> bool
             return bool(handler(key, modifiers))
         return True
 
-    if key == optional_arcade.arcade.key.P and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
-        if hasattr(controller, "toggle_command_palette"):
-            return controller.toggle_command_palette()
-        controller.command_palette_active = not bool(getattr(controller, "command_palette_active", False))
-        if controller.command_palette_active:
-            controller.command_palette_query = ""
-            controller.command_palette_index = 0
+    if key == optional_arcade.arcade.key.J and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
+        if not _is_text_input_active(controller):
+            return run_editor_action("editor.find_everything.toggle", controller, controller.window)
         return True
 
     if controller.command_palette_active:
@@ -371,9 +436,18 @@ def handle_input(controller: EditorController, key: int, modifiers: int) -> bool
             controller.command_palette_index = idx + 1
             return True
         if key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN):
-            from engine.editor_commands import filter_commands, get_all_commands  # noqa: PLC0415
+            from engine.editor_commands import (  # noqa: PLC0415
+                filter_commands,
+                get_all_commands,
+                get_palette_focus_target,
+            )
 
-            commands = filter_commands(get_all_commands(controller.window), controller.command_palette_query)
+            focus_target = get_palette_focus_target(controller)
+            commands = filter_commands(
+                get_all_commands(controller.window),
+                controller.command_palette_query,
+                focus_target=focus_target,
+            )
             if commands:
                 max_items = min(len(commands), 8)
                 idx = max(0, min(int(getattr(controller, "command_palette_index", 0) or 0), max_items - 1))
@@ -384,41 +458,10 @@ def handle_input(controller: EditorController, key: int, modifiers: int) -> bool
             return True
         return True
 
-    if key == optional_arcade.arcade.key.S and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
-        saver = getattr(controller, "save_current_scene", None)
-        if callable(saver):
-            saver()
+    if getattr(controller, "_left_dock_tab", "Outliner") == "Project":
+        handler = getattr(controller, "_handle_project_explorer_input", None)
+        if callable(handler) and handler(key, modifiers):
             return True
-
-    if key == optional_arcade.arcade.key.E and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
-        toggle = getattr(controller, "toggle_entity_panels", None)
-        if callable(toggle):
-            toggle()
-            return True
-
-    # Dock collapse toggles (Ctrl+L, Ctrl+R)
-    if key == optional_arcade.arcade.key.L and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
-        toggle = getattr(controller, "toggle_left_dock", None)
-        if callable(toggle):
-            toggle()
-            return True
-
-    # Ctrl+R is used for zone cycle, so only allow when not in ZONE mode
-    if key == optional_arcade.arcade.key.R and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
-        if controller.tool_mode != "ZONE":
-            toggle = getattr(controller, "toggle_right_dock", None)
-            if callable(toggle):
-                toggle()
-                return True
-        # Fall through to zone cycle handler below
-
-    # Viewport maximize toggle (Ctrl+Space - only when no text input/modal active)
-    if key == optional_arcade.arcade.key.SPACE and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
-        if not _is_text_input_active(controller):
-            toggle = getattr(controller, "toggle_viewport_maximized", None)
-            if callable(toggle):
-                toggle()
-                return True
 
     if controller.entity_panels_active:
         handler = getattr(controller, "_handle_entity_panels_input", None)
@@ -427,6 +470,10 @@ def handle_input(controller: EditorController, key: int, modifiers: int) -> bool
 
     if getattr(controller, "_right_dock_tab", "Inspector") == "History":
         handler = getattr(controller, "_handle_history_input", None)
+        if callable(handler) and handler(key, modifiers):
+            return True
+    if getattr(controller, "_right_dock_tab", "Inspector") == "Problems":
+        handler = getattr(controller, "_handle_problems_input", None)
         if callable(handler) and handler(key, modifiers):
             return True
 
@@ -446,8 +493,7 @@ def handle_input(controller: EditorController, key: int, modifiers: int) -> bool
     if key == optional_arcade.arcade.key.C and (modifiers & optional_arcade.arcade.key.MOD_SHIFT) and not (modifiers & optional_arcade.arcade.key.MOD_CTRL):
         return controller.toggle_shape_edit_mode("collision")
     if key == optional_arcade.arcade.key.O and not modifiers:
-        controller.toggle_occluder_tool()
-        return True
+        return run_editor_action("editor.occluder_tool.toggle", controller, controller.window)
 
     if controller.shape_edit_mode:
         if key in (optional_arcade.arcade.key.ESCAPE,):
@@ -500,8 +546,7 @@ def handle_input(controller: EditorController, key: int, modifiers: int) -> bool
             return controller._promote_prefab_shapes()
 
     if key == optional_arcade.arcade.key.L and not modifiers:
-        controller.toggle_lights_tool()
-        return True
+        return run_editor_action("editor.light_tool.toggle", controller, controller.window)
 
     if controller.lights_tool_active and not controller.palette_active:
         if key == optional_arcade.arcade.key.P and not modifiers:
@@ -568,8 +613,7 @@ def handle_input(controller: EditorController, key: int, modifiers: int) -> bool
 
     # Toggle Palette
     if key == optional_arcade.arcade.key.P:
-        controller.toggle_palette()
-        return True
+        return run_editor_action("editor.prefab_palette.toggle", controller, controller.window)
 
     # Palette filter Tab-to-insert should win over global Tab inspector toggle.
     if controller.palette_active and controller.palette_filter_active and key == optional_arcade.arcade.key.TAB:
@@ -604,15 +648,6 @@ def handle_input(controller: EditorController, key: int, modifiers: int) -> bool
     # Toggle Hierarchy
     if key == optional_arcade.arcade.key.H:
         controller.toggle_hierarchy()
-        return True
-
-    # Global Actions
-    if key == optional_arcade.arcade.key.DELETE:
-        controller.delete_selected()
-        return True
-
-    if key == optional_arcade.arcade.key.D and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
-        controller.duplicate_selected()
         return True
 
     # Copy/Paste (Ctrl+C / Ctrl+V) - skip if in text input mode
@@ -900,11 +935,24 @@ def handle_text_input(controller: EditorController, text: str) -> None:
     if getattr(controller, "confirm_open", False):
         return
 
+    # Project Explorer inline rename text input
+    project_ctrl = getattr(controller, "project_explorer", None)
+    if project_ctrl is not None and getattr(project_ctrl, "inline_rename_active", False):
+        handler = getattr(project_ctrl, "handle_rename_text_input", None)
+        if callable(handler) and handler(text):
+            return
+
     is_search_focused = getattr(controller, "is_search_focused", None)
     append_search = getattr(controller, "append_search_text", None)
     if callable(is_search_focused) and is_search_focused():
         if callable(append_search):
             append_search(text)
+        return
+
+    if getattr(controller, "_find_everything_open", False):
+        appender = getattr(controller, "append_find_query_text", None)
+        if callable(appender):
+            appender(text)
         return
 
     if getattr(controller, "scene_browser_active", False):
@@ -1223,80 +1271,12 @@ def handle_menu_bar_motion(controller: EditorController, x: float, y: float) -> 
 
 def _execute_menu_item(controller: EditorController, item_id: str) -> None:
     """Execute a menu item action."""
-    # File menu
-    if item_id == "file_save_scene":
-        saver = getattr(controller, "save_current_scene", None)
-        if callable(saver):
-            saver()
-    elif item_id == "file_open_scene_browser":
-        toggler = getattr(controller, "toggle_scene_browser", None)
-        if callable(toggler):
-            toggler()
-    elif item_id == "file_export_web_demo":
-        # Try to find export function
-        exporter = getattr(controller.window, "export_web_demo", None)
-        if callable(exporter):
-            exporter()
-        else:
-            logger.info("[Editor] Export not available")
-    elif item_id == "file_quit":
-        closer = getattr(controller.window, "close", None)
-        if callable(closer):
-            closer()
+    from engine.editor.editor_actions import run_editor_action
 
-    # Edit menu
-    elif item_id == "edit_undo":
-        undoer = getattr(controller, "undo_last", None)
-        if callable(undoer):
-            undoer()
-    elif item_id == "edit_redo":
-        redoer = getattr(controller, "redo_last", None)
-        if callable(redoer):
-            redoer()
-    elif item_id == "edit_duplicate":
-        duplicator = getattr(controller, "duplicate_selected", None)
-        if callable(duplicator):
-            duplicator()
-    elif item_id == "edit_delete":
-        deleter = getattr(controller, "delete_selected", None)
-        if callable(deleter):
-            deleter()
-
-    # View menu
-    elif item_id == "view_toggle_entity_panels":
-        toggler = getattr(controller, "toggle_entity_panels", None)
-        if callable(toggler):
-            toggler()
-    elif item_id == "view_toggle_asset_browser":
-        toggler = getattr(controller, "toggle_asset_browser", None)
-        if callable(toggler):
-            toggler()
-    elif item_id == "view_toggle_scene_browser":
-        toggler = getattr(controller, "toggle_scene_browser", None)
-        if callable(toggler):
-            toggler()
-    elif item_id == "view_toggle_command_palette":
-        toggler = getattr(controller, "toggle_command_palette", None)
-        if callable(toggler):
-            toggler()
-    elif item_id == "view_toggle_ghost_originals":
-        toggler = getattr(controller, "toggle_ghost_originals", None)
-        if callable(toggler):
-            toggler()
-
-    # Scene menu
-    elif item_id == "scene_toggle_palette":
-        toggler = getattr(controller, "toggle_palette", None)
-        if callable(toggler):
-            toggler()
-    elif item_id == "scene_toggle_lights":
-        toggler = getattr(controller, "toggle_lights_tool", None)
-        if callable(toggler):
-            toggler()
-    elif item_id == "scene_toggle_occluders":
-        toggler = getattr(controller, "toggle_occluders_tool", None)
-        if callable(toggler):
-            toggler()
+    try:
+        run_editor_action(item_id, controller, controller.window)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[Editor] Menu action failed: %s", exc)
 
 
 def handle_menu_bar_key(controller: EditorController, key: int, modifiers: int) -> bool:

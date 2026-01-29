@@ -121,8 +121,7 @@ def _handle_tidy_scene(args: argparse.Namespace) -> int:
         full_scene = loader.apply_scene_defaults(data)
         compacted = compact_scene_payload(full_scene)
 
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(compacted, f, indent=2)
+        write_json_atomic(Path(path), compacted)
 
         print(f"[Mesh][CLI] Tidied scene '{path}'")
         return 0

@@ -1,12 +1,13 @@
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 
+from tests.subprocess_tools import run_checked
+
 
 def _run(cmd: list[str], *, cwd: Path, env: dict[str, str]) -> tuple[int, bytes, bytes]:
-    res = subprocess.run(cmd, cwd=str(cwd), env=env, capture_output=True)
+    res = run_checked(cmd, cwd=str(cwd), env=env, text=False, capture_output=True)
     return res.returncode, res.stdout, res.stderr
 
 

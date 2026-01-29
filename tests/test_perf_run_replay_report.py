@@ -1,9 +1,13 @@
 import json
-import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from tests.subprocess_tools import run_checked
+
+# Timeout for perf-run subprocess to prevent test suite hang
+_PERF_RUN_TIMEOUT = 60
 
 
 @pytest.fixture
@@ -40,7 +44,7 @@ def test_perf_run_command(temp_replay_script, tmp_path):
     # NOTE: On strict headless CI without display, this might fail if arcade attempts
     # to open a window. However, this satisfies the requirement to adding the command/test.
     # If the environment is Windows (as per context), it should open a window briefly.
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd, timeout_s=_PERF_RUN_TIMEOUT)
     
     # Debug output if failed
     if result.returncode != 0:

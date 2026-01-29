@@ -11,8 +11,8 @@ class TestBuildDemoCommand(unittest.TestCase):
     @patch("shutil.copy")
     @patch("shutil.rmtree")
     @patch("pathlib.Path.mkdir")
-    @patch("builtins.open", new_callable=MagicMock) # Mock open for manifest
-    def test_build_flow(self, mock_open, mock_mkdir, mock_rmtree, mock_copy, mock_copytree, mock_polish, mock_check, mock_write_lock):
+    @patch("engine.tooling.build_demo_command.json_io.write_json_atomic")
+    def test_build_flow(self, mock_write_json, mock_mkdir, mock_rmtree, mock_copy, mock_copytree, mock_polish, mock_check, mock_write_lock):
         # Setup mocks
         mock_check.return_value = True
         mock_polish.return_value = 0
@@ -31,7 +31,7 @@ class TestBuildDemoCommand(unittest.TestCase):
         mock_copytree.assert_called() # Should copy assets, scenes, etc.
         
         # Verify manifest write
-        mock_open.assert_called()
+        mock_write_json.assert_called()
 
 if __name__ == "__main__":
     unittest.main()

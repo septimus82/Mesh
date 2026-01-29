@@ -1,10 +1,10 @@
 import hashlib
-import json
 import time
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from engine import json_io
 from engine.tooling.plan_types import Plan
 
 HISTORY_DIR = Path(".mesh/plan_history")
@@ -13,7 +13,7 @@ def record_history(plan: Plan, result: Dict[str, Any], profile: str = "default")
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)
 
     timestamp = int(time.time())
-    plan_hash = hashlib.md5(json.dumps(asdict(plan), sort_keys=True).encode()).hexdigest()[:8]
+    plan_hash = hashlib.md5(json_io.dumps_stable(asdict(plan)).encode()).hexdigest()[:8]
     filename = f"{timestamp}_{plan_hash}.json"
 
     record = {
@@ -26,8 +26,7 @@ def record_history(plan: Plan, result: Dict[str, Any], profile: str = "default")
         "plan_snapshot": asdict(plan)
     }
 
-    with (HISTORY_DIR / filename).open("w", encoding="utf-8") as f:
-        json.dump(record, f, indent=2)
+    json_io.write_json_atomic(HISTORY_DIR / filename, record)
 
 def list_history() -> List[Dict[str, Any]]:
     if not HISTORY_DIR.exists():
@@ -36,7 +35,7 @@ def list_history() -> List[Dict[str, Any]]:
     records = []
     for f in sorted(HISTORY_DIR.glob("*.json"), reverse=True):
         try:
-            data = json.loads(f.read_text(encoding="utf-8"))
+            data = json_io.read_json(f)
             records.append({
                 "id": f.stem,
                 "timestamp": data.get("timestamp"),
@@ -52,11 +51,13 @@ def get_history(history_id: str) -> Optional[Dict[str, Any]]:
     # Try exact match
     path = HISTORY_DIR / f"{history_id}.json"
     if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
+        raw = json_io.read_json(path)
+        return raw if isinstance(raw, dict) else None
 
     # Try prefix match
     matches = list(HISTORY_DIR.glob(f"*{history_id}*.json"))
     if len(matches) == 1:
-        return json.loads(matches[0].read_text(encoding="utf-8"))
+        raw = json_io.read_json(matches[0])
+        return raw if isinstance(raw, dict) else None
 
     return None

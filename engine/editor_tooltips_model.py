@@ -9,6 +9,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
+from engine.editor.editor_focus_model import (
+    collect_editor_state,
+    derive_focus_target,
+    is_text_input_active,
+)
+
 
 # Layout constants
 TOOLTIP_PADDING_X = 8.0
@@ -53,11 +59,13 @@ class TooltipLayout:
 
 # Tooltip text definitions
 DOCK_TAB_TOOLTIPS: Dict[str, str] = {
+    "Project": "Project Explorer -- Files in the project",
     "Scene": "Scene Browser -- Search + open scenes",
     "Outliner": "Outliner -- Entities in the scene",
     "Inspector": "Inspector -- Edit selected entity",
     "Assets": "Assets -- Search + spawn assets",
     "History": "History -- Undo/redo stack",
+    "Problems": "Problems -- Scan + fix common issues",
 }
 
 TOP_BAR_CONTROL_TOOLTIPS: Dict[str, str] = {
@@ -158,33 +166,9 @@ def _is_text_input_active_state(controller: Any) -> bool:
     Returns:
         True if text input is active.
     """
-    if getattr(controller, "palette_filter_active", False) is True:
-        return True
-    if getattr(controller, "hierarchy_filter_active", False) is True:
-        return True
-    if getattr(controller, "hierarchy_rename_active", False) is True:
-        return True
-    if getattr(controller, "animation_edit_active", False) is True:
-        return True
-    if getattr(controller, "inspector_edit_active", False) is True:
-        return True
-    if getattr(controller, "command_palette_active", False) is True:
-        return True
-    if getattr(controller, "entity_panels_filter_active", False) is True:
-        return True
-    if getattr(controller, "scene_browser_filter_active", False) is True:
-        return True
-    if getattr(controller, "asset_browser_filter_active", False) is True:
-        return True
-    search_focus = None
-    state_dict = getattr(controller, "__dict__", None)
-    if isinstance(state_dict, dict):
-        search_focus = state_dict.get("_search_focus")
-    else:
-        search_focus = getattr(controller, "_search_focus", None)
-    if isinstance(search_focus, str) and search_focus:
-        return True
-    return False
+    state_dict = collect_editor_state(controller)
+    focus_target = derive_focus_target(state_dict)
+    return is_text_input_active(focus_target, state_dict)
 
 
 def _is_modal_open_state(controller: Any) -> bool:

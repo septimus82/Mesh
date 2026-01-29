@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import subprocess
 import sys
+
+from tests.subprocess_tools import run_checked
 
 
 def test_importing_input_controller_has_no_side_effects_and_exports_surface() -> None:
@@ -32,11 +33,8 @@ assert out == "", out
 assert hasattr(mod, "InputController")
 """
 
-    proc = subprocess.run(
+    proc = run_checked(
         [sys.executable, "-c", script],
-        capture_output=True,
-        text=True,
-        check=False,
     )
     assert proc.returncode == 0, proc.stderr or proc.stdout
     assert proc.stdout == ""

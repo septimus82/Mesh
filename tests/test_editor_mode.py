@@ -70,10 +70,6 @@ def test_editor_save():
     window.scene_controller.current_scene_path = "test_scene.json"
     window.scene_controller.build_scene_snapshot.return_value = {"entities": []}
     
-    with patch("builtins.open", new_callable=MagicMock) as mock_open:
-        # Mock the file handle returned by open
-        mock_file = MagicMock()
-        mock_open.return_value.__enter__.return_value = mock_file
-        
+    with patch("engine.editor_runtime.ops.json_io.write_json_atomic") as mock_write:
         controller.save_current_scene()
-        mock_open.assert_called_with("test_scene.json", "w")
+        mock_write.assert_called_with("test_scene.json", {"entities": []})

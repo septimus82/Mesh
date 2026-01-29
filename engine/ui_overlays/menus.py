@@ -435,6 +435,10 @@ class MainMenuOverlay(UIElement):
         root_text = str(root or "").strip()
         if not root_text:
             return
+        editor = getattr(self.window, "editor_controller", None)
+        flusher = getattr(editor, "_flush_workspace_autosave", None) if editor is not None else None
+        if callable(flusher):
+            flusher()
         os.environ["MESH_REPO_ROOT"] = root_text
         reset_path_caches()
         add_recent_project(root_text)

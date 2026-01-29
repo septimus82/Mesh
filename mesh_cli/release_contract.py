@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Mapping
 
+from engine import json_io
 from engine.paths import reset_path_caches, set_content_roots
 from engine.tooling.content_commands import content_contract_command
 from mesh_cli import pack as pack_commands
@@ -366,9 +367,7 @@ def _finalize_report(
 
 def _write_report(path: Path, report: dict) -> bool:
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        text = json.dumps(report, indent=2)
-        path.write_text(text + "\n", encoding="utf-8")
+        json_io.write_json_atomic(path, report)
         return True
     except Exception as exc:  # noqa: BLE001
         print(f"[Mesh][Release] ERROR failed to write report: {exc}")

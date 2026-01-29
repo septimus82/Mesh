@@ -1,11 +1,14 @@
-import pytest
-import subprocess
 import sys
+
+import pytest
+
+from tests.subprocess_tools import run_checked
+
 
 def test_new_scene_help_output():
     """Test that 'mesh new-scene --help' output is stable."""
     cmd = [sys.executable, "-m", "mesh_cli", "new-scene", "--help"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd)
     assert result.returncode == 0
     
     expected_substrings = [
@@ -26,7 +29,7 @@ def test_new_scene_help_output():
 def test_edit_scene_help_output():
     """Test that 'mesh edit-scene --help' output is stable."""
     cmd = [sys.executable, "-m", "mesh_cli", "edit-scene", "--help"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd)
     assert result.returncode == 0
     
     expected_substrings = [
@@ -57,7 +60,7 @@ def test_edit_scene_help_output():
 def test_tidy_scene_help_output():
     """Test that 'mesh tidy-scene --help' output is stable."""
     cmd = [sys.executable, "-m", "mesh_cli", "tidy-scene", "--help"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd)
     assert result.returncode == 0
     
     expected_substrings = [
@@ -74,7 +77,7 @@ def test_tidy_scene_help_output():
 def test_list_scenes_help_output():
     """Test that 'mesh list-scenes --help' output is stable."""
     cmd = [sys.executable, "-m", "mesh_cli", "list-scenes", "--help"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd)
     assert result.returncode == 0
     
     expected_substrings = [
@@ -90,7 +93,7 @@ def test_list_scenes_help_output():
 def test_validate_help_output():
     """Test that 'mesh validate --help' output is stable."""
     cmd = [sys.executable, "-m", "mesh_cli", "validate", "--help"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd)
     assert result.returncode == 0
     
     expected_substrings = [

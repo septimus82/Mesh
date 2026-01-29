@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict
 
+from .. import json_io
 from ..encounter_sets import get_theme_manager
 from ..scene_loader import SceneLoader
 from ..scene_serializer import compact_scene_payload
@@ -471,8 +472,7 @@ def create_scene(path: str, template_name: str = "empty", extra_args: Dict[str, 
     target_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        with target_path.open("w", encoding="utf-8") as handle:
-            json.dump(final_scene, handle, indent=2, sort_keys=False)
+        json_io.write_json_atomic(target_path, final_scene)
         print(f"[Mesh][Scaffold] Created new scene at '{path}' using template '{template_name}'")
         return True
     except OSError as exc:
@@ -596,8 +596,7 @@ def create_quest(name: str, target_file: str = "assets/data/quests.json") -> boo
     data.append(new_quest)
 
     try:
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        json_io.write_json_atomic(path, data)
         print(f"[Mesh][Scaffold] Added quest '{quest_id}' to '{target_file}'")
         return True
     except Exception as e:
@@ -679,8 +678,7 @@ def create_npc(role: str, target_scene: str | None = None, x: int = 0, y: int = 
             full_scene = loader.apply_scene_defaults(scene_data)
             compacted = compact_scene_payload(full_scene)
 
-            with path.open("w", encoding="utf-8") as f:
-                json.dump(compacted, f, indent=2, sort_keys=False)
+            json_io.write_json_atomic(path, compacted)
 
             print(f"[Mesh][Scaffold] Added {role} NPC to '{target_scene}' at ({x}, {y})")
             return True
@@ -748,11 +746,7 @@ def extract_prefab(prefab_id: str, scene_path: str, entity_name: str, remove_sou
         else:
             prefabs.append(new_prefab)
 
-        # Ensure directory exists
-        prefabs_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with prefabs_path.open("w", encoding="utf-8") as f:
-            json.dump(prefabs, f, indent=2)
+        json_io.write_json_atomic(prefabs_path, prefabs)
 
         print(f"[Mesh][Scaffold] Extracted prefab '{prefab_id}' from '{entity_name}'")
 
@@ -765,8 +759,7 @@ def extract_prefab(prefab_id: str, scene_path: str, entity_name: str, remove_sou
             full_scene = loader.apply_scene_defaults(scene_data)
             compacted = compact_scene_payload(full_scene)
 
-            with path.open("w", encoding="utf-8") as f:
-                json.dump(compacted, f, indent=2, sort_keys=False)
+            json_io.write_json_atomic(path, compacted)
             print(f"[Mesh][Scaffold] Removed source entity from '{scene_path}'")
 
         return True
@@ -857,8 +850,7 @@ def place_prefab(
         full_scene = loader.apply_scene_defaults(scene_data)
         compacted = compact_scene_payload(full_scene)
 
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(compacted, f, indent=2, sort_keys=False)
+        json_io.write_json_atomic(path, compacted)
 
         print(f"[Mesh][Scaffold] Placed prefab '{prefab_id}' into '{target_scene}' at ({x}, {y})")
 

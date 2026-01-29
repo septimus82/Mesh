@@ -56,16 +56,15 @@ def test_mesh_cli_help_contains_no_placeholder_markers() -> None:
     strings into the help text.
     """
 
-    import subprocess
     import sys
     from pathlib import Path
 
+    from tests.subprocess_tools import run_checked
+
     repo_root = Path(__file__).resolve().parent.parent
-    res = subprocess.run(
+    res = run_checked(
         [sys.executable, "-m", "mesh_cli", "--help"],
         cwd=str(repo_root),
-        capture_output=True,
-        text=True,
     )
     assert res.returncode == 0, (res.stdout + "\n" + res.stderr).strip()
     help_text = (res.stdout + "\n" + res.stderr).lower()

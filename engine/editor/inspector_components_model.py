@@ -40,6 +40,8 @@ TRANSFORM_FIELDS: List[Tuple[str, str, str, Any]] = [
 RENDER_FIELDS: List[Tuple[str, str, str, Any]] = [
     ("sprite", "Sprite", "string", ""),
     ("layer", "Layer", "string", "entities"),
+    ("render_layer", "Render Layer", "int", 0),
+    ("depth_z", "Depth Z", "float", 0.0),
 ]
 
 INTERACTION_FIELDS: List[Tuple[str, str, str, Any]] = [

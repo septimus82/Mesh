@@ -1,28 +1,13 @@
+"""Clipboard utilities for the tooling module.
+
+This module is a shim re-exporting from the canonical clipboard module.
+All clipboard functionality is implemented in engine.tooling_runtime.clipboard.
+
+This shim exists for backwards compatibility with any code that may have
+imported from engine.tooling.clipboard.
+"""
 from __future__ import annotations
 
+from engine.tooling_runtime.clipboard import try_copy_to_clipboard
 
-def try_copy_to_clipboard(text: str) -> bool:
-    """
-    Best-effort clipboard copy.
-
-    Must be safe in headless/test environments: all errors are swallowed.
-    """
-    value = str(text or "")
-    if not value:
-        return False
-
-    try:
-        import warnings  # noqa: PLC0415
-        import tkinter  # noqa: PLC0415
-
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            root = tkinter.Tk()
-        root.withdraw()
-        root.clipboard_clear()
-        root.clipboard_append(value)
-        root.update()
-        root.destroy()
-        return True
-    except Exception:  # noqa: BLE001
-        return False
+__all__ = ["try_copy_to_clipboard"]

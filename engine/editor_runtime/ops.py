@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from ..logging_tools import get_logger
+from .. import json_io
 
 logger = get_logger(__name__)
 
@@ -46,8 +46,7 @@ def save_current_scene(controller: Any) -> None:
 
     try:
         snapshot = controller.window.scene_controller.build_scene_snapshot()
-        with open(path, "w") as f:
-            json.dump(snapshot, f, indent=2)
+        json_io.write_json_atomic(path, snapshot)
         logger.info("[Editor] Scene saved to '%s'", path)
         mark_clean = getattr(controller, "_mark_clean", None)
         if callable(mark_clean):

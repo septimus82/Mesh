@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import json
-import os
 from pathlib import Path
 from typing import Any
+
+from . import json_io
 
 
 SAVE_FORMAT_VERSION = 1
@@ -50,23 +50,20 @@ def dumps_json_deterministic(
     sort_keys: bool = True,
     trailing_newline: bool = True,
 ) -> str:
-    text = json.dumps(payload, indent=indent, sort_keys=sort_keys)
+    _ = (indent, sort_keys)
+    text = json_io.dumps_stable(payload)
     if trailing_newline:
         return text + "\n"
     return text
 
 
-def write_text_atomic(path: Path, text: str, *, encoding: str = "utf-8") -> None:
+def write_text_atomic(path: Path | str, text: str, *, encoding: str = "utf-8") -> None:
     """Write text to `path` atomically (temp + replace)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = path.with_suffix(path.suffix + ".tmp")
-    with open(tmp_path, "w", encoding=encoding, newline="\n") as handle:
-        handle.write(text)
-    os.replace(tmp_path, path)
+    json_io.write_text_atomic(path, text, encoding=encoding)
 
 
 def write_json_atomic(
-    path: Path,
+    path: Path | str,
     payload: Any,
     *,
     indent: int | None = 2,
@@ -74,15 +71,11 @@ def write_json_atomic(
     trailing_newline: bool = True,
     encoding: str = "utf-8",
 ) -> None:
-    text = dumps_json_deterministic(
-        payload,
-        indent=indent,
-        sort_keys=sort_keys,
-        trailing_newline=trailing_newline,
-    )
-    write_text_atomic(path, text, encoding=encoding)
+    _ = (indent, sort_keys, encoding)
+    text = dumps_json_deterministic(payload, trailing_newline=trailing_newline)
+    json_io.write_text_atomic(path, text, encoding="utf-8")
 
 
-def read_json(path: Path, *, encoding: str = "utf-8") -> Any:
-    with open(path, "r", encoding=encoding) as handle:
-        return json.load(handle)
+def read_json(path: Path | str, *, encoding: str = "utf-8") -> Any:
+    _ = encoding
+    return json_io.read_json(path)

@@ -63,6 +63,7 @@ KNOWN_EXTRA_FIELDS = {
     "tags",
     "type",
     "prefab_id",
+    "prefab_overrides",
     "variant_id",
     "id",
     "require_flags",

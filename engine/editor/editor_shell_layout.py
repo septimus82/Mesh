@@ -76,8 +76,8 @@ class EditorShellLayout:
 @dataclass(slots=True)
 class DockTabState:
     """Tracks which tabs are active in each dock."""
-    left_tab: str = "Scene"      # "Scene" or "Outliner"
-    right_tab: str = "Inspector"  # "Inspector", "Assets", or "History"
+    left_tab: str = "Scene"      # "Project", "Scene", or "Outliner"
+    right_tab: str = "Inspector"  # "Inspector", "Assets", "History", or "Problems"
 
 
 def clamp_dock_width(width: int, window_width: int, other_dock_width: int) -> int:
@@ -238,14 +238,14 @@ def clamp_rects_to_window(
     )
 
 
-def get_dock_tab_options() -> Tuple[Tuple[str, str], Tuple[str, str, str]]:
+def get_dock_tab_options() -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
     """Get the available tab options for each dock.
 
     Returns:
         Tuple of (left_tabs, right_tabs) where each is a tuple of tab names.
     """
-    left_tabs = ("Scene", "Outliner")
-    right_tabs = ("Inspector", "Assets", "History")
+    left_tabs = ("Project", "Scene", "Outliner")
+    right_tabs = ("Inspector", "Assets", "History", "Problems")
     return left_tabs, right_tabs
 
 

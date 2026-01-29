@@ -28,7 +28,7 @@ def test_save_manager_write_is_atomic_on_replace_failure(tmp_path, monkeypatch):
     def _boom_replace(_src, _dst):
         raise OSError("boom")
 
-    monkeypatch.setattr("engine.persistence_io.os.replace", _boom_replace)
+    monkeypatch.setattr("engine.json_io.os.replace", _boom_replace)
 
     assert manager.save_game("slot1") is False
     assert json.loads(path.read_text(encoding="utf-8")) == {"sentinel": 1}
@@ -57,7 +57,7 @@ def test_snapshot_write_is_atomic_on_replace_failure(tmp_path, monkeypatch):
     def _boom_replace(_src, _dst):
         raise OSError("boom")
 
-    monkeypatch.setattr("engine.persistence_io.os.replace", _boom_replace)
+    monkeypatch.setattr("engine.json_io.os.replace", _boom_replace)
 
     assert savegame.save_quick_snapshot(controller.window, path=path) is False
     assert path.read_text(encoding="utf-8") == "{\"sentinel\": 1}\n"

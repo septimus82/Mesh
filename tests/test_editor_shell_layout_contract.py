@@ -176,11 +176,13 @@ class TestGetDockTabOptions:
         """Should return the expected tab options."""
         left_tabs, right_tabs = get_dock_tab_options()
 
+        assert "Project" in left_tabs
         assert "Scene" in left_tabs
         assert "Outliner" in left_tabs
         assert "Inspector" in right_tabs
         assert "Assets" in right_tabs
         assert "History" in right_tabs
+        assert "Problems" in right_tabs
 
 
 class TestLayoutConstants:

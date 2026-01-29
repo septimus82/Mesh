@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 from engine.tooling.doctor import DoctorRunner
 from engine.tooling.explain import ExplainRunner
 from engine.tooling.pipeline_runner import run_pipeline_result
+from engine import json_io
 from engine.tooling.plan_types import Action, Plan
 
 
@@ -182,7 +183,8 @@ def _run_macro(args: argparse.Namespace) -> None:
 
 def _load_config() -> Dict[str, Any]:
     try:
-        return json.loads(Path("config.json").read_text(encoding="utf-8"))
+        raw = json.loads(Path("config.json").read_text(encoding="utf-8"))
+        return raw if isinstance(raw, dict) else {}
     except:
         return {}
 
@@ -566,9 +568,7 @@ def _plan_new_puzzle(ctx: WizardContext) -> None:
     }, f"Add puzzle to '{path.name}'")
 
 def _write_plan(plan: Plan, path: str) -> None:
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(asdict(plan), f, indent=2)
+    json_io.write_json_atomic(path, asdict(plan))
     print(f"[Mesh][Wizard] Plan written to {path}")
 
 def _print_plan(plan: Plan) -> None:

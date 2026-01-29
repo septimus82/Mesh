@@ -8,6 +8,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, Set
 
+from .. import json_io
 from ..behaviours import list_behaviours
 from ..config import EngineConfig
 from ..input import InputManager
@@ -66,9 +67,7 @@ def main(argv: list[str] | None = None) -> int:
 
     index = build_project_index(args.scenes_root)
     output_path = Path(args.output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8") as handle:
-        json.dump(index, handle, indent=2)
+    json_io.write_json_atomic(output_path, index)
 
     scene_count = len(index.get("scenes", []))
     behaviour_count = len(index.get("behaviours", []))

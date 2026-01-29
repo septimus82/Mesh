@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+from engine import json_io
 from engine.tooling.explain import ExplainRunner
 from engine.tooling.plan_types import Action, Plan
 from engine.tooling.plan_linter import is_allowed_ai_path
@@ -28,7 +29,7 @@ def run_plan_fix_command(args: argparse.Namespace) -> int:
     elif args.path:
         p = Path(args.path)
         if p.exists():
-            report = json.loads(p.read_text(encoding="utf-8"))
+            report = json_io.read_json(p)
             artifact_path = str(p).replace("\\", "/")
         else:
             print(f"Error: Report not found: {args.path}")
@@ -44,7 +45,6 @@ def run_plan_fix_command(args: argparse.Namespace) -> int:
     plan = generate_fix_plan(report, artifact_path)
     
     out_path = Path(args.out)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
     
     # Serialize manually to match expected JSON format
     plan_data = {
@@ -62,7 +62,7 @@ def run_plan_fix_command(args: argparse.Namespace) -> int:
         ]
     }
     
-    out_path.write_text(json.dumps(plan_data, indent=2) + "\n", encoding="utf-8")
+    json_io.write_json_atomic(out_path, plan_data)
     print(f"Generated fix plan: {out_path}")
     return 0
 
@@ -116,7 +116,7 @@ def generate_fix_plan(report: Dict[str, Any], artifact_path: str) -> Plan:
     for action in actions:
         # Create a signature based on type and args
         # args is a dict, so we need to serialize it to make it hashable
-        sig = (action.type, json.dumps(action.args, sort_keys=True))
+        sig = (action.type, json_io.dumps_stable(action.args))
         if sig not in seen_signatures:
             seen_signatures.add(sig)
             unique_actions.append(action)

@@ -1,6 +1,9 @@
-import subprocess
 import sys
+
 import pytest
+
+from tests.subprocess_tools import run_checked
+
 
 def _normalize_whitespace(text: str) -> str:
     return " ".join(text.split())
@@ -20,10 +23,8 @@ def _normalize_whitespace(text: str) -> str:
 ])
 def test_build_help_output(command, expected_substrings):
     """Verify that Build commands help output contains expected substrings."""
-    result = subprocess.run(
+    result = run_checked(
         [sys.executable, "mesh_cli.py"] + command,
-        capture_output=True,
-        text=True,
     )
     assert result.returncode == 0
     output = _normalize_whitespace(result.stdout)

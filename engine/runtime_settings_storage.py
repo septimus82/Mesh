@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import json
 import os
 import sys
 from pathlib import Path
 from typing import Any
 
+from . import json_io
 from .repo_root import get_repo_root
 from .runtime_settings import RuntimeSettings
 
@@ -31,7 +31,7 @@ def resolve_runtime_settings_path(path: str | Path | None = None) -> Path | None
 
 def _read_payload(path: Path) -> dict[str, Any] | None:
     try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw = json_io.read_json(path)
     except FileNotFoundError:
         return None
     except Exception:
@@ -71,6 +71,4 @@ def save_runtime_settings(path: str | Path | None, settings: RuntimeSettings) ->
         "version": 1,
         **settings.to_payload(),
     }
-    resolved.parent.mkdir(parents=True, exist_ok=True)
-    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-    resolved.write_text(text, encoding="utf-8", newline="\n")
+    json_io.write_json_atomic(resolved, payload)

@@ -26,22 +26,16 @@ def test_pytest_runner_logs_written_on_failure(tmp_path: Path) -> None:
     (repo_root / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
     _write_failing_test(repo_root)
 
-    full = subprocess.run(
+    full = run_checked(
         [sys.executable, "-m", "tooling.pytest_full", "--repo-root", str(repo_root)],
         cwd=str(Path(__file__).resolve().parents[1]),
-        capture_output=True,
-        text=True,
-        check=False,
     )
     assert full.returncode != 0
     assert (repo_root / "artifacts" / "pytest_full.log").exists()
 
-    fast = subprocess.run(
+    fast = run_checked(
         [sys.executable, "-m", "tooling.pytest_fast", "--repo-root", str(repo_root)],
         cwd=str(Path(__file__).resolve().parents[1]),
-        capture_output=True,
-        text=True,
-        check=False,
     )
     assert fast.returncode != 0
     assert (repo_root / "artifacts" / "pytest_fast.log").exists()

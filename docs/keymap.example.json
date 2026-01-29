@@ -1,0 +1,26 @@
+{
+  "editor.find_everything.toggle": "Ctrl+K",
+  "editor.scene_switcher.toggle": "Ctrl+O",
+  "editor.scene_browser.open": "Ctrl+Shift+O",
+
+  "editor.panel.inspector.toggle": "Ctrl+Alt+1",
+  "editor.panel.outliner.toggle": "Ctrl+Alt+2",
+  "editor.panel.problems.toggle": "Ctrl+Alt+3",
+  "editor.panel.project_explorer.toggle": "Ctrl+Alt+4",
+  "editor.panel.history.toggle": "Ctrl+Alt+5",
+  "editor.panel.prefab_variant_editor.toggle": "Ctrl+Alt+6",
+
+  "editor.viewport_maximize.toggle": "Ctrl+Space",
+
+  "editor.background_planes.add": "Ctrl+Alt+B",
+  "editor.background_planes.duplicate": "Ctrl+Alt+D",
+  "editor.background_planes.remove": "Ctrl+Alt+Backspace",
+  "editor.background_planes.move_up": "Alt+PageUp",
+  "editor.background_planes.move_down": "Alt+PageDown",
+  "editor.background_planes.toggle_repeat_x": "Ctrl+Alt+X",
+  "editor.background_planes.toggle_repeat_y": "Ctrl+Alt+Y",
+
+  "_comment_scoped": "Scoped overrides use 'scope:action_id' format (v1.1)",
+  "text_input.inline_rename:editor.project_explorer.inline_rename.commit": "Ctrl+Enter",
+  "text_input.inline_rename:editor.project_explorer.inline_rename.cancel": "Escape"
+}

@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
+from tests.subprocess_tools import run_checked
+
 pytestmark = [pytest.mark.integration]
 
 
-def _run_blocking_arcade(code: str, *, cwd: Path) -> subprocess.CompletedProcess[str]:
+def _run_blocking_arcade(code: str, *, cwd: Path) -> "subprocess.CompletedProcess[str]":
+    import subprocess  # Only needed for type hint
     script = r"""
 import importlib.abc
 import sys
@@ -23,12 +25,9 @@ class _BlockArcade(importlib.abc.MetaPathFinder):
 
 sys.meta_path.insert(0, _BlockArcade())
 """ + "\n" + code
-    return subprocess.run(
+    return run_checked(
         [sys.executable, "-c", script],
         cwd=str(cwd),
-        capture_output=True,
-        text=True,
-        check=False,
     )
 
 

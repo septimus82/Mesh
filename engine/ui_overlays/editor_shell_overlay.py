@@ -244,7 +244,7 @@ class EditorShellOverlay(UIElement):
         draw_panel_bg(dock.left, dock.right, tab_y, dock.top, SHELL_HEADER_COLOR)
 
         # Tab buttons
-        tabs = ("Scene", "Outliner")
+        tabs = ("Project", "Scene", "Outliner")
         tab_width = dock.width / len(tabs)
         active_tab = tab_state.left_tab
 
@@ -290,7 +290,7 @@ class EditorShellOverlay(UIElement):
         draw_panel_bg(dock.left, dock.right, tab_y, dock.top, SHELL_HEADER_COLOR)
 
         # Tab buttons
-        tabs = ("Inspector", "Assets", "History")
+        tabs = ("Inspector", "Assets", "History", "Problems")
         tab_width = dock.width / len(tabs)
         active_tab = tab_state.right_tab
 

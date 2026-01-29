@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from engine import json_io
 _LOG = logging.getLogger(__name__)
 
 
@@ -35,12 +35,15 @@ class WorkspaceSettings:
     outliner_search: str = ""
     assets_search: str = ""
     history_search: str = ""
+    problems_search: str = ""
+    project_search: str = ""
+    project_explorer_recents: list[dict[str, str]] = field(default_factory=list)
     light_occluder_tool: str | None = None  # "light", "occluder", or None
     outliner_focus: str = "outliner"  # "outliner" or "inspector"
     last_scene_id: str | None = None
     last_camera_center: list[float] | None = None
-    left_dock_tab: str = "Outliner"  # "Scene" or "Outliner"
-    right_dock_tab: str = "Inspector"  # "Inspector", "Assets", or "History"
+    left_dock_tab: str = "Outliner"  # "Project", "Scene", or "Outliner"
+    right_dock_tab: str = "Inspector"  # "Inspector", "Assets", "History", or "Problems"
     dock_left_w: int = 320  # Left dock width
     dock_right_w: int = 320  # Right dock width
     # Dock collapse / maximize state
@@ -51,6 +54,10 @@ class WorkspaceSettings:
     ghost_originals_enabled: bool = True
     ghost_originals_alpha: int = 90  # 0..255
     ghost_originals_dim_scale: float = 0.65  # 0.0..1.0
+    # HD-2D defaults preset (null = disabled, or "soft", "crisp", "noir", "dreamy")
+    hd2d_default_preset_id: str | None = None
+    # HD-2D batch paste radius in pixels (16..512)
+    hd2d_batch_radius_px: int = 96
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> WorkspaceSettings:
@@ -73,6 +80,9 @@ class WorkspaceSettings:
             outliner_search=str(data.get("outliner_search", "")),
             assets_search=str(data.get("assets_search", data.get("asset_browser_filter", ""))),
             history_search=str(data.get("history_search", "")),
+            problems_search=str(data.get("problems_search", "")),
+            project_search=str(data.get("project_search", "")),
+            project_explorer_recents=_coerce_recent_payloads(data.get("project_explorer_recents", [])),
             light_occluder_tool=data.get("light_occluder_tool"),
             outliner_focus=str(data.get("outliner_focus", "outliner")),
             last_scene_id=data.get("last_scene_id"),
@@ -87,6 +97,8 @@ class WorkspaceSettings:
             ghost_originals_enabled=bool(data.get("ghost_originals_enabled", True)),
             ghost_originals_alpha=ghost_alpha,
             ghost_originals_dim_scale=ghost_scale,
+            hd2d_default_preset_id=_coerce_hd2d_default_preset_id(data.get("hd2d_default_preset_id")),
+            hd2d_batch_radius_px=_coerce_hd2d_batch_radius_px(data.get("hd2d_batch_radius_px", 96)),
         )
 
 
@@ -101,7 +113,7 @@ def load_workspace(repo_root: Path) -> WorkspaceSettings:
         return WorkspaceSettings()
 
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data = json_io.read_json(path)
         if not isinstance(data, dict):
             return WorkspaceSettings()
         return WorkspaceSettings.from_dict(data)
@@ -115,8 +127,61 @@ def save_workspace(repo_root: Path, settings: WorkspaceSettings) -> None:
     path = get_workspace_path(repo_root)
     try:
         data = asdict(settings)
-        # Sort keys for determinism
-        text = json.dumps(data, indent=2, sort_keys=True)
-        path.write_text(text + "\n", encoding="utf-8")
+        json_io.write_json_atomic(path, data)
     except Exception as e:
         _LOG.error("Failed to save workspace settings: %s", e)
+
+
+def _coerce_recent_payloads(raw: Any, *, limit: int = 8) -> list[dict[str, str]]:
+    if not isinstance(raw, list):
+        return []
+    result: list[dict[str, str]] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        kind = entry.get("kind")
+        rel_path = entry.get("rel_path")
+        label = entry.get("label")
+        if not isinstance(kind, str) or kind not in ("scene", "asset", "path"):
+            continue
+        if not isinstance(rel_path, str) or not rel_path.strip():
+            continue
+        if not isinstance(label, str) or not label.strip():
+            continue
+        result.append({"kind": kind, "rel_path": rel_path, "label": label})
+        if len(result) >= limit:
+            break
+    return result
+
+
+def _coerce_hd2d_default_preset_id(raw: Any) -> str | None:
+    """Coerce and validate HD2D default preset ID.
+
+    Returns None if invalid, otherwise returns a valid preset ID string.
+    """
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        return None
+    preset_id = raw.strip().lower()
+    if not preset_id:
+        return None
+    # Only accept known preset IDs
+    if preset_id in ("soft", "crisp", "noir", "dreamy"):
+        return preset_id
+    return None
+
+
+def _coerce_hd2d_batch_radius_px(raw: Any) -> int:
+    """Coerce and clamp HD2D batch radius to valid bounds (16..512).
+
+    Returns default (96) if invalid, otherwise returns clamped value.
+    """
+    if raw is None:
+        return 96
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return 96
+    # Clamp to valid range
+    return max(16, min(512, value))

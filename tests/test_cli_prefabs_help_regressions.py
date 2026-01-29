@@ -1,11 +1,14 @@
-import subprocess
 import sys
+
 import pytest
+
+from tests.subprocess_tools import run_checked
+
 
 def run_help(command):
     """Run a command with --help and return the output."""
     cmd = [sys.executable, "-m", "mesh_cli"] + command + ["--help"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd)
     return result.stdout
 
 def test_new_prefab_help():

@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any, Dict
 
+from . import json_io
 from .repo_root import find_repo_root
 
 
@@ -181,7 +182,7 @@ def save_config(config: EngineConfig, path: str = "config.json") -> None:
     cfg_path = Path(path)
     try:
         data: Dict[str, Any] = asdict(config)
-        cfg_path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+        json_io.write_json_atomic(cfg_path, data)
         print(f"[Mesh][Config] Saved configuration to '{path}'")
     except OSError as exc:
         print(f"[Mesh][Config] ERROR: Could not write '{path}': {exc}")

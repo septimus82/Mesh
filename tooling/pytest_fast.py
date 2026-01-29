@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
-import json
 import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
+if __package__ in (None, ""):
+    repo_root = Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(repo_root))
+
+from engine import json_io
 from tooling.pytest_runner_common import (
     build_pytest_args,
     build_pytest_env,
@@ -48,8 +52,7 @@ def _xdist_available() -> bool:
 
 def _write_durations(path: Path, output: str) -> None:
     data = parse_durations_output(output)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    json_io.write_json_atomic(path, data)
 
 
 def main(argv: list[str] | None = None) -> int:

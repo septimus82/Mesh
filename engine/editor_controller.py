@@ -33,8 +33,28 @@ from .behaviours.utils import (
 from .editor_palette import DEFAULT_PREFAB_PATH
 from .editor_palette_thumbs import DEFAULT_THUMB_SIZE, request_thumb, tick_thumb_generation
 from .editor_entity_ops import EntitySummary, list_entities, update_entity_field
+from .editor.workspace_autosave_model import (
+    AutosaveState,
+    mark_flushed as _mark_workspace_autosave_flushed,
+    schedule_change as _schedule_workspace_autosave,
+    should_flush as _should_flush_workspace_autosave,
+)
+from .editor_prefab_variant_ops import (
+    DiffRow,
+    apply_override_delta as _apply_override_delta,
+    clear_all_overrides as _clear_all_overrides,
+    compute_prefab_override_diff,
+    revert_override_key as _revert_override_key,
+)
 from .editor_runtime import input as editor_input
 from .editor_runtime import ops as editor_ops
+from engine.editor_commands import get_all_commands
+from engine.scene_index import build_scene_rows
+from engine.editor.find_everything_model import build_find_items
+from engine.editor.scene_lint_model import build_scene_lint_issues
+from engine.editor.editor_file_ops_controller import EditorFileOpsController
+from engine.editor.editor_project_explorer_controller import ProjectExplorerController
+from engine.editor.editor_problems_controller import ProblemsController
 from .editor_light_occluder_ops import (
     COOKIE_PRESETS,
     LIGHT_COLOR_PRESETS,
@@ -147,6 +167,11 @@ from .editor.asset_browser_panel import (
     resolve_asset_activation as _resolve_asset_activation_impl,
 )
 
+from .editor.editor_workspace_controller import EditorWorkspaceController
+from .editor.editor_selection_controller import EditorSelectionController
+from .editor.editor_scene_ops import EditorSceneOpsController
+from .editor.editor_ui_flow_controller import EditorUIFlowController
+
 ZONE_BEHAVIOUR_CANONICAL = TRIGGER_ZONE_CANONICAL | HITBOX_CANONICAL
 ZONE_BEHAVIOUR_CLASSNAMES = TRIGGER_ZONE_CLASSNAMES | HITBOX_CLASSNAMES
 
@@ -155,6 +180,7 @@ PALETTE_THUMB_DRAW_SIZE = 18
 PALETTE_LINE_HEIGHT = 20
 
 PREFAB_PALETTE: list[dict[str, Any]] | None = None
+WORKSPACE_AUTOSAVE_DELAY_NS = 500_000_000
 
 # This module is intentionally resilient to being removed from sys.modules and
 # re-imported (some tests verify import surfaces and pop modules). In those
@@ -258,10 +284,26 @@ class EditorModeController:
         self.entity_drag_start_pos: Optional[tuple[float, float]] = None
         self.grid_size: float = 16.0
         self._repo_root_override: Any = None  # For testing: set to a Path to override get_repo_root
+        self._workspace_autosave_state = AutosaveState()
+        self._keymap_overrides: dict[str, str] = {}
+        
+        # Sub-controllers (Vertical Slice Diet V2)
+        # We initialize these early so legacy fields can be proxied to them
+        self._workspace_ctl = EditorWorkspaceController(self)
+        self._selection_ctl = EditorSelectionController(self)
+        self._scene_ops = EditorSceneOpsController(self)
+        self._ui_flow_ctl = EditorUIFlowController(self)
+        self._file_ops_ctl = EditorFileOpsController(self)
+        from engine.editor.editor_focus_controller import EditorFocusController  # noqa: PLC0415
+
+        self.focus = EditorFocusController(self)
+        self.project_explorer = ProjectExplorerController(self._get_repo_root())
+        self.problems = ProblemsController()
 
         # Multi-selection state
-        self._selected_entity_ids: List[str] = []
-        self._primary_entity_id: Optional[str] = None
+        # DELEGATED to EditorSelectionController
+        # self._selected_entity_ids: List[str] = []
+        # self._primary_entity_id: Optional[str] = None
         self._multiselect_drag_starts: Dict[str, tuple[float, float]] = {}
 
         # Inspector state
@@ -283,17 +325,18 @@ class EditorModeController:
         self._cached_entity_panels_list: List[EntitySummary] = []
         self._entity_panels_selected_id: str | None = None
 
-        # Panel search state (Outliner/Assets/History)
+        # Panel search state (Project/Outliner/Assets/History/Problems)
         self._outliner_search: str = ""
         self._assets_search: str = ""
         self._history_search: str = ""
+        self._problems_search: str = ""
         self._search_focus: str | None = None
 
         # Scene switcher state
         self.scene_switcher_active: bool = False
         self.scene_switcher_query: str = ""
         self.scene_switcher_index: int = 0
-        self.scene_switcher_recent: list[str] = []
+        # self.scene_switcher_recent: list[str] = [] # DELEGATED to EditorWorkspaceController
         self._scene_switcher_cached: list[tuple[str, str]] = []
 
         # Scene browser state
@@ -312,6 +355,19 @@ class EditorModeController:
 
         # Undo history state
         self._history_cursor_index: int = 0
+
+        # Problems panel state
+        # MOVED to self.problems (ProblemsController)
+
+        # Find Everything launcher state
+        # DELEGATED to EditorUIFlowController
+        # self._find_everything_open: bool = False
+        # self._find_everything_query: str = ""
+        # self._find_everything_selection_index: int = 0
+        # self._find_everything_cached_results: list[Any] = []
+        # self._find_everything_all_results: list[Any] = []
+        # self._find_everything_counts: dict[str, object] = {"total": 0, "by_group": {}}
+        # self._find_asset_lookup: dict[str, Any] = {}
 
         # Palette state
         self.palette_active: bool = False
@@ -362,8 +418,8 @@ class EditorModeController:
         self._hover_entity_rect: Optional[Tuple[float, float, float, float]] = None
 
         # Dock tab state (which panel is active in each dock)
-        self._left_dock_tab: str = "Outliner"  # "Scene" or "Outliner"
-        self._right_dock_tab: str = "Inspector"  # "Inspector" or "Assets"
+        self._left_dock_tab: str = "Outliner"  # "Project", "Scene", or "Outliner"
+        self._right_dock_tab: str = "Inspector"  # "Inspector", "Assets", "History", or "Problems"
 
         # Dock resize state
         from .editor.editor_shell_layout import DOCK_WIDTH  # noqa: PLC0415
@@ -396,6 +452,10 @@ class EditorModeController:
         # Clipboard state (internal, not OS clipboard)
         self._entity_clipboard: Optional[Dict[str, Any]] = None
         self._entity_clipboard_source_id: Optional[str] = None
+        self._hd2d_overrides_clipboard: Optional[Dict[str, Any]] = None
+
+        # HD-2D batch paste radius (loaded from workspace settings)
+        self._hd2d_batch_radius_px: int = 96
 
         # Tool state
         self.tool_mode: str = TOOL_MODE_MOVE
@@ -438,9 +498,10 @@ class EditorModeController:
         self._last_mouse_y: float = 0.0
 
         # Undo/Redo state
-        self.undo_stack: List[Dict[str, Any]] = []
-        self.redo_stack: List[Dict[str, Any]] = []
-        self.scene_dirty: bool = False
+        # DELEGATED to EditorSceneOpsController
+        # self.undo_stack: List[Dict[str, Any]] = []
+        # self.redo_stack: List[Dict[str, Any]] = []
+        # self.scene_dirty: bool = False
         self.dirty_state = EditorDirtyState()
         self.play_session = EditorPlaySession()
 
@@ -460,6 +521,7 @@ class EditorModeController:
         self.hierarchy_rename_buffer: str = ""
         self._cached_hierarchy_list: List[optional_arcade.arcade.Sprite] = []
         self._hierarchy_name_cache: Dict[int, str] = {}
+
 
         # Dialogue / Quest inspector state
         self.dialogue_panel_active: bool = False
@@ -504,6 +566,11 @@ class EditorModeController:
         self.lighting_preset_label: str | None = None
         self.lighting_preset_until: float = 0.0
 
+        # HD-2D preset preview state (non-destructive preview while browsing)
+        self._hd2d_preview_active: bool = False
+        self._hd2d_preview_snapshot: Any = None  # PreviewSnapshot from hd2d_preset_preview_model
+        self._hd2d_preview_preset_id: str | None = None
+
         # Scene occluder tool state
         self.occluder_tool_active: bool = False
         self.occluder_points: List[tuple[float, float]] = []
@@ -526,7 +593,11 @@ class EditorModeController:
         self._ghost_originals_alpha: int = 90
         self._ghost_originals_dim_scale: float = 0.65
 
+        # HD2D default preset (for auto-apply on new scenes)
+        self._hd2d_default_preset_id: str | None = None
+
         self.load_workspace()
+        self.load_keymap_overrides()
 
         # Shape editing state (entity-local collision/occluder polygons)
         self.shape_edit_mode: Optional[str] = None
@@ -560,11 +631,329 @@ class EditorModeController:
             width=200
         )
 
+    # -- Sub-Controller Accessors --
+
+    @property
+    def file_ops(self) -> EditorFileOpsController:
+        return self._file_ops_ctl
+
+    @property
+    def ui_flow(self) -> EditorUIFlowController:
+        return self._ui_flow_ctl
+
+    @property
+    def selection(self) -> EditorSelectionController:
+        return self._selection_ctl
+
+    @property
+    def scene_ops(self) -> EditorSceneOpsController:
+        return self._scene_ops
+
+    @property
+    def workspace(self) -> EditorWorkspaceController:
+        return self._workspace_ctl
+    
+    # -- EditorUiFlowHost Protocol Implementation --
+    
+    def ui_activate_command(self, cmd_id: str) -> bool:
+        return self._activate_find_command(cmd_id)
+        
+    def ui_activate_asset(self, item_id: str) -> bool:
+        return self._activate_find_asset(item_id)
+        
+    def ui_activate_scene(self, item_id: str) -> bool:
+        return self._activate_find_scene(item_id)
+        
+    def ui_activate_entity(self, item_id: str) -> bool:
+        return self._activate_find_entity(item_id)
+        
+    def ui_activate_problem(self, item_id: str) -> bool:
+        return self._activate_find_problem(item_id)
+        
+    def ui_get_palette_items(self) -> List[Any]:
+        # Support legacy test override
+        override = self._find_items_override
+        if isinstance(override, list):
+            return list(override)
+            
+        window = self.window
+        commands = get_all_commands(window) if window else []
+        
+        # Get recent scenes
+        recents = self.scene_switcher_recent
+        scenes = build_scene_rows("", recents)
+        
+        # Get entities
+        sc = getattr(window, "scene_controller", None)
+        scene_data = getattr(sc, "_loaded_scene_data", None)
+        entities = list_entities(scene_data) if isinstance(scene_data, dict) else []
+        
+        # Get assets
+        assets: List[Any] = []
+        if self._asset_browser_cached_rows:
+            assets = self._asset_browser_cached_rows
+        
+        if not assets:
+            repo_root = getattr(window, "repo_root", None)
+            if repo_root:
+                assets = scan_assets(repo_root)
+        
+        # Get problems
+        problems = self._ui_get_problems(scene_data, window)
+        
+        # Side effect: Update asset lookup (delegated state)
+        # We must keep this populated as referencing code expects it via _find_asset_lookup
+        if hasattr(self._ui_flow_ctl, "asset_lookup"):
+             self._ui_flow_ctl.asset_lookup = {
+                str(getattr(row, "rel_path", "") or ""): row
+                for row in assets
+                if str(getattr(row, "rel_path", "") or "")
+            }
+
+        return build_find_items(
+            commands=commands,
+            scenes=scenes,
+            entities=entities,
+            assets=assets,
+            problems=problems,
+        )
+
+    def _ui_get_problems(self, scene_data: Any, window: Any) -> List[Any]:
+        """Helper for palette items."""
+        if self.problems.issues:
+            return list(self.problems.issues)
+            
+        if not isinstance(scene_data, dict):
+            return []
+            
+        repo_root = getattr(window, "repo_root", None)
+        if not isinstance(repo_root, Path):
+            return []
+            
+        def resolver(prefab_id: str) -> bool:
+            try:
+                from engine.prefabs import get_prefab_manager
+                manager = get_prefab_manager()
+                return bool(manager.get_prefab(prefab_id))
+            except Exception:
+                return False
+                
+        return build_scene_lint_issues(scene_data, repo_root, prefab_resolver=resolver)
+
+    def ui_toast(self, msg: str) -> None:
+        self._show_toast(msg)
+
+    def ui_hd2d_preview(self, preset_id: str) -> None:
+        self.preview_hd2d_preset(preset_id)
+        
+    def ui_hd2d_cancel_preview(self) -> None:
+        self._cancel_hd2d_preview()
+        
+    def ui_hd2d_commit(self, preset_id: str) -> bool:
+        return self.commit_hd2d_preset(preset_id)
+
+    # -- Vertical Slice Diet V2 Delegation Properties --
+
+    @property
+    def workspace_data(self) -> WorkspaceSettings:
+        return self._workspace_ctl.workspace_data
+
+    @workspace_data.setter
+    def workspace_data(self, value: WorkspaceSettings) -> None:
+        self._workspace_ctl.workspace_data = value
+
+    @property
+    def recent_projects(self) -> List[str]:
+        return self._workspace_ctl.recent_projects
+
+    @recent_projects.setter
+    def recent_projects(self, value: List[str]) -> None:
+        self._workspace_ctl.recent_projects = value
+        
+    @property
+    def scene_switcher_recent(self) -> List[str]:
+        return self._workspace_ctl.recent_scenes
+
+    @scene_switcher_recent.setter
+    def scene_switcher_recent(self, value: List[str]) -> None:
+        self._workspace_ctl.recent_scenes = value
+
+    @property
+    def _selected_entity_ids(self) -> List[str]:
+        return self._selection_ctl.selected_ids
+
+    @_selected_entity_ids.setter
+    def _selected_entity_ids(self, value: List[str]) -> None:
+        if value is None:
+            value = []
+        self._selection_ctl.selected_ids = value
+
+    @property
+    def _primary_entity_id(self) -> Optional[str]:
+        return self._selection_ctl.primary_selected_id
+
+    @_primary_entity_id.setter
+    def _primary_entity_id(self, value: Optional[str]) -> None:
+        self._selection_ctl.primary_selected_id = value
+
+    @property
+    def undo_stack(self) -> List[Dict[str, Any]]:
+        return self._scene_ops.undo_stack
+
+    @undo_stack.setter
+    def undo_stack(self, value: List[Dict[str, Any]]) -> None:
+        self._scene_ops.undo_stack = value
+
+    @property
+    def redo_stack(self) -> List[Dict[str, Any]]:
+        return self._scene_ops.redo_stack
+
+    @redo_stack.setter
+    def redo_stack(self, value: List[Dict[str, Any]]) -> None:
+        self._scene_ops.redo_stack = value
+
+    @property
+    def scene_dirty(self) -> bool:
+        return self._scene_ops.scene_dirty
+
+    @scene_dirty.setter
+    def scene_dirty(self, value: bool) -> None:
+        self._scene_ops.scene_dirty = value
+
+    @property
+    def dirty_state(self) -> EditorDirtyState:
+        return self._scene_ops.dirty_state
+
+    @dirty_state.setter
+    def dirty_state(self, value: EditorDirtyState) -> None:
+        self._scene_ops.dirty_state = value
+
+    # -- UI Flow Delegation Properties --
+
+    @property
+    def _find_everything_open(self) -> bool:
+        return self._ui_flow_ctl.is_open
+
+    @_find_everything_open.setter
+    def _find_everything_open(self, value: bool) -> None:
+        self._ui_flow_ctl.is_open = value
+
+    @property
+    def _find_everything_query(self) -> str:
+        return self._ui_flow_ctl.query
+
+    @_find_everything_query.setter
+    def _find_everything_query(self, value: str) -> None:
+        self._ui_flow_ctl.query = value
+
+    @property
+    def _find_everything_selection_index(self) -> int:
+        return self._ui_flow_ctl.selection_index
+
+    @_find_everything_selection_index.setter
+    def _find_everything_selection_index(self, value: int) -> None:
+        self._ui_flow_ctl.selection_index = value
+
+    @property
+    def _find_everything_cached_results(self) -> List[Any]:
+        return self._ui_flow_ctl.cached_results
+
+    @_find_everything_cached_results.setter
+    def _find_everything_cached_results(self, value: List[Any]) -> None:
+        self._ui_flow_ctl.cached_results = value
+
+    @property
+    def _find_everything_all_results(self) -> List[Any]:
+        return self._ui_flow_ctl.all_results
+
+    @_find_everything_all_results.setter
+    def _find_everything_all_results(self, value: List[Any]) -> None:
+        self._ui_flow_ctl.all_results = value
+
+    @property
+    def _find_everything_counts(self) -> Dict[str, object]:
+        return self._ui_flow_ctl.counts
+
+    @_find_everything_counts.setter
+    def _find_everything_counts(self, value: Dict[str, object]) -> None:
+        self._ui_flow_ctl.counts = value
+
+    @property
+    def _find_asset_lookup(self) -> Dict[str, Any]:
+        return self._ui_flow_ctl.asset_lookup
+
+    @_find_asset_lookup.setter
+    def _find_asset_lookup(self, value: Dict[str, Any]) -> None:
+        self._ui_flow_ctl.asset_lookup = value
+
     def _get_repo_root(self) -> Any:
         """Get repo root, allowing override for testing."""
         if self._repo_root_override is not None:
             return self._repo_root_override
         return get_repo_root()
+
+    def load_keymap_overrides(self) -> None:
+        if os.environ.get("PYGBAG") == "1":
+            self._keymap_overrides = {}
+            return
+        if os.environ.get("PYTEST_CURRENT_TEST") and self._repo_root_override is None:
+            self._keymap_overrides = {}
+            return
+        from engine.editor.editor_actions import get_editor_actions  # noqa: PLC0415
+        from engine.editor.keymap_override_model import (
+            compute_keymap_conflicts,
+            apply_keymap_overrides,
+            parse_keymap_overrides,
+            format_keymap_conflict,
+        )  # noqa: PLC0415
+        from engine import json_io  # noqa: PLC0415
+
+        keymap_path = self._get_repo_root() / "keymap.json"
+        if not keymap_path.exists():
+            self._keymap_overrides = {}
+            return
+        try:
+            payload = json_io.read_json(keymap_path)
+        except Exception:
+            self._keymap_overrides = {}
+            return
+        if not isinstance(payload, dict):
+            self._keymap_overrides = {}
+            return
+        self._keymap_overrides = parse_keymap_overrides(payload)
+
+        actions = get_editor_actions(None, None)
+        known_scopes = {getattr(a, "shortcut_scope", "global") for a in actions}
+
+        overridden, unknown_scopes, unknown_keys = apply_keymap_overrides(
+            actions, self._keymap_overrides, known_scopes
+        )
+
+        applied_count = len(self._keymap_overrides) - len(unknown_scopes) - len(unknown_keys)
+
+        if unknown_scopes:
+            for scope in sorted(unknown_scopes):
+                logger.warning("[Editor] Keymap overrides: unknown scope %r", scope)
+
+        if unknown_keys:
+            for scope, action_id in sorted(unknown_keys):
+                logger.warning(
+                    "[Editor] Keymap overrides: unknown action id %r in scope %r",
+                    action_id,
+                    scope,
+                )
+
+        conflicts = compute_keymap_conflicts(overridden)
+        if conflicts:
+            logger.warning("[Editor] Keymap overrides: shortcut conflicts:")
+            for conflict in conflicts:
+                logger.warning("[Editor]   %s", format_keymap_conflict(conflict))
+
+        logger.info(
+            "[Editor] Keymap overrides: applied %d of %d entries",
+            applied_count,
+            len(self._keymap_overrides),
+        )
 
     def load_workspace(self) -> None:
         if os.environ.get("PYGBAG") == "1":
@@ -578,12 +967,18 @@ class EditorModeController:
         self.scene_switcher_active = settings.scene_switcher_open
         self.scene_browser_active = settings.scene_browser_open
         self.asset_browser_active = settings.asset_browser_open
+        self.project_explorer.set_query(getattr(settings, "project_search", ""))
         self._outliner_search = settings.outliner_search
         self.entity_panels_filter = self._outliner_search
         self._assets_search = settings.assets_search
         self.asset_browser_filter = self._assets_search
         self.asset_browser_kind = settings.asset_browser_kind
         self._history_search = settings.history_search
+        self.problems.set_query(settings.problems_search)
+        raw_recents = getattr(settings, "project_explorer_recents", [])
+        if isinstance(raw_recents, list):
+            from engine.editor.project_explorer_model import coerce_recent_items  # noqa: PLC0415
+            self._project_explorer_recents = coerce_recent_items(raw_recents)
         self.entity_panels_focus = settings.outliner_focus
 
         # Load dock tab state
@@ -603,6 +998,12 @@ class EditorModeController:
         self._ghost_originals_enabled = settings.ghost_originals_enabled
         self._ghost_originals_alpha = settings.ghost_originals_alpha
         self._ghost_originals_dim_scale = settings.ghost_originals_dim_scale
+
+        # Load HD2D default preset ID (for auto-apply on new scenes)
+        self._hd2d_default_preset_id = settings.hd2d_default_preset_id
+
+        # Load HD2D batch paste radius
+        self._hd2d_batch_radius_px = getattr(settings, "hd2d_batch_radius_px", 96)
 
         if self.asset_browser_active:
             self.refresh_asset_browser()
@@ -635,6 +1036,10 @@ class EditorModeController:
 
     def save_workspace(self) -> None:
         if os.environ.get("PYGBAG") == "1":
+            self._workspace_autosave_state = _mark_workspace_autosave_flushed(
+                self._workspace_autosave_state,
+                time.monotonic_ns(),
+            )
             return
 
         tool = None
@@ -657,9 +1062,11 @@ class EditorModeController:
             asset_browser_open=self.asset_browser_active,
             asset_browser_filter=self.asset_browser_filter,
             asset_browser_kind=self.asset_browser_kind,
+            project_search=self.project_explorer.search_query,
             outliner_search=self._outliner_search,
             assets_search=self._assets_search,
             history_search=self._history_search,
+            problems_search=self.problems.query,
             light_occluder_tool=tool,
             outliner_focus=self.entity_panels_focus,
             last_scene_id=scene_id,
@@ -674,19 +1081,48 @@ class EditorModeController:
             ghost_originals_enabled=self._ghost_originals_enabled,
             ghost_originals_alpha=self._ghost_originals_alpha,
             ghost_originals_dim_scale=self._ghost_originals_dim_scale,
+            project_explorer_recents=self._project_explorer_recent_payloads(),
+            hd2d_default_preset_id=self._hd2d_default_preset_id,
         )
 
         save_workspace(self._get_repo_root(), settings)
+        self._workspace_autosave_state = _mark_workspace_autosave_flushed(
+            self._workspace_autosave_state,
+            time.monotonic_ns(),
+        )
 
-    def _autosave_workspace(self) -> None:
+    def _autosave_workspace(self, now_ns: int | None = None) -> None:
+        now = time.monotonic_ns() if now_ns is None else int(now_ns)
+        self._workspace_autosave_state = _schedule_workspace_autosave(
+            self._workspace_autosave_state,
+            now,
+        )
+
+    def _tick_workspace_autosave(self, now_ns: int | None = None) -> None:
+        if not self._workspace_autosave_state.pending:
+            return
+        if getattr(editor_input, "_is_text_input_active", None):
+            try:
+                if editor_input._is_text_input_active(self):  # type: ignore[attr-defined]
+                    return
+            except Exception:
+                pass
+        now = time.monotonic_ns() if now_ns is None else int(now_ns)
+        if not _should_flush_workspace_autosave(self._workspace_autosave_state, now, WORKSPACE_AUTOSAVE_DELAY_NS):
+            return
+        self.save_workspace()
+
+    def _flush_workspace_autosave(self) -> None:
+        if not self._workspace_autosave_state.pending:
+            return
         self.save_workspace()
 
     # -------------------------------------------------------------------------
-    # Panel Search (Outliner / Assets / History)
+    # Panel Search (Outliner / Assets / History / Problems)
     # -------------------------------------------------------------------------
 
     def is_search_focused(self) -> bool:
-        return self._search_focus in ("outliner", "assets", "history")
+        return self._search_focus in ("project", "outliner", "assets", "history", "problems")
 
     def focus_search_for_active_panel(self) -> bool:
         if not self.active:
@@ -746,25 +1182,39 @@ class EditorModeController:
         return True
 
     def _resolve_active_search_panel(self) -> str | None:
+        if self._left_dock_tab == "Project":
+            return "project"
         if self._left_dock_tab == "Outliner" and self.entity_panels_active:
             return "outliner"
         if self._right_dock_tab == "Assets" and self.asset_browser_active:
             return "assets"
         if self._right_dock_tab == "History":
             return "history"
+        if self._right_dock_tab == "Problems":
+            return "problems"
         return None
 
     def _get_search_text_for_panel(self, panel: str) -> str:
+        if panel == "project":
+            return self.project_explorer.search_query
         if panel == "outliner":
             return self._outliner_search
         if panel == "assets":
             return self._assets_search
         if panel == "history":
             return self._history_search
+        if panel == "problems":
+            return self.problems.query
         return ""
 
     def _set_search_text_for_panel(self, panel: str, new_text: str) -> None:
         value = str(new_text or "")
+        if panel == "project":
+            if value == self.project_explorer.search_query:
+                return
+            self.project_explorer.set_query(value)
+            self._autosave_workspace()
+            return
         if panel == "outliner":
             if value == self._outliner_search:
                 return
@@ -780,6 +1230,12 @@ class EditorModeController:
             if value == self._history_search:
                 return
             self._history_search = value
+            self._autosave_workspace()
+            return
+        if panel == "problems":
+            if value == self.problems.query:
+                return
+            self.problems.set_query(value)
             self._autosave_workspace()
             return
 
@@ -973,6 +1429,7 @@ class EditorModeController:
         self.palette_filter_active = False
 
     def _disable_editor_mode(self) -> None:
+        self._flush_workspace_autosave()
         self.active = False
         logger.info("[Editor] Mode DISABLED")
         self.selected_entity = None
@@ -2868,7 +3325,91 @@ class EditorModeController:
         editor_ops.nudge_selected(self, dx, dy)
 
     def save_current_scene(self) -> None:
+        self._flush_workspace_autosave()
         editor_ops.save_current_scene(self)
+
+    def problems_jump_to_selected(self) -> bool:
+        """Jump to the selected problem (load scene, select entity, reveal in explorer)."""
+        from .editor.problems_jump_model import is_jump_supported, format_location_text
+
+        target = self.problems.get_selected_jump_target()
+        if not target or not is_jump_supported(target):
+            return False
+
+        kind = target.get("kind", "none")
+        scene_path = target.get("scene_path")
+        entity_id = target.get("entity_id")
+        path = target.get("path")
+
+        # Jump to scene (and optionally select entity)
+        if kind in ("scene", "entity") and scene_path:
+            if not self._open_scene_by_id(scene_path):
+                self._toast_problems(f"Failed to load scene: {scene_path}")
+                return False
+
+            # If entity jump, select the entity
+            if kind == "entity" and entity_id:
+                self._selection_ctl.primary_selected_id = entity_id
+                self._toast_problems(f"Jumped to entity: {entity_id}")
+            else:
+                self._toast_problems(f"Opened scene: {scene_path}")
+
+            # Reveal in Project Explorer if path available
+            if path:
+                self._reveal_in_project_explorer(path)
+
+            return True
+
+        # Reveal file in explorer (future: for file-only issues)
+        if kind == "file" and path:
+            if self._reveal_in_project_explorer(path):
+                loc_text = format_location_text(target)
+                self._toast_problems(f"Revealed: {loc_text}")
+                return True
+
+        return False
+
+    def problems_copy_location(self) -> bool:
+        """Copy the selected problem's location to clipboard (native only)."""
+        from .editor.problems_jump_model import format_location_text
+        from engine.tooling_runtime.clipboard import try_copy_to_clipboard
+
+        target = self.problems.get_selected_jump_target()
+        if not target:
+            return False
+
+        loc_text = format_location_text(target)
+        if not loc_text:
+            return False
+
+        success = try_copy_to_clipboard(loc_text)
+        if success:
+            self._toast_problems(f"Copied: {loc_text}")
+        else:
+            self._toast_problems("Clipboard unavailable (headless/web)")
+
+        return success
+
+    def _reveal_in_project_explorer(self, path: str) -> bool:
+        """Reveal a path in the Project Explorer."""
+        # Switch to Project tab if not already active
+        if self._left_dock_tab != "Project":
+            self._left_dock_tab = "Project"
+
+        # Use project_explorer controller to reveal
+        # We need viewport height and row height for proper reveal
+        # For simplicity, use reasonable defaults
+        viewport_height = 400  # Approximate; could be computed from layout
+        row_height = 20  # Standard row height
+
+        return self.project_explorer.reveal_path(path, viewport_height, row_height)
+
+    def _toast_problems(self, message: str, seconds: float = 2.5) -> None:
+        """Show a toast notification for problems panel actions."""
+        hud = getattr(self.window, "player_hud", None)
+        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        if callable(toaster):
+            toaster(message, seconds=seconds)
 
     def toggle_palette(self) -> None:
         editor_ops.toggle_palette(self)
@@ -2919,6 +3460,11 @@ class EditorModeController:
         editor_ops.duplicate_selected(self)
 
     def delete_selected(self) -> None:
+        if self.active and self._left_dock_tab == "Project":
+            paths = self.project_explorer.selected_paths(self._project_explorer_selectable_rows())
+            if paths:
+                self._file_ops_ctl.delete_selected_paths(paths)
+                return
         editor_ops.delete_selected(self)
 
     def copy_selected_entity_to_clipboard(self) -> None:
@@ -3122,6 +3668,7 @@ class EditorModeController:
         if not self.active:
             return
 
+        self._tick_workspace_autosave()
         self._update_status()
 
         # Draw overlay text
@@ -4414,6 +4961,25 @@ class EditorModeController:
         editor_ops.redo_last(self)
 
     def _push_command(self, cmd: Dict[str, Any]) -> None:
+        if isinstance(cmd, dict):
+            from engine.editor.editor_command_push_model import (  # noqa: PLC0415
+                backfill_label_from_action,
+                compute_command_backfill,
+            )
+
+            # First pass: backfill action_id, detail, label from command type
+            compute_command_backfill(cmd)
+
+            # Second pass: if label still missing, try to get from action registry
+            if "label" not in cmd:
+                action_id = cmd.get("action_id")
+                if isinstance(action_id, str) and action_id:
+                    from engine.editor.editor_actions import find_action, get_editor_actions  # noqa: PLC0415
+
+                    actions = get_editor_actions(self, self.window)
+                    action = find_action(actions, action_id)
+                    title = action.title if action is not None else ""
+                    backfill_label_from_action(cmd, action_id, title)
         self.undo_stack.append(cmd)
         self.redo_stack.clear()
         self._mark_dirty()
@@ -4616,6 +5182,32 @@ class EditorModeController:
                 if self.selected_entity is entity:
                     self._refresh_inspector_items()
 
+        elif ctype == "EditPrefabOverride":
+            self._apply_prefab_override_command(cmd, use_before=True)
+
+        elif ctype == "ClearPrefabOverrides":
+            self._apply_prefab_override_bulk_command(cmd, use_before=True)
+
+        elif ctype in ("FixSceneIssue", "FixSceneIssues"):
+            from engine.editor.scene_lint_ops import (  # noqa: PLC0415
+                FixSceneIssueCommand,
+                FixSceneIssuesCommand,
+                apply_fix_command,
+                invert_fix_command,
+            )
+
+            sc = getattr(self.window, "scene_controller", None)
+            scene_data = getattr(sc, "_loaded_scene_data", None) if sc else None
+            if isinstance(scene_data, dict) and sc is not None:
+                if ctype == "FixSceneIssues":
+                    cmd_obj = FixSceneIssuesCommand.from_dict(cmd)
+                else:
+                    cmd_obj = FixSceneIssueCommand.from_dict(cmd)
+                inverse = invert_fix_command(scene_data, cmd_obj, scene_data)
+                new_scene = apply_fix_command(scene_data, inverse, self._get_repo_root())
+                sc._loaded_scene_data = new_scene
+                self._refresh_after_scene_fix()
+
         elif ctype == "PromotePrefabShapes":
             prefab_id = cmd.get("prefab_id")
             source = cmd.get("source")
@@ -4716,6 +5308,9 @@ class EditorModeController:
         elif ctype == "AltDragDuplicate":
             self._revert_alt_drag_duplicate_cmd(cmd)
 
+        elif ctype == "EditBackgroundPlanes":
+            self._apply_background_planes_payload(cmd.get("before", []))
+
     def _apply_command(self, cmd: Dict[str, Any]) -> None:
         ctype = cmd["type"]
         entity_name = cmd.get("entity_name")
@@ -4798,6 +5393,30 @@ class EditorModeController:
                             self._apply_shape_payload(entity, field, after_shapes.get(field))
                 if self.selected_entity is entity:
                     self._refresh_inspector_items()
+
+        elif ctype == "EditPrefabOverride":
+            self._apply_prefab_override_command(cmd, use_before=False)
+
+        elif ctype == "ClearPrefabOverrides":
+            self._apply_prefab_override_bulk_command(cmd, use_before=False)
+
+        elif ctype in ("FixSceneIssue", "FixSceneIssues"):
+            from engine.editor.scene_lint_ops import (  # noqa: PLC0415
+                FixSceneIssueCommand,
+                FixSceneIssuesCommand,
+                apply_fix_command,
+            )
+
+            sc = getattr(self.window, "scene_controller", None)
+            scene_data = getattr(sc, "_loaded_scene_data", None) if sc else None
+            if isinstance(scene_data, dict) and sc is not None:
+                if ctype == "FixSceneIssues":
+                    cmd_obj = FixSceneIssuesCommand.from_dict(cmd)
+                else:
+                    cmd_obj = FixSceneIssueCommand.from_dict(cmd)
+                new_scene = apply_fix_command(scene_data, cmd_obj, self._get_repo_root())
+                sc._loaded_scene_data = new_scene
+                self._refresh_after_scene_fix()
 
         elif ctype == "PromotePrefabShapes":
             prefab_id = cmd.get("prefab_id")
@@ -4895,6 +5514,28 @@ class EditorModeController:
 
         elif ctype == "AltDragDuplicate":
             self._apply_alt_drag_duplicate_cmd(cmd)
+
+        elif ctype == "EditBackgroundPlanes":
+            self._apply_background_planes_payload(cmd.get("after", []))
+
+    def _apply_background_planes_payload(self, planes: Any) -> None:
+        sc = getattr(self.window, "scene_controller", None)
+        scene = getattr(sc, "_loaded_scene_data", None) if sc is not None else None
+        if not isinstance(scene, dict):
+            return
+        if not isinstance(planes, list):
+            planes = []
+        scene["background_planes"] = copy.deepcopy(planes)
+        if sc is not None:
+            try:
+                from engine.parallax_model import parse_background_planes  # noqa: PLC0415
+
+                sc._background_planes = parse_background_planes(scene)
+                cache = getattr(sc, "_background_plane_texture_cache", None)
+                if isinstance(cache, dict):
+                    cache.clear()
+            except Exception:
+                pass
 
     def _revert_alt_drag_duplicate_cmd(self, cmd: Dict[str, Any]) -> None:
         """Revert an alt-drag duplicate command (undo)."""
@@ -5065,6 +5706,363 @@ class EditorModeController:
         self._autosave_workspace()
         return self.command_palette_active
 
+    # -------------------------------------------------------------------------
+    # Find Everything (Ctrl+K)
+    # -------------------------------------------------------------------------
+
+    def toggle_find_everything(self) -> bool:
+        if not self.active:
+            return False
+        self._ui_flow_ctl.toggle_palette()
+        return self._ui_flow_ctl.is_open
+
+    def close_find_everything(self) -> None:
+        self._ui_flow_ctl.close_palette(cancel_preview=True)
+
+    # -------------------------------------------------------------------------
+    # HD-2D Preset Preview (non-destructive preview while browsing)
+    # -------------------------------------------------------------------------
+
+    def preview_hd2d_preset(self, preset_id: str) -> bool:
+        """Begin or update HD-2D preset preview without marking dirty or pushing undo.
+
+        Args:
+            preset_id: The preset to preview (e.g., "soft", "crisp").
+
+        Returns:
+            True if preview was applied.
+        """
+        from engine.editor.hd2d_preset_preview_model import (  # noqa: PLC0415
+            begin_preset_preview,
+            update_preset_preview,
+        )
+
+        sc = getattr(self.window, "scene_controller", None)
+        if sc is None:
+            return False
+        scene = getattr(sc, "_loaded_scene_data", None)
+        if not isinstance(scene, dict):
+            return False
+
+        if self._hd2d_preview_active and self._hd2d_preview_snapshot is not None:
+            # Already previewing - update to new preset
+            if self._hd2d_preview_preset_id == preset_id:
+                return True  # Same preset, nothing to do
+            new_scene = update_preset_preview(scene, preset_id, self._hd2d_preview_snapshot)
+        else:
+            # Start new preview
+            new_scene, snapshot = begin_preset_preview(scene, preset_id)
+            self._hd2d_preview_snapshot = snapshot
+            self._hd2d_preview_active = True
+
+        self._hd2d_preview_preset_id = preset_id
+        sc._loaded_scene_data = new_scene
+        return True
+
+    def _cancel_hd2d_preview(self) -> None:
+        """Cancel active HD2D preview and restore original settings.
+
+        Does NOT mark dirty or push undo - this is non-destructive.
+        """
+        if not self._hd2d_preview_active or self._hd2d_preview_snapshot is None:
+            self._hd2d_preview_active = False
+            self._hd2d_preview_snapshot = None
+            self._hd2d_preview_preset_id = None
+            return
+
+        from engine.editor.hd2d_preset_preview_model import end_preset_preview  # noqa: PLC0415
+
+        sc = getattr(self.window, "scene_controller", None)
+        if sc is None:
+            self._hd2d_preview_active = False
+            self._hd2d_preview_snapshot = None
+            self._hd2d_preview_preset_id = None
+            return
+        scene = getattr(sc, "_loaded_scene_data", None)
+        if not isinstance(scene, dict):
+            self._hd2d_preview_active = False
+            self._hd2d_preview_snapshot = None
+            self._hd2d_preview_preset_id = None
+            return
+
+        restored = end_preset_preview(scene, self._hd2d_preview_snapshot)
+        sc._loaded_scene_data = restored
+        self._hd2d_preview_active = False
+        self._hd2d_preview_snapshot = None
+        self._hd2d_preview_preset_id = None
+
+    def commit_hd2d_preset(self, preset_id: str) -> bool:
+        """Commit an HD2D preset (cancels preview first, then applies via action).
+
+        This marks dirty and pushes ONE undo entry.
+
+        Args:
+            preset_id: The preset to commit.
+
+        Returns:
+            True if preset was committed.
+        """
+        # Cancel preview first to restore original state
+        self._cancel_hd2d_preview()
+
+        # Now apply normally via the action system
+        from engine.editor.editor_actions import run_editor_action  # noqa: PLC0415
+
+        action_id = f"editor.hd2d.preset.{preset_id}.apply"
+        return run_editor_action(action_id, self, self.window)
+
+    def _maybe_preview_hd2d_from_selection(self) -> None:
+        """Check if current find selection is an HD2D preset and preview it.
+        
+        DEPRECATED: delegated to EditorUIFlowController
+        """
+        self._ui_flow_ctl.maybe_preview_from_selection()
+
+    def maybe_auto_apply_hd2d_defaults(self) -> bool:
+        """Auto-apply HD2D defaults to the current scene if configured.
+
+        This is called after scene load. It will apply the default preset
+        ONLY if:
+        1. A default preset is configured in workspace settings
+        2. The scene does NOT already have any HD2D setting keys
+
+        Does NOT push undo or mark dirty (silent auto-apply).
+
+        Returns:
+            True if defaults were applied, False otherwise.
+        """
+        default_preset_id = self._hd2d_default_preset_id
+        if not default_preset_id:
+            return False
+
+        from engine.editor.hd2d_defaults_model import (  # noqa: PLC0415
+            should_auto_apply_default,
+            apply_safe_merge,
+        )
+
+        sc = getattr(self.window, "scene_controller", None)
+        if sc is None:
+            return False
+        scene = getattr(sc, "_loaded_scene_data", None)
+        if not isinstance(scene, dict):
+            return False
+
+        if not should_auto_apply_default(scene, default_preset_id):
+            return False
+
+        # Apply defaults silently (no undo, no dirty mark)
+        new_scene = apply_safe_merge(scene, default_preset_id)
+        sc._loaded_scene_data = new_scene
+        return True
+
+    def upgrade_scene_to_hd2d_defaults(self) -> bool:
+        """Explicitly upgrade scene to HD2D defaults.
+
+        This is the user-triggered action. It:
+        1. Uses the configured default preset (no-op if not set)
+        2. Only fills missing HD2D keys (safe merge)
+        3. Marks dirty
+        4. Pushes ONE undo entry
+
+        Returns:
+            True if upgrade was applied, False otherwise.
+        """
+        default_preset_id = self._hd2d_default_preset_id
+        if not default_preset_id:
+            return False
+
+        from engine.editor.hd2d_defaults_model import (  # noqa: PLC0415
+            is_valid_default_preset_id,
+            compute_safe_merge_patch,
+            apply_safe_merge,
+            format_upgrade_undo_label,
+        )
+
+        if not is_valid_default_preset_id(default_preset_id):
+            return False
+
+        sc = getattr(self.window, "scene_controller", None)
+        if sc is None:
+            return False
+        scene = getattr(sc, "_loaded_scene_data", None)
+        if not isinstance(scene, dict):
+            return False
+
+        # Compute what keys will be added (for undo entry)
+        import copy  # noqa: PLC0415
+        before_settings = copy.deepcopy(scene.get("settings")) if isinstance(scene.get("settings"), dict) else {}
+        merge_patch = compute_safe_merge_patch(scene, default_preset_id)
+
+        if not merge_patch:
+            # No missing keys to fill - no-op
+            return False
+
+        new_scene = apply_safe_merge(scene, default_preset_id)
+        after_settings = new_scene.get("settings") if isinstance(new_scene.get("settings"), dict) else {}
+
+        sc._loaded_scene_data = new_scene
+
+        # Mark dirty
+        if callable(getattr(self, "_mark_dirty", None)):
+            self._mark_dirty()
+
+        # Push undo entry
+        if callable(getattr(self, "_push_command", None)):
+            self._push_command({
+                "type": "UpgradeSceneHd2dDefaults",
+                "label": format_upgrade_undo_label(default_preset_id),
+                "preset_id": default_preset_id,
+                "before": before_settings,
+                "after": after_settings,
+            })
+
+        return True
+
+    def set_find_query(self, text: str) -> None:
+        self._ui_flow_ctl.update_query(str(text or ""))
+
+    def append_find_query_text(self, text: str) -> bool:
+        if not text or not text.isprintable():
+            return False
+        self._ui_flow_ctl.update_query(self._ui_flow_ctl.query + text)
+        return True
+
+    def backspace_find_query(self) -> bool:
+        if not self._ui_flow_ctl.query:
+            return False
+        self._ui_flow_ctl.update_query(self._ui_flow_ctl.query[:-1])
+        return True
+
+    def move_find_selection(self, delta: int) -> None:
+        self._ui_flow_ctl.move_selection(delta)
+
+    def activate_find_selection(self) -> bool:
+        return self._ui_flow_ctl.commit_selection()
+
+        if handled:
+            self.close_find_everything()
+        return handled
+
+    def _refresh_find_everything_results(self) -> None:
+        """DEPRECATED: delegated to EditorUIFlowController."""
+        self._ui_flow_ctl._refresh_results()
+
+    def _build_find_everything_items(self) -> list[Any]:
+        """DEPRECATED: delegated to EditorUIFlowController."""
+        return self._ui_flow_ctl._build_items()
+
+    def _get_find_everything_problems(self) -> list[Any]:
+        """DEPRECATED: delegated to EditorUIFlowController."""
+        scene = getattr(getattr(self.window, "scene_controller", None), "_loaded_scene_data", None)
+        return self._ui_flow_ctl._get_problems(scene, self.window)
+
+    def _activate_find_command(self, command_id: str) -> bool:
+        from engine.editor.hd2d_preset_preview_model import (  # noqa: PLC0415
+            is_hd2d_preset_command,
+            extract_preset_id_from_command,
+        )
+
+        # Handle HD2D presets specially - commit via our method
+        if is_hd2d_preset_command(command_id):
+            preset_id = extract_preset_id_from_command(command_id)
+            if preset_id:
+                return self.commit_hd2d_preset(preset_id)
+            return False
+
+        # Normal command execution
+        from engine.editor_commands import run_command  # noqa: PLC0415
+
+        return run_command(command_id, self.window)
+
+    def _activate_find_scene(self, scene_id: str) -> bool:
+        return self._open_scene_by_id(scene_id)
+
+    def _activate_find_entity(self, entity_id: str) -> bool:
+        from engine.editor_runtime.state import apply_selection, get_sprite_for_entity_id  # noqa: PLC0415
+        from engine.editor_runtime.input import _focus_camera_on_entity  # noqa: PLC0415
+
+        sprite = get_sprite_for_entity_id(self, entity_id)
+        if sprite is None:
+            return False
+        apply_selection(self, sprite, shift=False)
+        self._entity_panels_selected_id = entity_id
+        self._refresh_entity_panels_list(sync_selected=True)
+        _focus_camera_on_entity(self)
+        return True
+
+    def _activate_find_asset(self, asset_path: str) -> bool:
+        row = self._find_asset_lookup.get(asset_path)
+        if row is None:
+            return self._copy_find_asset_path(asset_path)
+
+        intent = _resolve_asset_activation_impl(row)
+        if intent.get("kind") == "spawn_entity":
+            return self._spawn_find_asset(str(intent.get("asset_path", asset_path)))
+        return self._copy_find_asset_path(str(intent.get("asset_path", asset_path)))
+
+    def _spawn_find_asset(self, asset_path: str) -> bool:
+        scene = getattr(getattr(self.window, "scene_controller", None), "_loaded_scene_data", None)
+        if not isinstance(scene, dict):
+            return False
+        cam_x, cam_y = self._get_camera_center()
+        self.asset_place_active = True
+        self.asset_place_path = asset_path
+        self.place_asset_at(cam_x, cam_y)
+        self.asset_place_active = False
+        self.asset_place_path = None
+        return True
+
+    def _copy_find_asset_path(self, asset_path: str) -> bool:
+        hud = getattr(self.window, "player_hud", None)
+        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        if callable(toaster):
+            toaster(f"Copied path: {asset_path}")
+        return True
+
+    def _activate_find_problem(self, issue_id: str) -> bool:
+        issues = list(self.problems.issues)
+        if not issues:
+            issues = self._get_find_everything_problems()
+            self.problems.set_issues(list(issues))
+        
+        # Search in potentially re-sorted list
+        current_issues = self.problems.issues
+        index = next((i for i, issue in enumerate(current_issues) if getattr(issue, "issue_id", None) == issue_id), None)
+        
+        if index is None:
+            return False
+        self.set_dock_tab("right", "Problems")
+        self.problems.set_selected_index(index)
+        self.problems.preview_open = True
+        return True
+
+    def _handle_find_everything_input(self, key: int, modifiers: int) -> bool:
+        if not self.active or not self._find_everything_open:
+            return False
+        if key in (optional_arcade.arcade.key.K, optional_arcade.arcade.key.J) and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
+            self.close_find_everything()
+            return True
+        if key == optional_arcade.arcade.key.ESCAPE:
+            if self._find_everything_query:
+                # Clear query first (delegate to update_query)
+                self._ui_flow_ctl.update_query("")
+            else:
+                self.close_find_everything()
+            return True
+        if key == optional_arcade.arcade.key.BACKSPACE:
+            self.backspace_find_query()
+            return True
+        if key == optional_arcade.arcade.key.UP:
+            self.move_find_selection(-1)
+            return True
+        if key == optional_arcade.arcade.key.DOWN:
+            self.move_find_selection(1)
+            return True
+        if key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN):
+            self.activate_find_selection()
+            return True
+        return True
+
     def toggle_asset_browser(self) -> bool:
         if not self.active:
             return False
@@ -5089,7 +6087,7 @@ class EditorModeController:
 
         Args:
             dock: "left" or "right"
-            tab: Tab name ("Scene", "Outliner", "Inspector", "Assets", "History")
+            tab: Tab name ("Project", "Scene", "Outliner", "Inspector", "Assets", "History", "Problems")
 
         Returns:
             True if switch was successful.
@@ -5102,14 +6100,18 @@ class EditorModeController:
         self._context_menu_open = False
 
         if dock == "left":
-            if tab not in ("Scene", "Outliner"):
+            if tab not in ("Project", "Scene", "Outliner"):
                 return False
             if self._left_dock_tab == tab:
                 return False  # Already active
             self._left_dock_tab = tab
 
             # Route visibility based on new tab
-            if tab == "Scene":
+            if tab == "Project":
+                self.scene_browser_active = False
+                self.entity_panels_active = False
+                self._refresh_project_explorer_rows()
+            elif tab == "Scene":
                 self.scene_browser_active = True
                 # entity_panels_active can stay True but Scene tab takes priority
             elif tab == "Outliner":
@@ -5124,11 +6126,13 @@ class EditorModeController:
             return True
 
         elif dock == "right":
-            if tab not in ("Inspector", "Assets", "History"):
+            if tab not in ("Inspector", "Assets", "History", "Problems"):
                 return False
             if self._right_dock_tab == tab:
                 return False  # Already active
             self._right_dock_tab = tab
+            if tab != "Problems":
+                self._problems_preview_open = False
 
             # Route visibility based on new tab
             if tab == "Inspector":
@@ -5142,6 +6146,9 @@ class EditorModeController:
                 current = self._history_current_index(entries)
                 if current >= 0:
                     self._history_cursor_index = current
+            elif tab == "Problems":
+                if not self._problems_issues:
+                    self.scan_scene_problems()
 
             logger.info("[Editor] Right dock tab switched to %s", tab)
             self._sync_search_focus()
@@ -5233,7 +6240,7 @@ class EditorModeController:
         return True
 
     def refresh_asset_browser(self) -> None:
-        self._asset_browser_cached_rows = scan_assets(get_repo_root())
+        self._asset_browser_cached_rows = scan_assets(self._get_repo_root())
         self._filter_asset_browser()
 
     def set_asset_browser_filter(self, text: str) -> None:
@@ -5492,6 +6499,403 @@ class EditorModeController:
         return True
 
     # -------------------------------------------------------------------------
+    # Project Explorer Panel
+    # -------------------------------------------------------------------------
+
+    # -- Problems Compatibility Properties --
+    
+    @property
+    def _problems_issues(self) -> list[Any]:
+        return self.problems.issues
+    
+    @_problems_issues.setter
+    def _problems_issues(self, value: list[Any]) -> None:
+        self.problems.set_issues(value)
+
+    @property
+    def _problems_selected_index(self) -> int:
+        return self.problems.selected_index
+
+    @_problems_selected_index.setter
+    def _problems_selected_index(self, value: int) -> None:
+        self.problems.set_selected_index(value)
+
+    @property
+    def _problems_preview_open(self) -> bool:
+        return self.problems.preview_open
+
+    @_problems_preview_open.setter
+    def _problems_preview_open(self, value: bool) -> None:
+        self.problems.preview_open = value
+
+    def _refresh_project_explorer_rows(self) -> None:
+        self.project_explorer.refresh_tree()
+
+    def _activate_project_explorer_selected(self) -> bool:
+        from engine.editor.project_explorer_model import (  # noqa: PLC0415
+            activation_intent_for_display_row,
+        )
+
+        row = self.project_explorer.get_selected_row()
+        if row is None:
+            return False
+
+        recent = getattr(row, "recent", None)
+        entry = getattr(row, "entry", None)
+        intent = activation_intent_for_display_row(row)
+        kind = intent.get("kind")
+        if kind == "clear_recents":
+            return self._clear_project_recents()
+        if kind == "open_scene":
+            handled = self._open_scene_by_id(str(intent.get("scene_id", "")))
+            if handled and entry is not None:
+                self._push_project_recent("scene", entry.rel_path, entry.name)
+            elif handled and recent is not None:
+                self._push_project_recent(recent.kind, recent.rel_path, recent.label)
+            return handled
+        if kind == "spawn_asset":
+            handled = self._spawn_find_asset(str(intent.get("asset_path", "")))
+            if handled and entry is not None:
+                self._push_project_recent("asset", entry.rel_path, entry.name)
+            elif handled and recent is not None:
+                self._push_project_recent(recent.kind, recent.rel_path, recent.label)
+            return handled
+        if kind == "copy_path":
+            handled = self._copy_find_asset_path(str(intent.get("path", "")))
+            if handled and entry is not None:
+                self._push_project_recent("path", entry.rel_path, entry.name)
+            elif handled and recent is not None:
+                self._push_project_recent(recent.kind, recent.rel_path, recent.label)
+            return handled
+        return True
+
+    def _handle_project_explorer_input(self, key: int, modifiers: int) -> bool:
+        if not self.active or self._left_dock_tab != "Project":
+            return False
+
+        # Inline rename mode: consume all keys here (special keys handled via
+        # scoped shortcuts in input.py, other keys should not fall through)
+        if self.project_explorer.inline_rename_active:
+            # Non-special keys are consumed but not processed (text input via on_text)
+            return True
+
+        # Ensure rows populated
+        if not self.project_explorer.selectable_rows:
+            self.project_explorer.ensure_rows()
+            
+        if not self.project_explorer.selectable_rows:
+            return True
+
+        if self._search_focus == "project":
+            if key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN):
+                return True
+            if key == optional_arcade.arcade.key.BACKSPACE:
+                self.backspace_search_text()
+                return True
+
+        if key == optional_arcade.arcade.key.UP:
+            extend = bool(modifiers & optional_arcade.arcade.key.MOD_SHIFT)
+            self.project_explorer.move_selection(-1, extend=extend)
+            return True
+        if key == optional_arcade.arcade.key.DOWN:
+            extend = bool(modifiers & optional_arcade.arcade.key.MOD_SHIFT)
+            self.project_explorer.move_selection(1, extend=extend)
+            return True
+        if key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN):
+            return self._activate_project_explorer_selected()
+        return True
+
+    def _project_explorer_handle_mouse_click(self, x: float, y: float, button: int, modifiers: int) -> bool:
+        if not self.active or self._left_dock_tab != "Project":
+            return False
+        if button != optional_arcade.arcade.MOUSE_BUTTON_LEFT:
+            return True
+        if self._search_focus == "project":
+            return True
+
+        from engine.editor.editor_shell_layout import (  # noqa: PLC0415
+            compute_editor_shell_layout,
+        )
+        from engine.editor.project_explorer_model import (  # noqa: PLC0415
+            PROJECT_LINE_HEIGHT,
+            compute_project_explorer_hit_index,
+            compute_project_explorer_layout,
+            compute_project_window,
+        )
+
+        window_w = int(getattr(self.window, "width", 1280) or 1280)
+        window_h = int(getattr(self.window, "height", 720) or 720)
+        getter = getattr(self, "get_effective_dock_widths", None)
+        if callable(getter):
+            left_w, right_w = getter(window_w)
+        else:
+            left_w = getattr(self, "_dock_left_w", 320)
+            right_w = getattr(self, "_dock_right_w", 320)
+
+        layout = compute_editor_shell_layout(window_w, window_h, left_w, right_w)
+        dock = layout.left_dock
+        if not dock.contains_point(x, y):
+            return False
+
+        panel = compute_project_explorer_layout(dock)
+        if not panel.list_rect.contains_point(x, y):
+            return True
+
+        display_rows = self._project_explorer_display_rows()
+        selectable_rows = self._project_explorer_selectable_rows()
+        rows = display_rows
+        if not rows:
+            return True
+
+        visible_capacity = int(panel.list_rect.height / PROJECT_LINE_HEIGHT)
+        from engine.editor.project_explorer_model import (  # noqa: PLC0415
+            display_index_from_selectable_index,
+            selectable_index_from_display_index,
+        )
+
+        display_selected = display_index_from_selectable_index(
+            display_rows,
+            self.project_explorer.selected_index,
+        )
+        display_index = display_selected if display_selected is not None else 0
+        start_idx, visible = compute_project_window(
+            display_index,
+            len(display_rows),
+            visible_capacity,
+        )
+        hit_index = compute_project_explorer_hit_index(
+            y,
+            panel.list_rect,
+            start_idx,
+            visible,
+        )
+        if hit_index is not None:
+            selectable_index = selectable_index_from_display_index(display_rows, hit_index)
+            if selectable_index is None:
+                return True
+            if selectable_index < len(selectable_rows):
+                ctrl = bool(modifiers & optional_arcade.arcade.key.MOD_CTRL)
+                shift = bool(modifiers & optional_arcade.arcade.key.MOD_SHIFT)
+                self.project_explorer.handle_click(selectable_index, ctrl=ctrl, shift=shift)
+            return True
+
+        return True
+
+    def _activate_project_recent(self, recent: Any) -> bool:
+        kind = str(getattr(recent, "kind", "") or "")
+        rel_path = str(getattr(recent, "rel_path", "") or "")
+        if kind == "scene":
+            return self._open_scene_by_id(rel_path)
+        if kind == "asset":
+            return self._spawn_find_asset(rel_path)
+        if kind == "path":
+            return self._copy_find_asset_path(rel_path)
+        return False
+
+    def _push_project_recent(self, kind: str, rel_path: str, label: str) -> None:
+        from engine.editor.project_explorer_model import ProjectExplorerRecentItem
+
+        item = ProjectExplorerRecentItem(
+            kind=str(kind),
+            rel_path=str(rel_path),
+            label=str(label),
+        )
+        self.project_explorer.push_recent_item(item)
+        self._autosave_workspace()
+
+    def _project_explorer_recent_payloads(self) -> list[dict[str, Any]]:
+        return self.project_explorer.get_recents_payload()
+
+        if self.project_explorer.recents:
+            # Already cleared or shouldn't we check? logic in my replacement was checking !recents first.
+            pass
+
+    def _clear_project_recents(self) -> bool:
+        if not self.project_explorer.recents:
+            hud = getattr(self.window, "player_hud", None)
+            toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+            if callable(toaster):
+                toaster(tr("UI_NO_RECENTS"), seconds=2.5)
+            # Return True because we handled the input (by showing a warning), preventing fallback
+            return True
+
+        self.project_explorer.clear_recents()
+        self._autosave_workspace()
+        
+        hud = getattr(self.window, "player_hud", None)
+        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        if callable(toaster):
+            toaster(tr("UI_RECENTS_CLEARED"), seconds=2.5)
+        return True
+
+
+    def reveal_in_project_explorer(self, target_path: str) -> bool:
+        """Reveal a file path in the Project Explorer panel.
+
+        Sets the left dock to Project tab, finds the target row,
+        and scrolls to center it in the viewport.
+
+        Args:
+            target_path: The repo-relative path to reveal.
+
+        Returns:
+            True if target was found and revealed, False otherwise.
+        """
+        from engine.editor.project_explorer_model import PROJECT_LINE_HEIGHT  # noqa: PLC0415
+        
+        # Switch to Project tab
+        self._left_dock_tab = "Project"
+
+        window_h = int(getattr(self.window, "height", 720) or 720)
+        # Approximate viewport height (dock space)
+        viewport_h = max(300, window_h - 100)
+        
+        return self.project_explorer.reveal_path(
+            target_path=target_path, 
+            viewport_height=viewport_h, 
+            row_height=PROJECT_LINE_HEIGHT
+        )
+
+
+    def reveal_current_in_project_explorer(self) -> bool:
+        """Reveal the current scene or selected entity asset in Project Explorer.
+
+        Priority:
+        1. Current loaded scene path
+        2. Selected entity's sprite/asset path
+
+        Returns:
+            True if a target was found and revealed, False otherwise.
+        """
+        from engine.editor.project_explorer_reveal_model import choose_reveal_target  # noqa: PLC0415
+
+        scene_path = self._get_current_scene_path()
+        entity_asset_path = self._get_selected_entity_asset_path()
+
+        target = choose_reveal_target(scene_path, entity_asset_path)
+        if not target:
+            hud = getattr(self.window, "player_hud", None)
+            toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+            if callable(toaster):
+                toaster(tr("UI_NO_REVEAL_TARGET"), seconds=2.5)
+            return False
+
+        return self.reveal_in_project_explorer(target)
+
+    def _get_current_scene_path(self) -> str | None:
+        """Get the path of the currently loaded scene."""
+        scene_controller = getattr(self.window, "scene_controller", None)
+        if scene_controller is None:
+            return None
+        return getattr(scene_controller, "current_scene_path", None)
+
+    def _get_selected_entity_asset_path(self) -> str | None:
+        """Get the sprite/asset path of the selected entity."""
+        entity_json = self._get_selected_entity_json_for_inspector()
+        if entity_json is None:
+            return None
+
+        # Check for sprite path
+        sprite_path = entity_json.get("sprite")
+        if isinstance(sprite_path, str) and sprite_path.strip():
+            return sprite_path
+
+        # Check for sprite_sheet image
+        sprite_sheet = entity_json.get("sprite_sheet")
+        if isinstance(sprite_sheet, dict):
+            image_path = sprite_sheet.get("image")
+            if isinstance(image_path, str) and image_path.strip():
+                return image_path
+
+        return None
+
+    def copy_project_explorer_selected_path(self) -> bool:
+        """Copy the selected Project Explorer row path to clipboard.
+
+        Copies to internal state and attempts OS clipboard (no-op if unavailable).
+
+        Returns:
+            True if a path was copied, False otherwise.
+        """
+        return self._file_ops_ctl.copy_selected_path()
+
+    def _try_copy_to_os_clipboard(self, text: str) -> None:
+        """Attempt to copy text to OS clipboard. Safe no-op if unavailable."""
+        try:
+            import pyperclip  # noqa: PLC0415
+
+            pyperclip.copy(text)
+        except Exception:  # noqa: BLE001
+            # Clipboard not available (headless, web, missing deps) - silent no-op
+            pass
+
+    def safe_rename_selected_asset(self, new_name: str) -> bool:
+        """Rename the selected Project Explorer asset and update scene references.
+
+        This performs a "safe rename" - updating all references to the asset
+        in the currently loaded scene. On native runtime, also renames the file.
+        On web runtime, only updates references (preview mode).
+
+        Args:
+            new_name: The new filename (without directory).
+
+        Returns:
+            True if rename was successful, False otherwise.
+        """
+        return self._file_ops_ctl.rename_selected_asset(new_name)
+
+        return True
+
+    def safe_move_selected_asset(self, dest_folder_rel: str) -> bool:
+        """Move the selected Project Explorer asset and update scene references.
+
+        Args:
+            dest_folder_rel: Destination folder relative path (e.g. "assets/sprites").
+
+        Returns:
+            True if move was successful, False otherwise.
+        """
+        return self._file_ops_ctl.move_selected_asset(dest_folder_rel)
+
+        return True
+
+    def safe_move_selected_assets(self, dest_folder_rel: str) -> bool:
+        """Move multiple selected assets and update references."""
+        paths = self.project_explorer.selected_paths(self._project_explorer_selectable_rows())
+        if not paths:
+            return False
+        from engine.editor.asset_move_model import compute_move_paths  # noqa: PLC0415
+
+        old_paths = sorted(paths)
+        new_paths: list[str] = []
+        for old_rel in old_paths:
+            _, new_rel = compute_move_paths(old_rel, dest_folder_rel)
+            new_paths.append(new_rel)
+
+        result = self._file_ops_ctl.move_selected_paths_to_folder(old_paths, dest_folder_rel)
+        if result:
+            self.project_explorer.apply_post_move_selection(old_paths, new_paths, self.project_explorer.primary_path())
+        return result
+
+    def prompt_project_explorer_move_destination(self, on_confirm) -> bool:
+        """Prompt for destination folder and call on_confirm with selected path.
+
+        If no UI is available, shows a toast and returns False.
+        """
+        handler = getattr(self.window, "project_explorer_move_prompt", None)
+        if callable(handler):
+            return bool(handler(on_confirm))
+        hud = getattr(self.window, "player_hud", None)
+        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        if callable(toaster):
+            toaster("Safe Move: Select specific folder logic pending UI", seconds=2.5)
+        return False
+
+    def _get_selected_project_entry_path(self) -> str | None:
+        """Get the relative path of the selected Project Explorer entry."""
+        return self.project_explorer.primary_path(self._project_explorer_selectable_rows())
+
+    # -------------------------------------------------------------------------
     # Undo History Panel
     # -------------------------------------------------------------------------
 
@@ -5501,6 +6905,7 @@ class EditorModeController:
         entries = build_undo_history_entries(self.undo_stack, self.redo_stack)
         self._history_cursor_index = self._clamp_history_cursor(self._history_cursor_index, len(entries))
         return entries
+
 
     def get_filtered_undo_history_entries(self) -> list[Any]:
         from engine.editor.undo_history_model import filter_undo_history_entries  # noqa: PLC0415
@@ -5659,6 +7064,317 @@ class EditorModeController:
 
         return True
 
+    # -------------------------------------------------------------------------
+    # Problems Panel
+    # -------------------------------------------------------------------------
+
+    def scan_scene_problems(self) -> int:
+        """Scan current scene JSON for issues."""
+        from pathlib import Path  # noqa: PLC0415
+        from engine.editor.scene_lint_model import (  # noqa: PLC0415
+            build_scene_lint_issues,
+        )
+
+        scene = getattr(getattr(self.window, "scene_controller", None), "_loaded_scene_data", None)
+        if not isinstance(scene, dict):
+            scene = {}
+
+        repo_root = self._get_repo_root()
+        if not isinstance(repo_root, Path):
+            repo_root = Path(repo_root)
+
+        resolver = getattr(self, "_prefab_resolver", None)
+        if not callable(resolver):
+            def resolver(prefab_id: str) -> bool:
+                try:
+                    from engine.prefabs import get_prefab_manager  # noqa: PLC0415
+                    manager = get_prefab_manager()
+                    return bool(manager.get_prefab(prefab_id))
+                except Exception:  # noqa: BLE001
+                    return False
+
+        issues = build_scene_lint_issues(scene, repo_root, prefab_resolver=resolver)
+        self.problems.set_issues(issues)
+
+        hud = getattr(self.window, "player_hud", None)
+        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        if callable(toaster):
+            toaster(tr("UI_PROBLEMS_SCANNED"), seconds=2.5)
+        return len(issues)
+
+    def get_filtered_problems(self) -> list[Any]:
+        return self.problems.get_filtered_issues()
+
+    def _clamp_problems_selection(self) -> None:
+        # Managed by content controller
+        pass
+
+    def _problems_input_blocked(self) -> bool:
+        from engine.editor_tooltips_model import (  # noqa: PLC0415
+            _is_modal_open_state,
+            _is_text_input_active_state,
+        )
+
+        if getattr(self, "confirm_open", False):
+            return True
+        if self._search_focus == "problems":
+            return _is_modal_open_state(self)
+        return _is_text_input_active_state(self) or _is_modal_open_state(self)
+
+    def apply_selected_problem_fix(self) -> bool:
+        return self._apply_selected_problem_fix(advance=False)
+
+    def apply_fix_all_safe(self) -> bool:
+        return self._apply_all_safe_problem_fixes()
+
+    def _open_problems_preview(self) -> bool:
+        issues = self.get_filtered_problems()
+        if not issues:
+            self._problems_preview_open = False
+            return False
+        self._clamp_problems_selection()
+        self._problems_preview_open = True
+        return True
+
+    def _close_problems_preview(self) -> None:
+        self._problems_preview_open = False
+
+    def _toggle_problems_preview(self) -> bool:
+        if self._problems_preview_open:
+            self._close_problems_preview()
+            return True
+        return self._open_problems_preview()
+
+    def _apply_selected_problem_fix(self, *, advance: bool) -> bool:
+        issues = self.get_filtered_problems()
+        if not issues:
+            return False
+        self._clamp_problems_selection()
+        if not (0 <= self._problems_selected_index < len(issues)):
+            return False
+        issue = issues[self._problems_selected_index]
+        if not getattr(issue, "fixable", False):
+            self._problems_toast_no_fix()
+            return False
+
+        from engine.editor.scene_lint_ops import (  # noqa: PLC0415
+            apply_fix_command,
+            build_fix_command_for_issue,
+        )
+
+        scene = getattr(getattr(self.window, "scene_controller", None), "_loaded_scene_data", None)
+        if not isinstance(scene, dict):
+            return False
+
+        cmd = build_fix_command_for_issue(scene, issue, self._get_repo_root())
+        if cmd is None:
+            self._problems_toast_no_fix()
+            return False
+
+        prior_index = self._problems_selected_index
+        new_scene = apply_fix_command(scene, cmd, self._get_repo_root())
+        self._apply_scene_fix_update(new_scene)
+        self._push_command(cmd.to_dict())
+        self._refresh_after_scene_fix()
+        self.scan_scene_problems()
+
+        if advance:
+            issues = self.get_filtered_problems()
+            if issues:
+                self._problems_selected_index = min(prior_index, len(issues) - 1)
+            else:
+                self._problems_preview_open = False
+        else:
+            self._clamp_problems_selection()
+
+        hud = getattr(self.window, "player_hud", None)
+        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        if callable(toaster):
+            toaster(tr("UI_PROBLEM_FIXED"), seconds=2.5)
+        return True
+
+    def _apply_all_safe_problem_fixes(self) -> bool:
+        from engine.editor.scene_lint_ops import (  # noqa: PLC0415
+            apply_fix_all,
+            is_fix_safe,
+        )
+
+        issues = self.get_filtered_problems()
+        scene = getattr(getattr(self.window, "scene_controller", None), "_loaded_scene_data", None)
+        if not isinstance(scene, dict):
+            return False
+
+        new_scene, cmd = apply_fix_all(scene, issues, self._get_repo_root())
+        applied = len(cmd.commands)
+        skipped = sum(1 for issue in issues if not is_fix_safe(issue))
+        if applied <= 0:
+            hud = getattr(self.window, "player_hud", None)
+            toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+            if callable(toaster):
+                toaster(
+                    tr("UI_PROBLEMS_APPLIED_SAFE_SUMMARY").format(
+                        applied=applied,
+                        skipped=skipped,
+                    ),
+                    seconds=2.5,
+                )
+            return True
+
+        self._apply_scene_fix_update(new_scene)
+        self._push_command(cmd.to_dict())
+        self._refresh_after_scene_fix()
+        self.scan_scene_problems()
+        hud = getattr(self.window, "player_hud", None)
+        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        if callable(toaster):
+            toaster(
+                tr("UI_PROBLEMS_APPLIED_SAFE_SUMMARY").format(applied=applied, skipped=skipped),
+                seconds=2.5,
+            )
+        return True
+
+    def _problems_toast_no_fix(self) -> None:
+        hud = getattr(self.window, "player_hud", None)
+        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        if callable(toaster):
+            toaster(tr("UI_NO_FIX_AVAILABLE"), seconds=2.5)
+
+    def _apply_scene_fix_update(self, new_scene: dict[str, Any]) -> None:
+        scene_controller = getattr(self.window, "scene_controller", None)
+        if scene_controller is None:
+            return
+        scene_controller._loaded_scene_data = new_scene  # type: ignore[attr-defined]
+
+    def _refresh_after_scene_fix(self) -> None:
+        scene_controller = getattr(self.window, "scene_controller", None)
+        if scene_controller is None:
+            return
+        reloader = getattr(scene_controller, "reload_scene", None)
+        if callable(reloader):
+            reloader()
+        self._refresh_entity_panels_list(sync_selected=True)
+        self._refresh_hierarchy_list()
+        self._refresh_inspector_items()
+
+    def _handle_problems_input(self, key: int, modifiers: int) -> bool:
+        if not self.active or self._right_dock_tab != "Problems":
+            return False
+        if self._problems_input_blocked():
+            return True
+
+        self._clamp_problems_selection()
+        issues = self.get_filtered_problems()
+        count = len(issues)
+        if count <= 0:
+            return True
+
+        search_focus = self._search_focus == "problems"
+        if key in (optional_arcade.arcade.key.ESCAPE, optional_arcade.arcade.key.B):
+            if self._problems_preview_open:
+                self._close_problems_preview()
+                return True
+            self.set_dock_tab("right", "Inspector")
+            return True
+
+        if key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN, optional_arcade.arcade.key.A):
+            # Shift+Enter: apply fix and advance
+            if modifiers & optional_arcade.arcade.key.MOD_SHIFT and not (modifiers & optional_arcade.arcade.key.MOD_CTRL):
+                if search_focus:
+                    return True
+                self._apply_selected_problem_fix(advance=True)
+                return True
+            # Ctrl+Shift+Enter: apply all safe fixes
+            if modifiers & optional_arcade.arcade.key.MOD_CTRL and modifiers & optional_arcade.arcade.key.MOD_SHIFT:
+                if search_focus:
+                    return True
+                self._apply_all_safe_problem_fixes()
+                return True
+            # Plain Enter and Ctrl+Enter are handled by editor action system
+            # (editor.problems.jump_to_selected and editor.problems.jump_to_selected_ctrl)
+            return False
+
+        if key == optional_arcade.arcade.key.X:
+            if search_focus:
+                return True
+            self._apply_selected_problem_fix(advance=False)
+            return True
+
+        # Ctrl+Shift+C is handled by editor action system (editor.problems.copy_location)
+
+        if key == optional_arcade.arcade.key.UP:
+            self._problems_selected_index = max(0, self._problems_selected_index - 1)
+            return True
+        if key == optional_arcade.arcade.key.DOWN:
+            self._problems_selected_index = min(count - 1, self._problems_selected_index + 1)
+            return True
+
+        return False
+
+    def _problems_handle_mouse_click(self, x: float, y: float, button: int) -> bool:
+        if not self.active or self._right_dock_tab != "Problems":
+            return False
+        if self._problems_input_blocked():
+            return True
+        if self._search_focus == "problems":
+            return True
+        if button != optional_arcade.arcade.MOUSE_BUTTON_LEFT:
+            return True
+
+        from engine.editor.editor_shell_layout import (  # noqa: PLC0415
+            compute_editor_shell_layout,
+        )
+        from engine.editor.scene_lint_model import (  # noqa: PLC0415
+            PROBLEMS_LINE_HEIGHT,
+            compute_problems_panel_layout,
+            compute_problems_window,
+        )
+
+        window_w = int(getattr(self.window, "width", 1280) or 1280)
+        window_h = int(getattr(self.window, "height", 720) or 720)
+        getter = getattr(self, "get_effective_dock_widths", None)
+        if callable(getter):
+            left_w, right_w = getter(window_w)
+        else:
+            left_w = getattr(self, "_dock_left_w", 320)
+            right_w = getattr(self, "_dock_right_w", 320)
+
+        layout = compute_editor_shell_layout(window_w, window_h, left_w, right_w)
+        dock = layout.right_dock
+        if not dock.contains_point(x, y):
+            return False
+
+        panel = compute_problems_panel_layout(dock)
+        if panel.scan_rect.contains_point(x, y):
+            self.scan_scene_problems()
+            return True
+        if panel.fix_all_rect.contains_point(x, y):
+            self.apply_fix_all_safe()
+            return True
+
+        if not panel.list_rect.contains_point(x, y):
+            return True
+
+        self._clamp_problems_selection()
+        issues = self.get_filtered_problems()
+        if not issues:
+            return True
+
+        visible_capacity = int(panel.list_rect.height / PROBLEMS_LINE_HEIGHT)
+        start_idx, visible = compute_problems_window(
+            self._problems_selected_index, len(issues), visible_capacity
+        )
+
+        row_y = panel.list_rect.top
+        for idx in range(start_idx, start_idx + visible):
+            row_top = row_y
+            row_bottom = row_y - PROBLEMS_LINE_HEIGHT
+            if row_bottom <= y <= row_top:
+                self._problems_selected_index = idx
+                return True
+            row_y -= PROBLEMS_LINE_HEIGHT
+
+        return True
+
     def _refresh_hierarchy_list(self) -> None:
         previous_selection = self.selected_entity
         self._cached_hierarchy_list = self._build_hierarchy_list()
@@ -5734,6 +7450,161 @@ class EditorModeController:
         if fallback_index is not None:
             return f"idx:{int(fallback_index)}"
         return None
+
+    def _prefab_variant_label(self, entity_data: dict[str, Any]) -> str | None:
+        prefab_id = entity_data.get("prefab_id")
+        if not isinstance(prefab_id, str) or not prefab_id.strip():
+            return None
+        label = prefab_id.strip()
+        variant_id = entity_data.get("variant_id")
+        if isinstance(variant_id, str) and variant_id.strip():
+            label = f"{label} ({variant_id.strip()})"
+        return label
+
+    def _prefab_variant_override_rows(self, entity_data: dict[str, Any]) -> list[DiffRow]:
+        base_entity = self._get_prefab_base_entity(entity_data)
+        if base_entity is None:
+            return []
+        overrides = entity_data.get("prefab_overrides")
+        rows = compute_prefab_override_diff(base_entity, entity_data, overrides if isinstance(overrides, dict) else {})
+        return rows
+
+    def _entity_panels_prefab_override_rows(self) -> list[DiffRow]:
+        if not self.selected_entity:
+            return []
+        entity_data = self.window.scene_controller._ensure_entity_data_dict(self.selected_entity)
+        return self._prefab_variant_override_rows(entity_data)
+
+    def _prefab_override_base_value(self, base_entity: dict[str, Any], key: str) -> tuple[bool, Any]:
+        if not isinstance(base_entity, dict):
+            return False, None
+        parts = str(key or "").split(".")
+        current: Any = base_entity
+        for part in parts:
+            if not isinstance(current, dict) or part not in current:
+                return False, None
+            current = current.get(part)
+        return True, current
+
+    def _apply_prefab_override_payload(self, entity_data: dict[str, Any], updated: dict[str, Any]) -> None:
+        if "prefab_overrides" in updated:
+            entity_data["prefab_overrides"] = updated.get("prefab_overrides")
+        else:
+            entity_data.pop("prefab_overrides", None)
+
+    def _apply_prefab_override_entity_value(
+        self,
+        sprite: optional_arcade.arcade.Sprite,
+        key: str,
+        value: Any,
+        *,
+        present: bool,
+    ) -> None:
+        entity_data = self.window.scene_controller._ensure_entity_data_dict(sprite)
+        normalized = str(key or "")
+        lower_key = normalized.lower()
+
+        if not present:
+            entity_data.pop(normalized, None)
+            return
+
+        if lower_key == "x":
+            try:
+                self.window.scene_controller._apply_entity_mutation(sprite, x=float(value))
+            except Exception:  # noqa: BLE001
+                return
+            return
+        if lower_key == "y":
+            try:
+                self.window.scene_controller._apply_entity_mutation(sprite, y=float(value))
+            except Exception:  # noqa: BLE001
+                return
+            return
+        if lower_key == "scale":
+            try:
+                self.window.scene_controller._apply_entity_mutation(sprite, scale=float(value))
+            except Exception:  # noqa: BLE001
+                return
+            return
+        if lower_key == "tag":
+            self.window.scene_controller._apply_entity_mutation(sprite, tag=str(value or ""))
+            return
+        if lower_key in {"rotation", "rotation_deg"}:
+            try:
+                rotation = float(value) % 360.0
+            except Exception:  # noqa: BLE001
+                return
+            entity_data["rotation"] = rotation
+            sprite.angle = rotation
+            return
+        if lower_key == "mesh_name":
+            new_name = str(value or "")
+            entity_data["mesh_name"] = new_name
+            setattr(sprite, "mesh_name", new_name)
+            if id(sprite) in self._hierarchy_name_cache:
+                self._hierarchy_name_cache[id(sprite)] = new_name
+            return
+
+        entity_data[normalized] = value
+
+    def _apply_prefab_override_command(self, cmd: Dict[str, Any], *, use_before: bool) -> None:
+        entity_id = cmd.get("entity_id")
+        entity_name = cmd.get("entity_name")
+        entity = None
+        if isinstance(entity_id, str) and entity_id:
+            entity = self._find_entity_by_id(entity_id)
+        if entity is None and isinstance(entity_name, str) and entity_name:
+            entity = self._find_entity_by_name(entity_name)
+        if entity is None:
+            return
+
+        key = cmd.get("key")
+        if not isinstance(key, str) or not key.strip():
+            return
+
+        entity_data = self.window.scene_controller._ensure_entity_data_dict(entity)
+        override_present = cmd.get("before_override_present") if use_before else cmd.get("after_override_present")
+        override_value = cmd.get("before_override") if use_before else cmd.get("after_override")
+
+        if override_present:
+            updated = _apply_override_delta(entity_data, key, override_value)
+        else:
+            updated = _revert_override_key(entity_data, key)
+        self._apply_prefab_override_payload(entity_data, updated)
+
+        value_present = cmd.get("before_value_present") if use_before else cmd.get("after_value_present")
+        value = cmd.get("before_value") if use_before else cmd.get("after_value")
+        self._apply_prefab_override_entity_value(entity, key, value, present=bool(value_present))
+
+    def _apply_prefab_override_bulk_command(self, cmd: Dict[str, Any], *, use_before: bool) -> None:
+        entity_id = cmd.get("entity_id")
+        entity_name = cmd.get("entity_name")
+        entity = None
+        if isinstance(entity_id, str) and entity_id:
+            entity = self._find_entity_by_id(entity_id)
+        if entity is None and isinstance(entity_name, str) and entity_name:
+            entity = self._find_entity_by_name(entity_name)
+        if entity is None:
+            return
+
+        overrides = cmd.get("before_overrides") if use_before else cmd.get("after_overrides")
+        if not isinstance(overrides, dict):
+            overrides = {}
+
+        entity_data = self.window.scene_controller._ensure_entity_data_dict(entity)
+        if overrides:
+            entity_data["prefab_overrides"] = overrides
+        else:
+            entity_data.pop("prefab_overrides", None)
+
+        values = cmd.get("before_values") if use_before else cmd.get("after_values")
+        missing = cmd.get("before_missing") if use_before else cmd.get("after_missing")
+        if isinstance(values, dict):
+            for key, value in values.items():
+                self._apply_prefab_override_entity_value(entity, str(key), value, present=True)
+        if isinstance(missing, list):
+            for key in missing:
+                self._apply_prefab_override_entity_value(entity, str(key), None, present=False)
 
     def _filter_entity_panels_items(self, items: list[EntitySummary]) -> list[EntitySummary]:
         return _filter_entity_panels_items_impl(items, self._outliner_search)
@@ -6538,6 +8409,14 @@ class EditorModeController:
             if sprite
             else {}
         )
+        prefab_label = self._prefab_variant_label(entity_data) if sprite else None
+        override_rows = self._prefab_variant_override_rows(entity_data) if sprite else []
+        total_rows = len(ENTITY_PANEL_FIELDS) + len(override_rows)
+        if total_rows:
+            self.entity_panels_inspector_index = max(
+                0,
+                min(self.entity_panels_inspector_index, total_rows - 1),
+            )
         return _build_inspector_lines_impl(
             active=self.entity_panels_active,
             focus=self.entity_panels_focus,
@@ -6548,6 +8427,8 @@ class EditorModeController:
             text_field=self.entity_panels_text_field,
             text_buffer=self.entity_panels_text_buffer,
             sprite=sprite,
+            prefab_label=prefab_label,
+            override_rows=override_rows,
         )
 
     def _entity_panels_format_field_value(
@@ -6628,7 +8509,11 @@ class EditorModeController:
             return False
         field = self.entity_panels_text_field
         value = self.entity_panels_text_buffer
-        applied = self._entity_panels_apply_field_update(field, value)
+        if field.startswith("prefab_override:"):
+            key = field.split("prefab_override:", 1)[1]
+            applied = self._entity_panels_apply_prefab_override(key, value)
+        else:
+            applied = self._entity_panels_apply_field_update(field, value)
         self._entity_panels_cancel_text_edit()
         return applied
 
@@ -6685,6 +8570,153 @@ class EditorModeController:
             return False
 
         self._mark_dirty()
+        self._refresh_entity_panels_list(sync_selected=True)
+        return True
+
+    def _entity_panels_apply_prefab_override(self, key: str, value: Any) -> bool:
+        if not self.selected_entity:
+            return False
+        entity_data = self.window.scene_controller._ensure_entity_data_dict(self.selected_entity)
+        base_entity = self._get_prefab_base_entity(entity_data)
+        if base_entity is None:
+            return False
+        override_key = str(key or "").strip()
+        if not override_key:
+            return False
+
+        overrides = entity_data.get("prefab_overrides")
+        before_override_present = isinstance(overrides, dict) and override_key in overrides
+        before_override = overrides.get(override_key) if isinstance(overrides, dict) else None
+        before_value_present = override_key in entity_data
+        before_value = entity_data.get(override_key)
+
+        updated = _apply_override_delta(entity_data, override_key, value)
+        self._apply_prefab_override_payload(entity_data, updated)
+        self._apply_prefab_override_entity_value(self.selected_entity, override_key, value, present=True)
+
+        entity_id = self._entity_panels_selected_id_value()
+        entity_name = getattr(self.selected_entity, "mesh_name", "")
+        self._push_command(
+            {
+                "type": "EditPrefabOverride",
+                "entity_id": entity_id,
+                "entity_name": entity_name,
+                "key": override_key,
+                "before_override": before_override,
+                "after_override": value,
+                "before_override_present": before_override_present,
+                "after_override_present": True,
+                "before_value": before_value,
+                "after_value": value,
+                "before_value_present": before_value_present,
+                "after_value_present": True,
+            }
+        )
+        self._refresh_entity_panels_list(sync_selected=True)
+        return True
+
+    def _entity_panels_revert_prefab_override(self, row: DiffRow) -> bool:
+        if not self.selected_entity:
+            return False
+        entity_data = self.window.scene_controller._ensure_entity_data_dict(self.selected_entity)
+        base_entity = self._get_prefab_base_entity(entity_data)
+        if base_entity is None:
+            return False
+        override_key = str(row.key or "").strip()
+        if not override_key:
+            return False
+
+        overrides = entity_data.get("prefab_overrides")
+        before_override_present = isinstance(overrides, dict) and override_key in overrides
+        before_override = overrides.get(override_key) if isinstance(overrides, dict) else None
+        before_value_present = override_key in entity_data
+        before_value = entity_data.get(override_key)
+
+        base_present, base_value = self._prefab_override_base_value(base_entity, override_key)
+
+        updated = _revert_override_key(entity_data, override_key)
+        self._apply_prefab_override_payload(entity_data, updated)
+        self._apply_prefab_override_entity_value(
+            self.selected_entity,
+            override_key,
+            base_value,
+            present=base_present,
+        )
+
+        entity_id = self._entity_panels_selected_id_value()
+        entity_name = getattr(self.selected_entity, "mesh_name", "")
+        self._push_command(
+            {
+                "type": "EditPrefabOverride",
+                "entity_id": entity_id,
+                "entity_name": entity_name,
+                "key": override_key,
+                "before_override": before_override,
+                "after_override": base_value if base_present else None,
+                "before_override_present": before_override_present,
+                "after_override_present": False,
+                "before_value": before_value,
+                "after_value": base_value,
+                "before_value_present": before_value_present,
+                "after_value_present": base_present,
+            }
+        )
+        self._refresh_entity_panels_list(sync_selected=True)
+        return True
+
+    def _entity_panels_clear_prefab_overrides(self) -> bool:
+        if not self.selected_entity:
+            return False
+        entity_data = self.window.scene_controller._ensure_entity_data_dict(self.selected_entity)
+        overrides = entity_data.get("prefab_overrides")
+        if not isinstance(overrides, dict) or not overrides:
+            return False
+        base_entity = self._get_prefab_base_entity(entity_data)
+        if base_entity is None:
+            return False
+
+        before_overrides = copy.deepcopy(overrides)
+        before_values: dict[str, Any] = {}
+        before_missing: list[str] = []
+        for key in overrides.keys():
+            if key in entity_data:
+                before_values[key] = entity_data.get(key)
+            else:
+                before_missing.append(key)
+
+        after_values: dict[str, Any] = {}
+        after_missing: list[str] = []
+        for key in overrides.keys():
+            base_present, base_value = self._prefab_override_base_value(base_entity, key)
+            if base_present:
+                after_values[key] = base_value
+            else:
+                after_missing.append(key)
+            self._apply_prefab_override_entity_value(
+                self.selected_entity,
+                key,
+                base_value,
+                present=base_present,
+            )
+
+        updated = _clear_all_overrides(entity_data)
+        self._apply_prefab_override_payload(entity_data, updated)
+
+        entity_id = self._entity_panels_selected_id_value()
+        entity_name = getattr(self.selected_entity, "mesh_name", "")
+        self._push_command(
+            {
+                "type": "ClearPrefabOverrides",
+                "entity_id": entity_id,
+                "entity_name": entity_name,
+                "before_overrides": before_overrides,
+                "after_overrides": {},
+                "before_values": before_values,
+                "after_values": after_values,
+                "before_missing": sorted(before_missing),
+                "after_missing": sorted(after_missing),
+            }
+        )
         self._refresh_entity_panels_list(sync_selected=True)
         return True
 
@@ -6807,14 +8839,11 @@ class EditorModeController:
 
     def _get_selected_entity_json_for_inspector(self) -> dict[str, Any] | None:
         """Get the JSON data for the currently selected entity."""
-        primary_id = getattr(self, "_primary_selected_id", None)
+        from engine.editor.editor_selection_model import selected_entity_id  # noqa: PLC0415
+
+        primary_id = selected_entity_id(self)
         if not primary_id:
-            selected = getattr(self, "selected_entity", None)
-            if not selected:
-                return None
-            primary_id = getattr(selected, "mesh_name", None) or getattr(selected, "mesh_entity_data", {}).get("id")
-            if not primary_id:
-                return None
+            return None
 
         scene_controller = getattr(self.window, "scene_controller", None)
         if scene_controller is None:
@@ -6934,13 +8963,9 @@ class EditorModeController:
 
     def _get_entity_id_for_inspector(self) -> str | None:
         """Get the ID of the currently selected entity."""
-        primary_id = getattr(self, "_primary_selected_id", None)
-        if primary_id:
-            return primary_id
-        selected = getattr(self, "selected_entity", None)
-        if not selected:
-            return None
-        return getattr(selected, "mesh_name", None) or getattr(selected, "mesh_entity_data", {}).get("id")
+        from engine.editor.editor_selection_model import selected_entity_id  # noqa: PLC0415
+
+        return selected_entity_id(self)
 
     def _apply_inspector_to_sprite(self, field_key: str, value: Any) -> None:
         """Apply a field change to the sprite runtime state."""
@@ -7420,35 +9445,77 @@ class EditorModeController:
         if self.entity_panels_focus == ENTITY_PANEL_FOCUS_INSPECTOR:
             if not self.selected_entity:
                 return False
+            override_rows = self._entity_panels_prefab_override_rows()
+            field_count = len(ENTITY_PANEL_FIELDS)
+            total_count = field_count + len(override_rows)
+            if total_count <= 0:
+                return False
             if key == optional_arcade.arcade.key.UP:
                 self.entity_panels_inspector_index = max(0, self.entity_panels_inspector_index - 1)
                 return True
             if key == optional_arcade.arcade.key.DOWN:
-                count = len(ENTITY_PANEL_FIELDS)
-                if count:
-                    self.entity_panels_inspector_index = min(count - 1, self.entity_panels_inspector_index + 1)
+                if total_count:
+                    self.entity_panels_inspector_index = min(total_count - 1, self.entity_panels_inspector_index + 1)
                 return True
+            if key == optional_arcade.arcade.key.R and (modifiers & optional_arcade.arcade.key.MOD_SHIFT):
+                return self._entity_panels_clear_prefab_overrides()
+            if key == optional_arcade.arcade.key.R:
+                if self.entity_panels_inspector_index >= field_count and override_rows:
+                    idx = self.entity_panels_inspector_index - field_count
+                    if 0 <= idx < len(override_rows):
+                        return self._entity_panels_revert_prefab_override(override_rows[idx])
+                return False
             if key in (optional_arcade.arcade.key.LEFT, optional_arcade.arcade.key.RIGHT):
-                field = ENTITY_PANEL_FIELDS[self.entity_panels_inspector_index]
-                if field["kind"] != "float":
-                    return False
-                entity_data = self.window.scene_controller._ensure_entity_data_dict(self.selected_entity)
-                current = self._entity_panels_numeric_value(entity_data, self.selected_entity, field["key"])
-                delta = -1.0 if key == optional_arcade.arcade.key.LEFT else 1.0
-                if modifiers & optional_arcade.arcade.key.MOD_SHIFT:
-                    delta *= 10.0
-                return self._entity_panels_apply_field_update(field["key"], current + delta)
+                if self.entity_panels_inspector_index < field_count:
+                    field = ENTITY_PANEL_FIELDS[self.entity_panels_inspector_index]
+                    if field["kind"] != "float":
+                        return False
+                    entity_data = self.window.scene_controller._ensure_entity_data_dict(self.selected_entity)
+                    current = self._entity_panels_numeric_value(entity_data, self.selected_entity, field["key"])
+                    delta = -1.0 if key == optional_arcade.arcade.key.LEFT else 1.0
+                    if modifiers & optional_arcade.arcade.key.MOD_SHIFT:
+                        delta *= 10.0
+                    return self._entity_panels_apply_field_update(field["key"], current + delta)
+                if override_rows:
+                    idx = self.entity_panels_inspector_index - field_count
+                    if 0 <= idx < len(override_rows):
+                        current_value = override_rows[idx].override_value
+                        if isinstance(current_value, bool):
+                            return False
+                        if not isinstance(current_value, (int, float)):
+                            return False
+                        delta = -1 if key == optional_arcade.arcade.key.LEFT else 1
+                        if isinstance(current_value, float):
+                            delta = float(delta) * 0.1
+                        if modifiers & optional_arcade.arcade.key.MOD_SHIFT:
+                            delta *= 10
+                        return self._entity_panels_apply_prefab_override(
+                            override_rows[idx].key,
+                            current_value + delta,
+                        )
+                return False
             if key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN):
-                field = ENTITY_PANEL_FIELDS[self.entity_panels_inspector_index]
-                if field["kind"] not in ("string", "tags"):
-                    return False
-                entity_data = self.window.scene_controller._ensure_entity_data_dict(self.selected_entity)
-                if field["kind"] == "tags":
-                    initial = ", ".join(_normalize_entity_panel_tags(entity_data.get("tags")))
-                else:
-                    initial = str(entity_data.get(field["key"], "") or "")
-                self._entity_panels_begin_text_edit(field["key"], initial)
-                return True
+                if self.entity_panels_inspector_index < field_count:
+                    field = ENTITY_PANEL_FIELDS[self.entity_panels_inspector_index]
+                    if field["kind"] not in ("string", "tags"):
+                        return False
+                    entity_data = self.window.scene_controller._ensure_entity_data_dict(self.selected_entity)
+                    if field["kind"] == "tags":
+                        initial = ", ".join(_normalize_entity_panel_tags(entity_data.get("tags")))
+                    else:
+                        initial = str(entity_data.get(field["key"], "") or "")
+                    self._entity_panels_begin_text_edit(field["key"], initial)
+                    return True
+                if override_rows:
+                    idx = self.entity_panels_inspector_index - field_count
+                    if 0 <= idx < len(override_rows):
+                        current_value = override_rows[idx].override_value
+                        if isinstance(current_value, (int, float, bool)):
+                            return False
+                        initial = "" if current_value is None else str(current_value)
+                        self._entity_panels_begin_text_edit(f"prefab_override:{override_rows[idx].key}", initial)
+                        return True
+                return False
             return False
 
         return False

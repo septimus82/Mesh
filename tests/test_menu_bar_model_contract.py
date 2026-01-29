@@ -84,7 +84,7 @@ class TestBuildMenuGroups:
         mock_controller.undo_stack = []
         groups = build_menu_groups(mock_controller, mock_window)
         edit_menu = next(g for g in groups if g.title == "Edit")
-        undo_item = next(i for i in edit_menu.items if i.id == "edit_undo")
+        undo_item = next(i for i in edit_menu.items if i.id == "editor.history.undo")
         assert undo_item.enabled is False
 
     def test_undo_enabled_when_stack_has_items(self, mock_controller: MagicMock, mock_window: MagicMock) -> None:
@@ -92,7 +92,7 @@ class TestBuildMenuGroups:
         mock_controller.undo_stack = [{"type": "test"}]
         groups = build_menu_groups(mock_controller, mock_window)
         edit_menu = next(g for g in groups if g.title == "Edit")
-        undo_item = next(i for i in edit_menu.items if i.id == "edit_undo")
+        undo_item = next(i for i in edit_menu.items if i.id == "editor.history.undo")
         assert undo_item.enabled is True
 
     def test_save_disabled_when_not_dirty(self, mock_controller: MagicMock, mock_window: MagicMock) -> None:
@@ -100,7 +100,7 @@ class TestBuildMenuGroups:
         mock_controller.scene_dirty = False
         groups = build_menu_groups(mock_controller, mock_window)
         file_menu = next(g for g in groups if g.title == "File")
-        save_item = next(i for i in file_menu.items if i.id == "file_save_scene")
+        save_item = next(i for i in file_menu.items if i.id == "editor.scene.save")
         assert save_item.enabled is False
 
     def test_save_enabled_when_dirty(self, mock_controller: MagicMock, mock_window: MagicMock) -> None:
@@ -108,7 +108,7 @@ class TestBuildMenuGroups:
         mock_controller.scene_dirty = True
         groups = build_menu_groups(mock_controller, mock_window)
         file_menu = next(g for g in groups if g.title == "File")
-        save_item = next(i for i in file_menu.items if i.id == "file_save_scene")
+        save_item = next(i for i in file_menu.items if i.id == "editor.scene.save")
         assert save_item.enabled is True
 
 
@@ -129,7 +129,7 @@ class TestComputeMenuBarLayout:
                 MenuItem(id="file_open", label="Open"),
             )),
             MenuGroup(title="Edit", items=(
-                MenuItem(id="edit_undo", label="Undo"),
+                MenuItem(id="editor.history.undo", label="Undo"),
             )),
         ]
 

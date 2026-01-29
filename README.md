@@ -79,6 +79,20 @@ Scenes are JSON documents with explicit versioning, settings, layers, and entiti
 - `settings.background_color`: Name of an `arcade.color` constant (case-insensitive, underscores). Defaults to `dark_blue_gray`.
 - `settings.world_width` / `settings.world_height`: Optional world bounds. When provided, the camera will be clamped within these limits; otherwise it moves freely.
 - `settings.camera`: Advanced camera tuning (lerp speed, padding, zoom defaults, optional bounds, and trigger areas).
+- `settings.render_sort_mode`: HD-2D render ordering mode (`"y_sort"` or `"explicit_z"`). See [docs/mesh_scene_spec.md](docs/mesh_scene_spec.md) for details.
+
+### HD-2D Rendering
+
+The engine supports HD-2D style rendering with:
+
+- **Deterministic entity sorting** via `render_layer` and `depth_z` fields on entities.
+- **Parallax background planes** (`background_planes`) for layered depth.
+- **Sprite drop shadows** that scale with depth (nearer = larger/darker).
+- **Depth-based sprite tinting** for atmospheric depth shading (farther = darker/blue-shifted).
+- **Faux sprite outlines** (rim light) for readability when enabled.
+- **Two sort modes**: `y_sort` (classic top-down) and `explicit_z` (manual depth control).
+
+Press `F3` in-game to toggle the HD-2D debug overlay showing entity render order.
 
 ### Layers
 
@@ -243,3 +257,11 @@ Notes:
 - `expect_state` only supports `str`/`int`/`bool` and `list[str]` values.
 - `list[str]` uses exact list match (order + contents).
 ```
+
+## Keymap overrides (editor)
+
+Create `keymap.json` in the project root to override editor shortcuts.
+The file format is a flat mapping of `action_id` -> `shortcut` string.
+Set a shortcut to `""` (empty) to unbind it.
+See `docs/keymap.example.json` for a starter template.
+On editor init, unknown action ids and shortcut conflicts are logged once.

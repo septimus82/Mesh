@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional, Tuple
 
+from engine import json_io
 from engine.tooling.doctor import DoctorRunner
 from engine.tooling.tool_result import ToolResult
 from engine.tooling.issue_mapper import map_issue_to_hint
@@ -45,14 +45,14 @@ class ExplainRunner:
     def store_last_failure(self, report: Dict[str, Any] | ToolResult) -> None:
         if isinstance(report, ToolResult):
             report = report.to_doctor_report_dict()
-        self._last_failure_path.parent.mkdir(parents=True, exist_ok=True)
-        self._last_failure_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        json_io.write_json_atomic(self._last_failure_path, report)
 
     def load_last_failure(self) -> Dict[str, Any] | None:
         if not self._last_failure_path.exists():
             return None
         try:
-            return json.loads(self._last_failure_path.read_text(encoding="utf-8"))
+            raw = json_io.read_json(self._last_failure_path)
+            return raw if isinstance(raw, dict) else None
         except Exception:
             return None
 
@@ -98,22 +98,20 @@ class ExplainRunner:
                 "suggested_fixes": list(dict.fromkeys(suggested_fixes)),
                 "action_hints": action_hints,
             }
-            return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+            return json_io.dumps_stable(payload) + "\n"
         return self._format_groups(groups)
 
     def _format_missing_last_failure(self, *, json_output: bool) -> str:
         if json_output:
             return (
-                json.dumps(
+                json_io.dumps_stable(
                     {
                         "version": 1,
                         "summary": "No stored failure found.",
                         "root_causes": ["Explain --last needs a prior failing run to reference."],
                         "files": [".mesh/reports/doctor_last_failure.json"],
                         "suggested_fixes": ["mesh explain"],
-                    },
-                    indent=2,
-                    sort_keys=True,
+                    }
                 )
                 + "\n"
             )

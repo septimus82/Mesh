@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from engine.tooling import assist_command
 import engine.paths
+from engine import json_io
 
 def test_mesh_assist_dry_run_write_summary(tmp_path, monkeypatch):
     """Verify dry-run summary output."""
@@ -25,7 +26,7 @@ def test_mesh_assist_dry_run_write_summary(tmp_path, monkeypatch):
     
     # Create a file that will be identical
     identical_file = tmp_path / "identical.json"
-    identical_file.write_text('{"foo": "bar"}', encoding="utf-8")
+    json_io.write_json_atomic(identical_file, {"foo": "bar"})
     
     plan_data = {
         "actions": [
@@ -129,10 +130,8 @@ def test_mesh_assist_dry_run_write_summary(tmp_path, monkeypatch):
             "schema_version": 1
         }
         # Compacted form (defaults removed)
-        # Note: json.dump uses sort_keys=False by default in polish_scene, but we need to match EXACTLY.
-        # polish_scene uses: json.dump(compacted, f, indent=2, sort_keys=False)
-        # Let's ensure we write it exactly as polish_scene would.
-        identical_file.write_text(json.dumps(identical_data, indent=2, sort_keys=False), encoding="utf-8")
+        # polish_scene writes with stable formatting now.
+        json_io.write_json_atomic(identical_file, identical_data)
         
         # Update plan to use polish_scene for identical
         plan_data["actions"][2] = {

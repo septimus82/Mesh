@@ -129,6 +129,7 @@ def get_content_index(refresh: bool = False) -> "ContentIndex":
 
 def resolve_path(path_str: str) -> Path:
     """Resolve a content path against configured content roots."""
+    path_str = str(path_str).replace("\\", "/")
     # If absolute, return as is
     p = Path(path_str)
     if p.is_absolute():

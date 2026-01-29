@@ -5,6 +5,7 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
+from engine import json_io
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     # Plan
@@ -117,8 +118,7 @@ def _handle_plan_test_ai(args: argparse.Namespace) -> int:
         report = tester.run_ai_tests(plan)
 
         if args.out:
-            with open(args.out, "w", encoding="utf-8") as f:
-                json.dump(asdict(report), f, indent=2)
+            json_io.write_json_atomic(args.out, asdict(report))
             print(f"[Mesh][Tester] Report written to {args.out}")
 
         if args.junit:
@@ -212,8 +212,7 @@ def _handle_plan_test(args: argparse.Namespace) -> int:
         # Outputs
         report_dict = asdict(report)
         if args.out:
-            with open(args.out, "w", encoding="utf-8") as f:
-                json.dump(report_dict, f, indent=2)
+            json_io.write_json_atomic(args.out, report_dict)
             print(f"[Mesh][Tester] JSON report written to {args.out}")
 
         if args.junit:

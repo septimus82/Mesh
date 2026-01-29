@@ -97,9 +97,7 @@ def _process_diff_result(diff, args: argparse.Namespace) -> int:
         output_data = asdict(diff)
         if args.out:
             out_path = Path(args.out)
-            out_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(out_path, "w") as f:
-                json.dump(output_data, f, indent=2, sort_keys=True)
+            write_json_atomic(out_path, output_data)
             print(f"Diff report written to {out_path}")
         else:
             print(json.dumps(output_data, indent=2, sort_keys=True))

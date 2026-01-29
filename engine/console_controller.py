@@ -10,6 +10,7 @@ import engine.optional_arcade as optional_arcade
 from .console_runtime import commands as console_commands
 from .console_runtime import history as console_history
 from .console_runtime import render as console_render
+from . import json_io
 from .logging_tools import get_logger
 from .ai_ops import AIOps, load_job
 from .animation_state import get_animation_state_snapshot, request_animation_state
@@ -1544,13 +1545,7 @@ class ConsoleController:
         try:
             snapshot = self.window.build_scene_snapshot(compact=compact)
 
-            # Ensure directory exists
-            from pathlib import Path
-            path_obj = Path(target_path)
-            path_obj.parent.mkdir(parents=True, exist_ok=True)
-
-            with open(path_obj, "w", encoding="utf-8") as f:
-                json.dump(snapshot, f, indent=2)
+            json_io.write_json_atomic(target_path, snapshot)
 
             self.log(f"Scene saved to '{target_path}'")
 
@@ -1561,8 +1556,7 @@ class ConsoleController:
     def _dump_scene(self, target_path: str) -> None:
         try:
             snapshot = self.window.build_scene_snapshot()
-            with open(target_path, "w", encoding="utf-8") as f:
-                json.dump(snapshot, f, indent=2)
+            json_io.write_json_atomic(target_path, snapshot)
             self.log(f"Dumped scene to '{target_path}'")
         except Exception as e:
             self.log(f"Error dumping scene: {e}")
@@ -1672,8 +1666,7 @@ class ConsoleController:
     def _dump_state(self, path: str) -> None:
         state = self.window.game_state.snapshot()
         try:
-            with open(path, "w") as f:
-                json.dump(state, f, indent=2)
+            json_io.write_json_atomic(path, state)
             self.log(f"State dumped to {path}")
         except Exception as e:
             self.log(f"Error dumping state: {e}")

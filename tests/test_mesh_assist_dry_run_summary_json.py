@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 from types import SimpleNamespace
 from engine.tooling import assist_command
 import engine.paths
+from engine import json_io
 
 def test_mesh_assist_dry_run_summary_json(tmp_path, monkeypatch):
     """Verify dry-run summary JSON output."""
@@ -31,7 +32,7 @@ def test_mesh_assist_dry_run_summary_json(tmp_path, monkeypatch):
         "version": 1,
         "schema_version": 1
     }
-    identical_file.write_text(json.dumps(identical_data, indent=2, sort_keys=False), encoding="utf-8")
+    json_io.write_json_atomic(identical_file, identical_data)
     
     plan_data = {
         "actions": [

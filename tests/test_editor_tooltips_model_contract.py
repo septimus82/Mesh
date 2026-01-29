@@ -81,6 +81,11 @@ class TestComputeTooltipTextForTarget:
         assert text == DOCK_TAB_TOOLTIPS["Scene"]
         assert "Scene Browser" in text
 
+    def test_dock_tab_project(self) -> None:
+        text = compute_tooltip_text_for_target("dock_tab", "Project")
+        assert text == DOCK_TAB_TOOLTIPS["Project"]
+        assert "Project Explorer" in text
+
     def test_dock_tab_outliner(self) -> None:
         text = compute_tooltip_text_for_target("dock_tab", "Outliner")
         assert text == DOCK_TAB_TOOLTIPS["Outliner"]
@@ -100,6 +105,11 @@ class TestComputeTooltipTextForTarget:
         text = compute_tooltip_text_for_target("dock_tab", "History")
         assert text == DOCK_TAB_TOOLTIPS["History"]
         assert "History" in text
+
+    def test_dock_tab_problems(self) -> None:
+        text = compute_tooltip_text_for_target("dock_tab", "Problems")
+        assert text == DOCK_TAB_TOOLTIPS["Problems"]
+        assert "Problems" in text
 
     def test_menu_title_file(self) -> None:
         text = compute_tooltip_text_for_target("menu_title", "File")
@@ -436,8 +446,16 @@ class TestDockTabTooltips:
             right_dock_width = 320
             window = None
 
-        # Position in left dock tab area (x=80, y=535)
-        result = resolve_editor_tooltip(MockController(), 80.0, 535.0, 800, 600)
+        from engine.editor.editor_shell_layout import (
+            compute_editor_shell_layout,
+            compute_dock_tab_rects,
+        )
+
+        layout = compute_editor_shell_layout(800, 600, 320, 320)
+        tab_rects = compute_dock_tab_rects(layout)
+        scene_rect = tab_rects.left_tab_rects["Scene"]
+
+        result = resolve_editor_tooltip(MockController(), scene_rect.center_x, scene_rect.center_y, 800, 600)
         assert result is not None
         assert "Scene Browser" in result
 

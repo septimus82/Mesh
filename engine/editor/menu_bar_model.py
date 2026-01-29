@@ -12,6 +12,8 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple
 
+from engine.editor.editor_actions import get_editor_actions
+
 
 # Layout constants
 MENU_BAR_HEIGHT = 24
@@ -20,6 +22,68 @@ MENU_ITEM_HEIGHT = 24
 MENU_ITEM_PADDING_X = 16
 MENU_DROPDOWN_WIDTH = 200
 MENU_FONT_SIZE = 12
+
+MENU_GROUP_ORDER: tuple[str, ...] = ("File", "Edit", "View", "Scene")
+
+MENU_ACTION_ORDER: dict[str, tuple[str, ...]] = {
+    "File": (
+        "editor.scene.save",
+        "editor.scene_browser.open",
+        "|",
+        "app.export_web_demo",
+        "|",
+        "app.quit",
+    ),
+    "Edit": (
+        "editor.history.undo",
+        "editor.history.redo",
+        "|",
+        "editor.duplicate",
+        "editor.delete",
+    ),
+    "View": (
+        "editor.panel.project_explorer.toggle",
+        "editor.panel.outliner.toggle",
+        "editor.panel.inspector.toggle",
+        "editor.panel.history.toggle",
+        "editor.panel.problems.toggle",
+        "|",
+        "editor.problems.jump_to_selected",
+        "editor.problems.copy_location",
+        "|",
+        "editor.panel.prefab_variant_editor.toggle",
+        "|",
+        "editor.entity_panels.toggle",
+        "editor.asset_browser.toggle",
+        "editor.scene_browser.toggle",
+        "|",
+        "editor.command_palette.toggle",
+        "|",
+        "editor.ghost_originals.toggle",
+        "|",
+        "editor.hd2d.preset.soft.apply",
+        "editor.hd2d.preset.crisp.apply",
+        "editor.hd2d.preset.noir.apply",
+        "editor.hd2d.preset.dreamy.apply",
+    ),
+        "Scene": (
+            "editor.prefab_palette.toggle",
+            "editor.light_tool.toggle",
+            "editor.occluder_tool.toggle",
+            "|",
+            "editor.background_planes.add",
+            "editor.background_planes.duplicate",
+            "editor.background_planes.remove",
+            "|",
+            "editor.background_planes.move_up",
+            "editor.background_planes.move_down",
+            "editor.background_planes.select_prev",
+            "editor.background_planes.select_next",
+            "|",
+            "editor.background_planes.toggle_repeat_x",
+            "editor.background_planes.toggle_repeat_y",
+        ),
+}
 
 
 def _is_web_runtime() -> bool:
@@ -80,59 +144,52 @@ def build_menu_groups(controller: Any, window: Any) -> List[MenuGroup]:
         List of MenuGroup with items enabled/disabled appropriately.
     """
     is_web = _is_web_runtime()
+    actions = get_editor_actions(controller, window)
+    action_map = {action.id: action for action in actions}
 
-    # Check if various editor features are available
-    has_selection = getattr(controller, "selected_entity", None) is not None
-    can_undo = bool(getattr(controller, "undo_stack", []))
-    can_redo = bool(getattr(controller, "redo_stack", []))
-    scene_dirty = getattr(controller, "scene_dirty", False)
+    groups: list[MenuGroup] = []
+    def _action_allowed(action_id: str) -> bool:
+        action = action_map.get(action_id)
+        if action is None or not action.in_menu:
+            return False
+        if is_web and action.id in {"app.export_web_demo", "app.quit"}:
+            return False
+        return True
 
-    # File menu
-    file_items: List[MenuItem] = [
-        MenuItem(id="file_save_scene", label="Save Scene", enabled=scene_dirty, shortcut="Ctrl+S"),
-        MenuItem(id="file_open_scene_browser", label="Open Scene...", enabled=True, shortcut="Ctrl+O"),
-        MenuItem(id="file_separator_1", label="-", enabled=False),
-    ]
+    def _has_future_action(entries: tuple[str, ...]) -> bool:
+        for entry in entries:
+            if entry == "|":
+                continue
+            if _action_allowed(entry):
+                return True
+        return False
 
-    # Add export option (disabled on web)
-    if not is_web:
-        file_items.append(MenuItem(id="file_export_web_demo", label="Export Web Demo...", enabled=True))
-        file_items.append(MenuItem(id="file_separator_2", label="-", enabled=False))
-        file_items.append(MenuItem(id="file_quit", label="Quit", enabled=True, shortcut="Alt+F4"))
+    for group in MENU_GROUP_ORDER:
+        order = MENU_ACTION_ORDER.get(group, ())
+        items: list[MenuItem] = []
+        sep_index = 0
+        for idx, entry in enumerate(order):
+            if entry == "|":
+                if not items:
+                    continue
+                if not _has_future_action(order[idx + 1 :]):
+                    continue
+                if items and items[-1].label == "-":
+                    continue
+                sep_index += 1
+                items.append(MenuItem(id=f"{group.lower()}_separator_{sep_index}", label="-", enabled=False))
+                continue
+            if not _action_allowed(entry):
+                continue
+            action = action_map.get(entry)
+            if action is None:
+                continue
+            enabled = action.enabled(controller, window)
+            label = action.menu_label or action.title
+            items.append(MenuItem(id=action.id, label=label, enabled=enabled, shortcut=action.shortcut))
+        groups.append(MenuGroup(title=group, items=tuple(items)))
 
-    file_menu = MenuGroup(title="File", items=tuple(file_items))
-
-    # Edit menu
-    edit_items: List[MenuItem] = [
-        MenuItem(id="edit_undo", label="Undo", enabled=can_undo, shortcut="Ctrl+Z"),
-        MenuItem(id="edit_redo", label="Redo", enabled=can_redo, shortcut="Ctrl+Y"),
-        MenuItem(id="edit_separator_1", label="-", enabled=False),
-        MenuItem(id="edit_duplicate", label="Duplicate", enabled=has_selection, shortcut="Ctrl+D"),
-        MenuItem(id="edit_delete", label="Delete", enabled=has_selection, shortcut="Del"),
-    ]
-    edit_menu = MenuGroup(title="Edit", items=tuple(edit_items))
-
-    # View menu
-    view_items: List[MenuItem] = [
-        MenuItem(id="view_toggle_entity_panels", label="Entity Panels", enabled=True, shortcut="E"),
-        MenuItem(id="view_toggle_asset_browser", label="Asset Browser", enabled=True, shortcut="A"),
-        MenuItem(id="view_toggle_scene_browser", label="Scene Browser", enabled=True),
-        MenuItem(id="view_separator_1", label="-", enabled=False),
-        MenuItem(id="view_toggle_command_palette", label="Command Palette", enabled=True, shortcut="F1"),
-        MenuItem(id="view_separator_2", label="-", enabled=False),
-        MenuItem(id="view_toggle_ghost_originals", label="Ghost Originals During Alt-Dup", enabled=True),
-    ]
-    view_menu = MenuGroup(title="View", items=tuple(view_items))
-
-    # Scene menu
-    scene_items: List[MenuItem] = [
-        MenuItem(id="scene_toggle_palette", label="Prefab Palette", enabled=True, shortcut="P"),
-        MenuItem(id="scene_toggle_lights", label="Lights Tool", enabled=True, shortcut="L"),
-        MenuItem(id="scene_toggle_occluders", label="Occluders Tool", enabled=True, shortcut="O"),
-    ]
-    scene_menu = MenuGroup(title="Scene", items=tuple(scene_items))
-
-    return [file_menu, edit_menu, view_menu, scene_menu]
+    return groups
 
 
 def compute_menu_bar_layout(

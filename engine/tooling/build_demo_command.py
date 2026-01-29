@@ -4,6 +4,7 @@ import shutil
 import time
 from pathlib import Path
 
+from engine import json_io
 from engine.tooling import check, polish
 
 
@@ -138,8 +139,7 @@ def handle_build_demo(args: argparse.Namespace) -> int:
             diff = diff_locks(old_lock, lock_data)
 
             # Write diff JSON
-            with open(dist_dir / "content.diff.json", "w") as f:
-                json.dump(diff, f, indent=2)
+            json_io.write_json_atomic(dist_dir / "content.diff.json", diff)
 
             # Write Changelog
             lines = ["# Content Changelog", ""]
@@ -182,8 +182,7 @@ def handle_build_demo(args: argparse.Namespace) -> int:
         except Exception as e:
             print(f"[Mesh][Build] WARNING: Failed to generate changelog: {e}")
 
-    with open(dist_dir / "build_manifest.json", "w") as f:
-        json.dump(manifest, f, indent=2)
+    json_io.write_json_atomic(dist_dir / "build_manifest.json", manifest)
 
     print(f"[Mesh][Build] Demo build complete in {dist_dir}")
     return 0

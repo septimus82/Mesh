@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from engine import json_io
 from engine.paths import get_content_index, resolve_path
 
 
@@ -148,19 +149,19 @@ def build_lock(world_path: str = "worlds/main_world.json") -> Dict[str, Any]:
 
 def write_lock(path: Path, lock_data: Dict[str, Any]) -> None:
     """Write lock data to a file."""
-    path.write_text(json.dumps(lock_data, indent=2, sort_keys=True), encoding="utf-8")
+    json_io.write_json_atomic(path, lock_data)
 
 def read_lock(path: Path) -> Dict[str, Any]:
     """Read lock data from a file."""
-    return json.loads(path.read_text(encoding="utf-8"))
+    raw = json_io.read_json(path)
+    return raw if isinstance(raw, dict) else {}
 
 def compute_content_fingerprint(lock_data: Dict[str, Any]) -> str:
     """Compute a SHA-256 fingerprint of the content state."""
     # Since build_lock now includes hashes of key content files,
     # we can just hash the lock data structure itself.
     hasher = hashlib.sha256()
-    lock_json = json.dumps(lock_data, sort_keys=True)
-    hasher.update(lock_json.encode("utf-8"))
+    hasher.update(json_io.dumps_stable(lock_data).encode("utf-8"))
     return hasher.hexdigest()
 
 
@@ -174,6 +175,5 @@ def compute_strict_fingerprint(lock_data: Dict[str, Any]) -> str:
 
     hasher = hashlib.sha256()
     # Sort keys to ensure determinism
-    content_json = json.dumps(content_files, sort_keys=True)
-    hasher.update(content_json.encode("utf-8"))
+    hasher.update(json_io.dumps_stable(content_files).encode("utf-8"))
     return hasher.hexdigest()

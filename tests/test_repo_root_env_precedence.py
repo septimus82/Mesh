@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
+
+from tests.subprocess_tools import run_checked
 
 
 def test_env_var_wins_for_default_config_load(monkeypatch, tmp_path):
@@ -48,12 +49,10 @@ def test_cli_list_worlds_invalid_env_emits_deterministic_json_error(monkeypatch,
     here = Path(__file__).resolve().parent.parent
     env["PYTHONPATH"] = str(here)
 
-    proc = subprocess.run(
+    proc = run_checked(
         [sys.executable, "-m", "mesh_cli", "list-worlds"],
         cwd=str(tmp_path),
         env=env,
-        capture_output=True,
-        text=True,
     )
     assert proc.returncode == 2
     assert proc.stderr == ""

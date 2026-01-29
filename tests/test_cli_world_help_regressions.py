@@ -1,6 +1,9 @@
-import pytest
-import subprocess
 import sys
+
+import pytest
+
+from tests.subprocess_tools import run_checked
+
 
 def normalize_help_output(output: str) -> str:
     """Normalize help output for comparison."""
@@ -12,7 +15,7 @@ def normalize_help_output(output: str) -> str:
 def test_world_help_output():
     """Test that 'mesh world --help' output is stable."""
     cmd = [sys.executable, "-m", "mesh_cli", "world", "--help"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd)
     assert result.returncode == 0
     
     normalized = normalize_help_output(result.stdout)
@@ -33,7 +36,7 @@ def test_world_help_output():
 def test_validate_world_help_output():
     """Test that 'mesh validate-world --help' output is stable."""
     cmd = [sys.executable, "-m", "mesh_cli", "validate-world", "--help"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd)
     assert result.returncode == 0
     
     expected_substrings = [
@@ -52,7 +55,7 @@ def test_validate_world_help_output():
 def test_auto_wire_transitions_help_output():
     """Test that 'mesh auto-wire-transitions --help' output is stable."""
     cmd = [sys.executable, "-m", "mesh_cli", "auto-wire-transitions", "--help"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd)
     assert result.returncode == 0
     
     expected_substrings = [
@@ -71,7 +74,7 @@ def test_auto_wire_transitions_help_output():
 def test_world_graph_help_output():
     """Test that 'mesh world-graph --help' output is stable."""
     cmd = [sys.executable, "-m", "mesh_cli", "world-graph", "--help"]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = run_checked(cmd)
     assert result.returncode == 0
     
     expected_substrings = [

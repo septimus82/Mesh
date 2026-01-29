@@ -16,6 +16,7 @@ from .state import (
 from .prefab_palette_panel import normalize_entity_panel_tags
 
 if TYPE_CHECKING:
+    from engine.editor_prefab_variant_ops import DiffRow
     from engine.editor_entity_ops import EntitySummary
     from .components_model import InspectorComponent, InspectorField
 
@@ -165,6 +166,8 @@ def build_inspector_lines(
     text_field: Optional[str],
     text_buffer: str,
     sprite: Any = None,
+    prefab_label: Optional[str] = None,
+    override_rows: Optional[List["DiffRow"]] = None,
 ) -> List[str]:
     """Build display lines for the inspector panel.
 
@@ -199,20 +202,44 @@ def build_inspector_lines(
 
     lines.append(f"Selected: {sprite_name}")
 
+    rows = override_rows or []
     field_count = len(ENTITY_PANEL_FIELDS)
-    clamped_index = max(0, min(inspector_index, field_count - 1)) if field_count else 0
+    total_selectable = field_count + len(rows)
+    clamped_index = max(0, min(inspector_index, total_selectable - 1)) if total_selectable else 0
 
     editing_field = text_field if text_edit_active else None
+    selected_field_index: int | None = None
+    selected_override_index: int | None = None
+    if field_count and clamped_index < field_count:
+        selected_field_index = clamped_index
+    elif rows:
+        selected_override_index = max(0, clamped_index - field_count)
+
     for idx, field in enumerate(ENTITY_PANEL_FIELDS):
         key = field["key"]
         kind = field["kind"]
         label = field["label"]
-        prefix = "> " if idx == clamped_index else "  "
+        prefix = "> " if idx == selected_field_index else "  "
         if editing_field == key:
             value_text = f"{text_buffer}_"
         else:
             value_text = format_entity_field_value(entity_data, sprite, key, kind)
         lines.append(f"{prefix}{label}: {value_text}")
+
+    if prefab_label:
+        lines.append(f"Prefab: {prefab_label}")
+    if rows:
+        lines.append("Overrides:")
+        for idx, row in enumerate(rows):
+            prefix = "> " if idx == selected_override_index else "  "
+            base_text = _format_override_value(row.base_value)
+            override_text = _format_override_value(row.override_value)
+            suffix = " [Revert]" if idx == selected_override_index else ""
+            lines.append(f"{prefix}{row.key}: {base_text} -> {override_text}{suffix}")
+        lines.append("  [Revert All] (Shift+R)")
+    elif prefab_label:
+        lines.append("Overrides:")
+        lines.append("  (None)")
 
     return lines
 
@@ -291,6 +318,24 @@ def get_entity_numeric_value(
     if key == "rotation_deg":
         value = value % 360.0
     return value
+
+
+def _format_override_value(value: Any) -> str:
+    if value is None:
+        return "-"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float):
+        return f"{value:.1f}"
+    if isinstance(value, (int,)):
+        return str(value)
+    if isinstance(value, dict):
+        import json  # noqa: PLC0415
+
+        return json.dumps(value, sort_keys=True)
+    if isinstance(value, list):
+        return str(value)
+    return str(value)
 
 
 def compute_outliner_scroll_window(

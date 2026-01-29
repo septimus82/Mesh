@@ -6,6 +6,7 @@ import pytest
 
 import engine.optional_arcade as optional_arcade
 from engine import runtime_settings
+from engine.editor.editor_focus_model import FOCUS_PROJECT_EXPLORER
 from engine.editor_commands import filter_commands, get_all_commands, run_command
 from engine.editor_runtime import input as editor_input
 
@@ -51,8 +52,13 @@ class _StubPaletteController:
 def test_command_palette_filter_order() -> None:
     commands = get_all_commands(None)
     filtered = filter_commands(commands, "preset")
-    titles = [cmd.title for cmd in filtered[:4]]
+    titles = [cmd.title for cmd in filtered[:8]]
+    # HD-2D presets come first (sorted by filter score), then lighting presets
     assert titles == [
+        "HD-2D Preset: Noir",
+        "HD-2D Preset: Soft",
+        "HD-2D Preset: Crisp",
+        "HD-2D Preset: Dreamy",
         "Apply Lighting Preset 1",
         "Apply Lighting Preset 2",
         "Apply Lighting Preset 3",
@@ -94,3 +100,13 @@ def test_command_palette_open_close() -> None:
     closed = editor_input.handle_input(controller, optional_arcade.arcade.key.ESCAPE, 0)
     assert closed is True
     assert controller.command_palette_active is False
+
+
+@pytest.mark.fast
+def test_command_palette_project_explorer_focus_boosts_results() -> None:
+    commands = get_all_commands(None)
+    filtered = filter_commands(commands, "copy path", focus_target=FOCUS_PROJECT_EXPLORER)
+    assert filtered[0].id == "editor.project_explorer.copy_path"
+
+    filtered2 = filter_commands(commands, "select all", focus_target=FOCUS_PROJECT_EXPLORER)
+    assert filtered2[0].id == "editor.project_explorer.select_all"

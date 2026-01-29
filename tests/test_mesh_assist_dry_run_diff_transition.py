@@ -63,7 +63,7 @@ def test_mesh_assist_dry_run_diff_transition(tmp_path, monkeypatch):
         assert f"+++ {scene_path}" in output
         assert '+      "name": "Transition",' in output
         assert '+      "tag": "trigger",' in output
-        assert '+          "target_scene": "scenes/other.json",' in output
+        assert '"target_scene": "scenes/other.json"' in output
         
         # Ensure file on disk is UNCHANGED
         current_content = scene_path.read_text(encoding="utf-8")

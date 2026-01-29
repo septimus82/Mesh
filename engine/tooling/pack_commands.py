@@ -2,9 +2,9 @@
 
 import argparse
 import fnmatch
-import json
 from pathlib import Path
 
+from engine import json_io
 from engine.content_audit import audit_world
 from engine.content_lock import build_lock, read_lock, write_lock
 from engine.content_packs import validate_pack_dependencies
@@ -47,7 +47,7 @@ def init_content_pack_command(args: argparse.Namespace) -> None:
             "requires": []
         }
 
-        (pack_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        json_io.write_json_atomic(pack_dir / "manifest.json", manifest)
 
         print(f"[Mesh][Init] Pack initialized successfully at {pack_dir}")
 

@@ -1,2246 +1,2252 @@
 {
   "quests": [
     {
-      "id": "showcase_tour",
-      "title": "Tour of the Mesh",
       "description": "Visit the demonstration rooms to earn your developer badge.",
+      "id": "showcase_tour",
+      "reward": {
+        "inc_counters": {
+          "developer_badge": 1
+        }
+      },
       "stages": [
         {
           "id": "intro",
-          "title": "Talk to the Guide",
-          "text": "The Guide has information about this facility.",
           "start_on_event": {
-            "type": "dialogue_choice",
             "payload": {
-              "entity": "ShowcaseGuide",
-              "choice_id": "guide_intro_accept"
-            }
-          }
+              "choice_id": "guide_intro_accept",
+              "entity": "ShowcaseGuide"
+            },
+            "type": "dialogue_choice"
+          },
+          "text": "The Guide has information about this facility.",
+          "title": "Talk to the Guide"
         },
         {
           "id": "visit_lighting",
-          "title": "Visit the Lighting Lab",
-          "text": "Enter the yellow portal to see the lighting demo.",
           "requirements": {
             "counters": {
               "visited_lighting": 1
             }
-          }
+          },
+          "text": "Enter the yellow portal to see the lighting demo.",
+          "title": "Visit the Lighting Lab"
         },
         {
-          "id": "return_to_guide",
-          "title": "Return to the Guide",
-          "text": "Tell the Guide what you saw.",
           "complete_on": {
-            "type": "dialogue_choice",
             "payload": {
-              "entity": "ShowcaseGuide",
-              "choice_id": "guide_debrief"
-            }
-          }
+              "choice_id": "guide_debrief",
+              "entity": "ShowcaseGuide"
+            },
+            "type": "dialogue_choice"
+          },
+          "id": "return_to_guide",
+          "text": "Tell the Guide what you saw.",
+          "title": "Return to the Guide"
         }
       ],
-      "reward": {
-        "inc_counters": {
-            "developer_badge": 1
-        }
-      }
+      "title": "Tour of the Mesh"
     },
     {
-      "id": "cellar_exterminator",
-      "title": "Cellar Exterminator",
       "description": "Clear the cellar of the rat infestation.",
-      "stages": [
-        {
-          "id": "kill_rats",
-          "title": "Exterminate Rats",
-          "text": "Kill 5 rats in the cellar.",
-          "requirements": {
-            "counters": {
-              "rats_killed": 5
-            }
-          }
-        },
-        {
-          "id": "report_success",
-          "title": "Report Success",
-          "text": "Tell the Guard the cellar is clear.",
-          "complete_on": {
-            "type": "dialogue_choice",
-            "payload": {
-              "entity": "Guard",
-              "choice_id": "guard_exterminator_complete"
-            }
-          }
-        }
-      ],
+      "id": "cellar_exterminator",
       "reward": {
         "inc_counters": {
           "gold": 100
         }
-      }
-    },
-    {
-      "id": "field_supplies",
-      "title": "Field Supplies",
-      "description": "Help the field warden restock the outpost.",
+      },
       "stages": [
         {
-          "id": "collect_supply_crate",
-          "title": "Collect the Supply Crate",
-          "text": "Agree to help FieldWarden, then pick up the crate beside the barn.",
-          "start_on_event": {
-            "type": "dialogue_choice",
-            "payload": {
-              "entity": "FieldWarden",
-              "choice_id": "warden_offer_accept"
+          "id": "kill_rats",
+          "requirements": {
+            "counters": {
+              "rats_killed": 5
             }
           },
-          "complete_on": {
-            "type": "collectible_picked",
-            "payload": {
-              "collectible_name": "SupplyCrate"
-            }
-          }
+          "text": "Kill 5 rats in the cellar.",
+          "title": "Exterminate Rats"
         },
         {
-          "id": "return_to_warden",
-          "title": "Return to FieldWarden",
-          "text": "Bring the crate back to FieldWarden to finish the errand.",
           "complete_on": {
-            "type": "dialogue_choice",
             "payload": {
-              "entity": "FieldWarden",
-              "choice_id": "warden_turnin"
-            }
-          }
+              "choice_id": "guard_exterminator_complete",
+              "entity": "Guard"
+            },
+            "type": "dialogue_choice"
+          },
+          "id": "report_success",
+          "text": "Tell the Guard the cellar is clear.",
+          "title": "Report Success"
         }
       ],
+      "title": "Cellar Exterminator"
+    },
+    {
+      "description": "Help the field warden restock the outpost.",
+      "id": "field_supplies",
       "reward": {
-        "set_flags": {
-          "field_supplies_complete": true
-        },
         "inc_counters": {
           "quests_completed": 1
+        },
+        "set_flags": {
+          "field_supplies_complete": true
         }
-      }
-    },
-    {
-      "id": "ridge2_variant_g_beacon",
-      "title": "Outskirts Beacon",
-      "description": "Reach the beacon beyond the Hollowmere boss.",
-      "start_toast": "Beacon: Reach the Outskirts Beacon",
-      "complete_toast": "Beacon: Complete",
+      },
       "stages": [
         {
-          "id": "reach_beacon",
-          "title": "Reach the Beacon",
-          "text": "Push past the boss and reach the beacon near the exit.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantGStartZone2"
-            }
-          },
           "complete_on": {
-            "type": "entered_zone",
             "payload": {
-              "zone": "VariantGGoalZone2"
-            }
-          }
+              "collectible_name": "SupplyCrate"
+            },
+            "type": "collectible_picked"
+          },
+          "id": "collect_supply_crate",
+          "start_on_event": {
+            "payload": {
+              "choice_id": "warden_offer_accept",
+              "entity": "FieldWarden"
+            },
+            "type": "dialogue_choice"
+          },
+          "text": "Agree to help FieldWarden, then pick up the crate beside the barn.",
+          "title": "Collect the Supply Crate"
+        },
+        {
+          "complete_on": {
+            "payload": {
+              "choice_id": "warden_turnin",
+              "entity": "FieldWarden"
+            },
+            "type": "dialogue_choice"
+          },
+          "id": "return_to_warden",
+          "text": "Bring the crate back to FieldWarden to finish the errand.",
+          "title": "Return to FieldWarden"
         }
       ],
-      "reward": {
-        "set_flags": {
-          "ridge2_variant_g_beacon_complete": true
-        },
-        "inc_counters": {
-          "gold": 25
-        }
-      }
+      "title": "Field Supplies"
     },
     {
-      "id": "ridge2_variant_j_choice_a",
-      "title": "Outskirts Path A",
-      "description": "Commit to Path A and secure the cache.",
-      "requires_flags": [
-        "ridge2_variant_j_intro_complete"
+      "complete_toast": "Beacon: Complete",
+      "description": "Reach the beacon beyond the Hollowmere boss.",
+      "id": "ridge2_variant_g_beacon",
+      "reward": {
+        "inc_counters": {
+          "gold": 25
+        },
+        "set_flags": {
+          "ridge2_variant_g_beacon_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "VariantGGoalZone2"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reach_beacon",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantGStartZone2"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Push past the boss and reach the beacon near the exit.",
+          "title": "Reach the Beacon"
+        }
       ],
+      "start_toast": "Beacon: Reach the Outskirts Beacon",
+      "title": "Outskirts Beacon"
+    },
+    {
       "blocks_flags": [
         "ridge2_variant_j_choice_b_complete"
       ],
-      "start_toast": "Choice: Path A - Secure the Cache",
       "complete_toast": "Choice: Path A - Complete",
-      "stages": [
-        {
-          "id": "secure_cache_a",
-          "title": "Secure the Cache",
-          "text": "Take Path A and secure the cache near the exit.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantJChoiceAZone2"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantJGoalAZone2"
-            }
-          }
-        }
-      ],
-      "reward": {
-        "set_flags": {
-          "ridge2_variant_j_choice_a_complete": true
-        },
-        "inc_counters": {
-          "gold": 35
-        }
-      }
-    },
-    {
-      "id": "ridge2_variant_j_choice_b",
-      "title": "Outskirts Path B",
-      "description": "Commit to Path B and secure the cache.",
+      "description": "Commit to Path A and secure the cache.",
+      "id": "ridge2_variant_j_choice_a",
       "requires_flags": [
         "ridge2_variant_j_intro_complete"
       ],
+      "reward": {
+        "inc_counters": {
+          "gold": 35
+        },
+        "set_flags": {
+          "ridge2_variant_j_choice_a_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "VariantJGoalAZone2"
+            },
+            "type": "entered_zone"
+          },
+          "id": "secure_cache_a",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantJChoiceAZone2"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Take Path A and secure the cache near the exit.",
+          "title": "Secure the Cache"
+        }
+      ],
+      "start_toast": "Choice: Path A - Secure the Cache",
+      "title": "Outskirts Path A"
+    },
+    {
       "blocks_flags": [
         "ridge2_variant_j_choice_a_complete"
       ],
-      "start_toast": "Choice: Path B - Secure the Cache",
       "complete_toast": "Choice: Path B - Complete",
-      "stages": [
-        {
-          "id": "secure_cache_b",
-          "title": "Secure the Cache",
-          "text": "Take Path B and secure the cache near the exit.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantJChoiceBZone2"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantJGoalBZone2"
-            }
-          }
-        }
+      "description": "Commit to Path B and secure the cache.",
+      "id": "ridge2_variant_j_choice_b",
+      "requires_flags": [
+        "ridge2_variant_j_intro_complete"
       ],
       "reward": {
-        "set_flags": {
-          "ridge2_variant_j_choice_b_complete": true
-        },
         "inc_counters": {
           "gold": 35
+        },
+        "set_flags": {
+          "ridge2_variant_j_choice_b_complete": true
         }
-      }
-    },
-    {
-      "id": "ridge2_variant_j_intro",
-      "title": "Outskirts Fork",
-      "description": "Reach the fork and choose a signal path.",
-      "start_toast": "Intro: Reach the Fork",
-      "complete_toast": "Intro: Complete",
+      },
       "stages": [
         {
-          "id": "reach_fork",
-          "title": "Reach the Fork",
-          "text": "Enter the fork zone to unlock Path A or Path B.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantJStartZone2"
-            }
-          },
           "complete_on": {
-            "type": "entered_zone",
             "payload": {
-              "zone": "VariantJStartZone2"
-            }
-          }
+              "zone": "VariantJGoalBZone2"
+            },
+            "type": "entered_zone"
+          },
+          "id": "secure_cache_b",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantJChoiceBZone2"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Take Path B and secure the cache near the exit.",
+          "title": "Secure the Cache"
         }
       ],
-      "reward": {
-        "set_flags": {
-          "ridge2_variant_j_intro_complete": true
-        },
-        "inc_counters": {}
-      }
+      "start_toast": "Choice: Path B - Secure the Cache",
+      "title": "Outskirts Path B"
     },
     {
-      "id": "ridge2_variant_k_route",
-      "title": "Outskirts Route",
+      "complete_toast": "Intro: Complete",
+      "description": "Reach the fork and choose a signal path.",
+      "id": "ridge2_variant_j_intro",
+      "reward": {
+        "inc_counters": {},
+        "set_flags": {
+          "ridge2_variant_j_intro_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "VariantJStartZone2"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reach_fork",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantJStartZone2"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the fork zone to unlock Path A or Path B.",
+          "title": "Reach the Fork"
+        }
+      ],
+      "start_toast": "Intro: Reach the Fork",
+      "title": "Outskirts Fork"
+    },
+    {
+      "complete_toast": "Switch: Complete",
       "description": "Reach the exit after unlocking the door.",
+      "id": "ridge2_variant_k_route",
       "requires_flags": [
         "ridge2_variant_k_unlocked"
       ],
-      "start_toast": "Switch: Reach the Exit",
-      "complete_toast": "Switch: Complete",
-      "stages": [
-        {
-          "id": "reach_exit",
-          "title": "Reach the Exit",
-          "text": "Push past the boss and reach the exit.",
-          "start_on_event": {
-            "type": "ridge2_variant_k_unlock"
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantKGoalZone2"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "ridge2_variant_k_route_complete": true
-        },
         "inc_counters": {
           "gold": 45
+        },
+        "set_flags": {
+          "ridge2_variant_k_route_complete": true
         }
-      }
-    },
-    {
-      "id": "ridge2_variant_k_switch",
-      "title": "Outskirts Gate",
-      "description": "Flip the switch to unlock the route.",
-      "start_toast": "Switch: Flip the Switch",
-      "complete_toast": "Switch: Gate Unlocked",
+      },
       "stages": [
         {
-          "id": "flip_switch",
-          "title": "Flip the Switch",
-          "text": "Find the switch and activate it to unlock the door.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantKStartZone2"
-            }
-          },
           "complete_on": {
+            "payload": {
+              "zone": "VariantKGoalZone2"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reach_exit",
+          "start_on_event": {
             "type": "ridge2_variant_k_unlock"
-          }
+          },
+          "text": "Push past the boss and reach the exit.",
+          "title": "Reach the Exit"
         }
       ],
-      "reward": {
-        "set_flags": {
-          "ridge2_variant_k_unlocked": true
-        },
-        "inc_counters": {}
-      }
+      "start_toast": "Switch: Reach the Exit",
+      "title": "Outskirts Route"
     },
     {
-      "id": "ridge2_variant_m_choice_a",
-      "title": "Hollowmere Outskirts Path A",
-      "description": "Commit to Path A and secure the cache.",
-      "requires_flags": [
-        "ridge2_variant_m_intro_complete"
+      "complete_toast": "Switch: Gate Unlocked",
+      "description": "Flip the switch to unlock the route.",
+      "id": "ridge2_variant_k_switch",
+      "reward": {
+        "inc_counters": {},
+        "set_flags": {
+          "ridge2_variant_k_unlocked": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "type": "ridge2_variant_k_unlock"
+          },
+          "id": "flip_switch",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantKStartZone2"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Find the switch and activate it to unlock the door.",
+          "title": "Flip the Switch"
+        }
       ],
+      "start_toast": "Switch: Flip the Switch",
+      "title": "Outskirts Gate"
+    },
+    {
       "blocks_flags": [
         "ridge2_variant_m_choice_b_complete"
       ],
-      "start_toast": "Choice: Path A - Secure the Cache",
       "complete_toast": "Choice: Path A - Complete",
-      "stages": [
-        {
-          "id": "secure_cache_a",
-          "title": "Secure the Cache",
-          "text": "Take Path A and secure the cache near the exit.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantMChoiceAZone2"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantMGoalAZone2"
-            }
-          }
-        }
-      ],
-      "reward": {
-        "set_flags": {
-          "ridge2_variant_m_choice_a_complete": true
-        },
-        "inc_counters": {
-          "gold": 50
-        }
-      }
-    },
-    {
-      "id": "ridge2_variant_m_choice_b",
-      "title": "Hollowmere Outskirts Path B",
-      "description": "Commit to Path B and secure the cache.",
+      "description": "Commit to Path A and secure the cache.",
+      "id": "ridge2_variant_m_choice_a",
       "requires_flags": [
         "ridge2_variant_m_intro_complete"
       ],
+      "reward": {
+        "inc_counters": {
+          "gold": 50
+        },
+        "set_flags": {
+          "ridge2_variant_m_choice_a_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "VariantMGoalAZone2"
+            },
+            "type": "entered_zone"
+          },
+          "id": "secure_cache_a",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantMChoiceAZone2"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Take Path A and secure the cache near the exit.",
+          "title": "Secure the Cache"
+        }
+      ],
+      "start_toast": "Choice: Path A - Secure the Cache",
+      "title": "Hollowmere Outskirts Path A"
+    },
+    {
       "blocks_flags": [
         "ridge2_variant_m_choice_a_complete"
       ],
-      "start_toast": "Choice: Path B - Secure the Cache",
       "complete_toast": "Choice: Path B - Complete",
-      "stages": [
-        {
-          "id": "secure_cache_b",
-          "title": "Secure the Cache",
-          "text": "Take Path B and secure the cache near the exit.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantMChoiceBZone2"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantMGoalBZone2"
-            }
-          }
-        }
+      "description": "Commit to Path B and secure the cache.",
+      "id": "ridge2_variant_m_choice_b",
+      "requires_flags": [
+        "ridge2_variant_m_intro_complete"
       ],
       "reward": {
-        "set_flags": {
-          "ridge2_variant_m_choice_b_complete": true
-        },
         "inc_counters": {
           "gold": 50
+        },
+        "set_flags": {
+          "ridge2_variant_m_choice_b_complete": true
         }
-      }
-    },
-    {
-      "id": "ridge2_variant_m_intro",
-      "title": "Hollowmere Outskirts Fork",
-      "description": "Reach the fork and choose a signal path.",
-      "start_toast": "Intro: Reach the Fork",
-      "complete_toast": "Intro: Complete",
+      },
       "stages": [
         {
-          "id": "reach_fork",
-          "title": "Reach the Fork",
-          "text": "Enter the fork zone to unlock Path A or Path B.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantMStartZone2"
-            }
-          },
           "complete_on": {
-            "type": "entered_zone",
             "payload": {
-              "zone": "VariantMStartZone2"
-            }
-          }
+              "zone": "VariantMGoalBZone2"
+            },
+            "type": "entered_zone"
+          },
+          "id": "secure_cache_b",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantMChoiceBZone2"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Take Path B and secure the cache near the exit.",
+          "title": "Secure the Cache"
         }
       ],
-      "reward": {
-        "set_flags": {
-          "ridge2_variant_m_intro_complete": true
-        },
-        "inc_counters": {}
-      }
+      "start_toast": "Choice: Path B - Secure the Cache",
+      "title": "Hollowmere Outskirts Path B"
     },
     {
-      "id": "ridge2_variant_n_route",
-      "title": "Hollowmere Outskirts Route",
+      "complete_toast": "Intro: Complete",
+      "description": "Reach the fork and choose a signal path.",
+      "id": "ridge2_variant_m_intro",
+      "reward": {
+        "inc_counters": {},
+        "set_flags": {
+          "ridge2_variant_m_intro_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "VariantMStartZone2"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reach_fork",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantMStartZone2"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the fork zone to unlock Path A or Path B.",
+          "title": "Reach the Fork"
+        }
+      ],
+      "start_toast": "Intro: Reach the Fork",
+      "title": "Hollowmere Outskirts Fork"
+    },
+    {
+      "complete_toast": "Switch: Complete",
       "description": "Reach the exit after unlocking the door.",
+      "id": "ridge2_variant_n_route",
       "requires_flags": [
         "ridge2_variant_n_unlocked"
       ],
-      "start_toast": "Switch: Reach the Exit",
-      "complete_toast": "Switch: Complete",
-      "stages": [
-        {
-          "id": "reach_exit",
-          "title": "Reach the Exit",
-          "text": "Push past the boss and reach the exit.",
-          "start_on_event": {
-            "type": "ridge2_variant_n_unlock"
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantNGoalZone2"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "ridge2_variant_n_route_complete": true
-        },
         "inc_counters": {
           "gold": 55
+        },
+        "set_flags": {
+          "ridge2_variant_n_route_complete": true
         }
-      }
-    },
-    {
-      "id": "ridge2_variant_n_switch",
-      "title": "Hollowmere Outskirts Gate",
-      "description": "Flip the switch to unlock the route.",
-      "start_toast": "Switch: Flip the Switch",
-      "complete_toast": "Switch: Gate Unlocked",
+      },
       "stages": [
         {
-          "id": "flip_switch",
-          "title": "Flip the Switch",
-          "text": "Find the switch and activate it to unlock the door.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantNStartZone2"
-            }
-          },
           "complete_on": {
+            "payload": {
+              "zone": "VariantNGoalZone2"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reach_exit",
+          "start_on_event": {
             "type": "ridge2_variant_n_unlock"
-          }
+          },
+          "text": "Push past the boss and reach the exit.",
+          "title": "Reach the Exit"
         }
       ],
+      "start_toast": "Switch: Reach the Exit",
+      "title": "Hollowmere Outskirts Route"
+    },
+    {
+      "complete_toast": "Switch: Gate Unlocked",
+      "description": "Flip the switch to unlock the route.",
+      "id": "ridge2_variant_n_switch",
       "reward": {
+        "inc_counters": {},
         "set_flags": {
           "ridge2_variant_n_unlocked": true
-        },
-        "inc_counters": {}
-      }
-    },
-    {
-      "id": "ridge_variant_g_beacon",
-      "title": "Signal Beacon",
-      "description": "Reach the beacon behind the Ridge boss.",
-      "start_toast": "Beacon: Reach the Beacon",
-      "complete_toast": "Beacon: Complete",
+        }
+      },
       "stages": [
         {
-          "id": "reach_beacon",
-          "title": "Reach the Beacon",
-          "text": "Push past the boss and reach the beacon near the exit.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantGStartZone"
-            }
-          },
           "complete_on": {
-            "type": "entered_zone",
+            "type": "ridge2_variant_n_unlock"
+          },
+          "id": "flip_switch",
+          "start_on_event": {
             "payload": {
-              "zone": "VariantGGoalZone"
-            }
-          }
+              "zone": "VariantNStartZone2"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Find the switch and activate it to unlock the door.",
+          "title": "Flip the Switch"
         }
       ],
+      "start_toast": "Switch: Flip the Switch",
+      "title": "Hollowmere Outskirts Gate"
+    },
+    {
+      "complete_toast": "Beacon: Complete",
+      "description": "Reach the beacon behind the Ridge boss.",
+      "id": "ridge_variant_g_beacon",
       "reward": {
-        "set_flags": {
-          "ridge_variant_g_beacon_complete": true
-        },
         "inc_counters": {
           "gold": 25
+        },
+        "set_flags": {
+          "ridge_variant_g_beacon_complete": true
         }
-      }
-    },
-    {
-      "id": "ridge_variant_h_relay",
-      "title": "Signal Relay",
-      "description": "Reactivate the relay beyond the Ridge boss.",
-      "start_toast": "Relay: Reactivate the Relay",
-      "complete_toast": "Relay: Complete",
+      },
       "stages": [
         {
-          "id": "reactivate_relay",
-          "title": "Reactivate the Relay",
-          "text": "Push past the boss and re-activate the relay near the exit.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantHStartZone"
-            }
-          },
           "complete_on": {
-            "type": "entered_zone",
             "payload": {
-              "zone": "VariantHGoalZone"
-            }
-          }
+              "zone": "VariantGGoalZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reach_beacon",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantGStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Push past the boss and reach the beacon near the exit.",
+          "title": "Reach the Beacon"
         }
       ],
+      "start_toast": "Beacon: Reach the Beacon",
+      "title": "Signal Beacon"
+    },
+    {
+      "complete_toast": "Relay: Complete",
+      "description": "Reactivate the relay beyond the Ridge boss.",
+      "id": "ridge_variant_h_relay",
       "reward": {
-        "set_flags": {
-          "ridge_variant_h_relay_complete": true
-        },
         "inc_counters": {
           "gold": 30
+        },
+        "set_flags": {
+          "ridge_variant_h_relay_complete": true
         }
-      }
-    },
-    {
-      "id": "ridge_variant_i_cache",
-      "title": "Signal Cache",
-      "description": "Reach the signal cache beyond the Ridge boss.",
-      "start_toast": "Cache: Secure the Cache",
-      "complete_toast": "Cache: Complete",
+      },
       "stages": [
         {
-          "id": "secure_cache",
-          "title": "Secure the Cache",
-          "text": "Push past the boss and secure the cache near the exit.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantIStartZone"
-            }
-          },
           "complete_on": {
-            "type": "entered_zone",
             "payload": {
-              "zone": "VariantIGoalZone"
-            }
-          }
+              "zone": "VariantHGoalZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reactivate_relay",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantHStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Push past the boss and re-activate the relay near the exit.",
+          "title": "Reactivate the Relay"
         }
       ],
-      "reward": {
-        "set_flags": {
-          "ridge_variant_i_cache_complete": true
-        },
-        "inc_counters": {
-          "gold": 35
-        }
-      }
+      "start_toast": "Relay: Reactivate the Relay",
+      "title": "Signal Relay"
     },
     {
-      "id": "ridge_variant_j_choice_a",
-      "title": "Signal Path A",
-      "description": "Commit to Path A and secure the cache.",
-      "requires_flags": [
-        "ridge_variant_j_intro_complete"
+      "complete_toast": "Cache: Complete",
+      "description": "Reach the signal cache beyond the Ridge boss.",
+      "id": "ridge_variant_i_cache",
+      "reward": {
+        "inc_counters": {
+          "gold": 35
+        },
+        "set_flags": {
+          "ridge_variant_i_cache_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "VariantIGoalZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "secure_cache",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantIStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Push past the boss and secure the cache near the exit.",
+          "title": "Secure the Cache"
+        }
       ],
+      "start_toast": "Cache: Secure the Cache",
+      "title": "Signal Cache"
+    },
+    {
       "blocks_flags": [
         "ridge_variant_j_choice_b_complete"
       ],
-      "start_toast": "Choice: Path A - Secure the Cache",
       "complete_toast": "Choice: Path A - Complete",
-      "stages": [
-        {
-          "id": "secure_cache_a",
-          "title": "Secure the Cache",
-          "text": "Take Path A and secure the cache near the exit.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantJChoiceAZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantJGoalAZone"
-            }
-          }
-        }
-      ],
-      "reward": {
-        "set_flags": {
-          "ridge_variant_j_choice_a_complete": true
-        },
-        "inc_counters": {
-          "gold": 35
-        }
-      }
-    },
-    {
-      "id": "ridge_variant_j_choice_b",
-      "title": "Signal Path B",
-      "description": "Commit to Path B and secure the cache.",
+      "description": "Commit to Path A and secure the cache.",
+      "id": "ridge_variant_j_choice_a",
       "requires_flags": [
         "ridge_variant_j_intro_complete"
       ],
+      "reward": {
+        "inc_counters": {
+          "gold": 35
+        },
+        "set_flags": {
+          "ridge_variant_j_choice_a_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "VariantJGoalAZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "secure_cache_a",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantJChoiceAZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Take Path A and secure the cache near the exit.",
+          "title": "Secure the Cache"
+        }
+      ],
+      "start_toast": "Choice: Path A - Secure the Cache",
+      "title": "Signal Path A"
+    },
+    {
       "blocks_flags": [
         "ridge_variant_j_choice_a_complete"
       ],
-      "start_toast": "Choice: Path B - Secure the Cache",
       "complete_toast": "Choice: Path B - Complete",
-      "stages": [
-        {
-          "id": "secure_cache_b",
-          "title": "Secure the Cache",
-          "text": "Take Path B and secure the cache near the exit.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantJChoiceBZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantJGoalBZone"
-            }
-          }
-        }
+      "description": "Commit to Path B and secure the cache.",
+      "id": "ridge_variant_j_choice_b",
+      "requires_flags": [
+        "ridge_variant_j_intro_complete"
       ],
       "reward": {
-        "set_flags": {
-          "ridge_variant_j_choice_b_complete": true
-        },
         "inc_counters": {
           "gold": 35
+        },
+        "set_flags": {
+          "ridge_variant_j_choice_b_complete": true
         }
-      }
-    },
-    {
-      "id": "ridge_variant_j_intro",
-      "title": "Signal Fork",
-      "description": "Reach the fork and choose a signal path.",
-      "start_toast": "Intro: Reach the Fork",
-      "complete_toast": "Intro: Complete",
+      },
       "stages": [
         {
-          "id": "reach_fork",
-          "title": "Reach the Fork",
-          "text": "Enter the fork zone to unlock Path A or Path B.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantJStartZone"
-            }
-          },
           "complete_on": {
-            "type": "entered_zone",
             "payload": {
-              "zone": "VariantJStartZone"
-            }
-          }
+              "zone": "VariantJGoalBZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "secure_cache_b",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantJChoiceBZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Take Path B and secure the cache near the exit.",
+          "title": "Secure the Cache"
         }
       ],
-      "reward": {
-        "set_flags": {
-          "ridge_variant_j_intro_complete": true
-        },
-        "inc_counters": {}
-      }
+      "start_toast": "Choice: Path B - Secure the Cache",
+      "title": "Signal Path B"
     },
     {
-      "id": "ridge_variant_k_route",
-      "title": "Signal Route",
+      "complete_toast": "Intro: Complete",
+      "description": "Reach the fork and choose a signal path.",
+      "id": "ridge_variant_j_intro",
+      "reward": {
+        "inc_counters": {},
+        "set_flags": {
+          "ridge_variant_j_intro_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "VariantJStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reach_fork",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantJStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the fork zone to unlock Path A or Path B.",
+          "title": "Reach the Fork"
+        }
+      ],
+      "start_toast": "Intro: Reach the Fork",
+      "title": "Signal Fork"
+    },
+    {
+      "complete_toast": "Switch: Complete",
       "description": "Reach the exit after unlocking the door.",
+      "id": "ridge_variant_k_route",
       "requires_flags": [
         "ridge_variant_k_unlocked"
       ],
-      "start_toast": "Switch: Reach the Exit",
-      "complete_toast": "Switch: Complete",
-      "stages": [
-        {
-          "id": "reach_exit",
-          "title": "Reach the Exit",
-          "text": "Push past the boss and reach the exit.",
-          "start_on_event": {
-            "type": "ridge_variant_k_unlock"
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantKGoalZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "ridge_variant_k_route_complete": true
-        },
         "inc_counters": {
           "gold": 40
+        },
+        "set_flags": {
+          "ridge_variant_k_route_complete": true
         }
-      }
-    },
-    {
-      "id": "ridge_variant_k_switch",
-      "title": "Signal Gate",
-      "description": "Flip the switch to unlock the route.",
-      "start_toast": "Switch: Flip the Switch",
-      "complete_toast": "Switch: Gate Unlocked",
+      },
       "stages": [
         {
-          "id": "flip_switch",
-          "title": "Flip the Switch",
-          "text": "Find the switch and activate it to unlock the door.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantKStartZone"
-            }
-          },
           "complete_on": {
+            "payload": {
+              "zone": "VariantKGoalZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reach_exit",
+          "start_on_event": {
             "type": "ridge_variant_k_unlock"
-          }
+          },
+          "text": "Push past the boss and reach the exit.",
+          "title": "Reach the Exit"
         }
       ],
+      "start_toast": "Switch: Reach the Exit",
+      "title": "Signal Route"
+    },
+    {
+      "complete_toast": "Switch: Gate Unlocked",
+      "description": "Flip the switch to unlock the route.",
+      "id": "ridge_variant_k_switch",
       "reward": {
+        "inc_counters": {},
         "set_flags": {
           "ridge_variant_k_unlocked": true
-        },
-        "inc_counters": {}
-      }
-    },
-    {
-      "id": "ridge_variant_l_beacon",
-      "title": "Ridge Outpost Beacon",
-      "description": "Reach the beacon beyond the boss.",
-      "start_toast": "Beacon: Reach the Beacon",
-      "complete_toast": "Beacon: Complete",
+        }
+      },
       "stages": [
         {
-          "id": "reach_beacon",
-          "title": "Reach the Beacon",
-          "text": "Push past the boss and reach the beacon near the exit.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "VariantLStartZone"
-            }
-          },
           "complete_on": {
-            "type": "entered_zone",
+            "type": "ridge_variant_k_unlock"
+          },
+          "id": "flip_switch",
+          "start_on_event": {
             "payload": {
-              "zone": "VariantLGoalZone"
-            }
-          }
+              "zone": "VariantKStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Find the switch and activate it to unlock the door.",
+          "title": "Flip the Switch"
         }
       ],
+      "start_toast": "Switch: Flip the Switch",
+      "title": "Signal Gate"
+    },
+    {
+      "complete_toast": "Beacon: Complete",
+      "description": "Reach the beacon beyond the boss.",
+      "id": "ridge_variant_l_beacon",
       "reward": {
-        "set_flags": {
-          "ridge_variant_l_beacon_complete": true
-        },
         "inc_counters": {
           "gold": 45
+        },
+        "set_flags": {
+          "ridge_variant_l_beacon_complete": true
         }
-      }
-    },
-    {
-      "id": "quest_prologue_step1",
-      "title": "Prologue: Find the Cabin",
-      "description": "Follow the trail to the cabin.",
-      "start_toast": "Prologue: Follow the path to the cabin.",
-      "complete_toast": "Prologue: Cabin reached - head inside.",
+      },
       "stages": [
         {
-          "id": "find_cabin",
-          "title": "Find the Cabin",
-          "text": "Follow the trail and reach the cabin door.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "PrologueStep1StartZone"
-            }
-          },
           "complete_on": {
-            "type": "entered_zone",
             "payload": {
-              "zone": "PrologueStep1CompleteZone"
-            }
-          }
+              "zone": "VariantLGoalZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reach_beacon",
+          "start_on_event": {
+            "payload": {
+              "zone": "VariantLStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Push past the boss and reach the beacon near the exit.",
+          "title": "Reach the Beacon"
         }
       ],
-      "reward": {
-        "set_flags": {
-          "prologue_step1_complete": true
-        },
-        "inc_counters": {}
-      }
+      "start_toast": "Beacon: Reach the Beacon",
+      "title": "Ridge Outpost Beacon"
     },
     {
-      "id": "quest_prologue_step2",
-      "title": "Prologue: Light the Hearth",
+      "complete_toast": "Prologue: Cabin reached - head inside.",
+      "description": "Follow the trail to the cabin.",
+      "id": "quest_prologue_step1",
+      "reward": {
+        "inc_counters": {},
+        "set_flags": {
+          "prologue_step1_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "PrologueStep1CompleteZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "find_cabin",
+          "start_on_event": {
+            "payload": {
+              "zone": "PrologueStep1StartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Follow the trail and reach the cabin door.",
+          "title": "Find the Cabin"
+        }
+      ],
+      "start_toast": "Prologue: Follow the path to the cabin.",
+      "title": "Prologue: Find the Cabin"
+    },
+    {
+      "complete_toast": "Prologue: Hearth lit - warmth returns.",
       "description": "Search the cabin and light the hearth.",
+      "id": "quest_prologue_step2",
       "requires_flags": [
         "prologue_step1_complete"
       ],
-      "start_toast": "Prologue: Inside the cabin, light the hearth.",
-      "complete_toast": "Prologue: Hearth lit - warmth returns.",
-      "stages": [
-        {
-          "id": "light_hearth",
-          "title": "Light the Hearth",
-          "text": "Inside the cabin, reach the hearth to finish the prologue.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "PrologueStep2StartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "PrologueStep2CompleteZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "prologue_step2_complete": true
-        },
         "inc_counters": {
           "gold": 15
+        },
+        "set_flags": {
+          "prologue_step2_complete": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "PrologueStep2CompleteZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "light_hearth",
+          "start_on_event": {
+            "payload": {
+              "zone": "PrologueStep2StartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Inside the cabin, reach the hearth to finish the prologue.",
+          "title": "Light the Hearth"
+        }
+      ],
+      "start_toast": "Prologue: Inside the cabin, light the hearth.",
+      "title": "Prologue: Light the Hearth"
     },
     {
-      "id": "quest_prologue_step3",
-      "title": "Prologue: Return to Trailhead",
+      "complete_toast": "Prologue: Trailhead reached - prologue complete.",
       "description": "Head back outside and return to the trailhead.",
+      "id": "quest_prologue_step3",
       "requires_flags": [
         "prologue_step2_complete"
       ],
-      "start_toast": "Prologue: Return to the trailhead.",
-      "complete_toast": "Prologue: Trailhead reached - prologue complete.",
-      "stages": [
-        {
-          "id": "return_trailhead",
-          "title": "Return to Trailhead",
-          "text": "Leave the cabin and return to the trailhead to finish the prologue.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "PrologueStep2CompleteZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "PrologueStep3CompleteZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "prologue_step3_complete": true
-        },
         "inc_counters": {
           "gold": 10
+        },
+        "set_flags": {
+          "prologue_step3_complete": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "PrologueStep3CompleteZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "return_trailhead",
+          "start_on_event": {
+            "payload": {
+              "zone": "PrologueStep2CompleteZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Leave the cabin and return to the trailhead to finish the prologue.",
+          "title": "Return to Trailhead"
+        }
+      ],
+      "start_toast": "Prologue: Return to the trailhead.",
+      "title": "Prologue: Return to Trailhead"
     },
     {
-      "id": "quest_prologue_optional_note",
-      "title": "Prologue: Optional Note",
+      "blocks_flags": [
+        "prologue_step3_complete"
+      ],
+      "complete_toast": "Prologue: Note found in the cabin.",
       "description": "Find a small note tucked away inside the cabin.",
+      "id": "quest_prologue_optional_note",
       "requires_flags": [
         "prologue_step1_complete"
       ],
-      "blocks_flags": [
-        "prologue_step3_complete"
-      ],
-      "start_toast": "Prologue: Search the cabin for a note.",
-      "complete_toast": "Prologue: Note found in the cabin.",
-      "stages": [
-        {
-          "id": "find_note",
-          "title": "Find the Note",
-          "text": "Explore the cabin and look for a tucked-away note.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "OptionalNoteZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "OptionalNoteZone"
-            }
-          }
-        }
-      ],
       "reward": {
+        "inc_counters": {
+          "gold": 5
+        },
         "set_flags": {
           "prologue_note_found": true
-        },
-        "inc_counters": {
-          "gold": 5
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "OptionalNoteZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "find_note",
+          "start_on_event": {
+            "payload": {
+              "zone": "OptionalNoteZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Explore the cabin and look for a tucked-away note.",
+          "title": "Find the Note"
+        }
+      ],
+      "start_toast": "Prologue: Search the cabin for a note.",
+      "title": "Prologue: Optional Note"
     },
     {
-      "id": "quest_act1_route_a",
-      "title": "Act 1: Upper Path",
-      "description": "Choose and clear the upper route beyond the trailhead.",
-      "requires_flags": [
-        "prologue_step3_complete"
-      ],
       "blocks_flags": [
         "act1_route_b_done"
       ],
-      "start_toast": "Act 1: Take the upper path.",
       "complete_toast": "Act 1: Upper route cleared.",
-      "stages": [
-        {
-          "id": "route_a",
-          "title": "Upper Path",
-          "text": "Step onto the upper path and push through to the end.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Act1ForkChoiceAZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Act1ForkGoalAZone"
-            }
-          }
-        }
+      "description": "Choose and clear the upper route beyond the trailhead.",
+      "id": "quest_act1_route_a",
+      "requires_flags": [
+        "prologue_step3_complete"
       ],
       "reward": {
+        "inc_counters": {
+          "gold": 10
+        },
         "set_flags": {
           "act1_route_a_done": true
-        },
-        "inc_counters": {
-          "gold": 10
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Act1ForkGoalAZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "route_a",
+          "start_on_event": {
+            "payload": {
+              "zone": "Act1ForkChoiceAZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Step onto the upper path and push through to the end.",
+          "title": "Upper Path"
+        }
+      ],
+      "start_toast": "Act 1: Take the upper path.",
+      "title": "Act 1: Upper Path"
     },
     {
-      "id": "quest_act1_route_b",
-      "title": "Act 1: Lower Path",
+      "blocks_flags": [
+        "act1_route_a_done"
+      ],
+      "complete_toast": "Act 1: Lower route cleared.",
       "description": "Choose and clear the lower route beyond the trailhead.",
+      "id": "quest_act1_route_b",
       "requires_flags": [
         "prologue_step3_complete"
       ],
-      "blocks_flags": [
-        "act1_route_a_done"
-      ],
-      "start_toast": "Act 1: Take the lower path.",
-      "complete_toast": "Act 1: Lower route cleared.",
-      "stages": [
-        {
-          "id": "route_b",
-          "title": "Lower Path",
-          "text": "Step onto the lower path and push through to the end.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Act1ForkChoiceBZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Act1ForkGoalBZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "act1_route_b_done": true
-        },
         "inc_counters": {
           "gold": 10
+        },
+        "set_flags": {
+          "act1_route_b_done": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Act1ForkGoalBZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "route_b",
+          "start_on_event": {
+            "payload": {
+              "zone": "Act1ForkChoiceBZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Step onto the lower path and push through to the end.",
+          "title": "Lower Path"
+        }
+      ],
+      "start_toast": "Act 1: Take the lower path.",
+      "title": "Act 1: Lower Path"
     },
     {
-      "id": "quest_act1_convergence_a",
-      "title": "Act 1: Convergence",
-      "description": "Both routes converge ahead. Press on to the crossroads.",
-      "requires_flags": [
-        "act1_route_a_done"
-      ],
       "blocks_flags": [
         "act1_convergence_complete"
       ],
-      "start_toast": "Act 1: Routes converge - reach the crossroads.",
       "complete_toast": "Act 1: Crossroads reached.",
-      "stages": [
-        {
-          "id": "reach_crossroads",
-          "title": "Reach the Crossroads",
-          "text": "Head deeper along the converging trail to the crossroads.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ConvergenceStartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ConvergenceGoalZone"
-            }
-          }
-        }
+      "description": "Both routes converge ahead. Press on to the crossroads.",
+      "id": "quest_act1_convergence_a",
+      "requires_flags": [
+        "act1_route_a_done"
       ],
       "reward": {
-        "set_flags": {
-          "act1_convergence_complete": true
-        },
         "inc_counters": {
           "gold": 20
+        },
+        "set_flags": {
+          "act1_convergence_complete": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "ConvergenceGoalZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reach_crossroads",
+          "start_on_event": {
+            "payload": {
+              "zone": "ConvergenceStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Head deeper along the converging trail to the crossroads.",
+          "title": "Reach the Crossroads"
+        }
+      ],
+      "start_toast": "Act 1: Routes converge - reach the crossroads.",
+      "title": "Act 1: Convergence"
     },
     {
-      "id": "quest_act1_convergence_b",
-      "title": "Act 1: Convergence",
+      "blocks_flags": [
+        "act1_convergence_complete"
+      ],
+      "complete_toast": "Act 1: Crossroads reached.",
       "description": "Both routes converge ahead. Press on to the crossroads.",
+      "id": "quest_act1_convergence_b",
       "requires_flags": [
         "act1_route_b_done"
       ],
+      "reward": {
+        "inc_counters": {
+          "gold": 20
+        },
+        "set_flags": {
+          "act1_convergence_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "ConvergenceGoalZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "reach_crossroads",
+          "start_on_event": {
+            "payload": {
+              "zone": "ConvergenceStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Head deeper along the converging trail to the crossroads.",
+          "title": "Reach the Crossroads"
+        }
+      ],
+      "start_toast": "Act 1: Routes converge - reach the crossroads.",
+      "title": "Act 1: Convergence"
+    },
+    {
       "blocks_flags": [
         "act1_convergence_complete"
       ],
-      "start_toast": "Act 1: Routes converge - reach the crossroads.",
-      "complete_toast": "Act 1: Crossroads reached.",
-      "stages": [
-        {
-          "id": "reach_crossroads",
-          "title": "Reach the Crossroads",
-          "text": "Head deeper along the converging trail to the crossroads.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ConvergenceStartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ConvergenceGoalZone"
-            }
-          }
-        }
-      ],
-      "reward": {
-        "set_flags": {
-          "act1_convergence_complete": true
-        },
-        "inc_counters": {
-          "gold": 20
-        }
-      }
-    },
-    {
-      "id": "quest_act1_ack_route_a",
-      "title": "Act 1: Upper Route Acknowledged",
+      "complete_toast": "Act 1: Upper route chosen.",
       "description": "Acknowledge the chosen route at the convergence point.",
+      "id": "quest_act1_ack_route_a",
       "requires_flags": [
         "act1_route_a_done"
       ],
-      "blocks_flags": [
-        "act1_convergence_complete"
-      ],
-      "start_toast": "Act 1: Upper route chosen.",
-      "complete_toast": "Act 1: Upper route chosen.",
-      "stages": [
-        {
-          "id": "ack_upper",
-          "title": "Upper Route",
-          "text": "Upper route confirmed.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ConvergenceStartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ConvergenceStartZone"
-            }
-          }
-        }
-      ],
       "reward": {
+        "inc_counters": {},
         "set_flags": {
           "act1_ack_route_a": true
-        },
-        "inc_counters": {}
-      }
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "ConvergenceStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "ack_upper",
+          "start_on_event": {
+            "payload": {
+              "zone": "ConvergenceStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Upper route confirmed.",
+          "title": "Upper Route"
+        }
+      ],
+      "start_toast": "Act 1: Upper route chosen.",
+      "title": "Act 1: Upper Route Acknowledged"
     },
     {
-      "id": "quest_act1_ack_route_b",
-      "title": "Act 1: Lower Route Acknowledged",
-      "description": "Acknowledge the chosen route at the convergence point.",
-      "requires_flags": [
-        "act1_route_b_done"
-      ],
       "blocks_flags": [
         "act1_convergence_complete"
       ],
-      "start_toast": "Act 1: Lower route chosen.",
       "complete_toast": "Act 1: Lower route chosen.",
-      "stages": [
-        {
-          "id": "ack_lower",
-          "title": "Lower Route",
-          "text": "Lower route confirmed.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ConvergenceStartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ConvergenceStartZone"
-            }
-          }
-        }
+      "description": "Acknowledge the chosen route at the convergence point.",
+      "id": "quest_act1_ack_route_b",
+      "requires_flags": [
+        "act1_route_b_done"
       ],
       "reward": {
+        "inc_counters": {},
         "set_flags": {
           "act1_ack_route_b": true
-        },
-        "inc_counters": {}
-      }
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "ConvergenceStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "ack_lower",
+          "start_on_event": {
+            "payload": {
+              "zone": "ConvergenceStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Lower route confirmed.",
+          "title": "Lower Route"
+        }
+      ],
+      "start_toast": "Act 1: Lower route chosen.",
+      "title": "Act 1: Lower Route Acknowledged"
     },
     {
-      "id": "quest_act1_prologue_complete",
-      "title": "Act 1: Continue",
+      "complete_toast": "Act 1: Prologue complete.",
       "description": "Continue onward beyond the convergence point.",
+      "id": "quest_act1_prologue_complete",
       "requires_flags": [
         "act1_convergence_complete"
       ],
-      "start_toast": "Act 1: Continue onward.",
-      "complete_toast": "Act 1: Prologue complete.",
-      "stages": [
-        {
-          "id": "handoff",
-          "title": "Continue Onward",
-          "text": "Reach the handoff point to continue into Act 1.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ConvergenceGoalZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Act1HandoffZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "act1_prologue_complete": true
-        },
         "inc_counters": {
           "gold": 5
+        },
+        "set_flags": {
+          "act1_prologue_complete": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Act1HandoffZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "handoff",
+          "start_on_event": {
+            "payload": {
+              "zone": "ConvergenceGoalZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Reach the handoff point to continue into Act 1.",
+          "title": "Continue Onward"
+        }
+      ],
+      "start_toast": "Act 1: Continue onward.",
+      "title": "Act 1: Continue"
     },
     {
-      "id": "quest_act1_chapter1_start",
-      "title": "Act 1: Chapter 1",
+      "complete_toast": "Act 1: First steps taken.",
       "description": "Begin Chapter 1.",
+      "id": "quest_act1_chapter1_start",
       "requires_flags": [
         "act1_prologue_complete"
       ],
-      "start_toast": "Act 1: Chapter 1 begins.",
-      "complete_toast": "Act 1: First steps taken.",
-      "stages": [
-        {
-          "id": "first_steps",
-          "title": "First Steps",
-          "text": "Step into Chapter 1 and reach the checkpoint.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter1StartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter1CheckpointZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "act1_chapter1_started": true
-        },
         "inc_counters": {
           "gold": 5
+        },
+        "set_flags": {
+          "act1_chapter1_started": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Chapter1CheckpointZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "first_steps",
+          "start_on_event": {
+            "payload": {
+              "zone": "Chapter1StartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Step into Chapter 1 and reach the checkpoint.",
+          "title": "First Steps"
+        }
+      ],
+      "start_toast": "Act 1: Chapter 1 begins.",
+      "title": "Act 1: Chapter 1"
     },
     {
-      "id": "quest_act1_ch1_gate_switch",
-      "title": "Act 1: Unlock the Gate",
+      "complete_toast": "Act 1: Gate unlocked.",
       "description": "Find and activate the switch to unlock the gate.",
+      "id": "quest_act1_ch1_gate_switch",
       "requires_flags": [
         "act1_chapter1_started"
       ],
-      "start_toast": "Act 1: Activate the gate switch.",
-      "complete_toast": "Act 1: Gate unlocked.",
-      "stages": [
-        {
-          "id": "gate_switch",
-          "title": "Activate the Switch",
-          "text": "Enter the gate path and activate the switch.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "GatePathStartZone"
-            }
-          },
-          "complete_on": {
-            "type": "act1_ch1_gate_unlock",
-            "payload": {}
-          }
-        }
-      ],
       "reward": {
+        "inc_counters": {},
         "set_flags": {
           "act1_ch1_gate_unlocked": true
-        },
-        "inc_counters": {}
-      }
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {},
+            "type": "act1_ch1_gate_unlock"
+          },
+          "id": "gate_switch",
+          "start_on_event": {
+            "payload": {
+              "zone": "GatePathStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the gate path and activate the switch.",
+          "title": "Activate the Switch"
+        }
+      ],
+      "start_toast": "Act 1: Activate the gate switch.",
+      "title": "Act 1: Unlock the Gate"
     },
     {
-      "id": "quest_act1_ch1_gate_route",
-      "title": "Act 1: Pass Through the Gate",
+      "complete_toast": "Act 1: Gate path cleared.",
       "description": "Proceed beyond the gate once it is unlocked.",
+      "id": "quest_act1_ch1_gate_route",
       "requires_flags": [
         "act1_ch1_gate_unlocked"
       ],
-      "start_toast": "Act 1: Proceed beyond the gate.",
-      "complete_toast": "Act 1: Gate path cleared.",
-      "stages": [
-        {
-          "id": "gate_route",
-          "title": "Reach the Far Side",
-          "text": "With the gate unlocked, reach the far side of the path.",
-          "start_on_event": {
-            "type": "act1_ch1_gate_unlock",
-            "payload": {}
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "GatePathGoalZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "act1_ch1_gate_complete": true
-        },
         "inc_counters": {
           "gold": 15
+        },
+        "set_flags": {
+          "act1_ch1_gate_complete": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "GatePathGoalZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "gate_route",
+          "start_on_event": {
+            "payload": {},
+            "type": "act1_ch1_gate_unlock"
+          },
+          "text": "With the gate unlocked, reach the far side of the path.",
+          "title": "Reach the Far Side"
+        }
+      ],
+      "start_toast": "Act 1: Proceed beyond the gate.",
+      "title": "Act 1: Pass Through the Gate"
     },
     {
-      "id": "quest_act1_ch1_arrival",
-      "title": "Act 1: Arrival",
+      "complete_toast": "Act 1: The clearing opens ahead.",
       "description": "Step into the clearing beyond the gate and take in the landmark.",
+      "id": "quest_act1_ch1_arrival",
       "requires_flags": [
         "act1_ch1_gate_complete"
       ],
-      "start_toast": "Act 1: Follow the path into the clearing.",
-      "complete_toast": "Act 1: The clearing opens ahead.",
-      "stages": [
-        {
-          "id": "arrival",
-          "title": "Reach the Landmark",
-          "text": "Enter the clearing and reach the landmark.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ClearingStartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ClearingGoalZone"
-            }
-          }
-        }
-      ],
       "reward": {
+        "inc_counters": {
+          "gold": 20
+        },
         "set_flags": {
           "act1_ch1_arrival_complete": true
-        },
-        "inc_counters": {
-          "gold": 20
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "ClearingGoalZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "arrival",
+          "start_on_event": {
+            "payload": {
+              "zone": "ClearingStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the clearing and reach the landmark.",
+          "title": "Reach the Landmark"
+        }
+      ],
+      "start_toast": "Act 1: Follow the path into the clearing.",
+      "title": "Act 1: Arrival"
     },
     {
-      "id": "quest_act1_ch1_choice_a",
-      "title": "Act 1: Upper Trail",
-      "description": "Take the upper trail and secure the route.",
-      "requires_flags": [
-        "act1_ch1_arrival_complete"
-      ],
       "blocks_flags": [
         "act1_ch1_choice_b_done"
       ],
-      "start_toast": "Act 1: Take the upper trail.",
       "complete_toast": "Act 1: Upper trail secured.",
-      "stages": [
-        {
-          "id": "choice_a",
-          "title": "Upper Trail",
-          "text": "Follow the upper trail through the clearing.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ClearingChoiceAZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ClearingGoalAZone"
-            }
-          }
-        }
+      "description": "Take the upper trail and secure the route.",
+      "id": "quest_act1_ch1_choice_a",
+      "requires_flags": [
+        "act1_ch1_arrival_complete"
       ],
       "reward": {
+        "inc_counters": {
+          "gold": 10
+        },
         "set_flags": {
           "act1_ch1_choice_a_done": true
-        },
-        "inc_counters": {
-          "gold": 10
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "ClearingGoalAZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "choice_a",
+          "start_on_event": {
+            "payload": {
+              "zone": "ClearingChoiceAZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Follow the upper trail through the clearing.",
+          "title": "Upper Trail"
+        }
+      ],
+      "start_toast": "Act 1: Take the upper trail.",
+      "title": "Act 1: Upper Trail"
     },
     {
-      "id": "quest_act1_ch1_choice_b",
-      "title": "Act 1: Lower Trail",
+      "blocks_flags": [
+        "act1_ch1_choice_a_done"
+      ],
+      "complete_toast": "Act 1: Lower trail secured.",
       "description": "Take the lower trail and secure the route.",
+      "id": "quest_act1_ch1_choice_b",
       "requires_flags": [
         "act1_ch1_arrival_complete"
       ],
-      "blocks_flags": [
-        "act1_ch1_choice_a_done"
-      ],
-      "start_toast": "Act 1: Take the lower trail.",
-      "complete_toast": "Act 1: Lower trail secured.",
-      "stages": [
-        {
-          "id": "choice_b",
-          "title": "Lower Trail",
-          "text": "Follow the lower trail through the clearing.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ClearingChoiceBZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ClearingGoalBZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "act1_ch1_choice_b_done": true
-        },
         "inc_counters": {
           "gold": 10
+        },
+        "set_flags": {
+          "act1_ch1_choice_b_done": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "ClearingGoalBZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "choice_b",
+          "start_on_event": {
+            "payload": {
+              "zone": "ClearingChoiceBZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Follow the lower trail through the clearing.",
+          "title": "Lower Trail"
+        }
+      ],
+      "start_toast": "Act 1: Take the lower trail.",
+      "title": "Act 1: Lower Trail"
     },
     {
-      "id": "quest_act1_ch1_depart_a",
-      "title": "Act 1: Depart",
-      "description": "Leave the clearing after securing your chosen trail.",
-      "requires_flags": [
-        "act1_ch1_choice_a_done"
-      ],
       "blocks_flags": [
         "act1_ch1_depart_complete"
       ],
-      "start_toast": "Act 1: Head for the exit.",
       "complete_toast": "Act 1: Ready to move on.",
-      "stages": [
-        {
-          "id": "depart_a",
-          "title": "Exit the Clearing",
-          "text": "Reach the exit point beyond the clearing.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ClearingGoalAZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ClearingDepartZone"
-            }
-          }
-        }
+      "description": "Leave the clearing after securing your chosen trail.",
+      "id": "quest_act1_ch1_depart_a",
+      "requires_flags": [
+        "act1_ch1_choice_a_done"
       ],
       "reward": {
-        "set_flags": {
-          "act1_ch1_depart_complete": true
-        },
         "inc_counters": {
           "gold": 15
+        },
+        "set_flags": {
+          "act1_ch1_depart_complete": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "ClearingDepartZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "depart_a",
+          "start_on_event": {
+            "payload": {
+              "zone": "ClearingGoalAZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Reach the exit point beyond the clearing.",
+          "title": "Exit the Clearing"
+        }
+      ],
+      "start_toast": "Act 1: Head for the exit.",
+      "title": "Act 1: Depart"
     },
     {
-      "id": "quest_act1_ch1_depart_b",
-      "title": "Act 1: Depart",
+      "blocks_flags": [
+        "act1_ch1_depart_complete"
+      ],
+      "complete_toast": "Act 1: Ready to move on.",
       "description": "Leave the clearing after securing your chosen trail.",
+      "id": "quest_act1_ch1_depart_b",
       "requires_flags": [
         "act1_ch1_choice_b_done"
       ],
-      "blocks_flags": [
-        "act1_ch1_depart_complete"
-      ],
-      "start_toast": "Act 1: Head for the exit.",
-      "complete_toast": "Act 1: Ready to move on.",
-      "stages": [
-        {
-          "id": "depart_b",
-          "title": "Exit the Clearing",
-          "text": "Reach the exit point beyond the clearing.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ClearingGoalBZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "ClearingDepartZone"
-            }
-          }
-        }
-      ],
       "reward": {
+        "inc_counters": {
+          "gold": 15
+        },
         "set_flags": {
           "act1_ch1_depart_complete": true
-        },
-        "inc_counters": {
-          "gold": 15
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "ClearingDepartZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "depart_b",
+          "start_on_event": {
+            "payload": {
+              "zone": "ClearingGoalBZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Reach the exit point beyond the clearing.",
+          "title": "Exit the Clearing"
+        }
+      ],
+      "start_toast": "Act 1: Head for the exit.",
+      "title": "Act 1: Depart"
     },
     {
-      "id": "quest_act1_ch1_complete",
-      "title": "Act 1: Chapter 1 Complete",
+      "blocks_flags": [
+        "act1_chapter1_complete"
+      ],
+      "complete_toast": "Act 1: Chapter 1 complete.",
       "description": "Press onward to the overlook and mark the journey's first steps.",
+      "id": "quest_act1_ch1_complete",
       "requires_flags": [
         "act1_ch1_depart_complete"
       ],
-      "blocks_flags": [
-        "act1_chapter1_complete"
-      ],
-      "start_toast": "Act 1: Press onward to the overlook.",
-      "complete_toast": "Act 1: Chapter 1 complete.",
-      "stages": [
-        {
-          "id": "complete_ch1",
-          "title": "Reach the Overlook",
-          "text": "Enter the overlook and reach the marker.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "OverlookStartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "OverlookGoalZone"
-            }
-          }
-        }
-      ],
       "reward": {
+        "inc_counters": {
+          "gold": 20
+        },
         "set_flags": {
           "act1_chapter1_complete": true
-        },
-        "inc_counters": {
-          "gold": 20
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "OverlookGoalZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "complete_ch1",
+          "start_on_event": {
+            "payload": {
+              "zone": "OverlookStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the overlook and reach the marker.",
+          "title": "Reach the Overlook"
+        }
+      ],
+      "start_toast": "Act 1: Press onward to the overlook.",
+      "title": "Act 1: Chapter 1 Complete"
     },
     {
-      "id": "quest_act1_chapter2_start",
-      "title": "Act 1: Chapter 2",
+      "blocks_flags": [
+        "act1_chapter2_started"
+      ],
+      "complete_toast": "Act 1: Chapter 2 underway.",
       "description": "Begin Chapter 2 beyond the overlook.",
+      "id": "quest_act1_chapter2_start",
       "requires_flags": [
         "act1_chapter1_complete"
       ],
-      "blocks_flags": [
-        "act1_chapter2_started"
-      ],
-      "start_toast": "Act 1: Chapter 2 begins.",
-      "complete_toast": "Act 1: Chapter 2 underway.",
-      "stages": [
-        {
-          "id": "chapter2_start",
-          "title": "Step Forward",
-          "text": "Enter the Chapter 2 threshold and reach the checkpoint.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter2StartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter2CheckpointZone"
-            }
-          }
-        }
-      ],
       "reward": {
+        "inc_counters": {
+          "gold": 10
+        },
         "set_flags": {
           "act1_chapter2_started": true
-        },
-        "inc_counters": {
-          "gold": 10
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Chapter2CheckpointZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "chapter2_start",
+          "start_on_event": {
+            "payload": {
+              "zone": "Chapter2StartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the Chapter 2 threshold and reach the checkpoint.",
+          "title": "Step Forward"
+        }
+      ],
+      "start_toast": "Act 1: Chapter 2 begins.",
+      "title": "Act 1: Chapter 2"
     },
     {
-      "id": "quest_act1_ch2_ruin_switch",
-      "title": "Act 1: Ruined Gate",
+      "blocks_flags": [
+        "act1_ch2_ruin_unlocked"
+      ],
+      "complete_toast": "Act 1: The ruined gate unlocks.",
       "description": "Find the switch that unlocks the ruined gate.",
+      "id": "quest_act1_ch2_ruin_switch",
       "requires_flags": [
         "act1_chapter2_started"
       ],
-      "blocks_flags": [
-        "act1_ch2_ruin_unlocked"
-      ],
-      "start_toast": "Act 1: Find the switch at the ruined gate.",
-      "complete_toast": "Act 1: The ruined gate unlocks.",
-      "stages": [
-        {
-          "id": "flip_ruin_switch",
-          "title": "Flip the Switch",
-          "text": "Enter the ruined gate area and activate the switch.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "RuinedGateStartZone"
-            }
-          },
-          "complete_on": {
-            "type": "act1_ch2_ruin_unlock"
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "act1_ch2_ruin_unlocked": true
-        },
         "inc_counters": {
           "gold": 5
+        },
+        "set_flags": {
+          "act1_ch2_ruin_unlocked": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "type": "act1_ch2_ruin_unlock"
+          },
+          "id": "flip_ruin_switch",
+          "start_on_event": {
+            "payload": {
+              "zone": "RuinedGateStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the ruined gate area and activate the switch.",
+          "title": "Flip the Switch"
+        }
+      ],
+      "start_toast": "Act 1: Find the switch at the ruined gate.",
+      "title": "Act 1: Ruined Gate"
     },
     {
-      "id": "quest_act1_ch2_ruin_route",
-      "title": "Act 1: Ruined Route",
+      "blocks_flags": [
+        "act1_ch2_ruin_complete"
+      ],
+      "complete_toast": "Act 1: Ruined gate secured.",
       "description": "Push through and reach the marker beyond the ruined gate.",
+      "id": "quest_act1_ch2_ruin_route",
       "requires_flags": [
         "act1_ch2_ruin_unlocked"
       ],
-      "blocks_flags": [
-        "act1_ch2_ruin_complete"
-      ],
-      "start_toast": "Act 1: Pass through to the marker.",
-      "complete_toast": "Act 1: Ruined gate secured.",
+      "reward": {
+        "inc_counters": {
+          "gold": 15
+        },
+        "set_flags": {
+          "act1_ch2_ruin_complete": true
+        }
+      },
       "stages": [
         {
+          "complete_on": {
+            "payload": {
+              "zone": "RuinedGateGoalZone"
+            },
+            "type": "entered_zone"
+          },
           "id": "reach_ruin_marker",
-          "title": "Reach the Marker",
-          "text": "After unlocking the gate, reach the marker zone.",
           "start_on_event": {
             "type": "act1_ch2_ruin_unlock"
           },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "RuinedGateGoalZone"
-            }
-          }
+          "text": "After unlocking the gate, reach the marker zone.",
+          "title": "Reach the Marker"
         }
       ],
-      "reward": {
-        "set_flags": {
-          "act1_ch2_ruin_complete": true
-        },
-        "inc_counters": {
-          "gold": 15
-        }
-      }
+      "start_toast": "Act 1: Pass through to the marker.",
+      "title": "Act 1: Ruined Route"
     },
     {
-      "id": "quest_act1_ch2_choice_a",
-      "title": "Act 1: Chapter 2 Choice A",
-      "description": "Commit to Path A beyond the ruined gate.",
-      "requires_flags": [
-        "act1_ch2_ruin_complete"
-      ],
       "blocks_flags": [
         "act1_ch2_choice_b_done"
       ],
-      "start_toast": "Act 1: Choose Path A.",
       "complete_toast": "Act 1: Path A secured.",
-      "stages": [
-        {
-          "id": "choice_a",
-          "title": "Secure Path A",
-          "text": "Enter the Path A zone and reach the marker.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch2ChoiceAZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch2GoalAZone"
-            }
-          }
-        }
+      "description": "Commit to Path A beyond the ruined gate.",
+      "id": "quest_act1_ch2_choice_a",
+      "requires_flags": [
+        "act1_ch2_ruin_complete"
       ],
       "reward": {
+        "inc_counters": {
+          "gold": 10
+        },
         "set_flags": {
           "act1_ch2_choice_a_done": true
-        },
-        "inc_counters": {
-          "gold": 10
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch2GoalAZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "choice_a",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch2ChoiceAZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the Path A zone and reach the marker.",
+          "title": "Secure Path A"
+        }
+      ],
+      "start_toast": "Act 1: Choose Path A.",
+      "title": "Act 1: Chapter 2 Choice A"
     },
     {
-      "id": "quest_act1_ch2_choice_b",
-      "title": "Act 1: Chapter 2 Choice B",
+      "blocks_flags": [
+        "act1_ch2_choice_a_done"
+      ],
+      "complete_toast": "Act 1: Path B secured.",
       "description": "Commit to Path B beyond the ruined gate.",
+      "id": "quest_act1_ch2_choice_b",
       "requires_flags": [
         "act1_ch2_ruin_complete"
       ],
-      "blocks_flags": [
-        "act1_ch2_choice_a_done"
-      ],
-      "start_toast": "Act 1: Choose Path B.",
-      "complete_toast": "Act 1: Path B secured.",
-      "stages": [
-        {
-          "id": "choice_b",
-          "title": "Secure Path B",
-          "text": "Enter the Path B zone and reach the marker.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch2ChoiceBZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch2GoalBZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "act1_ch2_choice_b_done": true
-        },
         "inc_counters": {
           "gold": 10
+        },
+        "set_flags": {
+          "act1_ch2_choice_b_done": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch2GoalBZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "choice_b",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch2ChoiceBZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the Path B zone and reach the marker.",
+          "title": "Secure Path B"
+        }
+      ],
+      "start_toast": "Act 1: Choose Path B.",
+      "title": "Act 1: Chapter 2 Choice B"
     },
     {
-      "id": "quest_act1_ch2_complete_a",
-      "title": "Act 1: Chapter 2 Depart (A)",
-      "description": "Depart after completing Path A.",
-      "requires_flags": [
-        "act1_ch2_choice_a_done"
-      ],
       "blocks_flags": [
         "act1_chapter2_complete"
       ],
-      "start_toast": "Act 1: Head to the exit.",
       "complete_toast": "Act 1: Chapter 2 complete.",
-      "stages": [
-        {
-          "id": "depart_a",
-          "title": "Depart",
-          "text": "Reach the departure zone.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch2GoalAZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch2DepartZone"
-            }
-          }
-        }
+      "description": "Depart after completing Path A.",
+      "id": "quest_act1_ch2_complete_a",
+      "requires_flags": [
+        "act1_ch2_choice_a_done"
       ],
       "reward": {
-        "set_flags": {
-          "act1_chapter2_complete": true
-        },
         "inc_counters": {
           "gold": 20
+        },
+        "set_flags": {
+          "act1_chapter2_complete": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch2DepartZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "depart_a",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch2GoalAZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Reach the departure zone.",
+          "title": "Depart"
+        }
+      ],
+      "start_toast": "Act 1: Head to the exit.",
+      "title": "Act 1: Chapter 2 Depart (A)"
     },
     {
-      "id": "quest_act1_ch2_complete_b",
-      "title": "Act 1: Chapter 2 Depart (B)",
+      "blocks_flags": [
+        "act1_chapter2_complete"
+      ],
+      "complete_toast": "Act 1: Chapter 2 complete.",
       "description": "Depart after completing Path B.",
+      "id": "quest_act1_ch2_complete_b",
       "requires_flags": [
         "act1_ch2_choice_b_done"
       ],
-      "blocks_flags": [
-        "act1_chapter2_complete"
-      ],
-      "start_toast": "Act 1: Head to the exit.",
-      "complete_toast": "Act 1: Chapter 2 complete.",
-      "stages": [
-        {
-          "id": "depart_b",
-          "title": "Depart",
-          "text": "Reach the departure zone.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch2GoalBZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch2DepartZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "act1_chapter2_complete": true
-        },
         "inc_counters": {
           "gold": 20
+        },
+        "set_flags": {
+          "act1_chapter2_complete": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch2DepartZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "depart_b",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch2GoalBZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Reach the departure zone.",
+          "title": "Depart"
+        }
+      ],
+      "start_toast": "Act 1: Head to the exit.",
+      "title": "Act 1: Chapter 2 Depart (B)"
     },
     {
-      "id": "quest_act1_chapter3_start",
-      "title": "Act 1: Chapter 3",
-      "description": "Begin Chapter 3 after completing Chapter 2.",
-      "requires_flags": [
-        "act1_chapter2_complete"
-      ],
       "blocks_flags": [
         "act1_chapter3_started"
       ],
-      "start_toast": "Act 1: Chapter 3 begins.",
       "complete_toast": "Act 1: Chapter 3 underway.",
-      "stages": [
-        {
-          "id": "chapter3_start",
-          "title": "Step Forward",
-          "text": "Enter the Chapter 3 threshold and reach the checkpoint.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter3StartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter3CheckpointZone"
-            }
-          }
-        }
+      "description": "Begin Chapter 3 after completing Chapter 2.",
+      "id": "quest_act1_chapter3_start",
+      "requires_flags": [
+        "act1_chapter2_complete"
       ],
       "reward": {
-        "set_flags": {
-          "act1_chapter3_started": true
-        },
         "inc_counters": {
           "gold": 10
+        },
+        "set_flags": {
+          "act1_chapter3_started": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Chapter3CheckpointZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "chapter3_start",
+          "start_on_event": {
+            "payload": {
+              "zone": "Chapter3StartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the Chapter 3 threshold and reach the checkpoint.",
+          "title": "Step Forward"
+        }
+      ],
+      "start_toast": "Act 1: Chapter 3 begins.",
+      "title": "Act 1: Chapter 3"
     },
     {
-      "id": "quest_act1_ch3_note",
-      "title": "Act 1: Chapter 3 Note",
-      "description": "Search for signs and find the note.",
-      "requires_flags": [
-        "act1_chapter3_started"
-      ],
       "blocks_flags": [
         "act1_ch3_note_found",
         "act1_chapter3_complete"
       ],
-      "start_toast": "Act 1: Search for signs.",
       "complete_toast": "Act 1: A note reveals a warning.",
-      "stages": [
-        {
-          "id": "find_note",
-          "title": "Find the Note",
-          "text": "Look off the main path for a clue.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter3NoteZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter3NoteZone"
-            }
-          }
-        }
+      "description": "Search for signs and find the note.",
+      "id": "quest_act1_ch3_note",
+      "requires_flags": [
+        "act1_chapter3_started"
       ],
       "reward": {
-        "set_flags": {
-          "act1_ch3_note_found": true
-        },
         "inc_counters": {
           "gold": 5
+        },
+        "set_flags": {
+          "act1_ch3_note_found": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Chapter3NoteZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "find_note",
+          "start_on_event": {
+            "payload": {
+              "zone": "Chapter3NoteZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Look off the main path for a clue.",
+          "title": "Find the Note"
+        }
+      ],
+      "start_toast": "Act 1: Search for signs.",
+      "title": "Act 1: Chapter 3 Note"
     },
     {
-      "id": "quest_act1_ch3_exit",
-      "title": "Act 1: Chapter 3 Exit",
+      "blocks_flags": [
+        "act1_chapter3_complete"
+      ],
+      "complete_toast": "Act 1: Chapter 3 complete.",
       "description": "Follow the note's lead and move forward.",
+      "id": "quest_act1_ch3_exit",
       "requires_flags": [
         "act1_ch3_note_found"
       ],
-      "blocks_flags": [
-        "act1_chapter3_complete"
-      ],
-      "start_toast": "Act 1: Follow the note's lead.",
-      "complete_toast": "Act 1: Chapter 3 complete.",
-      "stages": [
-        {
-          "id": "move_forward",
-          "title": "Move Forward",
-          "text": "Reach the exit point to continue onward.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter3ExitZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter3ExitZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "act1_chapter3_complete": true
-        },
         "inc_counters": {
           "gold": 15
+        },
+        "set_flags": {
+          "act1_chapter3_complete": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Chapter3ExitZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "move_forward",
+          "start_on_event": {
+            "payload": {
+              "zone": "Chapter3ExitZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Reach the exit point to continue onward.",
+          "title": "Move Forward"
+        }
+      ],
+      "start_toast": "Act 1: Follow the note's lead.",
+      "title": "Act 1: Chapter 3 Exit"
     },
     {
-      "id": "quest_act1_chapter4_start",
-      "title": "Act 1: Chapter 4",
+      "blocks_flags": [
+        "act1_chapter4_started"
+      ],
+      "complete_toast": "Act 1: Chapter 4 underway.",
       "description": "Begin Chapter 4 after completing Chapter 3.",
+      "id": "quest_act1_chapter4_start",
       "requires_flags": [
         "act1_chapter3_complete"
       ],
-      "blocks_flags": [
-        "act1_chapter4_started"
-      ],
-      "start_toast": "Act 1: Chapter 4 begins.",
-      "complete_toast": "Act 1: Chapter 4 underway.",
-      "stages": [
-        {
-          "id": "chapter4_start",
-          "title": "Step Forward",
-          "text": "Enter the Chapter 4 threshold and reach the checkpoint.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter4StartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter4CheckpointZone"
-            }
-          }
-        }
-      ],
       "reward": {
+        "inc_counters": {
+          "gold": 10
+        },
         "set_flags": {
           "act1_chapter4_started": true
-        },
-        "inc_counters": {
-          "gold": 10
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Chapter4CheckpointZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "chapter4_start",
+          "start_on_event": {
+            "payload": {
+              "zone": "Chapter4StartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the Chapter 4 threshold and reach the checkpoint.",
+          "title": "Step Forward"
+        }
+      ],
+      "start_toast": "Act 1: Chapter 4 begins.",
+      "title": "Act 1: Chapter 4"
     },
     {
-      "id": "quest_act1_ch4_choice_a",
-      "title": "Act 1: Chapter 4 Choice A",
-      "description": "Commit to Path A in the fork.",
-      "requires_flags": [
-        "act1_chapter4_started"
-      ],
       "blocks_flags": [
         "act1_ch4_choice_b_done"
       ],
-      "start_toast": "Act 1: Choose Path A.",
       "complete_toast": "Act 1: Path A secured.",
-      "stages": [
-        {
-          "id": "choice_a",
-          "title": "Secure Path A",
-          "text": "Enter the Path A zone and reach the marker.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch4ChoiceAZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch4GoalAZone"
-            }
-          }
-        }
+      "description": "Commit to Path A in the fork.",
+      "id": "quest_act1_ch4_choice_a",
+      "requires_flags": [
+        "act1_chapter4_started"
       ],
       "reward": {
+        "inc_counters": {
+          "gold": 10
+        },
         "set_flags": {
           "act1_ch4_choice_a_done": true
-        },
-        "inc_counters": {
-          "gold": 10
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch4GoalAZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "choice_a",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch4ChoiceAZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the Path A zone and reach the marker.",
+          "title": "Secure Path A"
+        }
+      ],
+      "start_toast": "Act 1: Choose Path A.",
+      "title": "Act 1: Chapter 4 Choice A"
     },
     {
-      "id": "quest_act1_ch4_choice_b",
-      "title": "Act 1: Chapter 4 Choice B",
+      "blocks_flags": [
+        "act1_ch4_choice_a_done"
+      ],
+      "complete_toast": "Act 1: Path B secured.",
       "description": "Commit to Path B in the fork.",
+      "id": "quest_act1_ch4_choice_b",
       "requires_flags": [
         "act1_chapter4_started"
       ],
-      "blocks_flags": [
-        "act1_ch4_choice_a_done"
-      ],
-      "start_toast": "Act 1: Choose Path B.",
-      "complete_toast": "Act 1: Path B secured.",
-      "stages": [
-        {
-          "id": "choice_b",
-          "title": "Secure Path B",
-          "text": "Enter the Path B zone and reach the marker.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch4ChoiceBZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch4GoalBZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "act1_ch4_choice_b_done": true
-        },
         "inc_counters": {
           "gold": 10
+        },
+        "set_flags": {
+          "act1_ch4_choice_b_done": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch4GoalBZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "choice_b",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch4ChoiceBZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the Path B zone and reach the marker.",
+          "title": "Secure Path B"
+        }
+      ],
+      "start_toast": "Act 1: Choose Path B.",
+      "title": "Act 1: Chapter 4 Choice B"
     },
     {
-      "id": "quest_act1_ch4_complete_a",
-      "title": "Act 1: Chapter 4 Depart (A)",
-      "description": "Depart after completing Path A.",
-      "requires_flags": [
-        "act1_ch4_choice_a_done"
-      ],
       "blocks_flags": [
         "act1_chapter4_complete"
       ],
-      "start_toast": "Act 1: Head to the exit.",
       "complete_toast": "Act 1: Chapter 4 complete.",
-      "stages": [
-        {
-          "id": "depart_a",
-          "title": "Depart",
-          "text": "Reach the departure zone.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch4GoalAZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch4DepartZone"
-            }
-          }
-        }
+      "description": "Depart after completing Path A.",
+      "id": "quest_act1_ch4_complete_a",
+      "requires_flags": [
+        "act1_ch4_choice_a_done"
       ],
       "reward": {
-        "set_flags": {
-          "act1_chapter4_complete": true
-        },
         "inc_counters": {
           "gold": 20
+        },
+        "set_flags": {
+          "act1_chapter4_complete": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch4DepartZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "depart_a",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch4GoalAZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Reach the departure zone.",
+          "title": "Depart"
+        }
+      ],
+      "start_toast": "Act 1: Head to the exit.",
+      "title": "Act 1: Chapter 4 Depart (A)"
     },
     {
-      "id": "quest_act1_ch4_complete_b",
-      "title": "Act 1: Chapter 4 Depart (B)",
+      "blocks_flags": [
+        "act1_chapter4_complete"
+      ],
+      "complete_toast": "Act 1: Chapter 4 complete.",
       "description": "Depart after completing Path B.",
+      "id": "quest_act1_ch4_complete_b",
       "requires_flags": [
         "act1_ch4_choice_b_done"
       ],
-      "blocks_flags": [
-        "act1_chapter4_complete"
-      ],
-      "start_toast": "Act 1: Head to the exit.",
-      "complete_toast": "Act 1: Chapter 4 complete.",
-      "stages": [
-        {
-          "id": "depart_b",
-          "title": "Depart",
-          "text": "Reach the departure zone.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch4GoalBZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Ch4DepartZone"
-            }
-          }
-        }
-      ],
       "reward": {
-        "set_flags": {
-          "act1_chapter4_complete": true
-        },
         "inc_counters": {
           "gold": 20
+        },
+        "set_flags": {
+          "act1_chapter4_complete": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch4DepartZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "depart_b",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch4GoalBZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Reach the departure zone.",
+          "title": "Depart"
+        }
+      ],
+      "start_toast": "Act 1: Head to the exit.",
+      "title": "Act 1: Chapter 4 Depart (B)"
     },
     {
-      "id": "quest_act1_chapter5_start",
-      "title": "Act 1: Finale",
-      "description": "Begin the finale after completing Chapter 4.",
-      "requires_flags": [
-        "act1_chapter4_complete"
-      ],
       "blocks_flags": [
         "act1_chapter5_started"
       ],
-      "start_toast": "Act 1: Finale begins.",
       "complete_toast": "Act 1: Finale underway.",
-      "stages": [
-        {
-          "id": "chapter5_start",
-          "title": "Step Forward",
-          "text": "Enter the finale threshold and reach the checkpoint.",
-          "start_on_event": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter5StartZone"
-            }
-          },
-          "complete_on": {
-            "type": "entered_zone",
-            "payload": {
-              "zone": "Chapter5CheckpointZone"
-            }
-          }
-        }
+      "description": "Begin the finale after completing Chapter 4.",
+      "id": "quest_act1_chapter5_start",
+      "requires_flags": [
+        "act1_chapter4_complete"
       ],
       "reward": {
-        "set_flags": {
-          "act1_chapter5_started": true
-        },
         "inc_counters": {
           "gold": 10
+        },
+        "set_flags": {
+          "act1_chapter5_started": true
         }
-      }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Chapter5CheckpointZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "chapter5_start",
+          "start_on_event": {
+            "payload": {
+              "zone": "Chapter5StartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Enter the finale threshold and reach the checkpoint.",
+          "title": "Step Forward"
+        }
+      ],
+      "start_toast": "Act 1: Finale begins.",
+      "title": "Act 1: Finale"
     },
     {
       "id": "showcase_fetch",
-      "title": "Fetch the Artifact",
-      "type": "side",
       "stages": [
         {
           "id": "find_artifact",
-          "title": "Find the Artifact",
+          "requirements": {},
           "text": "Locate the ancient artifact.",
-          "requirements": {}
+          "title": "Find the Artifact"
         }
-      ]
+      ],
+      "title": "Fetch the Artifact",
+      "type": "side"
     },
     {
       "id": "showcase_kill",
-      "title": "Defeat the Boss",
-      "type": "side",
       "stages": [
         {
           "id": "defeat_boss",
-          "title": "Defeat the Boss",
+          "requirements": {},
           "text": "Defeat the boss enemy.",
-          "requirements": {}
+          "title": "Defeat the Boss"
         }
-      ]
+      ],
+      "title": "Defeat the Boss",
+      "type": "side"
+    },
+    {
+      "id": "test_quest",
+      "steps": [],
+      "title": "Test Quest",
+      "type": null
     }
   ]
 }

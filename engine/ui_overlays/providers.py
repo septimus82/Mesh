@@ -139,7 +139,7 @@ def scene_inspector_provider(window: Any) -> dict[str, Any]:
             except Exception:  # noqa: BLE001
                 world_x, world_y = None, None
             if isinstance(world_x, (int, float)) and isinstance(world_y, (int, float)):
-                candidates: list[optional_arcade.arcade.Sprite] = []
+                candidates: list[Any] = []
                 layers = getattr(scene, "layers", {}) or {}
                 for layer in layers.values():
                     try:
@@ -184,12 +184,101 @@ def scene_inspector_provider(window: Any) -> dict[str, Any]:
         "keys": true_keys[:5],
     }
 
+    # HD-2D info
+    render_sort_mode = getattr(scene, "_render_sort_mode", "y_sort") if scene is not None else "y_sort"
+    background_planes = getattr(scene, "_background_planes", []) if scene is not None else []
+    background_planes_count = len(background_planes) if isinstance(background_planes, list) else 0
+
     return {
         "scene_path": str(scene_path or "-"),
         "player": player_payload,
         "hover": hover_payload,
         "flags": flags_payload,
+        "render_sort_mode": str(render_sort_mode),
+        "background_planes_count": background_planes_count,
     }
+
+
+def hd2d_depth_debug_provider(window: Any) -> dict[str, Any]:
+    """Provider for HD-2D depth debug overlay.
+
+    Collects sprite render key info for debug display.
+    """
+    from engine.hd2d_debug_model import compute_hd2d_debug_payload
+
+    scene = getattr(window, "scene_controller", None)
+    if scene is None:
+        return {
+            "sort_mode": "y_sort",
+            "sprite_count": 0,
+            "plane_count": 0,
+            "sprite_infos": [],
+        }
+
+    sort_mode = getattr(scene, "_render_sort_mode", "y_sort")
+    background_planes = getattr(scene, "_background_planes", [])
+    plane_count = len(background_planes) if isinstance(background_planes, list) else 0
+
+    # Collect sprites from all layers
+    all_sprites: list[Any] = []
+    layers = getattr(scene, "layers", {}) or {}
+    for layer in layers.values():
+        try:
+            all_sprites.extend(layer)
+        except Exception:
+            pass
+
+    return compute_hd2d_debug_payload(
+        sort_mode=str(sort_mode),
+        sprites=all_sprites,
+        plane_count=plane_count,
+    )
+
+
+def background_planes_editor_provider(window: Any) -> dict[str, Any]:
+    """Provider for background planes editor panel.
+
+    Returns list of planes with editable fields for inspector UI.
+    """
+    from engine.editor.background_planes_edit_model import (
+        compute_tiling_mode,
+        list_background_planes,
+    )
+
+    scene = getattr(window, "scene_controller", None)
+    scene_payload = getattr(scene, "_loaded_scene_data", None) if scene is not None else None
+    if not isinstance(scene_payload, dict):
+        return {
+            "enabled": True,
+            "planes": [],
+            "selected_plane_id": "",
+        }
+
+    planes = list_background_planes(scene_payload)
+
+    plane_entries = []
+    for plane in planes:
+        plane_entries.append({
+            "id": plane.id,
+            "asset_path": plane.asset_path,
+            "parallax": plane.parallax,
+            "render_layer": plane.render_layer,
+            "alpha": plane.alpha,
+            "offset_x": plane.offset_x,
+            "offset_y": plane.offset_y,
+            "tiling_mode": compute_tiling_mode(plane.repeat_x, plane.repeat_y),
+        })
+
+    # Get selected plane id from editor state if available
+    editor_state = getattr(window, "background_plane_editor_state", None)
+    selected_id = getattr(editor_state, "selected_plane_id", "") if editor_state is not None else ""
+
+    return {
+        "enabled": True,
+        "planes": plane_entries,
+        "selected_plane_id": str(selected_id),
+    }
+
 
 def tile_paint_provider(window: Any) -> dict[str, Any]:
     from engine.tile_paint_mode import compute_tile_paint_tool, world_to_tile
@@ -730,7 +819,11 @@ def command_palette_provider(window: Any) -> dict[str, Any]:
 
 
 def editor_command_palette_provider(window: Any) -> dict[str, Any]:
-    from engine.editor_commands import filter_commands, get_all_commands
+    from engine.editor_commands import (
+        filter_commands,
+        get_all_commands,
+        get_palette_focus_target,
+    )
 
     editor = getattr(window, "editor_controller", None)
     enabled = bool(editor and getattr(editor, "active", False) and getattr(editor, "command_palette_active", False))
@@ -740,7 +833,8 @@ def editor_command_palette_provider(window: Any) -> dict[str, Any]:
     query = str(getattr(editor, "command_palette_query", "") or "")
     idx = int(getattr(editor, "command_palette_index", 0) or 0)
 
-    commands = filter_commands(get_all_commands(window), query)
+    focus_target = get_palette_focus_target(window)
+    commands = filter_commands(get_all_commands(window), query, focus_target=focus_target)
     if not commands:
         return {"enabled": True, "query": query, "rows": [], "selected_row": 0}
 
@@ -800,3 +894,174 @@ def objective_tracker_provider(window: Any) -> Sequence[str]:
     if not callable(getter):
         return []
     return compute_objective_tracker_lines(getter, demo_complete_visible=demo_complete_visible)
+
+
+def hd2d_preview_indicator_provider(window: Any) -> dict[str, Any]:
+    """Provider for HD-2D preset preview indicator overlay.
+
+    Returns:
+        Dict with:
+            visible: True if HD-2D preview is active
+            preset_id: The preset ID being previewed (or None)
+    """
+    editor = getattr(window, "editor_controller", None)
+    if editor is None:
+        return {"visible": False, "preset_id": None}
+
+    active = bool(getattr(editor, "_hd2d_preview_active", False))
+    preset_id = getattr(editor, "_hd2d_preview_preset_id", None)
+    if not active or not preset_id:
+        return {"visible": False, "preset_id": None}
+
+    return {"visible": True, "preset_id": str(preset_id)}
+
+
+def hd2d_settings_panel_provider(window: Any) -> dict[str, Any]:
+    """Provider for HD-2D settings panel in inspector.
+
+    Returns:
+        Dict with:
+            visible: True if no entity selected (show scene settings)
+            settings: Dict of current HD-2D settings values
+            active_preset: Preset ID if current settings match a preset (or None)
+            presets: List of {id, name} for preset buttons
+    """
+    from engine.editor.hd2d_look_presets_model import list_hd2d_presets  # noqa: PLC0415
+    from engine.editor.hd2d_settings_panel_model import (  # noqa: PLC0415
+        detect_active_preset,
+        parse_hd2d_scene_settings,
+        parse_hd2d_scene_settings_dict,
+    )
+
+    editor = getattr(window, "editor_controller", None)
+    if editor is None or not getattr(editor, "active", False):
+        return {"visible": False, "settings": {}, "active_preset": None, "presets": []}
+
+    # Only show when no entity is selected
+    primary_id = getattr(editor, "_primary_selected_id", None)
+    selected_ids = getattr(editor, "_selected_entity_ids", [])
+    has_selection = bool(primary_id) or (isinstance(selected_ids, list) and len(selected_ids) > 0)
+
+    # Get scene payload
+    scene_controller = getattr(window, "scene_controller", None)
+    scene_payload = getattr(scene_controller, "_loaded_scene_data", {}) if scene_controller else {}
+    if not isinstance(scene_payload, dict):
+        scene_payload = {}
+
+    # Parse settings
+    parsed = parse_hd2d_scene_settings(scene_payload)
+    settings_dict = parse_hd2d_scene_settings_dict(scene_payload)
+    active_preset = detect_active_preset(parsed)
+
+    # Build preset list
+    presets = [{"id": p.id, "name": p.name} for p in list_hd2d_presets()]
+
+    return {
+        "visible": not has_selection,
+        "settings": settings_dict,
+        "active_preset": active_preset,
+        "presets": presets,
+    }
+
+
+def hd2d_entity_overrides_provider(window: Any) -> dict[str, Any]:
+    """Provider for HD-2D entity overrides panel in inspector.
+
+    Returns:
+        Dict with:
+            visible: True if an entity is selected
+            entity_id: The selected entity ID (or None)
+            overrides: Dict of current override values (None = inherit)
+            has_overrides: True if entity has any overrides set
+            override_count: Number of overrides set
+    """
+    from engine.editor.hd2d_entity_overrides_model import (  # noqa: PLC0415
+        count_overrides,
+        has_any_override,
+        parse_hd2d_entity_overrides_dict,
+    )
+
+    editor = getattr(window, "editor_controller", None)
+    if editor is None or not getattr(editor, "active", False):
+        return {
+            "visible": False,
+            "entity_id": None,
+            "overrides": {},
+            "has_overrides": False,
+            "override_count": 0,
+        }
+
+    # Get selected entity
+    primary_id = getattr(editor, "_primary_selected_id", None)
+    if not primary_id:
+        return {
+            "visible": False,
+            "entity_id": None,
+            "overrides": {},
+            "has_overrides": False,
+            "override_count": 0,
+        }
+
+    # Get scene payload and find entity
+    scene_controller = getattr(window, "scene_controller", None)
+    scene_payload = getattr(scene_controller, "_loaded_scene_data", {}) if scene_controller else {}
+    if not isinstance(scene_payload, dict):
+        scene_payload = {}
+
+    entities = scene_payload.get("entities", [])
+    if not isinstance(entities, list):
+        entities = []
+
+    entity_dict: dict[str, Any] = {}
+    for ent in entities:
+        if not isinstance(ent, dict):
+            continue
+        eid = ent.get("id") or ent.get("mesh_name") or ent.get("name")
+        if str(eid or "").strip() == str(primary_id or "").strip():
+            entity_dict = ent
+            break
+
+    # Parse overrides
+    overrides = parse_hd2d_entity_overrides_dict(entity_dict)
+
+    return {
+        "visible": True,
+        "entity_id": str(primary_id),
+        "overrides": overrides,
+        "has_overrides": has_any_override(entity_dict),
+        "override_count": count_overrides(entity_dict),
+    }
+
+
+def project_explorer_provider(window: Any, viewport_h: int, row_h: float, overscan: int = 5) -> dict[str, Any]:
+    """Provider for the project explorer."""
+    editor = getattr(window, "editor_controller", None)
+    if not editor:
+        return {}
+    
+    explorer = getattr(editor, "project_explorer", None)
+    if not explorer:
+        return {}
+    
+    # We call get_provider_payload
+    # Note: If the method doesn't exist on the stub during partial refactor, this might fail, 
+    # but we added it to the class in Step 1.
+    if hasattr(explorer, "get_provider_payload"):
+        return cast(Dict[str, Any], explorer.get_provider_payload(viewport_h, row_h, overscan))
+    return {}
+
+
+def problems_panel_provider(window: Any, viewport_h: int, row_h: float, overscan: int = 5) -> dict[str, Any]:
+    """Provider for the problems panel."""
+    editor = getattr(window, "editor_controller", None)
+    if not editor:
+        return {}
+
+    problems = getattr(editor, "problems", None)
+    if not problems:
+        return {}
+
+    if hasattr(problems, "get_provider_payload"):
+        return cast(Dict[str, Any], problems.get_provider_payload(viewport_height=viewport_h, row_height=row_h, overscan=overscan))
+    return {}
+

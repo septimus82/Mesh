@@ -48,21 +48,6 @@ class TestRegionThemes(unittest.TestCase):
         # Call create_scene
         scaffold.create_scene("scenes/test_scene.json", "empty", extra_args={"region_theme": "moss"})
 
-        # Verify write
-        handle = mock_path_obj.open.return_value.__enter__.return_value
-        args, _ = handle.write.call_args
-        written_json = args[0] # It might be json.dump call, let's check
-        
-        # json.dump is called on handle
-        # Wait, scaffold uses json.dump(compacted, handle, ...)
-        # So we need to check the call to json.dump if we mocked open?
-        # Actually scaffold.py does:
-        # with target_path.open("w", encoding="utf-8") as handle:
-        #     json.dump(final_scene, handle, indent=2, sort_keys=False)
-        
-        # Since we can't easily intercept json.dump with just Path mock unless we mock json too,
-        # let's inspect what was passed to compact_scene_payload or apply_scene_defaults.
-        
         call_args = mock_loader_instance.apply_scene_defaults.call_args
         scene_data = call_args[0][0]
         

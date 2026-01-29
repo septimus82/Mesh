@@ -52,6 +52,9 @@ _LABEL_MAP = {
     "EditAnimation": "ANIM",
     "EditDialogue": "DIALOGUE",
     "PaintTile": "PAINT",
+    "FixSceneIssue": "FIX",
+    "FixSceneIssues": "FIX",
+    "EditBackgroundPlanes": "BG",
 }
 
 
@@ -141,6 +144,16 @@ def _find_current_index(entries: list[UndoEntry]) -> int | None:
 def _label_for_cmd(cmd: Any) -> str:
     if not isinstance(cmd, dict):
         return "CMD:UNKNOWN"
+    label = cmd.get("label")
+    if isinstance(label, str) and label.strip():
+        return label
+    action_id = cmd.get("action_id")
+    if isinstance(action_id, str) and action_id.strip():
+        from engine.editor.history_label_model import format_history_entry  # noqa: PLC0415
+
+        action_title = cmd.get("action_title") if isinstance(cmd.get("action_title"), str) else None
+        detail = cmd.get("detail") if isinstance(cmd.get("detail"), dict) else None
+        return format_history_entry(action_id, action_title, detail)
     ctype = cmd.get("type")
     if isinstance(ctype, str):
         mapped = _LABEL_MAP.get(ctype)

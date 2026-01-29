@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from engine import json_io
 from engine.tooling import ai_plan_command
 from engine.tooling.plan_linter import ACTION_SCHEMAS
 
@@ -121,14 +122,13 @@ def plan_schema_command(args: argparse.Namespace) -> None:
 
     if args.ai_out:
         ai_schema = ai_plan_command.generate_ai_schema()
-        output_json = json.dumps(ai_schema, indent=2, sort_keys=True)
+        output_json = json_io.dumps_stable(ai_schema)
         out_path = Path(args.ai_out)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(output_json, encoding="utf-8")
+        json_io.write_json_atomic(out_path, ai_schema)
         print(f"[Mesh][Schema] Wrote AI Plan schema to {out_path}")
         return
 
-    output_json = json.dumps(PLAN_SCHEMA, indent=2, sort_keys=True)
+    output_json = json_io.dumps_stable(PLAN_SCHEMA)
 
     if args.out:
         out_path = Path(args.out)
@@ -151,7 +151,7 @@ def plan_schema_command(args: argparse.Namespace) -> None:
             else:
                 print("[Mesh][Schema] Plan schema verified.")
         else:
-            out_path.write_text(output_json, encoding="utf-8")
+            json_io.write_json_atomic(out_path, PLAN_SCHEMA)
             print(f"[Mesh][Schema] Wrote Plan schema to {out_path}")
     else:
         print(output_json)

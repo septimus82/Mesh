@@ -55,3 +55,13 @@ class TestPathsResolution(unittest.TestCase):
         path = resolve_path("does_not_exist.txt")
         self.assertEqual(path, self.base_root / "does_not_exist.txt")
         self.assertFalse(path.exists())
+
+    def test_resolve_backslash_nested_path(self):
+        set_content_roots([self.base_root])
+        nested = self.base_root / "dir" / "nested.txt"
+        nested.parent.mkdir(parents=True, exist_ok=True)
+        nested.write_text("nested")
+
+        path = resolve_path("dir\\nested.txt")
+        self.assertTrue(path.exists())
+        self.assertEqual(path, nested)

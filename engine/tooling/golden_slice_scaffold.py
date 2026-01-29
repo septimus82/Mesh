@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from engine import json_io
 
 @dataclass(frozen=True, slots=True)
 class ScaffoldSpec:
@@ -26,7 +27,7 @@ class ScaffoldSpec:
     scene_path: str
 
 
-def add_golden_slice_command(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[name-defined]
+def add_golden_slice_command(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser("golden-slice", help="Golden Slice tooling")
     subs = parser.add_subparsers(dest="golden_slice_command", help="Golden Slice subcommands")
 
@@ -154,7 +155,6 @@ def _write_json_file(
     dry_run: bool,
     planned: list[tuple[str, str]],
 ) -> None:
-    text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if path.exists():
         try:
             existing = json.loads(path.read_text(encoding="utf-8"))
@@ -166,8 +166,7 @@ def _write_json_file(
     if dry_run:
         planned.append((path.as_posix(), "would create new file"))
         return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
+    json_io.write_json_atomic(path, payload)
 
 
 def _write_scene(
@@ -511,7 +510,7 @@ def _upsert_config_preset(
         )
 
     config["presets"] = dict(sorted(presets.items(), key=lambda kv: kv[0]))
-    new_text = json.dumps(config, indent=2) + "\n"
+    new_text = json_io.dumps_stable(config) + "\n"
     old_text = config_path.read_text(encoding="utf-8")
     if new_text == old_text:
         return
@@ -526,7 +525,7 @@ def _upsert_config_preset(
                 )
             )
         return
-    config_path.write_text(new_text, encoding="utf-8")
+    json_io.write_json_atomic(config_path, config)
 
 
 def _register_preset_in_showcase_all(*, presets: dict[str, Any], showcase_all_name: str, preset_name: str) -> bool:
@@ -750,7 +749,7 @@ def _upsert_quests(
         quests,
         key=lambda q: (0, q.get("id", "")) if isinstance(q, dict) and isinstance(q.get("id"), str) else (1, ""),
     )
-    new_text = json.dumps(root, indent=2) + "\n"
+    new_text = json_io.dumps_stable(root) + "\n"
     old_text = quests_path.read_text(encoding="utf-8")
     if new_text == old_text:
         return
@@ -760,7 +759,7 @@ def _upsert_quests(
         else:
             planned.append((quests_path.as_posix(), "would sort quests by id"))
         return
-    quests_path.write_text(new_text, encoding="utf-8")
+    json_io.write_json_atomic(quests_path, root)
 
 
 def _upsert_events(
@@ -807,14 +806,14 @@ def _upsert_events(
         events,
         key=lambda e: (0, e.get("name", "")) if isinstance(e, dict) and isinstance(e.get("name"), str) else (1, ""),
     )
-    new_text = json.dumps(root, indent=2) + "\n"
+    new_text = json_io.dumps_stable(root) + "\n"
     old_text = events_path.read_text(encoding="utf-8")
     if new_text == old_text:
         return
     if dry_run:
         planned.append((events_path.as_posix(), f"would add event '{name}' (sorted)"))
         return
-    events_path.write_text(new_text, encoding="utf-8")
+    json_io.write_json_atomic(events_path, root)
 
 
 def _variant_sort_key(variant: str) -> tuple[int, str]:

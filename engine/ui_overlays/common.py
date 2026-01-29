@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import importlib
 import json
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-import engine.optional_arcade as optional_arcade
 
 if TYPE_CHECKING:
-    import optional_arcade.arcade as _arcade
     from arcade import Sprite
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -16,6 +15,10 @@ if TYPE_CHECKING:  # pragma: no cover
 
 logger = logging.getLogger(__name__)
 _LOG_ONCE: set[str] = set()
+
+
+def _get_arcade() -> Any:
+    return importlib.import_module("engine.optional_arcade").arcade
 
 
 class UIElement:
@@ -73,7 +76,8 @@ def _draw_rectangle_filled(
     height: float,
     color: Any,
 ) -> None:
-    fn = getattr(optional_arcade.arcade, "draw_rectangle_filled", None)
+    arcade = _get_arcade()
+    fn = getattr(arcade, "draw_rectangle_filled", None)
     if callable(fn):
         fn(center_x, center_y, width, height, color)
         return
@@ -83,7 +87,7 @@ def _draw_rectangle_filled(
     right = center_x + half_w
     bottom = center_y - half_h
     top = center_y + half_h
-    optional_arcade.arcade.draw_lrbt_rectangle_filled(left, right, bottom, top, color)
+    arcade.draw_lrbt_rectangle_filled(left, right, bottom, top, color)
 
 
 def _draw_lrtb_rectangle_outline(
@@ -94,11 +98,12 @@ def _draw_lrtb_rectangle_outline(
     color: Any,
     border_width: float = 1.0,
 ) -> None:
-    fn = getattr(optional_arcade.arcade, "draw_lrtb_rectangle_outline", None)
+    arcade = _get_arcade()
+    fn = getattr(arcade, "draw_lrtb_rectangle_outline", None)
     if callable(fn):
         fn(left, right, top, bottom, color, border_width)
         return
-    optional_arcade.arcade.draw_lrbt_rectangle_outline(left, right, bottom, top, color, border_width)
+    arcade.draw_lrbt_rectangle_outline(left, right, bottom, top, color, border_width)
 
 
 def _sprite_under_cursor(window: "GameWindow") -> "Sprite | None":
@@ -109,8 +114,9 @@ def _sprite_under_cursor(window: "GameWindow") -> "Sprite | None":
 
     candidates: list["Sprite"] = []
     layers = getattr(window.scene_controller, "layers", {})
+    arcade = _get_arcade()
     for layer in layers.values():
-        hits = optional_arcade.arcade.get_sprites_at_point((world_x, world_y), layer)
+        hits = arcade.get_sprites_at_point((world_x, world_y), layer)
         if hits:
             candidates.extend(hits)
 
@@ -122,13 +128,15 @@ def _sprite_under_cursor(window: "GameWindow") -> "Sprite | None":
 def draw_panel_bg(left: float, right: float, bottom: float, top: float, color: Any = (0, 0, 0, 200)) -> None:
     """Draw a filled rectangle using lrbt ordering with safety."""
     lo_y, hi_y = (bottom, top) if bottom <= top else (top, bottom)
-    optional_arcade.arcade.draw_lrbt_rectangle_filled(left, right, lo_y, hi_y, color)
+    arcade = _get_arcade()
+    arcade.draw_lrbt_rectangle_filled(left, right, lo_y, hi_y, color)
 
 
 def draw_outline_centered(cx: float, cy: float, width: float, height: float, color: Any, border: float = 2) -> None:
     half_w = width / 2.0
     half_h = height / 2.0
-    optional_arcade.arcade.draw_lrbt_rectangle_outline(
+    arcade = _get_arcade()
+    arcade.draw_lrbt_rectangle_outline(
         cx - half_w,
         cx + half_w,
         cy - half_h,

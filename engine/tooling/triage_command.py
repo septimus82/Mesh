@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from engine import json_io
 from engine.tooling.doctor import DoctorRunner
 from engine.tooling.explain import ExplainRunner
 from engine.tooling import plan_fix_command
@@ -154,7 +155,7 @@ def run_triage_command(args: argparse.Namespace) -> int:
     if "unfixable" in plan_data["meta"]:
         plan_data["meta"]["unfixable"] = sorted(plan_data["meta"]["unfixable"])
 
-    out_path.write_text(json.dumps(plan_data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    json_io.write_json_atomic(out_path, plan_data)
     
     # Write artifacts if requested
     if getattr(args, "write_artifacts", False):
@@ -162,14 +163,14 @@ def run_triage_command(args: argparse.Namespace) -> int:
         artifacts_dir.mkdir(parents=True, exist_ok=True)
         
         doctor_path = artifacts_dir / "triage_last_doctor.json"
-        doctor_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        json_io.write_json_atomic(doctor_path, report)
         
         explain_path = artifacts_dir / "triage_last_explain.json"
         # explanation is a JSON string, parse it back to dump it prettily or just write it?
         # explain_result returns a string.
         try:
             # We already parsed and modified it above
-            explain_path.write_text(json.dumps(explanation_data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            json_io.write_json_atomic(explain_path, explanation_data)
         except (json.JSONDecodeError, UnboundLocalError):
             explain_path.write_text(explanation_str, encoding="utf-8")
             
@@ -178,7 +179,7 @@ def run_triage_command(args: argparse.Namespace) -> int:
             if plan_artifact_path.exists():
                 plan_artifact_path.unlink()
         else:
-            plan_artifact_path.write_text(json.dumps(plan_data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            json_io.write_json_atomic(plan_artifact_path, plan_data)
 
         print(f"\nArtifacts written:")
         print(f"  {doctor_path.as_posix()}")

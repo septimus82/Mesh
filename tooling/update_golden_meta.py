@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from engine import json_io
 from engine.content_lock import build_lock, compute_strict_fingerprint
 
 
@@ -13,12 +14,12 @@ def main():
     for trace_path in golden_dir.glob("*.jsonl"):
         meta_path = trace_path.with_suffix(".meta.json")
         if meta_path.exists():
-            data = json.loads(meta_path.read_text(encoding="utf-8"))
+            data = json_io.read_json(meta_path)
         else:
             data = {}
 
         data["content_fingerprint"] = fp
-        meta_path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding="utf-8")
+        json_io.write_json_atomic(meta_path, data)
         print(f"Updated {meta_path}")
 
 if __name__ == "__main__":

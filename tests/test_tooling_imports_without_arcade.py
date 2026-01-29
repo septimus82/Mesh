@@ -1,7 +1,9 @@
 import sys
-import subprocess
+
 import pytest
 from pathlib import Path
+
+from tests.subprocess_tools import run_checked
 
 def test_tooling_imports_without_arcade():
     """
@@ -62,11 +64,9 @@ except Exception as e:
 """
     
     # Run the subprocess
-    result = subprocess.run(
+    result = run_checked(
         [sys.executable, "-c", check_script],
         cwd=repo_root,
-        capture_output=True,
-        text=True
     )
     
     if result.returncode != 0:
