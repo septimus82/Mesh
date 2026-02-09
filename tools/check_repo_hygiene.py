@@ -16,6 +16,10 @@ _FORBIDDEN_PREFIXES: tuple[str, ...] = (
     ".ruff_cache/",
     "dist/",
     "build/",
+    "Mesh-Engine-v1/",
+    "seb/",
+    "seb1/",
+    "seb2/",
     ".mesh/",
     ".codex_tmp/",
     "artifacts/",
@@ -41,6 +45,10 @@ _FORBIDDEN_DIR_NAMES: frozenset[str] = frozenset(
         "artifacts",
         "traces",
         "saves",
+        "Mesh-Engine-v1",
+        "seb",
+        "seb1",
+        "seb2",
     }
 )
 

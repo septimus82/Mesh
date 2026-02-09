@@ -10,10 +10,17 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
 from engine.editor.editor_focus_model import (
-    collect_editor_state,
-    derive_focus_target,
-    is_text_input_active,
+    derive_focus_target_for_controller,
+    is_text_input_active_for_controller,
 )
+from engine.editor.editor_dock_query import get_raw_dock_widths
+from engine.editor.editor_menu_hover_query import get_context_menu_hover_id
+from engine.editor.editor_modal_state_query import (
+    get_active_menu_id,
+    is_scene_browser_active,
+    is_unsaved_changes_pending,
+)
+from engine.editor.editor_session_query import get_session_snapshot
 
 
 # Layout constants
@@ -66,6 +73,7 @@ DOCK_TAB_TOOLTIPS: Dict[str, str] = {
     "Assets": "Assets -- Search + spawn assets",
     "History": "History -- Undo/redo stack",
     "Problems": "Problems -- Scan + fix common issues",
+    "Debug": "Debug -- Quests, cutscenes, events",
 }
 
 TOP_BAR_CONTROL_TOOLTIPS: Dict[str, str] = {
@@ -166,9 +174,8 @@ def _is_text_input_active_state(controller: Any) -> bool:
     Returns:
         True if text input is active.
     """
-    state_dict = collect_editor_state(controller)
-    focus_target = derive_focus_target(state_dict)
-    return is_text_input_active(focus_target, state_dict)
+    focus_target = derive_focus_target_for_controller(controller)
+    return is_text_input_active_for_controller(focus_target, controller)
 
 
 def _is_modal_open_state(controller: Any) -> bool:
@@ -180,11 +187,12 @@ def _is_modal_open_state(controller: Any) -> bool:
     Returns:
         True if a modal is open.
     """
+    get_session_snapshot(controller)
     # Unsaved changes guard modal
-    if getattr(controller, "_unsaved_changes_pending", False):
+    if is_unsaved_changes_pending(controller):
         return True
     # Scene browser modal (if modal mode)
-    if getattr(controller, "scene_browser_active", False):
+    if is_scene_browser_active(controller):
         return True
     return False
 
@@ -208,10 +216,12 @@ def _hit_test_context_menu(
     Returns:
         TooltipHit if hovering a context menu item, None otherwise.
     """
-    if not getattr(controller, "_context_menu_open", False):
+    from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
+
+    if not panels_is_open(controller, "context_menu"):
         return None
 
-    hover_id = getattr(controller, "_context_menu_hover_id", None)
+    hover_id = get_context_menu_hover_id(controller)
     if not hover_id:
         return None
 
@@ -260,7 +270,7 @@ def _hit_test_menu_bar(
     if window is None:
         return None
 
-    active_menu = getattr(controller, "_menu_active", None)
+    active_menu = get_active_menu_id(controller)
     groups = build_menu_groups(controller, window)
     layout = compute_menu_bar_layout(window_w, window_h, groups, active_menu)
 
@@ -299,7 +309,9 @@ def _hit_test_top_bar_control(
     Returns:
         TooltipHit if hovering a top bar control, None otherwise.
     """
-    hover_id = getattr(controller, "_hover_top_bar_control_id", None)
+    from engine.editor.editor_hover_query import get_hovered_top_bar_control_id  # noqa: PLC0415
+
+    hover_id = get_hovered_top_bar_control_id(controller)
     if not hover_id:
         return None
 
@@ -334,8 +346,7 @@ def _hit_test_splitter(
         hit_test_splitter,
     )
 
-    left_dock = getattr(controller, "left_dock_width", 220)
-    right_dock = getattr(controller, "right_dock_width", 260)
+    left_dock, right_dock = get_raw_dock_widths(controller)
     shell_layout = compute_editor_shell_layout(
         window_width=window_w,
         window_height=window_h,
@@ -374,8 +385,7 @@ def _hit_test_dock_tabs(
         compute_dock_tab_rects,
     )
 
-    left_dock = getattr(controller, "left_dock_width", 220)
-    right_dock = getattr(controller, "right_dock_width", 260)
+    left_dock, right_dock = get_raw_dock_widths(controller)
     shell_layout = compute_editor_shell_layout(
         window_width=window_w,
         window_height=window_h,

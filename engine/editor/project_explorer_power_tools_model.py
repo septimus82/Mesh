@@ -4,6 +4,8 @@ from __future__ import annotations
 from pathlib import PurePosixPath
 from typing import FrozenSet, Iterable, Optional
 
+from engine.editor.editor_dock_query import get_dock_snapshot
+
 __all__ = [
     "invert_selection",
     "compute_common_parent",
@@ -47,7 +49,8 @@ def format_paths_for_clipboard(paths: Iterable[str]) -> str:
 def should_handle_project_explorer_shortcut(controller: object) -> bool:
     if not getattr(controller, "active", False):
         return False
-    if getattr(controller, "_left_dock_tab", "") != "Project":
+    snapshot = get_dock_snapshot(controller)
+    if snapshot is None or snapshot.left_tab != "Project":
         return False
     project_ctrl = getattr(controller, "project_explorer", None)
     if project_ctrl is None:

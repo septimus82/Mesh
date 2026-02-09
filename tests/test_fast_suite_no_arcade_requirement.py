@@ -39,6 +39,8 @@ def test_fast_suite_does_not_require_arcade() -> None:
             "-W",
             "error",
             "--strict-markers",
+            "-p",
+            "no:cacheprovider",
             "-m",
             "fast",
             "tests/test_pytest_fast_headless_contract.py",

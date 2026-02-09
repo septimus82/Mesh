@@ -10,6 +10,12 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Tuple
 
+from engine.editor.editor_session_query import get_session_snapshot
+from engine.editor.editor_modal_state_query import (
+    is_scene_browser_active,
+    is_unsaved_changes_pending,
+)
+
 
 class HoverHighlightKind(str, Enum):
     """Kind of hover highlight target."""
@@ -329,6 +335,7 @@ def is_ui_blocked(controller: Any) -> bool:
     Returns:
         True if hover highlights should be blocked.
     """
+    get_session_snapshot(controller)
     # Text input modes
     if getattr(controller, "palette_filter_active", False):
         return True
@@ -340,7 +347,9 @@ def is_ui_blocked(controller: Any) -> bool:
         return True
     if getattr(controller, "inspector_edit_active", False):
         return True
-    if getattr(controller, "command_palette_active", False):
+    from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
+
+    if panels_is_open(controller, "command_palette"):
         return True
     if getattr(controller, "entity_panels_filter_active", False):
         return True
@@ -350,9 +359,9 @@ def is_ui_blocked(controller: Any) -> bool:
         return True
 
     # Modal states
-    if getattr(controller, "_unsaved_changes_pending", False):
+    if is_unsaved_changes_pending(controller):
         return True
-    if getattr(controller, "scene_browser_active", False):
+    if is_scene_browser_active(controller):
         return True
 
     return False

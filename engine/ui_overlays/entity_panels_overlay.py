@@ -28,8 +28,10 @@ class EntityPanelsOverlay(UIElement):
             return
 
         # Check dock tab visibility
-        left_dock_tab = getattr(controller, "_left_dock_tab", "Outliner")
-        right_dock_tab = getattr(controller, "_right_dock_tab", "Inspector")
+        dock = getattr(controller, "dock", None)
+        snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+        left_dock_tab = getattr(snapshot, "left_tab", "Outliner") or "Outliner"
+        right_dock_tab = getattr(snapshot, "right_tab", "Inspector") or "Inspector"
 
         # Outliner only visible if left dock is set to "Outliner"
         show_outliner = left_dock_tab == "Outliner"

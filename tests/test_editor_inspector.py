@@ -46,7 +46,7 @@ def test_inspector_navigation():
     controller.selected_entity = sprite
     
     # Mock behaviour params
-    with patch("engine.editor_controller.get_behaviour_param_defs") as mock_defs:
+    with patch("engine.editor.editor_inspector_controller.get_behaviour_param_defs") as mock_defs:
         mock_defs.return_value = {"param1": MagicMock(default=10, type=int)}
         
         # Build items

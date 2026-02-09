@@ -1,0 +1,22 @@
+[
+  {
+    "id": "export_hero",
+    "tags": ["player"],
+    "metadata": {"author": "test"},
+    "display_name": "Export Hero",
+    "entity": {
+      "sprite": "assets/sprites/hero.png",
+      "behaviours": []
+    }
+  },
+  {
+    "id": "export_npc",
+    "tags": ["npc"],
+    "metadata": {"author": "test"},
+    "display_name": "Export NPC",
+    "entity": {
+      "sprite": "assets/sprites/npc.png",
+      "behaviours": []
+    }
+  }
+]

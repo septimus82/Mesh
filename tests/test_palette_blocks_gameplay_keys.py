@@ -1,14 +1,30 @@
 import pytest
 import arcade
-from unittest.mock import MagicMock
+from types import SimpleNamespace
 from engine.input_runtime.capture import handle_key_press
 from engine.palette_mode import get_state, toggle_palette
 
 def test_palette_blocks_gameplay_keys():
-    controller = MagicMock()
-    controller.window.console_controller.active = False
-    controller.window.ui_controller.on_key_press.return_value = False
-    controller.window.editor_controller.active = False
+    """Test that palette mode blocks interact keys but allows movement keys."""
+    # Use SimpleNamespace to avoid MagicMock's truthy attribute behavior
+    window = SimpleNamespace(
+        console_controller=SimpleNamespace(active=False),
+        ui_controller=SimpleNamespace(on_key_press=lambda key, mods: False),
+        editor_controller=SimpleNamespace(active=False, panels=None),
+        command_palette_enabled=False,
+        show_debug=True,
+    )
+    manager = SimpleNamespace(
+        is_key_bound_to_action=lambda action, key: False,
+        press=lambda key: None,
+        release=lambda key: None,
+    )
+    controller = SimpleNamespace(
+        window=window, 
+        manager=manager, 
+        _keys=set(),
+        _log_debug=lambda msg: None,
+    )
     
     state = get_state()
     state.reset()

@@ -41,6 +41,26 @@ if optional_arcade.arcade is not None:
 BaseParticleSprite: TypeAlias = Sprite
 
 
+def _resolve_particle_seed(window: Any) -> int | None:
+    seed_value = getattr(window, "particle_seed", None)
+    if seed_value is None:
+        cfg = getattr(window, "engine_config", None)
+        seed_value = getattr(cfg, "particle_seed", None) if cfg is not None else None
+    if seed_value is None:
+        return None
+    try:
+        return int(seed_value)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _build_effect_rng(window: Any) -> random.Random | None:
+    seed = _resolve_particle_seed(window)
+    if seed is None:
+        return None
+    return random.Random(seed)
+
+
 class Particle(BaseParticleSprite):
     """Legacy particle sprite retained for compatibility."""
 
@@ -83,6 +103,7 @@ class ParticleManager:
     def __init__(self, window: "GameWindow") -> None:
         self.window = window
         self.system = ParticleSystem()
+        self._effect_rng = _build_effect_rng(window)
         self._arcade_available = optional_arcade.arcade is not None
         self._sprites: list["Sprite"] = []
         self._sprite_pool: dict[tuple[Any, ...], list["Sprite"]] = {}
@@ -193,13 +214,14 @@ class ParticleManager:
 
     def emit_hit_effect(self, x: float, y: float, color: tuple = _DEFAULT_WHITE) -> None:
         """Emit a burst of particles for a hit effect."""
+        rng = self._effect_rng or random
         particles = []
         for _ in range(8):
-            angle = random.uniform(0, 2 * math.pi)
-            speed = random.uniform(1.0, 3.0)
+            angle = rng.uniform(0, 2 * math.pi)
+            speed = rng.uniform(1.0, 3.0)
             vx = math.cos(angle) * speed
             vy = math.sin(angle) * speed
-            life = random.uniform(0.3, 0.6)
+            life = rng.uniform(0.3, 0.6)
             life, scale1 = _apply_scale_change(scale0=1.0, scale_change=-0.05, life=life)
             particles.append(
                 ParticleData(
@@ -221,13 +243,14 @@ class ParticleManager:
 
     def emit_collect_effect(self, x: float, y: float) -> None:
         """Emit a burst of particles for a collection effect."""
+        rng = self._effect_rng or random
         particles = []
         for _ in range(12):
-            angle = random.uniform(0, 2 * math.pi)
-            speed = random.uniform(2.0, 4.0)
+            angle = rng.uniform(0, 2 * math.pi)
+            speed = rng.uniform(2.0, 4.0)
             vx = math.cos(angle) * speed
             vy = math.sin(angle) * speed
-            life = random.uniform(0.5, 0.8)
+            life = rng.uniform(0.5, 0.8)
             life, scale1 = _apply_scale_change(scale0=1.0, scale_change=-0.03, life=life)
             particles.append(
                 ParticleData(
@@ -249,13 +272,14 @@ class ParticleManager:
 
     def emit_death_effect(self, x: float, y: float, color: tuple = _DEFAULT_RED) -> None:
         """Emit a larger burst for death."""
+        rng = self._effect_rng or random
         particles = []
         for _ in range(20):
-            angle = random.uniform(0, 2 * math.pi)
-            speed = random.uniform(2.0, 5.0)
+            angle = rng.uniform(0, 2 * math.pi)
+            speed = rng.uniform(2.0, 5.0)
             vx = math.cos(angle) * speed
             vy = math.sin(angle) * speed
-            life = random.uniform(0.8, 1.2)
+            life = rng.uniform(0.8, 1.2)
             life, scale1 = _apply_scale_change(scale0=1.5, scale_change=-0.05, life=life)
             particles.append(
                 ParticleData(

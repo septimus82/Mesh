@@ -43,7 +43,7 @@ def list_history() -> List[Dict[str, Any]]:
                 "actions": len(data.get("plan_snapshot", {}).get("actions", [])),
                 "status": "success" # Assumed if written
             })
-        except:
+        except Exception:
             pass
     return records
 

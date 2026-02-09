@@ -1,0 +1,18 @@
+{
+  "name": "Export Test Scene B",
+  "description": "Scene referencing prefab asset",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "blue"
+  },
+  "entities": [
+    {
+      "name": "npc",
+      "x": 50,
+      "y": 50,
+      "sprite": "assets/sprites/npc.png",
+      "behaviours": []
+    }
+  ],
+  "layers": []
+}

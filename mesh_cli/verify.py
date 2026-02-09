@@ -9,6 +9,7 @@ VERIFY_ALL_STEPS: tuple[str, ...] = (
     "verify-strict",
     "mypy-gate",
     "mypy-baseline-guard",
+    "mypy-island",
     "pytest-fast",
     "pytest-fast-duration-guard",
     "world-progression-check",
@@ -499,7 +500,26 @@ def _build_verify_all_payload(args: argparse.Namespace):
                 failure_seen = True
                 exit_code = 1 if code != 2 else 2
 
-        # Step 6: pytest-fast (exclude slow/e2e tests for local sanity)
+        # Step 6: mypy-island (strict typing on curated stable subsystems)
+        if failure_seen:
+            _skipped_step("mypy-island")
+        else:
+            try:
+                from tooling import mypy_island
+
+                with suppress_stdout():
+                    code = int(mypy_island.main([]))
+                error = "" if code == 0 else f"typed island failed with code {code}"
+            except Exception as exc:  # noqa: BLE001
+                code = 1
+                error = f"{type(exc).__name__}: {exc}"
+
+            _add_step("mypy-island", code, error=error, artifact=None)
+            if code != 0:
+                failure_seen = True
+                exit_code = 1 if code != 2 else 2
+
+        # Step 7: pytest-fast (exclude slow/e2e tests for local sanity)
         if failure_seen:
             _skipped_step("pytest-fast")
         else:

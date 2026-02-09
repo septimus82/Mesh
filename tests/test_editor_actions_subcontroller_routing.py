@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 from types import SimpleNamespace
 from engine.editor.editor_actions import run_editor_action
+from tests._dock_stub import make_dock_stub
 
 def test_copy_path_uses_file_ops_protocol() -> None:
     # Setup
@@ -12,7 +13,7 @@ def test_copy_path_uses_file_ops_protocol() -> None:
     
     mock_editor = MagicMock()
     mock_editor.active = True
-    mock_editor._left_dock_tab = "Project"
+    mock_editor.dock = make_dock_stub(left_tab="Project")
     mock_editor.file_ops = mock_file_ops
     mock_editor.project_explorer = MagicMock()
     mock_editor.project_explorer.selected_paths.return_value = ["assets/a.png", "assets/b.png"]
@@ -37,7 +38,7 @@ def test_copy_common_parent_uses_file_ops_protocol() -> None:
 
     mock_editor = MagicMock()
     mock_editor.active = True
-    mock_editor._left_dock_tab = "Project"
+    mock_editor.dock = make_dock_stub(left_tab="Project")
     mock_editor.file_ops = mock_file_ops
     mock_editor.project_explorer = MagicMock()
     mock_editor.project_explorer.selected_paths.return_value = ["assets/a.png", "assets/b.png"]
@@ -58,7 +59,7 @@ def test_safe_rename_uses_file_ops_protocol() -> None:
     
     mock_editor = MagicMock()
     mock_editor.active = True
-    mock_editor._left_dock_tab = "Project"
+    mock_editor.dock = make_dock_stub(left_tab="Project")
     
     mock_editor.file_ops = mock_file_ops
     mock_editor.project_explorer = mock_project_explorer
@@ -84,7 +85,7 @@ def test_safe_rename_aborts_if_capability_missing() -> None:
     
     mock_editor = MagicMock()
     mock_editor.active = True
-    mock_editor._left_dock_tab = "Project"
+    mock_editor.dock = make_dock_stub(left_tab="Project")
     mock_editor.file_ops = mock_file_ops
     mock_editor.project_explorer = mock_project_explorer
     
@@ -105,7 +106,7 @@ def test_safe_move_routes_to_batch_when_multi_selected() -> None:
 
     mock_editor = MagicMock()
     mock_editor.active = True
-    mock_editor._left_dock_tab = "Project"
+    mock_editor.dock = make_dock_stub(left_tab="Project")
     mock_editor.file_ops = mock_file_ops
     mock_editor.project_explorer = mock_project_explorer
 
@@ -117,6 +118,6 @@ def test_safe_move_routes_to_batch_when_multi_selected() -> None:
 
     mock_window = SimpleNamespace(editor_controller=mock_editor)
 
-    run_editor_action("editor.project_explorer.safe_move_asset", mock_editor, mock_window)
+    run_editor_action("editor.project_explorer.refactor_move_selected", mock_editor, mock_window)
 
-    mock_editor.safe_move_selected_assets.assert_called_once_with("assets/dest")
+    mock_file_ops.request_safe_move_refactor.assert_called_once_with("assets/dest")

@@ -409,7 +409,7 @@ def generate_scene_data(path: str, template_name: str = "empty", extra_args: Dic
                     if "default_drop_table_id" in theme_data:
                         # In a real system, we'd look up the table. Here we just tag it.
                         boss_drops.append({"table_id": theme_data["default_drop_table_id"], "chance": 1.0})
-             except: pass
+             except Exception: pass
 
         # Add Boss
         base_scene["entities"].append({

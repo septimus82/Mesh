@@ -475,3 +475,327 @@ def validate_world(
                     )
 
     return sort_validation_errors(errors)
+
+
+# ---------------------------------------------------------------------------
+# Prefab validation
+# ---------------------------------------------------------------------------
+
+# Known top-level prefab fields
+KNOWN_PREFAB_FIELDS: frozenset[str] = frozenset({
+    "id",
+    "base",
+    "display_name",
+    "category",
+    "tags",
+    "metadata",
+    "entity",
+    "variants",
+    # Extension namespace: any field starting with "x_" is allowed
+})
+
+# Known entity fields within a prefab (subset relevant for prefab validation)
+KNOWN_PREFAB_ENTITY_FIELDS: frozenset[str] = frozenset({
+    "sprite",
+    "sprite_sheet",
+    "scale",
+    "rotation",
+    "layer",
+    "behaviours",
+    "behaviour_config",
+    "solid",
+    "collision_poly",
+    "occluder_poly",
+    "tags",
+    "name",
+    "animations",
+    "animation_state",
+    "animation_frame_rate",
+    "depth_z",
+    "render_layer",
+    "shadow_offset_y",
+    "shadow_scale",
+    "tint",
+    "alpha",
+    # Extension namespace: any field starting with "x_" is allowed
+})
+
+
+def validate_prefab(
+    path: Path,
+    data: Any,
+    *,
+    index: int | None = None,
+    strict: bool = False,
+) -> list[ValidationError]:
+    """Validate a single prefab definition.
+    
+    Args:
+        path: Path to the prefab file (for error messages).
+        data: The prefab dict to validate.
+        index: Optional index within a prefab array (for error paths).
+        strict: If True, enforce stricter validation rules.
+    
+    Returns:
+        List of ValidationError objects (empty if valid).
+    """
+    errors: list[ValidationError] = []
+    base_path = f"[{index}]" if index is not None else ""
+    
+    if not isinstance(data, dict):
+        return [
+            ValidationError(
+                code="prefab.type",
+                path=base_path,
+                message=f"Prefab {path}{base_path}: must be an object",
+            )
+        ]
+    
+    # Required: id
+    prefab_id = data.get("id")
+    if not isinstance(prefab_id, str) or not prefab_id.strip():
+        errors.append(
+            ValidationError(
+                code="prefab.id.required",
+                path=f"{base_path}.id" if base_path else "id",
+                message=f"Prefab {path}{base_path}: 'id' must be a non-empty string",
+            )
+        )
+        prefab_id = "<unknown>"
+    else:
+        prefab_id = prefab_id.strip()
+        # Validate id format (lowercase alphanumeric + underscores)
+        import re
+        if not re.match(r"^[a-z0-9_]+$", prefab_id):
+            errors.append(
+                ValidationError(
+                    code="prefab.id.format",
+                    path=f"{base_path}.id" if base_path else "id",
+                    message=f"Prefab {path}{base_path}: 'id' must match pattern ^[a-z0-9_]+$ (got '{prefab_id}')",
+                )
+            )
+    
+    # Required: entity
+    entity = data.get("entity")
+    if entity is None:
+        errors.append(
+            ValidationError(
+                code="prefab.entity.required",
+                path=f"{base_path}.entity" if base_path else "entity",
+                message=f"Prefab {path} '{prefab_id}': missing required 'entity' block",
+            )
+        )
+    elif not isinstance(entity, dict):
+        errors.append(
+            ValidationError(
+                code="prefab.entity.type",
+                path=f"{base_path}.entity" if base_path else "entity",
+                message=f"Prefab {path} '{prefab_id}': 'entity' must be an object",
+            )
+        )
+        entity = None
+    
+    # Validate entity fields
+    if isinstance(entity, dict):
+        ent_base = f"{base_path}.entity" if base_path else "entity"
+        
+        # Check for unknown fields (strict mode)
+        if strict:
+            for key in entity.keys():
+                if key not in KNOWN_PREFAB_ENTITY_FIELDS and not key.startswith("x_"):
+                    errors.append(
+                        ValidationError(
+                            code="prefab.entity.unknown_field",
+                            path=f"{ent_base}.{key}",
+                            message=f"Prefab {path} '{prefab_id}': unknown entity field '{key}' "
+                                    f"(use 'x_' prefix for extensions)",
+                        )
+                    )
+        
+        # Validate behaviours
+        behaviours = entity.get("behaviours")
+        if behaviours is not None:
+            if not isinstance(behaviours, list):
+                errors.append(
+                    ValidationError(
+                        code="prefab.entity.behaviours.type",
+                        path=f"{ent_base}.behaviours",
+                        message=f"Prefab {path} '{prefab_id}': behaviours must be an array",
+                    )
+                )
+            else:
+                for i, b in enumerate(behaviours):
+                    if not isinstance(b, (str, dict)):
+                        errors.append(
+                            ValidationError(
+                                code="prefab.entity.behaviours.entry_type",
+                                path=f"{ent_base}.behaviours[{i}]",
+                                message=f"Prefab {path} '{prefab_id}': behaviours[{i}] must be string or object",
+                            )
+                        )
+        
+        # Validate behaviour_config
+        bcfg = entity.get("behaviour_config")
+        if bcfg is not None and not isinstance(bcfg, dict):
+            errors.append(
+                ValidationError(
+                    code="prefab.entity.behaviour_config.type",
+                    path=f"{ent_base}.behaviour_config",
+                    message=f"Prefab {path} '{prefab_id}': behaviour_config must be an object",
+                )
+            )
+        
+        # Validate collision_poly and occluder_poly
+        for poly_field in ("collision_poly", "occluder_poly"):
+            poly = entity.get(poly_field)
+            if poly is not None:
+                if not isinstance(poly, list):
+                    errors.append(
+                        ValidationError(
+                            code=f"prefab.entity.{poly_field}.type",
+                            path=f"{ent_base}.{poly_field}",
+                            message=f"Prefab {path} '{prefab_id}': {poly_field} must be an array of points",
+                        )
+                    )
+                elif len(poly) < 3:
+                    errors.append(
+                        ValidationError(
+                            code=f"prefab.entity.{poly_field}.min_points",
+                            path=f"{ent_base}.{poly_field}",
+                            message=f"Prefab {path} '{prefab_id}': {poly_field} needs at least 3 points",
+                        )
+                    )
+        
+        # Validate tags
+        tags = entity.get("tags")
+        if tags is not None:
+            if not isinstance(tags, list):
+                errors.append(
+                    ValidationError(
+                        code="prefab.entity.tags.type",
+                        path=f"{ent_base}.tags",
+                        message=f"Prefab {path} '{prefab_id}': tags must be an array",
+                    )
+                )
+            else:
+                for i, t in enumerate(tags):
+                    if not isinstance(t, str):
+                        errors.append(
+                            ValidationError(
+                                code="prefab.entity.tags.entry_type",
+                                path=f"{ent_base}.tags[{i}]",
+                                message=f"Prefab {path} '{prefab_id}': tags[{i}] must be a string",
+                            )
+                        )
+    
+    # Optional: base (inheritance)
+    base = data.get("base")
+    if base is not None and not isinstance(base, str):
+        errors.append(
+            ValidationError(
+                code="prefab.base.type",
+                path=f"{base_path}.base" if base_path else "base",
+                message=f"Prefab {path} '{prefab_id}': 'base' must be a string",
+            )
+        )
+    
+    # Optional: tags (top-level)
+    top_tags = data.get("tags")
+    if top_tags is not None:
+        if not isinstance(top_tags, list):
+            errors.append(
+                ValidationError(
+                    code="prefab.tags.type",
+                    path=f"{base_path}.tags" if base_path else "tags",
+                    message=f"Prefab {path} '{prefab_id}': 'tags' must be an array",
+                )
+            )
+        else:
+            for i, t in enumerate(top_tags):
+                if not isinstance(t, str):
+                    errors.append(
+                        ValidationError(
+                            code="prefab.tags.entry_type",
+                            path=f"{base_path}.tags[{i}]" if base_path else f"tags[{i}]",
+                            message=f"Prefab {path} '{prefab_id}': tags[{i}] must be a string",
+                        )
+                    )
+    
+    # Optional: metadata
+    metadata = data.get("metadata")
+    if metadata is not None and not isinstance(metadata, dict):
+        errors.append(
+            ValidationError(
+                code="prefab.metadata.type",
+                path=f"{base_path}.metadata" if base_path else "metadata",
+                message=f"Prefab {path} '{prefab_id}': 'metadata' must be an object",
+            )
+        )
+    
+    # Check for unknown top-level fields (strict mode)
+    if strict:
+        for key in data.keys():
+            if key not in KNOWN_PREFAB_FIELDS and not key.startswith("x_"):
+                errors.append(
+                    ValidationError(
+                        code="prefab.unknown_field",
+                        path=f"{base_path}.{key}" if base_path else key,
+                        message=f"Prefab {path} '{prefab_id}': unknown field '{key}' "
+                                f"(use 'x_' prefix for extensions)",
+                    )
+                )
+    
+    return sort_validation_errors(errors)
+
+
+def validate_prefab_file(
+    path: Path,
+    data: Any,
+    *,
+    strict: bool = False,
+) -> list[ValidationError]:
+    """Validate a prefab file (array of prefab definitions).
+    
+    Args:
+        path: Path to the prefab file.
+        data: The parsed JSON data (should be a list).
+        strict: If True, enforce stricter validation rules.
+    
+    Returns:
+        List of ValidationError objects (empty if valid).
+    """
+    errors: list[ValidationError] = []
+    
+    if not isinstance(data, list):
+        return [
+            ValidationError(
+                code="prefab_file.type",
+                path="",
+                message=f"Prefab file {path}: must be an array of prefab definitions",
+            )
+        ]
+    
+    seen_ids: set[str] = set()
+    for index, prefab in enumerate(data):
+        # Validate individual prefab
+        prefab_errors = validate_prefab(path, prefab, index=index, strict=strict)
+        errors.extend(prefab_errors)
+        
+        # Check for duplicate IDs
+        if isinstance(prefab, dict):
+            pid = prefab.get("id")
+            if isinstance(pid, str) and pid.strip():
+                pid = pid.strip()
+                if pid in seen_ids:
+                    errors.append(
+                        ValidationError(
+                            code="prefab_file.duplicate_id",
+                            path=f"[{index}].id",
+                            message=f"Prefab file {path}: duplicate prefab id '{pid}'",
+                        )
+                    )
+                else:
+                    seen_ids.add(pid)
+    
+    return sort_validation_errors(errors)
+

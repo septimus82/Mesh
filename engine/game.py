@@ -1,4 +1,72 @@
-"""Arcade window and runtime glue for the Mesh engine prototype."""
+"""Arcade window and runtime glue for the Mesh engine prototype.
+
+This module contains the main GameWindow class which serves as the central
+facade for the entire Mesh Engine. It orchestrates all subsystems and provides
+the main game loop.
+
+Architecture:
+    GameWindow follows the Facade pattern, delegating responsibilities to
+    specialized controllers while providing a unified interface:
+
+    - **SceneController**: Entity management, layer rendering, scene loading
+    - **CameraController**: Viewport, zoom, shake, camera areas
+    - **InputController**: Keyboard/mouse/gamepad input handling
+    - **UIController**: UI overlays, HUD, menus, dialogue
+    - **EditorController**: In-game editor mode (dev only)
+    - **ConsoleController**: Developer console commands
+    - **LightManager**: Dynamic lighting and shadows
+    - **AudioManager**: Music and sound effects
+
+Game Loop:
+    Each frame, GameWindow.on_update() and on_draw() are called:
+
+    1. **on_update(dt)**:
+        - Process input
+        - Update behaviours (pre_update -> update -> late_update)
+        - Update physics/collisions
+        - Process pending scene changes
+        - Tick animations, particles, day/night cycle
+        - Deliver queued events
+
+    2. **on_draw()**:
+        - Clear screen
+        - Draw background layers/parallax
+        - Draw tilemap
+        - Draw entities (sorted by depth)
+        - Apply lighting
+        - Draw UI overlays
+
+Configuration:
+    Engine settings are loaded from config.json::
+
+        {
+            "title": "My Game",
+            "width": 1280,
+            "height": 720,
+            "fullscreen": false,
+            "start_scene": "scenes/main.json",
+            "lighting_enabled": true
+        }
+
+Example Usage::
+
+    from engine.config import load_config
+    from engine.game import GameWindow
+
+    config = load_config("config.json")
+    window = GameWindow(
+        width=config.width,
+        height=config.height,
+        title=config.title,
+        config=config
+    )
+    window.run()
+
+See Also:
+    - :class:`SceneController` for entity and scene management
+    - :class:`CameraController` for viewport control
+    - :mod:`engine.behaviours` for entity logic components
+"""
 
 from __future__ import annotations
 
@@ -72,6 +140,7 @@ from .ui import (
     PauseMenu,
     PlayerHUD,
     SceneDirtyOverlay,
+    PhysicsBroadphaseOverlay,
     SceneInspectorOverlay,
     SettingsOverlay,
     TilePaintOverlay,
@@ -93,6 +162,7 @@ from .ui_overlays.project_explorer_overlay import ProjectExplorerOverlay
 from .ui_overlays.asset_browser_overlay import AssetBrowserOverlay
 from .ui_overlays.undo_history_overlay import UndoHistoryOverlay
 from .ui_overlays.problems_panel_overlay import ProblemsPanelOverlay
+from .ui_overlays.debug_panels_overlay import DebugPanelsOverlay
 from .ui_overlays.find_everything_overlay import FindEverythingOverlay
 from .ui_overlays.component_inspector_overlay import ComponentInspectorOverlay
 from .ui_overlays.hd2d_settings_panel_overlay import Hd2dSettingsPanelOverlay
@@ -116,7 +186,56 @@ logger = get_logger(__name__)
 
 
 class GameWindow(engine.optional_arcade.arcade.Window):
-    """Simple Arcade window that can load sprite entities from a JSON scene."""
+    """Main game window and central facade for the Mesh Engine.
+
+    GameWindow inherits from Arcade's Window class and orchestrates all engine
+    subsystems. It serves as the service container that controllers and systems
+    reference to access other parts of the engine.
+
+    Key Responsibilities:
+        - Initialize and wire up all engine subsystems
+        - Run the main game loop (update/draw cycle)
+        - Dispatch input events to the appropriate handlers
+        - Manage scene loading and transitions
+        - Coordinate UI overlay rendering
+
+    Subsystems (accessible as attributes):
+        scene_controller: Entity and scene management
+        camera_controller: Viewport, zoom, shake
+        input_controller: Input handling and action dispatch
+        ui_controller: UI overlays and HUD
+        editor_controller: In-game editor (dev mode)
+        console_controller: Developer console
+        lighting: Dynamic lighting system
+        audio: Music and sound effects
+        events: Event bus for gameplay events
+        game_state: Global game state (flags, counters)
+        quest_manager: Quest progress tracking
+        save_manager: Save/load functionality
+
+    UI Overlays:
+        player_hud: Health/stamina/inventory HUD
+        pause_menu: In-game pause menu
+        help_overlay: Controls help screen
+        settings_overlay: Settings/options menu
+
+    Example::
+
+        # Access subsystems from a behaviour
+        def update(self, dt):
+            # Get player entity
+            player = self.window.scene_controller.player
+
+            # Emit a gameplay event
+            self.window.events.emit("item_collected", item_id="key_1")
+
+            # Check game state
+            if self.window.game_state.get_flag("boss_defeated"):
+                self.window.scene_controller.request_scene_change("credits.json")
+
+            # Play sound effect
+            self.window.audio.play_sound("coin_pickup")
+    """
 
     player_hud: PlayerHUD
     game_over_screen: GameOverScreen
@@ -139,6 +258,17 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         config: EngineConfig | None = None,
         config_path: str = "config.json",
     ) -> None:
+        """Initialize the game window and all engine subsystems.
+
+        Args:
+            width: Window width in pixels.
+            height: Window height in pixels.
+            title: Window title text.
+            fullscreen: Start in fullscreen mode.
+            vsync: Enable vertical sync.
+            config: Pre-loaded EngineConfig, or None to use defaults.
+            config_path: Path to config.json for runtime reference.
+        """
         super().__init__(
             width=width,
             height=height,
@@ -329,6 +459,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
 
         self.scene_dirty_overlay = SceneDirtyOverlay(self, provider=ui_providers.scene_dirty_provider)
         self.register_ui_element(self.scene_dirty_overlay)
+        self.physics_broadphase_overlay = PhysicsBroadphaseOverlay(self, provider=ui_providers.physics_broadphase_provider)
+        self.register_ui_element(self.physics_broadphase_overlay)
 
         self.hd2d_preview_indicator_overlay = HD2DPreviewIndicatorOverlay(self, provider=ui_providers.hd2d_preview_indicator_provider)
         self.register_ui_element(self.hd2d_preview_indicator_overlay)
@@ -395,6 +527,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.asset_browser_overlay = AssetBrowserOverlay(self); self.register_ui_element(self.asset_browser_overlay)
         self.undo_history_overlay = UndoHistoryOverlay(self); self.register_ui_element(self.undo_history_overlay)
         self.problems_panel_overlay = ProblemsPanelOverlay(self); self.register_ui_element(self.problems_panel_overlay)
+        self.debug_panels_overlay = DebugPanelsOverlay(self); self.register_ui_element(self.debug_panels_overlay)
         self.find_everything_overlay = FindEverythingOverlay(self); self.register_ui_element(self.find_everything_overlay)
 
         self.interact_prompt_overlay = InteractPromptOverlay(self, provider=ui_providers.interact_prompt_provider); self.register_ui_element(self.interact_prompt_overlay)
@@ -515,6 +648,10 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def request_scene_change(self, scene_path: str) -> None:
         """Request that a different scene load on the next frame."""
         game_scene_flow.request_scene_change(self, scene_path)
+
+    def queue_scene_change(self, scene_path: str, *, spawn_id: str | None = None) -> None:
+        """Request that the game switches to another scene at the end of the frame."""
+        game_scene_flow.queue_scene_change(self, scene_path, spawn_id=spawn_id)
 
     def mark_scene_dirty(self, reason: str) -> None:
         game_scene_ops.mark_scene_dirty(self, reason)

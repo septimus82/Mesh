@@ -826,12 +826,23 @@ def editor_command_palette_provider(window: Any) -> dict[str, Any]:
     )
 
     editor = getattr(window, "editor_controller", None)
-    enabled = bool(editor and getattr(editor, "active", False) and getattr(editor, "command_palette_active", False))
+    from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
+
+    enabled = bool(
+        editor
+        and getattr(editor, "active", False)
+        and panels_is_open(editor, "command_palette")
+    )
     if not enabled:
         return {"enabled": False}
 
-    query = str(getattr(editor, "command_palette_query", "") or "")
-    idx = int(getattr(editor, "command_palette_index", 0) or 0)
+    search = getattr(editor, "search", None)
+    query = ""
+    idx = 0
+    if search is not None:
+        getter = getattr(search, "get_command_palette_state", None)
+        if callable(getter):
+            query, idx = getter()
 
     focus_target = get_palette_focus_target(window)
     commands = filter_commands(get_all_commands(window), query, focus_target=focus_target)
@@ -1038,7 +1049,11 @@ def project_explorer_provider(window: Any, viewport_h: int, row_h: float, oversc
     editor = getattr(window, "editor_controller", None)
     if not editor:
         return {}
-    
+
+    providers = getattr(editor, "providers", None)
+    if providers and hasattr(providers, "get_project_explorer_payload"):
+        return cast(Dict[str, Any], providers.get_project_explorer_payload(viewport_h, row_h, overscan))
+
     explorer = getattr(editor, "project_explorer", None)
     if not explorer:
         return {}
@@ -1051,11 +1066,42 @@ def project_explorer_provider(window: Any, viewport_h: int, row_h: float, oversc
     return {}
 
 
+def project_explorer_context_menu_provider(window: Any) -> dict[str, Any]:
+    """Provider for Project Explorer context menu."""
+    editor = getattr(window, "editor_controller", None)
+    if not editor:
+        return {}
+
+    providers = getattr(editor, "providers", None)
+    if providers and hasattr(providers, "get_project_explorer_context_menu_payload"):
+        return cast(Dict[str, Any], providers.get_project_explorer_context_menu_payload())
+
+    explorer = getattr(editor, "project_explorer", None)
+    if not explorer or not hasattr(explorer, "get_context_menu_payload"):
+        return {}
+    return cast(Dict[str, Any], explorer.get_context_menu_payload())
+
+def physics_broadphase_provider(window: Any) -> dict[str, Any]:
+    from engine import physics_runtime
+
+    stats = physics_runtime.get_broadphase_stats()
+    return {
+        "enabled": bool(stats.get("enabled", False)),
+        "build_count": int(stats.get("build_count", 0)),
+        "candidate_count": int(stats.get("candidate_count", 0)),
+        "exact_checks_count": int(stats.get("exact_checks_count", 0)),
+    }
+
+
 def problems_panel_provider(window: Any, viewport_h: int, row_h: float, overscan: int = 5) -> dict[str, Any]:
     """Provider for the problems panel."""
     editor = getattr(window, "editor_controller", None)
     if not editor:
         return {}
+
+    providers = getattr(editor, "providers", None)
+    if providers and hasattr(providers, "get_problems_panel_payload"):
+        return cast(Dict[str, Any], providers.get_problems_panel_payload(viewport_h, row_h, overscan))
 
     problems = getattr(editor, "problems", None)
     if not problems:

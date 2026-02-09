@@ -1,0 +1,369 @@
+{
+  "name": "Puzzle Room 02",
+  "version": 1,
+  "schema_version": 1,
+  "settings": {
+    "background_color": "dark_slate_gray",
+    "world_width": 512,
+    "world_height": 384
+  },
+  "layers": [
+    {"name": "background"},
+    {"name": "entities"},
+    {"name": "foreground"}
+  ],
+  "entities": [
+    {
+      "id": "puzzle_room_02_player",
+      "name": "PuzzlePlayer",
+      "prefab_id": "player",
+      "layer": "entities",
+      "x": 96.0,
+      "y": 96.0
+    },
+    {
+      "id": "puzzle_room_02_entry_trigger",
+      "name": "RoomEntryTrigger02",
+      "prefab_id": "puzzle_room2_entry_trigger",
+      "layer": "background",
+      "x": 256.0,
+      "y": 192.0
+    },
+    {
+      "id": "puzzle_room_02_rune_b",
+      "name": "RuneB02",
+      "prefab_id": "puzzle2_rune_b",
+      "x": 200.0,
+      "y": 180.0
+    },
+    {
+      "id": "puzzle_room_02_rune_a",
+      "name": "RuneA02",
+      "prefab_id": "puzzle2_rune_a",
+      "x": 256.0,
+      "y": 240.0
+    },
+    {
+      "id": "puzzle_room_02_rune_c",
+      "name": "RuneC02",
+      "prefab_id": "puzzle2_rune_c",
+      "x": 312.0,
+      "y": 180.0
+    },
+    {
+      "id": "puzzle_room_02_hint_plaque",
+      "name": "HintPlaque02",
+      "prefab_id": "puzzle2_hint_plaque",
+      "x": 128.0,
+      "y": 240.0
+    },
+    {
+      "id": "puzzle_room_02_exit_door",
+      "name": "ExitDoor02",
+      "prefab_id": "puzzle2_exit_door",
+      "x": 416.0,
+      "y": 304.0
+    },
+    {
+      "id": "puzzle_room_02_timer",
+      "name": "Puzzle2Timer",
+      "prefab_id": "puzzle2_timer",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "id": "puzzle_room_02_sentinel",
+      "name": "Sentinel02",
+      "prefab_id": "puzzle2_sentinel",
+      "x": 256.0,
+      "y": 112.0
+    },
+    {
+      "id": "puzzle_room_02_sentinel_vision",
+      "name": "SentinelVision02",
+      "prefab_id": "puzzle2_sentinel_vision",
+      "layer": "background",
+      "x": 256.0,
+      "y": 112.0
+    },
+    {
+      "id": "puzzle_room_02_cutscene_trigger",
+      "name": "PuzzleResetCutscene02",
+      "prefab_id": "puzzle2_cutscene_trigger",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "id": "puzzle_room_02_start",
+      "name": "PuzzleStart02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["room2_entered"],
+          "forbid_flags": ["puzzle2.solved"],
+          "actions": [
+            {"type": "clear_flag", "flag": "puzzle2.seq1"},
+            {"type": "clear_flag", "flag": "puzzle2.seq2"},
+            {"type": "clear_flag", "flag": "puzzle2.locked"},
+            {"type": "clear_flag", "flag": "puzzle2.restart_pending"},
+            {"type": "set_flag", "flag": "puzzle2.running"},
+            {"type": "emit_event", "event_type": "room2_started"},
+            {"type": "start_timer", "target": "Puzzle2Timer", "timer_id": "puzzle2_timer"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_02_hint_start",
+      "name": "PuzzleHintStart02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["hint2_plaque_interact"],
+          "actions": [
+            {
+              "type": "start_dialogue",
+              "target": "HintPlaque02",
+              "dialogue_id": "puzzle2_hint_plaque"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_02_hint_complete",
+      "name": "PuzzleHintComplete02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["dialogue_completed"],
+          "event_filter": {"dialogue_id": "puzzle2_hint_plaque"},
+          "actions": [
+            {
+              "type": "emit_event",
+              "event_type": "hint2_read",
+              "payload": {"hint_id": "puzzle2_hint_plaque"}
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_02_seq_b",
+      "name": "PuzzleSequenceB02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle2_rune_b"],
+          "require_flags": ["puzzle2.running"],
+          "forbid_flags": ["puzzle2.seq1", "puzzle2.seq2", "puzzle2.solved", "puzzle2.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle2.seq1"},
+            {"type": "emit_event", "event_type": "puzzle2_progress", "payload": {"pos": 1}}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_02_seq_a",
+      "name": "PuzzleSequenceA02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle2_rune_a"],
+          "require_flags": ["puzzle2.running", "puzzle2.seq1"],
+          "forbid_flags": ["puzzle2.seq2", "puzzle2.solved", "puzzle2.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle2.seq2"},
+            {"type": "clear_flag", "flag": "puzzle2.seq1"},
+            {"type": "emit_event", "event_type": "puzzle2_progress", "payload": {"pos": 2}}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_02_seq_c",
+      "name": "PuzzleSequenceC02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle2_rune_c"],
+          "require_flags": ["puzzle2.running", "puzzle2.seq2"],
+          "forbid_flags": ["puzzle2.solved", "puzzle2.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle2.solved"},
+            {"type": "clear_flag", "flag": "puzzle2.seq1"},
+            {"type": "clear_flag", "flag": "puzzle2.seq2"},
+            {"type": "clear_flag", "flag": "puzzle2.running"},
+            {"type": "stop_timer", "target": "Puzzle2Timer", "timer_id": "puzzle2_timer"},
+            {"type": "emit_event", "event_type": "puzzle2_solved"},
+            {"type": "emit_event", "event_type": "hint2_read", "payload": {"hint_id": "puzzle2_hint_plaque"}}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_02_wrong_start",
+      "name": "PuzzleWrongStart02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle2_rune_a", "puzzle2_rune_c"],
+          "require_flags": ["puzzle2.running"],
+          "forbid_flags": ["puzzle2.seq1", "puzzle2.seq2", "puzzle2.solved", "puzzle2.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle2.locked"},
+            {"type": "clear_flag", "flag": "puzzle2.seq1"},
+            {"type": "clear_flag", "flag": "puzzle2.seq2"},
+            {"type": "emit_event", "event_type": "puzzle2_wrong"},
+            {"type": "delay", "duration": 0.25},
+            {"type": "clear_flag", "flag": "puzzle2.locked"},
+            {"type": "emit_event", "event_type": "puzzle2_reset"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_02_wrong_seq1",
+      "name": "PuzzleWrongSeq1_02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle2_rune_b", "puzzle2_rune_c"],
+          "require_flags": ["puzzle2.running", "puzzle2.seq1"],
+          "forbid_flags": ["puzzle2.seq2", "puzzle2.solved", "puzzle2.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle2.locked"},
+            {"type": "clear_flag", "flag": "puzzle2.seq1"},
+            {"type": "clear_flag", "flag": "puzzle2.seq2"},
+            {"type": "emit_event", "event_type": "puzzle2_wrong"},
+            {"type": "delay", "duration": 0.25},
+            {"type": "clear_flag", "flag": "puzzle2.locked"},
+            {"type": "emit_event", "event_type": "puzzle2_reset"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_02_wrong_seq2",
+      "name": "PuzzleWrongSeq2_02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle2_rune_a", "puzzle2_rune_b"],
+          "require_flags": ["puzzle2.running", "puzzle2.seq2"],
+          "forbid_flags": ["puzzle2.solved", "puzzle2.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle2.locked"},
+            {"type": "clear_flag", "flag": "puzzle2.seq1"},
+            {"type": "clear_flag", "flag": "puzzle2.seq2"},
+            {"type": "emit_event", "event_type": "puzzle2_wrong"},
+            {"type": "delay", "duration": 0.25},
+            {"type": "clear_flag", "flag": "puzzle2.locked"},
+            {"type": "emit_event", "event_type": "puzzle2_reset"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_02_timeout",
+      "name": "PuzzleTimeout02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle2_timeout"],
+          "event_filter": {"timer_id": "puzzle2_timer"},
+          "require_flags": ["puzzle2.running"],
+          "forbid_flags": ["puzzle2.solved"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle2.locked"},
+            {"type": "set_flag", "flag": "puzzle2.restart_pending"},
+            {"type": "clear_flag", "flag": "puzzle2.seq1"},
+            {"type": "clear_flag", "flag": "puzzle2.seq2"},
+            {"type": "clear_flag", "flag": "puzzle2.running"},
+            {"type": "stop_timer", "target": "Puzzle2Timer", "timer_id": "puzzle2_timer"},
+            {"type": "emit_event", "event_type": "puzzle2_failed", "payload": {"reason": "timeout"}}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_02_spotted",
+      "name": "PuzzleSpotted02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["sentinel_spotted"],
+          "require_flags": ["puzzle2.running"],
+          "forbid_flags": ["puzzle2.solved"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle2.locked"},
+            {"type": "set_flag", "flag": "puzzle2.restart_pending"},
+            {"type": "clear_flag", "flag": "puzzle2.seq1"},
+            {"type": "clear_flag", "flag": "puzzle2.seq2"},
+            {"type": "clear_flag", "flag": "puzzle2.running"},
+            {"type": "stop_timer", "target": "Puzzle2Timer", "timer_id": "puzzle2_timer"},
+            {"type": "emit_event", "event_type": "puzzle2_failed", "payload": {"reason": "spotted"}}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_02_reset_after_fail",
+      "name": "PuzzleResetAfterFail02",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle2_reset"],
+          "require_flags": ["puzzle2.restart_pending"],
+          "actions": [
+            {"type": "clear_flag", "flag": "puzzle2.restart_pending"},
+            {"type": "clear_flag", "flag": "puzzle2.locked"},
+            {"type": "clear_flag", "flag": "puzzle2.seq1"},
+            {"type": "clear_flag", "flag": "puzzle2.seq2"},
+            {"type": "set_flag", "flag": "puzzle2.running"},
+            {"type": "start_timer", "target": "Puzzle2Timer", "timer_id": "puzzle2_timer"}
+          ]
+        }
+      }
+    }
+  ]
+}

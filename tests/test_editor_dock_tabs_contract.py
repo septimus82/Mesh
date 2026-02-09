@@ -33,6 +33,7 @@ from engine.workspace_settings import (
     load_workspace,
     save_workspace,
 )
+from tests._dock_stub import make_dock_stub
 
 
 # ------------------------------------------------------------------------------
@@ -56,6 +57,7 @@ class TestDockTabRects:
         assert "Assets" in tab_rects.right_tab_rects
         assert "History" in tab_rects.right_tab_rects
         assert "Problems" in tab_rects.right_tab_rects
+        assert "Debug" in tab_rects.right_tab_rects
 
     def test_left_tabs_within_left_dock(self):
         """Left tab rects should be within the left dock area."""
@@ -186,6 +188,18 @@ class TestHitTestDockTab:
         result = hit_test_dock_tab(x, y, layout)
 
         assert result == ("right", "History")
+
+    def test_hit_right_tab_debug(self):
+        """Clicking on Debug tab returns ('right', 'Debug')."""
+        layout = compute_editor_shell_layout(1920, 1080)
+        tab_rects = compute_dock_tab_rects(layout)
+        debug_rect = tab_rects.right_tab_rects["Debug"]
+
+        x = debug_rect.center_x
+        y = debug_rect.center_y
+        result = hit_test_dock_tab(x, y, layout)
+
+        assert result == ("right", "Debug")
     def test_miss_returns_none(self):
         """Clicking outside tabs returns None."""
         layout = compute_editor_shell_layout(1920, 1080)
@@ -218,8 +232,7 @@ class TestDockTabStateSwitching:
         """Create a mock editor controller with dock tab state."""
         controller = MagicMock()
         controller.active = True
-        controller._left_dock_tab = "Outliner"
-        controller._right_dock_tab = "Inspector"
+        controller.dock = make_dock_stub(left_tab="Outliner", right_tab="Inspector")
         controller._menu_active = None
         controller._context_menu_open = False
         controller.entity_panels_active = False
@@ -233,70 +246,70 @@ class TestDockTabStateSwitching:
         from engine.editor_controller import EditorModeController
 
         # Test pure state logic
-        mock_controller._left_dock_tab = "Outliner"
+        mock_controller.dock.left_tab = "Outliner"
 
         # Simulate set_dock_tab logic
-        if mock_controller._left_dock_tab != "Scene":
-            mock_controller._left_dock_tab = "Scene"
+        if mock_controller.dock.left_tab != "Scene":
+            mock_controller.dock.left_tab = "Scene"
             mock_controller.scene_browser_active = True
 
-        assert mock_controller._left_dock_tab == "Scene"
+        assert mock_controller.dock.left_tab == "Scene"
         assert mock_controller.scene_browser_active is True
 
     def test_set_dock_tab_left_outliner(self, mock_controller):
         """Switching left dock to Outliner should update state."""
-        mock_controller._left_dock_tab = "Scene"
+        mock_controller.dock.left_tab = "Scene"
 
-        if mock_controller._left_dock_tab != "Outliner":
-            mock_controller._left_dock_tab = "Outliner"
+        if mock_controller.dock.left_tab != "Outliner":
+            mock_controller.dock.left_tab = "Outliner"
             mock_controller.entity_panels_active = True
             mock_controller.entity_panels_focus = "outliner"
 
-        assert mock_controller._left_dock_tab == "Outliner"
+        assert mock_controller.dock.left_tab == "Outliner"
         assert mock_controller.entity_panels_active is True
 
     def test_set_dock_tab_right_inspector(self, mock_controller):
         """Switching right dock to Inspector should update state."""
-        mock_controller._right_dock_tab = "Assets"
+        mock_controller.dock.right_tab = "Assets"
 
-        if mock_controller._right_dock_tab != "Inspector":
-            mock_controller._right_dock_tab = "Inspector"
+        if mock_controller.dock.right_tab != "Inspector":
+            mock_controller.dock.right_tab = "Inspector"
             mock_controller.entity_panels_active = True
             mock_controller.entity_panels_focus = "inspector"
 
-        assert mock_controller._right_dock_tab == "Inspector"
+        assert mock_controller.dock.right_tab == "Inspector"
         assert mock_controller.entity_panels_active is True
 
     def test_set_dock_tab_right_assets(self, mock_controller):
         """Switching right dock to Assets should update state."""
-        mock_controller._right_dock_tab = "Inspector"
+        mock_controller.dock.right_tab = "Inspector"
 
-        if mock_controller._right_dock_tab != "Assets":
-            mock_controller._right_dock_tab = "Assets"
+        if mock_controller.dock.right_tab != "Assets":
+            mock_controller.dock.right_tab = "Assets"
             mock_controller.asset_browser_active = True
 
-        assert mock_controller._right_dock_tab == "Assets"
+        assert mock_controller.dock.right_tab == "Assets"
         assert mock_controller.asset_browser_active is True
 
     def test_set_dock_tab_right_history(self, mock_controller):
         """Switching right dock to History should update state."""
-        mock_controller._right_dock_tab = "Inspector"
+        mock_controller.dock.right_tab = "Inspector"
 
-        if mock_controller._right_dock_tab != "History":
-            mock_controller._right_dock_tab = "History"
+        if mock_controller.dock.right_tab != "History":
+            mock_controller.dock.right_tab = "History"
 
-        assert mock_controller._right_dock_tab == "History"
+        assert mock_controller.dock.right_tab == "History"
 
     def test_set_dock_tab_same_tab_noop(self, mock_controller):
         """Switching to already active tab should be no-op."""
-        mock_controller._left_dock_tab = "Outliner"
-        initial_state = mock_controller._left_dock_tab
+        mock_controller.dock.left_tab = "Outliner"
+        initial_state = mock_controller.dock.left_tab
 
         # Same tab - should not change anything
-        if mock_controller._left_dock_tab == "Outliner":
+        if mock_controller.dock.left_tab == "Outliner":
             pass  # No-op
 
-        assert mock_controller._left_dock_tab == initial_state
+        assert mock_controller.dock.left_tab == initial_state
 
 
 # ------------------------------------------------------------------------------
@@ -513,7 +526,7 @@ class TestDockTabIntegration:
 
         # Should still have all tabs
         assert len(tab_rects.left_tab_rects) == 3
-        assert len(tab_rects.right_tab_rects) == 4
+        assert len(tab_rects.right_tab_rects) == 5
 
         # Tabs should still be clickable (have positive area)
         for rect in tab_rects.left_tab_rects.values():

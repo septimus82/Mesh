@@ -198,5 +198,343 @@
       "behaviours": ["EnemyAI"],
       "behaviour_config": { "Health": { "max": 7 } }
     }
+  },
+  {
+    "id": "puzzle_rune_a",
+    "tags": ["puzzle", "rune"],
+    "metadata": { "author": "puzzle_room" },
+    "display_name": "Puzzle Rune A",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["TriggerVolume"],
+      "behaviour_config": {
+        "TriggerVolume": {
+          "volume_type": "rect",
+          "width": 32,
+          "height": 32,
+          "target_tags": ["player"],
+          "on_enter_event": "puzzle_rune_a"
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle_rune_b",
+    "tags": ["puzzle", "rune"],
+    "metadata": { "author": "puzzle_room" },
+    "display_name": "Puzzle Rune B",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["TriggerVolume"],
+      "behaviour_config": {
+        "TriggerVolume": {
+          "volume_type": "rect",
+          "width": 32,
+          "height": 32,
+          "target_tags": ["player"],
+          "on_enter_event": "puzzle_rune_b"
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle_rune_c",
+    "tags": ["puzzle", "rune"],
+    "metadata": { "author": "puzzle_room" },
+    "display_name": "Puzzle Rune C",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["TriggerVolume"],
+      "behaviour_config": {
+        "TriggerVolume": {
+          "volume_type": "rect",
+          "width": 32,
+          "height": 32,
+          "target_tags": ["player"],
+          "on_enter_event": "puzzle_rune_c"
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle_hint_plaque",
+    "tags": ["puzzle", "hint"],
+    "metadata": { "author": "puzzle_room" },
+    "display_name": "Puzzle Hint Plaque",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["Interactable", "DialogueRunner"],
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "hint_plaque_interact",
+          "interact_label": "Read Plaque",
+          "target_tags": ["player"]
+        },
+        "DialogueRunner": {
+          "dialogue_id": "puzzle_hint_plaque",
+          "start_node": "start",
+          "auto_advance": true,
+          "script": {
+            "start": {
+              "speaker": "Plaque",
+              "text": "The runes whisper: A, then C, then B.",
+              "next": null
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle_exit_door",
+    "tags": ["puzzle", "door"],
+    "metadata": { "author": "puzzle_room" },
+    "display_name": "Puzzle Exit Door",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["Interactable"],
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "puzzle_exit_interact",
+          "interact_label": "Exit",
+          "target_tags": ["player"]
+        }
+      },
+      "require_flags": ["puzzle.solved"]
+    }
+  },
+  {
+    "id": "puzzle_controller",
+    "tags": ["puzzle", "controller"],
+    "metadata": { "author": "puzzle_room" },
+    "display_name": "Puzzle Controller",
+    "entity": {
+      "sprite": null,
+      "behaviours": ["ActionListRunner"],
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": [],
+          "actions": []
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle_room_entry_trigger",
+    "tags": ["puzzle", "trigger"],
+    "metadata": { "author": "puzzle_room" },
+    "display_name": "Puzzle Room Entry Trigger",
+    "entity": {
+      "sprite": null,
+      "behaviours": ["TriggerVolume"],
+      "behaviour_config": {
+        "TriggerVolume": {
+          "volume_type": "rect",
+          "width": 120,
+          "height": 120,
+          "target_tags": ["player"],
+          "on_enter_event": "room_entered",
+          "one_shot": true
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle_room2_entry_trigger",
+    "tags": ["puzzle", "trigger"],
+    "metadata": { "author": "puzzle_room_02" },
+    "display_name": "Puzzle Room 02 Entry Trigger",
+    "entity": {
+      "sprite": null,
+      "behaviours": ["TriggerVolume"],
+      "behaviour_config": {
+        "TriggerVolume": {
+          "volume_type": "rect",
+          "width": 120,
+          "height": 120,
+          "target_tags": ["player"],
+          "on_enter_event": "room2_entered",
+          "one_shot": true
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle2_rune_a",
+    "tags": ["puzzle", "rune"],
+    "metadata": { "author": "puzzle_room_02" },
+    "display_name": "Puzzle Rune A (Room 02)",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["TriggerVolume"],
+      "behaviour_config": {
+        "TriggerVolume": {
+          "volume_type": "rect",
+          "width": 32,
+          "height": 32,
+          "target_tags": ["player"],
+          "on_enter_event": "puzzle2_rune_a"
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle2_rune_b",
+    "tags": ["puzzle", "rune"],
+    "metadata": { "author": "puzzle_room_02" },
+    "display_name": "Puzzle Rune B (Room 02)",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["TriggerVolume"],
+      "behaviour_config": {
+        "TriggerVolume": {
+          "volume_type": "rect",
+          "width": 32,
+          "height": 32,
+          "target_tags": ["player"],
+          "on_enter_event": "puzzle2_rune_b"
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle2_rune_c",
+    "tags": ["puzzle", "rune"],
+    "metadata": { "author": "puzzle_room_02" },
+    "display_name": "Puzzle Rune C (Room 02)",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["TriggerVolume"],
+      "behaviour_config": {
+        "TriggerVolume": {
+          "volume_type": "rect",
+          "width": 32,
+          "height": 32,
+          "target_tags": ["player"],
+          "on_enter_event": "puzzle2_rune_c"
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle2_hint_plaque",
+    "tags": ["puzzle", "hint"],
+    "metadata": { "author": "puzzle_room_02" },
+    "display_name": "Puzzle Room 02 Hint Plaque",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["Interactable", "DialogueRunner"],
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "hint2_plaque_interact",
+          "interact_label": "Read Plaque",
+          "target_tags": ["player"]
+        },
+        "DialogueRunner": {
+          "dialogue_id": "puzzle2_hint_plaque",
+          "start_node": "start",
+          "auto_advance": true,
+          "script": {
+            "start": {
+              "speaker": "Plaque",
+              "text": "The runes whisper: B, then A, then C.",
+              "next": null
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle2_exit_door",
+    "tags": ["puzzle", "door"],
+    "metadata": { "author": "puzzle_room_02" },
+    "display_name": "Puzzle Room 02 Exit Door",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["Interactable"],
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "door2_opened",
+          "interact_label": "Exit",
+          "target_tags": ["player"]
+        }
+      }
+    },
+    "require_flags": ["puzzle2.solved"]
+  },
+  {
+    "id": "puzzle2_timer",
+    "tags": ["puzzle", "timer"],
+    "metadata": { "author": "puzzle_room_02" },
+    "display_name": "Puzzle Room 02 Timer",
+    "entity": {
+      "sprite": null,
+      "behaviours": ["Timer"],
+      "behaviour_config": {
+        "Timer": {
+          "duration": 20.0,
+          "auto_start": false,
+          "timer_event": "puzzle2_timeout",
+          "timer_id": "puzzle2_timer"
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle2_sentinel",
+    "tags": ["puzzle", "sentinel"],
+    "metadata": { "author": "puzzle_room_02" },
+    "display_name": "Puzzle Room 02 Sentinel",
+    "entity": {
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["PatrolPath"],
+      "behaviour_config": {
+        "PatrolPath": {
+          "waypoints": [
+            {"x": 160.0, "y": 112.0},
+            {"x": 352.0, "y": 112.0}
+          ],
+          "speed": 40.0,
+          "mode": "pingpong",
+          "wait_time": 0.5
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle2_sentinel_vision",
+    "tags": ["puzzle", "trigger"],
+    "metadata": { "author": "puzzle_room_02" },
+    "display_name": "Puzzle Room 02 Sentinel Vision",
+    "entity": {
+      "sprite": null,
+      "behaviours": ["TriggerVolume"],
+      "behaviour_config": {
+        "TriggerVolume": {
+          "volume_type": "rect",
+          "width": 96,
+          "height": 64,
+          "target_tags": ["player"],
+          "on_enter_event": "sentinel_spotted"
+        }
+      }
+    }
+  },
+  {
+    "id": "puzzle2_cutscene_trigger",
+    "tags": ["puzzle", "cutscene"],
+    "metadata": { "author": "puzzle_room_02" },
+    "display_name": "Puzzle Room 02 Reset Cutscene Trigger",
+    "entity": {
+      "sprite": null,
+      "behaviours": ["CutsceneTrigger"],
+      "behaviour_config": {
+        "CutsceneTrigger": {
+          "listen_event": "puzzle2_failed",
+          "cutscene_id": "puzzle_room_02_reset"
+        }
+      }
+    }
   }
 ]

@@ -1,4 +1,41 @@
-"""Event definitions for Mesh Engine."""
+"""Event system for decoupled communication between engine systems.
+
+The event bus provides a publish/subscribe mechanism for gameplay events,
+enabling loose coupling between behaviours, UI, and game systems.
+
+Architecture:
+    - **MeshEvent**: Immutable data container with type string and payload dict
+    - **MeshEventBus**: Central dispatcher that routes events to subscribers
+    - **Subscribers**: Callbacks registered for specific event types or wildcards
+
+Common Event Types:
+    - ``damage_applied``: Combat damage dealt to an entity
+    - ``collectible_picked``: Player picked up an item
+    - ``quest_started``, ``quest_stage_complete``: Quest progression
+    - ``scene_loaded``: New scene finished loading
+    - ``dialogue_started``, ``dialogue_ended``: NPC conversation
+    - ``animation_event``: Animation frame triggered event
+
+Usage Example::
+
+    # Subscribe to specific event type
+    def on_damage(event: MeshEvent):
+        target = event.payload.get("target")
+        amount = event.payload.get("amount", 0)
+        print(f"{target} took {amount} damage")
+
+    unsubscribe = window.events.subscribe("damage_applied", on_damage)
+
+    # Emit an event
+    window.events.emit("damage_applied", target="Player", amount=10, source="Enemy")
+
+    # Cleanup when done
+    unsubscribe()
+
+See Also:
+    - :class:`Behaviour.on_event` for handling events in behaviours
+    - :mod:`engine.event_runtime` for event normalization utilities
+"""
 
 from __future__ import annotations
 
@@ -16,14 +53,71 @@ logger = get_logger(__name__)
 
 @dataclass
 class MeshEvent:
-    """Simple data container that describes gameplay events."""
+    """Immutable data container representing a gameplay event.
+
+    Events are the primary mechanism for decoupled communication between
+    engine systems. They consist of a type identifier and a payload dict
+    containing event-specific data.
+
+    Attributes:
+        type: Event type identifier (e.g., "damage_applied", "quest_started").
+            Should be snake_case and descriptive.
+        payload: Dictionary containing event-specific data. Keys vary by event
+            type but commonly include:
+            - ``entity_name``: Name of the entity involved
+            - ``scene_id``: Current scene path
+            - Event-specific data (amount, target, source, etc.)
+
+    Example::
+
+        event = MeshEvent(
+            type="collectible_picked",
+            payload={
+                "entity_name": "Player",
+                "item_id": "health_potion",
+                "quantity": 1,
+            }
+        )
+    """
 
     type: EventType
     payload: dict[str, Any]
 
 
 class MeshEventBus:
-    """Lightweight publish/subscribe helper for Mesh events."""
+    """Central event dispatcher implementing publish/subscribe pattern.
+
+    The event bus maintains subscriber lists for each event type and delivers
+    events to registered callbacks. It also maintains a history buffer for
+    debugging and replay functionality.
+
+    Features:
+        - Type-specific subscriptions via :meth:`subscribe`
+        - Wildcard subscriptions via :meth:`subscribe_all`
+        - Event history for debugging (last 50 events by default)
+        - Optional recorder callback for replay/analytics
+        - Thread-safe delivery with error isolation
+
+    Attributes:
+        _history_limit: Maximum events retained in history (default: 50).
+
+    Example::
+
+        bus = MeshEventBus()
+
+        # Subscribe to damage events
+        unsub = bus.subscribe("damage_applied", lambda e: print(e.payload))
+
+        # Emit an event
+        bus.emit("damage_applied", target="Enemy", amount=25)
+
+        # Check recent events
+        recent = bus.get_recent_event_names(3)
+        # ['damage_applied']
+
+        # Cleanup
+        unsub()
+    """
 
     def __init__(self) -> None:
         self._subscribers: Dict[str, List[EventCallback]] = {}
@@ -45,7 +139,31 @@ class MeshEventBus:
         return [e["name"] for e in self._history[-limit:]]
 
     def subscribe(self, event_type: str, callback: EventCallback) -> Callable[[], None]:
-        """Register a callback for a specific event type."""
+        """Register a callback for a specific event type.
+
+        The callback will be invoked whenever an event of the specified type
+        is emitted. Multiple callbacks can be registered for the same type.
+
+        Args:
+            event_type: The event type to listen for (e.g., "damage_applied").
+                Must be a non-empty string.
+            callback: Function accepting a MeshEvent parameter. Will be called
+                synchronously when matching events are emitted.
+
+        Returns:
+            An unsubscribe function. Call it to remove the subscription::
+
+                unsub = bus.subscribe("my_event", handler)
+                # ... later ...
+                unsub()  # Stop receiving events
+
+        Raises:
+            ValueError: If event_type is empty or None.
+
+        Note:
+            Callbacks are invoked in registration order. Exceptions in one
+            callback don't prevent others from being called.
+        """
 
         key = str(event_type or "").strip()
         if not key:
@@ -80,7 +198,33 @@ class MeshEventBus:
         return unsubscribe
 
     def emit(self, event_or_type: str | MeshEvent, **payload: Any) -> None:
-        """Emit a MeshEvent. Can pass a MeshEvent object or a type string and payload."""
+        """Emit an event to all registered subscribers.
+
+        This is the primary method for broadcasting events. It accepts either
+        a pre-constructed MeshEvent or a type string with keyword payload args.
+
+        Args:
+            event_or_type: Either a MeshEvent instance or an event type string.
+            **payload: When event_or_type is a string, these become the event
+                payload. Common keys include:
+                - ``entity_name``: The entity involved
+                - ``target``: Target of an action
+                - ``source``: Origin of an action
+                - ``amount``: Numeric value (damage, quantity, etc.)
+
+        Example::
+
+            # Using type string and kwargs (preferred for simplicity)
+            bus.emit("damage_applied", target="Enemy", amount=10, source="Player")
+
+            # Using pre-constructed event
+            event = MeshEvent("quest_started", {"quest_id": "main_quest_1"})
+            bus.emit(event)
+
+        Note:
+            Event names are normalized to snake_case. Payloads are deep-copied
+            to prevent mutation issues.
+        """
         if isinstance(event_or_type, MeshEvent):
             self.emit_event(event_or_type)
         else:

@@ -17,6 +17,7 @@ from engine.editor.editor_actions import (
     get_palette_actions,
 )
 from engine.editor.shortcut_resolver_model import normalize_shortcut_text
+from tests._dock_stub import make_dock_stub
 
 
 class _FakeProblemsController:
@@ -37,7 +38,7 @@ class _FakeEditorController:
         right_dock_tab: str = "Inspector",
         problems_ctl: _FakeProblemsController | None = None,
     ) -> None:
-        self._right_dock_tab = right_dock_tab
+        self.dock = make_dock_stub(left_tab="Outliner", right_tab=right_dock_tab)
         self.problems = problems_ctl or _FakeProblemsController()
 
 

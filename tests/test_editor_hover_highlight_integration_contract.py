@@ -7,9 +7,23 @@ and the overlay produces correct highlight specs.
 from __future__ import annotations
 
 from typing import Any, Tuple
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from tests._session_stub import make_session_stub
+from tests._dock_stub import make_dock_stub
+from engine.editor.editor_hover_state_controller import EditorHoverStateController
+from engine.editor.editor_hover_dock_tab_query import (
+    get_hovered_dock_tab,
+    get_hovered_dock_tab_rect,
+)
+from engine.editor.editor_hover_query import (
+    get_hovered_entity_id,
+    get_hovered_entity_rect,
+    get_hovered_splitter,
+    get_hovered_splitter_rect,
+)
 
 
 class MockWindow:
@@ -62,6 +76,7 @@ class MockSprite:
         self.center_y = cy
         self.width = w
         self.height = h
+        self.mesh_entity_data = {"id": entity_id, "x": cx, "y": cy}
 
 
 class MockEditorController:
@@ -70,6 +85,7 @@ class MockEditorController:
     def __init__(self, window: MockWindow) -> None:
         self.window = window
         self.active = True
+        self.session = make_session_stub()
 
         # Basic editor state
         self.selected_entity_ids = []
@@ -87,7 +103,7 @@ class MockEditorController:
         self.scene_browser_filter_active = False
         self.asset_browser_filter_active = False
         self._unsaved_changes_pending = False
-        self.confirm_open = False
+        self.unsaved_confirm = SimpleNamespace(is_open=False)
         self.scene_browser_active = False
 
         # Menu/context state
@@ -97,79 +113,24 @@ class MockEditorController:
         self._context_menu_x = 0.0
         self._context_menu_y = 0.0
         self._context_menu_hover_id = None
+        self.panels = SimpleNamespace(
+            is_command_palette_open=lambda: False,
+            is_context_menu_open=lambda: self._context_menu_open,
+            is_project_context_menu_open=lambda: False,
+            is_keybinds_visible=lambda: False,
+            is_confirm_modal_visible=lambda: False,
+        )
 
         # Dock state
-        self._left_dock_tab = "Outliner"
-        self._right_dock_tab = "Inspector"
-        self._dock_left_w = 320
-        self._dock_right_w = 320
+        self.dock = make_dock_stub(left_tab="Outliner", right_tab="Inspector")
 
-        # Hover state (to be set by hover detection)
-        self._hover_menu_title = None
-        self._hover_menu_title_rect = None
-        self._hover_menu_item_rect = None
-        self._hover_top_bar_control_id = None
-        self._hover_dock_tab = None
-        self._hover_dock_tab_rect = None
-        self._hover_splitter = None
-        self._hover_splitter_rect = None
-        self._hover_context_item_rect = None
-        self._hover_inspector_field_key = None
-        self._hover_inspector_field_rect = None
-        self._hover_entity_id = None
-        self._hover_entity_rect = None
+        # Hover state (owned by hover controller)
+        self.hover = EditorHoverStateController(self.dock)
 
         # Clipboard state
         self._entity_clipboard = None
 
-    def clear_hover_state(self) -> None:
-        """Clear all hover state."""
-        self._hover_menu_title = None
-        self._hover_menu_title_rect = None
-        self._hover_menu_item_rect = None
-        self._hover_top_bar_control_id = None
-        self._hover_dock_tab = None
-        self._hover_dock_tab_rect = None
-        self._hover_splitter = None
-        self._hover_splitter_rect = None
-        self._hover_context_item_rect = None
-        self._hover_inspector_field_key = None
-        self._hover_inspector_field_rect = None
-        self._hover_entity_id = None
-        self._hover_entity_rect = None
-
-    def set_hover_dock_tab(self, dock: str | None, tab: str | None, rect: Tuple[float, float, float, float] | None) -> None:
-        if dock is not None and tab is not None:
-            self._hover_dock_tab = (dock, tab)
-            self._hover_dock_tab_rect = rect
-        else:
-            self._hover_dock_tab = None
-            self._hover_dock_tab_rect = None
-
-    def set_hover_splitter(self, which: str | None, rect: Tuple[float, float, float, float] | None) -> None:
-        self._hover_splitter = which
-        self._hover_splitter_rect = rect
-
-    def set_hover_menu_title(self, title: str | None, rect: Tuple[float, float, float, float] | None) -> None:
-        self._hover_menu_title = title
-        self._hover_menu_title_rect = rect
-
-    def set_hover_menu_item_rect(self, rect: Tuple[float, float, float, float] | None) -> None:
-        self._hover_menu_item_rect = rect
-
-    def set_hover_top_bar_control(self, control_id: str | None) -> None:
-        self._hover_top_bar_control_id = control_id
-
-    def set_hover_context_item_rect(self, rect: Tuple[float, float, float, float] | None) -> None:
-        self._hover_context_item_rect = rect
-
-    def set_hover_inspector_field(self, key: str | None, rect: Tuple[float, float, float, float] | None) -> None:
-        self._hover_inspector_field_key = key
-        self._hover_inspector_field_rect = rect
-
-    def set_hover_entity(self, entity_id: str | None, rect: Tuple[float, float, float, float] | None) -> None:
-        self._hover_entity_id = entity_id
-        self._hover_entity_rect = rect
+    # Hover state handled by EditorHoverStateController
 
 
 class TestHoverDetectionDockTab:
@@ -202,8 +163,8 @@ class TestHoverDetectionDockTab:
         update_hover_state(controller, x, y, 1280, 720)
 
         # Should detect Scene tab hover
-        assert controller._hover_dock_tab == ("left", "Scene")
-        assert controller._hover_dock_tab_rect is not None
+        assert get_hovered_dock_tab(controller) == ("left", "Scene")
+        assert get_hovered_dock_tab_rect(controller) is not None
 
     def test_hover_right_dock_tab_inspector(self) -> None:
         """Test hovering over right dock 'Inspector' tab."""
@@ -232,8 +193,8 @@ class TestHoverDetectionDockTab:
         update_hover_state(controller, x, y, 1280, 720)
 
         # Should detect Inspector tab hover
-        assert controller._hover_dock_tab == ("right", "Inspector")
-        assert controller._hover_dock_tab_rect is not None
+        assert get_hovered_dock_tab(controller) == ("right", "Inspector")
+        assert get_hovered_dock_tab_rect(controller) is not None
 
 
 class TestHoverDetectionSplitter:
@@ -258,8 +219,8 @@ class TestHoverDetectionSplitter:
         update_hover_state(controller, x, y, 1280, 720)
 
         # Should detect left splitter hover
-        assert controller._hover_splitter == "left"
-        assert controller._hover_splitter_rect is not None
+        assert get_hovered_splitter(controller) == "left"
+        assert get_hovered_splitter_rect(controller) is not None
 
     def test_hover_right_splitter(self) -> None:
         """Test hovering over right splitter."""
@@ -280,8 +241,8 @@ class TestHoverDetectionSplitter:
         update_hover_state(controller, x, y, 1280, 720)
 
         # Should detect right splitter hover
-        assert controller._hover_splitter == "right"
-        assert controller._hover_splitter_rect is not None
+        assert get_hovered_splitter(controller) == "right"
+        assert get_hovered_splitter_rect(controller) is not None
 
 
 class TestHoverDetectionContextMenu:
@@ -336,9 +297,9 @@ class TestHoverDetectionBlocking:
         update_hover_state(controller, x, y, 1280, 720)
 
         # Should be blocked - no hover state set
-        assert controller._hover_splitter is None
-        assert controller._hover_dock_tab is None
-        assert controller._hover_entity_id is None
+        assert get_hovered_splitter(controller) is None
+        assert get_hovered_dock_tab(controller) is None
+        assert get_hovered_entity_id(controller) is None
 
     def test_hover_blocked_when_rename_active(self) -> None:
         """Test hover detection is blocked during hierarchy rename."""
@@ -359,7 +320,7 @@ class TestHoverDetectionBlocking:
         update_hover_state(controller, x, y, 1280, 720)
 
         # Should be blocked
-        assert controller._hover_splitter is None
+        assert get_hovered_splitter(controller) is None
 
     def test_hover_blocked_when_modal_open(self) -> None:
         """Test hover detection is blocked when modal dialog is open."""
@@ -369,7 +330,7 @@ class TestHoverDetectionBlocking:
         controller = MockEditorController(window)
         window.editor_controller = controller
 
-        controller.confirm_open = True
+        controller.unsaved_confirm.is_open = True
 
         # Try to hover over left splitter
         from engine.editor.editor_shell_layout import compute_editor_shell_layout
@@ -380,7 +341,7 @@ class TestHoverDetectionBlocking:
         update_hover_state(controller, x, y, 1280, 720)
 
         # Should be blocked
-        assert controller._hover_splitter is None
+        assert get_hovered_splitter(controller) is None
 
 
 class TestHoverDetectionEntityHover:
@@ -406,18 +367,15 @@ class TestHoverDetectionEntityHover:
         y = 400.0  # In viewport
 
         # Update entity position to be at (400, 400) for this test
-        window.scene_controller.entities = [
-            {"id": "test_entity", "x": 400.0, "y": 400.0},
-        ]
-        window.scene_controller.entity_sprites._sprites = [
-            MockSprite("test_entity", 400.0, 400.0, 32.0, 32.0),
-        ]
+        sprites = [MockSprite("test_entity", 400.0, 400.0, 32.0, 32.0)]
+        window.scene_controller.entity_sprites._sprites = sprites
+        window.scene_controller.all_sprites = sprites  # Fallback used by hover detection
 
         update_hover_state(controller, x, y, 1280, 720)
 
         # Should detect entity hover
-        assert controller._hover_entity_id == "test_entity"
-        assert controller._hover_entity_rect is not None
+        assert get_hovered_entity_id(controller) == "test_entity"
+        assert get_hovered_entity_rect(controller) is not None
 
     def test_no_hover_on_selected_entity(self) -> None:
         """Test that selected entities don't get hover highlight."""
@@ -444,7 +402,7 @@ class TestHoverDetectionEntityHover:
         update_hover_state(controller, x, y, 1280, 720)
 
         # Should NOT set hover for selected entity
-        assert controller._hover_entity_id is None
+        assert get_hovered_entity_id(controller) is None
 
 
 class TestHoverHighlightModel:

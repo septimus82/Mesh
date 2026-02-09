@@ -1,3 +1,64 @@
+"""Input controller managing keyboard, mouse, and gamepad input.
+
+Provides a unified input handling system that:
+
+- **Action Mapping**: Maps physical keys/buttons to logical actions
+- **Gamepad Support**: Xbox-style controller with deadzone handling
+- **Input Capture**: Modal input capture for console/menus
+- **Rebindable Keys**: Runtime key remapping via settings
+
+Architecture:
+    The InputController wraps Arcade's input system and adds:
+    - Logical action layer ("move_left" instead of KEY_A)
+    - Simultaneous keyboard + gamepad support
+    - Input capture stack for UI priority
+    - Gamepad axis deadzone filtering
+
+Default Key Bindings:
+    Movement: WASD / Arrow keys
+    Interact: E / Gamepad A
+    Attack: Space / Gamepad X
+    Inventory: Tab / Gamepad Y
+    Pause: Escape / Gamepad Start
+    Help: F1 / Gamepad Back
+
+Gamepad Support:
+    - Left stick: Movement (with configurable deadzone)
+    - A button: Interact
+    - X button: Attack
+    - Y button: Inventory
+    - Start: Pause menu
+    - Back: Help overlay
+
+Example::
+
+    # Check if action is pressed this frame
+    if window.input_controller.is_action_pressed("interact"):
+        talk_to_npc()
+
+    # Check if action is held
+    if window.input_controller.is_action_held("attack"):
+        charge_attack()
+
+    # Get movement vector (keyboard or gamepad)
+    dx, dy = window.input_controller.get_movement_vector()
+    player.velocity = (dx * speed, dy * speed)
+
+Configuration (config.json)::
+
+    {
+        "keybinds": {
+            "interact": ["E", "ENTER"],
+            "attack": ["SPACE"],
+            "move_left": ["A", "LEFT"]
+        }
+    }
+
+See Also:
+    - :mod:`engine.input_bindings` for action definitions
+    - :mod:`engine.actions` for action dispatch
+"""
+
 from __future__ import annotations
 
 import logging
@@ -20,7 +81,8 @@ from .input_bindings import ACTION_SHOW_CHARACTER, apply_config_bindings, known_
 if TYPE_CHECKING:
     from .game import GameWindow
 
-_GAMEPAD_DEADZONE_DEFAULT = 0.2
+# Gamepad configuration constants
+_GAMEPAD_DEADZONE_DEFAULT = 0.2  # Minimum stick deflection to register
 _GAMEPAD_AXIS_PAIRS: tuple[tuple[str, str], ...] = (
     ("move_left", "move_right"),
     ("move_down", "move_up"),

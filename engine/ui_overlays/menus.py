@@ -412,11 +412,17 @@ class MainMenuOverlay(UIElement):
         setattr(self.window, "paused", False)
 
     def _project_items(self) -> list[dict[str, str]]:
-        from ..projects import get_recent_projects  # noqa: PLC0415
         from ..repo_root import get_repo_root  # noqa: PLC0415
 
         items: list[dict[str, str]] = []
-        for root in get_recent_projects():
+        editor = getattr(self.window, "editor", None)
+        if editor is not None and hasattr(editor, "workspace"):
+            roots = editor.workspace.get_recent_projects()
+        else:
+            from ..projects import get_recent_projects  # noqa: PLC0415
+
+            roots = get_recent_projects()
+        for root in roots:
             label = Path(root).name or root
             items.append({"root": root, "label": label, "kind": "recent"})
 
@@ -430,7 +436,6 @@ class MainMenuOverlay(UIElement):
 
     def _apply_project_root(self, root: str) -> None:
         from ..paths import reset_path_caches  # noqa: PLC0415
-        from ..projects import add_recent_project, set_last_project  # noqa: PLC0415
 
         root_text = str(root or "").strip()
         if not root_text:
@@ -441,8 +446,14 @@ class MainMenuOverlay(UIElement):
             flusher()
         os.environ["MESH_REPO_ROOT"] = root_text
         reset_path_caches()
-        add_recent_project(root_text)
-        set_last_project(root_text)
+        workspace_owner = getattr(self.window, "editor", None)
+        if workspace_owner is not None and hasattr(workspace_owner, "workspace"):
+            workspace_owner.workspace.record_project_open(root_text)
+        else:
+            from ..projects import add_recent_project, set_last_project  # noqa: PLC0415
+
+            add_recent_project(root_text)
+            set_last_project(root_text)
 
         # Reload config and world from the new project root
         self._reload_project_config()
@@ -1116,12 +1127,17 @@ class MainMenuOverlay(UIElement):
             saver()
 
     def _save_runtime_settings(self) -> None:
-        from ..runtime_settings_storage import save_runtime_settings  # noqa: PLC0415
         from ..i18n import tr  # noqa: PLC0415
 
-        path = getattr(self.window, "runtime_settings_path", None)
-        settings = self._runtime_settings()
-        save_runtime_settings(path, settings)
+        editor = getattr(self.window, "editor", None)
+        if editor is not None and hasattr(editor, "workspace"):
+            editor.workspace.save_user_settings()
+        else:
+            from ..runtime_settings_storage import save_runtime_settings  # noqa: PLC0415
+
+            path = getattr(self.window, "runtime_settings_path", None)
+            settings = self._runtime_settings()
+            save_runtime_settings(path, settings)
         hud = getattr(self.window, "player_hud", None)
         enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
         if callable(enqueue):
@@ -2137,12 +2153,17 @@ class PauseMenu(UIElement):
             saver()
 
     def _save_runtime_settings(self) -> None:
-        from ..runtime_settings_storage import save_runtime_settings  # noqa: PLC0415
         from ..i18n import tr  # noqa: PLC0415
 
-        path = getattr(self.window, "runtime_settings_path", None)
-        settings = self._runtime_settings()
-        save_runtime_settings(path, settings)
+        editor = getattr(self.window, "editor", None)
+        if editor is not None and hasattr(editor, "workspace"):
+            editor.workspace.save_user_settings()
+        else:
+            from ..runtime_settings_storage import save_runtime_settings  # noqa: PLC0415
+
+            path = getattr(self.window, "runtime_settings_path", None)
+            settings = self._runtime_settings()
+            save_runtime_settings(path, settings)
         hud = getattr(self.window, "player_hud", None)
         enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
         if callable(enqueue):

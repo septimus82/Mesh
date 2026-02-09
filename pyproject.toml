@@ -9,7 +9,9 @@ description = "Mesh Game Engine"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "arcade>=2.6.17",
+    # arcade: supports 2.6.17+ and 3.x series. Upper bound prevents untested major versions.
+    # When arcade 4.x releases, test and update this bound deliberately.
+    "arcade>=2.6.17,<4.0",
     "pillow",
 ]
 
@@ -36,7 +38,7 @@ include = ["engine*", "mesh_cli*"]
 [tool.ruff]
 line-length = 120
 select = ["E", "F", "I", "W"]
-ignore = ["E501", "E701", "E722", "E741", "F841"]
+ignore = ["E501", "E701", "E741", "F841"]
 exclude = [
     "tests",
     "build",
@@ -79,11 +81,19 @@ module = [
 disallow_untyped_defs = false
 ignore_errors = true
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-addopts = "-q"
-markers = [
-    "slow: long-running tests",
-    "integration: integration tests (filesystem-heavy, multi-module)",
-    "e2e: end-to-end / engine runtime tests",
+[[tool.mypy.overrides]]
+module = [
+    "engine.physics_model",
+    "engine.sensors_model",
+    "engine.editor.project_explorer_rank_model",
+    "engine.physics_broadphase_key_model",
 ]
+disallow_any_generics = true
+warn_return_any = true
+no_implicit_optional = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+
+# pytest config is in pytest.ini (single source of truth).
+# Do not add [tool.pytest.ini_options] here to avoid drift.

@@ -1,0 +1,26 @@
+{
+  "description": "Test scene for asset manifest testing",
+  "name": "test_manifest_scene_a",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "black",
+    "music": "assets/music/test_track.ogg"
+  },
+  "entities": [
+    {
+      "name": "hero",
+      "x": 100,
+      "y": 100,
+      "sprite": "assets/sprites/test_hero.png",
+      "behaviours": ["PlayerController"]
+    },
+    {
+      "name": "enemy",
+      "x": 200,
+      "y": 200,
+      "sprite": "assets/sprites/test_enemy.png",
+      "behaviours": []
+    }
+  ],
+  "layers": []
+}

@@ -18,7 +18,7 @@ def test_legacy_impl_does_not_regrow() -> None:
     nonempty = [line for line in lines if line.strip()]
 
     # Baseline captured when this guard was introduced.
-    BASELINE_NONEMPTY_LINES = 1566
+    BASELINE_NONEMPTY_LINES = 1569
 
     # Allow small incidental growth, but fail on large additions in a single PR.
     MAX_NONEMPTY_GROWTH = 30

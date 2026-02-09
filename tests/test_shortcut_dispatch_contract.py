@@ -7,9 +7,20 @@ from types import SimpleNamespace
 import engine.optional_arcade as optional_arcade
 
 from engine.editor_runtime import input as editor_input
+from engine.editor_runtime import editor_input_shortcut_handlers as editor_shortcuts
+from engine.editor.editor_project_explorer_actions_controller import (
+    EditorProjectExplorerActionsController,
+)
+from tests._session_stub import make_session_stub
+from tests._dock_stub import make_dock_stub
 
 
 def _stub_controller() -> SimpleNamespace:
+    search_stub = SimpleNamespace(
+        get_search_focus=lambda: "",
+        is_search_focused=lambda: False,
+        focus_search_for_active_panel=lambda: False,
+    )
     return SimpleNamespace(
         active=True,
         palette_filter_active=False,
@@ -17,12 +28,18 @@ def _stub_controller() -> SimpleNamespace:
         hierarchy_rename_active=False,
         animation_edit_active=False,
         inspector_edit_active=False,
-        command_palette_active=False,
         entity_panels_filter_active=False,
+        entity_panels_active=False,
         tool_mode="",
-        _search_focus="",
+        search=search_stub,
         project_explorer=SimpleNamespace(inline_rename_active=False),
+        panels=SimpleNamespace(
+            is_command_palette_open=lambda: False,
+            dispatch_input=lambda key, modifiers: False,
+        ),
         window=SimpleNamespace(),
+        session=make_session_stub(),
+        dock=make_dock_stub(),
     )
 
 
@@ -42,8 +59,8 @@ def test_shortcut_executes_action_when_enabled(monkeypatch) -> None:
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "get_editor_actions", fake_get_actions)
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "get_editor_actions", fake_get_actions)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     key = optional_arcade.arcade.key.B
     modifiers = optional_arcade.arcade.key.MOD_CTRL | optional_arcade.arcade.key.MOD_ALT
@@ -54,7 +71,7 @@ def test_shortcut_executes_action_when_enabled(monkeypatch) -> None:
 def test_shortcut_ignored_while_text_input_active_and_disabled(monkeypatch) -> None:
     """Shortcuts don't run when text input is active AND action is disabled."""
     controller = _stub_controller()
-    controller.command_palette_active = True
+    controller.panels = SimpleNamespace(is_command_palette_open=lambda: True)
     calls: list[str] = []
 
     def fake_get_actions(_controller, _window):
@@ -70,8 +87,8 @@ def test_shortcut_ignored_while_text_input_active_and_disabled(monkeypatch) -> N
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "get_editor_actions", fake_get_actions)
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "get_editor_actions", fake_get_actions)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     key = optional_arcade.arcade.key.B
     modifiers = optional_arcade.arcade.key.MOD_CTRL | optional_arcade.arcade.key.MOD_ALT
@@ -83,7 +100,7 @@ def test_shortcut_ignored_while_text_input_active_and_disabled(monkeypatch) -> N
 def test_shortcut_runs_when_text_input_active_and_enabled(monkeypatch) -> None:
     """Shortcuts CAN run when text input is active IF action is enabled."""
     controller = _stub_controller()
-    controller.command_palette_active = True
+    controller.panels = SimpleNamespace(is_command_palette_open=lambda: True)
     calls: list[str] = []
 
     def fake_get_actions(_controller, _window):
@@ -99,8 +116,8 @@ def test_shortcut_runs_when_text_input_active_and_enabled(monkeypatch) -> None:
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "get_editor_actions", fake_get_actions)
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "get_editor_actions", fake_get_actions)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     key = optional_arcade.arcade.key.B
     modifiers = optional_arcade.arcade.key.MOD_CTRL | optional_arcade.arcade.key.MOD_ALT
@@ -125,8 +142,8 @@ def test_handle_input_dispatches_shortcut_once(monkeypatch) -> None:
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "get_editor_actions", fake_get_actions)
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "get_editor_actions", fake_get_actions)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     key = optional_arcade.arcade.key.S
     modifiers = optional_arcade.arcade.key.MOD_CTRL
@@ -137,7 +154,11 @@ def test_handle_input_dispatches_shortcut_once(monkeypatch) -> None:
 def test_handle_input_blocks_shortcut_during_text_input(monkeypatch) -> None:
     """Shortcuts are blocked during text input if action is disabled."""
     controller = _stub_controller()
-    controller.command_palette_active = True
+    # When command palette is open, dispatch_input should consume Ctrl+S
+    controller.panels = SimpleNamespace(
+        is_command_palette_open=lambda: True,
+        dispatch_input=lambda key, modifiers: True,  # Panels consume the input
+    )
     calls: list[str] = []
 
     def fake_get_actions(_controller, _window):
@@ -153,12 +174,12 @@ def test_handle_input_blocks_shortcut_during_text_input(monkeypatch) -> None:
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "get_editor_actions", fake_get_actions)
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "get_editor_actions", fake_get_actions)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     key = optional_arcade.arcade.key.S
     modifiers = optional_arcade.arcade.key.MOD_CTRL
-    # Key not consumed because action is disabled
+    # Input consumed by panels (dispatch_input returns True)
     assert editor_input.handle_input(controller, key, modifiers) is True
     assert calls == []
 
@@ -167,11 +188,20 @@ def test_handle_input_ctrl_j_uses_registry(monkeypatch) -> None:
     controller = _stub_controller()
     calls: list[str] = []
 
+    def fake_get_actions(_controller, _window):
+        return [SimpleNamespace(
+            id="editor.find_everything.toggle",
+            shortcut="Ctrl+J",
+            shortcut_scope="global",
+            enabled=lambda c, w: True,
+        )]
+
     def fake_run(action_id, _controller, _window):
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "get_editor_actions", fake_get_actions)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     key = optional_arcade.arcade.key.J
     modifiers = optional_arcade.arcade.key.MOD_CTRL
@@ -187,7 +217,7 @@ def test_handle_input_panel_toggle_shortcut(monkeypatch) -> None:
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     key = optional_arcade.arcade.key.KEY_1
     modifiers = optional_arcade.arcade.key.MOD_CTRL | optional_arcade.arcade.key.MOD_ALT
@@ -203,22 +233,32 @@ def _stub_controller_with_project_explorer(inline_rename_active: bool = False) -
     project_ctrl = SimpleNamespace(
         inline_rename_active=inline_rename_active,
         selectable_rows=[],
+        selected_index=0,
+        ensure_rows=lambda: None,
+        move_selection=lambda _delta, extend=False: None,
     )
-    return SimpleNamespace(
+    controller = SimpleNamespace(
         active=True,
         palette_filter_active=False,
         hierarchy_filter_active=False,
         hierarchy_rename_active=False,
         animation_edit_active=False,
         inspector_edit_active=False,
-        command_palette_active=False,
         entity_panels_filter_active=False,
         tool_mode="",
-        _search_focus="",
-        _left_dock_tab="Project",
+        search=SimpleNamespace(
+            get_search_focus=lambda: "",
+            is_search_focused=lambda: False,
+            focus_search_for_active_panel=lambda: False,
+        ),
+        dock=make_dock_stub(left_tab="Project"),
         project_explorer=project_ctrl,
+        panels=SimpleNamespace(is_command_palette_open=lambda: False),
         window=SimpleNamespace(),
+        session=make_session_stub(),
     )
+    controller.project_explorer_actions = EditorProjectExplorerActionsController(controller)
+    return controller
 
 
 def test_inline_rename_enter_dispatches_commit_action(monkeypatch) -> None:
@@ -230,7 +270,7 @@ def test_inline_rename_enter_dispatches_commit_action(monkeypatch) -> None:
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     # Enter key via scoped shortcut dispatch
     result = editor_input._handle_editor_action_shortcut(
@@ -250,7 +290,7 @@ def test_inline_rename_escape_dispatches_cancel_action(monkeypatch) -> None:
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     result = editor_input._handle_editor_action_shortcut(
         controller, optional_arcade.arcade.key.ESCAPE, 0
@@ -285,8 +325,8 @@ def test_focus_snapshot_scopes_override_state(monkeypatch) -> None:
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "get_editor_actions", fake_get_actions)
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "get_editor_actions", fake_get_actions)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     result = editor_input._handle_editor_action_shortcut(
         controller, optional_arcade.arcade.key.ESCAPE, 0
@@ -305,7 +345,7 @@ def test_inline_rename_backspace_dispatches_backspace_action(monkeypatch) -> Non
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     result = editor_input._handle_editor_action_shortcut(
         controller, optional_arcade.arcade.key.BACKSPACE, 0
@@ -324,7 +364,7 @@ def test_inline_rename_delete_dispatches_delete_action(monkeypatch) -> None:
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     result = editor_input._handle_editor_action_shortcut(
         controller, optional_arcade.arcade.key.DELETE, 0
@@ -360,8 +400,8 @@ def test_inline_rename_inactive_enter_uses_global(monkeypatch) -> None:
         calls.append(action_id)
         return True
 
-    monkeypatch.setattr(editor_input, "get_editor_actions", fake_get_actions)
-    monkeypatch.setattr(editor_input, "run_editor_action", fake_run)
+    monkeypatch.setattr(editor_shortcuts, "get_editor_actions", fake_get_actions)
+    monkeypatch.setattr(editor_shortcuts, "run_editor_action", fake_run)
 
     # When not in inline rename mode, Enter should resolve to global scope action
     result = editor_input._handle_editor_action_shortcut(

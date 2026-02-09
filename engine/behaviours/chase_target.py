@@ -1,10 +1,24 @@
-"""Deterministic chase behaviour built on FollowPath + tile-grid nav."""
+"""Deterministic chase behaviour built on FollowPath + tile-grid nav.
+
+Provides target acquisition and pursuit using A* pathfinding. Emits events
+for integration with GameplayEventBus and ActionListRunner.
+
+Events emitted:
+- target_acquired: When a new target is acquired
+- target_lost: When target is lost (out of range or no path)
+- chase_step: Each update while actively chasing (optional, high freq)
+
+Save/restore:
+- Tracks state, target ID, path state, cooldown
+- Fully deterministic on restore
+"""
 
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import Any, Dict, List, Optional
 
+from ..gameplay_event_bus import EventConfigError
 from ..pathfinding import NavGrid, line_of_sight_clear
 from .base import Behaviour, ParamDef
 from .follow_path import FollowPathBehaviour
@@ -81,9 +95,29 @@ from .registry import register_behaviour
             "type": "int",
             "default": 10,
         },
+        {
+            "name": "emit_chase_step",
+            "description": "Emit chase_step event each update (can be noisy)",
+            "type": "bool",
+            "default": False,
+        },
+        {
+            "name": "enabled",
+            "description": "Whether chase behaviour is active",
+            "type": "bool",
+            "default": True,
+        },
     ],
 )
 class ChaseTargetBehaviour(Behaviour):
+    """Acquires and chases a target using A* pathfinding.
+    
+    Implements SaveableBehaviour for deterministic save/restore.
+    Emits events for GameplayEventBus integration.
+    """
+    
+    STATE_VERSION = 1
+    
     PARAM_DEFS = {
         "target_entity_id": ParamDef(str, default="", description="Authored entity id to chase"),
         "target_tag": ParamDef(str, default="", description="Fallback mesh_tag to chase"),
@@ -96,9 +130,15 @@ class ChaseTargetBehaviour(Behaviour):
         "los_required": ParamDef(bool, default=False, description="Require grid LOS to acquire target"),
         "repath_min_ticks": ParamDef(int, default=2, description="Forwarded to FollowPath"),
         "no_path_repath_ticks": ParamDef(int, default=10, description="Forwarded to FollowPath"),
+        "emit_chase_step": ParamDef(bool, default=False, description="Emit chase_step events"),
+        "enabled": ParamDef(bool, default=True, description="Whether active"),
     }
 
     def __init__(self, entity, window, **config: Any) -> None:
+        # Initialize private state before super().__init__
+        self._enabled: bool = True
+        self._target_id: Optional[str] = None
+        
         super().__init__(entity, window, **config)
         self.target_entity_id = str(self.config.get("target_entity_id") or "").strip() or None
         self.target_tag = str(self.config.get("target_tag") or "").strip() or None
@@ -111,15 +151,62 @@ class ChaseTargetBehaviour(Behaviour):
         self.los_required = bool(self.config.get("los_required", False))
         self.repath_min_ticks = max(1, int(self.config.get("repath_min_ticks", 2) or 2))
         self.no_path_repath_ticks = max(1, int(self.config.get("no_path_repath_ticks", 10) or 10))
+        self.emit_chase_step = bool(self.config.get("emit_chase_step", False))
+        self._enabled = bool(self.config.get("enabled", True))
 
         self.state: str = "idle"  # idle|chase|cooldown
         self._cooldown_remaining: int = 0
         self._no_path_ticks: int = 0
         self._target = None
+        self._target_id = None
         self._follow: FollowPathBehaviour | None = None
+    
+    @property
+    def enabled(self) -> bool:
+        """Whether chase behaviour is active."""
+        return self._enabled
+    
+    @enabled.setter
+    def enabled(self, value: bool) -> None:
+        self._enabled = bool(value)
+    
+    @property
+    def is_chasing(self) -> bool:
+        """Whether actively chasing a target."""
+        return self.state == "chase"
+    
+    @property
+    def current_target_id(self) -> Optional[str]:
+        """ID of current target, if any."""
+        return self._target_id
+    
+    def _emit_event(self, event_type: str, **kwargs) -> None:
+        """Emit a gameplay event."""
+        bus = getattr(self.window, "gameplay_event_bus", None)
+        my_id = getattr(self.entity, "mesh_id", "")
+        
+        payload = {
+            "entity": my_id,
+            "entity_name": getattr(self.entity, "mesh_name", ""),
+            "target_id": self._target_id or "",
+            "state": self.state,
+            **kwargs,
+        }
+        
+        if bus is not None:
+            bus.emit(
+                event_type,
+                source_entity=my_id,
+                source_behaviour="ChaseTarget",
+                **payload,
+            )
+        elif hasattr(self.window, "event_bus"):
+            self.window.event_bus.emit(event_type, **payload)
 
     def update(self, dt: float) -> None:
         if dt <= 0:
+            return
+        if not self._enabled:
             return
         if self.speed <= 0:
             return
@@ -145,12 +232,12 @@ class ChaseTargetBehaviour(Behaviour):
 
         target = self._target
         if target is None:
-            self._disengage()
+            self._disengage("no_target")
             return
 
         dist_tiles = self._distance_tiles_to(target, grid)
         if dist_tiles > float(self.leash_radius_tiles):
-            self._disengage()
+            self._disengage("out_of_range")
             return
         if self.stop_range_tiles > 0 and dist_tiles <= float(self.stop_range_tiles):
             self._no_path_ticks = 0
@@ -158,17 +245,25 @@ class ChaseTargetBehaviour(Behaviour):
 
         follow = self._follow
         if follow is None:
-            self._disengage()
+            self._disengage("no_path_follow")
             return
 
         follow.goal_x = float(getattr(target, "center_x", 0.0))
         follow.goal_y = float(getattr(target, "center_y", 0.0))
         follow.update(dt)
+        
+        # Emit chase_step if configured
+        if self.emit_chase_step:
+            self._emit_event(
+                "chase_step",
+                distance_tiles=dist_tiles,
+                follow_state=follow.state,
+            )
 
         if follow.state == "no_path":
             self._no_path_ticks += 1
             if self._no_path_ticks > self.give_up_ticks:
-                self._enter_cooldown()
+                self._enter_cooldown("no_path")
         else:
             self._no_path_ticks = 0
 
@@ -265,6 +360,7 @@ class ChaseTargetBehaviour(Behaviour):
     def _enter_chase(self, target: Any) -> None:
         self.state = "chase"
         self._target = target
+        self._target_id = self._entity_id(target)
         self._no_path_ticks = 0
         self._follow = FollowPathBehaviour(
             self.entity,
@@ -278,16 +374,131 @@ class ChaseTargetBehaviour(Behaviour):
             arrive_dist=2.0,
             diag=False,
         )
+        
+        # Emit target_acquired event
+        self._emit_event(
+            "target_acquired",
+            target_name=getattr(target, "mesh_name", ""),
+            distance_tiles=0.0,  # Will be updated next frame
+        )
 
-    def _disengage(self) -> None:
+    def _disengage(self, reason: str = "") -> None:
+        old_target_id = self._target_id
         self.state = "idle"
         self._target = None
+        self._target_id = None
         self._follow = None
         self._no_path_ticks = 0
+        
+        # Emit target_lost event
+        if old_target_id:
+            self._emit_event(
+                "target_lost",
+                former_target_id=old_target_id,
+                reason=reason,
+            )
 
-    def _enter_cooldown(self) -> None:
+    def _enter_cooldown(self, reason: str = "") -> None:
+        old_target_id = self._target_id
         self.state = "cooldown"
         self._cooldown_remaining = int(self.cooldown_ticks)
         self._target = None
+        self._target_id = None
         self._follow = None
         self._no_path_ticks = 0
+        
+        # Emit target_lost event
+        if old_target_id:
+            self._emit_event(
+                "target_lost",
+                former_target_id=old_target_id,
+                reason=reason,
+            )
+    
+    # =========================================================================
+    # SaveableBehaviour Protocol
+    # =========================================================================
+    
+    def saveable_state(self) -> Dict[str, Any]:
+        """Return JSON-serializable state dict."""
+        follow_state = None
+        if self._follow is not None:
+            follow_state = {
+                "state": self._follow.state,
+                "path_index": self._follow._path_index,
+                "repath_count": self._follow.repath_count,
+            }
+        
+        return {
+            "_version": self.STATE_VERSION,
+            "state": self.state,
+            "target_id": self._target_id,
+            "cooldown_remaining": self._cooldown_remaining,
+            "no_path_ticks": self._no_path_ticks,
+            "follow_state": follow_state,
+        }
+    
+    def restore_state(self, state: Dict[str, Any]) -> None:
+        """Apply previously saved state."""
+        self.state = str(state.get("state", "idle"))
+        self._target_id = state.get("target_id")
+        self._cooldown_remaining = int(state.get("cooldown_remaining", 0))
+        self._no_path_ticks = int(state.get("no_path_ticks", 0))
+        
+        # Re-acquire target if we were chasing
+        if self.state == "chase" and self._target_id:
+            target = self._resolve_target_by_id(self._target_id)
+            if target is not None:
+                self._target = target
+                # Recreate follow behaviour
+                self._follow = FollowPathBehaviour(
+                    self.entity,
+                    self.window,
+                    goal_x=float(getattr(target, "center_x", 0.0)),
+                    goal_y=float(getattr(target, "center_y", 0.0)),
+                    speed=float(self.speed),
+                    repath_interval=0.0,
+                    repath_min_ticks=int(self.repath_min_ticks),
+                    no_path_repath_ticks=int(self.no_path_repath_ticks),
+                    arrive_dist=2.0,
+                    diag=False,
+                )
+                # Restore follow state if available
+                follow_state = state.get("follow_state")
+                if follow_state and self._follow:
+                    self._follow.state = str(follow_state.get("state", "idle"))
+                    self._follow._path_index = int(follow_state.get("path_index", 0))
+                    self._follow.repath_count = int(follow_state.get("repath_count", 0))
+            else:
+                # Target no longer exists, go to idle
+                self.state = "idle"
+                self._target = None
+                self._target_id = None
+        else:
+            self._target = None
+            self._follow = None
+    
+    # =========================================================================
+    # Inspector Support
+    # =========================================================================
+    
+    def get_inspector_state(self) -> Dict[str, Any]:
+        """Return state for editor inspector."""
+        target_pos = None
+        if self._target is not None:
+            target_pos = (
+                float(getattr(self._target, "center_x", 0.0)),
+                float(getattr(self._target, "center_y", 0.0)),
+            )
+        
+        return {
+            "state": self.state,
+            "target_id": self._target_id,
+            "target_position": target_pos,
+            "cooldown_remaining": self._cooldown_remaining,
+            "no_path_ticks": self._no_path_ticks,
+            "acquire_radius": self.acquire_radius_tiles,
+            "leash_radius": self.leash_radius_tiles,
+            "speed": self.speed,
+            "follow_state": self._follow.state if self._follow else None,
+        }

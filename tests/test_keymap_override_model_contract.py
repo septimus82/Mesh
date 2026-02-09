@@ -13,7 +13,7 @@ from engine.editor.keymap_override_model import (
     parse_override_key,
     SHORTCUT_SCOPE_GLOBAL,
 )
-from engine.editor.editor_actions import SHORTCUT_SCOPE_INLINE_RENAME
+from engine.editor.editor_actions import SHORTCUT_SCOPE_INLINE_RENAME, SHORTCUT_SCOPE_PROJECT_EXPLORER
 
 
 @dataclass(frozen=True)
@@ -149,7 +149,7 @@ def test_unknown_scope_is_reported_and_ignored() -> None:
     overrides = parse_keymap_overrides({
         "bogus_scope:editor.foo": "Ctrl+X",
     })
-    known_scopes = {SHORTCUT_SCOPE_GLOBAL, SHORTCUT_SCOPE_INLINE_RENAME}
+    known_scopes = {SHORTCUT_SCOPE_GLOBAL, SHORTCUT_SCOPE_INLINE_RENAME, SHORTCUT_SCOPE_PROJECT_EXPLORER}
     updated, unknown_scopes, unknown_keys = apply_keymap_overrides(
         actions, overrides, known_scopes
     )

@@ -7,13 +7,18 @@ import sys
 from dataclasses import dataclass
 import copy
 from types import SimpleNamespace
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, cast
+
+from engine.editor.editor_actions_registry import ActionDef, DEFAULT_ACTION_DEFS
+from engine.editor.editor_dock_query import get_dock_snapshot
 
 from engine.runtime_settings import ensure_runtime_settings
 
 # Shortcut scope constants
 SHORTCUT_SCOPE_GLOBAL = "global"
 SHORTCUT_SCOPE_INLINE_RENAME = "text_input.inline_rename"
+SHORTCUT_SCOPE_PROJECT_EXPLORER = "project_explorer"
+SHORTCUT_SCOPE_PROJECT_EXPLORER_CONTEXT_MENU = "project_explorer.context_menu"
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,11 +66,23 @@ def _enabled_has_selection_or_project_explorer(controller: Any, _window: Any) ->
 
 
 def _enabled_can_undo(controller: Any, _window: Any) -> bool:
-    return bool(getattr(controller, "undo_stack", []))
+    undo_ctrl = getattr(controller, "undo", None)
+    if undo_ctrl is not None:
+        from engine.editor.editor_undo_controller import EditorUndoController  # noqa: PLC0415
+
+        if isinstance(undo_ctrl, EditorUndoController):
+            return bool(undo_ctrl.can_undo())
+    return False
 
 
 def _enabled_can_redo(controller: Any, _window: Any) -> bool:
-    return bool(getattr(controller, "redo_stack", []))
+    undo_ctrl = getattr(controller, "undo", None)
+    if undo_ctrl is not None:
+        from engine.editor.editor_undo_controller import EditorUndoController  # noqa: PLC0415
+
+        if isinstance(undo_ctrl, EditorUndoController):
+            return bool(undo_ctrl.can_redo())
+    return False
 
 
 def _enabled_scene_dirty(controller: Any, _window: Any) -> bool:
@@ -74,6 +91,18 @@ def _enabled_scene_dirty(controller: Any, _window: Any) -> bool:
 
 def _enabled_not_web(_controller: Any, _window: Any) -> bool:
     return not _is_web_runtime()
+
+
+def _enabled_multiselect(controller: Any, _window: Any) -> bool:
+    """Return True if 2+ entities are selected."""
+    selected_ids = getattr(controller, "_selected_entity_ids", [])
+    return len(selected_ids) >= 2
+
+
+def _enabled_multiselect_3(controller: Any, _window: Any) -> bool:
+    """Return True if 3+ entities are selected (for distribute)."""
+    selected_ids = getattr(controller, "_selected_entity_ids", [])
+    return len(selected_ids) >= 3
 
 
 def _enabled_right_dock_toggle(controller: Any, _window: Any) -> bool:
@@ -123,12 +152,14 @@ def _enabled_planes_exist(_controller: Any, window: Any) -> bool:
 
 def _enabled_problems_panel_active(controller: Any, _window: Any) -> bool:
     """True when Problems panel is the active right dock tab."""
-    return getattr(controller, "_right_dock_tab", "") == "Problems"
+    snapshot = get_dock_snapshot(controller)
+    return bool(snapshot is not None and snapshot.right_tab == "Problems")
 
 
 def _enabled_problems_can_jump(controller: Any, _window: Any) -> bool:
     """True when Problems panel is active, has issues, and selected issue is jump-supported."""
-    if getattr(controller, "_right_dock_tab", "") != "Problems":
+    snapshot = get_dock_snapshot(controller)
+    if snapshot is None or snapshot.right_tab != "Problems":
         return False
     problems_ctl = getattr(controller, "problems", None)
     if problems_ctl is None:
@@ -291,6 +322,14 @@ def _action_planes_move(window: Any, direction: str) -> None:
     )
 
 
+def _action_planes_move_up(window: Any) -> None:
+    _action_planes_move(window, "up")
+
+
+def _action_planes_move_down(window: Any) -> None:
+    _action_planes_move(window, "down")
+
+
 def _action_planes_toggle_repeat(window: Any, axis: str) -> None:
     from engine.editor.background_planes_edit_model import get_plane_by_id, update_background_plane  # noqa: PLC0415
 
@@ -323,6 +362,82 @@ def _action_planes_toggle_repeat(window: Any, axis: str) -> None:
     )
 
 
+def _action_planes_toggle_repeat_x(window: Any) -> None:
+    _action_planes_toggle_repeat(window, "x")
+
+
+def _action_planes_toggle_repeat_y(window: Any) -> None:
+    _action_planes_toggle_repeat(window, "y")
+
+
+# -------------------------------------------------------------------------
+# Align / Distribute Actions
+# -------------------------------------------------------------------------
+
+def _action_align_left(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is not None:
+        align = getattr(editor, "align", None)
+        if align is not None:
+            align.align_left()
+
+
+def _action_align_right(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is not None:
+        align = getattr(editor, "align", None)
+        if align is not None:
+            align.align_right()
+
+
+def _action_align_top(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is not None:
+        align = getattr(editor, "align", None)
+        if align is not None:
+            align.align_top()
+
+
+def _action_align_bottom(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is not None:
+        align = getattr(editor, "align", None)
+        if align is not None:
+            align.align_bottom()
+
+
+def _action_align_center_horizontal(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is not None:
+        align = getattr(editor, "align", None)
+        if align is not None:
+            align.align_center_horizontal()
+
+
+def _action_align_center_vertical(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is not None:
+        align = getattr(editor, "align", None)
+        if align is not None:
+            align.align_center_vertical()
+
+
+def _action_distribute_horizontal(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is not None:
+        align = getattr(editor, "align", None)
+        if align is not None:
+            align.distribute_horizontal()
+
+
+def _action_distribute_vertical(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is not None:
+        align = getattr(editor, "align", None)
+        if align is not None:
+            align.distribute_vertical()
+
+
 def _action_planes_select(window: Any, direction: str) -> None:
     sc = getattr(window, "scene_controller", None)
     scene = getattr(sc, "_loaded_scene_data", None) if sc is not None else None
@@ -345,6 +460,14 @@ def _action_planes_select(window: Any, direction: str) -> None:
         state.selected_plane_id = plane_ids[new_index]
     except Exception:
         pass
+
+
+def _action_planes_select_prev(window: Any) -> None:
+    _action_planes_select(window, "prev")
+
+
+def _action_planes_select_next(window: Any) -> None:
+    _action_planes_select(window, "next")
 
 
 def _apply_hd2d_preset(window: Any, preset_id: str) -> None:
@@ -380,6 +503,22 @@ def _apply_hd2d_preset(window: Any, preset_id: str) -> None:
             "before": before_settings,
             "after": after_settings,
         })
+
+
+def _action_apply_hd2d_preset_soft(window: Any) -> None:
+    _apply_hd2d_preset(window, "soft")
+
+
+def _action_apply_hd2d_preset_crisp(window: Any) -> None:
+    _apply_hd2d_preset(window, "crisp")
+
+
+def _action_apply_hd2d_preset_noir(window: Any) -> None:
+    _apply_hd2d_preset(window, "noir")
+
+
+def _action_apply_hd2d_preset_dreamy(window: Any) -> None:
+    _apply_hd2d_preset(window, "dreamy")
 
 
 def _upgrade_scene_to_hd2d_defaults(window: Any) -> None:
@@ -438,6 +577,26 @@ def _toggle_hd2d_setting(window: Any, key: str) -> None:
         })
 
 
+def _action_toggle_hd2d_shadows_enabled(window: Any) -> None:
+    _toggle_hd2d_setting(window, "shadows_enabled")
+
+
+def _action_toggle_hd2d_shadows_contact_enabled(window: Any) -> None:
+    _toggle_hd2d_setting(window, "shadows_contact_enabled")
+
+
+def _action_toggle_hd2d_shadows_ao_enabled(window: Any) -> None:
+    _toggle_hd2d_setting(window, "shadows_ao_enabled")
+
+
+def _action_toggle_hd2d_depth_tint_enabled(window: Any) -> None:
+    _toggle_hd2d_setting(window, "depth_tint_enabled")
+
+
+def _action_toggle_hd2d_outline_enabled(window: Any) -> None:
+    _toggle_hd2d_setting(window, "outline_enabled")
+
+
 def _adjust_hd2d_slider(window: Any, key: str, delta: float) -> None:
     """Adjust a float/int HD-2D scene setting with undo support."""
     from engine.editor.hd2d_settings_panel_model import (  # noqa: PLC0415
@@ -489,6 +648,30 @@ def _adjust_hd2d_slider(window: Any, key: str, delta: float) -> None:
             "before": before_settings,
             "after": after_settings,
         })
+
+
+def _action_adjust_hd2d_depth_tint_strength_up(window: Any) -> None:
+    _adjust_hd2d_slider(window, "depth_tint_strength", 0.05)
+
+
+def _action_adjust_hd2d_depth_tint_strength_down(window: Any) -> None:
+    _adjust_hd2d_slider(window, "depth_tint_strength", -0.05)
+
+
+def _action_adjust_hd2d_outline_strength_up(window: Any) -> None:
+    _adjust_hd2d_slider(window, "outline_strength", 0.05)
+
+
+def _action_adjust_hd2d_outline_strength_down(window: Any) -> None:
+    _adjust_hd2d_slider(window, "outline_strength", -0.05)
+
+
+def _action_adjust_hd2d_outline_radius_up(window: Any) -> None:
+    _adjust_hd2d_slider(window, "outline_radius_px", 1)
+
+
+def _action_adjust_hd2d_outline_radius_down(window: Any) -> None:
+    _adjust_hd2d_slider(window, "outline_radius_px", -1)
 
 
 # =============================================================================
@@ -551,6 +734,26 @@ def _toggle_entity_hd2d_override(window: Any, key: str) -> None:
         })
 
 
+def _action_toggle_entity_shadow_enabled(window: Any) -> None:
+    _toggle_entity_hd2d_override(window, "shadow_enabled")
+
+
+def _action_toggle_entity_shadow_contact_enabled(window: Any) -> None:
+    _toggle_entity_hd2d_override(window, "shadow_contact_enabled")
+
+
+def _action_toggle_entity_shadow_ao_enabled(window: Any) -> None:
+    _toggle_entity_hd2d_override(window, "shadow_ao_enabled")
+
+
+def _action_toggle_entity_depth_tint_enabled(window: Any) -> None:
+    _toggle_entity_hd2d_override(window, "depth_tint_enabled")
+
+
+def _action_toggle_entity_outline_enabled(window: Any) -> None:
+    _toggle_entity_hd2d_override(window, "outline_enabled")
+
+
 def _adjust_entity_hd2d_slider(window: Any, key: str, delta: float) -> None:
     """Adjust an entity HD-2D override slider value. If None, initialize to default."""
     from engine.editor.hd2d_entity_overrides_model import (  # noqa: PLC0415
@@ -610,6 +813,30 @@ def _adjust_entity_hd2d_slider(window: Any, key: str, delta: float) -> None:
             "before": before_scene,
             "after": new_scene,
         })
+
+
+def _action_adjust_entity_depth_tint_strength_up(window: Any) -> None:
+    _adjust_entity_hd2d_slider(window, "depth_tint_strength", 0.05)
+
+
+def _action_adjust_entity_depth_tint_strength_down(window: Any) -> None:
+    _adjust_entity_hd2d_slider(window, "depth_tint_strength", -0.05)
+
+
+def _action_adjust_entity_outline_strength_up(window: Any) -> None:
+    _adjust_entity_hd2d_slider(window, "outline_strength", 0.05)
+
+
+def _action_adjust_entity_outline_strength_down(window: Any) -> None:
+    _adjust_entity_hd2d_slider(window, "outline_strength", -0.05)
+
+
+def _action_adjust_entity_outline_radius_up(window: Any) -> None:
+    _adjust_entity_hd2d_slider(window, "outline_radius_px", 1)
+
+
+def _action_adjust_entity_outline_radius_down(window: Any) -> None:
+    _adjust_entity_hd2d_slider(window, "outline_radius_px", -1)
 
 
 def _clear_entity_hd2d_override(window: Any, key: str) -> None:
@@ -1152,6 +1379,14 @@ def _adjust_hd2d_batch_radius(window: Any, delta: int) -> None:
             enqueue(format_batch_radius_display(new_radius))
 
 
+def _action_adjust_hd2d_batch_radius_up(window: Any) -> None:
+    _adjust_hd2d_batch_radius(window, 16)
+
+
+def _action_adjust_hd2d_batch_radius_down(window: Any) -> None:
+    _adjust_hd2d_batch_radius(window, -16)
+
+
 def _reset_hd2d_batch_radius(window: Any) -> None:
     """Reset HD-2D batch paste radius to default (96px).
 
@@ -1186,27 +1421,16 @@ def _reset_hd2d_batch_radius(window: Any) -> None:
 
 def _save_hd2d_batch_radius_to_workspace(window: Any, radius: int) -> None:
     """Helper to save batch radius to workspace settings."""
-    from engine.workspace_settings import (  # noqa: PLC0415
-        load_workspace,
-        save_workspace,
-    )
-    from dataclasses import replace as dataclass_replace  # noqa: PLC0415
-
     editor = _get_editor(window)
     if editor is None:
         return
-
-    repo_root_getter = getattr(editor, "_get_repo_root", None)
-    if not callable(repo_root_getter):
+    workspace = getattr(editor, "workspace", None)
+    if workspace is None:
         return
-
-    try:
-        repo_root = repo_root_getter()
-        settings = load_workspace(repo_root)
-        updated = dataclass_replace(settings, hd2d_batch_radius_px=radius)
-        save_workspace(repo_root, updated)
-    except Exception:  # noqa: BLE001
-        pass  # Silently fail on workspace save errors
+    saver = getattr(workspace, "save_hd2d_batch_radius", None)
+    if not callable(saver):
+        return
+    saver(radius)
 
 
 def _toggle_lights_tool(window: Any) -> None:
@@ -1234,9 +1458,10 @@ def _toggle_entity_panels(window: Any) -> None:
 
 def _set_dock_tab(window: Any, dock: str, tab: str) -> None:
     editor = _get_editor(window)
-    setter = getattr(editor, "set_dock_tab", None) if editor is not None else None
+    dock_ctl = getattr(editor, "dock", None) if editor is not None else None
+    setter = getattr(dock_ctl, "apply_tab_change", None) if dock_ctl is not None else None
     if callable(setter):
-        setter(dock, tab)
+        setter(editor, dock, tab)
 
 
 def _toggle_dock_tab(window: Any, dock: str, tab: str) -> None:
@@ -1244,16 +1469,22 @@ def _toggle_dock_tab(window: Any, dock: str, tab: str) -> None:
     if editor is None or not getattr(editor, "active", False):
         return
     if dock == "left":
-        if getattr(editor, "_left_dock_tab", None) == tab and not getattr(editor, "get_dock_left_collapsed", lambda: False)():
-            toggler = getattr(editor, "toggle_left_dock", None)
-            if callable(toggler):
-                toggler()
+        snapshot = get_dock_snapshot(editor)
+        dock_ctl = getattr(editor, "dock", None)
+        if snapshot is not None and snapshot.left_tab == tab and dock_ctl is not None:
+            getter = getattr(dock_ctl, "get_left_collapsed", None)
+            toggler = getattr(dock_ctl, "toggle_left_dock", None)
+            if callable(getter) and callable(toggler) and not getter():
+                toggler(editor)
                 return
     elif dock == "right":
-        if getattr(editor, "_right_dock_tab", None) == tab and not getattr(editor, "get_dock_right_collapsed", lambda: False)():
-            toggler = getattr(editor, "toggle_right_dock", None)
-            if callable(toggler):
-                toggler()
+        snapshot = get_dock_snapshot(editor)
+        dock_ctl = getattr(editor, "dock", None)
+        if snapshot is not None and snapshot.right_tab == tab and dock_ctl is not None:
+            getter = getattr(dock_ctl, "get_right_collapsed", None)
+            toggler = getattr(dock_ctl, "toggle_right_dock", None)
+            if callable(getter) and callable(toggler) and not getter():
+                toggler(editor)
                 return
     _set_dock_tab(window, dock, tab)
 
@@ -1274,6 +1505,10 @@ def _toggle_problems_panel(window: Any) -> None:
     _toggle_dock_tab(window, "right", "Problems")
 
 
+def _toggle_debug_panel(window: Any) -> None:
+    _toggle_dock_tab(window, "right", "Debug")
+
+
 def _action_problems_jump(window: Any) -> None:
     """Jump to the currently selected problem (EditorAction handler)."""
     editor = _get_editor(window)
@@ -1292,6 +1527,113 @@ def _action_problems_copy_location(window: Any) -> None:
     copier = getattr(editor, "problems_copy_location", None)
     if callable(copier):
         copier()
+
+
+def _action_debug_select_event_entity(window: Any) -> None:
+    """Select an entity from the debug event monitor (EditorAction handler)."""
+    editor = _get_editor(window)
+    if editor is None or not getattr(editor, "active", False):
+        return
+    debug_panels = getattr(editor, "debug_panels", None)
+    if debug_panels is None:
+        return
+    entity_id = debug_panels.consume_pending_select_entity_id()
+    if not entity_id:
+        return
+    debug_panels.activate_event_entity(entity_id)
+
+
+def _action_debug_export_bundle(window: Any) -> None:
+    """Export the current debug bundle snapshot to artifacts/ (EditorAction handler)."""
+    editor = _get_editor(window)
+    if editor is None or not getattr(editor, "active", False):
+        return
+    from pathlib import Path  # noqa: PLC0415
+
+    from engine.editor.debug_bundle import build_debug_bundle  # noqa: PLC0415
+    from engine.persistence_io import write_json_atomic  # noqa: PLC0415
+    from engine.repo_root import get_repo_root  # noqa: PLC0415
+
+    try:
+        repo_root = get_repo_root()
+    except Exception:
+        repo_root = Path.cwd()
+
+    out_path = repo_root / "artifacts" / "debug_bundle.json"
+    try:
+        bundle = build_debug_bundle(window, editor, deterministic=False)
+        payload = bundle.to_dict(deterministic=False)
+        write_json_atomic(out_path, payload, indent=2, sort_keys=True, trailing_newline=True)
+        _debug_toast(window, f"Debug bundle exported: {out_path.as_posix()}")
+    except Exception:
+        _debug_toast(window, "Debug bundle export failed")
+
+
+def _action_debug_copy_quest_diagnostic(window: Any) -> None:
+    """Copy the selected quest diagnostic line to clipboard (EditorAction handler)."""
+    editor = _get_editor(window)
+    if editor is None or not getattr(editor, "active", False):
+        return
+    debug_panels = getattr(editor, "debug_panels", None)
+    if debug_panels is None:
+        return
+    text = str(debug_panels.get_selected_quest_diagnostic_text() or "")
+    if not text:
+        _debug_toast(window, "No quest diagnostic selected")
+        return
+    from engine.tooling_runtime.clipboard import try_copy_to_clipboard  # noqa: PLC0415
+
+    if try_copy_to_clipboard(text):
+        _debug_toast(window, "Quest diagnostic copied")
+    else:
+        _debug_toast(window, "Clipboard unavailable (headless/web)")
+
+
+def _action_debug_copy_filtered_events(window: Any) -> None:
+    """Copy the last filtered events from the debug panel (EditorAction handler)."""
+    editor = _get_editor(window)
+    if editor is None or not getattr(editor, "active", False):
+        return
+    debug_panels = getattr(editor, "debug_panels", None)
+    if debug_panels is None:
+        return
+    text = str(debug_panels.get_filtered_event_rows_text() or "")
+    if not text:
+        _debug_toast(window, "No events to copy")
+        return
+    from engine.tooling_runtime.clipboard import try_copy_to_clipboard  # noqa: PLC0415
+
+    if try_copy_to_clipboard(text):
+        _debug_toast(window, "Filtered events copied")
+    else:
+        _debug_toast(window, "Clipboard unavailable (headless/web)")
+
+
+def _action_debug_copy_cutscene_summary(window: Any) -> None:
+    """Copy the cutscene summary line(s) from the debug panel (EditorAction handler)."""
+    editor = _get_editor(window)
+    if editor is None or not getattr(editor, "active", False):
+        return
+    debug_panels = getattr(editor, "debug_panels", None)
+    if debug_panels is None:
+        return
+    text = str(debug_panels.get_cutscene_summary_text() or "")
+    if not text:
+        _debug_toast(window, "No cutscene summary available")
+        return
+    from engine.tooling_runtime.clipboard import try_copy_to_clipboard  # noqa: PLC0415
+
+    if try_copy_to_clipboard(text):
+        _debug_toast(window, "Cutscene summary copied")
+    else:
+        _debug_toast(window, "Clipboard unavailable (headless/web)")
+
+
+def _debug_toast(window: Any, message: str, *, seconds: float = 2.5) -> None:
+    hud = getattr(window, "player_hud", None)
+    toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+    if callable(toaster):
+        toaster(message, seconds=seconds)
 
 
 def _toggle_project_explorer_panel(window: Any) -> None:
@@ -1379,6 +1721,59 @@ def _project_explorer_delete_selected(window: Any) -> None:
         deleter()
 
 
+def _project_explorer_context_menu_open(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is None:
+        return
+    opener = getattr(editor, "open_project_explorer_context_menu_at_selection", None)
+    if callable(opener):
+        opener()
+
+
+def _project_explorer_context_menu_close(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is None:
+        return
+    project = getattr(editor, "project_explorer", None)
+    if project is None:
+        return
+    closer = getattr(project, "close_context_menu", None)
+    if callable(closer):
+        closer(editor)
+
+
+def _project_explorer_context_menu_move(window: Any, delta: int) -> None:
+    editor = _get_editor(window)
+    if editor is None:
+        return
+    project = getattr(editor, "project_explorer", None)
+    if project is None:
+        return
+    mover = getattr(project, "move_context_menu_selection", None)
+    if callable(mover):
+        mover(delta)
+
+
+def _action_project_explorer_context_menu_up(window: Any) -> None:
+    _project_explorer_context_menu_move(window, -1)
+
+
+def _action_project_explorer_context_menu_down(window: Any) -> None:
+    _project_explorer_context_menu_move(window, 1)
+
+
+def _project_explorer_context_menu_activate(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is None:
+        return
+    project = getattr(editor, "project_explorer", None)
+    if project is None:
+        return
+    activator = getattr(project, "activate_context_menu_item", None)
+    if callable(activator):
+        activator(editor)
+
+
 def _safe_rename_selected_asset(window: Any) -> None:
     """Initiate inline rename for selected Project Explorer asset.
 
@@ -1459,6 +1854,48 @@ def _safe_move_selected_assets(window: Any) -> None:
 
     prompter = getattr(editor, "prompt_project_explorer_move_destination", None)
     if callable(prompter):
+        # V2 Refactor Path for multi-select
+        prompter(lambda dest: editor.file_ops.request_safe_move_refactor(dest))
+
+
+def _enabled_safe_move_refactor(controller: Any, window: Any) -> bool:
+    """Enabled if we can move file (legacy) or folder/multi (v2)."""
+    # Base check for project explorer focus/selection
+    editor = _get_editor(window)
+    if not editor: return False
+    
+    from engine.editor.project_explorer_power_tools_model import should_handle_project_explorer_shortcut
+    if not should_handle_project_explorer_shortcut(editor):
+        return False
+        
+    ops = editor.file_ops
+    return bool(ops.can_safe_move_selected_asset() or ops.can_safe_move_selected_assets_folder())
+
+
+def _safe_move_refactor_wrapper(window: Any) -> None:
+    """Dispatch to Legacy or V2 move depending on selection."""
+    editor = _get_editor(window)
+    if not editor: return
+    
+    ops = editor.file_ops
+    use_v2 = ops.can_safe_move_selected_assets_folder()
+    # Check multi-select too?
+    project_ctrl = getattr(editor, "project_explorer", None)
+    if project_ctrl and getattr(project_ctrl, "selection_count", lambda: 0)() > 1:
+        use_v2 = True
+        
+    prompter = getattr(editor, "prompt_project_explorer_move_destination", None)
+    if not callable(prompter): 
+        # Toast fallback?
+        return
+
+    if use_v2:
+        prompter(lambda dest: ops.request_safe_move_refactor(dest))
+    else:
+        # Legacy
+        prompter(lambda dest: editor.safe_move_selected_asset(dest))
+
+    if callable(prompter):
         prompter(lambda dest: editor.safe_move_selected_assets(dest))
         return
 
@@ -1508,8 +1945,11 @@ def _inline_rename_commit(window: Any) -> None:
 
     # Perform actual rename via file_ops
     file_ops = getattr(editor, "file_ops", None)
-    if file_ops is not None and hasattr(file_ops, "rename_selected_asset"):
-        file_ops.rename_selected_asset(new_name)
+    if file_ops is not None:
+        if hasattr(file_ops, "request_safe_rename_refactor"):
+             file_ops.request_safe_rename_refactor(new_name)
+        elif hasattr(file_ops, "rename_selected_asset"):
+             file_ops.rename_selected_asset(new_name)
 
 
 def _inline_rename_cancel(window: Any) -> None:
@@ -1756,6 +2196,11 @@ def _enabled_project_explorer_selection(_controller: Any, window: Any) -> bool:
     count = getattr(project_ctrl, "selection_count", None)
     if callable(count):
         return bool(count() > 0)
+    state = getattr(project_ctrl, "selection_state", None)
+    if state is not None:
+        selected = getattr(state, "selected_indices", None)
+        if selected:
+            return True
     return False
 
 
@@ -1766,6 +2211,15 @@ def _enabled_project_explorer_active(_controller: Any, window: Any) -> bool:
     from engine.editor.project_explorer_power_tools_model import should_handle_project_explorer_shortcut
 
     return bool(should_handle_project_explorer_shortcut(editor))
+
+
+def _enabled_project_explorer_context_menu_open(_controller: Any, window: Any) -> bool:
+    editor = _get_editor(window)
+    if editor is None or not getattr(editor, "active", False):
+        return False
+    from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
+
+    return panels_is_open(editor, "project_context_menu")
 
 
 def _toggle_prefab_variant_editor(window: Any) -> None:
@@ -1792,16 +2246,18 @@ def _toggle_find_everything(window: Any) -> None:
 
 def _toggle_left_dock(window: Any) -> None:
     editor = _get_editor(window)
-    toggler = getattr(editor, "toggle_left_dock", None) if editor is not None else None
+    dock_ctl = getattr(editor, "dock", None) if editor is not None else None
+    toggler = getattr(dock_ctl, "toggle_left_dock", None) if dock_ctl is not None else None
     if callable(toggler):
-        toggler()
+        toggler(editor)
 
 
 def _toggle_right_dock(window: Any) -> None:
     editor = _get_editor(window)
-    toggler = getattr(editor, "toggle_right_dock", None) if editor is not None else None
+    dock_ctl = getattr(editor, "dock", None) if editor is not None else None
+    toggler = getattr(dock_ctl, "toggle_right_dock", None) if dock_ctl is not None else None
     if callable(toggler):
-        toggler()
+        toggler(editor)
 
 
 def _toggle_viewport_maximized(window: Any) -> None:
@@ -1850,6 +2306,22 @@ def _apply_lighting_preset(window: Any, index: int) -> None:
         apply_fn(int(index))
 
 
+def _action_apply_lighting_preset_0(window: Any) -> None:
+    _apply_lighting_preset(window, 0)
+
+
+def _action_apply_lighting_preset_1(window: Any) -> None:
+    _apply_lighting_preset(window, 1)
+
+
+def _action_apply_lighting_preset_2(window: Any) -> None:
+    _apply_lighting_preset(window, 2)
+
+
+def _action_apply_lighting_preset_3(window: Any) -> None:
+    _apply_lighting_preset(window, 3)
+
+
 def _toggle_fog(window: Any) -> None:
     settings = ensure_runtime_settings(window)
     settings.fog_enabled = not bool(settings.fog_enabled)
@@ -1877,11 +2349,24 @@ def _toggle_command_palette(window: Any) -> None:
         return
     if editor is None:
         return
-    active = bool(getattr(editor, "command_palette_active", False))
-    editor.command_palette_active = not active
-    if editor.command_palette_active:
-        editor.command_palette_query = ""
-        editor.command_palette_index = 0
+    panels = getattr(editor, "panels", None)
+    if panels and hasattr(panels, "toggle_command_palette"):
+        if panels.toggle_command_palette():
+            search = getattr(editor, "search", None)
+            if search is not None:
+                clear = getattr(search, "clear_command_palette_state", None)
+                if callable(clear):
+                    clear()
+        return
+
+
+def _open_keybinds(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor:
+        panels = getattr(editor, "panels", None)
+        if panels and hasattr(panels, "open_keybinds"):
+            panels.open_keybinds()
+            return
 
 
 def _toggle_ghost_originals(window: Any) -> None:
@@ -1900,6 +2385,10 @@ def _toggle_prefab_palette(window: Any) -> None:
 
 def _undo(window: Any) -> None:
     editor = _get_editor(window)
+    undo_ctrl = getattr(editor, "undo", None) if editor is not None else None
+    if undo_ctrl is not None and hasattr(undo_ctrl, "undo"):
+        undo_ctrl.undo()
+        return
     undoer = getattr(editor, "undo_last", None) if editor is not None else None
     if callable(undoer):
         undoer()
@@ -1907,6 +2396,10 @@ def _undo(window: Any) -> None:
 
 def _redo(window: Any) -> None:
     editor = _get_editor(window)
+    undo_ctrl = getattr(editor, "undo", None) if editor is not None else None
+    if undo_ctrl is not None and hasattr(undo_ctrl, "redo"):
+        undo_ctrl.redo()
+        return
     redoer = getattr(editor, "redo_last", None) if editor is not None else None
     if callable(redoer):
         redoer()
@@ -1942,1260 +2435,101 @@ def _quit_app(window: Any) -> None:
         closer()
 
 
+
+def _action_refactor_delete_selected(window: Any) -> None:
+    editor = _get_editor(window)
+    project = getattr(editor, "project_explorer", None)
+    file_ops = getattr(editor, "file_ops", None)
+    
+    if project and file_ops and hasattr(file_ops, "request_safe_delete_refactor"):
+        if hasattr(project, "ensure_rows"):
+            project.ensure_rows()
+        paths = project.selected_paths(getattr(project, "selectable_rows", []))
+        if paths:
+            file_ops.request_safe_delete_refactor(paths)
+
+
+def _action_refactor_move_selected(window: Any) -> None:
+    editor = _get_editor(window)
+    project = getattr(editor, "project_explorer", None)
+    file_ops = getattr(editor, "file_ops", None)
+    
+    if project and file_ops and hasattr(file_ops, "request_safe_move_refactor"):
+        # Ensure V2 capability check?
+        can_move = getattr(file_ops, "can_safe_move_selected_assets_folder", lambda: True)()
+        if not can_move:
+             return
+
+        prompter = getattr(editor, "prompt_project_explorer_move_destination", None)
+        if callable(prompter):
+            prompter(lambda dest: file_ops.request_safe_move_refactor(dest))
+        else:
+            file_ops.request_safe_move_refactor("")
+
+
+def _action_refactor_rename_commit(window: Any) -> None:
+    editor = _get_editor(window)
+    project = getattr(editor, "project_explorer", None)
+    if project is None or not getattr(project, "inline_rename_active", False):
+        return
+
+    should_commit, new_name, error = project.get_inline_rename_commit_result()
+    
+    if should_commit and new_name:
+        state = getattr(project, "inline_rename_state", None)
+        original_path = getattr(state, "original_path", "")
+        
+        parent = os.path.dirname(original_path)
+        new_path = os.path.join(parent, new_name).replace("\\", "/")
+        
+        project.cancel_inline_rename()
+        
+        file_ops = getattr(editor, "file_ops", None)
+        if file_ops and hasattr(file_ops, "request_safe_rename_refactor"):
+            file_ops.request_safe_rename_refactor(original_path, new_path)
+            
+    elif error is None:
+        project.cancel_inline_rename()
+    else:
+        hud = getattr(window, "player_hud", None)
+        if hud:
+            toaster = getattr(hud, "enqueue_toast", None)
+            if callable(toaster):
+                toaster(f"Rename failed: {error}", seconds=2.5)
+
+
+def _resolve_action_callable(name: str) -> Callable[..., Any]:
+    fn = globals().get(str(name))
+    if not callable(fn):
+        raise KeyError(f"Unknown action callable: {name}")
+    return cast(Callable[..., Any], fn)
+
+
+def _build_actions_from_defs(defs: Iterable[ActionDef]) -> list[EditorAction]:
+    actions: list[EditorAction] = []
+    for spec in defs:
+        enabled_fn = cast(Callable[[Any, Any], bool], _resolve_action_callable(spec.enabled))
+        run_fn = cast(Callable[[Any], None], _resolve_action_callable(spec.run))
+        actions.append(
+            EditorAction(
+                id=spec.id,
+                title=spec.title,
+                keywords=spec.keywords,
+                group=spec.group,
+                shortcut=spec.shortcut,
+                enabled=enabled_fn,
+                run=run_fn,
+                in_palette=spec.in_palette,
+                in_menu=spec.in_menu,
+                menu_label=spec.menu_label,
+                shortcut_scope=spec.shortcut_scope,
+            )
+        )
+    return actions
+
+
 def get_editor_actions(controller: Any | None, _window: Any | None) -> list[EditorAction]:
-    actions: list[EditorAction] = [
-        EditorAction(
-            id="editor.light_tool.toggle",
-            title="Toggle Light Tool",
-            keywords=("light", "lighting", "tool"),
-            group="Scene",
-            shortcut="L",
-            enabled=_enabled_always,
-            run=_toggle_lights_tool,
-            in_palette=True,
-            in_menu=True,
-            menu_label="Lights Tool",
-        ),
-        EditorAction(
-            id="editor.occluder_tool.toggle",
-            title="Toggle Occluder Tool",
-            keywords=("occluder", "shadow", "polygon"),
-            group="Scene",
-            shortcut="O",
-            enabled=_enabled_always,
-            run=_toggle_occluder_tool,
-            in_palette=True,
-            in_menu=True,
-            menu_label="Occluders Tool",
-        ),
-        EditorAction(
-            id="editor.entity_panels.toggle",
-            title="Toggle Entity Panels",
-            keywords=("entity", "outliner", "inspector", "panels"),
-            group="View",
-            shortcut="Ctrl+E",
-            enabled=_enabled_always,
-            run=_toggle_entity_panels,
-            in_palette=True,
-            in_menu=True,
-            menu_label="Entity Panels",
-        ),
-        EditorAction(
-            id="editor.panel.project_explorer.toggle",
-            title="Toggle Project Explorer",
-            keywords=("panel", "project", "explorer", "files"),
-            group="View",
-            shortcut="Ctrl+Alt+4",
-            enabled=_enabled_always,
-            run=_toggle_project_explorer_panel,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.project_explorer.reveal_current",
-            title="Reveal in Project Explorer",
-            keywords=("reveal", "project", "explorer", "scene", "asset", "show"),
-            group="View",
-            shortcut="Ctrl+Shift+E",
-            enabled=_enabled_has_reveal_target,
-            run=_reveal_current_in_project_explorer,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.project_explorer.copy_path",
-            title="Project Explorer: Copy Selected Paths",
-            keywords=("project", "explorer", "files", "selection", "copy", "move", "delete", "paths", "path", "copy path", "clipboard"),
-            group="Edit",
-            shortcut="Ctrl+Shift+C",
-            enabled=_enabled_project_explorer_selection,
-            run=_copy_project_explorer_path,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.project_explorer.copy_common_parent",
-            title="Project Explorer: Copy Common Parent",
-            keywords=("project", "explorer", "files", "selection", "copy", "move", "delete", "path", "parent", "folder", "clipboard"),
-            group="Edit",
-            shortcut="Ctrl+Shift+Alt+C",
-            enabled=_enabled_project_explorer_selection,
-            run=_copy_project_explorer_common_parent,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.project_explorer.select_all",
-            title="Project Explorer: Select All",
-            keywords=("project", "explorer", "files", "selection", "copy", "move", "delete", "select", "all"),
-            group="Edit",
-            shortcut="Ctrl+A",
-            enabled=_enabled_project_explorer_active,
-            run=_project_explorer_select_all,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.project_explorer.clear_selection",
-            title="Project Explorer: Clear Selection",
-            keywords=("project", "explorer", "files", "selection", "copy", "move", "delete", "clear"),
-            group="Edit",
-            shortcut="Escape",
-            enabled=_enabled_project_explorer_active,
-            run=_project_explorer_clear_selection,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.project_explorer.invert_selection",
-            title="Project Explorer: Invert Selection",
-            keywords=("project", "explorer", "files", "selection", "copy", "move", "delete", "invert"),
-            group="Edit",
-            shortcut="Ctrl+I",
-            enabled=_enabled_project_explorer_active,
-            run=_project_explorer_invert_selection,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.project_explorer.delete_selected",
-            title="Project Explorer: Delete Selected",
-            keywords=("project", "explorer", "files", "selection", "copy", "move", "delete"),
-            group="Edit",
-            shortcut="",
-            enabled=_enabled_project_explorer_selection,
-            run=_project_explorer_delete_selected,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.project_explorer.safe_rename_asset",
-            title="Safe Rename Asset",
-            keywords=("rename", "asset", "refactor", "references", "project", "explorer"),
-            group="Edit",
-            shortcut="F2",
-            enabled=_enabled_project_explorer_file_selection,
-            run=_safe_rename_selected_asset,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.project_explorer.safe_move_asset",
-            title="Project Explorer: Move Selected...",
-            keywords=("project", "explorer", "files", "selection", "copy", "move", "delete", "asset", "refactor", "references"),
-            group="Edit",
-            shortcut="Ctrl+Shift+M",
-            enabled=_enabled_project_explorer_file_selection,
-            run=_safe_move_selected_asset,
-            in_palette=True,
-            in_menu=True,
-        ),
-        # --- Inline Rename Actions (not in palette/menu, scoped to inline rename mode) ---
-        EditorAction(
-            id="editor.project_explorer.inline_rename.commit",
-            title="Commit Inline Rename",
-            keywords=(),
-            group="Edit",
-            shortcut="Enter",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_commit,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cancel",
-            title="Cancel Inline Rename",
-            keywords=(),
-            group="Edit",
-            shortcut="Escape",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cancel,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.backspace",
-            title="Inline Rename Backspace",
-            keywords=(),
-            group="Edit",
-            shortcut="Backspace",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_backspace,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.delete",
-            title="Inline Rename Delete",
-            keywords=(),
-            group="Edit",
-            shortcut="Delete",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_delete,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        # --- Inline Rename Cursor Navigation Actions ---
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_left",
-            title="Inline Rename Cursor Left",
-            keywords=(),
-            group="Edit",
-            shortcut="Left",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_left,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_left_extend",
-            title="Inline Rename Cursor Left Extend",
-            keywords=(),
-            group="Edit",
-            shortcut="Shift+Left",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_left_extend,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_right",
-            title="Inline Rename Cursor Right",
-            keywords=(),
-            group="Edit",
-            shortcut="Right",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_right,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_right_extend",
-            title="Inline Rename Cursor Right Extend",
-            keywords=(),
-            group="Edit",
-            shortcut="Shift+Right",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_right_extend,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_home",
-            title="Inline Rename Cursor Home",
-            keywords=(),
-            group="Edit",
-            shortcut="Home",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_home,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_home_extend",
-            title="Inline Rename Cursor Home Extend",
-            keywords=(),
-            group="Edit",
-            shortcut="Shift+Home",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_home_extend,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_end",
-            title="Inline Rename Cursor End",
-            keywords=(),
-            group="Edit",
-            shortcut="End",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_end,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_end_extend",
-            title="Inline Rename Cursor End Extend",
-            keywords=(),
-            group="Edit",
-            shortcut="Shift+End",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_end_extend,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_word_left",
-            title="Inline Rename Cursor Word Left",
-            keywords=(),
-            group="Edit",
-            shortcut="Ctrl+Left",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_word_left,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_word_left_extend",
-            title="Inline Rename Cursor Word Left Extend",
-            keywords=(),
-            group="Edit",
-            shortcut="Ctrl+Shift+Left",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_word_left_extend,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_word_right",
-            title="Inline Rename Cursor Word Right",
-            keywords=(),
-            group="Edit",
-            shortcut="Ctrl+Right",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_word_right,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.cursor_word_right_extend",
-            title="Inline Rename Cursor Word Right Extend",
-            keywords=(),
-            group="Edit",
-            shortcut="Ctrl+Shift+Right",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_cursor_word_right_extend,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.delete_prev_word",
-            title="Inline Rename Delete Prev Word",
-            keywords=(),
-            group="Edit",
-            shortcut="Ctrl+Backspace",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_delete_prev_word,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.project_explorer.inline_rename.delete_next_word",
-            title="Inline Rename Delete Next Word",
-            keywords=(),
-            group="Edit",
-            shortcut="Ctrl+Delete",
-            enabled=_enabled_inline_rename_active,
-            run=_inline_rename_delete_next_word,
-            in_palette=False,
-            in_menu=False,
-            shortcut_scope=SHORTCUT_SCOPE_INLINE_RENAME,
-        ),
-        EditorAction(
-            id="editor.panel.outliner.toggle",
-            title="Toggle Outliner",
-            keywords=("panel", "outliner", "entities", "list"),
-            group="View",
-            shortcut="Ctrl+Alt+2",
-            enabled=_enabled_always,
-            run=_toggle_outliner_panel,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.panel.inspector.toggle",
-            title="Toggle Inspector",
-            keywords=("panel", "inspector", "properties", "details"),
-            group="View",
-            shortcut="Ctrl+Alt+1",
-            enabled=_enabled_always,
-            run=_toggle_inspector_panel,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.panel.history.toggle",
-            title="Toggle History",
-            keywords=("panel", "history", "undo", "stack"),
-            group="View",
-            shortcut="Ctrl+Alt+5",
-            enabled=_enabled_always,
-            run=_toggle_history_panel,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.panel.problems.toggle",
-            title="Toggle Problems",
-            keywords=("panel", "problems", "lint", "issues"),
-            group="View",
-            shortcut="Ctrl+Alt+3",
-            enabled=_enabled_always,
-            run=_toggle_problems_panel,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.problems.jump_to_selected",
-            title="Jump to Selected Problem",
-            keywords=("jump", "problem", "go", "navigate", "location", "line"),
-            group="View",
-            shortcut="Enter",
-            enabled=_enabled_problems_can_jump,
-            run=_action_problems_jump,
-            in_palette=True,
-            in_menu=True,
-            menu_label="Jump to Problem",
-        ),
-        EditorAction(
-            id="editor.problems.jump_to_selected_ctrl",
-            title="Jump to Selected Problem (Ctrl)",
-            keywords=(),
-            group="View",
-            shortcut="Ctrl+Enter",
-            enabled=_enabled_problems_can_jump,
-            run=_action_problems_jump,
-            in_palette=False,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.problems.copy_location",
-            title="Copy Problem Location",
-            keywords=("copy", "problem", "location", "line", "path", "clipboard"),
-            group="View",
-            shortcut="Ctrl+Shift+L",
-            enabled=_enabled_problems_panel_active,
-            run=_action_problems_copy_location,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.panel.prefab_variant_editor.toggle",
-            title="Toggle Prefab Variant Editor",
-            keywords=("panel", "prefab", "variant", "overrides"),
-            group="View",
-            shortcut="Ctrl+Alt+6",
-            enabled=_enabled_always,
-            run=_toggle_prefab_variant_editor,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.find_everything.toggle",
-            title="Find Everything",
-            keywords=("find", "search", "launcher", "everything"),
-            group="View",
-            shortcut="Ctrl+K",
-            enabled=_enabled_always,
-            run=_toggle_find_everything,
-            in_palette=False,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.scene_browser.open",
-            title="Open Scene Browser",
-            keywords=("scene", "browser", "open"),
-            group="File",
-            shortcut="Ctrl+Shift+O",
-            enabled=_enabled_always,
-            run=_open_scene_browser,
-            in_palette=True,
-            in_menu=True,
-            menu_label="Open Scene...",
-        ),
-        EditorAction(
-            id="editor.scene_switcher.toggle",
-            title="Open Scene Switcher",
-            keywords=("scene", "switcher", "open", "quick"),
-            group="File",
-            shortcut="Ctrl+O",
-            enabled=_enabled_always,
-            run=_toggle_scene_switcher,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.scene.save",
-            title="Save Scene",
-            keywords=("save", "scene"),
-            group="File",
-            shortcut="Ctrl+S",
-            enabled=_enabled_scene_dirty,
-            run=_save_scene,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.play.start",
-            title="Play From Here",
-            keywords=("play", "start", "test"),
-            group=None,
-            shortcut="F6",
-            enabled=_enabled_always,
-            run=_play_from_here,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.play.stop",
-            title="Stop Playing",
-            keywords=("stop", "play", "return"),
-            group=None,
-            shortcut="F7",
-            enabled=_enabled_always,
-            run=_stop_playing,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.lighting_preset.1",
-            title="Apply Lighting Preset 1",
-            keywords=("lighting", "preset", "1"),
-            group=None,
-            shortcut="",
-            enabled=_enabled_always,
-            run=lambda w: _apply_lighting_preset(w, 0),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.lighting_preset.2",
-            title="Apply Lighting Preset 2",
-            keywords=("lighting", "preset", "2"),
-            group=None,
-            shortcut="",
-            enabled=_enabled_always,
-            run=lambda w: _apply_lighting_preset(w, 1),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.lighting_preset.3",
-            title="Apply Lighting Preset 3",
-            keywords=("lighting", "preset", "3"),
-            group=None,
-            shortcut="",
-            enabled=_enabled_always,
-            run=lambda w: _apply_lighting_preset(w, 2),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.lighting_preset.4",
-            title="Apply Lighting Preset 4",
-            keywords=("lighting", "preset", "4"),
-            group=None,
-            shortcut="",
-            enabled=_enabled_always,
-            run=lambda w: _apply_lighting_preset(w, 3),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="runtime.fog.toggle",
-            title="Toggle Fog",
-            keywords=("fog", "atmosphere"),
-            group=None,
-            shortcut="",
-            enabled=_enabled_always,
-            run=_toggle_fog,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="runtime.soft_shadows.toggle",
-            title="Toggle Soft Shadows",
-            keywords=("soft", "shadows", "lighting"),
-            group=None,
-            shortcut="",
-            enabled=_enabled_always,
-            run=_toggle_soft_shadows,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.asset_browser.toggle",
-            title="Toggle Asset Browser",
-            keywords=("asset", "browser", "view"),
-            group="View",
-            shortcut="Ctrl+Shift+A",
-            enabled=_enabled_always,
-            run=_toggle_asset_browser,
-            in_palette=False,
-            in_menu=True,
-            menu_label="Asset Browser",
-        ),
-        EditorAction(
-            id="editor.command_palette.toggle",
-            title="Toggle Command Palette",
-            keywords=("command", "palette"),
-            group="View",
-            shortcut="Ctrl+P",
-            enabled=_enabled_always,
-            run=_toggle_command_palette,
-            in_palette=False,
-            in_menu=True,
-            menu_label="Command Palette",
-        ),
-        EditorAction(
-            id="editor.dock_left.toggle",
-            title="Toggle Left Dock",
-            keywords=("dock", "left", "toggle"),
-            group="View",
-            shortcut="Ctrl+L",
-            enabled=_enabled_always,
-            run=_toggle_left_dock,
-            in_palette=False,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.dock_right.toggle",
-            title="Toggle Right Dock",
-            keywords=("dock", "right", "toggle"),
-            group="View",
-            shortcut="Ctrl+R",
-            enabled=_enabled_right_dock_toggle,
-            run=_toggle_right_dock,
-            in_palette=False,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.viewport_maximize.toggle",
-            title="Toggle Viewport Maximize",
-            keywords=("viewport", "maximize", "toggle"),
-            group="View",
-            shortcut="Ctrl+Space",
-            enabled=_enabled_always,
-            run=_toggle_viewport_maximized,
-            in_palette=False,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.scene_browser.toggle",
-            title="Scene Browser",
-            keywords=("scene", "browser", "view"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_always,
-            run=_open_scene_browser,
-            in_palette=False,
-            in_menu=True,
-            menu_label="Scene Browser",
-        ),
-        EditorAction(
-            id="editor.ghost_originals.toggle",
-            title="Toggle Ghost Originals",
-            keywords=("ghost", "originals", "alt", "dup"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_always,
-            run=_toggle_ghost_originals,
-            in_palette=False,
-            in_menu=True,
-            menu_label="Ghost Originals During Alt-Dup",
-        ),
-        EditorAction(
-            id="editor.prefab_palette.toggle",
-            title="Prefab Palette",
-            keywords=("prefab", "palette"),
-            group="Scene",
-            shortcut="P",
-            enabled=_enabled_always,
-            run=_toggle_prefab_palette,
-            in_palette=False,
-            in_menu=True,
-            menu_label="Prefab Palette",
-        ),
-        EditorAction(
-            id="editor.history.undo",
-            title="Undo",
-            keywords=("undo", "history"),
-            group="Edit",
-            shortcut="Ctrl+Z",
-            enabled=_enabled_can_undo,
-            run=_undo,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.history.redo",
-            title="Redo",
-            keywords=("redo", "history"),
-            group="Edit",
-            shortcut="Ctrl+Y",
-            enabled=_enabled_can_redo,
-            run=_redo,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.duplicate",
-            title="Duplicate",
-            keywords=("duplicate",),
-            group="Edit",
-            shortcut="Ctrl+D",
-            enabled=_enabled_has_selection,
-            run=_duplicate,
-            in_palette=False,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.delete",
-            title="Delete",
-            keywords=("delete",),
-            group="Edit",
-            shortcut="Del",
-            enabled=_enabled_has_selection_or_project_explorer,
-            run=_delete,
-            in_palette=False,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="app.export_web_demo",
-            title="Export Web Demo...",
-            keywords=("export", "web", "demo"),
-            group="File",
-            shortcut="",
-            enabled=_enabled_not_web,
-            run=_export_web_demo,
-            in_palette=False,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="app.quit",
-            title="Quit",
-            keywords=("quit", "exit"),
-            group="File",
-            shortcut="Alt+F4",
-            enabled=_enabled_not_web,
-            run=_quit_app,
-            in_palette=False,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.hd2d.preset.soft.apply",
-            title="HD-2D Preset: Soft",
-            keywords=("hd2d", "preset", "look", "soft", "style"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _apply_hd2d_preset(w, "soft"),
-            in_palette=True,
-            in_menu=True,
-            menu_label="Soft",
-        ),
-        EditorAction(
-            id="editor.hd2d.preset.crisp.apply",
-            title="HD-2D Preset: Crisp",
-            keywords=("hd2d", "preset", "look", "crisp", "style"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _apply_hd2d_preset(w, "crisp"),
-            in_palette=True,
-            in_menu=True,
-            menu_label="Crisp",
-        ),
-        EditorAction(
-            id="editor.hd2d.preset.noir.apply",
-            title="HD-2D Preset: Noir",
-            keywords=("hd2d", "preset", "look", "noir", "style"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _apply_hd2d_preset(w, "noir"),
-            in_palette=True,
-            in_menu=True,
-            menu_label="Noir",
-        ),
-        EditorAction(
-            id="editor.hd2d.preset.dreamy.apply",
-            title="HD-2D Preset: Dreamy",
-            keywords=("hd2d", "preset", "look", "dreamy", "style"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _apply_hd2d_preset(w, "dreamy"),
-            in_palette=True,
-            in_menu=True,
-            menu_label="Dreamy",
-        ),
-        EditorAction(
-            id="editor.hd2d.defaults.upgrade_scene",
-            title="Upgrade Scene to HD2D Defaults",
-            keywords=("hd2d", "defaults", "upgrade", "scene", "style"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=_upgrade_scene_to_hd2d_defaults,
-            in_palette=True,
-            in_menu=False,
-        ),
-        # HD-2D Settings Panel toggle actions
-        EditorAction(
-            id="editor.hd2d.toggle.shadows",
-            title="HD-2D: Toggle Shadows",
-            keywords=("hd2d", "shadows", "toggle", "setting"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _toggle_hd2d_setting(w, "shadows_enabled"),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.toggle.shadows_contact",
-            title="HD-2D: Toggle Contact Shadows",
-            keywords=("hd2d", "shadows", "contact", "toggle", "setting"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _toggle_hd2d_setting(w, "shadows_contact_enabled"),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.toggle.shadows_ao",
-            title="HD-2D: Toggle Ambient Occlusion",
-            keywords=("hd2d", "shadows", "ao", "ambient", "occlusion", "toggle", "setting"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _toggle_hd2d_setting(w, "shadows_ao_enabled"),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.toggle.depth_tint",
-            title="HD-2D: Toggle Depth Tint",
-            keywords=("hd2d", "tint", "depth", "toggle", "setting"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _toggle_hd2d_setting(w, "depth_tint_enabled"),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.toggle.outline",
-            title="HD-2D: Toggle Outline",
-            keywords=("hd2d", "outline", "toggle", "setting"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _toggle_hd2d_setting(w, "outline_enabled"),
-            in_palette=True,
-            in_menu=False,
-        ),
-        # HD-2D Settings Panel slider actions (increase/decrease)
-        EditorAction(
-            id="editor.hd2d.tint_strength.increase",
-            title="HD-2D: Increase Tint Strength",
-            keywords=("hd2d", "tint", "strength", "increase"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _adjust_hd2d_slider(w, "depth_tint_strength", 0.05),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.tint_strength.decrease",
-            title="HD-2D: Decrease Tint Strength",
-            keywords=("hd2d", "tint", "strength", "decrease"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _adjust_hd2d_slider(w, "depth_tint_strength", -0.05),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.outline_strength.increase",
-            title="HD-2D: Increase Outline Strength",
-            keywords=("hd2d", "outline", "strength", "increase"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _adjust_hd2d_slider(w, "outline_strength", 0.05),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.outline_strength.decrease",
-            title="HD-2D: Decrease Outline Strength",
-            keywords=("hd2d", "outline", "strength", "decrease"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _adjust_hd2d_slider(w, "outline_strength", -0.05),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.outline_radius.increase",
-            title="HD-2D: Increase Outline Radius",
-            keywords=("hd2d", "outline", "radius", "increase"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _adjust_hd2d_slider(w, "outline_radius_px", 1),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.outline_radius.decrease",
-            title="HD-2D: Decrease Outline Radius",
-            keywords=("hd2d", "outline", "radius", "decrease"),
-            group="View",
-            shortcut="",
-            enabled=_enabled_scene_loaded,
-            run=lambda w: _adjust_hd2d_slider(w, "outline_radius_px", -1),
-            in_palette=True,
-            in_menu=False,
-        ),
-        # HD-2D Entity Override toggle actions (when entity is selected)
-        EditorAction(
-            id="editor.entity.hd2d.toggle.shadow",
-            title="Entity HD-2D: Toggle Shadow Override",
-            keywords=("entity", "hd2d", "shadow", "toggle", "override"),
-            group="Entity",
-            shortcut="",
-            enabled=_enabled_entity_selected,
-            run=lambda w: _toggle_entity_hd2d_override(w, "shadow_enabled"),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.entity.hd2d.toggle.shadow_contact",
-            title="Entity HD-2D: Toggle Contact Shadow Override",
-            keywords=("entity", "hd2d", "shadow", "contact", "toggle", "override"),
-            group="Entity",
-            shortcut="",
-            enabled=_enabled_entity_selected,
-            run=lambda w: _toggle_entity_hd2d_override(w, "shadow_contact_enabled"),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.entity.hd2d.toggle.shadow_ao",
-            title="Entity HD-2D: Toggle AO Shadow Override",
-            keywords=("entity", "hd2d", "shadow", "ao", "ambient", "occlusion", "toggle", "override"),
-            group="Entity",
-            shortcut="",
-            enabled=_enabled_entity_selected,
-            run=lambda w: _toggle_entity_hd2d_override(w, "shadow_ao_enabled"),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.entity.hd2d.toggle.depth_tint",
-            title="Entity HD-2D: Toggle Depth Tint Override",
-            keywords=("entity", "hd2d", "tint", "depth", "toggle", "override"),
-            group="Entity",
-            shortcut="",
-            enabled=_enabled_entity_selected,
-            run=lambda w: _toggle_entity_hd2d_override(w, "depth_tint_enabled"),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.entity.hd2d.toggle.outline",
-            title="Entity HD-2D: Toggle Outline Override",
-            keywords=("entity", "hd2d", "outline", "toggle", "override"),
-            group="Entity",
-            shortcut="",
-            enabled=_enabled_entity_selected,
-            run=lambda w: _toggle_entity_hd2d_override(w, "outline_enabled"),
-            in_palette=True,
-            in_menu=False,
-        ),
-        # HD-2D Entity Override slider actions
-        EditorAction(
-            id="editor.entity.hd2d.tint_strength.increase",
-            title="Entity HD-2D: Increase Tint Strength Override",
-            keywords=("entity", "hd2d", "tint", "strength", "increase", "override"),
-            group="Entity",
-            shortcut="",
-            enabled=_enabled_entity_selected,
-            run=lambda w: _adjust_entity_hd2d_slider(w, "depth_tint_strength", 0.05),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.entity.hd2d.tint_strength.decrease",
-            title="Entity HD-2D: Decrease Tint Strength Override",
-            keywords=("entity", "hd2d", "tint", "strength", "decrease", "override"),
-            group="Entity",
-            shortcut="",
-            enabled=_enabled_entity_selected,
-            run=lambda w: _adjust_entity_hd2d_slider(w, "depth_tint_strength", -0.05),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.entity.hd2d.outline_strength.increase",
-            title="Entity HD-2D: Increase Outline Strength Override",
-            keywords=("entity", "hd2d", "outline", "strength", "increase", "override"),
-            group="Entity",
-            shortcut="",
-            enabled=_enabled_entity_selected,
-            run=lambda w: _adjust_entity_hd2d_slider(w, "outline_strength", 0.05),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.entity.hd2d.outline_strength.decrease",
-            title="Entity HD-2D: Decrease Outline Strength Override",
-            keywords=("entity", "hd2d", "outline", "strength", "decrease", "override"),
-            group="Entity",
-            shortcut="",
-            enabled=_enabled_entity_selected,
-            run=lambda w: _adjust_entity_hd2d_slider(w, "outline_strength", -0.05),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.entity.hd2d.outline_radius.increase",
-            title="Entity HD-2D: Increase Outline Radius Override",
-            keywords=("entity", "hd2d", "outline", "radius", "increase", "override"),
-            group="Entity",
-            shortcut="",
-            enabled=_enabled_entity_selected,
-            run=lambda w: _adjust_entity_hd2d_slider(w, "outline_radius_px", 1),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.entity.hd2d.outline_radius.decrease",
-            title="Entity HD-2D: Decrease Outline Radius Override",
-            keywords=("entity", "hd2d", "outline", "radius", "decrease", "override"),
-            group="Entity",
-            shortcut="",
-            enabled=_enabled_entity_selected,
-            run=lambda w: _adjust_entity_hd2d_slider(w, "outline_radius_px", -1),
-            in_palette=True,
-            in_menu=False,
-        ),
-        # HD-2D Entity Override clipboard actions (copy/paste/clear)
-        EditorAction(
-            id="editor.hd2d.entity_overrides.copy",
-            title="Entity HD-2D: Copy Overrides",
-            keywords=("entity", "hd2d", "override", "copy", "clipboard"),
-            group="Entity",
-            shortcut="Ctrl+Alt+C",
-            enabled=_enabled_entity_selected,
-            run=_copy_entity_hd2d_overrides,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.entity_overrides.paste",
-            title="Entity HD-2D: Paste Overrides (Merge)",
-            keywords=("entity", "hd2d", "override", "paste", "clipboard", "merge"),
-            group="Entity",
-            shortcut="Ctrl+Alt+V",
-            enabled=_enabled_hd2d_clipboard_has_data,
-            run=_paste_entity_hd2d_overrides,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.entity_overrides.paste_replace",
-            title="Entity HD-2D: Paste Overrides (Replace)",
-            keywords=("entity", "hd2d", "override", "paste", "clipboard", "replace"),
-            group="Entity",
-            shortcut="Ctrl+Shift+Alt+V",
-            enabled=_enabled_hd2d_clipboard_has_data,
-            run=_paste_replace_entity_hd2d_overrides,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.entity_overrides.clear_all",
-            title="Entity HD-2D: Clear All Overrides",
-            keywords=("entity", "hd2d", "override", "clear", "all", "reset"),
-            group="Entity",
-            shortcut="Ctrl+Shift+Backspace",
-            enabled=_enabled_entity_has_overrides,
-            run=_clear_all_entity_hd2d_overrides,
-            in_palette=True,
-            in_menu=False,
-        ),
-        # HD-2D Entity Override batch actions
-        EditorAction(
-            id="editor.hd2d.entity_overrides.batch_paste_radius_merge",
-            title="Entity HD-2D: Batch Paste Overrides (Radius, Merge)",
-            keywords=("entity", "hd2d", "override", "batch", "paste", "radius", "merge", "nearby"),
-            group="Entity",
-            shortcut="Ctrl+Shift+B",
-            enabled=_enabled_hd2d_clipboard_has_data,
-            run=_batch_paste_hd2d_overrides_merge,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.entity_overrides.batch_paste_radius_replace",
-            title="Entity HD-2D: Batch Paste Overrides (Radius, Replace)",
-            keywords=("entity", "hd2d", "override", "batch", "paste", "radius", "replace", "nearby"),
-            group="Entity",
-            shortcut="Ctrl+Shift+Alt+B",
-            enabled=_enabled_hd2d_clipboard_has_data,
-            run=_batch_paste_hd2d_overrides_replace,
-            in_palette=True,
-            in_menu=False,
-        ),
-        # HD-2D batch radius adjustment actions
-        EditorAction(
-            id="editor.hd2d.entity_overrides.batch_radius.increase",
-            title="Entity HD-2D: Increase Batch Radius (+16px)",
-            keywords=("entity", "hd2d", "batch", "radius", "increase", "expand"),
-            group="Entity",
-            shortcut="Ctrl+Alt+]",
-            enabled=_enabled_always,
-            run=lambda w: _adjust_hd2d_batch_radius(w, 16),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.entity_overrides.batch_radius.decrease",
-            title="Entity HD-2D: Decrease Batch Radius (-16px)",
-            keywords=("entity", "hd2d", "batch", "radius", "decrease", "shrink"),
-            group="Entity",
-            shortcut="Ctrl+Alt+[",
-            enabled=_enabled_always,
-            run=lambda w: _adjust_hd2d_batch_radius(w, -16),
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.hd2d.entity_overrides.batch_radius.reset",
-            title="Entity HD-2D: Reset Batch Radius (96px)",
-            keywords=("entity", "hd2d", "batch", "radius", "reset", "default"),
-            group="Entity",
-            shortcut="Ctrl+Alt+\\\\",
-            enabled=_enabled_always,
-            run=_reset_hd2d_batch_radius,
-            in_palette=True,
-            in_menu=False,
-        ),
-        EditorAction(
-            id="editor.background_planes.add",
-            title="Background Planes: Add",
-            keywords=("background", "plane", "planes", "parallax", "add"),
-            group="Scene",
-            shortcut="Ctrl+Alt+B",
-            enabled=_enabled_always,
-            run=_action_planes_add,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.background_planes.duplicate",
-            title="Background Planes: Duplicate Selected",
-            keywords=("background", "plane", "planes", "parallax", "duplicate", "copy"),
-            group="Scene",
-            shortcut="Ctrl+Alt+D",
-            enabled=_enabled_plane_selected,
-            run=_action_planes_duplicate,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.background_planes.remove",
-            title="Background Planes: Remove Selected",
-            keywords=("background", "plane", "planes", "parallax", "remove", "delete"),
-            group="Scene",
-            shortcut="Ctrl+Alt+Backspace",
-            enabled=_enabled_plane_selected,
-            run=_action_planes_remove,
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.background_planes.move_up",
-            title="Background Planes: Move Up",
-            keywords=("background", "plane", "planes", "parallax", "move", "up", "layer"),
-            group="Scene",
-            shortcut="Alt+PageUp",
-            enabled=_enabled_plane_selected,
-            run=lambda w: _action_planes_move(w, "up"),
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.background_planes.move_down",
-            title="Background Planes: Move Down",
-            keywords=("background", "plane", "planes", "parallax", "move", "down", "layer"),
-            group="Scene",
-            shortcut="Alt+PageDown",
-            enabled=_enabled_plane_selected,
-            run=lambda w: _action_planes_move(w, "down"),
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.background_planes.select_prev",
-            title="Background Planes: Select Previous",
-            keywords=("background", "plane", "planes", "parallax", "select", "previous", "cycle"),
-            group="Scene",
-            shortcut="Ctrl+Alt+PageUp",
-            enabled=_enabled_planes_exist,
-            run=lambda w: _action_planes_select(w, "prev"),
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.background_planes.select_next",
-            title="Background Planes: Select Next",
-            keywords=("background", "plane", "planes", "parallax", "select", "next", "cycle"),
-            group="Scene",
-            shortcut="Ctrl+Alt+PageDown",
-            enabled=_enabled_planes_exist,
-            run=lambda w: _action_planes_select(w, "next"),
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.background_planes.toggle_repeat_x",
-            title="Background Planes: Toggle Tiling X",
-            keywords=("background", "plane", "planes", "parallax", "tiling", "tile", "repeat", "x"),
-            group="Scene",
-            shortcut="Ctrl+Alt+X",
-            enabled=_enabled_plane_selected,
-            run=lambda w: _action_planes_toggle_repeat(w, "x"),
-            in_palette=True,
-            in_menu=True,
-        ),
-        EditorAction(
-            id="editor.background_planes.toggle_repeat_y",
-            title="Background Planes: Toggle Tiling Y",
-            keywords=("background", "plane", "planes", "parallax", "tiling", "tile", "repeat", "y"),
-            group="Scene",
-            shortcut="Ctrl+Alt+Y",
-            enabled=_enabled_plane_selected,
-            run=lambda w: _action_planes_toggle_repeat(w, "y"),
-            in_palette=True,
-            in_menu=True,
-        ),
-    ]
+    actions = _build_actions_from_defs(DEFAULT_ACTION_DEFS)
     overrides = getattr(controller, "_keymap_overrides", None) if controller is not None else None
     if isinstance(overrides, dict) and overrides:
         from engine.editor.keymap_override_model import apply_keymap_overrides  # noqa: PLC0415

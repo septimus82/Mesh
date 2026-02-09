@@ -15,6 +15,9 @@ from engine.ui_overlays.problems_panel_overlay import (
 )
 from engine.editor.state import EditorDirtyState
 from engine.editor_controller import EditorModeController
+from tests._dock_stub import make_dock_stub
+from tests._search_stub import attach_search_stub
+from tests._session_stub import make_session_stub
 
 
 class StubHud:
@@ -47,13 +50,12 @@ class StubController:
     def __init__(self, scene: dict, repo_root: Path) -> None:
         self.window = StubWindow(StubSceneController(scene), player_hud=StubHud())
         self.active = True
-        self._right_dock_tab = "Problems"
-        self._left_dock_tab = "Outliner"
+        self.dock = make_dock_stub(left_tab="Outliner", right_tab="Problems")
+        self.session = make_session_stub()
         
         from engine.editor.editor_problems_controller import ProblemsController
         self.problems = ProblemsController()
         
-        self._search_focus = None
         self._repo_root_override = repo_root
         self.undo_stack: list[dict] = []
         self.redo_stack: list[dict] = []
@@ -70,9 +72,9 @@ class StubController:
         self.asset_browser_filter_active = False
         self._unsaved_changes_pending = False
         self.scene_browser_active = False
-        self.confirm_open = False
-        self._dock_left_w = 320
-        self._dock_right_w = 320
+        from types import SimpleNamespace
+        self.unsaved_confirm = SimpleNamespace(is_open=False)
+        self.search = attach_search_stub(self)
         
         # Stub for _selection_ctl needed by problems_jump_to_selected
         class StubSelectionCtl:
@@ -98,14 +100,6 @@ class StubController:
         return True
 
     @property
-    def _problems_issues(self) -> list:
-        return self.problems.issues
-    
-    @_problems_issues.setter
-    def _problems_issues(self, value):
-        self.problems.set_issues(value)
-
-    @property
     def _problems_search(self) -> str:
         return self.problems.query
 
@@ -113,35 +107,11 @@ class StubController:
     def _problems_search(self, value: str):
         self.problems.set_query(value)
         
-    @property
-    def _problems_selected_index(self) -> int:
-        return self.problems.selected_index
-
-    @_problems_selected_index.setter
-    def _problems_selected_index(self, value: int):
-        self.problems.set_selected_index(value)
-        
-    @property
-    def _problems_preview_open(self) -> bool:
-        return self.problems.preview_open
-
-    @_problems_preview_open.setter
-    def _problems_preview_open(self, value: bool):
-        self.problems.preview_open = value
-
     def _get_repo_root(self):
         return self._repo_root_override
 
     def _autosave_workspace(self) -> None:
         return
-
-    def set_dock_tab(self, dock: str, tab: str) -> bool:
-        if dock == "right":
-            self._right_dock_tab = tab
-            if tab != "Problems":
-                self._problems_preview_open = False
-            return True
-        return False
 
     def _refresh_entity_panels_list(self, *, sync_selected: bool = False) -> None:  # noqa: ARG002
         return
@@ -153,7 +123,7 @@ class StubController:
         return
 
     def get_effective_dock_widths(self, window_w: int):  # noqa: ARG002
-        return (self._dock_left_w, self._dock_right_w)
+        return self.dock.get_effective_dock_widths(window_w)
 
     def scan_scene_problems(self) -> int:
         return EditorModeController.scan_scene_problems(self)
@@ -215,7 +185,7 @@ def test_enter_jumps_to_problem(tmp_path: Path) -> None:
     handled = ctrl._handle_problems_input(optional_arcade.arcade.key.ENTER, 0)
     assert handled is False  # Defers to action system
     # Jump does not open preview
-    assert ctrl._problems_preview_open is False
+    assert ctrl.problems.preview_open is False
     # Jump does not apply fixes
     assert not ctrl.undo_stack
 
@@ -247,7 +217,7 @@ def test_shift_enter_applies_and_advances(tmp_path: Path) -> None:
     assert handled is True
     issues = ctrl.get_filtered_problems()
     assert issues
-    assert 0 <= ctrl._problems_selected_index < len(issues)
+    assert 0 <= ctrl.problems.selected_index < len(issues)
 
 
 def test_escape_closes_preview_then_panel(tmp_path: Path) -> None:
@@ -258,17 +228,17 @@ def test_escape_closes_preview_then_panel(tmp_path: Path) -> None:
     ctrl._open_problems_preview()
 
     ctrl._handle_problems_input(optional_arcade.arcade.key.ESCAPE, 0)
-    assert ctrl._problems_preview_open is False
-    assert ctrl._right_dock_tab == "Problems"
+    assert ctrl.problems.preview_open is False
+    assert ctrl.dock.right_tab == "Problems"
 
     ctrl._handle_problems_input(optional_arcade.arcade.key.ESCAPE, 0)
-    assert ctrl._right_dock_tab == "Inspector"
+    assert ctrl.dock.right_tab == "Inspector"
 
 
 def test_apply_non_fixable_emits_toast(tmp_path: Path) -> None:
     scene = {"entities": [{"id": "ok"}]}
     ctrl = StubController(scene, tmp_path)
-    ctrl._problems_issues = [
+    ctrl.problems.issues = [
         SceneLintIssue(
             issue_id="custom",
             kind="CUSTOM",
@@ -296,12 +266,12 @@ def test_search_focus_blocks_ctrl_enter_jump(tmp_path: Path) -> None:
     ctrl = StubController(scene, tmp_path)
     ctrl._prefab_resolver = lambda _: True
     ctrl.scan_scene_problems()
-    ctrl._search_focus = "problems"
+    ctrl.search._search_focus = "problems"
 
     # Enter with search focus: jump is still called (but search_focus check happens earlier for certain actions)
     ctrl._handle_problems_input(optional_arcade.arcade.key.ENTER, 0)
     # Preview is not opened since we jump instead
-    assert ctrl._problems_preview_open is False
+    assert ctrl.problems.preview_open is False
     assert not ctrl.undo_stack
 
     # Ctrl+Enter with search focus: blocked, returns early

@@ -44,9 +44,25 @@ from engine.editor.project_explorer_inline_rename_model import (
     delete_prev_word,
     delete_next_word,
 )
+from engine.editor.project_explorer_context_menu_model import (
+    ContextMenuItem,
+    ProjectExplorerSelectionPayload,
+    build_project_explorer_context_menu,
+    clamp_menu_index,
+    first_selectable_index,
+    find_index_by_action_id,
+    next_selectable_index,
+    hit_test_menu_item,
+    CONTEXT_MENU_WIDTH,
+    CONTEXT_MENU_ITEM_HEIGHT,
+    CONTEXT_MENU_PADDING_Y,
+)
+from engine.editor.project_explorer_context_menu_layout_model import clamp_menu_rect
+from engine.editor.project_explorer_power_tools_model import compute_common_parent
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from engine.editor_controller import EditorModeController
 
 
 class ProjectExplorerController:
@@ -75,6 +91,18 @@ class ProjectExplorerController:
         
         # Inline Rename State
         self.inline_rename_state: Optional[InlineRenameState] = None
+
+        # Context Menu State
+        self.context_menu_open: bool = False
+        self.context_menu_index: Optional[int] = None
+        self.context_menu_hover_index: Optional[int] = None
+        self.context_menu_items: list[ContextMenuItem] = []
+        self.context_menu_anchor: tuple[int, int] = (0, 0)
+        self.context_menu_width: int = CONTEXT_MENU_WIDTH
+        self.context_menu_height: int = 0
+        self.context_menu_last_action_id: Optional[str] = None
+        self.context_menu_selection_key: tuple[str, ...] | None = None
+        self._editor: Optional["EditorModeController"] = None
 
     def set_repo_root(self, repo_root: Path) -> None:
         """Update repo root (e.g. on workspace load)."""
@@ -339,6 +367,208 @@ class ProjectExplorerController:
     def selection_count(self) -> int:
         return len(self.selection_state.selected_indices)
 
+    def open_context_menu(
+        self,
+        x: int,
+        y: int,
+        editor: "EditorModeController",
+        *,
+        active_scopes: tuple[str, ...],
+    ) -> None:
+        """Open the context menu at the given screen position."""
+        self.ensure_rows()
+        self._editor = editor
+
+        selection_count = self.selection_count()
+        selected_paths = self.selected_paths(self.selectable_rows)
+        selection_key = tuple(sorted(set(str(p) for p in selected_paths if str(p).strip())))
+        has_common_parent = bool(compute_common_parent(selected_paths)) if len(selected_paths) > 1 else False
+
+        # Capability checks (avoid hasattr chains)
+        file_ops = getattr(editor, "file_ops", None)
+        can_rename = selection_count == 1
+        can_move = selection_count > 0
+        can_delete = selection_count > 0
+        if file_ops is not None:
+            can_rename = bool(getattr(file_ops, "can_safe_rename_selected_asset", lambda: can_rename)())
+            can_move = bool(
+                getattr(file_ops, "can_safe_move_selected_assets_folder", lambda: can_move)()
+                or getattr(file_ops, "can_safe_move_selected_asset", lambda: can_move)()
+            )
+            can_delete = bool(getattr(file_ops, "can_delete_selected_assets", lambda paths: can_delete)(selected_paths))
+        can_rename = bool(can_rename and selection_count == 1)
+        can_move = bool(can_move and selection_count > 0)
+        can_delete = bool(can_delete and selection_count > 0)
+
+        # Reveal target (scene path or entity selection)
+        window = getattr(editor, "window", None)
+        can_reveal = False
+        if window is not None:
+            sc = getattr(window, "scene_controller", None)
+            scene_path = getattr(sc, "current_scene_path", None) if sc is not None else None
+            if scene_path:
+                can_reveal = True
+        if getattr(editor, "_primary_selected_id", None):
+            can_reveal = True
+
+        can_copy_paths = selection_count > 0
+        can_copy_common_parent = selection_count > 1 and has_common_parent
+        can_select_all = True
+        can_clear_selection = True
+        can_invert_selection = True
+
+        payload = ProjectExplorerSelectionPayload(
+            selection_count=selection_count,
+            has_common_parent=has_common_parent,
+            can_rename=can_rename,
+            can_move=can_move,
+            can_delete=can_delete,
+            can_reveal=can_reveal,
+            can_copy_paths=can_copy_paths,
+            can_copy_common_parent=can_copy_common_parent,
+            can_select_all=can_select_all,
+            can_clear_selection=can_clear_selection,
+            can_invert_selection=can_invert_selection,
+        )
+
+        from engine.editor.editor_actions import get_editor_actions  # noqa: PLC0415
+
+        actions = get_editor_actions(editor, window)
+        self.context_menu_items = build_project_explorer_context_menu(payload, actions, active_scopes)
+        self.context_menu_height = (
+            len(self.context_menu_items) * CONTEXT_MENU_ITEM_HEIGHT
+        ) + (CONTEXT_MENU_PADDING_Y * 2)
+
+        self.context_menu_anchor = (int(x), int(y))
+
+        # Selection persistence: only keep last action if selection is unchanged.
+        if self.context_menu_selection_key != selection_key:
+            self.context_menu_last_action_id = None
+        self.context_menu_selection_key = selection_key
+
+        preferred_index = find_index_by_action_id(self.context_menu_items, self.context_menu_last_action_id)
+        if preferred_index is None:
+            preferred_index = first_selectable_index(self.context_menu_items)
+        self.context_menu_index = preferred_index
+        self.context_menu_hover_index = None
+        self.context_menu_open = True
+
+        panels = getattr(editor, "panels", None)
+        if panels and hasattr(panels, "open_project_context_menu"):
+            panels.open_project_context_menu()
+        else:
+            ui_stack = getattr(editor, "ui_layers", None)
+            if ui_stack:
+                ui_stack.push_modal("project_context_menu")
+
+    def close_context_menu(self, editor: "EditorModeController") -> None:
+        if not self.context_menu_open:
+            return
+        self.context_menu_open = False
+        self.context_menu_items = []
+        self.context_menu_hover_index = None
+        self._editor = None
+        panels = getattr(editor, "panels", None)
+        if panels and hasattr(panels, "close_project_context_menu"):
+            panels.close_project_context_menu()
+        else:
+            ui_stack = getattr(editor, "ui_layers", None)
+            if ui_stack:
+                ui_stack.pop_modal("project_context_menu")
+
+    def move_context_menu_selection(self, delta: int) -> None:
+        if not self.context_menu_open or not self.context_menu_items:
+            return
+        self.context_menu_index = next_selectable_index(
+            self.context_menu_items, self.context_menu_index, delta
+        )
+        index = self.context_menu_index
+        if index is not None:
+            item = self.context_menu_items[clamp_menu_index(index, self.context_menu_items)]
+            if item.kind == "action" and item.enabled:
+                self.context_menu_last_action_id = item.action_id
+
+    def activate_context_menu_item(self, editor: "EditorModeController") -> bool:
+        if not self.context_menu_open or not self.context_menu_items:
+            return False
+        if self.context_menu_index is None:
+            return False
+        index = clamp_menu_index(self.context_menu_index, self.context_menu_items)
+        item = self.context_menu_items[index]
+        if item.kind != "action" or not item.enabled or not item.action_id:
+            return False
+        from engine.editor.editor_actions import run_editor_action  # noqa: PLC0415
+
+        self.close_context_menu(editor)
+        return bool(run_editor_action(item.action_id, editor, getattr(editor, "window", None)))
+
+    def _context_menu_position(self, editor: "EditorModeController") -> tuple[int, int]:
+        window = getattr(editor, "window", None)
+        vp_w = int(getattr(window, "width", 1280) or 1280)
+        vp_h = int(getattr(window, "height", 720) or 720)
+        ax, ay = self.context_menu_anchor
+        return clamp_menu_rect(ax, ay, self.context_menu_width, self.context_menu_height, vp_w, vp_h)
+
+    def handle_context_menu_mouse_move(self, x: float, y: float) -> bool:
+        if not self.context_menu_open:
+            return False
+        editor = self._editor
+        if editor is None:
+            return False
+        mx, my = self._context_menu_position(editor)
+        local_x = x - mx
+        local_y = y - my
+        idx = hit_test_menu_item(local_x, local_y, len(self.context_menu_items))
+        if idx is None:
+            self.context_menu_hover_index = None
+        else:
+            self.context_menu_hover_index = idx
+        return True
+
+    def handle_context_menu_mouse_press(
+        self,
+        x: float,
+        y: float,
+        button: int,
+        editor: "EditorModeController",
+    ) -> bool:
+        if not self.context_menu_open:
+            return False
+        mx, my = self._context_menu_position(editor)
+        w, h = self.context_menu_width, self.context_menu_height
+        if not (mx <= x <= mx + w and my <= y <= my + h):
+            self.close_context_menu(editor)
+            return True
+        if button == 1:
+            if self.context_menu_hover_index is not None:
+                self.context_menu_index = clamp_menu_index(
+                    self.context_menu_hover_index, self.context_menu_items
+                )
+                item = self.context_menu_items[self.context_menu_index]
+                if item.kind == "action" and item.enabled:
+                    self.context_menu_last_action_id = item.action_id
+                self.activate_context_menu_item(editor)
+        return True
+
+    def get_context_menu_payload(self) -> dict[str, Any]:
+        window = getattr(getattr(self, "_editor", None), "window", None)
+        vp_w = int(getattr(window, "width", 1280) or 1280)
+        vp_h = int(getattr(window, "height", 720) or 720)
+        ax, ay = self.context_menu_anchor
+        return {
+            "open": self.context_menu_open,
+            "items": list(self.context_menu_items),
+            "index": self.context_menu_index,
+            "hover_index": self.context_menu_hover_index,
+            "anchor_x": ax,
+            "anchor_y": ay,
+            "preferred_width": self.context_menu_width,
+            "row_height": CONTEXT_MENU_ITEM_HEIGHT,
+            "height": self.context_menu_height,
+            "viewport_w": vp_w,
+            "viewport_h": vp_h,
+        }
+
     def apply_post_move_selection(
         self,
         old_paths: list[str],
@@ -445,11 +675,18 @@ class ProjectExplorerController:
         """
         if len(self.selection_state.selected_indices) > 1:
             return False
-        state = create_inline_rename_state(path)
+
+        is_dir = False
+        selected_row = self.get_selected_row()
+        if selected_row and selected_row.entry:
+            is_dir = getattr(selected_row.entry, "is_dir", False)
+        
+        state = create_inline_rename_state(path, is_dir=is_dir)
         if state is None:
             return False
         self.inline_rename_state = state
         return True
+
 
     def cancel_inline_rename(self) -> None:
         """Cancel inline rename mode without committing."""
@@ -471,6 +708,7 @@ class ProjectExplorerController:
             state.original_stem,
             state.current_text,
             state.original_ext,
+            is_dir=state.is_dir,
         )
         
         if should_commit and normalized_name:

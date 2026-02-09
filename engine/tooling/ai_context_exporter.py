@@ -64,7 +64,7 @@ def _load_quest_definitions() -> Dict[str, str]:
         except Exception:
             pass # Ignore errors in quest loading for context export
 
-    # TODO: Load pack quests if needed, but core is usually sufficient for context
+    # Core quests are usually sufficient for context; pack quests can be added later if needed.
 
     return definitions
 

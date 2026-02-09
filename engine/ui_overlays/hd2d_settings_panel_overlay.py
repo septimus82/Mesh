@@ -20,6 +20,7 @@ import engine.optional_arcade as optional_arcade
 from .common import UIElement
 from ..text_draw import draw_text_cached, TextCache
 from ..editor.editor_shell_layout import EditorShellLayout, compute_editor_shell_layout
+from ..editor.editor_dock_query import get_raw_dock_widths
 
 if TYPE_CHECKING:
     from engine.game import GameWindow
@@ -123,9 +124,7 @@ class Hd2dSettingsPanelOverlay(UIElement):
         controller = getattr(self.window, "editor_controller", None)
         if controller is None:
             return (320, 320)
-        left_w = getattr(controller, "_dock_left_w", 320)
-        right_w = getattr(controller, "_dock_right_w", 320)
-        return (left_w, right_w)
+        return get_raw_dock_widths(controller)
 
     def _get_layout(self) -> EditorShellLayout:
         """Get current editor layout."""
@@ -142,7 +141,9 @@ class Hd2dSettingsPanelOverlay(UIElement):
             return
 
         # Only draw when Inspector tab is active
-        right_dock_tab = getattr(controller, "_right_dock_tab", "Inspector")
+        dock = getattr(controller, "dock", None)
+        snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+        right_dock_tab = getattr(snapshot, "right_tab", "Inspector") or "Inspector"
         if right_dock_tab != "Inspector":
             return
 
@@ -476,9 +477,7 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
         controller = getattr(self.window, "editor_controller", None)
         if controller is None:
             return (320, 320)
-        left_w = getattr(controller, "_dock_left_w", 320)
-        right_w = getattr(controller, "_dock_right_w", 320)
-        return (left_w, right_w)
+        return get_raw_dock_widths(controller)
 
     def _get_layout(self) -> EditorShellLayout:
         """Get current editor layout."""
@@ -495,7 +494,9 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
             return
 
         # Only draw when Inspector tab is active
-        right_dock_tab = getattr(controller, "_right_dock_tab", "Inspector")
+        dock = getattr(controller, "dock", None)
+        snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+        right_dock_tab = getattr(snapshot, "right_tab", "Inspector") or "Inspector"
         if right_dock_tab != "Inspector":
             return
 

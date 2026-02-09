@@ -38,7 +38,7 @@ def test_mesh_cli_commands_package_has_no_command_modules() -> None:
 def test_legacy_scaffold_command_modules_do_not_exist(module_name: str) -> None:
     """Regression guard.
 
-    These modules were previously present as TODO scaffolds. They must not be
+    These modules were previously present as incomplete scaffolds. They must not be
     importable; real commands live in mesh_cli/{scene,room,verify,macro}.py.
     """
 
@@ -52,7 +52,7 @@ def test_legacy_scaffold_command_modules_do_not_exist(module_name: str) -> None:
 def test_mesh_cli_help_contains_no_placeholder_markers() -> None:
     """Regression guard.
 
-    If a placeholder command is exposed, it tends to leak "TODO" / "placeholder"
+    If a placeholder command is exposed, it tends to leak "TO-DO" / "placeholder"
     strings into the help text.
     """
 

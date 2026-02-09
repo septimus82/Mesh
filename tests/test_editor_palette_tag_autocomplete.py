@@ -4,7 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from engine.editor_controller import EditorModeController, _palette_tag_frequencies
+from engine.editor.prefab_palette_panel import palette_tag_frequencies as _palette_tag_frequencies
+from engine.editor_controller import EditorModeController
 
 
 class MockWindow:

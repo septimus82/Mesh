@@ -16,9 +16,32 @@ A Mesh scene JSON file is an object with the following keys:
 | `collision_rules` | object | no | Optional overrides for tag-to-tag collision checks. |
 | `tilemap` | object | no | Optional Tiled map configuration (see below). |
 | `background_layers` | array | no | Optional image-based parallax layers rendered behind the tilemap. |
+| `sensors` | array | no | Optional sensor/trigger definitions (AABB zones). |
 | `entities` | array | **yes** | The sprites that appear in the scene. Empty list by default. |
 
 Any additional top-level keys are ignored but reported as warnings by the validator.
+
+## Sensors Object
+
+`sensors` defines a list of trigger zones.
+
+```json
+"sensors": [
+    {
+        "id": "gate_trigger",
+        "rect": [100, 200, 50, 50],
+        "tags": ["checkpoint"],
+        "enabled": true
+    }
+]
+```
+
+| Field | Type | Default | Description |
+| ----- | ---- | ------- | ----------- |
+| `id` | string | **required** | Unique identifier for logic hooks. |
+| `rect` | array | **required** | `[x, y, w, h]` center-x, center-y, width, height. |
+| `tags` | array | `[]` | List of string tags for filtering. |
+| `enabled` | bool | `true` | Whether the sensor is active initially. |
 
 ## Settings Object
 
@@ -818,3 +841,12 @@ The engine configuration (`config.json`) supports a `main_menu_scene` field. Whe
 ### Layers
 
 Layers are declared up front and mapped to `arcade.SpriteList` instances inside the engine (`background`, `entities`, `foreground`). Entities select a layer via `layer`; unknown layers are auto-created (with a warning) which keeps the format flexible.
+
+## Asset References & Refactoring
+
+Scene files reference assets via relative paths (e.g. `assets/sprites/hero.png`). The Editor's Project Explorer supports **Safe Refactoring** for these paths:
+
+-   **Renaming/Moving** an asset automatically updates all matching string references in `.json` scene files.
+-   **Deleting** an asset warns if it is referenced by any scene.
+-   Refactoring is atomic (Two-Phase Commit) and includes a preview of affected files.
+

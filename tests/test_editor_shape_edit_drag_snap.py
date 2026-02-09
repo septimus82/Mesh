@@ -41,7 +41,7 @@ def test_shape_drag_updates_vertex_without_adding(monkeypatch) -> None:
     controller = _build_controller(monkeypatch)
     sprite = _StubSprite(x=100.0, y=100.0, points=[[0, 0], [10, 0], [0, 10]])
     controller.selected_entity = sprite
-    assert controller.toggle_shape_edit_mode("occluder") is True
+    assert controller.shape.toggle_shape_edit_mode("occluder") is True
 
     before_len = len(controller.shape_edit_points)
     controller.handle_mouse_click(100, 100, arcade.MOUSE_BUTTON_LEFT, 0)
@@ -57,7 +57,7 @@ def test_shape_snap_rounds_dragged_point(monkeypatch) -> None:
     controller.grid_size = 10
     sprite = _StubSprite(x=100.0, y=100.0, points=[[0, 0], [10, 0], [0, 10]])
     controller.selected_entity = sprite
-    assert controller.toggle_shape_edit_mode("occluder") is True
+    assert controller.shape.toggle_shape_edit_mode("occluder") is True
 
     controller.handle_input(arcade.key.G, 0)
     assert controller.shape_snap_enabled is True
@@ -71,7 +71,7 @@ def test_shape_click_far_adds_point(monkeypatch) -> None:
     controller = _build_controller(monkeypatch)
     sprite = _StubSprite(x=100.0, y=100.0, points=[[0, 0], [10, 0], [0, 10]])
     controller.selected_entity = sprite
-    assert controller.toggle_shape_edit_mode("occluder") is True
+    assert controller.shape.toggle_shape_edit_mode("occluder") is True
 
     before_len = len(controller.shape_edit_points)
     controller.handle_mouse_click(200, 200, arcade.MOUSE_BUTTON_LEFT, 0)

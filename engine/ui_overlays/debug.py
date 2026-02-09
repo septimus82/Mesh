@@ -5,6 +5,8 @@ from typing import TYPE_CHECKING, Any, Callable
 import engine.optional_arcade as optional_arcade
 
 from ..animation_state import get_animation_state_snapshot
+from ..ui_text_cache import UiTextCache, draw_text
+from ..text_draw import TextCache
 from .common import (
     _LOG_ONCE,
     UIElement,
@@ -317,6 +319,21 @@ def format_scene_dirty_overlay_lines(payload: dict[str, Any] | None) -> list[str
     return [f"SCENE DIRTY reason={reason} rev={rev}", counts_line]
 
 
+def format_physics_broadphase_lines(payload: dict[str, Any] | None) -> list[str]:
+    if not isinstance(payload, dict):
+        payload = {}
+    enabled = bool(payload.get("enabled", False))
+    build = int(payload.get("build_count") or 0)
+    candidate = int(payload.get("candidate_count") or 0)
+    exact = int(payload.get("exact_checks_count") or 0)
+    enabled_text = "Y" if enabled else "N"
+    return [
+        "PHYSICS BROADPHASE",
+        f"enabled={enabled_text} build={build}",
+        f"candidates={candidate} exact={exact}",
+    ]
+
+
 class SceneDirtyOverlay(UIElement):
     def __init__(self, window: "GameWindow", *, provider: Any | None = None) -> None:
         super().__init__(window)
@@ -347,6 +364,61 @@ class SceneDirtyOverlay(UIElement):
             anchor_y="top",
             font_name=("Consolas", "Courier New", "Courier"),
         )
+
+
+class PhysicsBroadphaseOverlay(UIElement):
+    def __init__(self, window: "GameWindow", *, provider: Any | None = None) -> None:
+        super().__init__(window)
+        self.provider = provider
+        self._ui_cache = UiTextCache(getattr(window, "text_cache", TextCache()))
+
+    def draw(self) -> None:
+        if not bool(getattr(self.window, "show_debug", False)):
+            return
+
+        payload: dict[str, Any] | None = None
+        if callable(self.provider):
+            try:
+                payload = self.provider(self.window)
+            except Exception:  # noqa: BLE001
+                payload = None
+
+        lines = format_physics_broadphase_lines(payload if isinstance(payload, dict) else None)
+        if not lines:
+            return
+
+        line_height = 16.0
+        padding = 12.0
+        width = 240.0
+        height = len(lines) * line_height + padding * 2.0
+
+        right = float(getattr(self.window, "width", 1280) or 1280) - 20.0
+        left = right - width
+        bottom = 20.0
+        top = bottom + height
+
+        _draw_rectangle_filled(
+            center_x=(left + right) / 2.0,
+            center_y=(top + bottom) / 2.0,
+            width=width,
+            height=height,
+            color=(0, 0, 0, 170),
+        )
+        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+
+        y = top - padding
+        for line in lines:
+            draw_text(
+                self._ui_cache,
+                text=line,
+                x=left + padding,
+                y=y,
+                color=optional_arcade.arcade.color.LIGHT_GRAY,
+                font_size=12,
+                anchor_y="top",
+                font_name=("Consolas", "Courier New", "Courier"),
+            )
+            y -= line_height
 
 
 class HD2DDepthDebugOverlay(UIElement):

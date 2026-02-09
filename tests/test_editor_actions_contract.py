@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 from engine.editor.editor_actions import get_editor_actions, run_editor_action
+from tests._dock_stub import make_dock_stub
 from engine.editor.menu_bar_model import build_menu_groups
 
 
@@ -14,6 +15,9 @@ def _stub_controller() -> MagicMock:
     controller.undo_stack = []
     controller.redo_stack = []
     controller.scene_dirty = False
+    from engine.editor.editor_undo_controller import EditorUndoController
+
+    controller.undo = EditorUndoController(controller)
     return controller
 
 
@@ -39,6 +43,7 @@ def test_menu_groups_include_expected_actions(monkeypatch) -> None:
     assert "editor.scene.save" in group_map["File"]
     assert "editor.history.undo" in group_map["Edit"]
     assert "editor.entity_panels.toggle" in group_map["View"]
+    assert "editor.panel.debug.toggle" in group_map["View"]
     assert "editor.light_tool.toggle" in group_map["Scene"]
     assert group_map["File"][:2] == ["editor.scene.save", "editor.scene_browser.open"]
 
@@ -50,6 +55,7 @@ def test_panel_toggle_actions_registered_in_order() -> None:
         "editor.panel.inspector.toggle",
         "editor.panel.history.toggle",
         "editor.panel.problems.toggle",
+        "editor.panel.debug.toggle",
         "editor.panel.prefab_variant_editor.toggle",
     ]
     actions = get_editor_actions(None, None)
@@ -64,43 +70,31 @@ def test_panel_toggle_actions_toggle_collapsed_state() -> None:
     class _StubController:
         def __init__(self) -> None:
             self.active = True
-            self._left_dock_tab = "Outliner"
-            self._right_dock_tab = "Inspector"
-            self._dock_left_collapsed = False
-            self._dock_right_collapsed = False
+            self.dock = make_dock_stub(left_tab="Outliner", right_tab="Inspector")
 
         def set_dock_tab(self, dock: str, tab: str) -> None:
             if dock == "left":
-                self._left_dock_tab = tab
-                self._dock_left_collapsed = False
+                self.dock.set_left_tab(tab, force=True)
+                self.dock.set_left_collapsed(False)
             else:
-                self._right_dock_tab = tab
-                self._dock_right_collapsed = False
-
-        def toggle_left_dock(self) -> None:
-            self._dock_left_collapsed = not self._dock_left_collapsed
-
-        def toggle_right_dock(self) -> None:
-            self._dock_right_collapsed = not self._dock_right_collapsed
-
-        def get_dock_left_collapsed(self) -> bool:
-            return self._dock_left_collapsed
-
-        def get_dock_right_collapsed(self) -> bool:
-            return self._dock_right_collapsed
+                self.dock.set_right_tab(tab, force=True)
+                self.dock.set_right_collapsed(False)
 
     controller = _StubController()
     window = SimpleNamespace(editor_controller=controller)
 
     assert run_editor_action("editor.panel.outliner.toggle", controller, window) is True
-    assert controller._dock_left_collapsed is True
+    assert controller.dock.get_left_collapsed() is True
     assert run_editor_action("editor.panel.outliner.toggle", controller, window) is True
-    assert controller._dock_left_collapsed is False
+    assert controller.dock.get_left_collapsed() is False
 
     assert run_editor_action("editor.panel.history.toggle", controller, window) is True
-    assert controller._right_dock_tab == "History"
+    assert controller.dock.right_tab == "History"
     assert run_editor_action("editor.panel.history.toggle", controller, window) is True
-    assert controller._dock_right_collapsed is True
+    assert controller.dock.get_right_collapsed() is True
+
+    assert run_editor_action("editor.panel.debug.toggle", controller, window) is True
+    assert controller.dock.right_tab == "Debug"
 
 
 def test_undo_redo_actions_registered_and_enabled_correctly() -> None:
@@ -114,8 +108,8 @@ def test_undo_redo_actions_registered_and_enabled_correctly() -> None:
     assert by_id["editor.history.undo"].enabled(controller, window) is False
     assert by_id["editor.history.redo"].enabled(controller, window) is False
 
-    controller.undo_stack = [{"type": "test"}]
-    controller.redo_stack = [{"type": "test"}]
+    controller.undo.push({"type": "test"})
+    controller.undo.set_redo_stack([{"type": "test"}])
     assert by_id["editor.history.undo"].enabled(controller, window) is True
     assert by_id["editor.history.redo"].enabled(controller, window) is True
 
@@ -124,32 +118,17 @@ def test_ui_only_actions_do_not_push_history() -> None:
     class _StubController:
         def __init__(self) -> None:
             self.active = True
-            self._left_dock_tab = "Outliner"
-            self._right_dock_tab = "Inspector"
-            self._dock_left_collapsed = False
-            self._dock_right_collapsed = False
+            self.dock = make_dock_stub(left_tab="Outliner", right_tab="Inspector")
             self.undo_stack: list[dict[str, object]] = []
             self.redo_stack: list[dict[str, object]] = []
 
         def set_dock_tab(self, dock: str, tab: str) -> None:
             if dock == "left":
-                self._left_dock_tab = tab
-                self._dock_left_collapsed = False
+                self.dock.set_left_tab(tab, force=True)
+                self.dock.set_left_collapsed(False)
             else:
-                self._right_dock_tab = tab
-                self._dock_right_collapsed = False
-
-        def toggle_left_dock(self) -> None:
-            self._dock_left_collapsed = not self._dock_left_collapsed
-
-        def toggle_right_dock(self) -> None:
-            self._dock_right_collapsed = not self._dock_right_collapsed
-
-        def get_dock_left_collapsed(self) -> bool:
-            return self._dock_left_collapsed
-
-        def get_dock_right_collapsed(self) -> bool:
-            return self._dock_right_collapsed
+                self.dock.set_right_tab(tab, force=True)
+                self.dock.set_right_collapsed(False)
 
         def _push_command(self, cmd: dict[str, object]) -> None:
             self.undo_stack.append(cmd)

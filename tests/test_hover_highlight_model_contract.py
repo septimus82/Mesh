@@ -6,6 +6,8 @@ headless-safe, and correctly prioritize UI elements.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from engine.editor_hover_highlight_model import (
@@ -15,6 +17,12 @@ from engine.editor_hover_highlight_model import (
     is_ui_blocked,
     resolve_hover_highlights,
 )
+from tests._session_stub import make_session_stub
+
+
+def _make_controller(**attrs: object) -> object:
+    attrs.setdefault("session", make_session_stub())
+    return type("MockController", (), attrs)()
 
 
 class TestHighlightRect:
@@ -767,57 +775,58 @@ class TestIsUiBlocked:
 
     def test_not_blocked_default(self) -> None:
         """Test returns False for controller with no active modes."""
-        controller = type("MockController", (), {})()
+        controller = _make_controller()
         assert is_ui_blocked(controller) is False
 
     def test_blocked_palette_filter(self) -> None:
         """Test blocked when palette filter is active."""
-        controller = type("MockController", (), {"palette_filter_active": True})()
+        controller = _make_controller(palette_filter_active=True)
         assert is_ui_blocked(controller) is True
 
     def test_blocked_hierarchy_filter(self) -> None:
         """Test blocked when hierarchy filter is active."""
-        controller = type("MockController", (), {"hierarchy_filter_active": True})()
+        controller = _make_controller(hierarchy_filter_active=True)
         assert is_ui_blocked(controller) is True
 
     def test_blocked_hierarchy_rename(self) -> None:
         """Test blocked when hierarchy rename is active."""
-        controller = type("MockController", (), {"hierarchy_rename_active": True})()
+        controller = _make_controller(hierarchy_rename_active=True)
         assert is_ui_blocked(controller) is True
 
     def test_blocked_animation_edit(self) -> None:
         """Test blocked when animation edit is active."""
-        controller = type("MockController", (), {"animation_edit_active": True})()
+        controller = _make_controller(animation_edit_active=True)
         assert is_ui_blocked(controller) is True
 
     def test_blocked_inspector_edit(self) -> None:
         """Test blocked when inspector edit is active."""
-        controller = type("MockController", (), {"inspector_edit_active": True})()
+        controller = _make_controller(inspector_edit_active=True)
         assert is_ui_blocked(controller) is True
 
     def test_blocked_command_palette(self) -> None:
         """Test blocked when command palette is active."""
-        controller = type("MockController", (), {"command_palette_active": True})()
+        panels = SimpleNamespace(is_command_palette_open=lambda: True)
+        controller = _make_controller(panels=panels)
         assert is_ui_blocked(controller) is True
 
     def test_blocked_unsaved_changes_modal(self) -> None:
         """Test blocked when unsaved changes modal is pending."""
-        controller = type("MockController", (), {"_unsaved_changes_pending": True})()
+        controller = _make_controller(_unsaved_changes_pending=True)
         assert is_ui_blocked(controller) is True
 
     def test_blocked_scene_browser(self) -> None:
         """Test blocked when scene browser is active."""
-        controller = type("MockController", (), {"scene_browser_active": True})()
+        controller = _make_controller(scene_browser_active=True)
         assert is_ui_blocked(controller) is True
 
     def test_blocked_entity_panels_filter(self) -> None:
         """Test blocked when entity panels filter is active."""
-        controller = type("MockController", (), {"entity_panels_filter_active": True})()
+        controller = _make_controller(entity_panels_filter_active=True)
         assert is_ui_blocked(controller) is True
 
     def test_blocked_asset_browser_filter(self) -> None:
         """Test blocked when asset browser filter is active."""
-        controller = type("MockController", (), {"asset_browser_filter_active": True})()
+        controller = _make_controller(asset_browser_filter_active=True)
         assert is_ui_blocked(controller) is True
 
 

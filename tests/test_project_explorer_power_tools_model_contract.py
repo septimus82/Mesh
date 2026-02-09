@@ -9,6 +9,7 @@ from engine.editor.project_explorer_power_tools_model import (
     format_paths_for_clipboard,
     should_handle_project_explorer_shortcut,
 )
+from tests._dock_stub import make_dock_stub
 
 
 def test_invert_selection() -> None:
@@ -32,7 +33,7 @@ def test_format_paths_for_clipboard_sorts_and_normalizes() -> None:
 def test_should_handle_project_explorer_shortcut() -> None:
     editor = SimpleNamespace(
         active=True,
-        _left_dock_tab="Project",
+        dock=make_dock_stub(left_tab="Project"),
         project_explorer=SimpleNamespace(inline_rename_active=False),
     )
     assert should_handle_project_explorer_shortcut(editor) is True

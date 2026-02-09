@@ -74,10 +74,61 @@ class PlayerController(Behaviour):
             vy = (vy / length) * speed
             self._update_facing_from_velocity(vx, vy)
         self._sync_animation_state(vx, vy)
-        # move_entity_with_collision expects absolute deltas; scale velocity by dt
-        self.window.move_entity_with_collision(self.entity, vx * dt, vy * dt)
+        
+        # Physics Facade V1: Use pure physics model if possible
+        scene_controller = getattr(self.window, "scene_controller", None)
+        solid_sprites = getattr(scene_controller, "solid_sprites", None)
+        
+        if solid_sprites is not None:
+            from engine.physics_runtime import move_entity_with_physics
+            move_entity_with_physics(self.entity, (vx * dt, vy * dt), solid_sprites)
+        else:
+            # Fallback for legacy / headless without scene
+            self.window.move_entity_with_collision(self.entity, vx * dt, vy * dt)
+            
+        # Sensors V1
+        if scene_controller and hasattr(scene_controller, "sensors_runtime"):
+            from engine.physics_model import Aabb
+            entity_data = getattr(self.entity, "mesh_entity_data", {})
+            # Use instance ID as fallback if no data ID
+            eid = str(entity_data.get("id", f"id_{id(self.entity)}"))
+            
+            aabb = Aabb(
+                self.entity.center_x, 
+                self.entity.center_y, 
+                self.entity.width, 
+                self.entity.height
+            )
+            
+            events = scene_controller.sensors_runtime.update_entity_sensors(
+                scene_controller._loaded_scene_data,
+                eid,
+                aabb
+            )
+            
+            if events:
+                from engine.behaviour_event_router_model import build_sensor_behaviour_events
+                from engine.behaviour_event_router import dispatch_events
+                
+                sensors = scene_controller.sensors_runtime.get_sensors(scene_controller._loaded_scene_data)
+                b_events = build_sensor_behaviour_events(
+                    events,
+                    sensors,
+                    getattr(scene_controller, "current_scene_path", None),
+                    origin="player",
+                )
+                dispatch_events(scene_controller, b_events)
+
         self._handle_interact(input_manager)
         self._handle_attack(input_manager)
+
+    def on_sensor_enter(self, sensor_id: str) -> None:
+        """Hook for sensor entry."""
+        pass  # Override in subclasses or dynamically attached methods
+
+    def on_sensor_exit(self, sensor_id: str) -> None:
+        """Hook for sensor exit."""
+        pass
 
     def _sync_animation_state(self, vx: float, vy: float) -> None:
         entity_data = getattr(self.entity, "mesh_entity_data", None)

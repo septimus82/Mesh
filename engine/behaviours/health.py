@@ -40,6 +40,8 @@ if TYPE_CHECKING:  # pragma: no cover
 class Health(Behaviour):
     """Simple HP container for an entity."""
 
+    STATE_VERSION = 1
+
     PARAM_DEFS = {
         "max_hp": ParamDef(float, default=1.0, description="Maximum health value"),
         "hp": ParamDef(float, default=1.0, description="Initial health value"),
@@ -76,6 +78,29 @@ class Health(Behaviour):
 
     def update(self, dt: float) -> None:  # noqa: D401 ARG002
         """Health currently has no per-frame logic."""
+
+    # ------------------------------------------------------------------ #
+    # Save / Restore
+    # ------------------------------------------------------------------ #
+
+    def saveable_state(self) -> dict:
+        """Return HP state for save serialization."""
+        return {
+            "version": self.STATE_VERSION,
+            "hp": self.hp,
+            "max_hp": self.max_hp,
+            "invulnerable": self.invulnerable,
+            "dead": self._dead,
+        }
+
+    def restore_state(self, state: dict) -> None:
+        """Restore HP state from save data."""
+        self.max_hp = float(state.get("max_hp", self.max_hp))
+        hp_raw = float(state.get("hp", self.max_hp))
+        # Clamp to [0, max_hp]
+        self.hp = max(0.0, min(hp_raw, self.max_hp))
+        self.invulnerable = bool(state.get("invulnerable", False))
+        self._dead = bool(state.get("dead", self.hp <= 0))
 
     def apply_damage(self, amount: float) -> None:
         """Apply incoming damage, respecting invulnerability and death state."""

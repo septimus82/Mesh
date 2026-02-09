@@ -66,6 +66,9 @@ class TestBuildMenuGroups:
         controller.undo_stack = []
         controller.redo_stack = []
         controller.scene_dirty = False
+        from engine.editor.editor_undo_controller import EditorUndoController
+
+        controller.undo = EditorUndoController(controller)
         return controller
 
     @pytest.fixture
@@ -81,7 +84,7 @@ class TestBuildMenuGroups:
 
     def test_undo_disabled_when_stack_empty(self, mock_controller: MagicMock, mock_window: MagicMock) -> None:
         """Undo is disabled when undo stack is empty."""
-        mock_controller.undo_stack = []
+        mock_controller.undo.set_undo_stack([])
         groups = build_menu_groups(mock_controller, mock_window)
         edit_menu = next(g for g in groups if g.title == "Edit")
         undo_item = next(i for i in edit_menu.items if i.id == "editor.history.undo")
@@ -89,7 +92,7 @@ class TestBuildMenuGroups:
 
     def test_undo_enabled_when_stack_has_items(self, mock_controller: MagicMock, mock_window: MagicMock) -> None:
         """Undo is enabled when undo stack has items."""
-        mock_controller.undo_stack = [{"type": "test"}]
+        mock_controller.undo.push({"type": "test"})
         groups = build_menu_groups(mock_controller, mock_window)
         edit_menu = next(g for g in groups if g.title == "Edit")
         undo_item = next(i for i in edit_menu.items if i.id == "editor.history.undo")

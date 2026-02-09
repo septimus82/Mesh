@@ -1,0 +1,11 @@
+{
+  "cutscenes": [
+    {
+      "id": "puzzle_room_02_reset",
+      "steps": [
+        {"type": "wait", "duration": 0.5},
+        {"type": "emit_event", "event": "puzzle2_reset", "reason": "cutscene"}
+      ]
+    }
+  ]
+}

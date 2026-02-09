@@ -112,7 +112,7 @@ def extract_scenes_from_plan(plan_data: dict[str, Any]) -> list[str]:
             try:
                 stem = Path(p).stem
                 scenes.add(stem)
-            except:
+            except Exception:
                 pass
 
     return sorted(list(scenes))

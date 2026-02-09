@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import SimpleNamespace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from engine.editor.find_everything_model import FindItem, FindResult, filter_find_items, build_find_display_rows
 from engine.editor.scene_lint_model import SceneLintIssue
 from engine.editor_controller import EditorModeController
+from tests._session_stub import make_session_stub
+from tests._dock_stub import make_dock_stub
 
 
 @dataclass
@@ -25,10 +29,13 @@ class StubController:
     def __init__(self, repo_root: Path) -> None:
         self.active = True
         self.window = StubWindow()
+        self.session = make_session_stub()
         
         # UI Flow Controller
         from engine.editor.editor_ui_flow_controller import EditorUIFlowController
         self._ui_flow_ctl = EditorUIFlowController(self)
+        from engine.editor.editor_search_controller import EditorSearchController
+        self.search = EditorSearchController(self, self._ui_flow_ctl)
         
         # self._find_everything_open = False # Delegated
         # self._find_everything_query = "" # Delegated
@@ -37,13 +44,19 @@ class StubController:
         
         self._find_items_override: list[FindItem] = []
         # self._find_asset_lookup: dict[str, object] = {} # Delegated
+        self._asset_browser_cached_rows: list[Any] = []
+        self.scene_switcher_recent: list[str] = []
         
         self._repo_root_override = repo_root
-        self._right_dock_tab = "Inspector"
-        self._problems_issues: list = []
-        self._problems_selected_index = 0
-        self._problems_preview_open = False
-        self.confirm_open = False
+        self.dock = make_dock_stub(left_tab="Outliner", right_tab="Inspector")
+        self.problems = SimpleNamespace(
+            issues=[],
+            selected_index=0,
+            preview_open=False,
+        )
+        self.problems.set_issues = lambda items: setattr(self.problems, "issues", list(items))
+        self.problems.set_selected_index = lambda idx: setattr(self.problems, "selected_index", idx)
+        self.unsaved_confirm = SimpleNamespace(is_open=False)
         self.command_palette_active = False
         self.scene_browser_active = False
         self.asset_browser_active = False
@@ -89,11 +102,11 @@ class StubController:
         return True
 
     def ui_activate_problem(self, problem_id: str) -> bool:
-        if self._problems_issues:
+        if self.problems.issues:
             # Logic from editor_controller.py: _activate_find_problem
             # It sets preview open and switches tab.
-            self._problems_preview_open = True
-            self._right_dock_tab = "Problems" 
+            self.problems.preview_open = True
+            self.dock.right_tab = "Problems" 
             return True
         return False
         
@@ -186,16 +199,8 @@ class StubController:
     def _handle_find_everything_input(self, key: int, modifiers: int) -> bool:
         return EditorModeController._handle_find_everything_input(self, key, modifiers)
 
-    def set_dock_tab(self, dock: str, tab: str) -> bool:
-        if dock == "right":
-            self._right_dock_tab = tab
-            if tab != "Problems":
-                self._problems_preview_open = False
-            return True
-        return False
-
     def get_filtered_problems(self):
-        return list(self._problems_issues)
+        return list(self.problems.issues)
 
     def _clamp_problems_selection(self) -> None:
         return EditorModeController._clamp_problems_selection(self)
@@ -296,16 +301,16 @@ def test_activate_problem_opens_preview(tmp_path: Path) -> None:
         fixable=True,
         meta={},
     )
-    ctrl._problems_issues = [issue]
+    ctrl.problems.issues = [issue]
     item = FindItem(kind="problem", item_id="dup:1", title="Duplicate id", subtitle="DUPLICATE_ID", keywords=())
     ctrl._find_items_override = [item]
     ctrl.toggle_find_everything()
     ctrl._find_everything_cached_results = filter_find_items([item], "", limit=10)
 
     assert ctrl.activate_find_selection() is True
-    assert ctrl._right_dock_tab == "Problems"
-    assert ctrl._problems_selected_index == 0
-    assert ctrl._problems_preview_open is True
+    assert ctrl.dock.right_tab == "Problems"
+    assert ctrl.problems.selected_index == 0
+    assert ctrl.problems.preview_open is True
 
 
 def test_find_everything_ctrl_j_toggles(tmp_path: Path) -> None:

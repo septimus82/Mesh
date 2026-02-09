@@ -30,7 +30,7 @@ def apply_selection(
     if getattr(controller, "shape_edit_mode", None) and selected_entity is not getattr(
         controller, "shape_edit_entity", None
     ):
-        cancel = getattr(controller, "_cancel_shape_edit", None)
+        cancel = getattr(getattr(controller, "shape", None), "cancel_shape_edit", None)
         if callable(cancel):
             cancel()
 
@@ -72,8 +72,8 @@ def apply_selection(
             elif transform_mode == TRANSFORM_MODE_SCALE:
                 _init_scale_drag(controller)
 
-        controller._reset_zone_selection_state()
-        controller._sync_zone_selection_state(controller.selected_entity)
+        controller.shape.reset_zone_selection_state()
+        controller.shape.sync_zone_selection_state(controller.selected_entity)
         controller._cancel_hierarchy_rename()
         controller._refresh_dialogue_cache()
         controller._refresh_animation_cache()
@@ -88,7 +88,9 @@ def apply_selection(
         )
 
         # Reset inspector
-        controller.inspector_active = False
+        inspector = getattr(controller, "inspector", None)
+        if inspector is not None:
+            inspector.set_inspector_active(False)
         controller.inspector_selection_index = 0
         controller._refresh_inspector_items()
         controller.dialogue_panel_active = False
@@ -105,8 +107,10 @@ def apply_selection(
             except ValueError:
                 pass
     else:
-        controller.inspector_active = False
-        controller._reset_zone_selection_state()
+        inspector = getattr(controller, "inspector", None)
+        if inspector is not None:
+            inspector.set_inspector_active(False)
+        controller.shape.reset_zone_selection_state()
         controller._cancel_hierarchy_rename()
         controller._close_dialogue_panel()
         controller._close_animation_panel()

@@ -883,292 +883,6 @@ def _default_stamp_entity_id(
     return f"{stem}_{prefix}_{suffix}_{origin_x}_{origin_y}_0_0"
 
 
-class _StampReportError(Exception):
-    def __init__(self, message: str, *, exit_code: int = 1) -> None:
-        super().__init__(message)
-        self.message = message
-        self.exit_code = int(exit_code)
-
-
-def _compute_scene_stamp_report_legacy_do_not_use(
-    *,
-    scene_path_display: str,
-    stamp_path_raw: str,
-    origin_x: int,
-    origin_y: int,
-    id_prefix: str,
-) -> dict[str, Any]:
-    """Compute a dry-run report of what `scene stamp` would change (no writes)."""
-    from engine.path_norm import normalize_scene_path
-    from engine.paths import resolve_path
-    from engine.scene_loader import SceneLoader
-    from engine.tilemap_edit import TilemapDims, ensure_tiles_array, get_layer_by_id
-
-    resolved_scene = resolve_path(scene_path_display)
-    if not resolved_scene.exists():
-        raise _StampReportError(f"scene not found: {scene_path_display}")
-
-    resolved_stamp = resolve_path(stamp_path_raw)
-    if not resolved_stamp.exists():
-        raise _StampReportError(f"stamp not found: {stamp_path_raw}")
-
-    try:
-        raw_scene = json.loads(resolved_scene.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        raise _StampReportError(f"failed to parse scene JSON: {scene_path_display}: {exc}") from exc
-    if not isinstance(raw_scene, dict):
-        raise _StampReportError(f"scene JSON root must be an object: {scene_path_display}")
-
-    try:
-        stamp = json.loads(resolved_stamp.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        raise _StampReportError(f"failed to parse stamp JSON: {stamp_path_raw}: {exc}") from exc
-    if not isinstance(stamp, dict):
-        raise _StampReportError(f"stamp JSON root must be an object: {stamp_path_raw}")
-
-    stamp_id = stamp.get("id")
-    if not isinstance(stamp_id, str) or not stamp_id.strip():
-        raise _StampReportError("stamp.id must be a non-empty string")
-    stamp_id = stamp_id.strip()
-
-    try:
-        stamp_w = int(stamp.get("width", 0))
-        stamp_h = int(stamp.get("height", 0))
-    except Exception:
-        stamp_w = 0
-        stamp_h = 0
-    if stamp_w <= 0 or stamp_h <= 0:
-        raise _StampReportError("stamp.width/stamp.height must be positive integers")
-
-    resolved_id_prefix = str(id_prefix or "").strip() or stamp_id
-
-    loader = SceneLoader()
-    scene = loader.apply_scene_defaults(raw_scene)
-
-    entities_value = scene.get("entities")
-    if entities_value is None:
-        entities: list[dict[str, Any]] = []
-        scene["entities"] = entities
-    elif isinstance(entities_value, list):
-        entities = entities_value  # type: ignore[assignment]
-    else:
-        raise _StampReportError(f"scene.entities must be a list: {scene_path_display}")
-
-    tilemap = scene.get("tilemap")
-    if not isinstance(tilemap, dict):
-        raise _StampReportError(f"scene has no tilemap section: {scene_path_display}")
-
-    dims_raw = _tilemap_resolve_dims_for_edit(
-        scene_path_display=scene_path_display,
-        scene_path=resolved_scene,
-        tilemap=tilemap,
-    )
-    if dims_raw is None:
-        raise _StampReportError("tilemap dims missing", exit_code=1)
-    dims = TilemapDims(width=dims_raw[0], height=dims_raw[1])
-
-    _scene_tilemap_maybe_migrate_layers(tilemap)
-    tile_layers = tilemap.get("tile_layers")
-    if not isinstance(tile_layers, list):
-        raise _StampReportError(f"tilemap.tile_layers must be a list: {scene_path_display}")
-
-    prefabs_path = resolve_path("assets/prefabs.json")
-    try:
-        prefabs_payload = json.loads(prefabs_path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        raise _StampReportError(f"failed to read prefabs: {prefabs_path}: {exc}") from exc
-    if not isinstance(prefabs_payload, list):
-        raise _StampReportError(f"prefabs payload must be a list: {prefabs_path}")
-    known_prefabs: set[str] = {
-        str(entry.get("id"))
-        for entry in prefabs_payload
-        if isinstance(entry, dict) and isinstance(entry.get("id"), str)
-    }
-
-    stamp_entities_value = stamp.get("entities", [])
-    if stamp_entities_value is None:
-        stamp_entities_value = []
-    if not isinstance(stamp_entities_value, list):
-        raise _StampReportError("stamp.entities must be an array when provided")
-
-    for idx, entry in enumerate(stamp_entities_value):
-        if not isinstance(entry, dict):
-            raise _StampReportError(f"stamp.entities[{idx}] must be an object")
-        prefab_id = entry.get("prefab_id")
-        if not isinstance(prefab_id, str) or not prefab_id.strip():
-            raise _StampReportError(f"stamp.entities[{idx}].prefab_id must be a non-empty string")
-        if prefab_id.strip() not in known_prefabs:
-            raise _StampReportError(f"stamp.entities[{idx}] prefab_id not found: {prefab_id}")
-
-    tile_size = _tilemap_try_resolve_tile_size_for_stamp(scene_path=resolved_scene, tilemap=tilemap)
-
-    tile_changes_by_layer: dict[str, dict[int, tuple[int, int]]] = {}
-
-    stamp_tiles_value = stamp.get("tiles", [])
-    if stamp_tiles_value is None:
-        stamp_tiles_value = []
-    if not isinstance(stamp_tiles_value, list):
-        raise _StampReportError("stamp.tiles must be an array when provided")
-
-    tiles_cache: dict[str, list[int]] = {}
-
-    for idx, entry in enumerate(stamp_tiles_value):
-        if not isinstance(entry, dict):
-            raise _StampReportError(f"stamp.tiles[{idx}] must be an object")
-
-        layer_id = entry.get("layer_id")
-        if not isinstance(layer_id, str) or not layer_id.strip():
-            raise _StampReportError(f"stamp.tiles[{idx}].layer_id must be a non-empty string")
-        layer_id = layer_id.strip()
-
-        x_value = entry.get("x")
-        y_value = entry.get("y")
-        w_value = entry.get("w")
-        h_value = entry.get("h")
-        tile_value = entry.get("tile")
-        if x_value is None or y_value is None or w_value is None or h_value is None or tile_value is None:
-            raise _StampReportError(f"stamp.tiles[{idx}] x/y/w/h/tile must be integers")
-        try:
-            rel_x = int(x_value)
-            rel_y = int(y_value)
-            w = int(w_value)
-            h = int(h_value)
-            tile = int(tile_value)
-        except Exception as exc:
-            raise _StampReportError(f"stamp.tiles[{idx}] x/y/w/h/tile must be integers") from exc
-
-        if w <= 0 or h <= 0:
-            raise _StampReportError(f"stamp.tiles[{idx}] w/h must be > 0")
-        if rel_x < 0 or rel_y < 0 or rel_x + w > stamp_w or rel_y + h > stamp_h:
-            raise _StampReportError(f"stamp.tiles[{idx}] rect out of stamp bounds")
-
-        x0 = origin_x + rel_x
-        y0 = origin_y + rel_y
-        x1 = x0 + w - 1
-        y1 = y0 + h - 1
-
-        try:
-            layer = get_layer_by_id(tile_layers, layer_id)
-        except KeyError as exc:
-            raise _StampReportError(f"tile layer not found: {layer_id}") from exc
-
-        if layer_id not in tiles_cache:
-            tiles_cache[layer_id] = ensure_tiles_array(layer, dims=dims)
-
-        tiles = tiles_cache[layer_id]
-        if x0 < 0 or y0 < 0 or x1 >= dims.width or y1 >= dims.height:
-            raise _StampReportError(f"stamp tile rect out of bounds for layer '{layer_id}': rect out of bounds")
-
-        changes = tile_changes_by_layer.setdefault(layer_id, {})
-        for yy in range(int(y0), int(y1) + 1):
-            row_start = int(yy) * int(dims.width)
-            for xx in range(int(x0), int(x1) + 1):
-                cell_idx = row_start + int(xx)
-                if cell_idx not in changes:
-                    changes[cell_idx] = (int(tiles[cell_idx]), int(tiles[cell_idx]))
-                before, _after = changes[cell_idx]
-                changes[cell_idx] = (int(before), int(tile))
-                tiles[cell_idx] = int(tile)
-
-    entity_changes: list[dict[str, Any]] = []
-    for idx, entry in enumerate(stamp_entities_value):
-        if not isinstance(entry, dict):
-            continue
-        prefab_id = str(entry.get("prefab_id") or "").strip()
-        id_suffix = entry.get("id_suffix")
-        if not isinstance(id_suffix, str) or not id_suffix.strip():
-            raise _StampReportError(f"stamp.entities[{idx}].id_suffix must be a non-empty string")
-        id_suffix = id_suffix.strip()
-        x_value = entry.get("x")
-        y_value = entry.get("y")
-        if x_value is None or y_value is None:
-            raise _StampReportError(f"stamp.entities[{idx}].x/y must be integers")
-        try:
-            rel_x = int(x_value)
-            rel_y = int(y_value)
-        except Exception as exc:
-            raise _StampReportError(f"stamp.entities[{idx}].x/y must be integers") from exc
-        if rel_x < 0 or rel_y < 0 or rel_x >= stamp_w or rel_y >= stamp_h:
-            raise _StampReportError(f"stamp.entities[{idx}] position out of stamp bounds")
-
-        entity_id = _default_stamp_entity_id(
-            scene_path_display,
-            id_prefix=resolved_id_prefix,
-            id_suffix=id_suffix,
-            origin_x=origin_x,
-            origin_y=origin_y,
-        )
-
-        if tile_size is not None:
-            tw, th = tile_size
-            desired_x = (origin_x + rel_x + 0.5) * float(tw)
-            desired_y = (origin_y + rel_y + 0.5) * float(th)
-        else:
-            desired_x = float(origin_x + rel_x)
-            desired_y = float(origin_y + rel_y)
-
-        existing = next((e for e in entities if isinstance(e, dict) and e.get("id") == entity_id), None)
-        if existing is None:
-            entity_changes.append(
-                {
-                    "id": entity_id,
-                    "action": "add",
-                    "prefab_id": prefab_id,
-                    "x": float(desired_x),
-                    "y": float(desired_y),
-                }
-            )
-            continue
-
-        if str(existing.get("prefab_id") or "") != prefab_id:
-            raise _StampReportError(
-                f"prefab_mismatch: {entity_id} (expected {prefab_id}, got {existing.get('prefab_id')})"
-            )
-
-        if float(existing.get("x", desired_x)) != float(desired_x) or float(existing.get("y", desired_y)) != float(
-            desired_y
-        ):
-            entity_changes.append(
-                {
-                    "id": entity_id,
-                    "action": "update",
-                    "prefab_id": prefab_id,
-                    "x": float(desired_x),
-                    "y": float(desired_y),
-                }
-            )
-
-    tile_changes: list[dict[str, Any]] = []
-    for layer_id in sorted(tile_changes_by_layer):
-        for cell_idx in sorted(tile_changes_by_layer[layer_id].keys()):
-            before, after = tile_changes_by_layer[layer_id][cell_idx]
-            if int(before) == int(after):
-                continue
-            x = int(cell_idx) % int(dims.width)
-            y = int(cell_idx) // int(dims.width)
-            tile_changes.append(
-                {
-                    "layer_id": layer_id,
-                    "x": int(x),
-                    "y": int(y),
-                    "before": int(before),
-                    "after": int(after),
-                }
-            )
-    tile_changes.sort(key=lambda row: (row["layer_id"], int(row["y"]), int(row["x"])))
-
-    entity_changes.sort(key=lambda row: str(row.get("id") or ""))
-
-    return {
-        "ok": True,
-        "scene_path": normalize_scene_path(scene_path_display),
-        "stamp_path": normalize_scene_path(stamp_path_raw),
-        "origin": {"x": int(origin_x), "y": int(origin_y)},
-        "tile_changes": tile_changes,
-        "entity_changes": entity_changes,
-    }
-
-
 def _handle_scene_stamp(args: argparse.Namespace) -> int:
     """Apply a stamp JSON: tile edits + optional prefab entity placements (idempotent)."""
     from . import scene as scene_commands
@@ -1629,6 +1343,10 @@ def create_parser() -> argparse.ArgumentParser:
     from . import misc as misc_commands
     misc_commands.register(subparsers)
 
+    # Debug bundle
+    from . import debug as debug_commands
+    debug_commands.register(subparsers)
+
     # Check (Moved to qa.py)
 
     # Verify commands (verify-demo/verify-strict/verify-replays/verify-all)
@@ -1647,6 +1365,10 @@ def create_parser() -> argparse.ArgumentParser:
     # Release contract
     from . import release_contract as release_contract_commands
     release_contract_commands.register(subparsers)
+
+    # Release pipeline
+    from . import release as release_commands
+    release_commands.register(subparsers)
 
     # Perf Run
     from engine.tooling import perf_command
@@ -1803,8 +1525,14 @@ def create_parser() -> argparse.ArgumentParser:
     from . import replay as replay_commands
     replay_commands.register(subparsers)
 
+    from . import cutscene as cutscene_commands
+    cutscene_commands.register(subparsers)
+
     from . import build as build_commands
     build_commands.register(subparsers)
+
+    from . import export as export_commands
+    export_commands.register(subparsers)
 
     # Prefab Management (Moved to prefabs.py)
 
@@ -1989,6 +1717,14 @@ def main(argv: list[str] | None = None) -> int:
         from . import assets as asset_commands
 
         return asset_commands.handle(args)
+    if args.command == "release":
+        from . import release as release_commands
+
+        return release_commands.handle(args)
+    if args.command == "debug":
+        from . import debug as debug_commands
+
+        return debug_commands.handle(args)
     if args.command == "dump-state":
         return _handle_dump_state(args)
     if args.command == "replay-script":
@@ -2016,6 +1752,10 @@ def main(argv: list[str] | None = None) -> int:
         from . import replay as replay_commands
 
         return replay_commands.handle(args)
+    if args.command in {"cutscene-simulate", "cutscene-validate"}:
+        from . import cutscene as cutscene_commands
+
+        return cutscene_commands.handle(args)
     if args.command == "migrate":
         return migrate_command.handle_migrate(args)
     if args.command in {"build-demo", "dist", "release", "pack", "cli-snapshot", "replay-goldens", "golden-slice", "content"}:
@@ -2064,6 +1804,10 @@ def main(argv: list[str] | None = None) -> int:
         return scene_commands.handle(args)
     if args.command == "add-puzzle":
         return _handle_add_puzzle(args)
+    if args.command == "export":
+        from . import export as export_commands
+
+        return export_commands.handle(args)
     # Handle content commands
     if hasattr(args, "func"):
         result = args.func(args)

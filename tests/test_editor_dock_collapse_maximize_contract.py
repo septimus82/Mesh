@@ -304,168 +304,73 @@ class TestTopBarControlsHitTesting:
 
 
 class TestControllerStateTransitions:
-    """Tests for EditorController dock/maximize state transitions."""
+    """Tests for dock/maximize state transitions via EditorDockController."""
+
+    class _Host:
+        def _autosave_workspace(self) -> None:
+            return
 
     def test_toggle_left_dock_flips_boolean(self) -> None:
-        """toggle_left_dock should flip _dock_left_collapsed."""
-        # Create a mock controller with the needed state
-        class MockController:
-            def __init__(self):
-                self._dock_left_collapsed = False
-                self._dock_right_collapsed = False
-                self._viewport_maximized = False
-                self._dock_prev_left_collapsed = False
-                self._dock_prev_right_collapsed = False
+        from engine.editor.editor_dock_controller import EditorDockController
 
-            def _autosave_workspace(self):
-                pass
+        dock = EditorDockController(None, left_collapsed=False, right_collapsed=False, viewport_maximized=False)
+        host = self._Host()
+        assert dock.get_left_collapsed() is False
 
-            def toggle_left_dock(self):
-                if self._viewport_maximized:
-                    return
-                self._dock_left_collapsed = not self._dock_left_collapsed
-                self._autosave_workspace()
+        dock.toggle_left_dock(host)
+        assert dock.get_left_collapsed() is True
 
-        controller = MockController()
-        assert controller._dock_left_collapsed is False
-
-        controller.toggle_left_dock()
-        assert controller._dock_left_collapsed is True
-
-        controller.toggle_left_dock()
-        assert controller._dock_left_collapsed is False
+        dock.toggle_left_dock(host)
+        assert dock.get_left_collapsed() is False
 
     def test_toggle_right_dock_flips_boolean(self) -> None:
-        """toggle_right_dock should flip _dock_right_collapsed."""
+        from engine.editor.editor_dock_controller import EditorDockController
 
-        class MockController:
-            def __init__(self):
-                self._dock_left_collapsed = False
-                self._dock_right_collapsed = False
-                self._viewport_maximized = False
-                self._dock_prev_left_collapsed = False
-                self._dock_prev_right_collapsed = False
+        dock = EditorDockController(None, left_collapsed=False, right_collapsed=False, viewport_maximized=False)
+        host = self._Host()
+        assert dock.get_right_collapsed() is False
 
-            def _autosave_workspace(self):
-                pass
+        dock.toggle_right_dock(host)
+        assert dock.get_right_collapsed() is True
 
-            def toggle_right_dock(self):
-                if self._viewport_maximized:
-                    return
-                self._dock_right_collapsed = not self._dock_right_collapsed
-                self._autosave_workspace()
-
-        controller = MockController()
-        assert controller._dock_right_collapsed is False
-
-        controller.toggle_right_dock()
-        assert controller._dock_right_collapsed is True
-
-        controller.toggle_right_dock()
-        assert controller._dock_right_collapsed is False
+        dock.toggle_right_dock(host)
+        assert dock.get_right_collapsed() is False
 
     def test_maximize_stores_previous_collapse_states(self) -> None:
-        """toggle_viewport_maximized ON should store previous collapse states."""
+        from engine.editor.editor_dock_controller import EditorDockController
 
-        class MockController:
-            def __init__(self):
-                self._dock_left_collapsed = True  # Start collapsed
-                self._dock_right_collapsed = False
-                self._viewport_maximized = False
-                self._dock_prev_left_collapsed = False
-                self._dock_prev_right_collapsed = False
+        dock = EditorDockController(None, left_collapsed=True, right_collapsed=False, viewport_maximized=False)
+        host = self._Host()
 
-            def _autosave_workspace(self):
-                pass
-
-            def toggle_viewport_maximized(self):
-                if self._viewport_maximized:
-                    self._viewport_maximized = False
-                    self._dock_left_collapsed = self._dock_prev_left_collapsed
-                    self._dock_right_collapsed = self._dock_prev_right_collapsed
-                else:
-                    self._dock_prev_left_collapsed = self._dock_left_collapsed
-                    self._dock_prev_right_collapsed = self._dock_right_collapsed
-                    self._viewport_maximized = True
-                self._autosave_workspace()
-
-        controller = MockController()
-
-        # Toggle ON
-        controller.toggle_viewport_maximized()
-        assert controller._viewport_maximized is True
-        assert controller._dock_prev_left_collapsed is True
-        assert controller._dock_prev_right_collapsed is False
+        dock.toggle_viewport_maximized(host)
+        assert dock.get_viewport_maximized() is True
+        assert dock.get_prev_left_collapsed() is True
+        assert dock.get_prev_right_collapsed() is False
 
     def test_maximize_off_restores_previous_states(self) -> None:
-        """toggle_viewport_maximized OFF should restore previous collapse states."""
+        from engine.editor.editor_dock_controller import EditorDockController
 
-        class MockController:
-            def __init__(self):
-                self._dock_left_collapsed = True
-                self._dock_right_collapsed = False
-                self._viewport_maximized = False
-                self._dock_prev_left_collapsed = False
-                self._dock_prev_right_collapsed = False
+        dock = EditorDockController(None, left_collapsed=True, right_collapsed=False, viewport_maximized=False)
+        host = self._Host()
 
-            def _autosave_workspace(self):
-                pass
+        dock.toggle_viewport_maximized(host)
+        dock.toggle_viewport_maximized(host)
 
-            def toggle_viewport_maximized(self):
-                if self._viewport_maximized:
-                    self._viewport_maximized = False
-                    self._dock_left_collapsed = self._dock_prev_left_collapsed
-                    self._dock_right_collapsed = self._dock_prev_right_collapsed
-                else:
-                    self._dock_prev_left_collapsed = self._dock_left_collapsed
-                    self._dock_prev_right_collapsed = self._dock_right_collapsed
-                    self._viewport_maximized = True
-                self._autosave_workspace()
-
-        controller = MockController()
-
-        # Toggle ON then OFF
-        controller.toggle_viewport_maximized()
-        controller.toggle_viewport_maximized()
-
-        assert controller._viewport_maximized is False
-        # Should restore previous states
-        assert controller._dock_left_collapsed is True
-        assert controller._dock_right_collapsed is False
+        assert dock.get_viewport_maximized() is False
+        assert dock.get_left_collapsed() is True
+        assert dock.get_right_collapsed() is False
 
     def test_dock_toggle_blocked_when_maximized(self) -> None:
-        """toggle_left_dock and toggle_right_dock should do nothing when maximized."""
+        from engine.editor.editor_dock_controller import EditorDockController
 
-        class MockController:
-            def __init__(self):
-                self._dock_left_collapsed = False
-                self._dock_right_collapsed = False
-                self._viewport_maximized = True  # Start maximized
-                self._dock_prev_left_collapsed = False
-                self._dock_prev_right_collapsed = False
+        dock = EditorDockController(None, left_collapsed=False, right_collapsed=False, viewport_maximized=True)
+        host = self._Host()
 
-            def _autosave_workspace(self):
-                pass
+        dock.toggle_left_dock(host)
+        assert dock.get_left_collapsed() is False
 
-            def toggle_left_dock(self):
-                if self._viewport_maximized:
-                    return
-                self._dock_left_collapsed = not self._dock_left_collapsed
-                self._autosave_workspace()
-
-            def toggle_right_dock(self):
-                if self._viewport_maximized:
-                    return
-                self._dock_right_collapsed = not self._dock_right_collapsed
-                self._autosave_workspace()
-
-        controller = MockController()
-
-        controller.toggle_left_dock()
-        assert controller._dock_left_collapsed is False  # Unchanged
-
-        controller.toggle_right_dock()
-        assert controller._dock_right_collapsed is False  # Unchanged
+        dock.toggle_right_dock(host)
+        assert dock.get_right_collapsed() is False
 
 
 # =============================================================================

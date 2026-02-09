@@ -9,6 +9,9 @@ from engine.migrations import migrate_payload
 from engine.paths import resolve_path
 from engine.persistence_io import SAVE_FORMAT_VERSION
 from engine.save_runtime import constants
+from engine.save_runtime.entity_state import serialize_entities, apply_entities
+from engine.save_runtime.quest_state import serialize_quests, apply_quests
+from engine.save_runtime.schema import SAVE_SCHEMA_VERSION
 from engine.world_controller import WorldController
 
 
@@ -182,6 +185,21 @@ def apply_loaded_payload(
         else:
             controller.replace_state(state_block)
 
+    # Apply saved entity state (v2)
+    saved_entities = payload.get("saved_entities")
+    if isinstance(saved_entities, dict):
+        entities_list = saved_entities.get("entities", [])
+        scene_controller = getattr(window, "scene_controller", None)
+        if scene_controller is not None and isinstance(entities_list, list):
+            apply_entities(scene_controller, entities_list)
+
+    # Apply saved quest state (v2)
+    saved_quests = payload.get("saved_quests")
+    if isinstance(saved_quests, dict) and controller is not None:
+        quest_manager = getattr(controller, "quests", None)
+        if quest_manager is not None:
+            apply_quests(quest_manager, saved_quests)
+
     spawn_zone_id = payload.get("spawn_zone_id")
     setter = getattr(window, "set_next_spawn_point", None)
     if callable(setter) and spawn_zone_id:
@@ -204,6 +222,26 @@ def build_slot_payload(
     controller = getattr(window, "game_state_controller", None)
     if controller is not None:
         snapshot["game_state"] = controller.export_state()
+
+    # Add saved entity state (v2)
+    scene_controller = window.scene_controller
+    snapshot["saved_entities"] = {
+        "schema_version": 1,
+        "entities": serialize_entities(scene_controller),
+    }
+
+    # Add saved quest state (v2)
+    if controller is not None:
+        quest_manager = getattr(controller, "quests", None)
+        if quest_manager is not None:
+            snapshot["saved_quests"] = serialize_quests(quest_manager)
+        else:
+            snapshot["saved_quests"] = {"schema_version": 1, "quests": {}}
+    else:
+        snapshot["saved_quests"] = {"schema_version": 1, "quests": {}}
+
+    # Add save schema version
+    snapshot["save_schema_version"] = SAVE_SCHEMA_VERSION
 
     content_to_hash = {
         "data": snapshot,

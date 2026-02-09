@@ -4,10 +4,9 @@ from __future__ import annotations
 from typing import Any
 
 from engine.editor.editor_focus_model import (
-    collect_editor_state,
     compute_active_shortcut_scopes,
-    derive_focus_target,
-    is_text_input_active,
+    derive_focus_target_for_controller,
+    is_text_input_active_for_controller,
 )
 
 
@@ -16,10 +15,9 @@ class EditorFocusController:
         self._controller = controller
 
     def get_focus_snapshot(self) -> dict[str, Any]:
-        state_dict = collect_editor_state(self._controller)
-        focus_target = derive_focus_target(state_dict)
-        text_input_active = is_text_input_active(focus_target, state_dict)
-        scopes = compute_active_shortcut_scopes(focus_target, state_dict)
+        focus_target = derive_focus_target_for_controller(self._controller)
+        text_input_active = is_text_input_active_for_controller(focus_target, self._controller)
+        scopes = compute_active_shortcut_scopes(focus_target, {})
         return {
             "focus_target": focus_target,
             "text_input_active": text_input_active,

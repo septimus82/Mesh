@@ -9,6 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import engine.optional_arcade as optional_arcade
+from engine.editor.editor_menu_hover_query import get_menu_hover_item_id
+from engine.editor.editor_modal_state_query import get_active_menu_id
 
 from ..text_draw import draw_text_cached, TextCache
 from .common import UIElement, draw_panel_bg
@@ -54,8 +56,8 @@ class MenuBarOverlay(UIElement):
         )
 
         # Get current state
-        active_menu = getattr(controller, "_menu_active", None)
-        hover_item_id = getattr(controller, "_menu_hover_item_id", None)
+        active_menu = get_active_menu_id(controller)
+        hover_item_id = get_menu_hover_item_id(controller)
 
         # Build layout
         menu_groups = build_menu_groups(controller, self.window)

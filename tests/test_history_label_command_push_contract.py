@@ -9,13 +9,9 @@ from engine.editor_controller import EditorModeController
 
 def _stub_controller() -> EditorModeController:
     controller = EditorModeController.__new__(EditorModeController)
-    
-    # Needs scene ops for undo_stack property
-    from engine.editor.editor_scene_ops import EditorSceneOpsController
-    controller._scene_ops = EditorSceneOpsController(controller)
-    
-    # Overwrite the lists in the ops controller, or just let setter handle it
-    # controller.undo_stack = [] -> This calls the setter which sets _scene_ops.undo_stack
+
+    from engine.editor.editor_undo_controller import EditorUndoController
+    controller.undo = EditorUndoController(controller)
     controller.undo_stack = []
     controller.redo_stack = []
     controller.window = SimpleNamespace()

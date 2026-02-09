@@ -2217,6 +2217,84 @@
       "title": "Act 1: Finale"
     },
     {
+      "description": "Solve the rune sequence to unlock the exit.",
+      "id": "puzzle_room_01",
+      "reward": {
+        "set_flags": {
+          "puzzle_room_01_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "type": "room_entered"
+          },
+          "id": "step0",
+          "text": "Enter the puzzle chamber.",
+          "title": "Enter the Puzzle Room"
+        },
+        {
+          "complete_on": {
+            "type": "hint_read"
+          },
+          "id": "step1",
+          "text": "Inspect the plaque for a hint.",
+          "title": "Read the Hint"
+        },
+        {
+          "complete_on": {
+            "type": "puzzle_solved"
+          },
+          "emit_events_on_complete": [
+            "quest_room_complete"
+          ],
+          "id": "step2",
+          "text": "Step on the runes in the correct order.",
+          "title": "Solve the Rune Sequence"
+        }
+      ],
+      "title": "Puzzle Room"
+    },
+    {
+      "description": "Solve the timed rune sequence under pressure.",
+      "id": "puzzle_room_02",
+      "reward": {
+        "set_flags": {
+          "puzzle_room_02_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "type": "room2_entered"
+          },
+          "id": "step0",
+          "text": "Enter the second puzzle chamber.",
+          "title": "Enter Puzzle Room 02"
+        },
+        {
+          "complete_on": {
+            "type": "hint2_read"
+          },
+          "id": "step1",
+          "text": "Inspect the plaque for a hint (optional).",
+          "title": "Read the Hint"
+        },
+        {
+          "complete_on": {
+            "type": "puzzle2_solved"
+          },
+          "emit_events_on_complete": [
+            "quest_room2_complete"
+          ],
+          "id": "step2",
+          "text": "Solve the rune sequence before time runs out.",
+          "title": "Solve the Timed Rune Sequence"
+        }
+      ],
+      "title": "Puzzle Room 02"
+    },
+    {
       "id": "showcase_fetch",
       "stages": [
         {

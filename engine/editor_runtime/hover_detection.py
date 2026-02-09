@@ -8,6 +8,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Tuple
 
+from engine.editor.editor_session_query import get_session_snapshot
+from engine.editor.editor_dock_query import get_raw_dock_widths
+from engine.editor.editor_modal_state_query import (
+    get_active_menu_id,
+    is_scene_browser_active,
+    is_unsaved_changes_pending,
+)
+
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController
 
@@ -40,6 +48,7 @@ def _is_ui_blocked(controller: "EditorModeController") -> bool:
     Returns:
         True if hover detection should be skipped.
     """
+    get_session_snapshot(controller)
     # Text input modes
     if getattr(controller, "palette_filter_active", False):
         return True
@@ -51,7 +60,9 @@ def _is_ui_blocked(controller: "EditorModeController") -> bool:
         return True
     if getattr(controller, "_inspector_text_edit_active", False):
         return True
-    if getattr(controller, "command_palette_active", False):
+    from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
+
+    if panels_is_open(controller, "command_palette"):
         return True
     if getattr(controller, "entity_panels_filter_active", False):
         return True
@@ -61,11 +72,11 @@ def _is_ui_blocked(controller: "EditorModeController") -> bool:
         return True
 
     # Modal states
-    if getattr(controller, "_unsaved_changes_pending", False):
+    if is_unsaved_changes_pending(controller):
         return True
-    if getattr(controller, "confirm_open", False):
+    if panels_is_open(controller, "unsaved_confirm"):
         return True
-    if getattr(controller, "scene_browser_active", False):
+    if is_scene_browser_active(controller):
         return True
 
     return False
@@ -97,9 +108,7 @@ def update_hover_state(
         window_h: Window height.
     """
     # Clear previous hover state
-    clear_hover_fn = getattr(controller, "clear_hover_state", None)
-    if callable(clear_hover_fn):
-        clear_hover_fn()
+    controller.hover.clear_hover_state()
 
     # Check if UI is blocked
     if _is_ui_blocked(controller):
@@ -113,8 +122,7 @@ def update_hover_state(
         hit_test_splitter,
     )
 
-    left_dock_w = getattr(controller, "_dock_left_w", 320)
-    right_dock_w = getattr(controller, "_dock_right_w", 320)
+    left_dock_w, right_dock_w = get_raw_dock_widths(controller)
 
     layout = compute_editor_shell_layout(
         window_w, window_h,
@@ -123,6 +131,8 @@ def update_hover_state(
     )
 
     # 1. Context menu hover (highest priority if open)
+    if _update_project_explorer_context_menu_hover(controller, x, y):
+        return
     if _update_context_menu_hover(controller, x, y, window_w, window_h):
         return
 
@@ -144,18 +154,14 @@ def update_hover_state(
             "toggle_right": "R",
             "toggle_max": "M",
         }
-        setter = getattr(controller, "set_hover_top_bar_control", None)
-        if callable(setter):
-            setter(control_ids.get(top_bar_hit))
+        controller.hover.set_hover_top_bar_control(control_ids.get(top_bar_hit))
         return
 
     # 4. Splitter hover
     splitter_hit = hit_test_splitter(x, y, layout)
     if splitter_hit:
         splitter_rect = layout.left_splitter if splitter_hit == "left" else layout.right_splitter
-        setter = getattr(controller, "set_hover_splitter", None)
-        if callable(setter):
-            setter(splitter_hit, _rect_to_tuple(splitter_rect))
+        controller.hover.set_hover_splitter(splitter_hit, _rect_to_tuple(splitter_rect))
         return
 
     # 5. Dock tab hover
@@ -167,9 +173,7 @@ def update_hover_state(
             tab_rect = tab_rects.left_tab_rects.get(tab_name)
         else:
             tab_rect = tab_rects.right_tab_rects.get(tab_name)
-        setter = getattr(controller, "set_hover_dock_tab", None)
-        if callable(setter):
-            setter(dock_side, tab_name, _rect_to_tuple(tab_rect))
+        controller.hover.set_hover_dock_tab(dock_side, tab_name, _rect_to_tuple(tab_rect))
         return
 
     # 6. Inspector field hover (if in right dock and Inspector tab active)
@@ -191,7 +195,9 @@ def _update_context_menu_hover(
 
     Returns True if context menu is open (regardless of hover hit).
     """
-    if not getattr(controller, "_context_menu_open", False):
+    from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
+
+    if not panels_is_open(controller, "context_menu"):
         return False
 
     from engine.editor.context_menu_model import (
@@ -214,12 +220,27 @@ def _update_context_menu_hover(
     if hit_item and layout.items_with_rects:
         for item, rect in layout.items_with_rects:
             if item.id == hit_item:
-                setter = getattr(controller, "set_hover_context_item_rect", None)
-                if callable(setter):
-                    setter(_rect_to_tuple(rect))
+                controller.hover.set_hover_context_item_rect(_rect_to_tuple(rect))
                 break
 
     return True  # Context menu is open, blocks other hover
+
+
+def _update_project_explorer_context_menu_hover(
+    controller: "EditorModeController",
+    x: float,
+    y: float,
+) -> bool:
+    """Update hover for Project Explorer context menu if open."""
+    project = getattr(controller, "project_explorer", None)
+    from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
+
+    if project is None or not panels_is_open(controller, "project_context_menu"):
+        return False
+    handler = getattr(project, "handle_context_menu_mouse_move", None)
+    if callable(handler):
+        handler(x, y)
+    return True
 
 
 def _update_menu_bar_hover(
@@ -241,7 +262,7 @@ def _update_menu_bar_hover(
         hit_test_menu_item,
     )
 
-    active_menu = getattr(controller, "_menu_active", None)
+    active_menu = get_active_menu_id(controller)
     window = getattr(controller, "window", None)
     if window is None:
         return False
@@ -258,9 +279,7 @@ def _update_menu_bar_hover(
         if hit_item and layout.dropdown:
             for item, rect in layout.dropdown:
                 if item.id == hit_item:
-                    setter = getattr(controller, "set_hover_menu_item_rect", None)
-                    if callable(setter):
-                        setter(_rect_to_tuple(rect))
+                    controller.hover.set_hover_menu_item_rect(_rect_to_tuple(rect))
                     break
 
         # Check for title switch
@@ -275,9 +294,7 @@ def _update_menu_bar_hover(
     hit_title = hit_test_menu_title(x, y, layout)
     if hit_title:
         title_rect = layout.titles.get(hit_title) if layout.titles else None
-        setter = getattr(controller, "set_hover_menu_title", None)
-        if callable(setter):
-            setter(hit_title, _rect_to_tuple(title_rect))
+        controller.hover.set_hover_menu_title(hit_title, _rect_to_tuple(title_rect))
         return True
 
     # No menu title hover; allow other hover checks to proceed.
@@ -295,7 +312,9 @@ def _update_inspector_field_hover(
     Returns True if hovering an inspector field.
     """
     # Check if right dock is showing Inspector tab
-    right_tab = getattr(controller, "_right_dock_tab", "Inspector")
+    dock = getattr(controller, "dock", None)
+    snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+    right_tab = getattr(snapshot, "right_tab", "Inspector") or "Inspector"
     if right_tab != "Inspector":
         return False
 
@@ -346,9 +365,7 @@ def _update_inspector_field_hover(
     row_bottom = row_top - ROW_HEIGHT
     rect = (right_dock.left + PADDING, row_bottom, right_dock.width - 2 * PADDING, ROW_HEIGHT - PADDING)
 
-    setter = getattr(controller, "set_hover_inspector_field", None)
-    if callable(setter):
-        setter(field_key, rect)
+    controller.hover.set_hover_inspector_field(field_key, rect)
 
     return True
 
@@ -365,10 +382,23 @@ def _get_inspector_field_keys(controller: "EditorModeController", entity_id: str
         return []
 
     entity_data = None
-    entities = getattr(scene_controller, "entities", None) or []
-    for e in entities:
-        if isinstance(e, dict) and e.get("id") == entity_id:
-            entity_data = e
+    entities = getattr(scene_controller, "entities", None)
+    iter_entities = getattr(entities, "iter_entities", None) if entities is not None else None
+    if callable(iter_entities):
+        try:
+            sprites = iter_entities()
+        except TypeError:
+            sprites = iter_entities(scene_controller)
+    else:
+        sprites = getattr(scene_controller, "all_sprites", [])
+    from engine.editor.editor_clipboard_ops import get_entity_id_from_data  # noqa: PLC0415
+
+    for sprite in list(sprites or []):
+        data = getattr(sprite, "mesh_entity_data", None)
+        if not isinstance(data, dict):
+            continue
+        if get_entity_id_from_data(data) == entity_id:
+            entity_data = data
             break
 
     if not entity_data:
@@ -432,10 +462,13 @@ def _update_entity_hover(
     if not scene_controller:
         return False
 
-    entities = getattr(scene_controller, "entities", None) or []
+    entities = getattr(scene_controller, "entities", None)
+    iter_entities = getattr(entities, "iter_entities", None) if entities is not None else None
+    sprites = iter_entities(scene_controller) if callable(iter_entities) else getattr(scene_controller, "all_sprites", [])
     sprite_list = getattr(scene_controller, "entity_sprites", None)
 
     from engine.editor.selection_outline import resolve_entity_bounds, RectF
+    from engine.editor.editor_clipboard_ops import get_entity_id_from_data  # noqa: PLC0415
 
     # Find topmost entity under cursor
     # Prefer currently selected entity if it contains the point
@@ -444,17 +477,27 @@ def _update_entity_hover(
 
     # Build entity lookup
     entity_by_id: dict[str, dict] = {}
-    for e in entities:
-        if isinstance(e, dict):
-            eid = e.get("id")
-            if eid:
-                entity_by_id[eid] = e
+    for sprite in list(sprites or []):
+        data = getattr(sprite, "mesh_entity_data", None)
+        if not isinstance(data, dict):
+            continue
+        eid = get_entity_id_from_data(data)
+        if eid:
+            entity_by_id[eid] = data
 
     # Build sprite lookup
     sprite_by_id: dict[str, Any] = {}
     if sprite_list:
         for sprite in sprite_list:
-            eid = getattr(sprite, "entity_id", None)
+            sprite_eid = getattr(sprite, "entity_id", None)
+            if isinstance(sprite_eid, str) and sprite_eid:
+                sprite_by_id[sprite_eid] = sprite
+    else:
+        for sprite in list(sprites or []):
+            data = getattr(sprite, "mesh_entity_data", None)
+            if not isinstance(data, dict):
+                continue
+            eid = get_entity_id_from_data(data)
             if eid:
                 sprite_by_id[eid] = sprite
 
@@ -480,9 +523,7 @@ def _update_entity_hover(
         if rect and rect.contains_point(world_x, world_y):
             # Found hover target
             rect_tuple = (rect.x, rect.y, rect.w, rect.h)
-            setter = getattr(controller, "set_hover_entity", None)
-            if callable(setter):
-                setter(eid, rect_tuple)
+            controller.hover.set_hover_entity(eid, rect_tuple)
             return True
 
     return False

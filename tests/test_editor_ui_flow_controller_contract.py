@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 import sys
 from typing import Any, List, Optional
+from types import SimpleNamespace
 
 # Mock optional_arcade if not present
 if "engine.optional_arcade" not in sys.modules:
@@ -32,7 +33,7 @@ class StubEditorController:
         self.scene_switcher_recent = []
         self._find_items_override = None
         self._asset_browser_cached_rows = []
-        self._problems_issues = []
+        self.problems = SimpleNamespace(issues=[])
 
     def toggle_find_everything(self) -> bool: return True
     def open_scene(self, scene_path: str) -> None: pass

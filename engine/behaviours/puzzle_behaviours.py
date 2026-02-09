@@ -110,8 +110,9 @@ class DoorLock(Behaviour):
         self.locked = config.get("starts_locked", True)
         self.open_sprite = config.get("open_sprite", "")
 
+        self._unsubscribe = None
         if self.unlock_event:
-            self.window.event_bus.subscribe(self.unlock_event, self._on_unlock_event)
+            self._unsubscribe = self.window.event_bus.subscribe(self.unlock_event, self._on_unlock_event)
 
         self._update_collision()
 
@@ -139,6 +140,12 @@ class DoorLock(Behaviour):
             if hasattr(self.entity, "properties"):
                 self.entity.properties["solid"] = False
                 self.entity.properties["walkable"] = True
+
+    def destroy(self) -> None:
+        """Unsubscribe from event bus on teardown."""
+        if self._unsubscribe:
+            self._unsubscribe()
+            self._unsubscribe = None
 
 
 @register_behaviour(
@@ -181,8 +188,9 @@ class RewardChest(Behaviour):
         self.gold = config.get("gold", 0)
         self.looted = False
 
+        self._unsubscribe = None
         if self.unlock_event:
-            self.window.event_bus.subscribe(self.unlock_event, self._on_unlock_event)
+            self._unsubscribe = self.window.event_bus.subscribe(self.unlock_event, self._on_unlock_event)
             # Start hidden/disabled if waiting for event?
             # For now, let's assume it's a chest that unlocks, not spawns.
             # Or maybe it spawns. Let's assume it's visible but locked until event?
@@ -195,6 +203,12 @@ class RewardChest(Behaviour):
     def _on_unlock_event(self, event: MeshEvent) -> None:
         self.enabled = True
         print(f"[Puzzle] RewardChest {self.entity} enabled by '{event.type}'")
+
+    def destroy(self) -> None:
+        """Unsubscribe from event bus on teardown."""
+        if self._unsubscribe:
+            self._unsubscribe()
+            self._unsubscribe = None
 
     def on_interact(self, interactor: Sprite) -> None:
         if not self.enabled or self.looted:

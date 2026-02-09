@@ -5,6 +5,8 @@ Tests tooltip computation as pure functions - headless, no arcade dependency.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from engine.editor_tooltips_model import (
@@ -20,6 +22,26 @@ from engine.editor_tooltips_model import (
     _is_text_input_active_state,
     _is_modal_open_state,
 )
+from tests._dock_stub import make_dock_stub
+from tests._session_stub import make_session_stub
+
+
+def _panels(*, command_palette_open: bool = False, context_menu_open: bool = False) -> SimpleNamespace:
+    return SimpleNamespace(
+        is_command_palette_open=lambda: command_palette_open,
+        is_context_menu_open=lambda: context_menu_open,
+        is_project_context_menu_open=lambda: False,
+        is_keybinds_visible=lambda: False,
+        is_confirm_modal_visible=lambda: False,
+    )
+
+
+def _session() -> SimpleNamespace:
+    return make_session_stub()
+
+
+def _dock(left_w: int = 220, right_w: int = 260) -> SimpleNamespace:
+    return make_dock_stub(left_w=left_w, right_w=right_w)
 
 
 # -----------------------------------------------------------------------------
@@ -236,33 +258,37 @@ class TestIsTextInputActiveState:
 
     def test_returns_false_when_no_input_active(self) -> None:
         class MockController:
+            session = _session()
             palette_filter_active = False
             hierarchy_filter_active = False
             hierarchy_rename_active = False
             animation_edit_active = False
             inspector_edit_active = False
-            command_palette_active = False
             entity_panels_filter_active = False
             scene_browser_filter_active = False
             asset_browser_filter_active = False
+            panels = _panels()
 
         assert _is_text_input_active_state(MockController()) is False
 
     def test_returns_true_when_palette_filter_active(self) -> None:
         class MockController:
+            session = _session()
             palette_filter_active = True
 
         assert _is_text_input_active_state(MockController()) is True
 
     def test_returns_true_when_inspector_edit_active(self) -> None:
         class MockController:
+            session = _session()
             inspector_edit_active = True
 
         assert _is_text_input_active_state(MockController()) is True
 
     def test_returns_true_when_command_palette_active(self) -> None:
         class MockController:
-            command_palette_active = True
+            session = _session()
+            panels = _panels(command_palette_open=True)
 
         assert _is_text_input_active_state(MockController()) is True
 
@@ -277,6 +303,7 @@ class TestIsModalOpenState:
 
     def test_returns_false_when_no_modal(self) -> None:
         class MockController:
+            session = _session()
             _unsaved_changes_pending = False
             scene_browser_active = False
 
@@ -284,12 +311,14 @@ class TestIsModalOpenState:
 
     def test_returns_true_when_unsaved_changes_pending(self) -> None:
         class MockController:
+            session = _session()
             _unsaved_changes_pending = True
 
         assert _is_modal_open_state(MockController()) is True
 
     def test_returns_true_when_scene_browser_active(self) -> None:
         class MockController:
+            session = _session()
             scene_browser_active = True
 
         assert _is_modal_open_state(MockController()) is True
@@ -305,33 +334,36 @@ class TestResolveEditorTooltip:
 
     def test_returns_none_when_text_input_active(self) -> None:
         class MockController:
+            session = _session()
             inspector_edit_active = True
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
 
         result = resolve_editor_tooltip(MockController(), 400.0, 300.0, 800, 600)
         assert result is None
 
     def test_returns_none_when_modal_open(self) -> None:
         class MockController:
+            session = _session()
             _unsaved_changes_pending = True
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
 
         result = resolve_editor_tooltip(MockController(), 400.0, 300.0, 800, 600)
         assert result is None
 
     def test_top_bar_hover_left_tooltip(self) -> None:
         class MockController:
-            _hover_top_bar_control_id = "L"
+            session = _session()
+            hover = SimpleNamespace(get_hover_top_bar_control_id=lambda: "L")
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
             window = None
 
         result = resolve_editor_tooltip(MockController(), 400.0, 300.0, 800, 600)
@@ -339,11 +371,12 @@ class TestResolveEditorTooltip:
 
     def test_top_bar_hover_right_tooltip(self) -> None:
         class MockController:
-            _hover_top_bar_control_id = "R"
+            session = _session()
+            hover = SimpleNamespace(get_hover_top_bar_control_id=lambda: "R")
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
             window = None
 
         result = resolve_editor_tooltip(MockController(), 400.0, 300.0, 800, 600)
@@ -351,11 +384,12 @@ class TestResolveEditorTooltip:
 
     def test_top_bar_hover_max_tooltip(self) -> None:
         class MockController:
-            _hover_top_bar_control_id = "M"
+            session = _session()
+            hover = SimpleNamespace(get_hover_top_bar_control_id=lambda: "M")
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
             window = None
 
         result = resolve_editor_tooltip(MockController(), 400.0, 300.0, 800, 600)
@@ -363,12 +397,13 @@ class TestResolveEditorTooltip:
 
     def test_top_bar_tooltip_blocked_by_text_input(self) -> None:
         class MockController:
-            _hover_top_bar_control_id = "L"
+            session = _session()
+            hover = SimpleNamespace(get_hover_top_bar_control_id=lambda: "L")
             inspector_edit_active = True
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
             window = None
 
         result = resolve_editor_tooltip(MockController(), 400.0, 300.0, 800, 600)
@@ -376,12 +411,13 @@ class TestResolveEditorTooltip:
 
     def test_top_bar_tooltip_blocked_by_modal(self) -> None:
         class MockController:
-            _hover_top_bar_control_id = "L"
+            session = _session()
+            hover = SimpleNamespace(get_hover_top_bar_control_id=lambda: "L")
             _unsaved_changes_pending = True
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
             window = None
 
         result = resolve_editor_tooltip(MockController(), 400.0, 300.0, 800, 600)
@@ -392,11 +428,12 @@ class TestResolveEditorTooltip:
             pass
 
         class MockController:
-            _hover_top_bar_control_id = "L"
+            session = _session()
+            hover = SimpleNamespace(get_hover_top_bar_control_id=lambda: "L")
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
             window = MockWindow()
 
         result = resolve_editor_tooltip(MockController(), 20.0, 590.0, 800, 600)
@@ -405,10 +442,11 @@ class TestResolveEditorTooltip:
     def test_returns_splitter_tooltip_on_splitter_hover(self) -> None:
         # Position near left splitter (around x=223 for default 220px left dock)
         class MockController:
+            session = _session()
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
             window = None
 
         result = resolve_editor_tooltip(MockController(), 223.0, 400.0, 800, 600)
@@ -416,10 +454,11 @@ class TestResolveEditorTooltip:
 
     def test_deterministic_same_inputs(self) -> None:
         class MockController:
+            session = _session()
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
             window = None
 
         result1 = resolve_editor_tooltip(MockController(), 223.0, 400.0, 800, 600)
@@ -440,10 +479,11 @@ class TestDockTabTooltips:
         # For 800x600 window, top_bar ends at 600-48=552, tab header is 32px
         # Tab area is roughly y=520-552
         class MockController:
+            session = _session()
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 320
-            right_dock_width = 320
+            dock = _dock(320, 320)
             window = None
 
         from engine.editor.editor_shell_layout import (
@@ -461,10 +501,11 @@ class TestDockTabTooltips:
 
     def test_right_dock_inspector_tab_tooltip(self) -> None:
         class MockController:
+            session = _session()
             _context_menu_open = False
+            panels = _panels()
             _menu_active = None
-            left_dock_width = 320
-            right_dock_width = 320
+            dock = _dock(320, 320)
             window = None
 
         # Position in right dock tab area (x=800-320+80=560, y=535)
@@ -483,13 +524,14 @@ class TestContextMenuTooltips:
 
     def test_context_menu_item_with_shortcut(self) -> None:
         class MockController:
+            session = _session()
             _context_menu_open = True
+            panels = _panels(context_menu_open=True)
             _context_menu_hover_id = "ctx_duplicate"
             _context_menu_x = 100
             _context_menu_y = 300
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
             window = None
             selected_entity = None
             _entity_clipboard = None
@@ -501,13 +543,14 @@ class TestContextMenuTooltips:
 
     def test_context_menu_no_hover(self) -> None:
         class MockController:
+            session = _session()
             _context_menu_open = True
+            panels = _panels(context_menu_open=True)
             _context_menu_hover_id = None  # No hover
             _context_menu_x = 100
             _context_menu_y = 300
             _menu_active = None
-            left_dock_width = 220
-            right_dock_width = 260
+            dock = _dock()
             window = None
 
         # Should fall through to other checks

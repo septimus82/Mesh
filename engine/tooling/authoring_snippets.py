@@ -67,6 +67,11 @@ def _get_selected_entity_id(window: Any) -> str | None:
 
 def _set_selected_entity_id(window: Any, value: str | None) -> None:
     setattr(window, "authoring_selected_entity_id", value)
+    editor = getattr(window, "editor_controller", None)
+    session = getattr(editor, "session", None) if editor is not None else None
+    setter = getattr(session, "set_authoring_selected_active", None) if session is not None else None
+    if callable(setter):
+        setter(bool(value))
 
 
 def _build_hover_payload_from_sprite(sprite: Any) -> dict[str, Any]:

@@ -25,6 +25,11 @@ from ..editor.editor_shell_layout import (
     Rect,
     TopBarControls,
 )
+from ..editor.editor_dock_query import (
+    get_dock_collapsed,
+    get_effective_dock_widths,
+    get_viewport_maximized,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -63,16 +68,7 @@ class EditorShellOverlay(UIElement):
         controller = getattr(self.window, "editor_controller", None)
         if controller is None:
             return (320, 320)
-        # Use effective widths if available (respects collapse/maximize state)
-        getter = getattr(controller, "get_effective_dock_widths", None)
-        if callable(getter):
-            result = getter(self.window.width)
-            if isinstance(result, tuple) and len(result) == 2:
-                return (int(result[0]), int(result[1]))
-        # Fallback to raw widths
-        left_w = getattr(controller, "_dock_left_w", 320)
-        right_w = getattr(controller, "_dock_right_w", 320)
-        return (int(left_w), int(right_w))
+        return get_effective_dock_widths(controller, self.window.width)
 
     def _get_layout(self) -> EditorShellLayout:
         """Get or compute the current layout."""
@@ -93,8 +89,10 @@ class EditorShellOverlay(UIElement):
         controller = getattr(self.window, "editor_controller", None)
         if controller is None:
             return DockTabState()
-        left_tab = getattr(controller, "_left_dock_tab", "Outliner")
-        right_tab = getattr(controller, "_right_dock_tab", "Inspector")
+        dock = getattr(controller, "dock", None)
+        snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+        left_tab = getattr(snapshot, "left_tab", "Outliner") or "Outliner"
+        right_tab = getattr(snapshot, "right_tab", "Inspector") or "Inspector"
         return DockTabState(left_tab=left_tab, right_tab=right_tab)
 
     def draw(self) -> None:
@@ -107,9 +105,8 @@ class EditorShellOverlay(UIElement):
         cache = self._text_cache
 
         # Check collapse/maximize state
-        left_collapsed = getattr(controller, "_dock_left_collapsed", False)
-        right_collapsed = getattr(controller, "_dock_right_collapsed", False)
-        viewport_maximized = getattr(controller, "_viewport_maximized", False)
+        left_collapsed, right_collapsed = get_dock_collapsed(controller)
+        viewport_maximized = get_viewport_maximized(controller)
 
         self._draw_top_bar(layout, controller, cache, viewport_maximized, left_collapsed, right_collapsed)
 
@@ -290,7 +287,7 @@ class EditorShellOverlay(UIElement):
         draw_panel_bg(dock.left, dock.right, tab_y, dock.top, SHELL_HEADER_COLOR)
 
         # Tab buttons
-        tabs = ("Inspector", "Assets", "History", "Problems")
+        tabs = ("Inspector", "Assets", "History", "Problems", "Debug")
         tab_width = dock.width / len(tabs)
         active_tab = tab_state.right_tab
 

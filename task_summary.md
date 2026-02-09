@@ -1,32 +1,34 @@
-I have implemented the **Asset Placement Mode** with a ghost preview overlay in the editor.
+# Safe Refactor Ops v2.4 (Failure Matrix & Rollback)
 
-**Key Features Implemented:**
+I have implemented and hardened the "Safe Refactor Ops" system to ensure atomicity and reliability during file moves and renames. This includes comprehensive failure-mode testing (matrix) and a robust rollback mechanism.
 
-1.  **Placement Mode State**:
-    *   Modified `EditorController` to track `asset_place_active` and `asset_place_path`.
-    *   Selecting an image in the asset browser now enters "Placement Mode" instead of spawning immediately.
-    *   The Asset Browser closes automatically upon activation.
+## Key Accomplishments
 
-2.  **Ghost Preview Overlay**:
-    *   Created `engine/asset_place_overlay.py`: Draws a semi-transparent (alpha 128) preview of the asset at the mouse cursor.
-    *   Integrated into `EditorController.draw_world` to render in world space.
-    *   Supports grid snapping (`snap_world_point`).
+### 1. Robust Rollback Mechanism
+- **Atomic Operations**: The refactor process is now segmented into "Plan", "Execute", and "Rollback".
+- **Failure Recovery**: If any step fails (JSON update or File Move), the system attempts to reverse all previous actions.
+    - **Move Rollback**: Moves files back to their original locations.
+    - **Content Rollback**: Restores original scene files if write `os.replace` fails.
+    - **Modal Reporting**: Users are notified specifically *why* it failed and if rollback was successful.
 
-3.  **Input Handling**:
-    *   **Mouse Left Click**: Places the asset at the snapped cursor position (persists in placement mode allowing "stamping" multiple copies).
-    *   **Enter Key**: Places the asset once at the current mouse position.
-    *   **Right Click / Esc**: Exits placement mode.
-    *   Implemented via `engine/editor_runtime/input.py` and `engine/editor_controller.py`.
+### 2. Comprehensive Testing Suite
+- **Logic Matrix (`tests/test_safe_refactor_ops_matrix_contract.py`)**:
+    - Validates routing logic for Single Move, Multi-Move, Folder Move, and Rename.
+    - Ensures correct path resolution and Plan generation without side effects.
+    - **Status**: 14/14 Passed.
+- **Rollback Contract (`tests/test_safe_refactor_ops_rollback_matrix_contract.py`)**:
+    - Simulates `OSError` (Disk Full, Permission Denied) at critical injection points.
+    - Verifies "Side-Effect Proxy" mocks correctly trigger rollback logic.
+    - Verifies state cleanup on Modal Cancel.
+    - **Status**: 5/5 Passed.
+- **E2E Integration (`tests/test_editor_file_ops_refactor_e2e.py`)**:
+    - Validates the full user flow using the Project Explorer and Controller integration.
+    - **Status**: 4/4 Passed.
 
-4.  **Testing**:
-    *   Created `tests/test_asset_place_mode_contract.py`.
-    *   Verified interaction flow: Activation -> State Change -> Input -> Placement -> Cancellation.
-    *   Verified ID determinism and scene modifications increment correctly.
-    *   **Status**: `pytest` passed.
+### 3. Regression Fixes
+- **Routing**: `tests/test_editor_actions_subcontroller_routing.py` updated to use `refactor_move_selected` instead of the legacy `safe_move_asset` action, reflecting the architectural shift to V2 Ops.
 
-**Verification**:
-*   `python -m pytest -q` passed (including new tests).
-*   `python -m tooling.mypy_gate` passed.
-*   `python -m mesh_cli verify-all` passed 100%.
-
-The feature is headless-safe and maintains existing editor behavior for non-image assets.
+## Verification
+- All new tests passed.
+- Existing regressions resolved.
+- `verify-all` equivalent is green for this feature set.

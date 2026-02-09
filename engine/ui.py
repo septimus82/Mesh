@@ -62,9 +62,11 @@ from .ui_overlays.debug import (
     HD2DPreviewIndicatorOverlay,
     HotReloadOverlay,
     PaletteOverlay,
+    PhysicsBroadphaseOverlay,
     SceneDirtyOverlay,
     SceneInspectorOverlay,
     format_encounter_debug_text,
+    format_physics_broadphase_lines,
     format_scene_dirty_overlay_lines,
     format_scene_inspector_text,
 )

@@ -91,8 +91,6 @@ class StubEditorController:
         self._last_mouse_y = 0.0
         self.window = MockWindow()
         self.selected_entity = None
-        self.left_dock_width = 220
-        self.right_dock_width = 260
         # State flags
         self._marquee_active = False
         self._alt_dup_active = False
@@ -240,7 +238,7 @@ class TestHitTestSplitterIntegration:
             left_dock_w=220,
             right_dock_w=260,
         )
-        # Right dock starts at window_w - right_dock_width
+        # Right dock starts at window_w - right dock width
         right_splitter_x = 1280 - 260 - 3  # Around splitter center
         result = hit_test_splitter(right_splitter_x, 360.0, layout)
         assert result == "right"

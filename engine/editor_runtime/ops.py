@@ -71,7 +71,9 @@ def toggle_palette(controller: Any) -> None:
         return
     controller.palette_active = not controller.palette_active
     if controller.palette_active:
-        controller.inspector_active = False
+        inspector = getattr(controller, "inspector", None)
+        if inspector is not None:
+            inspector.set_inspector_active(False)
         controller.hierarchy_active = False
         controller.palette_filter_active = False
         refresh = getattr(controller, "_refresh_palette_list", None)
@@ -183,8 +185,8 @@ def duplicate_selected(controller: Any) -> None:
     new_sprite = controller._create_entity_internal(new_data)
     if new_sprite:
         controller.selected_entity = new_sprite  # Select the new one
-        controller._reset_zone_selection_state()
-        controller._sync_zone_selection_state(controller.selected_entity)
+        controller.shape.reset_zone_selection_state()
+        controller.shape.sync_zone_selection_state(controller.selected_entity)
         logger.info("[Editor] Duplicated entity to %s", new_data["name"])
         controller._push_command(
             {
@@ -216,6 +218,10 @@ def delete_selected(controller: Any) -> None:
 
 
 def undo_last(controller: Any) -> None:
+    undo_ctrl = getattr(controller, "undo", None)
+    if undo_ctrl is not None and hasattr(undo_ctrl, "undo"):
+        undo_ctrl.undo()
+        return
     if not controller.undo_stack:
         logger.info("[Editor] Nothing to undo.")
         return
@@ -232,6 +238,10 @@ def undo_last(controller: Any) -> None:
 
 
 def redo_last(controller: Any) -> None:
+    undo_ctrl = getattr(controller, "undo", None)
+    if undo_ctrl is not None and hasattr(undo_ctrl, "redo"):
+        undo_ctrl.redo()
+        return
     if not controller.redo_stack:
         logger.info("[Editor] Nothing to redo.")
         return

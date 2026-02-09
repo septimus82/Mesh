@@ -1,0 +1,235 @@
+{
+  "name": "Puzzle Room 01",
+  "version": 1,
+  "schema_version": 1,
+  "settings": {
+    "background_color": "dark_slate_gray",
+    "world_width": 512,
+    "world_height": 384
+  },
+  "layers": [
+    {"name": "background"},
+    {"name": "entities"},
+    {"name": "foreground"}
+  ],
+  "entities": [
+    {
+      "id": "puzzle_room_01_player",
+      "name": "PuzzlePlayer",
+      "prefab_id": "player",
+      "layer": "entities",
+      "x": 96.0,
+      "y": 96.0
+    },
+    {
+      "id": "puzzle_room_01_entry_trigger",
+      "name": "RoomEntryTrigger",
+      "prefab_id": "puzzle_room_entry_trigger",
+      "layer": "background",
+      "x": 256.0,
+      "y": 192.0
+    },
+    {
+      "id": "puzzle_room_01_rune_a",
+      "name": "RuneA",
+      "prefab_id": "puzzle_rune_a",
+      "x": 200.0,
+      "y": 180.0
+    },
+    {
+      "id": "puzzle_room_01_rune_c",
+      "name": "RuneC",
+      "prefab_id": "puzzle_rune_c",
+      "x": 256.0,
+      "y": 240.0
+    },
+    {
+      "id": "puzzle_room_01_rune_b",
+      "name": "RuneB",
+      "prefab_id": "puzzle_rune_b",
+      "x": 312.0,
+      "y": 180.0
+    },
+    {
+      "id": "puzzle_room_01_hint_plaque",
+      "name": "HintPlaque",
+      "prefab_id": "puzzle_hint_plaque",
+      "x": 128.0,
+      "y": 240.0
+    },
+    {
+      "id": "puzzle_room_01_exit_door",
+      "name": "ExitDoor",
+      "prefab_id": "puzzle_exit_door",
+      "x": 416.0,
+      "y": 304.0
+    },
+    {
+      "id": "puzzle_room_01_hint_start",
+      "name": "PuzzleHintStart",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["hint_plaque_interact"],
+          "actions": [
+            {
+              "type": "start_dialogue",
+              "target": "HintPlaque",
+              "dialogue_id": "puzzle_hint_plaque"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_01_hint_complete",
+      "name": "PuzzleHintComplete",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["dialogue_completed"],
+          "event_filter": {"dialogue_id": "puzzle_hint_plaque"},
+          "actions": [
+            {"type": "emit_event", "event_type": "hint_read"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_01_seq_a",
+      "name": "PuzzleSequenceA",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle_rune_a"],
+          "forbid_flags": ["puzzle.seq1", "puzzle.seq2", "puzzle.solved", "puzzle.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle.seq1"},
+            {"type": "emit_event", "event_type": "puzzle_progress", "payload": {"pos": 1}}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_01_seq_c",
+      "name": "PuzzleSequenceC",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle_rune_c"],
+          "require_flags": ["puzzle.seq1"],
+          "forbid_flags": ["puzzle.seq2", "puzzle.solved", "puzzle.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle.seq2"},
+            {"type": "clear_flag", "flag": "puzzle.seq1"},
+            {"type": "emit_event", "event_type": "puzzle_progress", "payload": {"pos": 2}}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_01_seq_b",
+      "name": "PuzzleSequenceB",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle_rune_b"],
+          "require_flags": ["puzzle.seq2"],
+          "forbid_flags": ["puzzle.solved", "puzzle.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle.solved"},
+            {"type": "clear_flag", "flag": "puzzle.seq1"},
+            {"type": "clear_flag", "flag": "puzzle.seq2"},
+            {"type": "emit_event", "event_type": "puzzle_solved"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_01_wrong_start",
+      "name": "PuzzleWrongStart",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle_rune_b", "puzzle_rune_c"],
+          "forbid_flags": ["puzzle.seq1", "puzzle.seq2", "puzzle.solved", "puzzle.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle.locked"},
+            {"type": "clear_flag", "flag": "puzzle.seq1"},
+            {"type": "clear_flag", "flag": "puzzle.seq2"},
+            {"type": "emit_event", "event_type": "puzzle_wrong"},
+            {"type": "delay", "duration": 0.25},
+            {"type": "clear_flag", "flag": "puzzle.locked"},
+            {"type": "emit_event", "event_type": "puzzle_reset"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_01_wrong_seq1",
+      "name": "PuzzleWrongSeq1",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle_rune_a", "puzzle_rune_b"],
+          "require_flags": ["puzzle.seq1"],
+          "forbid_flags": ["puzzle.seq2", "puzzle.solved", "puzzle.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle.locked"},
+            {"type": "clear_flag", "flag": "puzzle.seq1"},
+            {"type": "clear_flag", "flag": "puzzle.seq2"},
+            {"type": "emit_event", "event_type": "puzzle_wrong"},
+            {"type": "delay", "duration": 0.25},
+            {"type": "clear_flag", "flag": "puzzle.locked"},
+            {"type": "emit_event", "event_type": "puzzle_reset"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "puzzle_room_01_wrong_seq2",
+      "name": "PuzzleWrongSeq2",
+      "prefab_id": "puzzle_controller",
+      "layer": "background",
+      "x": 0.0,
+      "y": 0.0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["puzzle_rune_a", "puzzle_rune_c"],
+          "require_flags": ["puzzle.seq2"],
+          "forbid_flags": ["puzzle.solved", "puzzle.locked"],
+          "actions": [
+            {"type": "set_flag", "flag": "puzzle.locked"},
+            {"type": "clear_flag", "flag": "puzzle.seq1"},
+            {"type": "clear_flag", "flag": "puzzle.seq2"},
+            {"type": "emit_event", "event_type": "puzzle_wrong"},
+            {"type": "delay", "duration": 0.25},
+            {"type": "clear_flag", "flag": "puzzle.locked"},
+            {"type": "emit_event", "event_type": "puzzle_reset"}
+          ]
+        }
+      }
+    }
+  ]
+}

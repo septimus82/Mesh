@@ -605,10 +605,9 @@ class GoldenSliceVariantPickerOverlay(UIElement):
 
         scene_path = target_scene.replace("\\", "/")
         try:
-            controller = getattr(self.window, "scene_controller", None)
-            queue = getattr(controller, "queue_scene_change", None) if controller is not None else None
-            if callable(queue):
-                queue(scene_path, spawn_id="default")
+            requester = getattr(self.window, "queue_scene_change", None)
+            if callable(requester):
+                requester(scene_path, spawn_id="default")
             else:
                 self.window.request_scene_change(scene_path)
         except Exception:

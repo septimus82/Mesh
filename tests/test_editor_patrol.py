@@ -109,7 +109,7 @@ class TestEditorPatrol(unittest.TestCase):
         
         # Shift+Right Arrow
         initial_radius = zone.radius
-        self.controller._handle_zone_input(arcade.key.RIGHT, arcade.key.MOD_SHIFT)
+        self.controller.shape.handle_zone_input(arcade.key.RIGHT, arcade.key.MOD_SHIFT)
         
         self.assertGreater(zone.radius, initial_radius)
         self.assertEqual(zone.radius, initial_radius + 16.0)
@@ -126,16 +126,16 @@ class TestEditorPatrol(unittest.TestCase):
 
         self.controller.selected_entity = sprite
         self.window.scene_controller.all_sprites = [sprite]
-        self.controller._reset_zone_selection_state()
-        self.controller._sync_zone_selection_state(sprite)
+        self.controller.shape.reset_zone_selection_state()
+        self.controller.shape.sync_zone_selection_state(sprite)
 
-        active = self.controller._get_zone_behaviour(sprite)
+        active = self.controller.shape.get_zone_behaviour(sprite)
         self.assertIs(active, trigger)
         self.assertEqual(self.controller.zone_edit_target, ZONE_TARGET_TRIGGER)
 
-        cycled = self.controller._cycle_zone_behaviour()
+        cycled = self.controller.shape.cycle_zone_behaviour()
         self.assertTrue(cycled)
-        active_after = self.controller._get_zone_behaviour(sprite)
+        active_after = self.controller.shape.get_zone_behaviour(sprite)
         self.assertIs(active_after, hitbox)
         self.assertEqual(self.controller.zone_edit_target, ZONE_TARGET_HITBOX)
 
@@ -151,17 +151,17 @@ class TestEditorPatrol(unittest.TestCase):
 
         self.controller.selected_entity = sprite
         self.window.scene_controller.all_sprites = [sprite]
-        self.controller._reset_zone_selection_state()
-        self.controller._sync_zone_selection_state(sprite)
+        self.controller.shape.reset_zone_selection_state()
+        self.controller.shape.sync_zone_selection_state(sprite)
 
-        active = self.controller._get_zone_behaviour(sprite)
+        active = self.controller.shape.get_zone_behaviour(sprite)
         self.assertIs(active, trigger)
         self.assertEqual(self.controller.zone_edit_target, ZONE_TARGET_TRIGGER)
 
-        toggled = self.controller._toggle_zone_edit_target()
+        toggled = self.controller.shape.toggle_zone_edit_target()
         self.assertTrue(toggled)
         self.assertEqual(self.controller.zone_edit_target, ZONE_TARGET_HITBOX)
-        active_after = self.controller._get_zone_behaviour(sprite)
+        active_after = self.controller.shape.get_zone_behaviour(sprite)
         self.assertIs(active_after, hitbox)
 
 if __name__ == '__main__':

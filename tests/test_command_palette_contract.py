@@ -9,6 +9,7 @@ from engine import runtime_settings
 from engine.editor.editor_focus_model import FOCUS_PROJECT_EXPLORER
 from engine.editor_commands import filter_commands, get_all_commands, run_command
 from engine.editor_runtime import input as editor_input
+from tests._session_stub import make_session_stub
 
 
 class _StubEditorController:
@@ -42,10 +43,86 @@ class _StubWindow:
 class _StubPaletteController:
     def __init__(self) -> None:
         self.active = True
-        self.command_palette_active = False
-        self.command_palette_query = "oops"
-        self.command_palette_index = 3
+        self._palette_open = False
+        self.search = self._SearchState()
         self.window = SimpleNamespace()
+        self.panels = self._StubPanels(self)
+        self.session = make_session_stub()
+
+    class _SearchState:
+        def __init__(self) -> None:
+            self._query = "oops"
+            self._index = 3
+
+        @property
+        def command_palette_query(self) -> str:
+            return self._query
+
+        @command_palette_query.setter
+        def command_palette_query(self, value: str) -> None:
+            self._query = str(value or "")
+
+        @property
+        def command_palette_index(self) -> int:
+            return self._index
+
+        @command_palette_index.setter
+        def command_palette_index(self, value: int) -> None:
+            self._index = int(value or 0)
+
+        def clear_command_palette_state(self) -> None:
+            self._query = ""
+            self._index = 0
+
+        def get_command_palette_state(self) -> tuple[str, int]:
+            return (self._query, int(self._index))
+
+        def backspace_command_palette(self) -> bool:
+            if not self._query:
+                return False
+            self._query = self._query[:-1]
+            self._index = 0
+            return True
+
+        def move_command_palette_selection(self, delta: int) -> None:
+            self._index = max(0, int(self._index) + int(delta))
+
+        def is_search_focused(self) -> bool:
+            return False
+
+        def focus_search_for_active_panel(self) -> bool:
+            return False
+
+    class _StubPanels:
+        def __init__(self, controller: "_StubPaletteController") -> None:
+            self._controller = controller
+
+        def is_command_palette_open(self) -> bool:
+            return bool(self._controller._palette_open)
+
+        def toggle_command_palette(self) -> bool:
+            self._controller._palette_open = not self._controller._palette_open
+            return self._controller._palette_open
+
+        def close_command_palette(self) -> None:
+            self._controller._palette_open = False
+
+        def dispatch_input(self, _key: int, _modifiers: int) -> bool:
+            return False
+
+    def run_editor_action(self, action_id: str) -> bool:
+        if action_id == "editor.command_palette.toggle":
+            opened = self.panels.toggle_command_palette()
+            if opened:
+                self.search.command_palette_query = ""
+                self.search.command_palette_index = 0
+            return True
+        if action_id == "editor.command_palette.close":
+            self.panels.close_command_palette()
+            self.search.command_palette_query = ""
+            self.search.command_palette_index = 0
+            return True
+        return False
 
 
 @pytest.mark.fast
@@ -93,13 +170,13 @@ def test_command_palette_open_close() -> None:
 
     opened = editor_input.handle_input(controller, optional_arcade.arcade.key.P, ctrl_mod)
     assert opened is True
-    assert controller.command_palette_active is True
-    assert controller.command_palette_query == ""
-    assert controller.command_palette_index == 0
+    assert controller._palette_open is True
+    assert controller.search.command_palette_query == ""
+    assert controller.search.command_palette_index == 0
 
     closed = editor_input.handle_input(controller, optional_arcade.arcade.key.ESCAPE, 0)
     assert closed is True
-    assert controller.command_palette_active is False
+    assert controller._palette_open is False
 
 
 @pytest.mark.fast

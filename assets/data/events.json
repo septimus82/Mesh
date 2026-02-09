@@ -53,6 +53,187 @@
       }
     },
     {
+      "name": "room_entered",
+      "description": "Fired when the player enters a room trigger (e.g., puzzle room).",
+      "payload": {
+        "zone": "string",
+        "entity": "string"
+      }
+    },
+    {
+      "name": "hint_read",
+      "description": "Fired when a player reads a hint or plaque.",
+      "payload": {
+        "entity": "string",
+        "hint_id": "string"
+      }
+    },
+    {
+      "name": "puzzle_progress",
+      "description": "Fired when a puzzle sequence advances.",
+      "payload": {
+        "entity": "string",
+        "pos": "int"
+      }
+    },
+    {
+      "name": "puzzle_wrong",
+      "description": "Fired when a puzzle sequence is entered incorrectly.",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "name": "puzzle_reset",
+      "description": "Fired when a puzzle sequence is reset.",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "name": "puzzle_solved",
+      "description": "Fired when a puzzle sequence is completed.",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "name": "quest_room_complete",
+      "description": "Fired when the puzzle room quest completes.",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "name": "room2_entered",
+      "description": "Fired when the player enters the Puzzle Room 02 trigger.",
+      "payload": {
+        "zone": "string",
+        "entity": "string"
+      }
+    },
+    {
+      "name": "room2_started",
+      "description": "Fired when the Puzzle Room 02 timer starts.",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "name": "hint2_plaque_interact",
+      "description": "Fired when the Puzzle Room 02 hint plaque is interacted with.",
+      "payload": {
+        "target": "string",
+        "interactor": "string"
+      }
+    },
+    {
+      "name": "hint2_read",
+      "description": "Fired when the Puzzle Room 02 hint is read.",
+      "payload": {
+        "entity": "string",
+        "hint_id": "string"
+      }
+    },
+    {
+      "name": "puzzle2_rune_a",
+      "description": "Fired when the Puzzle Room 02 rune A trigger is entered.",
+      "payload": {
+        "zone": "string",
+        "entity": "string",
+        "position": "tuple[float, float]"
+      }
+    },
+    {
+      "name": "puzzle2_rune_b",
+      "description": "Fired when the Puzzle Room 02 rune B trigger is entered.",
+      "payload": {
+        "zone": "string",
+        "entity": "string",
+        "position": "tuple[float, float]"
+      }
+    },
+    {
+      "name": "puzzle2_rune_c",
+      "description": "Fired when the Puzzle Room 02 rune C trigger is entered.",
+      "payload": {
+        "zone": "string",
+        "entity": "string",
+        "position": "tuple[float, float]"
+      }
+    },
+    {
+      "name": "puzzle2_progress",
+      "description": "Fired when the Puzzle Room 02 sequence advances.",
+      "payload": {
+        "entity": "string",
+        "pos": "int"
+      }
+    },
+    {
+      "name": "puzzle2_wrong",
+      "description": "Fired when the Puzzle Room 02 sequence is entered incorrectly.",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "name": "puzzle2_timeout",
+      "description": "Fired when the Puzzle Room 02 timer expires.",
+      "payload": {
+        "timer_id": "string",
+        "entity": "string",
+        "fire_count": "int",
+        "duration": "float"
+      }
+    },
+    {
+      "name": "sentinel_spotted",
+      "description": "Fired when the Puzzle Room 02 sentinel sees the player.",
+      "payload": {
+        "zone": "string",
+        "entity": "string",
+        "position": "tuple[float, float]"
+      }
+    },
+    {
+      "name": "puzzle2_failed",
+      "description": "Fired when the Puzzle Room 02 sequence fails.",
+      "payload": {
+        "entity": "string",
+        "reason": "string"
+      }
+    },
+    {
+      "name": "puzzle2_reset",
+      "description": "Fired when the Puzzle Room 02 sequence resets.",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "name": "puzzle2_solved",
+      "description": "Fired when the Puzzle Room 02 sequence is completed.",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "name": "door2_opened",
+      "description": "Fired when the Puzzle Room 02 exit door is opened.",
+      "payload": {
+        "target": "string",
+        "interactor": "string"
+      }
+    },
+    {
+      "name": "quest_room2_complete",
+      "description": "Fired when the Puzzle Room 02 quest completes.",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
       "name": "open_shop",
       "description": "Fired to open the vendor UI.",
       "payload": {

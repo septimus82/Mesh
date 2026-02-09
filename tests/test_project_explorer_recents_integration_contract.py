@@ -6,7 +6,12 @@ from dataclasses import asdict, dataclass
 
 from engine.editor.project_explorer_model import ProjectExplorerRecentItem, ProjectRow
 from engine.editor_controller import EditorModeController
+from engine.editor.editor_project_explorer_actions_controller import (
+    EditorProjectExplorerActionsController,
+)
 from engine.workspace_settings import WorkspaceSettings
+from tests._dock_stub import make_dock_stub
+from tests._search_stub import attach_search_stub
 
 
 @dataclass
@@ -30,11 +35,12 @@ class StubController:
         self.window = StubWindow(player_hud=StubHud())
         self.project_explorer = ProjectExplorerController(Path("."))
         self.project_explorer.recents = []
+        self.project_explorer_actions = EditorProjectExplorerActionsController(self)
         
         self.active = True
-        self._left_dock_tab = "Project"
+        self.dock = make_dock_stub(left_tab="Project")
         self._project_search = ""
-        self._search_focus = None
+        self.search = attach_search_stub(self)
         
         self.scene_calls: list[str] = []
         self.asset_calls: list[str] = []

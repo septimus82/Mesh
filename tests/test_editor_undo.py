@@ -61,7 +61,7 @@ class TestEditorUndo(unittest.TestCase):
         self.controller.redo_last()
         self.assertEqual(sprite.center_x, 116.0)
 
-    @patch('engine.editor_controller.get_behaviour_param_defs')
+    @patch('engine.editor.editor_inspector_controller.get_behaviour_param_defs')
     def test_undo_property_change(self, mock_get_defs):
         # Setup mock defs
         mock_def = MagicMock()

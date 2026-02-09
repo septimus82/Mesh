@@ -43,7 +43,7 @@ class WorkspaceSettings:
     last_scene_id: str | None = None
     last_camera_center: list[float] | None = None
     left_dock_tab: str = "Outliner"  # "Project", "Scene", or "Outliner"
-    right_dock_tab: str = "Inspector"  # "Inspector", "Assets", "History", or "Problems"
+    right_dock_tab: str = "Inspector"  # "Inspector", "Assets", "History", "Problems", or "Debug"
     dock_left_w: int = 320  # Left dock width
     dock_right_w: int = 320  # Right dock width
     # Dock collapse / maximize state
@@ -58,6 +58,10 @@ class WorkspaceSettings:
     hd2d_default_preset_id: str | None = None
     # HD-2D batch paste radius in pixels (16..512)
     hd2d_batch_radius_px: int = 96
+    # Debug panel event monitor filters
+    debug_event_type_filter: str = ""
+    debug_event_entity_id: str = ""
+    debug_event_limit: int = 20
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> WorkspaceSettings:
@@ -99,6 +103,9 @@ class WorkspaceSettings:
             ghost_originals_dim_scale=ghost_scale,
             hd2d_default_preset_id=_coerce_hd2d_default_preset_id(data.get("hd2d_default_preset_id")),
             hd2d_batch_radius_px=_coerce_hd2d_batch_radius_px(data.get("hd2d_batch_radius_px", 96)),
+            debug_event_type_filter=str(data.get("debug_event_type_filter", "")),
+            debug_event_entity_id=str(data.get("debug_event_entity_id", "")),
+            debug_event_limit=_coerce_debug_event_limit(data.get("debug_event_limit", 20)),
         )
 
 
@@ -185,3 +192,14 @@ def _coerce_hd2d_batch_radius_px(raw: Any) -> int:
         return 96
     # Clamp to valid range
     return max(16, min(512, value))
+
+
+def _coerce_debug_event_limit(raw: Any) -> int:
+    """Coerce debug event limit to a non-negative integer (default 20)."""
+    if raw is None:
+        return 20
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return 20
+    return max(0, value)

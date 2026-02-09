@@ -7,6 +7,11 @@ from pathlib import Path
 
 from engine.editor.project_explorer_model import ProjectRow
 from engine.editor_controller import EditorModeController
+from engine.editor.editor_project_explorer_actions_controller import (
+    EditorProjectExplorerActionsController,
+)
+from tests._dock_stub import make_dock_stub
+from tests._search_stub import attach_search_stub
 
 
 class StubHud:
@@ -32,13 +37,14 @@ class StubController:
     def __init__(self, rows: list[ProjectRow]) -> None:
         self.window = StubWindow(player_hud=StubHud())
         self.active = True
-        self._left_dock_tab = "Project"
+        self.dock = make_dock_stub(left_tab="Project")
         
         self.project_explorer = ProjectExplorerController(Path("."))
         self.project_explorer.project_rows = list(rows)
         self.project_explorer.tree_rev = 1
         
         self.project_explorer.ensure_rows()
+        self.project_explorer_actions = EditorProjectExplorerActionsController(self)
 
         # Legacy fields redirection (if tests access them directly)
         # But tests seem to access _project_selected_index.
@@ -46,7 +52,7 @@ class StubController:
         # But for now, let's see if StubController usages can just be updated or if I can sync state.
         
         self._project_search = ""
-        self._search_focus = None
+        self.search = attach_search_stub(self)
         
         # Mocks
         self.scene_calls: list[str] = []
@@ -109,7 +115,10 @@ class StubController:
         return True
 
     def _copy_find_asset_path(self, asset_path: str) -> bool:
-        return EditorModeController._copy_find_asset_path(self, asset_path)
+        hud = self.window.player_hud
+        if hud is not None:
+            hud.enqueue_toast(f"Copied path: {asset_path}")
+        return True
 
 
 def test_project_explorer_scene_activation() -> None:

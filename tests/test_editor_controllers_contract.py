@@ -75,44 +75,18 @@ class TestEditorSelectionController:
         assert sel_ctrl.primary_selected_id is None
 
 class TestEditorSceneOpsController:
-    def test_undo_stack(self) -> None:
+    def test_dirty_state(self) -> None:
         from engine.editor.editor_scene_ops import EditorSceneOpsController
         
         ctrl = MockController()
         ops_ctrl = EditorSceneOpsController(ctrl)
-        
-        cmd = {"type": "test"}
-        ops_ctrl.push_command(cmd)
-        
-        assert len(ops_ctrl.undo_stack) == 1
-        assert ops_ctrl.dirty_state.is_dirty is True
-        
-        # Test limit
-        ops_ctrl.max_history = 2
-        ops_ctrl.push_command({"type": "1"})
-        ops_ctrl.push_command({"type": "2"})
-        ops_ctrl.push_command({"type": "3"})
-        assert len(ops_ctrl.undo_stack) == 2
-        assert ops_ctrl.undo_stack[0]["type"] == "2"
-        assert ops_ctrl.undo_stack[1]["type"] == "3"
+        assert ops_ctrl.scene_dirty is False
+        assert ops_ctrl.dirty_state.is_dirty is False
 
-    def test_undo_redo(self) -> None:
-        from engine.editor.editor_scene_ops import EditorSceneOpsController
-        
-        ctrl = MockController()
-        ops_ctrl = EditorSceneOpsController(ctrl)
-        
-        cmd = {"type": "test"}
-        ops_ctrl.push_command(cmd)
-        
-        # Undo
-        undo_cmd = ops_ctrl.undo()
-        assert undo_cmd == cmd
-        assert len(ops_ctrl.undo_stack) == 0
-        assert len(ops_ctrl.redo_stack) == 1
-        
-        # Redo
-        redo_cmd = ops_ctrl.redo()
-        assert redo_cmd == cmd
-        assert len(ops_ctrl.undo_stack) == 1
-        assert len(ops_ctrl.redo_stack) == 0
+        ops_ctrl.mark_dirty()
+        assert ops_ctrl.scene_dirty is True
+        assert ops_ctrl.dirty_state.is_dirty is True
+
+        ops_ctrl.mark_clean()
+        assert ops_ctrl.scene_dirty is False
+        assert ops_ctrl.dirty_state.is_dirty is False

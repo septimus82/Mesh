@@ -12,6 +12,9 @@
 
   "editor.viewport_maximize.toggle": "Ctrl+Space",
 
+  "editor.project_explorer.refactor_move_selected": "Ctrl+Shift+M",
+  "editor.project_explorer.refactor_delete_selected": "Delete",
+
   "editor.background_planes.add": "Ctrl+Alt+B",
   "editor.background_planes.duplicate": "Ctrl+Alt+D",
   "editor.background_planes.remove": "Ctrl+Alt+Backspace",

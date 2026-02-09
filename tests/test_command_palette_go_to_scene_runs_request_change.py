@@ -18,9 +18,8 @@ def test_command_palette_go_to_scene_runs_request_change(capsys, monkeypatch) ->
         class _SceneController:
             current_scene_path = "scenes/start.json"
 
-            @staticmethod
-            def request_scene_change(scene_path: str) -> None:
-                requested.append(str(scene_path))
+        def _request_scene_change(scene_path: str) -> None:
+            requested.append(str(scene_path))
 
         class _Window:
             show_debug = True
@@ -32,6 +31,7 @@ def test_command_palette_go_to_scene_runs_request_change(capsys, monkeypatch) ->
             ui_controller = type("U", (), {"on_key_press": lambda *_a: False, "input_blocked": False})()
             console_controller = type("C", (), {"active": False, "toggle": lambda *_a: None})()
             editor_controller = type("E", (), {"active": False})()
+            request_scene_change = staticmethod(_request_scene_change)
 
         window = _Window()
         controller = type("Ctl", (), {"window": window, "manager": type("M", (), {"press": lambda *_a: None})(), "_keys": set()})()

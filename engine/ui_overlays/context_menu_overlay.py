@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import engine.optional_arcade as optional_arcade
+from engine.editor.editor_menu_hover_query import get_context_menu_hover_id
 
 from ..text_draw import draw_text_cached, TextCache
 from .common import UIElement, draw_panel_bg
@@ -40,7 +41,9 @@ class ContextMenuOverlay(UIElement):
             return
         if not getattr(controller, "active", False):
             return
-        if not getattr(controller, "_context_menu_open", False):
+        from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
+
+        if not panels_is_open(controller, "context_menu"):
             return
 
         # Import here to avoid circular imports
@@ -53,7 +56,7 @@ class ContextMenuOverlay(UIElement):
         # Get current state
         menu_x = getattr(controller, "_context_menu_x", 0)
         menu_y = getattr(controller, "_context_menu_y", 0)
-        hover_id = getattr(controller, "_context_menu_hover_id", None)
+        hover_id = get_context_menu_hover_id(controller)
 
         # Build layout
         items = build_context_menu_items(controller)

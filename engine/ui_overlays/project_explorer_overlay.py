@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Optional
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_rectangle_filled, _draw_lrtb_rectangle_outline
 from ..editor.editor_shell_layout import compute_editor_shell_layout
+from ..editor.editor_dock_query import get_effective_dock_widths
 from ..editor.panel_search_model import format_search_bar_text
 from .providers import project_explorer_provider
 from ..editor.project_explorer_model import (
@@ -75,18 +76,15 @@ class ProjectExplorerOverlay(UIElement):
         if controller is None or not getattr(controller, "active", False):
             return
 
-        left_tab = getattr(controller, "_left_dock_tab", "Outliner")
+        dock = getattr(controller, "dock", None)
+        snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+        left_tab = getattr(snapshot, "left_tab", "Outliner") or "Outliner"
         if left_tab != "Project":
             return
 
         window_w = int(getattr(self.window, "width", 1280) or 1280)
         window_h = int(getattr(self.window, "height", 720) or 720)
-        getter = getattr(controller, "get_effective_dock_widths", None)
-        if callable(getter):
-            left_w, right_w = getter(window_w)
-        else:
-            left_w = getattr(controller, "_dock_left_w", 320)
-            right_w = getattr(controller, "_dock_right_w", 320)
+        left_w, right_w = get_effective_dock_widths(controller, window_w)
 
         layout = compute_editor_shell_layout(window_w, window_h, left_w, right_w)
         dock = layout.left_dock
@@ -99,7 +97,8 @@ class ProjectExplorerOverlay(UIElement):
         
         rows = data.get("rows", [])
         search_text = str(data.get("search_query", ""))
-        search_focused = getattr(controller, "_search_focus", None) == "project"
+        search = getattr(controller, "search", None)
+        search_focused = bool(search is not None and search.is_panel_search_focused("project"))
         
         # Get inline rename state
         rename_active, rename_text, rename_path, rename_cursor, rename_sel_start, rename_sel_end = self._get_inline_rename_info(controller)

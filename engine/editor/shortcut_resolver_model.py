@@ -9,6 +9,8 @@ import engine.optional_arcade as optional_arcade
 # Scope constants (re-exported for convenience)
 SHORTCUT_SCOPE_GLOBAL = "global"
 SHORTCUT_SCOPE_INLINE_RENAME = "text_input.inline_rename"
+SHORTCUT_SCOPE_PROJECT_EXPLORER = "project_explorer"
+SHORTCUT_SCOPE_PROJECT_EXPLORER_CONTEXT_MENU = "project_explorer.context_menu"
 
 
 _MOD_ORDER = ("Ctrl", "Alt", "Shift")

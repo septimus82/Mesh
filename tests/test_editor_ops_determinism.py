@@ -41,7 +41,9 @@ def test_inspector_param_order_is_sorted_deterministically(monkeypatch) -> None:
     def fake_param_defs(_name: str):
         return {"b": _ParamDef(default=2, typ=int), "a": _ParamDef(default=0, typ=int)}
 
-    monkeypatch.setattr(editor_module, "get_behaviour_param_defs", fake_param_defs)
+    import engine.editor.editor_inspector_controller as inspector_module
+
+    monkeypatch.setattr(inspector_module, "get_behaviour_param_defs", fake_param_defs)
 
     window = types.SimpleNamespace()
     window.strict_mode = False
@@ -54,4 +56,3 @@ def test_inspector_param_order_is_sorted_deterministically(monkeypatch) -> None:
     items = controller._build_inspector_items()
     keys = [item["name"] for item in items if item.get("type") == "param"]
     assert keys == ["a", "b", "z"]
-

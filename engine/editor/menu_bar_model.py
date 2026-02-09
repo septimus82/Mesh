@@ -47,6 +47,7 @@ MENU_ACTION_ORDER: dict[str, tuple[str, ...]] = {
         "editor.panel.inspector.toggle",
         "editor.panel.history.toggle",
         "editor.panel.problems.toggle",
+        "editor.panel.debug.toggle",
         "|",
         "editor.problems.jump_to_selected",
         "editor.problems.copy_location",

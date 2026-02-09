@@ -1,13 +1,29 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
 
+_log = logging.getLogger(__name__)
+
 
 def _coerce_path(path: str | Path) -> Path:
     return path if isinstance(path, Path) else Path(path)
+
+
+def _strip_bom(text: str, *, source: str = "") -> str:
+    """Strip a leading UTF-8 BOM (U+FEFF) if present.
+
+    Returns the cleaned text.  Emits a deterministic warning when a BOM is
+    stripped so the root cause is visible in logs without breaking callers.
+    """
+    if text.startswith("\ufeff"):
+        label = source or "<string>"
+        _log.warning("Stripped UTF-8 BOM from JSON source: %s", label)
+        return text[1:]
+    return text
 
 
 def dumps_stable(payload: Any) -> str:
@@ -38,5 +54,11 @@ def write_json_atomic(path: str | Path, payload: Any, *, trailing_newline: bool 
 
 def read_json(path: str | Path) -> Any:
     target = _coerce_path(path)
-    with open(target, "r", encoding="utf-8") as handle:
-        return json.load(handle)
+    text = target.read_text(encoding="utf-8")
+    text = _strip_bom(text, source=str(target))
+    return json.loads(text)
+
+
+def loads_safe(text: str, *, source: str = "") -> Any:
+    """Parse a JSON string, stripping a leading BOM if present."""
+    return json.loads(_strip_bom(text, source=source))

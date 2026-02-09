@@ -39,10 +39,16 @@ def _make_window():
     window.console_controller.process_key.return_value = False
     window.editor_controller = MagicMock()
     window.editor_controller.active = False
+    window.editor_controller.panels = None  # Prevent spurious MagicMock truthy values
+    window.editor_controller.ui_layers = None
+    window.editor_controller.keybinds = None
+    window.editor_controller.project_explorer = None
     window.engine_config = MagicMock()
     window.engine_config.input_bindings = None
     window.player_hud = MagicMock()
     window.show_debug = False
+    window.command_palette_enabled = False
+    window.settings_overlay = None  # Prevent ESC from being consumed by settings toggle
     return window
 
 

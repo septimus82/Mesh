@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 
 import engine.editor_controller as editor_module
+import engine.editor.editor_inspector_controller as inspector_module
 from engine.editor_controller import EditorModeController
 
 
@@ -73,7 +74,7 @@ def test_undo_redo_entity_edits(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_param_defs(_name: str):
         return {"hp": _ParamDef(default=10, typ=int)}
 
-    monkeypatch.setattr(editor_module, "get_behaviour_param_defs", fake_param_defs)
+    monkeypatch.setattr(inspector_module, "get_behaviour_param_defs", fake_param_defs)
 
     window = types.SimpleNamespace()
     window.strict_mode = False

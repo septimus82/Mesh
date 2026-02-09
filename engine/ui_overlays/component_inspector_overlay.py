@@ -25,6 +25,7 @@ from ..editor.editor_shell_layout import (
     EditorShellLayout,
     TAB_HEADER_HEIGHT,
 )
+from ..editor.editor_dock_query import get_raw_dock_widths
 from ..editor.inspector_components_model import (
     ComponentSection,
     ComponentRow,
@@ -78,9 +79,7 @@ class ComponentInspectorOverlay(UIElement):
         controller = getattr(self.window, "editor_controller", None)
         if controller is None:
             return (320, 320)
-        left_w = getattr(controller, "_dock_left_w", 320)
-        right_w = getattr(controller, "_dock_right_w", 320)
-        return (left_w, right_w)
+        return get_raw_dock_widths(controller)
 
     def _get_layout(self) -> EditorShellLayout:
         """Get or compute the current layout."""
@@ -104,7 +103,9 @@ class ComponentInspectorOverlay(UIElement):
             return
 
         # Only draw when Inspector tab is active
-        right_dock_tab = getattr(controller, "_right_dock_tab", "Inspector")
+        dock = getattr(controller, "dock", None)
+        snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+        right_dock_tab = getattr(snapshot, "right_tab", "Inspector") or "Inspector"
         if right_dock_tab != "Inspector":
             return
 

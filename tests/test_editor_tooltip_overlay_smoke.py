@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from tests._dock_stub import make_dock_stub
 
 class TestEditorTooltipOverlaySmoke:
     """Smoke tests for EditorTooltipOverlay."""
@@ -123,8 +124,7 @@ class TestEditorTooltipOverlayIntegration:
         mock_controller.get_last_mouse_pos.return_value = (223.0, 400.0)  # Left splitter
         mock_controller._context_menu_open = False
         mock_controller._menu_active = None
-        mock_controller.left_dock_width = 220
-        mock_controller.right_dock_width = 260
+        mock_controller.dock = make_dock_stub(left_w=220, right_w=260)
         mock_controller.window = mock_window
         mock_controller._inspector_cursor = None
 
@@ -159,8 +159,7 @@ class TestEditorTooltipOverlayIntegration:
         mock_controller.get_last_mouse_pos.return_value = (400.0, 300.0)  # Center viewport
         mock_controller._context_menu_open = False
         mock_controller._menu_active = None
-        mock_controller.left_dock_width = 220
-        mock_controller.right_dock_width = 260
+        mock_controller.dock = make_dock_stub(left_w=220, right_w=260)
         mock_controller.window = mock_window
         mock_controller._inspector_cursor = None
 

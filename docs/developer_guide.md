@@ -10,6 +10,25 @@ The project is organized as follows:
     -   `behaviours/`: Game logic components (AI, Player, Interactables).
     -   `game.py`: Main game loop and window management.
     -   `scene_controller.py`: Manages entities and scene loading.
+        -   Entity access is mediated by `SceneEntityStoreController` (`scene_controller.entities`).
+        -   Preferred access: `scene_controller.iter_entities()` / `scene_controller.entities.iter_entities()`.
+        -   `scene_controller.entities` remains iterable for legacy callers.
+    -   `editor_runtime/input.py`: Editor input entrypoint.
+        -   `editor_runtime/editor_input_router.py`: Scoped route table + dispatch.
+        -   `editor_runtime/editor_input_legacy_handlers.py`: Legacy key handling (moved out of input.py).
+        -   `editor_runtime/editor_input_menu_handlers.py`: Menu/context menu mouse/key helpers.
+        -   `editor_runtime/editor_input_transform_handlers.py`: Rotate/scale drag helpers.
+        -   `editor_runtime/editor_input_drag_handlers.py`: Mouse drag/release handling.
+        -   `editor_runtime/editor_input_click_handlers.py`: Mouse click handling (moved out of input.py).
+        -   `editor_runtime/editor_input_text_handlers.py`: Text input routing (moved out of input.py).
+        -   `editor_runtime/editor_input_key_handlers.py`: Pre-router key handling (moved out of input.py).
+        -   `editor_runtime/editor_input_shortcut_handlers.py`: Shortcut resolution helpers (moved out of input.py).
+        -   `editor_runtime/editor_input_dispatch.py`: Keyboard dispatch orchestrator (moved out of input.py).
+        -   `editor_runtime/input.py`: Facade only (policy test enforces no inline logic).
+    -   `editor/editor_undo_controller.py`: Undo/redo command execution + history snapshot facade.
+        -   `editor/editor_undo_model.py`: Pure undo history model (cursor + slicing).
+    -   `editor/editor_dock_controller.py`: Dock tabs/collapse/resize state + snapshot.
+    -   `ui_overlays/undo_history_overlay.py`: Renders history list from the undo controller snapshot.
     -   `ui.py`: UI elements and overlays.
 -   `scenes/`: JSON files defining game levels and menus.
 -   `assets/`: Game assets (images, sounds, music, data).
@@ -94,6 +113,25 @@ Optional xdist (if installed):
 python -m tooling.test_tiers tier1 --xdist
 python -m tooling.test_tiers tier2 --xdist --jobs 4
 ```
+
+## Clean Export
+
+Create a clean source ZIP containing only git-tracked files needed to run/build.
+Excludes `.venv/`, `__pycache__/`, `dist/`, `build/`, `.mypy_cache/`, `*.pyc`, `*.pyd`, etc.
+
+```bash
+# Default: creates mesh_clean_YYYYMMDD_HHMMSS.zip in current directory
+python -m tooling.export_clean
+
+# Custom output path
+python -m tooling.export_clean --out release.zip
+
+# Dry-run: list files without creating ZIP
+python -m tooling.export_clean --dry-run
+```
+
+The packaging hygiene gate (`test_packaging_hygiene_gate.py`) runs as part of `pytest -m fast`
+and will fail if forbidden directories (`.venv/`, `dist/`, etc.) exist in the workspace.
 
 ## Perf-run (CI)
 
@@ -375,6 +413,60 @@ The engine includes a lightweight in-game editor for tweaking scenes.
 | **T** | With Zone tool active: toggle between TriggerZone and Hitbox on the selected entity |
 | **F6** | Save current scene changes to JSON |
 
+### Editor internals (controllers)
+
+The editor runtime is split into focused controllers to keep `editor_controller.py` lean:
+
+- `EditorPanelsController` owns modal/panel visibility and UI layer registration.
+- `EditorProvidersController` builds provider payloads deterministically.
+- `EditorDockController` owns dock tabs, widths, collapse/maximize, and focus sync.
+- `EditorHoverStateController` owns hover state for highlights/tooltips (menu/title, context, splitter, entity).
+- `EditorWorkspaceController` owns workspace/settings load/save + autosave orchestration.
+- Consumers should read dock state via the dock snapshot (`get_snapshot()` / `editor_dock_query.get_dock_snapshot`).
+- `editor_dock_focus_model` maps dock snapshot + session flags to a focus target.
+- `editor_focus_model` derives focus using session + dock snapshots and panel visibility queries (no ad-hoc state dicts).
+- Input routing (`editor_input_router`/`editor_input_shortcut_handlers`) derives focus from session+dock snapshots via `derive_focus_target_for_controller(...)`.
+- Command palette focus uses `derive_focus_target_for_controller(...)` + dock snapshots (no `collect_editor_state`).
+- Command palette command list lives in `editor_commands_registry` (thin facade in `editor_commands.py`).
+- Command palette key handling is implemented in `editor_command_palette_controller` (router delegates).
+- `collect_editor_state` is legacy and only used inside `editor_focus_model`; new code should not call it.
+- Command palette query/index state lives in `EditorSearchController` (`editor.search`).
+- Panel search focus + per-panel search text (Outliner/Assets/History/Problems/Project) live in `EditorSearchController`.
+- `ProjectExplorerController` handles Project Explorer tree/selection.
+- `EditorProjectExplorerActionsController` orchestrates Project Explorer input + activation.
+- `EditorSceneBrowseController` orchestrates Scene Switcher/Scene Browser interactions.
+- `EditorSceneOpenController` encapsulates scene open/switch orchestration and unsaved-change guard flow.
+- `EditorDialogueController` orchestrates Dialogue panel editing/rendering and quest context drawing.
+- `EditorDebugOverlayController` encapsulates the editor overlay debug text rendering.
+- `EditorOverlayController` orchestrates the editor overlay draw stack.
+- `EditorToolController` encapsulates tool mode cycling.
+- `EditorAnimationController` orchestrates Animator panel editing/rendering (including active-guarded draw).
+- `EditorTileController` orchestrates Tile panel editing/rendering (including active-guarded draw).
+- `EditorLightsController` orchestrates Lights/Occluder tools and runtime sync.
+- `EditorShapeController` encapsulates path/zone/shape editing logic (input handlers call it directly).
+- `EditorPaletteController` encapsulates prefab palette filtering/selection/thumbs, palette overlay drawing, and palette preview rendering.
+- `EditorPrefabController` encapsulates prefab overrides + prefab shape promotion/apply.
+- `EditorInspectorController` encapsulates inspector component input handling, inspector list/editing flow, focus toggling, selection overlay lines, and behaviour parameter editing (update/remove params, apply config maps, prefab base entity resolution).
+- `EditorClipboardController` encapsulates clipboard state and copy/paste operations for entities (including HD2D overrides clipboard).
+- `EditorHd2dController` encapsulates HD2D preset preview, commit, auto-apply, and upgrade operations for scene settings.
+- `EditorDuplicateController` encapsulates alt-drag duplicate operations: begin, update, end, cancel, reset, and apply command.
+- `EditorMarqueeController` encapsulates marquee box selection operations: begin, update, end, cancel, and reset.
+- `EditorPlayController` encapsulates play session operations: start, stop, camera handling, and player spawning.
+- `EditorKeymapController` encapsulates keymap override loading, parsing, and application.
+- `EditorDrawController` encapsulates world-space drawing: selection highlight, tool visuals (patrol paths, zones), shape editing, lights overlay, and asset placement ghost.
+- `EditorCursorController` encapsulates cursor state, hints, and gizmo overlay feedback (mouse position tracking, cursor affordance computation, transform gizmo state).
+- `EditorProblemsActionsController` encapsulates problems panel actions: jump to problem (load scene, select entity), copy location to clipboard, reveal in project explorer, toast notifications.
+- `EditorFindActionsController` encapsulates find/activate actions: activate commands, scenes, entities, assets, and problems from find-everything or command palette.
+- `EditorEntityOpsController` encapsulates entity CRUD operations: find by name/id, create, delete, and apply rotate/scale transform commands.
+- `EditorCommandDispatchController` encapsulates undo/redo command dispatch: applies and reverts commands by type for all 25+ command types (MoveEntity, AddEntity, EditLight, etc.).
+- `EditorAlignController` encapsulates multi-select align and distribute operations: align left/right/top/bottom/center, distribute horizontal/vertical with full undo/redo support.
+- `EditorEntityPanelsController` encapsulates outliner/inspector entity panels logic (including toggle open/close).
+- `EditorHierarchyController` encapsulates hierarchy panel open/close, list/rename, input handling, and panel drawing.
+- `EditorAssetBrowserController` encapsulates asset browser filtering/selection/placement flow.
+- `EditorSearchController` encapsulates command palette + find-everything + panel-search orchestration.
+- `CommandPaletteController` encapsulates debug command palette prompt/selection handling.
+- `ProblemsController` encapsulates Problems panel state, scans, input routing, and preview/solve logic.
+
 ### Narrative Editing (Dialogue & Quests)
 
 - Press `D` when a `Dialogue`-enabled entity is selected to open the dialogue panel.
@@ -402,6 +494,7 @@ The engine includes a lightweight in-game editor for tweaking scenes.
 - Scenes can define a top-level `lights` array: each entry `{ "x": 100, "y": 120, "radius": 160, "color": "#ffaa66", "mode": "soft" }`.
 - A `LightSource` behaviour can be attached to entities; config fields: `radius`, `color`, `mode`, `offset_x`, `offset_y`, `enabled`.
 - Lighting uses Arcade's LightLayer; ambient and enable/disable flags live in `config.json` (`lighting_enabled`, `lighting_ambient_color`).
+- Lighting helpers live in `engine/lighting/types.py` (types), `engine/lighting/cookies.py` (light cookies), `engine/lighting/shafts.py` (light shafts), `engine/lighting/shadow_pipeline.py` (shadow rendering), `engine/lighting/shadow_selection.py` (shadow-light selection), `engine/lighting/occluder_utils.py` (occluder parsing), `engine/lighting/occluder_layer_builder.py` (occluder layer rebuild), `engine/lighting/static_light_builder.py` (static/dynamic light rebuild), `engine/lighting/lighting_stats.py` (lighting stats aggregation), `engine/lighting/polygon_raycaster.py` (shadow polygon ray-casting), `engine/lighting/shadowcast_snapshot.py` (shadowcast debug snapshot), and `engine/lighting/lighting_snapshot.py` (lighting state snapshot), all re-exported/used by `engine/lighting/__init__.py`.
 - Editor Lights Tool (`L`): toggle lights mode, click empty space to add a light, click/drag to move, `Del` to remove, `Up/Down` (Shift for bigger steps) to change radius, `M` toggles mode, `C` cycles preset colors. Undo/redo works like other tools; save with `F6`.
 - Day/Night: global cycle (config flags `day_night_enabled`, `day_length_seconds`, `day_start_hour`) interpolates ambient lighting over 24h. Scenes can override with `settings.time_of_day_hour`, `settings.day_night_enabled`, and `settings.day_night_cycle_length_seconds`. Dev console: `time_of_day`, `set_time_of_day <hour>`, `daynight on|off` (alias `day_night` on/off). Time-of-day persists in game state as `time_of_day_hours`.
 - Behaviour: `ToggleSceneLights` listens for an event (`listen_event`) and toggles/forces on/off lights matching a `group` or `indices` in `scene.lights`. Mode options: `toggle`, `on`, `off`. Useful with `ToggleSwitch`/`TriggerZone` to drive torches or alarms.

@@ -84,6 +84,10 @@ def normalize_stages(root: Any) -> list[dict[str, Any]]:
             or entry.get("reqs")
             or entry.get("conditions"),
         )
+        # Preserve emit_events_on_complete for QuestRunner
+        emit_events = entry.get("emit_events_on_complete", [])
+        if not isinstance(emit_events, list):
+            emit_events = []
         normalized.append(
             {
                 "id": stage_id,
@@ -93,10 +97,10 @@ def normalize_stages(root: Any) -> list[dict[str, Any]]:
                 "start_event": start_trigger,
                 "complete_event": complete_trigger,
                 "requirements": requirements,
+                "emit_events_on_complete": emit_events,
             },
         )
     return normalized
-
 
 def normalize_event_trigger(value: Any) -> dict[str, Any] | None:
     if value is None:

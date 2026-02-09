@@ -40,7 +40,9 @@ __all__ = [
     "normalize_committed_filename",
     "is_reserved_filename",
     "contains_path_separators",
+    "compute_committed_name_for_path",
 ]
+
 
 # Characters not allowed in filenames (Windows-compatible)
 INVALID_FILENAME_CHARS = frozenset('<>:"/\\|?*')
@@ -62,6 +64,7 @@ class InlineRenameState:
         selection_start: Start index of selection in current_text.
         selection_end: End index of selection in current_text.
         anchor_idx: Anchor position for shift-selection (None if no anchor).
+        is_dir: Whether the renaming item is a directory.
     
     The caret is always at selection_end. When shift-selecting, anchor_idx
     marks the fixed end of the selection while selection_end moves.
@@ -74,6 +77,7 @@ class InlineRenameState:
     selection_start: int
     selection_end: int
     anchor_idx: Optional[int] = None
+    is_dir: bool = False
 
 
 def _normalize_path(path: str) -> str:
@@ -83,16 +87,16 @@ def _normalize_path(path: str) -> str:
     return path.replace("\\", "/").strip()
 
 
-def is_renameable_path(path: str) -> bool:
+def is_renameable_path(path: str, is_dir: bool = False) -> bool:
     """Check if a path can be renamed.
     
     A path is renameable if:
     - It's not empty after normalization
-    - It's a file path (doesn't end with /)
     - It has a filename component
     
     Args:
         path: The relative path to check.
+        is_dir: Whether the path represents a directory.
         
     Returns:
         True if the path can be renamed, False otherwise.
@@ -100,12 +104,18 @@ def is_renameable_path(path: str) -> bool:
     norm = _normalize_path(path)
     if not norm:
         return False
-    # Don't allow renaming directories
+    
+    # If it is a directory path ending with /, strip it
     if norm.endswith("/"):
+        norm = norm[:-1]
+        
+    if not norm: # Was just a root slash
         return False
-    # Must have a filename
+
+    # Must have a filename component
     filename = norm.rsplit("/", 1)[-1] if "/" in norm else norm
     return bool(filename)
+
 
 
 def split_basename_ext(filename: str) -> Tuple[str, str]:
@@ -153,11 +163,12 @@ def split_basename_ext(filename: str) -> Tuple[str, str]:
     return (stem, ext)
 
 
-def compute_initial_rename_text(path: str) -> Tuple[str, str, str]:
+def compute_initial_rename_text(path: str, is_dir: bool = False) -> Tuple[str, str, str]:
     """Compute the initial text for the rename editor.
     
     Args:
         path: The relative path being renamed.
+        is_dir: Whether the item is a directory.
         
     Returns:
         Tuple of (stem, extension, basename) where:
@@ -169,8 +180,17 @@ def compute_initial_rename_text(path: str) -> Tuple[str, str, str]:
     if not norm:
         return ("", "", "")
     
+    # Strip trailing slash if present for directories
+    if norm.endswith("/"):
+        norm = norm[:-1]
+    
     # Extract filename
     basename = norm.rsplit("/", 1)[-1] if "/" in norm else norm
+    
+    if is_dir:
+        # Directories don't have extensions logic for rename
+        return (basename, "", basename)
+    
     stem, ext = split_basename_ext(basename)
     
     return (stem, ext, basename)
@@ -259,7 +279,8 @@ def contains_path_separators(name: str) -> bool:
 def should_commit_rename(
     original_stem: str,
     current_text: str,
-    original_ext: str,
+    original_ext: str = "",
+    is_dir: bool = False,
 ) -> Tuple[bool, Optional[str], Optional[str]]:
     """Determine if a rename should be committed.
     
@@ -267,6 +288,7 @@ def should_commit_rename(
         original_stem: The original filename stem.
         current_text: The current text in the editor.
         original_ext: The preserved extension.
+        is_dir: Whether renaming a directory.
         
     Returns:
         Tuple of (should_commit, normalized_name, error_message).
@@ -274,7 +296,7 @@ def should_commit_rename(
     """
     # Reject path separators / drive-ish characters in raw input
     if contains_path_separators(current_text):
-        return (False, None, "Filename cannot be empty")
+        return (False, None, "Filename cannot contain path separators")
 
     # Sanitize the editable part
     sanitized = sanitize_rename_input(current_text)
@@ -283,21 +305,28 @@ def should_commit_rename(
     # Reject empty stem after sanitization/normalization
     if not stem_normalized:
         return (False, None, "Filename cannot be empty")
-
-    # Build candidate name with extension preservation
-    candidate = apply_extension_preservation(stem_normalized, original_ext)
+    
+    # Build candidate name
+    if is_dir:
+        # Directories use stem as-is (no extension append)
+        candidate = stem_normalized
+    else:
+        # Files append extension
+        candidate = apply_extension_preservation(stem_normalized, original_ext)
+        
     normalized = normalize_committed_filename(candidate)
 
     # Cannot be empty or reserved after normalization
     if is_reserved_filename(normalized):
-        return (False, None, "Filename cannot be empty")
+        return (False, None, "Filename reserved or invalid")
 
     # Reject path separators / drive-ish characters
     if contains_path_separators(normalized):
-        return (False, None, "Filename cannot be empty")
+        return (False, None, "Filename cannot contain path separators")
 
     # Check for invalid characters (shouldn't happen if sanitize is used)
     for ch in INVALID_FILENAME_CHARS:
+
         if ch in normalized:
             return (False, None, f"Invalid character: {ch}")
 
@@ -343,21 +372,44 @@ def build_new_path(original_path: str, new_basename: str) -> str:
         return new_basename
 
 
-def create_inline_rename_state(path: str) -> Optional[InlineRenameState]:
-    """Create an initial inline rename state for a path.
+def compute_committed_name_for_path(original_path: str, edited_text: str, is_dir: bool = False) -> str:
+    """Compute the final committed name given the edited text.
     
     Args:
-        path: The relative path to rename.
+        original_path: The original path.
+        edited_text: The edited text (stem).
+        is_dir: Whether it's a directory.
         
+    Returns:
+        The final filename (including extension if file).
+    """
+    if is_dir:
+        return normalize_committed_filename(edited_text)
+        
+    # Recompute extension
+    _, _, basename = compute_initial_rename_text(original_path, is_dir=False)
+    _, ext = split_basename_ext(basename)
+    
+    candidate = apply_extension_preservation(normalize_committed_filename(edited_text), ext)
+    return normalize_committed_filename(candidate)
+
+
+def create_inline_rename_state(path: str, is_dir: bool = False) -> Optional[InlineRenameState]:
+    """Create an initial inline rename state for a path.
+
+    Args:
+        path: The relative path to rename.
+        is_dir: Whether the item is a directory.
+
     Returns:
         InlineRenameState if path is renameable, None otherwise.
     """
-    if not is_renameable_path(path):
+    if not is_renameable_path(path, is_dir=is_dir):
         return None
-    
-    stem, ext, basename = compute_initial_rename_text(path)
+
+    stem, ext, basename = compute_initial_rename_text(path, is_dir=is_dir)
     sel_start, sel_end = compute_rename_selection(stem)
-    
+
     return InlineRenameState(
         original_path=_normalize_path(path),
         original_basename=basename,
@@ -366,6 +418,7 @@ def create_inline_rename_state(path: str) -> Optional[InlineRenameState]:
         current_text=stem,
         selection_start=sel_start,
         selection_end=sel_end,
+        is_dir=is_dir,
     )
 
 

@@ -85,7 +85,6 @@ def run_check(world_path: str = "worlds/main_world.json", full: bool = False, re
         # The lock stores overrides as a dict.
         if existing_lock.get("overrides") != current_lock.get("overrides"):
              print("[Mesh][Check] Lock mismatch: Overrides differ.")
-             # TODO: detailed diff?
              mismatch = True
 
         if mismatch:

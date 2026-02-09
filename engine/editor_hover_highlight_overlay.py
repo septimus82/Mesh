@@ -16,6 +16,27 @@ from engine.editor_hover_highlight_model import (
     is_ui_blocked,
     resolve_hover_highlights,
 )
+from engine.editor.editor_hover_dock_tab_query import (
+    get_hovered_dock_tab,
+    get_hovered_dock_tab_rect,
+)
+from engine.editor.editor_hover_query import (
+    get_hovered_entity_id,
+    get_hovered_entity_rect,
+    get_hovered_inspector_field_key,
+    get_hovered_inspector_field_rect,
+    get_hovered_splitter,
+    get_hovered_splitter_rect,
+)
+from engine.editor.editor_menu_hover_query import (
+    get_context_menu_hover_id,
+    get_context_menu_hover_rect,
+    get_menu_hover_item_id,
+    get_menu_hover_item_rect,
+    get_menu_hover_title,
+    get_menu_hover_title_rect,
+)
+from engine.editor.editor_modal_state_query import get_active_menu_id
 from engine.logging_tools import get_logger
 
 if TYPE_CHECKING:
@@ -247,70 +268,73 @@ class EditorHoverHighlightOverlay:
         """Get hovered menu title from controller."""
         # Menu bar highlighting uses _menu_hover_item_id for both title and items
         # The title is hovered when menu is not active but hovering on title
-        menu_active = getattr(controller, "_menu_active", False)
-        if not menu_active:
+        active_menu = get_active_menu_id(controller)
+        if not active_menu:
             # Check if hovering menu title (not item)
-            return getattr(controller, "_menu_hover_title", None)
+            return get_menu_hover_title(controller)
         return None
 
     def _get_hovered_menu_title_rect(self, controller: Any) -> Tuple[float, float, float, float] | None:
         """Get hovered menu title rect from controller."""
-        return getattr(controller, "_menu_hover_title_rect", None)
+        return get_menu_hover_title_rect(controller)
 
     def _get_hovered_menu_item_id(self, controller: Any) -> str | None:
         """Get hovered menu item ID from controller."""
-        menu_active = getattr(controller, "_menu_active", False)
-        if menu_active:
-            return getattr(controller, "_menu_hover_item_id", None)
+        active_menu = get_active_menu_id(controller)
+        if active_menu:
+            return get_menu_hover_item_id(controller)
         return None
 
     def _get_hovered_menu_item_rect(self, controller: Any) -> Tuple[float, float, float, float] | None:
         """Get hovered menu item rect from controller."""
-        return getattr(controller, "_menu_hover_item_rect", None)
+        return get_menu_hover_item_rect(controller)
 
     def _get_hovered_top_bar_control_id(self, controller: Any) -> str | None:
         """Get hovered top bar control ID from controller."""
-        return getattr(controller, "_hover_top_bar_control_id", None)
+        from engine.editor.editor_hover_query import get_hovered_top_bar_control_id  # noqa: PLC0415
+
+        return get_hovered_top_bar_control_id(controller)
 
     def _get_hovered_context_item_id(self, controller: Any) -> str | None:
         """Get hovered context menu item ID from controller."""
-        context_open = getattr(controller, "_context_menu_open", False)
-        if context_open:
-            return getattr(controller, "_context_menu_hover_id", None)
+        from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
+
+        if panels_is_open(controller, "context_menu"):
+            return get_context_menu_hover_id(controller)
         return None
 
     def _get_hovered_context_item_rect(self, controller: Any) -> Tuple[float, float, float, float] | None:
         """Get hovered context menu item rect from controller."""
-        return getattr(controller, "_hover_context_item_rect", None)
+        return get_context_menu_hover_rect(controller)
 
     def _get_hovered_dock_tab(self, controller: Any) -> Tuple[str, str] | None:
         """Get hovered dock tab (side, name) from controller."""
-        return getattr(controller, "_hover_dock_tab", None)
+        return get_hovered_dock_tab(controller)
 
     def _get_hovered_dock_tab_rect(self, controller: Any) -> Tuple[float, float, float, float] | None:
         """Get hovered dock tab rect from controller."""
-        return getattr(controller, "_hover_dock_tab_rect", None)
+        return get_hovered_dock_tab_rect(controller)
 
     def _get_hovered_splitter(self, controller: Any) -> str | None:
         """Get hovered splitter side from controller."""
-        return getattr(controller, "_hover_splitter", None)
+        return get_hovered_splitter(controller)
 
     def _get_hovered_splitter_rect(self, controller: Any) -> Tuple[float, float, float, float] | None:
         """Get hovered splitter rect from controller."""
-        return getattr(controller, "_hover_splitter_rect", None)
+        return get_hovered_splitter_rect(controller)
 
     def _get_hovered_inspector_field_key(self, controller: Any) -> str | None:
         """Get hovered inspector field key from controller."""
-        return getattr(controller, "_hover_inspector_field_key", None)
+        return get_hovered_inspector_field_key(controller)
 
     def _get_hovered_inspector_field_rect(self, controller: Any) -> Tuple[float, float, float, float] | None:
         """Get hovered inspector field rect from controller."""
-        return getattr(controller, "_hover_inspector_field_rect", None)
+        return get_hovered_inspector_field_rect(controller)
 
     def _get_hovered_entity_id(self, controller: Any) -> str | None:
         """Get hovered entity ID from controller."""
-        return getattr(controller, "_hover_entity_id", None)
+        return get_hovered_entity_id(controller)
 
     def _get_hovered_entity_rect(self, controller: Any) -> Tuple[float, float, float, float] | None:
         """Get hovered entity rect (world coords) from controller."""
-        return getattr(controller, "_hover_entity_rect", None)
+        return get_hovered_entity_rect(controller)

@@ -715,10 +715,9 @@ class DevBrowserOverlay(UIElement):
 
     def _queue_scene_change(self, scene_path: str, *, spawn_id: str | None = None) -> None:
         scene_path = str(scene_path).strip().replace("\\", "/")
-        controller = getattr(self.window, "scene_controller", None)
-        queue = getattr(controller, "queue_scene_change", None) if controller is not None else None
-        if callable(queue):
-            queue(scene_path, spawn_id=spawn_id or "default")
+        requester = getattr(self.window, "queue_scene_change", None)
+        if callable(requester):
+            requester(scene_path, spawn_id=spawn_id or "default")
         else:
             self.window.request_scene_change(scene_path)
 

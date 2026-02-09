@@ -52,6 +52,10 @@ class SceneExit(Behaviour):
     def _on_event(self, event: Any) -> None:
         if not self._target_scene:
             return
+        queue = getattr(self.window, "queue_scene_change", None)
+        if callable(queue):
+            queue(self._target_scene, spawn_id=self._target_spawn)
+            return
         scene_controller = getattr(self.window, "scene_controller", None)
         if scene_controller is None:
             return

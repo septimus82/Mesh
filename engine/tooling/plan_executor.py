@@ -409,7 +409,7 @@ class PlanExecutor:
         if path.exists():
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
-            except:
+            except Exception:
                 pass
 
         if not any(q["id"] == args["id"] for q in data.get("quests", [])):

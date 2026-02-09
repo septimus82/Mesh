@@ -213,6 +213,70 @@ class QuestManager:
             )
         return entries
 
+    def get_inspector_state(self) -> dict[str, Any]:
+        """Return read-only quest status summary for editor inspector.
+        
+        This provides a comprehensive overview of all quests and their
+        current state, suitable for debugging and editor tooling.
+        
+        Returns:
+            Dictionary with quest summaries, counts, and metadata.
+        """
+        quests: list[dict[str, Any]] = []
+        active_count = 0
+        completed_count = 0
+        inactive_count = 0
+        
+        for quest_id, quest in self._definitions.items():
+            state = self._ensure_state(quest_id)
+            status = state.get("status", "inactive")
+            
+            if status == "active":
+                active_count += 1
+            elif status == "completed":
+                completed_count += 1
+            else:
+                inactive_count += 1
+            
+            current_stage = state.get("current_stage")
+            awaiting_stage = state.get("awaiting_stage")
+            completed_stages = state.get("completed_stages", [])
+            total_stages = len(quest.get("stages", []))
+            
+            # Get current stage info
+            stage_info: dict[str, Any] | None = None
+            if current_stage:
+                stage_def = quest["stage_lookup"].get(current_stage)
+                if stage_def:
+                    stage_info = {
+                        "id": current_stage,
+                        "title": stage_def.get("title", current_stage),
+                        "text": stage_def.get("text", ""),
+                        "has_complete_trigger": stage_def.get("complete_event") is not None,
+                        "has_requirements": bool(stage_def.get("requirements")),
+                    }
+            
+            quests.append({
+                "id": quest_id,
+                "title": quest.get("title", quest_id),
+                "status": status,
+                "progress": f"{len(completed_stages)}/{total_stages}",
+                "progress_pct": len(completed_stages) / total_stages if total_stages > 0 else 0.0,
+                "current_stage": stage_info,
+                "awaiting_stage": awaiting_stage,
+                "completed_stages": list(completed_stages),
+                "requires_flags": quest.get("requires_flags", []),
+                "blocks_flags": quest.get("blocks_flags", []),
+            })
+        
+        return {
+            "total_quests": len(self._definitions),
+            "active_count": active_count,
+            "completed_count": completed_count,
+            "inactive_count": inactive_count,
+            "quests": quests,
+        }
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -222,7 +286,8 @@ class QuestManager:
             return {}
         try:
             with path.open("r", encoding="utf-8") as handle:
-                return json.load(handle)
+                result = json.load(handle)
+                return result if isinstance(result, dict) else {}
         except OSError as exc:
             print(f"[Mesh][Quests] Failed to read {path}: {exc}")
         except json.JSONDecodeError as exc:

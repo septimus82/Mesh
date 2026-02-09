@@ -1,4 +1,45 @@
-"""Camera controller for Mesh Engine."""
+"""Camera controller for Mesh Engine.
+
+Provides smooth camera following, zoom control, screen shake, and camera areas
+for dynamic viewport management during gameplay.
+
+Key Features:
+    - **Smooth Follow**: Lerp-based following with configurable strength
+    - **Zoom Control**: Animated zoom with min/max bounds
+    - **Screen Shake**: Both legacy (duration-based) and trauma-based systems
+    - **Camera Areas**: Named regions with custom zoom/lerp overrides
+    - **Bounds Clamping**: Keep camera within world boundaries
+    - **Deadzone**: Prevent camera jitter for small movements
+
+Architecture:
+    The controller wraps Arcade's Camera2D and adds game-specific features.
+    It maintains separate cameras for world rendering and GUI overlay.
+
+Usage Example::
+
+    # In game update loop
+    camera = window.camera_controller
+
+    # Follow player with smooth interpolation
+    camera.update_camera_follow(
+        target_x=player.center_x,
+        target_y=player.center_y,
+        dt=delta_time,
+        lerp_factor=5.0,
+        deadzone_px=20,
+    )
+
+    # Add screen shake on hit
+    camera.shake_state.add_trauma(0.3)
+
+    # Zoom in for dramatic moment
+    camera.zoom_state.target = 1.5
+
+See Also:
+    - :class:`CameraArea` for defining custom camera zones
+    - :class:`CameraShakeState` for shake configuration
+    - Scene JSON ``settings.camera`` for per-scene camera config
+"""
 
 from __future__ import annotations
 
@@ -33,6 +74,45 @@ if ArcadeCamera is None:  # pragma: no cover - only used when optional_arcade.ar
 
 @dataclass(slots=True)
 class CameraArea:
+    """Defines a rectangular region with custom camera behavior.
+
+    Camera areas allow different parts of a scene to have unique camera
+    settings. When the follow target enters an area, the camera smoothly
+    transitions to that area's zoom/lerp settings.
+
+    Use cases:
+        - Boss arenas with locked zoom
+        - Scenic overlooks with wide zoom-out
+        - Tight corridors with faster camera response
+        - Cutscene triggers with specific framing
+
+    Attributes:
+        name: Unique identifier for debugging and transitions.
+        x: Left edge of the area in world coordinates.
+        y: Bottom edge of the area in world coordinates.
+        width: Width of the area in pixels.
+        height: Height of the area in pixels.
+        zoom: Optional zoom override when inside this area.
+        lerp_factor: Optional camera follow speed override.
+        padding: Additional padding from area edges.
+        priority: Higher priority areas take precedence when overlapping.
+
+    Example (in scene JSON)::
+
+        "settings": {
+            "camera": {
+                "areas": [
+                    {
+                        "name": "boss_arena",
+                        "x": 800, "y": 0,
+                        "width": 400, "height": 300,
+                        "zoom": 0.8,
+                        "priority": 10
+                    }
+                ]
+            }
+        }
+    """
     name: str
     x: float
     y: float
@@ -45,15 +125,40 @@ class CameraArea:
 
     @property
     def bounds(self) -> tuple[float, float, float, float]:
+        """Return area bounds as (left, bottom, right, top)."""
         return (self.x, self.y, self.x + self.width, self.y + self.height)
 
     def contains(self, x: float, y: float) -> bool:
+        """Check if a point is inside this area."""
         left, bottom, right, top = self.bounds
         return left <= x <= right and bottom <= y <= top
 
 
 @dataclass(slots=True)
 class CameraZoomState:
+    """Manages animated zoom transitions for the camera.
+
+    Zoom smoothly interpolates from ``current`` toward ``target`` each frame.
+    Values are clamped between ``min_zoom`` and ``max_zoom``.
+
+    Attributes:
+        current: Current zoom level (1.0 = 100%, 2.0 = 200% magnification).
+        target: Desired zoom level to animate toward.
+        speed: Interpolation speed (higher = faster zoom transitions).
+        min_zoom: Minimum allowed zoom (default 0.25 = 25%).
+        max_zoom: Maximum allowed zoom (default 4.0 = 400%).
+
+    Example::
+
+        # Zoom in for dramatic effect
+        zoom_state.target = 1.5
+
+        # Zoom out for overview
+        zoom_state.target = 0.5
+
+        # Instant zoom (bypass animation)
+        zoom_state.current = zoom_state.target = 2.0
+    """
     current: float = 1.0
     target: float = 1.0
     speed: float = 5.0
@@ -61,12 +166,58 @@ class CameraZoomState:
     max_zoom: float = 4.0
 
     def clamp(self, value: float) -> float:
+        """Clamp a zoom value to the allowed range."""
         return min(self.max_zoom, max(self.min_zoom, value))
 
 
 @dataclass(slots=True)
 class CameraShakeState:
-    """Simple procedural shake envelope."""
+    """Manages screen shake effects using both legacy and trauma systems.
+
+    Two shake systems are available:
+
+    **Legacy System** (duration-based):
+        Set duration, amplitude, and frequency for a fixed-length shake.
+        Uses sinusoidal oscillation with configurable falloff.
+
+    **Trauma System** (recommended):
+        Add "trauma" (0.0-1.0) which naturally decays over time.
+        Shake intensity is trauma squared for natural feel.
+        More flexible for stacking multiple damage sources.
+
+    The trauma system is preferred for gameplay as it:
+        - Stacks naturally (multiple hits add trauma)
+        - Has smooth organic decay
+        - Produces more cinematic results
+
+    Attributes:
+        timer: Current time into legacy shake.
+        duration: Total legacy shake duration.
+        amplitude: Legacy shake magnitude in pixels.
+        frequency: Legacy shake oscillation speed.
+        falloff: Legacy amplitude decay rate.
+        offset_x, offset_y: Current frame's shake offset.
+        trauma: Current trauma value (0.0-1.0).
+        trauma_decay: How fast trauma decreases per second.
+        trauma_max_offset: Maximum pixel offset at full trauma.
+        trauma_frequency: Noise sampling frequency.
+
+    Example::
+
+        # Add trauma from taking damage
+        shake.add_trauma(0.3)  # 30% trauma
+
+        # Big hit adds more, naturally caps at 1.0
+        shake.add_trauma(0.5)  # Now at 80% trauma
+
+        # Configure trauma behavior
+        shake.add_trauma(
+            0.4,
+            decay=2.0,        # Faster decay
+            max_offset=20.0,  # Stronger shake
+            seed=12345,       # Deterministic for replay
+        )
+    """
 
     timer: float = 0.0
     duration: float = 0.0
@@ -85,10 +236,12 @@ class CameraShakeState:
     rng: random.Random = field(default_factory=random.Random, repr=False)
 
     def reset(self) -> None:
+        """Reset both legacy and trauma shake to idle state."""
         self.reset_legacy()
         self.reset_trauma()
 
     def reset_legacy(self) -> None:
+        """Reset only legacy shake parameters."""
         self.timer = 0.0
         self.duration = 0.0
         self.amplitude = 0.0
@@ -98,12 +251,14 @@ class CameraShakeState:
         self.offset_y = 0.0
 
     def reset_trauma(self) -> None:
+        """Reset only trauma shake parameters."""
         self.trauma = 0.0
         self.trauma_timer = 0.0
         self.trauma_angle = 0.0
         self.trauma_scale = 1.0
 
     def set_seed(self, seed: int | None) -> None:
+        """Set RNG seed for deterministic shake (useful for replays)."""
         if seed is None:
             return
         self.rng.seed(int(seed))
@@ -117,6 +272,18 @@ class CameraShakeState:
         frequency: float | None = None,
         seed: int | None = None,
     ) -> None:
+        """Add trauma to trigger/intensify screen shake.
+
+        Trauma values stack additively but are capped at 1.0.
+        Shake intensity scales with trauma squared for natural feel.
+
+        Args:
+            amount: Trauma to add (0.0-1.0 scale, but can exceed).
+            decay: Override trauma decay rate (higher = faster settle).
+            max_offset: Override maximum pixel offset at full trauma.
+            frequency: Override noise sampling frequency.
+            seed: Set RNG seed for deterministic behavior.
+        """
         if decay is not None:
             self.trauma_decay = max(0.0, float(decay))
         if max_offset is not None:
@@ -129,7 +296,50 @@ class CameraShakeState:
 
 
 class CameraController:
+    """Main camera controller managing viewport, follow, zoom, and shake.
+
+    Wraps Arcade's camera system with game-specific features including
+    smooth following, animated zoom, screen shake, camera areas, and
+    world bounds clamping.
+
+    Attributes:
+        window: Reference to the main game window.
+        camera: Arcade camera for world rendering.
+        gui_camera: Separate camera for UI (unaffected by shake/zoom).
+        zoom_state: Current zoom configuration and animation state.
+        shake_state: Screen shake configuration and current offsets.
+        areas: List of CameraArea zones with custom settings.
+        active_area: Currently active camera area (or None for default).
+        bounds: Optional (left, bottom, right, top) world bounds.
+
+    Example::
+
+        controller = CameraController(window)
+
+        # Configure bounds from scene
+        controller.bounds = (0, 0, 1600, 900)
+
+        # Add camera areas
+        controller.areas.append(CameraArea(
+            name="boss_room",
+            x=1200, y=0, width=400, height=300,
+            zoom=0.75
+        ))
+
+        # In update loop
+        controller.update_camera_follow(
+            target_x=player.center_x,
+            target_y=player.center_y,
+            dt=delta_time
+        )
+    """
+
     def __init__(self, window: GameWindow) -> None:
+        """Initialize the camera controller.
+
+        Args:
+            window: The main game window to attach cameras to.
+        """
         self.window = window
         if _CAMERA_NEEDS_DIMENSIONS:
             self.camera = ArcadeCamera(window.width, window.height)
@@ -168,6 +378,33 @@ class CameraController:
         min_zoom: float | None = None,
         max_zoom: float | None = None,
     ) -> None:
+        """Update camera position to follow a target with smooth interpolation.
+
+        Call this each frame in the game update loop. The camera smoothly
+        moves toward the target position, respecting bounds, deadzones,
+        and camera area overrides.
+
+        Args:
+            target_x: Target X position to follow (usually player.center_x).
+            target_y: Target Y position to follow (usually player.center_y).
+            dt: Delta time in seconds since last frame.
+            lerp_factor: Follow speed multiplier (higher = snappier).
+            follow_strength: Alias for lerp_factor.
+            deadzone_px: Symmetric deadzone radius (no movement if target
+                within this distance of camera center).
+            deadzone_w: Deadzone width (for asymmetric deadzones).
+            deadzone_h: Deadzone height (for asymmetric deadzones).
+            max_speed: Maximum camera movement speed in pixels/second.
+            padding: Extra padding from world bounds.
+            zoom: Target zoom level to animate toward.
+            zoom_speed: Zoom interpolation speed.
+            min_zoom: Override minimum zoom limit.
+            max_zoom: Override maximum zoom limit.
+
+        Note:
+            If the target is inside a :class:`CameraArea`, that area's
+            zoom and lerp_factor settings will override parameters.
+        """
         camera = self.camera
         if camera is None:
             # print("[Mesh][Camera] WARNING: update_camera_follow called with no camera present")

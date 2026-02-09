@@ -6,6 +6,7 @@ Tests the editor controller alt-drag duplicate flow - headless, no arcade render
 from __future__ import annotations
 
 import copy
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -94,6 +95,12 @@ class FakeEditorController:
         self._selected_entity_ids: list[str] = []
         self._primary_entity_id: str | None = None
         self.selected_entity: FakeSprite | None = None
+        self._context_menu_open = False
+        self.panels = SimpleNamespace(
+            is_context_menu_open=lambda: self._context_menu_open,
+            open_context_menu=self._open_context_menu_panel,
+            close_context_menu=self._close_context_menu_panel,
+        )
 
         # Alt-drag duplicate state
         self._alt_dup_active = False
@@ -314,6 +321,12 @@ class FakeEditorController:
         self._alt_dup_last_world = None
         self._alt_dup_original_selection = None
         self._alt_dup_original_primary = None
+
+    def _open_context_menu_panel(self) -> None:
+        self._context_menu_open = True
+
+    def _close_context_menu_panel(self) -> None:
+        self._context_menu_open = False
 
     def undo(self) -> None:
         """Undo the last command."""

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "test_hero",
+    "tags": ["player"],
+    "metadata": {"author": "test"},
+    "display_name": "Test Hero",
+    "entity": {
+      "sprite": "assets/sprites/test_hero.png",
+      "behaviours": ["PlayerController"]
+    }
+  },
+  {
+    "id": "test_enemy",
+    "tags": ["enemy"],
+    "metadata": {"author": "test"},
+    "display_name": "Test Enemy",
+    "entity": {
+      "sprite": "assets/sprites/test_enemy.png",
+      "behaviours": []
+    }
+  },
+  {
+    "id": "test_broken",
+    "tags": ["broken"],
+    "metadata": {"author": "test"},
+    "display_name": "Test Broken Prefab",
+    "entity": {
+      "sprite": "assets/sprites/nonexistent_sprite.png",
+      "behaviours": []
+    }
+  }
+]

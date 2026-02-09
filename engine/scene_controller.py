@@ -1,3 +1,58 @@
+"""Scene controller for managing entities, layers, and scene lifecycle.
+
+The SceneController is the central hub for runtime scene management, handling:
+
+- **Scene Loading**: Parse JSON scenes into sprite entities with behaviours
+- **Layer Management**: Organize sprites into named layers (background/entities/foreground)
+- **Entity Lifecycle**: Create, update, and destroy entities and their behaviours
+- **Tilemap Integration**: Load and render tilemaps with collision detection
+- **Scene Transitions**: Queue and execute scene changes with fade effects
+- **HD-2D Rendering**: Support for depth sorting, shadows, parallax, and outlines
+- **Pathfinding**: Build and cache navigation grids for AI movement
+
+Architecture:
+    The SceneController maintains the runtime representation of a scene,
+    separate from the JSON source. It coordinates with:
+    - :class:`SceneLoader` for parsing scene JSON
+    - :class:`PrefabManager` for entity template resolution
+    - :class:`TilemapManager` for tileset loading
+    - :class:`LightManager` for dynamic lighting
+    - :class:`SensorRuntime` for trigger zone detection
+
+Scene JSON Format::
+
+    {
+        "name": "My Scene",
+        "version": 1,
+        "settings": {
+            "world_width": 1600,
+            "world_height": 900,
+            "background_color": "dark_blue_gray",
+            "render_sort_mode": "y_sort"
+        },
+        "layers": [
+            {"name": "background"},
+            {"name": "entities"},
+            {"name": "foreground"}
+        ],
+        "entities": [
+            {"name": "Player", "x": 100, "y": 200, "prefab": "p_player"},
+            {"name": "NPC", "x": 300, "y": 200, "prefab": "p_npc_guard"}
+        ],
+        "tilemap": { ... }
+    }
+
+Key Methods:
+    - :meth:`load_scene`: Load a scene from JSON path
+    - :meth:`request_scene_change`: Queue transition to another scene
+    - :meth:`get_entity_by_name`: Find an entity sprite by name
+    - :meth:`spawn_entity`: Create a new entity at runtime
+
+See Also:
+    - :doc:`docs/scenes` for scene format documentation
+    - :doc:`docs/mesh_scene_spec` for complete schema reference
+"""
+
 from __future__ import annotations
 
 import copy
@@ -20,6 +75,9 @@ from .scene_runtime.transitions import queue_scene_change as _queue_scene_change
 from .scene_runtime.transitions import reload_scene as _reload_scene_runtime
 from .scene_runtime.transitions import request_scene_change as _request_scene_change_runtime
 from .scene_runtime.transitions import request_scene_reload as _request_scene_reload_runtime
+from .scene_lifecycle_controller import load_scene as _load_scene_runtime
+from .scene_update_controller import SceneUpdateController
+from .scene_entity_store_controller import SceneEntityStoreController
 from .scene_runtime import authoring as _authoring_runtime
 from .scene_runtime.persistence import (
     apply_scene_state as _apply_scene_state_runtime,
@@ -29,6 +87,16 @@ from .scene_runtime.persistence import (
     snapshot_camera_state as _snapshot_camera_state_runtime,
     snapshot_player_state as _snapshot_player_state_runtime,
 )
+
+from .scene_render_pipeline import (
+    build_render_context,
+    compute_draw_plan,
+    execute_draw_plan,
+    execute_background_plan,
+    execute_scene_plan,
+)
+
+from .sensors_runtime import SensorRuntime
 
 from .animation_state import (
     request_animation_state,
@@ -67,7 +135,8 @@ from .tilemap_batch import TilemapBatchState, TilemapBatchStats
 from .tilemap_batch_arcade import TilemapBatcher
 from .background_layers import BackgroundLayer, draw_background_layers, parse_background_layers
 from .culling import Rect, is_sprite_visible, sprite_bounds
-from .pathfinding import NavGrid, NavGridCache, build_nav_grid_from_tilemap_instance
+from .pathfinding import NavGrid
+from .scene_navigation_controller import SceneNavigationController
 from .parallax_model import BackgroundPlane, parse_background_planes, sort_background_planes
 from .render_queue import DrawSpriteCmd
 from .render_sort_model import compute_sprite_render_sort_key
@@ -106,8 +175,54 @@ from .ui import (
 if TYPE_CHECKING:
     from .game import GameWindow
 
+
 class SceneController:
+    """Manages scene loading, entities, layers, and runtime state.
+
+    The SceneController is responsible for:
+    - Loading scenes from JSON and building sprite entities
+    - Managing named sprite layers (background, entities, foreground)
+    - Updating entity behaviours each frame
+    - Handling scene transitions and reloads
+    - Providing entity lookup and iteration utilities
+    - Rendering the scene with HD-2D effects
+
+    Attributes:
+        window: Reference to the main GameWindow.
+        layers: Dict mapping layer names to SpriteLists.
+        solid_sprites: SpriteList of collidable sprites.
+        scene_settings: Current scene's settings dict.
+        current_scene_path: Path to the currently loaded scene.
+        tilemap_instance: Active tilemap (if scene has one).
+        player: Reference to the player sprite (shortcut).
+
+    Example:
+        Get entities and transition scenes::
+
+            # Find an entity
+            npc = scene.get_entity_by_name(\"Guard\")
+
+            # Iterate all entities
+            for sprite in scene.all_sprites:
+                print(sprite.name)
+
+            # Change scenes
+            scene.request_scene_change(\"scenes/dungeon.json\")
+
+            # Spawn entity at runtime
+            scene.spawn_entity({
+                \"name\": \"Projectile\",
+                \"x\": 100, \"y\": 200,
+                \"prefab\": \"p_arrow\"
+            })
+    """
+
     def __init__(self, window: GameWindow):
+        """Initialize the scene controller.
+
+        Args:
+            window: The main game window to attach to.
+        """
         self.window = window
         self.layers: Dict[str, optional_arcade.arcade.SpriteList] = {
             "background": optional_arcade.arcade.SpriteList(),
@@ -128,18 +243,26 @@ class SceneController:
         self._last_hot_reload_error_message: str = ""
         self._last_hot_reload_error_scene: str = ""
 
+        # Tilemap state
         self.tilemap_instance: TilemapInstance | None = None
         self._tilemap_background_layers: list[optional_arcade.arcade.SpriteList] = []
         self._tilemap_foreground_layers: list[optional_arcade.arcade.SpriteList] = []
         self._tilemap_draw_layers: list[TilemapDrawLayer] = []
         self._tilemap_batch_state: TilemapBatchState | None = None
         self._tilemap_batcher: TilemapBatcher | None = None
+
+        # Background/parallax layers
         self._background_layers: list[BackgroundLayer] = []
         self._background_planes: list[BackgroundPlane] = []
         self._background_plane_texture_cache: dict[str, Any] = {}
-        self._nav_grid_cache: NavGridCache[NavGrid] = NavGridCache()
+
+        # Pathfinding cache
+        self.navigation = SceneNavigationController()
+        self.updater = SceneUpdateController()
+        self.entities = SceneEntityStoreController(self)
         self._render_culled_count: int = 0
         self._render_sort_mode: str = "y_sort"  # "y_sort" or "explicit_z"
+        self.sensors_runtime = SensorRuntime()
         self._shadows_enabled: bool = True  # HD-2D sprite drop shadows
         self._shadows_contact_enabled: bool = True  # HD-2D contact shadows (double-layer)
         self._shadows_ao_enabled: bool = False  # HD-2D AO shadow ring (optional)
@@ -241,205 +364,7 @@ class SceneController:
 
     def load_scene(self, scene_path: str) -> Dict[str, Any]:
         """Load entities from a JSON scene file and build sprites for them."""
-        print(f"[Mesh][Scene] Loading scene '{scene_path}'")
-        self._clear_scene_event_subscriptions()
-        try:
-            from engine.lighting.occluders import reset_entity_occluder_cache  # noqa: PLC0415
-
-            reset_entity_occluder_cache()
-        except Exception:  # noqa: BLE001
-            pass
-        scene = self.window.scene_loader.load_scene(scene_path)
-        self.current_scene_path = scene_path
-        self._loaded_scene_data = scene
-        # Keep a stable authored copy for debug authoring tools (avoid persisting runtime-only mutations).
-        self._loaded_scene_source_data = copy.deepcopy(scene) if isinstance(scene, dict) else {}
-        self._background_layers = parse_background_layers(scene)
-        self._background_planes = parse_background_planes(scene)
-        self._background_plane_texture_cache.clear()  # Clear texture cache on scene load
-
-        try:
-            recorder = getattr(self.window, "record_recent_scene", None)
-            if callable(recorder):
-                recorder(scene_path)
-        except Exception:  # noqa: BLE001
-            pass
-
-        self._apply_theme_runtime(scene)
-
-        self.scene_settings = scene.get("settings", {})
-        # Load render sort mode from scene settings
-        raw_sort_mode = self.scene_settings.get("render_sort_mode", "y_sort")
-        self._render_sort_mode = str(raw_sort_mode) if raw_sort_mode in ("y_sort", "explicit_z") else "y_sort"
-        # Load shadows enabled setting (default True)
-        self._shadows_enabled = bool(self.scene_settings.get("shadows_enabled", True))
-        # Load contact shadows setting (default True when shadows enabled)
-        self._shadows_contact_enabled = bool(self.scene_settings.get("shadows_contact_enabled", True))
-        # Load AO shadows setting (default False - subtle, opt-in)
-        self._shadows_ao_enabled = bool(self.scene_settings.get("shadows_ao_enabled", False))
-        # Load depth tint settings (default disabled)
-        self._depth_tint_settings = parse_depth_tint_settings(self.scene_settings)
-        # Load outline settings (default disabled)
-        self._outline_settings = parse_outline_settings(self.scene_settings)
-        self._apply_scene_settings(self.scene_settings)
-        self._apply_scene_state(scene.get("state"))
-        self._configure_camera_from_scene(self.scene_settings)
-
-        # Reset collision rules to default
-        self.collision_rules = dict(self._default_collision_rules)
-        scene_rules = scene.get("collision_rules")
-        if isinstance(scene_rules, dict):
-            self._apply_collision_rules_overrides(scene_rules)
-
-        self.window.world_width = self.scene_settings.get("world_width")
-        self.window.world_height = self.scene_settings.get("world_height")
-        lighting = getattr(self.window, "lighting", None)
-        if lighting is not None:
-            lights_cfg = scene.get("lights")
-            if isinstance(lights_cfg, list):
-                lighting.configure_scene_lights(lights_cfg)
-            else:
-                lighting.configure_scene_lights(None)
-            ambient_tint = None
-            if isinstance(self.scene_settings, dict):
-                ambient_tint = self.scene_settings.get("ambient_light_rgba")
-            if ambient_tint is not None:
-                try:
-                    lighting.set_ambient_tint(ambient_tint)
-                except Exception:  # noqa: BLE001
-                    pass
-
-            occluders_cfg = scene.get("occluders")
-            try:
-                from engine.lighting.occluders import (  # noqa: PLC0415
-                    build_entity_occluders_from_scene_payload,
-                    build_occluders_from_scene_payload,
-                )
-
-                entity_occluders = build_entity_occluders_from_scene_payload(scene)
-            except Exception:  # noqa: BLE001
-                entity_occluders = []
-
-            if "occluders" in scene and isinstance(occluders_cfg, list):
-                merged = list(occluders_cfg)
-                if entity_occluders:
-                    merged.extend(entity_occluders)
-                lighting.configure_scene_occluders(merged)
-            else:
-                try:
-                    revision = int(getattr(self.window, "scene_dirty_counter", 0) or 0)
-                    auto_occluders = build_occluders_from_scene_payload(scene, scene_path=scene_path, revision=revision)
-                    if entity_occluders:
-                        auto_occluders.extend(entity_occluders)
-                    lighting.configure_scene_occluders(auto_occluders)
-                except Exception:  # noqa: BLE001
-                    lighting.configure_scene_occluders(None)
-
-            try:
-                settings_block = scene.get("settings", {})
-                if isinstance(settings_block, dict) and "lighting_shadows_mode" in settings_block:
-                    mode = settings_block.get("lighting_shadows_mode")
-                    setter = getattr(lighting, "set_shadows_mode", None)
-                    if callable(setter):
-                        setter(str(mode))
-                    else:
-                        lighting.shadows_mode = str(mode or "none").strip().lower()
-            except Exception:  # noqa: BLE001
-                pass
-
-        # Handle music
-        music_path = self.scene_settings.get("music")
-        audio = getattr(self.window, "audio", None)
-        if audio is not None:
-            cfg = getattr(self.window, "engine_config", None)
-            crossfade_enabled = bool(getattr(cfg, "music_crossfade_enabled", False))
-            if isinstance(self.scene_settings, dict) and "music_crossfade_enabled" in self.scene_settings:
-                crossfade_enabled = bool(self.scene_settings.get("music_crossfade_enabled"))
-            fade_out_s = float(getattr(cfg, "music_crossfade_out_s", 0.25))
-            fade_in_s = float(getattr(cfg, "music_crossfade_in_s", 0.25))
-            if isinstance(self.scene_settings, dict):
-                if "music_crossfade_out_s" in self.scene_settings:
-                    fade_out_s = float(self.scene_settings.get("music_crossfade_out_s", fade_out_s))
-                if "music_crossfade_in_s" in self.scene_settings:
-                    fade_in_s = float(self.scene_settings.get("music_crossfade_in_s", fade_in_s))
-
-            if music_path:
-                volume = float(self.scene_settings.get("music_volume", 1.0))
-                if crossfade_enabled and hasattr(audio, "transition_music"):
-                    audio.transition_music(
-                        music_path,
-                        fade_out_s=fade_out_s,
-                        fade_in_s=fade_in_s,
-                        volume=volume,
-                    )
-                else:
-                    audio.play_music(music_path, volume=volume)
-            else:
-                # Stop music if scene has none? Or keep playing previous?
-                # Usually we want to stop if explicitly None, but maybe keep if missing?
-                # Let's assume if "music" key is missing, we keep playing.
-                # If "music" is explicitly null/empty, we stop.
-                if "music" in self.scene_settings and not music_path:
-                    if crossfade_enabled and hasattr(audio, "transition_music"):
-                        audio.transition_music("", fade_out_s=fade_out_s, fade_in_s=fade_in_s, volume=0.0)
-                    else:
-                        audio.stop_music()
-
-        self._ensure_layers(scene.get("layers", []))
-        self._clear_layers()
-        scene_dir = Path(scene_path).resolve().parent
-        self._load_tilemap_layers(scene, scene_dir)
-
-        total_spawned = 0
-        from .scene_entity_gating import filter_entities_by_flags  # noqa: PLC0415
-
-        getter = getattr(self.window, "get_flag", None)
-        entities_payload = filter_entities_by_flags(scene.get("entities", []), get_flag=getter if callable(getter) else None)
-        for entity in entities_payload:
-            sprite = self._create_sprite(entity)
-            if not sprite:
-                continue
-            layer_name = entity.get("layer", "entities")
-            if layer_name not in self.layers:
-                print(f"[Mesh][Scene] WARNING: Layer '{layer_name}' missing, creating on the fly")
-                self.layers[layer_name] = optional_arcade.arcade.SpriteList()
-            layer = self.layers[layer_name]
-            layer.append(sprite)
-            is_solid = bool(entity.get("solid", False))
-            sprite.mesh_is_solid = is_solid  # type: ignore[attr-defined]
-            if is_solid:
-                self.solid_sprites.append(sprite)
-            total_spawned += 1
-
-        # Build deterministic per-scene entity index once per load.
-        # Use the same iteration order as legacy lookup paths (layer order).
-        self._scene_index = build_scene_index_from_sprites(self.all_sprites)
-
-        print(f"[Mesh][Scene] Scene ready with {total_spawned} sprite(s)")
-        editor = getattr(self.window, "editor_controller", None)
-        record_recent = getattr(editor, "record_recent_scene", None) if editor is not None else None
-        if callable(record_recent):
-            record_recent(self.current_scene_path)
-        # Auto-apply HD2D defaults if configured and scene lacks HD2D keys
-        auto_apply_hd2d = getattr(editor, "maybe_auto_apply_hd2d_defaults", None) if editor is not None else None
-        if callable(auto_apply_hd2d):
-            try:
-                auto_apply_hd2d()
-            except Exception:  # noqa: BLE001
-                pass
-        self._rebuild_ui_for_scene()
-        maybe_enqueue_controls_hint_toast(self.window, scene_id=self.current_scene_path, seconds=4.0)
-        maybe_enqueue_preset_mode_toast(self.window, scene_id=self.current_scene_path, seconds=4.0)
-        maybe_enqueue_shadowmask_enabled_toast(self.window, seconds=4.0)
-        self._apply_pending_spawn_point()
-        try:
-            from .savegame import _apply_pending_savegame_player_pos  # noqa: PLC0415
-
-            _apply_pending_savegame_player_pos(self.window)
-        except Exception:  # noqa: BLE001
-            pass
-        self.window.clear_input_locks()
-        return scene
+        return _load_scene_runtime(self, scene_path)
 
     def request_scene_reload(self, clear_assets: bool = False) -> None:
         """Request that the currently loaded scene reload on the next frame."""
@@ -448,11 +373,7 @@ class SceneController:
     def get_nav_grid(self) -> NavGrid | None:
         scene_path = self.current_scene_path
         revision = int(getattr(self.window, "scene_dirty_counter", 0) or 0)
-
-        def _build() -> NavGrid | None:
-            return build_nav_grid_from_tilemap_instance(self.tilemap_instance)
-
-        return self._nav_grid_cache.get_or_build(scene_path=scene_path, revision=revision, build=_build)
+        return self.navigation.get_nav_grid(scene_path=scene_path, revision=revision, tilemap_instance=self.tilemap_instance)
 
     @property
     def current_scene_data(self) -> Dict[str, Any] | None:
@@ -470,27 +391,10 @@ class SceneController:
 
     def request_scene_change(self, scene_path: str) -> None:
         """Request that a different scene load on the next frame."""
-        editor = getattr(self.window, "editor_controller", None)
-        if editor is not None and getattr(editor, "active", False):
-            blocker = getattr(editor, "confirm_unsaved_changes", None)
-            if callable(blocker):
-                blocked = blocker("Switch Scene", lambda: _request_scene_change_runtime(self, scene_path))
-                if blocked:
-                    return
         _request_scene_change_runtime(self, scene_path)
 
     def queue_scene_change(self, scene_path: str, spawn_id: str | None = None) -> None:
         """Request that the game switches to another scene at the end of the frame."""
-        editor = getattr(self.window, "editor_controller", None)
-        if editor is not None and getattr(editor, "active", False):
-            blocker = getattr(editor, "confirm_unsaved_changes", None)
-            if callable(blocker):
-                blocked = blocker(
-                    "Switch Scene",
-                    lambda: _queue_scene_change_runtime(self, scene_path, spawn_id=spawn_id),
-                )
-                if blocked:
-                    return
         _queue_scene_change_runtime(self, scene_path, spawn_id=spawn_id)
 
     def _perform_scene_change(self, scene_path: str, spawn_id: str | None = None) -> None:
@@ -506,70 +410,7 @@ class SceneController:
         return _reload_scene_runtime(self, new_path=self.current_scene_path)
 
     def update(self, delta_time: float) -> None:
-        if self._pending_scene_path is not None:
-            path = self._pending_scene_path
-            self._pending_scene_path = None
-            if hasattr(self.window, "_mesh_event_queue"):
-                self.window._mesh_event_queue = []
-
-            # Capture state for hot reload
-            is_reload = (path == self.current_scene_path)
-
-            # Prefer explicitly preserved state (from request_scene_reload), fallback to current
-            saved_state = self._preserved_camera_state
-            self._preserved_camera_state = None
-
-            saved_camera_pos = None
-            saved_zoom = None
-
-            if is_reload:
-                if saved_state:
-                    saved_camera_pos = (saved_state["x"], saved_state["y"])
-                    saved_zoom = saved_state["zoom"]
-                else:
-                    saved_camera_pos = self.window.get_camera_center()
-                    saved_zoom = self.window.camera_controller.zoom_state.current
-
-            if getattr(self.window, "assets", None) is not None and self._clear_assets_on_next_load:
-                print("[Mesh][Assets] Clearing texture cache before reload")
-                self.window.assets.clear()
-                if getattr(self.window, "audio", None) is not None:
-                    self.window.audio.clear_cache()
-            self._clear_assets_on_next_load = False
-
-            print(f"[Mesh][Scene] Loading pending scene '{path}'")
-            self.load_scene(path)
-
-            # Restore state for hot reload
-            if is_reload and saved_camera_pos:
-                print(f"[Mesh][Scene] Restoring camera to {saved_camera_pos}")
-
-                # Robust camera move
-                camera = getattr(self.window, "camera", None)
-                if camera:
-                    move_to = getattr(camera, "move_to", None)
-                    if callable(move_to):
-                        move_to(saved_camera_pos, 1.0)
-                    else:
-                        setattr(camera, "position", saved_camera_pos)
-
-                if saved_zoom is not None:
-                    self.window.set_camera_zoom_target(saved_zoom, speed=999.0)
-
-            return
-
-        if self._pending_scene_change:
-            info = self._pending_scene_change
-            self._pending_scene_change = None
-            self._perform_scene_change(info["scene_path"], info.get("spawn_id"))
-            return
-
-        if not self.window.paused:
-            self._pre_update_behaviour_stage(delta_time)
-            self._update_behaviour_stage(delta_time)
-            self._update_movement_stage(delta_time)
-            self._update_animation_stage(delta_time)
-            self._late_update_stage(delta_time)
+        self.updater.handle_update(delta_time, self)
 
     def draw(self) -> None:
         render_queue = getattr(self.window, "render_queue", None)
@@ -582,6 +423,7 @@ class SceneController:
         use_culling = bool(getattr(self.window, "render_culling_enabled", False)) and use_batching
         camera_rect = self._get_camera_rect(camera_pos=base_camera_pos) if use_culling else None
 
+        # 1. Background Layers (Custom)
         if self._background_layers:
             try:
                 camera_x, camera_y = base_camera_pos
@@ -598,595 +440,76 @@ class SceneController:
             finally:
                 self.window.camera.use()
 
-        # Draw HD-2D background planes (parallax_model)
-        if self._background_planes:
-            try:
-                camera_x, camera_y = base_camera_pos
-                zoom = float(self.window.camera_controller.zoom_state.current)
-                self.window.camera_controller.gui_camera.use()
-                self._draw_background_planes(
-                    camera_x=float(camera_x),
-                    camera_y=float(camera_y),
-                    viewport_w=float(self.window.width),
-                    viewport_h=float(self.window.height),
-                    zoom=zoom,
-                )
-            finally:
-                self.window.camera.use()
+        # Build Render Context & Plan
+        all_sprites: list[Any] = []
+        for layer in self._layer_draw_order():
+            all_sprites.extend(layer)
+
+        ctx = build_render_context(
+            sprites=all_sprites,
+            background_planes=self._background_planes,
+            camera_pos=base_camera_pos,
+            viewport_size=(float(self.window.width), float(self.window.height)),
+            zoom=float(self.window.camera_controller.zoom_state.current),
+            sort_mode=self._render_sort_mode,
+            shadows_enabled=self._shadows_enabled,
+            shadows_ao_enabled=self._shadows_ao_enabled,
+            shadows_contact_enabled=self._shadows_contact_enabled,
+            depth_tint_settings=self._depth_tint_settings,
+            outline_settings=self._outline_settings,
+            use_culling=use_culling,
+            camera_rect=camera_rect,
+        )
+        plan = compute_draw_plan(ctx)
+
+        # 2. Background Planes (Parallax) - GUI Camera
+        if hasattr(self.window.camera_controller, "gui_camera"):
+             self.window.camera_controller.gui_camera.use()
+             execute_background_plan(plan, self._get_background_plane_texture)
+             self.window.camera.use()
 
         tile_layers = self._tilemap_draw_layers
         tile_stats = TilemapBatchStats()
-        if tile_layers:
-            camera = getattr(self.window, "camera", None)
-            camera_pos_before = getattr(camera, "position", None) if camera is not None else None
+        camera = getattr(self.window, "camera", None)
 
+        if tile_layers:
+            # 3a. Tile Layers Z < 0
             for tile_layer in tile_layers:
                 if tile_layer.z < 0:
-                    tile_stats.add(
+                     tile_stats.add(
                         self._draw_tilemap_layer(tile_layer, camera=camera, base_camera_pos=base_camera_pos)
                     )
-            if use_batching:
-                self._submit_layers_to_render_queue(render_queue, camera_rect=camera_rect, use_culling=use_culling)
-                render_queue.flush()
-            else:
-                self._draw_layers_with_shadows()
-            for tile_layer in tile_layers:
-                if tile_layer.z >= 0:
-                    tile_stats.add(
-                        self._draw_tilemap_layer(tile_layer, camera=camera, base_camera_pos=base_camera_pos)
-                    )
-
-            if camera is not None and camera_pos_before is not None:
-                try:
-                    setattr(camera, "position", camera_pos_before)
-                    use = getattr(camera, "use", None)
-                    if callable(use):
-                        use()
-                except Exception:
-                    pass
-            self._set_tilemap_perf_counters(tile_stats)
-            self._set_render_cull_counter()
-            return
-
-        for layer in self._tilemap_background_layers:
-            layer.draw()
-        if use_batching:
-            self._submit_layers_to_render_queue(render_queue, camera_rect=camera_rect, use_culling=use_culling)
-            render_queue.flush()
         else:
-            self._draw_layers_with_shadows()
-        for layer in self._tilemap_foreground_layers:
-            layer.draw()
+             # 3b. Legacy BG Layers
+             for layer in self._tilemap_background_layers:
+                layer.draw()
+        
+        # 4. Scene (Shadows + Sprites)
+        execute_scene_plan(
+             plan, 
+             render_queue=render_queue, 
+             use_batching=use_batching, 
+             camera_rect=camera_rect, 
+             use_culling=use_culling
+        )
+        if use_batching and render_queue:
+            render_queue.flush()
+        
+        if tile_layers:
+            # 5a. Tile Layers Z >= 0
+             for tile_layer in tile_layers:
+                if tile_layer.z >= 0:
+                     tile_stats.add(
+                        self._draw_tilemap_layer(tile_layer, camera=camera, base_camera_pos=base_camera_pos)
+                    )
+        else:
+             # 5b. Legacy FG Layers
+             for layer in self._tilemap_foreground_layers:
+                layer.draw()
+
         self._set_tilemap_perf_counters(tile_stats)
         self._set_render_cull_counter()
 
-    def _draw_layers_with_shadows(self) -> None:
-        """Draw all layers with HD-2D sprite shadows and depth tinting (non-batched path).
-
-        Collects all sprites, sorts by HD-2D render key, draws shadows first,
-        then draws sprites with optional depth tinting in sorted order.
-        """
-        # Collect and sort all sprites
-        all_sprites: list[Any] = []
-        for layer in self._layer_draw_order():
-            all_sprites.extend(layer)
-
-        sort_mode = self._render_sort_mode
-        sorted_sprites = sorted(
-            all_sprites,
-            key=lambda s: compute_sprite_render_sort_key(s, sort_mode=sort_mode),
-        )
-
-        # Draw shadows first (no culling in non-batched path)
-        if self._shadows_enabled:
-            self._draw_sprite_shadows(sorted_sprites, camera_rect=None, use_culling=False)
-
-        # Draw sprites in sorted order with optional depth tinting and outlines
-        tint_enabled = self._depth_tint_settings.enabled
-        for sprite in sorted_sprites:
-            try:
-                self._draw_sprite_outline(sprite)
-                if tint_enabled:
-                    self._draw_sprite_with_tint(sprite)
-                else:
-                    sprite.draw()
-            except Exception:  # noqa: BLE001
-                pass
-
-    def _draw_sprite_with_tint(self, sprite: Any) -> None:
-        """Draw a single sprite with depth tinting applied (non-batched path).
-
-        Temporarily modifies sprite.color, draws, then restores.
-        Headless-safe: falls back to normal draw if color manipulation fails.
-        """
-        tint = compute_sprite_tint(
-            sprite,
-            self._depth_tint_settings,
-            sort_mode=self._render_sort_mode,
-        )
-
-        if tint is None:
-            # No tint needed, draw normally
-            sprite.draw()
-            return
-
-        # Save original color
-        original_color = getattr(sprite, "color", None)
-
-        try:
-            # Compute tinted color
-            tinted = apply_tint_to_sprite_color(original_color, tint)
-            # Apply tint temporarily
-            sprite.color = tinted  # type: ignore[attr-defined]
-            sprite.draw()
-        finally:
-            # Restore original color
-            try:
-                if original_color is None:
-                    # Reset to default white
-                    sprite.color = (255, 255, 255, 255)  # type: ignore[attr-defined]
-                else:
-                    sprite.color = original_color  # type: ignore[attr-defined]
-            except Exception:  # noqa: BLE001
-                pass
-
-    def _draw_sprite_outline(self, sprite: Any) -> None:
-        """Draw faux sprite outline behind the sprite (non-batched path)."""
-        entity_data = getattr(sprite, "mesh_entity_data", None) or {}
-        if not should_draw_outline(entity_data, self._outline_settings.enabled):
-            return
-
-        try:
-            render_layer = int(entity_data.get("render_layer", 0))
-        except (TypeError, ValueError):
-            render_layer = 0
-        try:
-            depth_z = float(entity_data.get("depth_z", 0.0))
-        except (TypeError, ValueError):
-            depth_z = 0.0
-
-        center_x = float(getattr(sprite, "center_x", 0.0))
-        center_y = float(getattr(sprite, "center_y", 0.0))
-        draw_calls = compute_sprite_outline_draw_calls(
-            center_x,
-            center_y,
-            render_layer,
-            depth_z,
-            self._outline_settings,
-            entity_data=entity_data,
-        )
-        if not draw_calls:
-            return
-
-        original_color = getattr(sprite, "color", None)
-        original_alpha = getattr(sprite, "alpha", None)
-        original_x = getattr(sprite, "center_x", None)
-        original_y = getattr(sprite, "center_y", None)
-
-        try:
-            for call in draw_calls:
-                sprite.center_x = call.x
-                sprite.center_y = call.y
-                try:
-                    sprite.color = call.color  # type: ignore[attr-defined]
-                except Exception:
-                    pass
-                try:
-                    sprite.alpha = int(call.alpha)  # type: ignore[attr-defined]
-                except Exception:
-                    pass
-                sprite.draw()
-        finally:
-            try:
-                if original_x is not None:
-                    sprite.center_x = original_x
-                if original_y is not None:
-                    sprite.center_y = original_y
-                if original_color is None:
-                    sprite.color = (255, 255, 255, 255)  # type: ignore[attr-defined]
-                else:
-                    sprite.color = original_color  # type: ignore[attr-defined]
-                if original_alpha is not None:
-                    sprite.alpha = original_alpha  # type: ignore[attr-defined]
-            except Exception:  # noqa: BLE001
-                pass
-
-    def _submit_layers_to_render_queue(
-        self,
-        render_queue: Any,
-        *,
-        camera_rect: Rect | None,
-        use_culling: bool,
-    ) -> None:
-        # Collect all sprites from all layers and sort by HD-2D render key
-        all_sprites: list[Any] = []
-        for layer in self._layer_draw_order():
-            all_sprites.extend(layer)
-
-        # Sort by render_layer + y-sort or explicit_z
-        sort_mode = self._render_sort_mode
-        sorted_sprites = sorted(
-            all_sprites,
-            key=lambda s: compute_sprite_render_sort_key(s, sort_mode=sort_mode),
-        )
-
-        # Draw shadows BEFORE sprites (in same sorted order) for HD-2D depth
-        if self._shadows_enabled:
-            self._draw_sprite_shadows(sorted_sprites, camera_rect=camera_rect, use_culling=use_culling)
-
-        # Submit sprites in sorted order
-        for sprite in sorted_sprites:
-            self._submit_sprite_outline(
-                sprite,
-                render_queue,
-                camera_rect=camera_rect,
-                use_culling=use_culling,
-            )
-            self._submit_sprite_to_render_queue(
-                sprite,
-                render_queue,
-                camera_rect=camera_rect,
-                use_culling=use_culling,
-            )
-
-    def _draw_sprite_shadows(
-        self,
-        sorted_sprites: list[Any],
-        *,
-        camera_rect: Rect | None,
-        use_culling: bool,
-    ) -> None:
-        """Draw multi-layer blob shadows for sprites (HD-2D effect).
-
-        Shadows are drawn BEFORE sprites in the same sorted order.
-        Draw order: AO (if enabled) -> base -> contact (if enabled)
-        Uses arcade.draw_ellipse_filled if available, otherwise no-op.
-        Headless-safe: gracefully skips if drawing unavailable.
-        """
-        # Check if ellipse drawing is available (headless-safe)
-        draw_ellipse_filled = getattr(optional_arcade.arcade, "draw_ellipse_filled", None)
-        if draw_ellipse_filled is None:
-            return
-
-        # Shadow color (dark gray with alpha from params)
-        shadow_base_color = (20, 20, 20)
-
-        for sprite in sorted_sprites:
-            # Compute multi-layer shadow params using pure model
-            multi_shadow = compute_sprite_multi_shadow(
-                sprite,
-                contact_enabled=self._shadows_contact_enabled,
-                ao_enabled=self._shadows_ao_enabled,
-            )
-            if multi_shadow is None:
-                continue
-
-            # Basic culling check using base shadow ellipse
-            if use_culling and camera_rect is not None:
-                shadow_rect = sprite_bounds(
-                    multi_shadow.base_ellipse.cx,
-                    multi_shadow.base_ellipse.cy,
-                    multi_shadow.base_ellipse.width,
-                    multi_shadow.base_ellipse.height,
-                )
-                if not is_sprite_visible(camera_rect, shadow_rect):
-                    continue
-
-            try:
-                # Draw AO shadow first (if enabled) - largest, lightest
-                if multi_shadow.ao_ellipse is not None and multi_shadow.ao_alpha > 0:
-                    ao_alpha = int(multi_shadow.ao_alpha * 255)
-                    ao_color = (*shadow_base_color, ao_alpha)
-                    draw_ellipse_filled(
-                        multi_shadow.ao_ellipse.cx,
-                        multi_shadow.ao_ellipse.cy,
-                        multi_shadow.ao_ellipse.width,
-                        multi_shadow.ao_ellipse.height,
-                        ao_color,
-                    )
-
-                # Draw base shadow
-                base_alpha = int(multi_shadow.base_alpha * 255)
-                base_color = (*shadow_base_color, base_alpha)
-                draw_ellipse_filled(
-                    multi_shadow.base_ellipse.cx,
-                    multi_shadow.base_ellipse.cy,
-                    multi_shadow.base_ellipse.width,
-                    multi_shadow.base_ellipse.height,
-                    base_color,
-                )
-
-                # Draw contact shadow last (if enabled) - smallest, darkest
-                if multi_shadow.contact_ellipse is not None and multi_shadow.contact_alpha > 0:
-                    contact_alpha = int(multi_shadow.contact_alpha * 255)
-                    contact_color = (*shadow_base_color, contact_alpha)
-                    draw_ellipse_filled(
-                        multi_shadow.contact_ellipse.cx,
-                        multi_shadow.contact_ellipse.cy,
-                        multi_shadow.contact_ellipse.width,
-                        multi_shadow.contact_ellipse.height,
-                        contact_color,
-                    )
-            except Exception:  # noqa: BLE001
-                # Graceful fallback if drawing fails
-                pass
-
-    def _submit_sprite_to_render_queue(
-        self,
-        sprite: Any,
-        render_queue: Any,
-        *,
-        camera_rect: Rect | None,
-        use_culling: bool,
-    ) -> None:
-        """Submit a single sprite to the render queue."""
-        texture = getattr(sprite, "texture", None)
-        texture_key = getattr(sprite, "mesh_texture_key", None)
-        if texture_key is None:
-            name = getattr(texture, "name", None)
-            if name:
-                texture_key = ("texture", str(name))
-            else:
-                texture_key = ("texture_id", id(texture) if texture is not None else id(sprite))
-
-        scale = getattr(sprite, "scale", 1.0)
-        if isinstance(scale, tuple) and scale:
-            scale_value = float(scale[0])
-        else:
-            scale_value = float(scale)
-
-        alpha = getattr(sprite, "alpha", 255)
-        rotation = getattr(sprite, "angle", 0.0)
-        center_x = float(getattr(sprite, "center_x", 0.0))
-        center_y = float(getattr(sprite, "center_y", 0.0))
-
-        if use_culling and camera_rect is not None:
-            width = getattr(sprite, "width", None)
-            height = getattr(sprite, "height", None)
-            sprite_rect = None
-            if isinstance(width, (int, float)) and isinstance(height, (int, float)):
-                if float(width) > 0.0 and float(height) > 0.0:
-                    sprite_rect = sprite_bounds(center_x, center_y, float(width), float(height))
-            if sprite_rect is None:
-                tex_w = getattr(texture, "width", None)
-                tex_h = getattr(texture, "height", None)
-                if isinstance(tex_w, (int, float)) and isinstance(tex_h, (int, float)):
-                    if float(tex_w) > 0.0 and float(tex_h) > 0.0:
-                        sprite_rect = sprite_bounds(
-                            center_x,
-                            center_y,
-                            float(tex_w),
-                            float(tex_h),
-                            scale=scale_value,
-                        )
-            if sprite_rect is not None and not is_sprite_visible(camera_rect, sprite_rect):
-                self._render_culled_count += 1
-                return
-
-        # Use render_layer from entity data for layer index if available
-        entity_data = getattr(sprite, "mesh_entity_data", None) or {}
-        render_layer = entity_data.get("render_layer", 0)
-        try:
-            layer_index = int(render_layer)
-        except (TypeError, ValueError):
-            layer_index = 0
-
-        # Compute final color with optional depth tinting
-        sprite_color = getattr(sprite, "color", None)
-        if self._depth_tint_settings.enabled:
-            tint = compute_sprite_tint(
-                sprite,
-                self._depth_tint_settings,
-                sort_mode=self._render_sort_mode,
-            )
-            if tint is not None:
-                sprite_color = apply_tint_to_sprite_color(sprite_color, tint)
-
-        render_queue.submit(
-            DrawSpriteCmd(
-                texture_key=texture_key,
-                texture=texture,
-                x=center_x,
-                y=center_y,
-                scale=scale_value,
-                alpha=float(alpha),
-                rotation=float(rotation),
-                layer=layer_index,
-                blend_mode="normal",
-                color=sprite_color,
-            )
-        )
-
-    def _submit_sprite_outline(
-        self,
-        sprite: Any,
-        render_queue: Any,
-        *,
-        camera_rect: Rect | None,
-        use_culling: bool,
-    ) -> None:
-        entity_data = getattr(sprite, "mesh_entity_data", None) or {}
-        if not should_draw_outline(entity_data, self._outline_settings.enabled):
-            return
-
-        try:
-            render_layer = int(entity_data.get("render_layer", 0))
-        except (TypeError, ValueError):
-            render_layer = 0
-        try:
-            depth_z = float(entity_data.get("depth_z", 0.0))
-        except (TypeError, ValueError):
-            depth_z = 0.0
-
-        center_x = float(getattr(sprite, "center_x", 0.0))
-        center_y = float(getattr(sprite, "center_y", 0.0))
-        draw_calls = compute_sprite_outline_draw_calls(
-            center_x,
-            center_y,
-            render_layer,
-            depth_z,
-            self._outline_settings,
-            entity_data=entity_data,
-        )
-        if not draw_calls:
-            return
-
-        if use_culling and camera_rect is not None:
-            width = getattr(sprite, "width", None)
-            height = getattr(sprite, "height", None)
-            sprite_rect = None
-            if isinstance(width, (int, float)) and isinstance(height, (int, float)):
-                if float(width) > 0.0 and float(height) > 0.0:
-                    sprite_rect = sprite_bounds(center_x, center_y, float(width), float(height))
-            if sprite_rect is None:
-                texture = getattr(sprite, "texture", None)
-                tex_w = getattr(texture, "width", None)
-                tex_h = getattr(texture, "height", None)
-                if isinstance(tex_w, (int, float)) and isinstance(tex_h, (int, float)):
-                    if float(tex_w) > 0.0 and float(tex_h) > 0.0:
-                        sprite_rect = sprite_bounds(
-                            center_x,
-                            center_y,
-                            float(tex_w),
-                            float(tex_h),
-                            scale=float(getattr(sprite, "scale", 1.0) or 1.0),
-                        )
-            if sprite_rect is not None and not is_sprite_visible(camera_rect, sprite_rect):
-                return
-
-        texture = getattr(sprite, "texture", None)
-        texture_key = getattr(sprite, "mesh_texture_key", None)
-        if texture_key is None:
-            name = getattr(texture, "name", None)
-            if name:
-                texture_key = ("texture", str(name))
-            else:
-                texture_key = ("texture_id", id(texture) if texture is not None else id(sprite))
-
-        scale = getattr(sprite, "scale", 1.0)
-        if isinstance(scale, tuple) and scale:
-            scale_value = float(scale[0])
-        else:
-            scale_value = float(scale)
-
-        rotation = getattr(sprite, "angle", 0.0)
-        alpha = float(getattr(sprite, "alpha", 255))
-
-        for call in draw_calls:
-            outline_alpha = float(call.alpha) * (alpha / 255.0)
-            render_queue.submit(
-                DrawSpriteCmd(
-                    texture_key=texture_key,
-                    texture=texture,
-                    x=call.x,
-                    y=call.y,
-                    scale=scale_value,
-                    alpha=outline_alpha,
-                    rotation=float(rotation),
-                    layer=int(render_layer),
-                    blend_mode="normal",
-                    color=call.color,
-                )
-            )
-
-    def _submit_layer_to_render_queue(
-        self,
-        layer: optional_arcade.arcade.SpriteList,
-        render_queue: Any,
-        layer_index: int,
-        *,
-        camera_rect: Rect | None,
-        use_culling: bool,
-    ) -> None:
-        # Legacy method kept for compatibility - now unused in HD-2D path
-        for sprite in layer:
-            self._submit_sprite_to_render_queue(
-                sprite,
-                render_queue,
-                camera_rect=camera_rect,
-                use_culling=use_culling,
-            )
-
-    def _draw_background_planes(
-        self,
-        *,
-        camera_x: float,
-        camera_y: float,
-        viewport_w: float,
-        viewport_h: float,
-        zoom: float = 1.0,
-    ) -> None:
-        """Draw HD-2D background planes with parallax.
-
-        Uses the parallax_model module for offset calculations.
-        Draws to GUI camera coordinates (screen space).
-        Headless-safe: no-op if Arcade drawing unavailable.
-        """
-        # Check if drawing is available (headless-safe)
-        draw_texture_rectangle = getattr(optional_arcade.arcade, "draw_texture_rectangle", None)
-        if draw_texture_rectangle is None:
-            return
-
-        from .parallax_model import compute_parallax_offset_with_zoom
-
-        planes = sort_background_planes(self._background_planes)
-        if not planes:
-            return
-
-        center_x = float(viewport_w) / 2.0
-        center_y = float(viewport_h) / 2.0
-
-        for plane in planes:
-            # Load texture with cache
-            texture = self._get_background_plane_texture(plane.asset_path)
-            if texture is None:
-                continue
-
-            # Compute parallax offset
-            offset_x, offset_y = compute_parallax_offset_with_zoom(
-                camera_x, camera_y, plane.parallax, zoom
-            )
-
-            # Apply plane's static offset
-            base_x = center_x + offset_x + plane.offset_x
-            base_y = center_y + offset_y + plane.offset_y
-
-            tex_w = max(1.0, float(texture.width))
-            tex_h = max(1.0, float(texture.height))
-
-            # Compute alpha (0-255 for arcade)
-            alpha = int(max(0, min(255, plane.alpha * 255)))
-
-            if not plane.repeat_x and not plane.repeat_y:
-                # Single draw
-                draw_texture_rectangle(
-                    base_x, base_y, tex_w, tex_h, texture, alpha=alpha
-                )
-                continue
-
-            # Tiled drawing
-            x_range = (0, 0)
-            y_range = (0, 0)
-            if plane.repeat_x:
-                left_needed = -tex_w / 2.0
-                right_needed = float(viewport_w) + tex_w / 2.0
-                n_min = int((left_needed - base_x) // tex_w) - 1
-                n_max = int((right_needed - base_x) // tex_w) + 1
-                x_range = (n_min, n_max)
-            if plane.repeat_y:
-                bottom_needed = -tex_h / 2.0
-                top_needed = float(viewport_h) + tex_h / 2.0
-                m_min = int((bottom_needed - base_y) // tex_h) - 1
-                m_max = int((top_needed - base_y) // tex_h) + 1
-                y_range = (m_min, m_max)
-
-            for xi in range(x_range[0], x_range[1] + 1):
-                for yi in range(y_range[0], y_range[1] + 1):
-                    dx = float(xi) * tex_w if plane.repeat_x else 0.0
-                    dy = float(yi) * tex_h if plane.repeat_y else 0.0
-                    draw_texture_rectangle(
-                        base_x + dx, base_y + dy, tex_w, tex_h, texture, alpha=alpha
-                    )
 
     def _get_background_plane_texture(self, asset_path: str) -> Any:
         """Get texture for a background plane, using cache.
@@ -1338,25 +661,8 @@ class SceneController:
         scale: float | None = None,
         tag: str | None = None,
     ) -> None:
-        if x is not None:
-            sprite.center_x = float(x)
-        if y is not None:
-            sprite.center_y = float(y)
-        if scale is not None:
-            sprite.scale = float(scale)
-        if tag is not None:
-            sprite.mesh_tag = tag  # type: ignore[attr-defined]
-
-        # Sync back to entity data
-        entity_data = self._ensure_entity_data_dict(sprite)
-        if x is not None:
-            entity_data["x"] = float(x)
-        if y is not None:
-            entity_data["y"] = float(y)
-        if scale is not None:
-            entity_data["scale"] = float(scale)
-        if tag is not None:
-            entity_data["tag"] = tag
+        self.entities.enqueue_mutation(sprite, x=x, y=y, scale=scale, tag=tag)
+        self.entities.apply_pending_ops(self, stage="immediate")
 
     def _apply_collision_poly(self, sprite: optional_arcade.arcade.Sprite, poly: Any) -> None:
         from engine.geometry_tools import sanitize_poly  # noqa: PLC0415
@@ -1601,13 +907,7 @@ class SceneController:
         return normalized
 
     def _ensure_entity_data_dict(self, sprite: optional_arcade.arcade.Sprite) -> dict[str, Any]:
-        if not hasattr(sprite, "mesh_entity_data"):
-            sprite.mesh_entity_data = {}  # type: ignore[attr-defined]
-        data = getattr(sprite, "mesh_entity_data")
-        if not isinstance(data, dict):
-            data = {}
-            sprite.mesh_entity_data = data  # type: ignore[attr-defined]
-        return data
+        return self.entities.ensure_entity_data_dict(sprite)
 
     def _ensure_behaviour_config_root(self, entity_data: dict[str, Any]) -> dict[str, dict[str, Any]]:
         """Ensure entity_data has a valid behaviour_config dict and return it."""
@@ -1663,7 +963,7 @@ class SceneController:
         self._tilemap_draw_layers = []
         self._background_layers = []
         self.tilemap_instance = None
-        self._nav_grid_cache.invalidate()
+        self.navigation.invalidate()
         try:
             from engine.lighting.occluders import OCCLUDER_CACHE  # noqa: PLC0415
 
@@ -2138,7 +1438,7 @@ class SceneController:
             return
 
         self.tilemap_instance = instance
-        self._nav_grid_cache.invalidate()
+        self.navigation.invalidate()
         self._tilemap_background_layers = instance.background_layers
         self._tilemap_foreground_layers = instance.foreground_layers
         self._tilemap_draw_layers = list(getattr(instance, "draw_layers", []))
@@ -2368,49 +1668,18 @@ class SceneController:
 
     def find_entity(self, identifier: str | int) -> optional_arcade.arcade.Sprite | None:
         """Find an entity by ID (index in all_sprites) or name."""
-        all_sprites = list(self.all_sprites)
-
-        # Try as integer ID first
-        try:
-            idx = int(identifier)
-            if 0 <= idx < len(all_sprites):
-                return all_sprites[idx]
-        except (ValueError, TypeError):
-            pass
-
-        # Try as name
-        target_name = str(identifier).strip()
-        for sprite in all_sprites:
-            if getattr(sprite, "mesh_name", "") == target_name:
-                return sprite
-
-        return None
+        return self.entities.find_entity(self, identifier)
 
     def get_all_entities(self) -> list[optional_arcade.arcade.Sprite]:
         """Return a stable list of all entities."""
-        return list(self.all_sprites)
+        return self.entities.iter_entities(self)
 
     def find_sprite_by_name(self, name: str | None) -> optional_arcade.arcade.Sprite | None:
         """Return the first sprite whose mesh_name matches the provided value."""
-        if not name:
-            return None
-        for sprite in self.all_sprites:
-            if getattr(sprite, "mesh_name", None) == name:
-                return sprite
-        return None
+        return self.entities.find_sprite_by_name(self, name)
 
     def _find_player_sprite(self) -> optional_arcade.arcade.Sprite | None:
-        sprites = list(self.all_sprites)
-        for sprite in sprites:
-            tag = getattr(sprite, "mesh_tag", None)
-            if isinstance(tag, str) and tag.strip().lower() == "player":
-                return sprite
-        for sprite in sprites:
-            behaviours = getattr(sprite, "mesh_behaviours_runtime", [])
-            for behaviour in behaviours:
-                if behaviour.__class__.__name__ == "PlayerController":
-                    return sprite
-        return None
+        return self.entities.find_primary_player_sprite(self)
 
     def _find_spawn_marker(self, spawn_id: str) -> optional_arcade.arcade.Sprite | None:
         return _find_spawn_marker_runtime(self.all_sprites, spawn_id)

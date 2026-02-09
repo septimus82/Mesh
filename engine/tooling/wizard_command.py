@@ -185,7 +185,7 @@ def _load_config() -> Dict[str, Any]:
     try:
         raw = json.loads(Path("config.json").read_text(encoding="utf-8"))
         return raw if isinstance(raw, dict) else {}
-    except:
+    except Exception:
         return {}
 
 def _expand_preset(args: argparse.Namespace) -> None:

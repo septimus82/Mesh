@@ -1,0 +1,25 @@
+{
+  "name": "Export Test Scene A",
+  "description": "Scene with valid asset references",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "black"
+  },
+  "entities": [
+    {
+      "name": "player",
+      "x": 100,
+      "y": 100,
+      "sprite": "assets/sprites/hero.png",
+      "behaviours": []
+    },
+    {
+      "name": "item",
+      "x": 200,
+      "y": 200,
+      "sprite": "assets/sprites/item.png",
+      "behaviours": []
+    }
+  ],
+  "layers": []
+}

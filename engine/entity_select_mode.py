@@ -96,6 +96,11 @@ def set_selection(window: Any, state: EntitySelectState, ids: list[str], *, prim
     else:
         state.primary_id = ids[0] if ids else None
     setattr(window, "authoring_selected_entity_id", state.primary_id)
+    editor = getattr(window, "editor_controller", None)
+    session = getattr(editor, "session", None) if editor is not None else None
+    setter = getattr(session, "set_authoring_selected_active", None) if session is not None else None
+    if callable(setter):
+        setter(bool(state.primary_id))
 
 
 def toggle_selected(window: Any, state: EntitySelectState, entity_id: str, *, make_primary: bool = True) -> None:

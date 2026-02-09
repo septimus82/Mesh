@@ -61,7 +61,7 @@ def test_entity_nudge_selection_and_steps(capsys) -> None:
         console_controller = _Console()
         ui_controller = _UI()
         editor_controller = _Editor()
-        show_debug = False
+        show_debug = True  # Required for F12 selection and debug features
         scene_inspector_overlay = _Overlay()
         scene_controller = _Scene()
 

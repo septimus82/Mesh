@@ -1,0 +1,25 @@
+{
+  "description": "Test scene with missing asset reference",
+  "name": "test_manifest_scene_b",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "dark_blue"
+  },
+  "entities": [
+    {
+      "name": "npc",
+      "x": 50,
+      "y": 50,
+      "sprite": "assets/sprites/test_npc.png",
+      "behaviours": []
+    },
+    {
+      "name": "ghost",
+      "x": 150,
+      "y": 150,
+      "sprite": "assets/sprites/missing_ghost.png",
+      "behaviours": []
+    }
+  ],
+  "layers": []
+}

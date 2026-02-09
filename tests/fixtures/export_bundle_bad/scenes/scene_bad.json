@@ -1,0 +1,16 @@
+{
+  "name": "Export Test Scene Bad",
+  "description": "Scene with a missing asset reference",
+  "schema_version": 1,
+  "settings": {},
+  "entities": [
+    {
+      "name": "ghost",
+      "x": 0,
+      "y": 0,
+      "sprite": "assets/sprites/missing_asset.png",
+      "behaviours": []
+    }
+  ],
+  "layers": []
+}

@@ -12,11 +12,19 @@ class MockGameWindow:
         self.input_controller = None
         self.console_controller = MagicMock()
         self.console_controller.active = False  # Ensure console is not active by default
+        self.console_controller.process_key = MagicMock(return_value=False)
         self.editor_controller = MagicMock()
+        self.editor_controller.active = False
+        self.editor_controller.panels = None
+        self.editor_controller.ui_layers = None
+        self.editor_controller.keybinds = None
+        self.editor_controller.project_explorer = None
         self.engine_config = MagicMock()
         self.engine_config.player_stats_enabled = True
         self.game_state_controller = MagicMock()
         self.show_debug = False
+        self.command_palette_enabled = False
+        self.settings_overlay = None
         self.width = 800
         self.height = 600
         

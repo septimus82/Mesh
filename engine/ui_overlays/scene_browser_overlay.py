@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
+from ..editor.editor_modal_state_query import is_scene_browser_active
 from .common import UIElement, draw_panel_bg
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -29,11 +30,13 @@ class SceneBrowserOverlay(UIElement):
         controller = getattr(self.window, "editor_controller", None)
         if controller is None or not getattr(controller, "active", False):
             return
-        if not getattr(controller, "scene_browser_active", False):
+        if not is_scene_browser_active(controller):
             return
 
         # Check dock tab visibility - Scene browser only visible if left dock is "Scene"
-        left_dock_tab = getattr(controller, "_left_dock_tab", "Outliner")
+        dock = getattr(controller, "dock", None)
+        snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+        left_dock_tab = getattr(snapshot, "left_tab", "Outliner") or "Outliner"
         if left_dock_tab != "Scene":
             return
 

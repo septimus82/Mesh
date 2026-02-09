@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 from unittest.mock import MagicMock
+from types import SimpleNamespace
 
 from engine.editor.editor_clipboard_ops import (
     clone_entity_payload,
@@ -382,6 +383,7 @@ class TestTextInputBlocking:
         from engine.editor_runtime.input import _is_text_input_active
 
         controller = MagicMock()
+        controller.focus = None  # Prevent MagicMock truthy values
         controller.palette_filter_active = False
         controller.hierarchy_filter_active = False
         controller.hierarchy_rename_active = False
@@ -389,5 +391,17 @@ class TestTextInputBlocking:
         controller.inspector_edit_active = False
         controller.command_palette_active = False
         controller.entity_panels_filter_active = False
+        # Additional keys checked by is_text_input_active
+        controller.entity_panels_text_edit_active = False
+        controller.scene_browser_filter_active = False
+        controller.asset_browser_filter_active = False
+        controller.scene_browser_active = False
+        controller.asset_browser_active = False
+        controller.scene_switcher_active = False
+        controller.search = SimpleNamespace(get_search_focus=lambda: "")
+        controller.project_explorer = None
+        controller.dock = None
+        controller.panels = None
+        controller.ui_layers = None
 
         assert _is_text_input_active(controller) is False

@@ -93,20 +93,20 @@ def mock_arcade_window(monkeypatch):
     Patch arcade.get_window to return a mock.
     Useful for tests that trigger code paths calling arcade.get_window().
     """
-    import engine.optional_arcade
+    import engine.optional_arcade as oa
 
     # If arcade is missing, ensure we use the engine fallback for constants.
-    if not engine.optional_arcade.has_arcade():
+    if not oa.has_arcade():
         from engine import arcade_fallback
-        monkeypatch.setattr(engine.optional_arcade, "arcade", arcade_fallback)
+        monkeypatch.setattr(oa, "arcade", arcade_fallback)
 
     # Also patch BufferDescription to prevent ValueError: buffer parameter must be an arcade.gl.Buffer
     # if the real SpriteList somehow runs.
-    if engine.optional_arcade.arcade_gl:
+    if oa.arcade_gl:
          mock_buffer_desc = MagicMock()
-         monkeypatch.setattr(engine.optional_arcade.arcade_gl, "BufferDescription", mock_buffer_desc)
+         monkeypatch.setattr(oa.arcade_gl, "BufferDescription", mock_buffer_desc)
 
-    with patch("engine.optional_arcade.arcade.get_window") as mock_get:
+    with patch.object(oa.arcade, "get_window") as mock_get:
 
         yield mock_get
 

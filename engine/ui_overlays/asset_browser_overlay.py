@@ -27,7 +27,9 @@ class AssetBrowserOverlay(UIElement):
             return
 
         # Check dock tab visibility - Asset browser only visible if right dock is "Assets"
-        right_dock_tab = getattr(controller, "_right_dock_tab", "Inspector")
+        dock = getattr(controller, "dock", None)
+        snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+        right_dock_tab = getattr(snapshot, "right_tab", "Inspector") or "Inspector"
         if right_dock_tab != "Assets":
             return
 
@@ -56,9 +58,10 @@ class AssetBrowserOverlay(UIElement):
         
         from ..editor.panel_search_model import format_search_bar_text  # noqa: PLC0415
 
-        filter_text = getattr(controller, "_assets_search", "")
+        search = getattr(controller, "search", None)
+        filter_text = search.get_assets_search() if search is not None else ""
         kind_text = getattr(controller, "asset_browser_kind", "All")
-        search_focused = getattr(controller, "_search_focus", None) == "assets"
+        search_focused = bool(search is not None and search.is_panel_search_focused("assets"))
 
         draw_text_cached(
             format_search_bar_text(filter_text, search_focused),
@@ -131,7 +134,8 @@ class AssetBrowserOverlay(UIElement):
             # Wrap path if needed? For now just draw
             draw_text_cached(sel_row.rel_path, detail_x, detail_y - 15, color=(100, 255, 100), font_size=10, cache=self._text_cache)
         else:
-            filter_val = str(getattr(controller, "_assets_search", "") or "")
+            search = getattr(controller, "search", None)
+            filter_val = str(search.get_assets_search() if search is not None else "" or "")
             if not rows and filter_val:
                  draw_text_cached("No matches found.", split_x + 20, content_top - 20, color=(255, 100, 100), font_size=12, cache=self._text_cache)
 

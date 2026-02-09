@@ -16,7 +16,14 @@ Mesh/
 |-- assets/
 `-- tooling/
 ```
+## Editor & Tooling
 
+The engine includes an embedded editor with robust refactoring capabilities:
+
+-   **Project Explorer**: File management with direct asset manipulation.
+-   **Safe Refactoring**: Rename, Move, and Delete operations automatically update references across all loaded scenes and assets.
+-   **Safe Delete**: Checks for incoming references before deletion.
+-   **Two-Phase Commit**: Preview changes in a modal dialog before applying them to the filesystem (`Del`, `F6`, `Enter` in rename).
 ## Architecture
 
 The engine uses a component-based architecture where `GameWindow` acts as a Facade, delegating responsibilities to specialized controllers:
@@ -29,6 +36,25 @@ The engine uses a component-based architecture where `GameWindow` acts as a Faca
 - **InputController**: Handles keyboard and mouse input.
 - **ConsoleController**: Manages the developer console.
 - **SaveManager**: Handles saving and loading of game state.
+- **EditorController**: Editor-mode facade that delegates to focused sub-controllers
+  (panels/providers/session/dock/unsaved-changes confirm). Modal visibility is owned by
+  `EditorPanelsController` for deterministic UI state.
+- **EditorDockController**: Owns dock tabs, sizing/collapse, and focus sync for
+  panel visibility; UI/layout/tooltips read widths via `editor_dock_query`.
+- **Dock width policy**: runtime/editor code should not read `left_dock_width` /
+  `right_dock_width` directly; use `editor_dock_query` helpers.
+- **Tooltip policy**: editor tooltips must use `editor_dock_query` for dock widths
+  (ratcheted by contract tests).
+- **Test policy**: tests should use `tests/_dock_stub.py` for dock widths; direct
+  `left/right_dock_width` usage is ratcheted.
+- **Hover policy**: hover dock-tab reads are centralized in
+  `editor_hover_dock_tab_query` (ratcheted).
+- **Hover fields policy**: splitter/inspector/entity hover fields are read via
+  `editor_hover_query` (ratcheted).
+- **Menu hover policy**: menu/context hover reads are centralized in
+  `editor_menu_hover_query` (ratcheted).
+- **EditorHistoryController**: Manages undo history state, filtering, and input handling,
+  keeping history UI logic out of EditorController.
 
 ## Scene format
 

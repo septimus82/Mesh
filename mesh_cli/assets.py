@@ -78,6 +78,10 @@ def handle(args: argparse.Namespace) -> int:
             return _handle_assets_audit(args)
         if getattr(args, "assets_command", None) == "fix-missing":
             return _handle_assets_fix_missing(args)
+        if getattr(args, "assets_command", None) == "build-manifest":
+            return _handle_assets_build_manifest(args)
+        if getattr(args, "assets_command", None) == "audit-deps":
+            return _handle_assets_audit_deps(args)
         print("[Mesh][CLI] Error: missing assets subcommand")
         return 2
     if args.command == "index":
@@ -268,6 +272,45 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         help="Repo root for pack/content discovery",
     )
 
+    # Build manifest (deterministic asset inventory with hashes)
+    build_manifest_parser = assets_subparsers.add_parser(
+        "build-manifest",
+        help="Build deterministic asset manifest with hashes",
+        description="Scan asset roots and generate a manifest with asset IDs, types, SHA256 hashes, sizes, and mtimes",
+    )
+    build_manifest_parser.add_argument(
+        "--repo-root",
+        default=".",
+        help="Repo root for asset discovery",
+    )
+    build_manifest_parser.add_argument(
+        "--out",
+        default="artifacts/asset_manifest.json",
+        help="Output manifest path",
+    )
+
+    # Audit dependencies (check for missing asset references)
+    audit_deps_parser = assets_subparsers.add_parser(
+        "audit-deps",
+        help="Audit asset dependencies for missing references",
+        description="Parse scenes and prefabs to extract asset references and detect missing dependencies with blame chain",
+    )
+    audit_deps_parser.add_argument(
+        "--repo-root",
+        default=".",
+        help="Repo root for content discovery",
+    )
+    audit_deps_parser.add_argument(
+        "--out",
+        default="artifacts/asset_deps.json",
+        help="Output dependency report path",
+    )
+    audit_deps_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Fail on any missing dependencies",
+    )
+
 
 def _handle_assets_reload(args: argparse.Namespace) -> int:
     repo_root = Path(str(getattr(args, "repo_root", ".") or ".")).resolve()
@@ -422,6 +465,73 @@ def _handle_assets_fix_missing(args: argparse.Namespace) -> int:
         f"skipped_existing={skipped_existing}, skipped_unsupported={skipped_unsupported}) "
         f"wrote {out_path.as_posix()}"
     )
+    return 0
+
+
+def _handle_assets_build_manifest(args: argparse.Namespace) -> int:
+    """Build deterministic asset manifest with hashes."""
+    repo_root_raw = str(getattr(args, "repo_root", ".") or ".").strip() or "."
+    repo_root = Path(repo_root_raw).resolve()
+    out_raw = str(getattr(args, "out", "") or "").strip() or "artifacts/asset_manifest.json"
+    out_path = Path(out_raw)
+    if not out_path.is_absolute():
+        out_path = repo_root / out_path
+
+    from tooling.asset_manifest import build_manifest
+
+    manifest = build_manifest(repo_root)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json_atomic(out_path, manifest, indent=2, sort_keys=True, trailing_newline=True)
+
+    asset_count = manifest.get("asset_count", 0)
+    print(f"[Mesh][Assets] OK (manifest: {asset_count} assets) wrote {out_path.as_posix()}")
+    return 0
+
+
+def _handle_assets_audit_deps(args: argparse.Namespace) -> int:
+    """Audit asset dependencies for missing references."""
+    repo_root_raw = str(getattr(args, "repo_root", ".") or ".").strip() or "."
+    repo_root = Path(repo_root_raw).resolve()
+    out_raw = str(getattr(args, "out", "") or "").strip() or "artifacts/asset_deps.json"
+    out_path = Path(out_raw)
+    if not out_path.is_absolute():
+        out_path = repo_root / out_path
+    strict = bool(getattr(args, "strict", False))
+
+    from tooling.asset_manifest import audit_dependencies, build_manifest
+
+    manifest = build_manifest(repo_root)
+    report = audit_dependencies(repo_root, manifest=manifest)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json_atomic(out_path, report.to_dict(), indent=2, sort_keys=True, trailing_newline=True)
+
+    ref_count = len(report.references)
+    missing_count = len(report.missing)
+    error_count = len(report.errors)
+
+    if report.missing:
+        print(f"[Mesh][Assets] FAILED ({ref_count} refs, {missing_count} missing, {error_count} errors)")
+        for dep in report.missing[:5]:
+            print(f"  - {dep.asset_id}")
+            for ref in dep.references[:2]:
+                print(f"      referenced by: {ref.source_file} ({ref.field_path})")
+            if len(dep.references) > 2:
+                print(f"      ... and {len(dep.references) - 2} more references")
+        if len(report.missing) > 5:
+            print(f"  ... and {len(report.missing) - 5} more missing")
+        print(f"  wrote {out_path.as_posix()}")
+        return 1 if strict else 0
+
+    if report.errors:
+        print(f"[Mesh][Assets] ERROR ({ref_count} refs, {error_count} errors)")
+        for err in report.errors[:5]:
+            print(f"  - {err}")
+        print(f"  wrote {out_path.as_posix()}")
+        return 1
+
+    print(f"[Mesh][Assets] OK ({ref_count} refs, all dependencies resolved) wrote {out_path.as_posix()}")
     return 0
 
 

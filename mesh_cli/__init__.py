@@ -32,6 +32,8 @@ def __getattr__(name: str):
         "misc",
         "ai",
         "build",
+        "debug",
+        "release",
     }:
         try:
             return importlib.import_module(f"{__name__}.{name}")

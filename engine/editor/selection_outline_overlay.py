@@ -29,6 +29,7 @@ from .selection_outline import (
     STYLE_DUPLICATE,
     STYLE_HOVER,
 )
+from .editor_hover_query import get_hovered_entity_id, get_hovered_entity_rect
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController
@@ -214,7 +215,7 @@ class SelectionOutlineOverlay:
             controller: Editor controller.
             selected_ids: List of currently selected entity IDs.
         """
-        hover_entity_id = getattr(controller, "_hover_entity_id", None)
+        hover_entity_id = get_hovered_entity_id(controller)
         if not hover_entity_id:
             return
 
@@ -222,7 +223,7 @@ class SelectionOutlineOverlay:
         if hover_entity_id in selected_ids:
             return
 
-        hover_entity_rect = getattr(controller, "_hover_entity_rect", None)
+        hover_entity_rect = get_hovered_entity_rect(controller)
         if not hover_entity_rect:
             return
 

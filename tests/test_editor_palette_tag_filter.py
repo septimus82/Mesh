@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from engine.editor_controller import _filter_prefab_palette_items
+from engine.editor.prefab_palette_panel import filter_prefab_palette_items as _filter_prefab_palette_items
 
 
 def test_palette_tag_filter_syntax_and_matching() -> None:

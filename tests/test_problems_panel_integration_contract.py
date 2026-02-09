@@ -12,6 +12,9 @@ from engine.editor.state import EditorDirtyState
 from engine.editor.scene_lint_model import SceneLintIssue
 from engine.editor_controller import EditorModeController
 from engine.ui_overlays.problems_panel_overlay import ProblemsPanelOverlay
+from tests._dock_stub import make_dock_stub
+from tests._search_stub import attach_search_stub
+from tests._session_stub import make_session_stub
 
 
 class StubHud:
@@ -44,12 +47,11 @@ class StubController:
     def __init__(self, scene: dict, repo_root: Path) -> None:
         self.window = StubWindow(StubSceneController(scene), player_hud=StubHud())
         self.active = True
-        self._right_dock_tab = "Problems"
+        self.dock = make_dock_stub(left_tab="Project", right_tab="Problems")
         
         from engine.editor.editor_problems_controller import ProblemsController
         self.problems = ProblemsController()
         
-        self._search_focus = None
         self._repo_root_override = repo_root
         self.undo_stack: list[dict] = []
         self.redo_stack: list[dict] = []
@@ -66,10 +68,10 @@ class StubController:
         self.asset_browser_filter_active = False
         self._unsaved_changes_pending = False
         self.scene_browser_active = False
-        self.confirm_open = False
-        self._dock_left_w = 320
-        self._dock_right_w = 320
-        self._left_dock_tab = "Project"
+        from types import SimpleNamespace
+        self.unsaved_confirm = SimpleNamespace(is_open=False)
+        self.session = make_session_stub()
+        self.search = attach_search_stub(self)
         
         # Stub for _selection_ctl needed by problems_jump_to_selected
         class StubSelectionCtl:
@@ -94,38 +96,6 @@ class StubController:
         """Stub: Always succeed for tests."""
         return True
 
-    @property
-    def _problems_issues(self) -> list:
-        return self.problems.issues
-    
-    @_problems_issues.setter
-    def _problems_issues(self, value):
-        self.problems.set_issues(value)
-
-    @property
-    def _problems_search(self) -> str:
-        return self.problems.query
-
-    @_problems_search.setter
-    def _problems_search(self, value: str):
-        self.problems.set_query(value)
-        
-    @property
-    def _problems_selected_index(self) -> int:
-        return self.problems.selected_index
-
-    @_problems_selected_index.setter
-    def _problems_selected_index(self, value: int):
-        self.problems.set_selected_index(value)
-        
-    @property
-    def _problems_preview_open(self) -> bool:
-        return self.problems.preview_open
-
-    @_problems_preview_open.setter
-    def _problems_preview_open(self, value: bool):
-        self.problems.preview_open = value
-
     def _get_repo_root(self):
         return self._repo_root_override
 
@@ -142,7 +112,7 @@ class StubController:
         return
 
     def get_effective_dock_widths(self, window_w: int):  # noqa: ARG002
-        return (self._dock_left_w, self._dock_right_w)
+        return self.dock.get_effective_dock_widths(window_w)
 
     def scan_scene_problems(self) -> int:
         return EditorModeController.scan_scene_problems(self)
@@ -206,7 +176,7 @@ def test_scan_builds_issues(tmp_path: Path) -> None:
 
     count = ctrl.scan_scene_problems()
     assert count == 1
-    assert ctrl._problems_issues
+    assert ctrl.problems.issues
 
 
 def test_apply_selected_fix_pushes_undo_and_dirty(tmp_path: Path) -> None:
@@ -236,7 +206,7 @@ def test_fix_all_safe_skips_risky_and_toasts(tmp_path: Path) -> None:
     ctrl = StubController(scene, tmp_path)
     ctrl._prefab_resolver = lambda _: True
     ctrl.scan_scene_problems()
-    safe_issue = ctrl._problems_issues[0]
+    safe_issue = ctrl.problems.issues[0]
     risky_issue = SceneLintIssue(
         issue_id="risky",
         kind=safe_issue.kind,
@@ -249,7 +219,7 @@ def test_fix_all_safe_skips_risky_and_toasts(tmp_path: Path) -> None:
         fixable=safe_issue.fixable,
         meta=safe_issue.meta,
     )
-    ctrl._problems_issues = [risky_issue, safe_issue]
+    ctrl.problems.set_issues([risky_issue, safe_issue])
 
     assert ctrl.apply_fix_all_safe() is True
     assert ctrl.window.scene_controller._loaded_scene_data["entities"][1]["id"].startswith("dup_fix_")
@@ -262,7 +232,7 @@ def test_fix_all_safe_no_safe_does_not_mutate(tmp_path: Path) -> None:
     ctrl = StubController(scene, tmp_path)
     ctrl._prefab_resolver = lambda _: True
     ctrl.scan_scene_problems()
-    safe_issue = ctrl._problems_issues[0]
+    safe_issue = ctrl.problems.issues[0]
     risky_issue = SceneLintIssue(
         issue_id="risky",
         kind=safe_issue.kind,
@@ -275,7 +245,7 @@ def test_fix_all_safe_no_safe_does_not_mutate(tmp_path: Path) -> None:
         fixable=safe_issue.fixable,
         meta=safe_issue.meta,
     )
-    ctrl._problems_issues = [risky_issue]
+    ctrl.problems.set_issues([risky_issue])
 
     assert ctrl.apply_fix_all_safe() is True
     assert ctrl.window.scene_controller._loaded_scene_data == scene
@@ -292,7 +262,7 @@ def test_search_focus_blocks_enter(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
     ctrl = StubController(scene, tmp_path)
     ctrl._prefab_resolver = lambda _: True
     ctrl.scan_scene_problems()
-    ctrl._search_focus = "problems"
+    ctrl.search._search_focus = "problems"
 
     # Enter is now handled by the action system, not _handle_problems_input
     # The panel handler returns False to defer to the action system
