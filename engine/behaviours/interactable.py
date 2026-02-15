@@ -15,6 +15,7 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, List
 
+from ..event_emit import emit_gameplay_event
 from ..events import MeshEvent
 from ..gameplay_event_bus import EventConfigError, validate_event_type
 from .base import Behaviour, ParamDef
@@ -191,31 +192,24 @@ class InteractableBehaviour(Behaviour):
     
     def _emit_event(self, interactor) -> None:
         """Emit the interaction event."""
-        bus = getattr(self.window, "gameplay_event_bus", None)
         interactor_id = self._get_entity_id(interactor)
         my_id = getattr(self.entity, "mesh_id", "")
-        
-        if bus is not None:
-            bus.emit(
-                self.interact_event,
-                source_entity=my_id,
-                source_behaviour="Interactable",
-                target=my_id,
-                target_name=getattr(self.entity, "mesh_name", ""),
-                interactor=interactor_id,
-                interactor_name=getattr(interactor, "mesh_name", ""),
-                position=(float(self.entity.center_x), float(self.entity.center_y)),
-                interaction_count=self._interaction_count,
-            )
-        elif hasattr(self.window, "event_bus"):
-            self.window.event_bus.emit(
-                self.interact_event,
-                target=my_id,
-                target_name=getattr(self.entity, "mesh_name", ""),
-                interactor=interactor_id,
-                interactor_name=getattr(interactor, "mesh_name", ""),
-                position=(float(self.entity.center_x), float(self.entity.center_y)),
-            )
+        payload = {
+            "target": my_id,
+            "target_name": getattr(self.entity, "mesh_name", ""),
+            "interactor": interactor_id,
+            "interactor_name": getattr(interactor, "mesh_name", ""),
+            "position": (float(self.entity.center_x), float(self.entity.center_y)),
+            "interaction_count": self._interaction_count,
+        }
+
+        emit_gameplay_event(
+            self.window,
+            self.interact_event,
+            payload,
+            source_entity_id=my_id,
+            source_behaviour="Interactable",
+        )
     
     def try_interact(self) -> bool:
         """Attempt to interact with this object.

@@ -1,0 +1,613 @@
+{
+  "entities": [
+    {
+      "id": "episode_06_ep06_player",
+      "layer": "entities",
+      "name": "Episode06Player",
+      "prefab_id": "player",
+      "x": 72.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_06_ep06_entry_trigger",
+      "layer": "background",
+      "name": "Episode06EntryTrigger",
+      "prefab_id": "ep06_trigger",
+      "x": 112.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_06_ep06_mentor",
+      "layer": "entities",
+      "name": "Episode06Mentor",
+      "prefab_id": "ep06_mentor",
+      "x": 264.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_06_ep06_rune_a",
+      "layer": "entities",
+      "name": "Episode06RuneA",
+      "prefab_id": "ep06_rune_a",
+      "x": 408.0,
+      "y": 184.0
+    },
+    {
+      "id": "episode_06_ep06_rune_b",
+      "layer": "entities",
+      "name": "Episode06RuneB",
+      "prefab_id": "ep06_rune_b",
+      "x": 488.0,
+      "y": 248.0
+    },
+    {
+      "id": "episode_06_ep06_fight_sentry",
+      "layer": "entities",
+      "name": "Episode06FightSentry",
+      "prefab_id": "ep06_fight_sentry",
+      "x": 520.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_06_ep06_puzzle_sentry",
+      "layer": "entities",
+      "name": "Episode06PuzzleSentry",
+      "prefab_id": "ep06_puzzle_sentry",
+      "x": 600.0,
+      "y": 280.0
+    },
+    {
+      "id": "episode_06_ep06_reward_cache",
+      "layer": "entities",
+      "name": "Episode06RewardCache",
+      "prefab_id": "ep06_reward",
+      "x": 692.0,
+      "y": 208.0
+    },
+    {
+      "id": "episode_06_ep06_reward_bonus_cache",
+      "layer": "entities",
+      "name": "Episode06RewardBonusCache",
+      "prefab_id": "ep06_reward_bonus",
+      "x": 692.0,
+      "y": 256.0
+    },
+    {
+      "id": "episode_06_ep06_exit_door",
+      "layer": "entities",
+      "name": "Episode06ExitDoor",
+      "prefab_id": "ep06_door",
+      "x": 768.0,
+      "y": 224.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.entered",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep06_intro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep06_entered"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_intro_start_ctrl",
+      "layer": "background",
+      "name": "Episode06IntroStart",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.fight_path",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep06.puzzle_path",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep06_choice_made",
+              "payload": {
+                "choice": "fight"
+              },
+              "type": "emit_event"
+            },
+            {
+              "event_type": "ep06_combat_started",
+              "payload": {
+                "path": "fight"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "Fight through."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_choice_fight_ctrl",
+      "layer": "background",
+      "name": "Episode06ChoiceFight",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.puzzle_path",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep06.fight_path",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep06_choice_made",
+              "payload": {
+                "choice": "puzzle"
+              },
+              "type": "emit_event"
+            },
+            {
+              "event_type": "ep06_combat_started",
+              "payload": {
+                "path": "puzzle"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "Solve first."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_choice_puzzle_ctrl",
+      "layer": "background",
+      "name": "Episode06ChoicePuzzle",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.fight_enemy_dead",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep06.combat_cleared",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep06_combat_cleared",
+              "payload": {
+                "path": "fight"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "name": "Episode06FightSentry"
+          },
+          "listen_events": [
+            "died"
+          ],
+          "require_flags": [
+            "ep06.fight_path"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_fight_dead_ctrl",
+      "layer": "background",
+      "name": "Episode06FightDead",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.puzzle_enemy_dead",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep06.combat_cleared",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep06_combat_cleared",
+              "payload": {
+                "path": "puzzle"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "name": "Episode06PuzzleSentry"
+          },
+          "listen_events": [
+            "died"
+          ],
+          "require_flags": [
+            "ep06.puzzle_path"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_puzzle_dead_ctrl",
+      "layer": "background",
+      "name": "Episode06PuzzleDead",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.seq1",
+              "type": "set_flag"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_06_ep06_rune_a"
+          },
+          "forbid_flags": [
+            "ep06.puzzle_solved"
+          ],
+          "listen_events": [
+            "ep06_puzzle_touched"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_rune_a_ctrl",
+      "layer": "background",
+      "name": "Episode06RuneAController",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.puzzle_solved",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep06_puzzle_solved",
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_06_ep06_rune_b"
+          },
+          "forbid_flags": [
+            "ep06.puzzle_solved"
+          ],
+          "listen_events": [
+            "ep06_puzzle_touched"
+          ],
+          "require_flags": [
+            "ep06.seq1"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_rune_b_ctrl",
+      "layer": "background",
+      "name": "Episode06RuneBController",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "event_type": "ep06_wrong_order",
+              "payload": {
+                "target": "rune_b"
+              },
+              "type": "emit_event"
+            },
+            {
+              "event_type": "ep06_reset_start",
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_06_ep06_rune_b"
+          },
+          "forbid_flags": [
+            "ep06.seq1",
+            "ep06.puzzle_solved"
+          ],
+          "listen_events": [
+            "ep06_puzzle_touched"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_wrong_order_ctrl",
+      "layer": "background",
+      "name": "Episode06WrongOrderController",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.seq1",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep06.puzzle_solved",
+              "type": "clear_flag"
+            }
+          ],
+          "listen_events": [
+            "ep06_reset_done"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_reset_done_ctrl",
+      "layer": "background",
+      "name": "Episode06ResetDoneController",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.exit_unlocked",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep06_exit_unlocked",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "ep06.exit_unlocked"
+          ],
+          "listen_events": [
+            "ep06_puzzle_solved"
+          ],
+          "require_flags": [
+            "ep06.combat_cleared"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_unlock_ctrl",
+      "layer": "background",
+      "name": "Episode06UnlockController",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.reward_collected",
+              "type": "set_flag"
+            }
+          ],
+          "forbid_flags": [
+            "ep06.puzzle_path"
+          ],
+          "listen_events": [
+            "ep06_reward_collected"
+          ],
+          "require_flags": [
+            "ep06.exit_unlocked"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_reward_std_ctrl",
+      "layer": "background",
+      "name": "Episode06RewardStandard",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.reward_collected",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep06.reward_bonus_collected",
+              "type": "set_flag"
+            }
+          ],
+          "listen_events": [
+            "ep06_reward_bonus_collected"
+          ],
+          "require_flags": [
+            "ep06.exit_unlocked",
+            "ep06.puzzle_path"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_reward_bonus_ctrl",
+      "layer": "background",
+      "name": "Episode06RewardBonus",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "event_type": "ep06_outro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep06_exit_door_interact"
+          ],
+          "require_flags": [
+            "ep06.exit_unlocked",
+            "ep06.reward_collected"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_outro_ctrl",
+      "layer": "background",
+      "name": "Episode06OutroStart",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep06.complete",
+              "type": "set_flag"
+            }
+          ],
+          "listen_events": [
+            "ep06_complete"
+          ]
+        }
+      },
+      "id": "episode_06_ep06_complete_ctrl",
+      "layer": "background",
+      "name": "Episode06Complete",
+      "prefab_id": "ep06_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign05.ep06_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep06.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep06.fight_path",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep06.puzzle_path",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep06.combat_cleared",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep06.fight_enemy_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep06.puzzle_enemy_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep06.seq1",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep06.puzzle_solved",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep06.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep06.reward_collected",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep06.reward_bonus_collected",
+              "type": "clear_flag"
+            }
+          ],
+          "forbid_flags": [
+            "campaign05.ep06_complete"
+          ],
+          "listen_events": [
+            "quest_ep06_complete"
+          ],
+          "require_flags": [
+            "campaign05.active"
+          ]
+        }
+      },
+      "id": "episode_06_campaign05_done_ctrl",
+      "layer": "background",
+      "name": "Episode06Campaign05Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    }
+  ],
+  "layers": [
+    {
+      "name": "background"
+    },
+    {
+      "name": "entities"
+    },
+    {
+      "name": "foreground"
+    }
+  ],
+  "name": "Episode 06: Conduit of Ash",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "#1a2230",
+    "world_height": 448,
+    "world_width": 832
+  },
+  "version": 1
+}

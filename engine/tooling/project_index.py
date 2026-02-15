@@ -12,11 +12,11 @@ from .. import json_io
 from ..behaviours import list_behaviours
 from ..config import EngineConfig
 from ..input import InputManager
+from mesh_cli.version_info import get_tool_version
 import engine.optional_arcade as optional_arcade
 arcade_mod = optional_arcade.arcade
 from ..scene_loader import SceneLoader
 
-ENGINE_VERSION = "0.1.0"
 CLI_PREFIX = "[Mesh][ProjectIndex]"
 
 
@@ -42,7 +42,7 @@ def build_project_index(
         all_layers.update(summary.get("layers", []))
 
     engine_section = {
-        "version": ENGINE_VERSION,
+        "version": get_tool_version(),
         "config_defaults": asdict(config) if config is not None else {},
         "input_actions": _input_snapshot(),
     }

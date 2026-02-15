@@ -8,9 +8,10 @@ from typing import Any, Iterable
 
 from ..behaviours import list_behaviours
 from ..input import InputManager
+from mesh_cli.version_info import get_tool_version
 import engine.optional_arcade as optional_arcade
 arcade_mod = optional_arcade.arcade
-from .project_index import ENGINE_VERSION, build_project_index
+from .project_index import build_project_index
 
 SCENE_SPEC_PATH = Path("docs/mesh_scene_spec.md")
 DOC_FILENAMES = {
@@ -170,7 +171,7 @@ def _write_scenes_doc(path: Path, project_index: dict[str, Any]) -> None:
         "",
         f"Mesh scene schema lives at `{SCENE_SPEC_PATH.as_posix()}`.",
         "",
-        f"Engine version: {ENGINE_VERSION}",
+        f"Engine version: {get_tool_version()}",
     ]
     if isinstance(project_index, dict) and project_index.get("error"):
         lines.append("")

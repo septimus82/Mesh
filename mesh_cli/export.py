@@ -52,6 +52,11 @@ def register(subparsers: argparse._SubParsersAction) -> None:
         action="store_true",
         help="Don't fail on missing dependencies",
     )
+    build_parser.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="Write deterministic manifest metadata (no wall-clock timestamps)",
+    )
 
     # plan
     plan_parser = export_subparsers.add_parser(
@@ -143,6 +148,7 @@ def _handle_export_build(args: argparse.Namespace) -> int:
 
     include_unused = bool(getattr(args, "include_unused", False))
     fail_on_missing = not bool(getattr(args, "allow_missing", False))
+    deterministic = bool(getattr(args, "deterministic", False))
 
     print(f"[Mesh][Export] building bundle from {repo_root}...")
 
@@ -151,6 +157,7 @@ def _handle_export_build(args: argparse.Namespace) -> int:
         output_dir,
         include_unused=include_unused,
         fail_on_missing=fail_on_missing,
+        deterministic=deterministic,
     )
 
     if exit_code == 0 and manifest is not None:

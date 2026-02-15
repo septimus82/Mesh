@@ -1,0 +1,104 @@
+{
+  "name": "Combat Vignette 01",
+  "version": 1,
+  "schema_version": 1,
+  "settings": {
+    "tilemap": null,
+    "background_color": "#1a1a2e"
+  },
+  "entities": [
+    {
+      "id": "player",
+      "name": "Player",
+      "prefab_id": "player",
+      "x": 64,
+      "y": 256
+    },
+    {
+      "id": "cv_entry_trigger",
+      "name": "ArenaEntryTrigger",
+      "prefab_id": "cv_entry_trigger",
+      "x": 128,
+      "y": 256
+    },
+    {
+      "id": "sentry_archer",
+      "name": "SentryArcher",
+      "prefab_id": "sentry_archer",
+      "x": 450,
+      "y": 256
+    },
+    {
+      "id": "chest_reward_cv",
+      "name": "RewardChest",
+      "prefab_id": "chest_reward_cv",
+      "x": 550,
+      "y": 256
+    },
+
+    {
+      "id": "cv_init",
+      "name": "CombatVignetteInit",
+      "prefab_id": "cv_controller",
+      "x": 0,
+      "y": 0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["cv_entered"],
+          "actions": [
+            { "type": "set_flag", "flag": "cv.started" },
+            { "type": "emit_event", "event_type": "cv_combat_started" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cv_on_enemy_dead",
+      "name": "CombatVignetteOnEnemyDead",
+      "prefab_id": "cv_controller",
+      "x": 0,
+      "y": 0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["cv_enemy_dead"],
+          "actions": [
+            { "type": "set_flag", "flag": "cv.enemy_dead" },
+            { "type": "set_flag", "flag": "cv.reward_unlocked" },
+            { "type": "emit_event", "event_type": "cv_reward_unlocked" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "cv_on_reward",
+      "name": "CombatVignetteOnReward",
+      "prefab_id": "cv_controller",
+      "x": 0,
+      "y": 0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["reward_collected"],
+          "actions": [
+            { "type": "set_flag", "flag": "cv.completed" },
+            { "type": "emit_event", "event_type": "cv_complete" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "campaign_combat_done_ctrl",
+      "name": "CampaignCombatDone",
+      "prefab_id": "campaign_controller",
+      "x": 0,
+      "y": 0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["quest_combat_vignette_complete"],
+          "actions": [
+            { "type": "set_flag", "flag": "campaign.combat_complete" }
+          ]
+        }
+      }
+    }
+  ]
+}

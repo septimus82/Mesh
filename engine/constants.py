@@ -1,9 +1,11 @@
 """Shared constants for Mesh Engine."""
 
+from engine.combat_constants import EVENT_DAMAGE_APPLIED_ALIAS
+
 # Event Names
 EVENT_COLLECTED = "collected"
 EVENT_COLLECTIBLE_PICKED = "collectible_picked"
-EVENT_DAMAGE_APPLIED = "damage_applied"
+EVENT_DAMAGE_APPLIED = EVENT_DAMAGE_APPLIED_ALIAS
 EVENT_LEVEL_UP = "level_up"
 EVENT_ENTERED_ZONE = "entered_zone"
 EVENT_ANIMATION_EVENT = "animation_event"

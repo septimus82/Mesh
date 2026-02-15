@@ -1,0 +1,42 @@
+{
+  "counts": {
+    "event_count": 41,
+    "snapshot_count": 25,
+    "world_digest_count": 25
+  },
+  "expected_event_digest": "64aad232200635bc06891e337bcb8bd3ac79674871f6caae9f3dddc0b93ba857",
+  "expected_final_state_digest": "89585a689e51d43d29b3528d6034b9d735341f8b57f76ef4c6993be2efa8db2b",
+  "expected_world_digest": "bcb2577ac813a7322fa264709fb38fb9496e624e358e312851f29b59d3782a13",
+  "id": "ep04",
+  "run_determinism": {
+    "digests_match": true,
+    "events_match": true,
+    "final_state_match": true
+  },
+  "run_ok": true,
+  "sample": {
+    "events_first": [
+      "ep04_entered",
+      "action_list_started",
+      "ep04_intro_start"
+    ],
+    "events_last": [
+      "quest_stage_completed",
+      "quest_ep04_complete",
+      "quest_completed"
+    ],
+    "world_digests_first": [
+      "123436154af2b77083fb6ae04466fffed7f6b046a5d8b66361812f6bd3724b55",
+      "d30be286411f094eadce042cdfd95e905b66e5896c3d98d9db700ec0869d0e3e",
+      "587969969c427d2b55bbf789d7801c27b38e007e32c2e2c23382878e308ede3c"
+    ],
+    "world_digests_last": [
+      "855594ce3553ee984812b1f40370ad8ffdf917ad75e6f5df1eb32827a596a995",
+      "0a296cbfbb145171d5495d8541807a1cbfd57a16d379cf6153a174c0e6d43897",
+      "9f190572294a408366a536e3d1e9a055d28c7099fbab3793203d5979c842a23d"
+    ]
+  },
+  "scene": "scenes/episode_04_ep04.json",
+  "schema_version": 1,
+  "script": "replays/ep04.json"
+}

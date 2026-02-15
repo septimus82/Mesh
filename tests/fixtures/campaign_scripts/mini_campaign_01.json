@@ -1,0 +1,75 @@
+{
+  "campaign_id": "mini_campaign_01",
+  "description": "Deterministic scripted playthrough for mini-campaign replay check.",
+  "quests": [
+    "mini_campaign_01",
+    "town_schedule_01",
+    "puzzle_room_03",
+    "combat_vignette_01"
+  ],
+  "initial_flags": [
+    "campaign.started"
+  ],
+  "scenes": [
+    {
+      "scene_id": "town",
+      "scene_path": "scenes/town_schedule_01.json",
+      "start_hour": 8.0,
+      "controller_prefab_ids": ["town_schedule_ctrl", "campaign_controller"],
+      "steps": [
+        {"action": "set_hour", "hour": 8.0},
+        {"action": "update_schedule", "dt": 0.016},
+        {"action": "step_trigger", "trigger": "town_entry_trigger", "player_x": 128.0, "player_y": 256.0},
+        {"action": "drain"},
+        {"action": "set_hour", "hour": 7.0},
+        {"action": "update_schedule", "dt": 0.016},
+        {"action": "drain"},
+        {"action": "emit", "event_type": "vendor_interact_attempt", "payload": {"interactor": "player"}},
+        {"action": "drain"},
+        {"action": "set_hour", "hour": 21.0},
+        {"action": "update_schedule", "dt": 0.016},
+        {"action": "drain"},
+        {"action": "step_trigger", "trigger": "town_secret_trigger", "player_x": 64.0, "player_y": 64.0},
+        {"action": "drain"},
+        {"action": "process_quests"},
+        {"action": "checkpoint", "label": "after_town"}
+      ]
+    },
+    {
+      "scene_id": "puzzle",
+      "scene_path": "scenes/puzzle_room_03.json",
+      "start_hour": 12.0,
+      "controller_prefab_ids": ["puzzle_room_ctrl", "campaign_controller"],
+      "steps": [
+        {"action": "step_trigger", "trigger": "puzzle_entry_trigger", "player_x": 64.0, "player_y": 256.0},
+        {"action": "drain"},
+        {"action": "emit", "event_type": "lever_left_pulled", "payload": {"interactor": "player"}},
+        {"action": "drain"},
+        {"action": "emit", "event_type": "lever_right_pulled", "payload": {"interactor": "player"}},
+        {"action": "drain"},
+        {"action": "step_trigger", "trigger": "rune_center", "player_x": 192.0, "player_y": 192.0},
+        {"action": "drain"},
+        {"action": "process_quests"},
+        {"action": "checkpoint", "label": "after_puzzle"}
+      ]
+    },
+    {
+      "scene_id": "combat",
+      "scene_path": "scenes/combat_vignette_01.json",
+      "start_hour": 12.0,
+      "controller_prefab_ids": ["cv_controller", "campaign_controller"],
+      "steps": [
+        {"action": "step_trigger", "trigger": "cv_entry_trigger", "player_x": 128.0, "player_y": 256.0},
+        {"action": "drain"},
+        {"action": "damage_enemy", "amount": 5.0},
+        {"action": "drain"},
+        {"action": "damage_enemy", "amount": 5.0},
+        {"action": "drain"},
+        {"action": "emit", "event_type": "reward_collected", "payload": {"source_entity": "chest_reward_cv", "source_behaviour": "Interactable", "entity": "chest_reward_cv"}},
+        {"action": "drain"},
+        {"action": "process_quests"},
+        {"action": "checkpoint", "label": "after_combat"}
+      ]
+    }
+  ]
+}

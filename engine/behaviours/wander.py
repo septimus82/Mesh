@@ -18,9 +18,10 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
+from ..event_emit import emit_gameplay_event
 from ..gameplay_event_bus import EventConfigError
 from ..pathfinding import NavGrid, astar
-from ..rng_service import get_rng
+from ..singletons import get_registry
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
@@ -135,7 +136,7 @@ class WanderBehaviour(Behaviour):
         self._enabled = bool(self.config.get("enabled", True))
         
         # Get RNG stream
-        self._rng = get_rng(WANDER_RNG_STREAM)
+        self._rng = get_registry().get_rng_stream(WANDER_RNG_STREAM)
         
         # Set initial origin if anchoring to spawn
         if self.anchor_to_spawn:
@@ -170,7 +171,6 @@ class WanderBehaviour(Behaviour):
     
     def _emit_event(self, event_type: str, **kwargs) -> None:
         """Emit a gameplay event."""
-        bus = getattr(self.window, "gameplay_event_bus", None)
         my_id = getattr(self.entity, "mesh_id", "")
         
         payload = {
@@ -180,15 +180,13 @@ class WanderBehaviour(Behaviour):
             **kwargs,
         }
         
-        if bus is not None:
-            bus.emit(
-                event_type,
-                source_entity=my_id,
-                source_behaviour="Wander",
-                **payload,
-            )
-        elif hasattr(self.window, "event_bus"):
-            self.window.event_bus.emit(event_type, **payload)
+        emit_gameplay_event(
+            self.window,
+            event_type,
+            payload,
+            source_entity_id=my_id,
+            source_behaviour="Wander",
+        )
     
     def _get_nav_grid(self) -> NavGrid | None:
         """Get the navigation grid from scene controller."""

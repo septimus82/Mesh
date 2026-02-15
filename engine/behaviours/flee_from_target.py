@@ -18,9 +18,10 @@ from __future__ import annotations
 import math
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from ..event_emit import emit_gameplay_event
 from ..gameplay_event_bus import EventConfigError
 from ..pathfinding import NavGrid, astar
-from ..rng_service import get_rng
+from ..singletons import get_registry
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
@@ -158,7 +159,7 @@ class FleeFromTargetBehaviour(Behaviour):
         self._enabled = bool(self.config.get("enabled", True))
         
         # Get RNG stream
-        self._rng = get_rng(FLEE_RNG_STREAM)
+        self._rng = get_registry().get_rng_stream(FLEE_RNG_STREAM)
     
     @property
     def enabled(self) -> bool:
@@ -186,7 +187,6 @@ class FleeFromTargetBehaviour(Behaviour):
     
     def _emit_event(self, event_type: str, **kwargs) -> None:
         """Emit a gameplay event."""
-        bus = getattr(self.window, "gameplay_event_bus", None)
         my_id = getattr(self.entity, "mesh_id", "")
         
         payload = {
@@ -197,15 +197,13 @@ class FleeFromTargetBehaviour(Behaviour):
             **kwargs,
         }
         
-        if bus is not None:
-            bus.emit(
-                event_type,
-                source_entity=my_id,
-                source_behaviour="FleeFromTarget",
-                **payload,
-            )
-        elif hasattr(self.window, "event_bus"):
-            self.window.event_bus.emit(event_type, **payload)
+        emit_gameplay_event(
+            self.window,
+            event_type,
+            payload,
+            source_entity_id=my_id,
+            source_behaviour="FleeFromTarget",
+        )
     
     def _get_nav_grid(self) -> NavGrid | None:
         """Get the navigation grid from scene controller."""

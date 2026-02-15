@@ -1,8 +1,83 @@
 {
   "events": [
     {
-      "name": "collectible_picked",
+      "description": "Fired when the Act 1 Chapter 1 gate switch is activated.",
+      "name": "act1_ch1_gate_unlock",
+      "payload": {
+        "source": "object"
+      }
+    },
+    {
+      "description": "Fired when the Act 1 Chapter 2 ruined gate switch is activated.",
+      "name": "act1_ch2_ruin_unlock",
+      "payload": {
+        "source": "object"
+      }
+    },
+    {
+      "description": "Fired when mini campaign 02 is completed.",
+      "name": "campaign02_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when mini campaign 02 starts from Episode 01 entry.",
+      "name": "campaign02_started",
+      "payload": {
+        "campaign_id": "string"
+      }
+    },
+    {
+      "description": "Fired when Episode 01 mentor-help choice is committed for Mini Campaign 03 payoff.",
+      "name": "campaign03.helped_mentor",
+      "payload": {
+        "choice": "string"
+      }
+    },
+    {
+      "description": "Fired when mini campaign 03 is completed.",
+      "name": "campaign03_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when mini campaign 03 starts from Episode 01 entry.",
+      "name": "campaign03_started",
+      "payload": {
+        "campaign_id": "string"
+      }
+    },
+    {
+      "description": "Fired when mini campaign 04 is completed.",
+      "name": "campaign04_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when mini campaign 04 starts from Episode 01 entry.",
+      "name": "campaign04_started",
+      "payload": {
+        "campaign_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the entire mini campaign is completed.",
+      "name": "campaign_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the mini campaign begins.",
+      "name": "campaign_started",
+      "payload": {}
+    },
+    {
       "description": "Fired when a collectible is picked up by an entity.",
+      "name": "collectible_picked",
       "payload": {
         "collectible_name": "string",
         "collector": "string",
@@ -10,292 +85,1243 @@
       }
     },
     {
-      "name": "damage_applied",
+      "description": "Fired when the combat vignette encounter begins.",
+      "name": "cv_combat_started",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when the combat vignette scenario is completed.",
+      "name": "cv_complete",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when the vignette sentry enemy is killed.",
+      "name": "cv_enemy_dead",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when the player enters the combat vignette arena.",
+      "name": "cv_entered",
+      "payload": {
+        "entity": "string",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Fired when the reward chest becomes interactable after enemy death.",
+      "name": "cv_reward_unlocked",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
       "description": "Fired when damage is dealt to an entity.",
+      "name": "damage_applied",
+      "payload": {
+        "amount": "float",
+        "source": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when an attack is declared before damage resolution.",
+      "name": "combat_attack",
+      "payload": {
+        "attacker": "string",
+        "target": "string",
+        "type": "string"
+      }
+    },
+    {
+      "description": "Fired when a combat hit applies non-zero damage.",
+      "name": "combat_hit",
+      "payload": {
+        "amount": "float",
+        "source": "string",
+        "target": "string",
+        "was_crit": "bool"
+      }
+    },
+    {
+      "description": "Fired when a combat attempt applies zero damage.",
+      "name": "combat_miss",
       "payload": {
         "source": "string",
         "target": "string",
-        "amount": "float"
+        "was_crit": "bool"
       }
     },
     {
-      "name": "dialogue_choice",
+      "description": "Canonical combat damage event aliasing damage_applied.",
+      "name": "combat_damage",
+      "payload": {
+        "amount": "float",
+        "source": "string",
+        "target": "string",
+        "was_crit": "bool"
+      }
+    },
+    {
+      "description": "Canonical combat death event aliasing died.",
+      "name": "combat_death",
+      "payload": {
+        "name": "string",
+        "source": "string",
+        "target": "string"
+      }
+    },
+    {
       "description": "Fired when a player selects a dialogue choice.",
+      "name": "dialogue_choice",
       "payload": {
-        "entity": "string",
-        "choice_id": "string"
+        "choice_id": "string",
+        "entity": "string"
       }
     },
     {
-      "name": "dialogue_started",
-      "description": "Fired when a dialogue sequence begins.",
+      "description": "Emitted when a dialogue script reaches completion.",
+      "name": "dialogue_completed",
       "payload": {
+        "dialogue_id": "string",
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when a dialogue sequence begins.",
+      "name": "dialogue_started",
+      "payload": {
+        "actor": "string",
         "entity": "string",
         "owner": "string",
-        "trigger": "string",
-        "actor": "string"
+        "trigger": "string"
       }
     },
     {
-      "name": "died",
       "description": "Fired when an entity's health reaches zero.",
+      "name": "died",
       "payload": {
         "actor": "object",
         "name": "string"
       }
     },
     {
-      "name": "entered_zone",
+      "description": "Fired when the Puzzle Room 02 exit door is opened.",
+      "name": "door2_opened",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 03 exit door is opened.",
+      "name": "door3_opened",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Emitted when the combat showcase portal is used.",
+      "name": "enter_portal_combat",
+      "payload": {}
+    },
+    {
+      "description": "Emitted when the dungeon showcase portal is used.",
+      "name": "enter_portal_dungeon",
+      "payload": {}
+    },
+    {
+      "description": "Emitted when the lighting showcase portal is used.",
+      "name": "enter_portal_lighting",
+      "payload": {}
+    },
+    {
+      "description": "Emitted when the stealth showcase portal is used.",
+      "name": "enter_portal_stealth",
+      "payload": {}
+    },
+    {
       "description": "Fired when an entity enters a trigger zone.",
-      "payload": {
-        "zone": "string",
-        "entity": "string"
-      }
-    },
-    {
-      "name": "room_entered",
-      "description": "Fired when the player enters a room trigger (e.g., puzzle room).",
-      "payload": {
-        "zone": "string",
-        "entity": "string"
-      }
-    },
-    {
-      "name": "hint_read",
-      "description": "Fired when a player reads a hint or plaque.",
+      "name": "entered_zone",
       "payload": {
         "entity": "string",
-        "hint_id": "string"
+        "zone": "string"
       }
     },
     {
-      "name": "puzzle_progress",
-      "description": "Fired when a puzzle sequence advances.",
+      "description": "Fired when the player chooses a dialogue branch in Episode 01.",
+      "name": "ep01_choice_made",
+      "payload": {
+        "choice": "string"
+      }
+    },
+    {
+      "description": "Fired when the archive clue interactable is used in Episode 01.",
+      "name": "ep01_clue_found",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when Episode 01 is completed.",
+      "name": "ep01_complete",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the player enters the Episode 01 scene.",
+      "name": "ep01_entered",
       "payload": {
         "entity": "string",
-        "pos": "int"
+        "zone": "string"
       }
     },
     {
-      "name": "puzzle_wrong",
-      "description": "Fired when a puzzle sequence is entered incorrectly.",
+      "description": "Fired when the Episode 01 exit door is interacted with.",
+      "name": "ep01_exit_door_interact",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 01 exit is unlocked.",
+      "name": "ep01_exit_unlocked",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the Episode 01 intro cutscene reaches dialogue handoff.",
+      "name": "ep01_intro_cutscene_done",
+      "payload": {}
+    },
+    {
+      "description": "Requests the Episode 01 intro cutscene to start.",
+      "name": "ep01_intro_start",
+      "payload": {}
+    },
+    {
+      "description": "Requests the Episode 01 outro cutscene to start.",
+      "name": "ep01_outro_start",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the player chooses a dialogue branch in Episode 02.",
+      "name": "ep02_choice_made",
+      "payload": {
+        "choice": "string"
+      }
+    },
+    {
+      "description": "Fired when Episode 02 is completed.",
+      "name": "ep02_complete",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the player enters the Episode 02 scene.",
+      "name": "ep02_entered",
+      "payload": {
+        "entity": "string",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 02 exit door is interacted with.",
+      "name": "ep02_exit_door_interact",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 02 exit is unlocked.",
+      "name": "ep02_exit_unlocked",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the Episode 02 intro cutscene reaches dialogue handoff.",
+      "name": "ep02_intro_done",
+      "payload": {}
+    },
+    {
+      "description": "Requests the Episode 02 intro cutscene to start.",
+      "name": "ep02_intro_start",
+      "payload": {}
+    },
+    {
+      "description": "Requests the Episode 02 outro cutscene to start.",
+      "name": "ep02_outro_start",
+      "payload": {}
+    },
+    {
+      "description": "Fired when Episode 02 signal grid is shut down.",
+      "name": "ep02_signal_off",
+      "payload": {}
+    },
+    {
+      "description": "Fired when Episode 02 signal relays are stabilized.",
+      "name": "ep02_signal_stable",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the Episode 02 signal terminal network is interacted with.",
+      "name": "ep02_terminal_touched",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the player picks a dialogue branch in Episode 03.",
+      "name": "ep03_choice_made",
+      "payload": {
+        "choice": "string"
+      }
+    },
+    {
+      "description": "Fired when Episode 03 is completed.",
+      "name": "ep03_complete",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the player enters Episode 03.",
+      "name": "ep03_entered",
+      "payload": {
+        "entity": "string",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Fired when the exit door is interacted with.",
+      "name": "ep03_exit_door_interact",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the exit unlock condition is met.",
+      "name": "ep03_exit_unlocked",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the hint plaque is interacted with.",
+      "name": "ep03_hint_requested",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when a hint is granted for the sigil puzzle.",
+      "name": "ep03_hint_shown",
+      "payload": {
+        "hint": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 03 intro cutscene completes and dialogue starts.",
+      "name": "ep03_intro_done",
+      "payload": {}
+    },
+    {
+      "description": "Requests the Episode 03 intro cutscene.",
+      "name": "ep03_intro_start",
+      "payload": {}
+    },
+    {
+      "description": "Requests the Episode 03 outro cutscene.",
+      "name": "ep03_outro_start",
+      "payload": {}
+    },
+    {
+      "description": "Fired when all three sigils are activated in order.",
+      "name": "ep03_puzzle_solved",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the wrong-order reset cutscene completes.",
+      "name": "ep03_reset_done",
+      "payload": {}
+    },
+    {
+      "description": "Requests the wrong-order reset cutscene.",
+      "name": "ep03_reset_start",
+      "payload": {}
+    },
+    {
+      "description": "Fired when any sigil is interacted with.",
+      "name": "ep03_sigil_touched",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when sigils are activated in the wrong order.",
+      "name": "ep03_wrong_order",
+      "payload": {
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when all required Episode 04 sentries are defeated for the chosen route.",
+      "name": "ep04_all_enemies_dead",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the player chooses safe or hard combat route in Episode 04.",
+      "name": "ep04_choice_made",
+      "payload": {
+        "choice": "string"
+      }
+    },
+    {
+      "description": "Fired when Episode 04 combat begins after dialogue choice.",
+      "name": "ep04_combat_started",
+      "payload": {
+        "difficulty": "string"
+      }
+    },
+    {
+      "description": "Fired when Episode 04 is completed.",
+      "name": "ep04_complete",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the player enters Episode 04 arena.",
+      "name": "ep04_entered",
+      "payload": {
+        "entity": "string",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 04 exit door is interacted with.",
+      "name": "ep04_exit_door_interact",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when Episode 04 reward and exit are unlocked.",
+      "name": "ep04_exit_unlocked",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the Episode 04 intro cutscene completes and dialogue begins.",
+      "name": "ep04_intro_done",
+      "payload": {}
+    },
+    {
+      "description": "Requests the Episode 04 intro cutscene.",
+      "name": "ep04_intro_start",
+      "payload": {}
+    },
+    {
+      "description": "Requests the Episode 04 outro cutscene.",
+      "name": "ep04_outro_start",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the bonus reward cache is collected in Episode 04.",
+      "name": "ep04_reward_bonus_collected",
       "payload": {
         "entity": "string"
       }
     },
     {
-      "name": "puzzle_reset",
-      "description": "Fired when a puzzle sequence is reset.",
+      "description": "Fired when the Episode 04 reward chest is collected.",
+      "name": "ep04_reward_collected",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the night gate opens due to time-of-day transition.",
+      "name": "gate_opened",
       "payload": {
         "entity": "string"
       }
     },
     {
-      "name": "puzzle_solved",
-      "description": "Fired when a puzzle sequence is completed.",
-      "payload": {
-        "entity": "string"
-      }
+      "description": "Requests scene transition to combat vignette 01.",
+      "name": "go_to_combat_vignette_01",
+      "payload": {}
     },
     {
-      "name": "quest_room_complete",
-      "description": "Fired when the puzzle room quest completes.",
-      "payload": {
-        "quest_id": "string"
-      }
+      "description": "Requests scene transition to Episode 02: Signal in the Dust.",
+      "name": "go_to_episode_02_ep02",
+      "payload": {}
     },
     {
-      "name": "room2_entered",
-      "description": "Fired when the player enters the Puzzle Room 02 trigger.",
-      "payload": {
-        "zone": "string",
-        "entity": "string"
-      }
+      "description": "Requests scene transition to Episode 03: The Three Sigils.",
+      "name": "go_to_episode_03_ep03",
+      "payload": {}
     },
     {
-      "name": "room2_started",
-      "description": "Fired when the Puzzle Room 02 timer starts.",
-      "payload": {
-        "entity": "string"
-      }
+      "description": "Requests deterministic transition from Episode 03 to Episode 04.",
+      "name": "go_to_episode_04_ep04",
+      "payload": {}
     },
     {
-      "name": "hint2_plaque_interact",
+      "description": "Requests deterministic transition from Episode 04 to Episode 05.",
+      "name": "go_to_episode_05_ep05",
+      "payload": {}
+    },
+    {
+      "description": "Requests scene transition to puzzle room 03.",
+      "name": "go_to_puzzle_room_03",
+      "payload": {}
+    },
+    {
       "description": "Fired when the Puzzle Room 02 hint plaque is interacted with.",
+      "name": "hint2_plaque_interact",
       "payload": {
-        "target": "string",
-        "interactor": "string"
+        "interactor": "string",
+        "target": "string"
       }
     },
     {
-      "name": "hint2_read",
       "description": "Fired when the Puzzle Room 02 hint is read.",
+      "name": "hint2_read",
       "payload": {
         "entity": "string",
         "hint_id": "string"
       }
     },
     {
-      "name": "puzzle2_rune_a",
-      "description": "Fired when the Puzzle Room 02 rune A trigger is entered.",
+      "description": "Emitted when the puzzle hint plaque is interacted with.",
+      "name": "hint_plaque_interact",
       "payload": {
-        "zone": "string",
-        "entity": "string",
-        "position": "tuple[float, float]"
+        "interactor": "string",
+        "target": "string"
       }
     },
     {
-      "name": "puzzle2_rune_b",
-      "description": "Fired when the Puzzle Room 02 rune B trigger is entered.",
-      "payload": {
-        "zone": "string",
-        "entity": "string",
-        "position": "tuple[float, float]"
-      }
-    },
-    {
-      "name": "puzzle2_rune_c",
-      "description": "Fired when the Puzzle Room 02 rune C trigger is entered.",
-      "payload": {
-        "zone": "string",
-        "entity": "string",
-        "position": "tuple[float, float]"
-      }
-    },
-    {
-      "name": "puzzle2_progress",
-      "description": "Fired when the Puzzle Room 02 sequence advances.",
+      "description": "Fired when a player reads a hint or plaque.",
+      "name": "hint_read",
       "payload": {
         "entity": "string",
-        "pos": "int"
+        "hint_id": "string"
       }
     },
     {
-      "name": "puzzle2_wrong",
-      "description": "Fired when the Puzzle Room 02 sequence is entered incorrectly.",
+      "description": "Fired when the left lever in Puzzle Room 03 is interacted with.",
+      "name": "lever_left_pulled",
       "payload": {
-        "entity": "string"
+        "interactor": "string",
+        "target": "string"
       }
     },
     {
-      "name": "puzzle2_timeout",
-      "description": "Fired when the Puzzle Room 02 timer expires.",
+      "description": "Fired when the right lever in Puzzle Room 03 is interacted with.",
+      "name": "lever_right_pulled",
       "payload": {
-        "timer_id": "string",
-        "entity": "string",
-        "fire_count": "int",
-        "duration": "float"
+        "interactor": "string",
+        "target": "string"
       }
     },
     {
-      "name": "sentinel_spotted",
-      "description": "Fired when the Puzzle Room 02 sentinel sees the player.",
+      "description": "Fired to open the vendor UI.",
+      "name": "open_shop",
       "payload": {
-        "zone": "string",
-        "entity": "string",
-        "position": "tuple[float, float]"
+        "shop_id": "string"
       }
     },
     {
-      "name": "puzzle2_failed",
       "description": "Fired when the Puzzle Room 02 sequence fails.",
+      "name": "puzzle2_failed",
       "payload": {
         "entity": "string",
         "reason": "string"
       }
     },
     {
-      "name": "puzzle2_reset",
+      "description": "Fired when the Puzzle Room 02 sequence advances.",
+      "name": "puzzle2_progress",
+      "payload": {
+        "entity": "string",
+        "pos": "int"
+      }
+    },
+    {
       "description": "Fired when the Puzzle Room 02 sequence resets.",
+      "name": "puzzle2_reset",
       "payload": {
         "entity": "string"
       }
     },
     {
-      "name": "puzzle2_solved",
+      "description": "Fired when the Puzzle Room 02 rune A trigger is entered.",
+      "name": "puzzle2_rune_a",
+      "payload": {
+        "entity": "string",
+        "position": "tuple[float, float]",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 02 rune B trigger is entered.",
+      "name": "puzzle2_rune_b",
+      "payload": {
+        "entity": "string",
+        "position": "tuple[float, float]",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 02 rune C trigger is entered.",
+      "name": "puzzle2_rune_c",
+      "payload": {
+        "entity": "string",
+        "position": "tuple[float, float]",
+        "zone": "string"
+      }
+    },
+    {
       "description": "Fired when the Puzzle Room 02 sequence is completed.",
+      "name": "puzzle2_solved",
       "payload": {
         "entity": "string"
       }
     },
     {
-      "name": "door2_opened",
-      "description": "Fired when the Puzzle Room 02 exit door is opened.",
+      "description": "Fired when the Puzzle Room 02 timer expires.",
+      "name": "puzzle2_timeout",
       "payload": {
-        "target": "string",
+        "duration": "float",
+        "entity": "string",
+        "fire_count": "int",
+        "timer_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 02 sequence is entered incorrectly.",
+      "name": "puzzle2_wrong",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 03 sequence fails.",
+      "name": "puzzle3_failed",
+      "payload": {
+        "entity": "string",
+        "reason": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 03 sequence resets.",
+      "name": "puzzle3_reset",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when the player steps on the central rune in Puzzle Room 03.",
+      "name": "puzzle3_rune_step",
+      "payload": {
+        "entity": "string",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 03 sequence is completed.",
+      "name": "puzzle3_solved",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 03 timer expires.",
+      "name": "puzzle3_timeout",
+      "payload": {
+        "duration": "float",
+        "entity": "string",
+        "fire_count": "int",
+        "timer_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the timed window starts in Puzzle Room 03.",
+      "name": "puzzle3_window_started",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Emitted when the puzzle exit interactable is used.",
+      "name": "puzzle_exit_interact",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when a puzzle sequence advances.",
+      "name": "puzzle_progress",
+      "payload": {
+        "entity": "string",
+        "pos": "int"
+      }
+    },
+    {
+      "description": "Fired when a puzzle sequence is reset.",
+      "name": "puzzle_reset",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Emitted when puzzle rune A is activated.",
+      "name": "puzzle_rune_a",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Emitted when puzzle rune B is activated.",
+      "name": "puzzle_rune_b",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Emitted when puzzle rune C is activated.",
+      "name": "puzzle_rune_c",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when a puzzle sequence is completed.",
+      "name": "puzzle_solved",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when a puzzle sequence is entered incorrectly.",
+      "name": "puzzle_wrong",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when the combat vignette quest completes.",
+      "name": "quest_combat_vignette_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when a quest is fully completed.",
+      "name": "quest_completed",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 02 quest completes.",
+      "name": "quest_ep02_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 03 quest completes.",
+      "name": "quest_ep03_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 04 quest completes.",
+      "name": "quest_ep04_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 01 quest completes.",
+      "name": "quest_episode_01_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 02 quest completes.",
+      "name": "quest_room2_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 03 quest completes.",
+      "name": "quest_room3_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the puzzle room quest completes.",
+      "name": "quest_room_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when a quest stage is completed.",
+      "name": "quest_stage_completed",
+      "payload": {
+        "quest_id": "string",
+        "stage_id": "string"
+      }
+    },
+    {
+      "description": "Fired when a quest stage becomes active.",
+      "name": "quest_stage_started",
+      "payload": {
+        "quest_id": "string",
+        "stage_id": "string"
+      }
+    },
+    {
+      "description": "Fired when the town schedule quest completes.",
+      "name": "quest_town_complete",
+      "payload": {
+        "quest_id": "string"
+      }
+    },
+    {
+      "description": "Fired when a reward chest is looted.",
+      "name": "reward_collected",
+      "payload": {
+        "gold": "integer",
+        "item_id": "string",
+        "source": "string"
+      }
+    },
+    {
+      "description": "Fired when the Golden Slice 2 Variant K puzzle switch is activated.",
+      "name": "ridge2_variant_k_unlock",
+      "payload": {
+        "source": "object"
+      }
+    },
+    {
+      "description": "Fired when the Golden Slice puzzle switch for variant N2 is activated.",
+      "name": "ridge2_variant_n_unlock",
+      "payload": {
+        "source": "object"
+      }
+    },
+    {
+      "description": "Fired when the Variant K puzzle switch is activated.",
+      "name": "ridge_variant_k_unlock",
+      "payload": {
+        "source": "object"
+      }
+    },
+    {
+      "description": "Fired when the player enters the Puzzle Room 02 trigger.",
+      "name": "room2_entered",
+      "payload": {
+        "entity": "string",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 02 timer starts.",
+      "name": "room2_started",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when the player enters the Puzzle Room 03 trigger.",
+      "name": "room3_entered",
+      "payload": {
+        "entity": "string",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Fired when the player enters a room trigger (e.g., puzzle room).",
+      "name": "room_entered",
+      "payload": {
+        "entity": "string",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Emitted when a scene transition event is requested.",
+      "name": "scene_transition",
+      "payload": {
+        "from_scene": "string",
+        "to_scene": "string"
+      }
+    },
+    {
+      "description": "Fired when the player discovers the secret behind the night gate.",
+      "name": "secret_found",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when the Puzzle Room 02 sentinel sees the player.",
+      "name": "sentinel_spotted",
+      "payload": {
+        "entity": "string",
+        "position": "tuple[float, float]",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Fired when the player enters the town schedule scene.",
+      "name": "town_entered",
+      "payload": {
+        "entity": "string",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Fired when a projectile entity is spawned by a ranged attack.",
+      "name": "projectile_fired",
+      "payload": {
+        "source": "string",
+        "speed": "float",
+        "target_x": "float",
+        "target_y": "float",
+        "x": "float",
+        "y": "float"
+      }
+    },
+    {
+      "description": "Fired when a projectile impacts a target.",
+      "name": "projectile_hit",
+      "payload": {
+        "amount": "float",
+        "source": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Emitted when a scene exit interaction occurs.",
+      "name": "use_exit",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the vendor NPC leaves the stall and closes.",
+      "name": "vendor_closed",
+      "payload": {
+        "entity": "string",
+        "schedule_index": "integer"
+      }
+    },
+    {
+      "description": "Fired when the player attempts to interact with the vendor.",
+      "name": "vendor_interact_attempt",
+      "payload": {
         "interactor": "string"
       }
     },
     {
-      "name": "quest_room2_complete",
-      "description": "Fired when the Puzzle Room 02 quest completes.",
+      "description": "Fired when the player successfully interacts with the vendor while open.",
+      "name": "vendor_interacted",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when the vendor NPC arrives at the stall and opens for business.",
+      "name": "vendor_opened",
+      "payload": {
+        "entity": "string",
+        "schedule_index": "integer"
+      }
+    },
+    {
+      "description": "Fired when the player enters Episode 05: Hollowmere Market.",
+      "name": "ep05_entered",
+      "payload": {
+        "entity": "string",
+        "zone": "string"
+      }
+    },
+    {
+      "description": "Requests the Episode 05 intro cutscene to start.",
+      "name": "ep05_intro_start",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the Episode 05 intro cutscene hands off to dialogue.",
+      "name": "ep05_intro_done",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the Episode 05 intro dialogue branch is chosen.",
+      "name": "ep05_choice_made",
+      "payload": {
+        "choice": "string"
+      }
+    },
+    {
+      "description": "Fired when the Hollowmere vendor opens during morning hours.",
+      "name": "ep05_vendor_opened",
+      "payload": {
+        "entity": "string",
+        "schedule_index": "integer"
+      }
+    },
+    {
+      "description": "Fired when the Hollowmere vendor closes outside morning hours.",
+      "name": "ep05_vendor_closed",
+      "payload": {
+        "entity": "string",
+        "schedule_index": "integer"
+      }
+    },
+    {
+      "description": "Fired when the player attempts to interact with the Hollowmere vendor.",
+      "name": "ep05_vendor_interact_attempt",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the player speaks with the vendor while the stall is open.",
+      "name": "ep05_vendor_spoken",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the Hollowmere notice board is read.",
+      "name": "ep05_notice_board_read",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the tavern gate opens at night.",
+      "name": "ep05_night_gate_opened",
+      "payload": {
+        "entity": "string"
+      }
+    },
+    {
+      "description": "Fired when the player talks to the mentor at the tavern.",
+      "name": "ep05_mentor_interact",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 05 tavern objective is completed.",
+      "name": "ep05_tavern_met",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when Episode 05 exit and rewards are unlocked.",
+      "name": "ep05_exit_unlocked",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the standard Episode 05 reward is collected.",
+      "name": "ep05_reward_collected",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the bonus Episode 05 reward is collected.",
+      "name": "ep05_reward_bonus_collected",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 05 exit door is interacted with.",
+      "name": "ep05_exit_door_interact",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Requests the Episode 05 outro cutscene to start.",
+      "name": "ep05_outro_start",
+      "payload": {}
+    },
+    {
+      "description": "Fired when Episode 05 is completed.",
+      "name": "ep05_complete",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the Episode 05 quest completes.",
+      "name": "quest_ep05_complete",
       "payload": {
         "quest_id": "string"
       }
     },
     {
-      "name": "open_shop",
-      "description": "Fired to open the vendor UI.",
+      "description": "Fired when mini campaign 05 starts from Episode 01 entry.",
+      "name": "campaign05_started",
       "payload": {
-        "shop_id": "string"
+        "campaign_id": "string"
       }
     },
     {
-      "name": "quest_completed",
-      "description": "Fired when a quest is fully completed.",
+      "description": "Requests deterministic transition from Episode 05 to Episode 06.",
+      "name": "go_to_episode_06_ep06",
+      "payload": {}
+    },
+    {
+      "description": "Fired when mini campaign 05 is completed.",
+      "name": "campaign05_complete",
       "payload": {
         "quest_id": "string"
       }
     },
     {
-      "name": "quest_stage_completed",
-      "description": "Fired when a quest stage is completed.",
+      "description": "Fired when the player enters Episode 06: Conduit of Ash.",
+      "name": "ep06_entered",
       "payload": {
-        "quest_id": "string",
-        "stage_id": "string"
+        "entity": "string",
+        "zone": "string"
       }
     },
     {
-      "name": "quest_stage_started",
-      "description": "Fired when a quest stage becomes active.",
+      "description": "Requests the Episode 06 intro cutscene to start.",
+      "name": "ep06_intro_start",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the Episode 06 intro cutscene hands off to dialogue.",
+      "name": "ep06_intro_done",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the Episode 06 branch choice is committed.",
+      "name": "ep06_choice_made",
       "payload": {
-        "quest_id": "string",
-        "stage_id": "string"
+        "choice": "string"
       }
     },
     {
-      "name": "act1_ch1_gate_unlock",
-      "description": "Fired when the Act 1 Chapter 1 gate switch is activated.",
+      "description": "Fired when Episode 06 combat route is armed.",
+      "name": "ep06_combat_started",
       "payload": {
-        "source": "object"
+        "path": "string"
       }
     },
     {
-      "name": "act1_ch2_ruin_unlock",
-      "description": "Fired when the Act 1 Chapter 2 ruined gate switch is activated.",
+      "description": "Fired when the required Episode 06 sentry is defeated.",
+      "name": "ep06_combat_cleared",
       "payload": {
-        "source": "object"
+        "path": "string"
       }
     },
     {
-      "name": "ridge2_variant_k_unlock",
-      "description": "Fired when the Golden Slice 2 Variant K puzzle switch is activated.",
+      "description": "Fired when a Conduit rune is interacted with.",
+      "name": "ep06_puzzle_touched",
       "payload": {
-        "source": "object"
+        "interactor": "string",
+        "target": "string"
       }
     },
     {
-      "name": "ridge2_variant_n_unlock",
-      "description": "Fired when the Golden Slice puzzle switch for variant N2 is activated.",
+      "description": "Fired when Episode 06 puzzle sequence input is invalid.",
+      "name": "ep06_wrong_order",
       "payload": {
-        "source": "object"
+        "target": "string"
       }
     },
     {
-      "name": "ridge_variant_k_unlock",
-      "description": "Fired when the Variant K puzzle switch is activated.",
+      "description": "Requests the Episode 06 puzzle reset cutscene to start.",
+      "name": "ep06_reset_start",
+      "payload": {}
+    },
+    {
+      "description": "Fired when Episode 06 puzzle reset cutscene completes.",
+      "name": "ep06_reset_done",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the Episode 06 rune puzzle is solved.",
+      "name": "ep06_puzzle_solved",
+      "payload": {}
+    },
+    {
+      "description": "Fired when Episode 06 exit conditions are satisfied.",
+      "name": "ep06_exit_unlocked",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the standard Episode 06 reward is collected.",
+      "name": "ep06_reward_collected",
       "payload": {
-        "source": "object"
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the puzzle-path Episode 06 bonus reward is collected.",
+      "name": "ep06_reward_bonus_collected",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Fired when the Episode 06 exit door is interacted with.",
+      "name": "ep06_exit_door_interact",
+      "payload": {
+        "interactor": "string",
+        "target": "string"
+      }
+    },
+    {
+      "description": "Requests the Episode 06 outro cutscene to start.",
+      "name": "ep06_outro_start",
+      "payload": {}
+    },
+    {
+      "description": "Fired when Episode 06 is completed.",
+      "name": "ep06_complete",
+      "payload": {}
+    },
+    {
+      "description": "Fired when the Episode 06 quest completes.",
+      "name": "quest_ep06_complete",
+      "payload": {
+        "quest_id": "string"
       }
     }
   ]

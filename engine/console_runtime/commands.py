@@ -7,6 +7,13 @@ from typing import Any, Callable
 from engine.console_runtime.models import ParsedCommand
 from engine.console_runtime.parse import parse_command_line
 from engine.console_runtime import handlers
+from engine.console_runtime import handlers_ai
+from engine.console_runtime import handlers_behaviour
+from engine.console_runtime import handlers_camera
+from engine.console_runtime import handlers_config
+from engine.console_runtime import handlers_entity
+from engine.console_runtime import handlers_inventory
+from engine.console_runtime import handlers_scene
 
 
 Handler = Callable[[Any, list[str]], bool]
@@ -35,12 +42,12 @@ def _dispatch_table() -> dict[str, Handler]:
     add("xp", handlers.handle_xp)
     add("stats", handlers.handle_stats)
     add("world", handlers.handle_world)
-    add("entity", lambda c, a: (c._entity_command(a), True)[1])
-    add("spawn", lambda c, a: (c._spawn_command(a), True)[1])
-    add("spawn_like", lambda c, a: (c._spawn_like_command(a), True)[1])
-    add("behaviours", lambda c, a: (c._list_registered_behaviours(), True)[1])
-    add("behaviour", lambda c, a: (c._behaviour_detail(a), True)[1])
-    add("beh", lambda c, a: (c._beh_command(a), True)[1])
+    add("entity", handlers_entity.handle_entity)
+    add("spawn", handlers_entity.handle_spawn)
+    add("spawn_like", handlers_entity.handle_spawn_like)
+    add("behaviours", handlers_behaviour.handle_behaviours)
+    add("behaviour", handlers_behaviour.handle_behaviour_detail)
+    add("beh", handlers_behaviour.handle_beh)
     add("events", lambda c, a: (c._events_command(), True)[1])
     add("update_order", lambda c, a: (c._update_order_command(), True)[1])
 
@@ -49,55 +56,15 @@ def _dispatch_table() -> dict[str, Handler]:
         c._dump_state(target_path)
         return True
 
-    add("dumpstate", _dumpstate)
+    add("dumpstate", handlers_scene.handle_dump_state)
+    add("dump_scene", handlers_scene.handle_dump_scene)
+    add("loadstate", handlers_scene.handle_load_state)
 
-    def _dump_scene(c, a):
-        target_path = a[0] if a else "mesh_scene.json"
-        c._dump_scene(target_path)
-        return True
-
-    add("dump_scene", _dump_scene)
-
-    def _loadstate(c, a):
-        if not a:
-            c.log("Usage: loadstate <path>")
-        else:
-            c._load_state(a[0])
-        return True
-
-    add("loadstate", _loadstate)
-
-    add("index", lambda c, a: (c._build_project_index(a), True)[1])
-
-    def _ai_context(c, a):
-        target_path = a[0] if a else "mesh_ai_context.json"
-        c._ai_context(target_path)
-        return True
-
-    add("ai_context", _ai_context)
-
-    def _docs(c, a):
-        target_dir = a[0] if a else "docs"
-        c._generate_docs(target_dir)
-        return True
-
-    add("docs", _docs)
-
-    def _ai_bundle(c, a):
-        target_dir = a[0] if a else "mesh_ai_bundle"
-        c._ai_bundle(target_dir)
-        return True
-
-    add("ai_bundle", _ai_bundle)
-
-    def _ai_job(c, a):
-        if not a:
-            c.log("Usage: ai_job <job_path>")
-            return True
-        c._ai_job(a[0])
-        return True
-
-    add("ai_job", _ai_job)
+    add("index", handlers_ai.handle_build_project_index)
+    add("ai_context", handlers_ai.handle_ai_context)
+    add("docs", handlers_ai.handle_generate_docs)
+    add("ai_bundle", handlers_ai.handle_ai_bundle)
+    add("ai_job", handlers_ai.handle_ai_job)
 
     def _daynight(c, a):
         dn = getattr(c.window, "day_night", None)
@@ -320,14 +287,9 @@ def _dispatch_table() -> dict[str, Handler]:
     add("lighting_stats", _lighting_stats)
     add("lighting_state", _lighting_stats)
 
-    add("reload_behaviours", lambda c, a: (c._reload_behaviours(), True)[1])
+    add("reload_behaviours", handlers_behaviour.handle_reload_behaviours)
 
-    def _validate_scene(c, a):
-        target_path = a[0] if a else (c.window.scene_controller.current_scene_path or "scenes/test_scene.json")
-        c._validate_scene(target_path)
-        return True
-
-    add("validate_scene", _validate_scene)
+    add("validate_scene", handlers_scene.handle_validate_scene)
     add("reload", lambda c, a: (c.window.reload_scene(), True)[1])
 
     def _reload_scene(c, a):
@@ -342,11 +304,11 @@ def _dispatch_table() -> dict[str, Handler]:
             return False
         sub = a[0].lower()
         if sub == "save":
-            c._save_scene(a[1:])
+            handlers_scene.handle_save_scene(c, a[1:])
             return True
         if sub == "dump":
             target_path = a[1] if len(a) > 1 else "mesh_scene_dump.json"
-            c._dump_scene(target_path)
+            handlers_scene.handle_dump_scene(c, [target_path])
             return True
         target = a[0]
         c.log(f"Switching scene to '{target}'")
@@ -355,7 +317,7 @@ def _dispatch_table() -> dict[str, Handler]:
 
     add("scene", _scene)
 
-    add("camera", lambda c, a: (c._camera_command(a), True)[1])
+    add("camera", handlers_camera.handle_camera)
 
     def _rules(c, _a):
         c.log("collision_rules:")
@@ -503,20 +465,11 @@ def _dispatch_table() -> dict[str, Handler]:
     add("prefab_source", _prefab_source)
     add("prefab_source_chain", _prefab_source_chain)
 
-    def _config(c, _a):
-        cfg = getattr(c.window, "engine_config", None)
-        if cfg is None:
-            c.log("No config loaded.")
-        else:
-            c.log(f"Config: {cfg.width}x{cfg.height}, scene={cfg.start_scene}, vol={cfg.master_volume:.2f}")
-            c._print_config()
-        return True
+    add("config", handlers_config.handle_config)
 
-    add("config", _config)
-
-    add("bindings", lambda c, a: (c._bindings_command(), True)[1])
-    add("bind", lambda c, a: (c._bind_command(a), True)[1])
-    add("unbind", lambda c, a: (c._unbind_command(a), True)[1])
+    add("bindings", handlers_config.handle_bindings)
+    add("bind", handlers_config.handle_bind)
+    add("unbind", handlers_config.handle_unbind)
 
     def _sound(c, a):
         if not a:
@@ -555,11 +508,11 @@ def _dispatch_table() -> dict[str, Handler]:
 
     add("stopmusic", _stopmusic)
 
-    add("inventory", lambda c, a: (c._inventory_command(a), True)[1])
-    add("inv", lambda c, a: (c._inventory_command(a), True)[1])
-    add("equip", lambda c, a: (c._equip_command(a), True)[1])
-    add("unequip", lambda c, a: (c._unequip_command(a), True)[1])
-    add("set", lambda c, a: (c._handle_set(a), True)[1])
+    add("inventory", handlers_inventory.handle_inventory)
+    add("inv", handlers_inventory.handle_inventory)
+    add("equip", handlers_inventory.handle_equip)
+    add("unequip", handlers_inventory.handle_unequip)
+    add("set", handlers_config.handle_set)
 
     def _save(c, a):
         if not a:
@@ -589,12 +542,7 @@ def _dispatch_table() -> dict[str, Handler]:
 
     add("load", _load)
 
-    def _saveconfig(c, _a):
-        c.log("Saving configuration to disk")
-        c._save_config_to_disk()
-        return True
-
-    add("saveconfig", _saveconfig)
+    add("saveconfig", handlers_config.handle_saveconfig)
 
     entries.sort(key=lambda item: item[0])
     return dict(entries)

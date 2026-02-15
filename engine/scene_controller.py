@@ -75,6 +75,7 @@ from .scene_runtime.transitions import queue_scene_change as _queue_scene_change
 from .scene_runtime.transitions import reload_scene as _reload_scene_runtime
 from .scene_runtime.transitions import request_scene_change as _request_scene_change_runtime
 from .scene_runtime.transitions import request_scene_reload as _request_scene_reload_runtime
+from .scene_runtime import scene_load_apply as _scene_load_apply_runtime
 from .scene_lifecycle_controller import load_scene as _load_scene_runtime
 from .scene_update_controller import SceneUpdateController
 from .scene_entity_store_controller import SceneEntityStoreController
@@ -119,6 +120,7 @@ from .behaviours.utils import (
     prune_optional_behaviour_defaults,
     strip_behaviour_metadata,
 )
+from .swallowed_exceptions import record_swallowed
 from .constants import (
     EVENT_ANIMATION_EVENT,
     EVENT_COLLECTIBLE_PICKED,
@@ -527,8 +529,8 @@ class SceneController:
         if assets is not None:
             try:
                 texture = assets.get_texture(asset_path)
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                record_swallowed("engine.scene_controller._get_background_plane_texture.assets_get_texture", exc)
 
         # Fallback to direct load
         if texture is None:
@@ -972,14 +974,18 @@ class SceneController:
             pass
 
     def get_loaded_scene_payload(self) -> Dict[str, Any]:
-        return self._loaded_scene_data
+        return _scene_load_apply_runtime.get_loaded_scene_payload(self)
 
     def get_authored_scene_payload(self) -> Dict[str, Any]:
         """Return a copy of the scene payload before runtime-only mutations (e.g., themed spawn resolution)."""
-        return _authoring_runtime.get_authored_scene_payload(self)
+        return _scene_load_apply_runtime.get_authored_scene_payload(self, authoring_runtime=_authoring_runtime)
 
     def debug_apply_authored_scene_payload(self, authored_payload: Dict[str, Any]) -> bool:
-        return _authoring_runtime.debug_apply_authored_scene_payload(self, authored_payload)
+        return _scene_load_apply_runtime.debug_apply_authored_scene_payload(
+            self,
+            authored_payload,
+            authoring_runtime=_authoring_runtime,
+        )
 
     def refresh_tilemap_layers(self) -> bool:
         """Debug-only: rebuild tilemap sprite layers from the current loaded scene payload."""
@@ -1089,6 +1095,171 @@ class SceneController:
 
     def debug_add_tag(self, selected_ids: list[str], tag: str) -> tuple[int, int]:
         return _authoring_runtime.debug_add_tag(self, selected_ids, tag)
+
+    def debug_remove_tag(self, selected_ids: list[str], tag: str) -> tuple[int, int]:
+        return _authoring_runtime.debug_remove_tag(self, selected_ids, tag)
+
+    def debug_toggle_tag(self, selected_ids: list[str], tag: str) -> tuple[int, int, int]:
+        return _authoring_runtime.debug_toggle_tag(self, selected_ids, tag)
+
+    def debug_batch_rename(self, selected_ids: list[str], prefix: str = "", suffix: str = "") -> tuple[int, int]:
+        return _authoring_runtime.debug_batch_rename(self, selected_ids, prefix=prefix, suffix=suffix)
+
+    def debug_set_names(self, entity_ids: list[str], base: str, start: int = 1, width: int = 3) -> dict:
+        return _authoring_runtime.debug_set_names(self, entity_ids, base, start=start, width=width)
+
+    def debug_align_selection(
+        self,
+        entity_ids: list[str],
+        axis: str,
+        mode: str,
+        reference: str = "primary",
+        primary_id: str = "",
+    ) -> dict:
+        return _authoring_runtime.debug_align_selection(
+            self, entity_ids, axis, mode, reference=reference, primary_id=primary_id,
+        )
+
+    def debug_distribute_selection(
+        self,
+        entity_ids: list[str],
+        axis: str,
+        mode: str = "gap",
+        reference: str = "group",
+        primary_id: str = "",
+    ) -> dict:
+        return _authoring_runtime.debug_distribute_selection(
+            self, entity_ids, axis, mode, reference=reference, primary_id=primary_id,
+        )
+
+    def debug_snap_to_grid(
+        self,
+        entity_ids: list[str],
+        step: int,
+        axes: str = "xy",
+        mode: str = "nearest",
+    ) -> dict:
+        return _authoring_runtime.debug_snap_to_grid(
+            self, entity_ids, step, axes=axes, mode=mode,
+        )
+
+    def debug_nudge_selection(
+        self,
+        entity_ids: list[str],
+        dx: float,
+        dy: float,
+        count: int = 1,
+        step: float | None = None,
+    ) -> dict:
+        return _authoring_runtime.debug_nudge_selection(
+            self, entity_ids, dx, dy, count=count, step=step,
+        )
+
+    def debug_rotate_selection(
+        self,
+        entity_ids: list[str],
+        deg: float,
+        about: str = "self",
+        primary_id: str = "",
+    ) -> dict:
+        return _authoring_runtime.debug_rotate_selection(
+            self, entity_ids, deg, about=about, primary_id=primary_id,
+        )
+
+    def debug_mirror_selection(
+        self,
+        entity_ids: list[str],
+        axis: str,
+        about: str = "group",
+        primary_id: str = "",
+        include_rotation: bool = True,
+    ) -> dict:
+        return _authoring_runtime.debug_mirror_selection(
+            self, entity_ids, axis, about=about, primary_id=primary_id,
+            include_rotation=include_rotation,
+        )
+
+    def debug_group_selection(
+        self,
+        entity_ids: list[str],
+        name_base: str = "Group",
+        about: str = "group",
+        primary_id: str = "",
+    ) -> dict:
+        return _authoring_runtime.debug_group_selection(
+            self, entity_ids, name_base=name_base, about=about,
+            primary_id=primary_id,
+        )
+
+    def debug_ungroup_selection(
+        self,
+        entity_ids: list[str],
+        mode: str = "auto",
+    ) -> dict:
+        return _authoring_runtime.debug_ungroup_selection(
+            self, entity_ids, mode=mode,
+        )
+
+    def debug_duplicate_to_grid(
+        self,
+        entity_ids: list[str],
+        rows: int = 1,
+        cols: int = 1,
+        dx: float = 0.0,
+        dy: float = 0.0,
+        origin: str = "selection",
+        include_original: bool = True,
+        name_mode: str = "none",
+    ) -> dict:
+        return _authoring_runtime.debug_duplicate_to_grid(
+            self, entity_ids, rows=rows, cols=cols, dx=dx, dy=dy,
+            origin=origin, include_original=include_original,
+            name_mode=name_mode,
+        )
+
+    def debug_duplicate_along_path(
+        self,
+        entity_ids: list[str],
+        from_x: float = 0.0,
+        from_y: float = 0.0,
+        to_x: float = 0.0,
+        to_y: float = 0.0,
+        count: int = 2,
+        include_original: bool = True,
+        origin: str = "selection",
+        name_mode: str = "none",
+        orient: bool = False,
+    ) -> dict:
+        return _authoring_runtime.debug_duplicate_along_path(
+            self, entity_ids, from_x=from_x, from_y=from_y,
+            to_x=to_x, to_y=to_y, count=count,
+            include_original=include_original, origin=origin,
+            name_mode=name_mode, orient=orient,
+        )
+
+    def debug_scatter_selection(
+        self,
+        entity_ids: list[str],
+        n: int = 1,
+        shape: str = "circle",
+        radius: float = 64.0,
+        width: float = 128.0,
+        height: float = 128.0,
+        center: str = "group",
+        seed: int = 0,
+        jitter_rot_deg: float = 0.0,
+        snap_step: int | None = None,
+        include_original: bool = True,
+        name_mode: str = "none",
+    ) -> dict:
+        return _authoring_runtime.debug_scatter_selection(
+            self, entity_ids, n=n, shape=shape,
+            radius=radius, width=width, height=height,
+            center=center, seed=seed,
+            jitter_rot_deg=jitter_rot_deg, snap_step=snap_step,
+            include_original=include_original,
+            name_mode=name_mode,
+        )
 
     def debug_config_triggerzone_set_zone_id(self, selected_ids: list[str], zone_id: str) -> tuple[int, int, int]:
         """
@@ -1346,111 +1517,13 @@ class SceneController:
         )
 
     def _load_tilemap_layers(self, scene: Dict[str, Any], scene_dir: Path) -> None:
-        tilemap_data = scene.get("tilemap")
-        manager = getattr(self.window, "tilemap_manager", None)
-        if not isinstance(tilemap_data, dict) or manager is None:
-            return
-
-        def _expand_candidates(raw: Any) -> list[Path]:
-            candidates: list[Path] = []
-            if not isinstance(raw, str) or not raw.strip():
-                return candidates
-            value_path = Path(raw)
-            if value_path.is_absolute():
-                candidates.append(value_path)
-            else:
-                candidates.append((scene_dir / value_path).resolve())
-                candidates.append((Path.cwd() / value_path).resolve())
-            return candidates
-
-        candidates: list[Path] = []
-        candidates.extend(_expand_candidates(tilemap_data.get("resolved_path")))
-        candidates.extend(_expand_candidates(tilemap_data.get("path")))
-
-        if not candidates:
-            print("[Mesh][Tilemap] WARNING: Scene defined a tilemap without a path")
-            return
-
-        tilemap_path = None
-        for candidate in candidates:
-            if candidate.exists():
-                tilemap_path = candidate
-                break
-        if tilemap_path is None:
-            tilemap_path = candidates[-1]
-
-        raw_tile_layers = tilemap_data.get("tile_layers")
-        raw_layer_configs = (
-            raw_tile_layers
-            if isinstance(raw_tile_layers, list) and raw_tile_layers
-            else tilemap_data.get("layers", [])
-        )
-        if not isinstance(raw_layer_configs, list) or not raw_layer_configs:
-            print(f"[Mesh][Tilemap] WARNING: Scene tilemap '{tilemap_path}' has no layers configured")
-            return
-
-        layer_configs: list[dict[str, Any]] = []
-        for cfg in raw_layer_configs:
-            if isinstance(cfg, dict):
-                layer_configs.append(dict(cfg))
-
-        collision_layer_id = tilemap_data.get("collision_layer_id")
-        if isinstance(collision_layer_id, str) and collision_layer_id.strip():
-            target = collision_layer_id.strip()
-            for cfg in layer_configs:
-                name = cfg.get("id") or cfg.get("name") or cfg.get("layer")
-                if isinstance(name, str) and name.strip() == target:
-                    cfg["collision"] = True
-
-        overrides_value = tilemap_data.get("overrides")
-        overrides: dict[str, Any] | None = None
-        if isinstance(overrides_value, dict):
-            overrides = dict(overrides_value)
-
-        tile_override_layers: dict[str, Any] = {}
-        if overrides and isinstance(overrides.get("layers"), dict):
-            tile_override_layers = dict(overrides.get("layers", {}))
-
-        if isinstance(raw_tile_layers, list):
-            for entry in raw_tile_layers:
-                if not isinstance(entry, dict):
-                    continue
-                layer_id = entry.get("id") or entry.get("name") or entry.get("layer")
-                if not isinstance(layer_id, str) or not layer_id.strip():
-                    continue
-                tiles = entry.get("tiles")
-                if isinstance(tiles, list):
-                    tile_override_layers[layer_id.strip()] = tiles
-
-        if tile_override_layers:
-            if overrides is None:
-                overrides = {}
-            overrides["layers"] = tile_override_layers
-        try:
-            instance = load_tilemap(tilemap_path, layer_configs, overrides=overrides)
-        except Exception as exc:
-            if "scene_load_tilemap" not in _LOG_ONCE:
-                logger.error("Failed to load tilemap '%s': %s", tilemap_path, exc, exc_info=True)
-                _LOG_ONCE.add("scene_load_tilemap")
-            return
-
-        if instance is None:
-            return
-
-        self.tilemap_instance = instance
-        self.navigation.invalidate()
-        self._tilemap_background_layers = instance.background_layers
-        self._tilemap_foreground_layers = instance.foreground_layers
-        self._tilemap_draw_layers = list(getattr(instance, "draw_layers", []))
-        if instance.collision_sprites:
-            self.solid_sprites.extend(instance.collision_sprites)
-        self._init_tilemap_batching(instance)
-        self._apply_tilemap_world_bounds(instance)
-
-        layer_count = len(instance.background_layers) + len(instance.foreground_layers)
-        print(
-            f"[Mesh][Tilemap] Loaded '{tilemap_path.name}' with {layer_count} draw layer(s) and "
-            f"{len(instance.collision_sprites)} collision sprite(s)",
+        _scene_load_apply_runtime.load_tilemap_layers(
+            self,
+            scene,
+            scene_dir,
+            logger=logger,
+            log_once=_LOG_ONCE,
+            load_tilemap_func=lambda *args, **kwargs: load_tilemap(*args, **kwargs),
         )
 
     def _init_tilemap_batching(self, instance: TilemapInstance) -> None:
@@ -1718,44 +1791,14 @@ class SceneController:
         _apply_pending_spawn_point_runtime(self)
 
     def _apply_scene_settings(self, settings: Dict[str, Any]) -> None:
-        try:
-            arcade_window = optional_arcade.arcade.get_window()
-        except RuntimeError:
-            arcade_window = None
-        if arcade_window is None:
-            return
-
-        color_name = settings.get("background_color")
-        if isinstance(color_name, str):
-            color_value = getattr(optional_arcade.arcade.color, color_name.upper(), None)
-            if color_value:
-                optional_arcade.arcade.set_background_color(color_value)
-                return
-        optional_arcade.arcade.set_background_color(optional_arcade.arcade.color.DARK_BLUE_GRAY)
-
-        # Day/night overrides
-        day_night = getattr(self.window, "day_night", None)
-        if day_night is not None:
-            if "day_night_enabled" in settings:
-                day_night.enabled = bool(settings.get("day_night_enabled"))
-            if "time_of_day_hour" in settings:
-                try:
-                    day_night.set_hour(float(settings["time_of_day_hour"]))
-                except (TypeError, ValueError):
-                    pass
-            if "day_night_cycle_length_seconds" in settings:
-                try:
-                    day_night.set_cycle_length_seconds(float(settings["day_night_cycle_length_seconds"]))
-                except (TypeError, ValueError):
-                    pass
-
-        spawn_id = settings.get("initial_spawn")
-        if spawn_id:
-            # Queue a spawn move after entities are loaded
-            self.window.set_next_spawn_point(spawn_id)
+        _scene_load_apply_runtime.apply_scene_settings(self, settings)
 
     def _apply_scene_state(self, state_block: Any) -> None:
-        _apply_scene_state_runtime(self, state_block)
+        _scene_load_apply_runtime.apply_scene_state(
+            self,
+            state_block,
+            apply_scene_state_runtime=_apply_scene_state_runtime,
+        )
 
     def _configure_camera_from_scene(self, settings: Dict[str, Any]) -> None:
         self.window.camera_controller.configure_from_scene(settings)

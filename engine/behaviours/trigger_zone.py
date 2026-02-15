@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 
 from ..constants import EVENT_ENTERED_ZONE
+from ..event_emit import emit_gameplay_event
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
@@ -74,12 +75,17 @@ class TriggerZoneBehaviour(Behaviour):
             print(f"[Mesh][Trigger] {entity_name} triggered {event}")
             actor_name = getattr(target, "mesh_name", "<unnamed>")
 
-            # Emit explicit event via the bus
-            self.window.event_bus.emit(
+            # Emit explicit event via gameplay bus adapter.
+            emit_gameplay_event(
+                self.window,
                 EVENT_ENTERED_ZONE,
-                zone=entity_name,
-                actor=actor_name,
-                position=(float(self.entity.center_x), float(self.entity.center_y)),
+                {
+                    "zone": entity_name,
+                    "actor": actor_name,
+                    "position": (float(self.entity.center_x), float(self.entity.center_y)),
+                },
+                source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
+                source_behaviour="TriggerZone",
             )
 
             # Legacy signal support (optional, but good for compatibility)

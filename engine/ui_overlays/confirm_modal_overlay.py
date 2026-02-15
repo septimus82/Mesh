@@ -1,11 +1,11 @@
 from typing import List, Optional
-from engine.optional_arcade import arcade
+import engine.optional_arcade as optional_arcade
 from engine.ui_overlays.common import draw_panel_bg, draw_outline_centered
 from engine.ui_text_cache import UiTextCache, draw_text
 from engine.text_draw import TextCache
 
 class ConfirmModalOverlay:
-    def __init__(self, window: arcade.Window):
+    def __init__(self, window: optional_arcade.arcade.Window):
         self.window = window
         self._ui_cache = UiTextCache(getattr(window, "text_cache", TextCache()))
 
@@ -33,7 +33,7 @@ class ConfirmModalOverlay:
             text=title,
             x=cx,
             y=cy + panel_h // 2 - 25,
-            color=arcade.color.WHITE,
+            color=optional_arcade.arcade.color.WHITE,
             font_size=14,
             anchor_x="center",
             bold=True,
@@ -42,13 +42,13 @@ class ConfirmModalOverlay:
         # Content
         start_y = cy + panel_h//2 - 60
         for i, line in enumerate(message_lines):
-            color = arcade.color.LIGHT_GRAY
+            color = optional_arcade.arcade.color.LIGHT_GRAY
             if line.startswith("!"): # Warning/Alert
-                color = arcade.color.YELLOW
+                color = optional_arcade.arcade.color.YELLOW
             elif line.startswith("+"): # Add
-                color = arcade.color.GREEN
+                color = optional_arcade.arcade.color.GREEN
             elif line.startswith("-"): # Remove
-                color = arcade.color.RED
+                color = optional_arcade.arcade.color.RED
                 
             draw_text(
                 self._ui_cache,
@@ -74,14 +74,14 @@ class ConfirmModalOverlay:
                 track_right = track_left + 3
                 track_top = list_top
                 track_bottom = list_bottom
-                arcade.draw_lrtb_rectangle_filled(track_left, track_right, track_top, track_bottom, (90, 90, 100, 140))
+                optional_arcade.arcade.draw_lrtb_rectangle_filled(track_left, track_right, track_top, track_bottom, (90, 90, 100, 140))
                 track_h = max(1.0, track_top - track_bottom)
                 ratio = max(0.0, min(1.0, start_index / max(1, (total_lines - visible_count))))
                 thumb_h = max(10.0, track_h * (visible_count / total_lines))
                 usable_h = max(1.0, track_h - thumb_h)
                 thumb_top = track_top - (ratio * usable_h)
                 thumb_bottom = thumb_top - thumb_h
-                arcade.draw_lrtb_rectangle_filled(track_left, track_right, thumb_top, thumb_bottom, (150, 150, 160, 200))
+                optional_arcade.arcade.draw_lrtb_rectangle_filled(track_left, track_right, thumb_top, thumb_bottom, (150, 150, 160, 200))
         except Exception:
             pass
             
@@ -91,7 +91,7 @@ class ConfirmModalOverlay:
             text=f"{prompt_confirm}   |   {prompt_cancel}",
             x=cx,
             y=cy - panel_h // 2 + 15,
-            color=arcade.color.WHITE,
+            color=optional_arcade.arcade.color.WHITE,
             font_size=12,
             anchor_x="center",
         )
@@ -112,7 +112,7 @@ class ConfirmModalOverlay:
                     text=hint,
                     x=cx + panel_w // 2 - 12,
                     y=cy - panel_h // 2 + 15,
-                    color=arcade.color.LIGHT_GRAY,
+                    color=optional_arcade.arcade.color.LIGHT_GRAY,
                     font_size=10,
                     anchor_x="right",
                 )

@@ -18,7 +18,10 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Sequence
 
+from ..diagnostics import Diagnostic, diagnostics_to_text
+from ..event_emit import emit_gameplay_event
 from ..gameplay_event_bus import EventConfigError, validate_event_type
+from ..save_runtime.state_codec import decode_state, encode_state
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
@@ -80,6 +83,9 @@ class DialogueRunnerBehaviour(Behaviour):
     Implements SaveableBehaviour for deterministic save/restore.
     """
     
+    TYPE_ID = "dialogue_runner"
+    STATE_VERSION = 1
+
     PARAM_DEFS = {
         "script": ParamDef(dict, {}, "Dialogue script"),
         "start_node": ParamDef(str, "start", "Initial node ID"),
@@ -96,6 +102,7 @@ class DialogueRunnerBehaviour(Behaviour):
         self._choice_history: List[Dict[str, Any]] = []
         self._is_running: bool = False
         self._completed: bool = False
+        self._last_restore_diagnostics: tuple[Diagnostic, ...] = ()
         
         super().__init__(entity, window, **config)
         
@@ -199,7 +206,6 @@ class DialogueRunnerBehaviour(Behaviour):
         **kwargs,
     ) -> None:
         """Emit a gameplay event."""
-        bus = getattr(self.window, "gameplay_event_bus", None)
         my_id = getattr(self.entity, "mesh_id", "")
         
         payload = {
@@ -209,15 +215,13 @@ class DialogueRunnerBehaviour(Behaviour):
             **kwargs,
         }
         
-        if bus is not None:
-            bus.emit(
-                event_type,
-                source_entity=my_id,
-                source_behaviour="DialogueRunner",
-                **payload,
-            )
-        elif hasattr(self.window, "event_bus"):
-            self.window.event_bus.emit(event_type, **payload)
+        emit_gameplay_event(
+            self.window,
+            event_type,
+            payload,
+            source_entity_id=my_id,
+            source_behaviour="DialogueRunner",
+        )
     
     def _go_to_node(self, node_id: str, is_start: bool = False) -> None:
         """Navigate to a specific node."""
@@ -347,8 +351,7 @@ class DialogueRunnerBehaviour(Behaviour):
         return node_id in self._visited_nodes
     
     # SaveableBehaviour protocol
-    def saveable_state(self) -> Dict[str, Any]:
-        """Return JSON-serializable state dict."""
+    def _inner_save_state(self) -> Dict[str, Any]:
         return {
             "enabled": self._enabled,
             "current_node": self._current_node,
@@ -357,15 +360,66 @@ class DialogueRunnerBehaviour(Behaviour):
             "is_running": self._is_running,
             "completed": self._completed,
         }
-    
-    def restore_state(self, state: Dict[str, Any]) -> None:
+
+    def saveable_state(self) -> Dict[str, Any]:
+        """Return JSON-serializable wrapped state dict."""
+        return encode_state(self.TYPE_ID, self.STATE_VERSION, self._inner_save_state())
+
+    @staticmethod
+    def _is_legacy_v0_payload(payload: Dict[str, Any]) -> bool:
+        required = {
+            "enabled",
+            "current_node",
+            "visited_nodes",
+            "choice_history",
+            "is_running",
+            "completed",
+        }
+        return required.issubset(set(payload.keys()))
+
+    @staticmethod
+    def _adapt_legacy_v0(payload: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "enabled": bool(payload.get("enabled", True)),
+            "current_node": payload.get("current_node"),
+            "visited_nodes": list(payload.get("visited_nodes", [])),
+            "choice_history": list(payload.get("choice_history", [])),
+            "is_running": bool(payload.get("is_running", False)),
+            "completed": bool(payload.get("completed", False)),
+        }
+
+    def restore_state(
+        self,
+        state: Dict[str, Any],
+        *,
+        strict: bool = True,
+        source: str = "dialogue_runner",
+    ) -> None:
         """Apply previously saved state."""
-        self._enabled = bool(state.get("enabled", True))
-        self._current_node = state.get("current_node")
-        self._visited_nodes = list(state.get("visited_nodes", []))
-        self._choice_history = list(state.get("choice_history", []))
-        self._is_running = bool(state.get("is_running", False))
-        self._completed = bool(state.get("completed", False))
+        inner_state, diagnostics = decode_state(
+            state,
+            expected_type_id=self.TYPE_ID,
+            supported_versions={self.STATE_VERSION},
+            strict=bool(strict),
+            source=str(source),
+            legacy_v0_predicate=self._is_legacy_v0_payload,
+            legacy_v0_adapter=self._adapt_legacy_v0,
+        )
+        self._last_restore_diagnostics = tuple(diagnostics)
+        if inner_state is None:
+            if strict:
+                details = diagnostics_to_text(self._last_restore_diagnostics).strip()
+                if details:
+                    raise ValueError(details)
+                raise ValueError("dialogue_runner restore failed")
+            return
+
+        self._enabled = bool(inner_state.get("enabled", True))
+        self._current_node = inner_state.get("current_node")
+        self._visited_nodes = list(inner_state.get("visited_nodes", []))
+        self._choice_history = list(inner_state.get("choice_history", []))
+        self._is_running = bool(inner_state.get("is_running", False))
+        self._completed = bool(inner_state.get("completed", False))
     
     def get_inspector_state(self) -> Dict[str, Any]:
         """Return state summary for editor inspection."""

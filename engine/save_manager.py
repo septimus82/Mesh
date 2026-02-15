@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 from .save_runtime import constants as save_constants
 from .save_runtime import io as save_io
 from .save_runtime import payloads as save_payloads
+from .save_runtime.restore_policy import SLOT_POLICY
+from .save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 
 if TYPE_CHECKING:
     from .game import GameWindow
@@ -76,7 +78,7 @@ class SaveManager:
     def _load_game_impl(self, slot_name: str) -> bool:
         try:
             path = self.get_save_path(slot_name)
-            ok, payload_or_error = save_io.load_slot_payload(path)
+            ok, payload_or_error = save_io.load_slot_payload(path, policy=SLOT_POLICY)
             if not ok:
                 msg = str(payload_or_error or "")
                 if msg:
@@ -89,7 +91,26 @@ class SaveManager:
             # otherwise the scene load might merge with existing state.
             # However, SceneController.load_scene merges state.
             # So we should extract the state from the save and force-set it.
-            save_payloads.apply_loaded_payload(self.window, data, mode="slot")
+            apply_diags = SaveDiagnosticsAggregator()
+            applied = save_payloads.apply_loaded_payload(
+                self.window,
+                data,
+                mode="slot",
+                policy=SLOT_POLICY,
+                diagnostics=apply_diags,
+                source=path.as_posix(),
+            )
+            save_io.record_load_attempt(
+                kind="slot_apply",
+                path=path,
+                ok=bool(applied),
+                aggregator=apply_diags,
+            )
+            if not applied:
+                if SLOT_POLICY.write_sidecars_on_failure:
+                    save_io.write_diagnostics_sidecars(path, apply_diags)
+                sys.stderr.write(save_io.format_load_error("[Mesh][Save]", apply_diags) + "\n")
+                return False
 
             # 2. Determine which scene to load
             # If the save file IS a valid scene (which build_scene_snapshot produces),

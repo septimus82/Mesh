@@ -2,7 +2,23 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import TYPE_CHECKING
+
+from engine.combat_constants import (
+    EVENT_COMBAT_DAMAGE,
+    EVENT_COMBAT_DEATH,
+    EVENT_COMBAT_HIT,
+    EVENT_COMBAT_MISS,
+    EVENT_DAMAGE_APPLIED_ALIAS,
+    KEY_AMOUNT,
+    KEY_ATTACKER,
+    KEY_SOURCE,
+    KEY_TARGET,
+    KEY_WAS_CRIT,
+)
+from engine.combat_model import AttackSpec, TargetState, resolve_attack
+from engine.event_emit import emit_gameplay_event
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -102,7 +118,14 @@ class Health(Behaviour):
         self.invulnerable = bool(state.get("invulnerable", False))
         self._dead = bool(state.get("dead", self.hp <= 0))
 
-    def apply_damage(self, amount: float) -> None:
+    def apply_damage(
+        self,
+        amount: float,
+        *,
+        source_entity: str | None = None,
+        source_behaviour: str | None = None,
+        attack_tags: tuple[str, ...] = (),
+    ) -> None:
         """Apply incoming damage, respecting invulnerability and death state."""
         if self.invulnerable or self._dead:
             return
@@ -117,12 +140,91 @@ class Health(Behaviour):
                     print(f"[Mesh][Health] ERROR applying defense reduction: {exc}")
                     setattr(self, "_mesh_defense_error_logged", True)
 
-        self.hp -= incoming
         name = getattr(self.entity, "mesh_name", "<unnamed>")
-        print(f"[Mesh][Health] '{name}' took {incoming} damage -> {self.hp}/{self.max_hp}")
+        attacker_name = str(source_entity or "").strip() or "<unknown>"
+        current_state = TargetState(
+            hp=float(self.hp),
+            max_hp=float(self.max_hp),
+            dead=bool(self._dead),
+            invulnerable=bool(self.invulnerable),
+        )
+        attack_spec = AttackSpec(
+            source_id=attacker_name,
+            target_id=name,
+            base_damage=float(incoming),
+            crit_chance=0.0,
+            rng_stream="combat.default",
+            tags=tuple(str(item) for item in attack_tags if str(item).strip()),
+        )
+        next_state, result = resolve_attack(attack_spec, current_state, rng=None)
 
-        if self.hp <= 0 and not self._dead:
-            self._dead = True
+        self.hp = float(next_state.hp)
+        self._dead = bool(next_state.dead)
+        print(f"[Mesh][Health] '{name}' took {result.applied_damage} damage -> {self.hp}/{self.max_hp}")
+
+        payload = {
+            KEY_ATTACKER: attacker_name,
+            KEY_SOURCE: attacker_name,
+            KEY_TARGET: name,
+            KEY_AMOUNT: float(result.applied_damage),
+            KEY_WAS_CRIT: bool(result.was_crit),
+            "source_behaviour": str(source_behaviour or ""),
+        }
+        source_entity_id = str(getattr(self.entity, "mesh_id", "") or "")
+        if result.applied_damage > 0:
+            emit_gameplay_event(
+                self.window,
+                EVENT_COMBAT_HIT,
+                payload,
+                source_entity_id=source_entity_id,
+                source_behaviour="Health",
+            )
+            emit_gameplay_event(
+                self.window,
+                EVENT_COMBAT_DAMAGE,
+                payload,
+                source_entity_id=source_entity_id,
+                source_behaviour="Health",
+            )
+            emit_gameplay_event(
+                self.window,
+                EVENT_DAMAGE_APPLIED_ALIAS,
+                payload,
+                source_entity_id=source_entity_id,
+                source_behaviour="Health",
+            )
+        else:
+            emit_gameplay_event(
+                self.window,
+                EVENT_COMBAT_MISS,
+                payload,
+                source_entity_id=source_entity_id,
+                source_behaviour="Health",
+            )
+        if result.target_dead:
+            emit_gameplay_event(
+                self.window,
+                EVENT_COMBAT_DEATH,
+                payload,
+                source_entity_id=source_entity_id,
+                source_behaviour="Health",
+            )
+
+        if result.target_dead:
             # self.window.on_entity_died(self.entity)
-            self.window.event_bus.emit("died", actor=self.entity, name=name)
+            emit_gameplay_event(
+                self.window,
+                "died",
+                {"name": name, "entity": source_entity_id or name},
+                source_entity_id=source_entity_id,
+                source_behaviour="Health",
+            )
+            # Preserve legacy died event payload for old event_bus subscribers.
+            legacy_bus = getattr(self.window, "event_bus", None)
+            if legacy_bus is not None:
+                emit_gameplay_event(
+                    SimpleNamespace(event_bus=legacy_bus),
+                    "died",
+                    {"actor": self.entity, "name": name},
+                )
             self.entity.remove_from_sprite_lists()

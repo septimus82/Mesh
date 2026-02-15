@@ -4,8 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from engine.event_emit import emit_gameplay_event
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
+from engine.combat_constants import (
+    EVENT_PROJECTILE_HIT,
+    KEY_AMOUNT,
+    KEY_SOURCE,
+    KEY_TARGET,
+)
 import engine.optional_arcade as optional_arcade
 
 if TYPE_CHECKING:
@@ -125,11 +132,28 @@ class Projectile(Behaviour):
                 return
 
     def _apply_damage(self, target: Sprite) -> None:
+        source_name = str(getattr(self.entity, "mesh_name", "") or "").strip() or "projectile"
+        target_name = str(getattr(target, "mesh_name", "") or "").strip() or "<unnamed>"
+        emit_gameplay_event(
+            self.window,
+            EVENT_PROJECTILE_HIT,
+            {
+                KEY_SOURCE: source_name,
+                KEY_TARGET: target_name,
+                KEY_AMOUNT: float(self.damage),
+            },
+            source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
+            source_behaviour="Projectile",
+        )
         # Look for Health behaviour
         behaviours = getattr(target, "mesh_behaviours_runtime", [])
         for behaviour in behaviours:
             if hasattr(behaviour, "apply_damage"):
-                behaviour.apply_damage(self.damage)
+                behaviour.apply_damage(
+                    self.damage,
+                    source_entity=source_name,
+                    source_behaviour="Projectile",
+                )
 
                 # Audio feedback
                 if hasattr(self.window, "audio"):

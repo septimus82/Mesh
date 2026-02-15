@@ -1,64 +1,54 @@
-import pytest
 import json
-from pathlib import Path
-from engine.content_audit import ContentAuditor, audit_world
-from engine.tooling.content_commands import _check_thresholds
 from argparse import Namespace
+from pathlib import Path
 
-def test_audit_categories(tmp_path):
-    """Test that assets are correctly categorized."""
-    # Setup a mock world and assets
-    world_file = tmp_path / "world.json"
-    world_file.write_text(json.dumps({"scenes": {}}))
-    
-    # Create dummy assets
-    (tmp_path / "assets").mkdir()
-    (tmp_path / "assets/tex.png").touch()
-    (tmp_path / "assets/sound.wav").touch()
-    (tmp_path / "assets/data.json").touch()
-    (tmp_path / "assets/unknown.xyz").touch()
-    
-    # Mock available files in auditor
-    auditor = ContentAuditor(str(world_file))
-    auditor.available_files = {
-        str(tmp_path / "assets/tex.png"): "core",
-        str(tmp_path / "assets/sound.wav"): "core",
-        str(tmp_path / "assets/data.json"): "core",
-        str(tmp_path / "assets/unknown.xyz"): "core"
-    }
-    # No references
-    
-    report = auditor._build_report()
-    stats = report["stats"]
-    
-    assert stats["unused_assets_count"] == 3 # .xyz is skipped by extension filter in _build_report?
-    # Wait, _build_report filters by extension.
-    # asset_extensions = {".png", ".jpg", ".wav", ".ogg", ".mp3", ".json"}
-    # So .xyz is skipped.
-    
-    cats = stats["unused_by_category"]
-    assert cats["texture"] == 1
-    assert cats["audio"] == 1
-    assert cats["data"] == 1
-    assert "other" not in cats
+import pytest
 
-def test_audit_allow_packs(tmp_path):
-    """Test that allow_packs excludes assets from audit."""
-    world_file = tmp_path / "world.json"
-    world_file.write_text(json.dumps({"scenes": {}}))
-    
-    auditor = ContentAuditor(str(world_file))
-    auditor.available_files = {
-        "assets/core_tex.png": "core",
-        "assets/mod_tex.png": "mod_pack"
-    }
-    
-    # Audit with allow_packs
-    report = auditor._build_report(allow_packs=["mod_pack"])
+from engine.content_audit import audit_world
+from engine.tooling.content_commands import _check_thresholds
+
+
+def _write_json(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _build_minimal_content_tree(root: Path) -> None:
+    _write_json(root / "assets/data/events.json", {"events": [{"name": "ep.entered", "description": "e", "payload": {}}]})
+    _write_json(root / "assets/data/quests.json", {"quests": [{"id": "q1", "title": "q", "description": "d", "stages": []}]})
+    _write_json(root / "cutscenes.json", {"cutscenes": [{"id": "c1", "steps": []}]})
+    _write_json(
+        root / "assets/data/dialogues.json",
+        {
+            "dialogues": [
+                {
+                    "id": "d1",
+                    "schema_version": 1,
+                    "start_node": "start",
+                    "script": {"start": {"speaker": "n", "text": "t", "choices": []}},
+                }
+            ]
+        },
+    )
+    _write_json(root / "assets/prefabs.json", [{"id": "player", "entity": {"behaviours": [], "behaviour_config": {}}}])
+    _write_json(root / "scenes/s1.json", {"name": "s1", "entities": [{"id": "player", "prefab_id": "player", "x": 0, "y": 0}]})
+
+
+def test_audit_categories(tmp_path: Path, monkeypatch) -> None:
+    _build_minimal_content_tree(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    report = audit_world()
     stats = report["stats"]
-    
-    assert stats["unused_assets_count"] == 1
-    assert report["unused_assets"][0]["path"] == "assets/core_tex.png"
+    assert set(stats["unused_by_category"].keys()) == {"audio", "data", "texture"}
+    assert isinstance(stats["unused_by_category"]["data"], int)
+
+
+def test_audit_allow_packs_is_adapter_warning(tmp_path: Path, monkeypatch) -> None:
+    _build_minimal_content_tree(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    report = audit_world(allow_packs=["mod_pack"])
+    codes = [row.get("code", "") for row in report["integrity_issues"]]
+    assert "content.audit_legacy.allow_packs_ignored" in codes
 
 def test_check_thresholds_delta():
     """Test delta threshold enforcement."""

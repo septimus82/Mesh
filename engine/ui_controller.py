@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Sequence
 
+from .logging_tools import get_logger
 from .ui import (
     AnimationStateOverlay,
     CharacterPanel,
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
     from arcade import Sprite
 
     from .game import GameWindow
+
+logger = get_logger(__name__)
 
 class UIController:
     def __init__(self, window: GameWindow):
@@ -68,7 +71,7 @@ class UIController:
                 try:
                     handler(width, height)
                 except Exception as exc:  # noqa: BLE001
-                    print(f"[Mesh][UI] WARNING: on_resize failed for {element.__class__.__name__}: {exc!r}")
+                    logger.warning("on_resize failed for %s: %r", element.__class__.__name__, exc)
 
     def update(self, dt: float) -> None:
         for element in list(self.ui_elements):
@@ -80,7 +83,7 @@ class UIController:
 
     def rebuild_for_scene(self) -> None:
         self.clear_ui_elements()
-        print("[Mesh][UI] Rebuilding UI for scene")
+        logger.info("Rebuilding UI for scene")
         self.register_ui_element(EntityInspector(self.window))
         self.register_ui_element(AnimationStateOverlay(self.window))
         self.register_ui_element(DevConsole(self.window))
@@ -96,8 +99,8 @@ class UIController:
         self.register_ui_element(self.character_panel)
 
     def register_health_bar(self, sprite: Sprite) -> None:
-        print(
-            "[Mesh][UI] Registering HealthBar for",
+        logger.info(
+            "Registering HealthBar for %s",
             getattr(sprite, "mesh_name", "<unnamed>"),
         )
         self.register_ui_element(HealthBar(self.window, sprite))
@@ -111,7 +114,7 @@ class UIController:
     def show_dialogue(self, entries: Sequence[dict[str, str]], *, owner: str) -> bool:
         box = self.dialogue_box
         if box is None:
-            print("[Mesh][Dialogue] WARNING: DialogueBox unavailable")
+            logger.warning("DialogueBox unavailable")
             return False
         return box.play(entries, owner=owner)
 

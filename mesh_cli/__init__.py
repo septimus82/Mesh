@@ -17,6 +17,7 @@ def __getattr__(name: str):
         "legacy",
         "legacy_impl",
         "reports",
+        "health_report",
         "scene",
         "verify",
         "room",
@@ -34,6 +35,9 @@ def __getattr__(name: str):
         "build",
         "debug",
         "release",
+        "content",
+        "episode",
+        "replays",
     }:
         try:
             return importlib.import_module(f"{__name__}.{name}")

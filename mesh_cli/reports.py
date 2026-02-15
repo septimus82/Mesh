@@ -6,10 +6,16 @@ import os
 import sys
 from dataclasses import asdict
 from pathlib import Path
+from typing import Any, Callable, cast
 
 from engine.encounter_report_diff import diff_reports, load_report
 from engine.logging_tools import suppress_stdout
 from engine.persistence_io import dumps_json_deterministic, write_json_atomic
+
+
+def _generate_encounter_report(legacy_mod: Any, **kwargs: Any) -> Any:
+    generator = cast(Callable[..., Any], legacy_mod.generate_encounter_report)
+    return generator(**kwargs)
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
@@ -151,7 +157,8 @@ def _handle_encounter_compare(baseline_path: str, target_path: str, args: argpar
     difficulties = args.difficulty.split(",") if args.difficulty else None
     themes = args.themes.split(",") if args.themes else None
 
-    new_report = legacy_mod.generate_encounter_report(
+    new_report = _generate_encounter_report(
+        legacy_mod,
         scene_paths=scene_paths,
         difficulties=difficulties,
         theme_filter=themes,
@@ -197,7 +204,8 @@ def _handle_encounter_report(args: argparse.Namespace) -> int:
 
     if args.json or args.out:
         with suppress_stdout():
-            report = legacy_mod.generate_encounter_report(
+            report = _generate_encounter_report(
+                legacy_mod,
                 scene_paths=scene_paths,
                 difficulties=difficulties,
                 theme_filter=themes,
@@ -211,7 +219,8 @@ def _handle_encounter_report(args: argparse.Namespace) -> int:
         sys.stdout.write(dumps_json_deterministic(output_data, indent=2, sort_keys=True, trailing_newline=True))
         return 0
 
-    report = legacy_mod.generate_encounter_report(
+    report = _generate_encounter_report(
+        legacy_mod,
         scene_paths=scene_paths,
         difficulties=difficulties,
         theme_filter=themes,

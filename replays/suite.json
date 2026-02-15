@@ -1,0 +1,152 @@
+[
+  {
+    "budgets": {
+      "max_tick_ms_max": 200.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 5000.0
+    },
+    "golden": "replays/golden/campaign02_golden.json",
+    "id": "campaign02",
+    "mode": "campaign",
+    "scene": "scenes/episode_01_intro.json",
+    "script": "replays/campaign02.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 200.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 6000.0
+    },
+    "golden": "replays/golden/campaign03_help_golden.json",
+    "id": "campaign03_help",
+    "mode": "campaign",
+    "scene": "scenes/episode_01_intro.json",
+    "script": "replays/campaign03_help.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 200.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 6000.0
+    },
+    "golden": "replays/golden/campaign03_silent_golden.json",
+    "id": "campaign03_silent",
+    "mode": "campaign",
+    "scene": "scenes/episode_01_intro.json",
+    "script": "replays/campaign03_silent.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 200.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 9000.0
+    },
+    "golden": "replays/golden/campaign04_bonus_golden.json",
+    "id": "campaign04_bonus",
+    "mode": "campaign",
+    "scene": "scenes/episode_01_intro.json",
+    "script": "replays/campaign04_bonus.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 200.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 9000.0
+    },
+    "golden": "replays/golden/campaign04_standard_golden.json",
+    "id": "campaign04_standard",
+    "mode": "campaign",
+    "scene": "scenes/episode_01_intro.json",
+    "script": "replays/campaign04_standard.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 150.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 1500.0
+    },
+    "golden": "replays/golden/ep01_golden.json",
+    "id": "ep01",
+    "scene": "scenes/episode_01_intro.json",
+    "script": "replays/ep01.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 150.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 2000.0
+    },
+    "golden": "replays/golden/ep02_golden.json",
+    "id": "ep02",
+    "scene": "scenes/episode_02_ep02.json",
+    "script": "replays/ep02.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 150.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 2500.0
+    },
+    "golden": "replays/golden/ep03_golden.json",
+    "id": "ep03",
+    "scene": "scenes/episode_03_ep03.json",
+    "script": "replays/ep03.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 150.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 3000.0
+    },
+    "golden": "replays/golden/ep04_golden.json",
+    "id": "ep04",
+    "scene": "scenes/episode_04_ep04.json",
+    "script": "replays/ep04.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 150.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 3000.0
+    },
+    "golden": "replays/golden/ep05_golden.json",
+    "id": "ep05",
+    "scene": "scenes/episode_05_ep05.json",
+    "script": "replays/ep05.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 200.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 12000.0
+    },
+    "golden": "replays/golden/campaign05_standard_golden.json",
+    "id": "campaign05_standard",
+    "mode": "campaign",
+    "scene": "scenes/episode_01_intro.json",
+    "script": "replays/campaign05_standard.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 200.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 12500.0
+    },
+    "golden": "replays/golden/campaign05_variant_golden.json",
+    "id": "campaign05_variant",
+    "mode": "campaign",
+    "scene": "scenes/episode_01_intro.json",
+    "script": "replays/campaign05_variant.json"
+  },
+  {
+    "budgets": {
+      "max_tick_ms_max": 150.0,
+      "max_tick_ms_p95": 50.0,
+      "max_total_ms": 3500.0
+    },
+    "golden": "replays/golden/ep06_golden.json",
+    "id": "ep06",
+    "scene": "scenes/episode_06_ep06.json",
+    "script": "replays/ep06.json"
+  }
+]

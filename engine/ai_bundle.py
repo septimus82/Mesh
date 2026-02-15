@@ -31,7 +31,7 @@ def build_ai_bundle(scene_paths: List[Path], goal: str) -> Dict[str, Any]:
     meta = {
         "bundle_id": f"bundle_{int(datetime.now(timezone.utc).timestamp())}",
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "engine_version": ENGINE_VERSION
+        "engine_version": ENGINE_VERSION,
     }
 
     return {

@@ -7,6 +7,12 @@ import engine.optional_arcade as optional_arcade
 from engine.behaviours.combat import Combat
 from engine.behaviours.health import Health
 from engine.behaviours.hitbox import Hitbox
+from engine.combat_constants import (
+    EVENT_COMBAT_DAMAGE,
+    EVENT_COMBAT_DEATH,
+    EVENT_COMBAT_HIT,
+    EVENT_DAMAGE_APPLIED_ALIAS,
+)
 from engine.config import EngineConfig
 from engine.game_state_controller import GameStateController
 from engine.events import MeshEventBus
@@ -111,7 +117,7 @@ def test_player_defense_applied_when_enabled():
     starting_hp = health.hp
     defense = window.game_state_controller.get_player_stats().get("defense", 0)
     health.apply_damage(defense + 3)
-    assert health.hp == pytest.approx(starting_hp - 3)
+    assert health.hp == pytest.approx(max(0.0, starting_hp - 3))
 
 
 def test_combat_respects_player_stats_toggle():
@@ -125,3 +131,22 @@ def test_combat_respects_player_stats_toggle():
     combat_disabled = Combat(player_disabled, window_disabled)
     # When disabled, default damage stays at the default (1.0) because stats are ignored
     assert combat_disabled.damage == 1.0
+
+
+def test_health_emits_combat_alias_events_on_mesh_event_bus():
+    window = StatsWindow(enabled=False)
+    target = MockEntity("Dummy")
+    target.mesh_tag = "enemy"
+    health = Health(target, window, max_hp=4.0, hp=4.0)
+
+    health.apply_damage(1.5, source_entity="archer", source_behaviour="Projectile")
+    names = window.event_bus.get_recent_event_names(10)
+    assert EVENT_COMBAT_HIT in names
+    assert EVENT_COMBAT_DAMAGE in names
+    assert EVENT_DAMAGE_APPLIED_ALIAS in names
+    assert EVENT_COMBAT_DEATH not in names
+
+    health.apply_damage(10.0, source_entity="archer", source_behaviour="Projectile")
+    names = window.event_bus.get_recent_event_names(20)
+    assert EVENT_COMBAT_DEATH in names
+    assert names[-1] == "died"

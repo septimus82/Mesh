@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from arcade import Sprite
 
+from ..event_emit import emit_gameplay_event
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -59,7 +60,12 @@ class SwitchInteract(Behaviour):
             return
 
         self.activated = True
-        self.window.event_bus.emit(MeshEvent(self.event_id, {"source": self.entity}))
+        emit_gameplay_event(
+            getattr(self.window, "event_bus", None),
+            MeshEvent(self.event_id, {"source": self.entity}),
+            source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
+            source_behaviour="SwitchInteract",
+        )
 
         # Visual feedback
         if self.active_sprite:
@@ -124,8 +130,13 @@ class DoorLock(Behaviour):
         self.locked = False
         self._update_collision()
 
-        # Emit door_unlocked event for chaining
-        self.window.event_bus.emit(MeshEvent("door_unlocked", {"door_id": getattr(self.entity, "id", "unknown")}))
+        # Emit door_unlocked event for chaining.
+        emit_gameplay_event(
+            getattr(self.window, "event_bus", None),
+            MeshEvent("door_unlocked", {"door_id": getattr(self.entity, "id", "unknown")}),
+            source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
+            source_behaviour="DoorLock",
+        )
 
     def _update_collision(self) -> None:
         # If locked, it should be solid. If unlocked, pass-through.
@@ -225,8 +236,14 @@ class RewardChest(Behaviour):
             if self.gold:
                 interactor.inventory.add_gold(self.gold)
 
-        self.window.event_bus.emit(MeshEvent("reward_collected", {
-            "source": self.entity,
-            "item_id": self.item_id,
-            "gold": self.gold
-        }))
+        emit_gameplay_event(
+            self.window,
+            "reward_collected",
+            {
+                "source": self.entity,
+                "item_id": self.item_id,
+                "gold": self.gold,
+            },
+            source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
+            source_behaviour="RewardChest",
+        )

@@ -69,7 +69,7 @@ if optional_arcade.arcade is not None:
 
 if ArcadeCamera is None:  # pragma: no cover - only used when optional_arcade.arcade is unavailable
     class ArcadeCamera:  # type: ignore[no-redef]
-        def __init__(self, *args, **kwargs) -> None:  # noqa: D401, ANN001
+        def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: D401
             raise RuntimeError("Arcade Camera API not available")
 
 @dataclass(slots=True)
@@ -422,7 +422,7 @@ class CameraController:
         if area is not self.active_area:
             previous = self.active_area.name if self.active_area else "<default>"
             next_name = area.name if area else "<default>"
-            print(f"[Mesh][Camera] area {previous} -> {next_name}")
+            logger.debug("Camera area %s -> %s", previous, next_name)
             self.active_area = area
 
         if area and area.lerp_factor:
@@ -744,7 +744,7 @@ class CameraController:
 
     def _parse_camera_area(self, entry: Any, index: int) -> CameraArea | None:
         if not isinstance(entry, dict):
-            print(f"[Mesh][Camera] WARNING: camera areas[{index}] must be an object")
+            logger.warning("camera areas[%d] must be an object", index)
             return None
         try:
             x = float(entry["x"])
@@ -752,10 +752,10 @@ class CameraController:
             width = float(entry["width"])
             height = float(entry["height"])
         except (KeyError, TypeError, ValueError):
-            print(f"[Mesh][Camera] WARNING: camera areas[{index}] missing numeric x/y/width/height")
+            logger.warning("camera areas[%d] missing numeric x/y/width/height", index)
             return None
         if width <= 0 or height <= 0:
-            print(f"[Mesh][Camera] WARNING: camera areas[{index}] must have positive width/height")
+            logger.warning("camera areas[%d] must have positive width/height", index)
             return None
         name = str(entry.get("name") or f"area_{index}")
         zoom_value = entry.get("zoom")
@@ -858,10 +858,10 @@ class CameraController:
             bottom = float(payload["bottom"])
             top = float(payload["top"])
         except (KeyError, TypeError, ValueError):
-            print("[Mesh][Camera] WARNING: bounds must include numeric left/right/top/bottom")
+            logger.warning("bounds must include numeric left/right/top/bottom")
             return None
         if right == left or top == bottom:
-            print("[Mesh][Camera] WARNING: bounds must span a positive width and height")
+            logger.warning("bounds must span a positive width and height")
             return None
         return (min(left, right), min(bottom, top), max(left, right), max(bottom, top))
 

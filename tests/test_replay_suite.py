@@ -80,3 +80,44 @@ def test_replay_suite_surfaces_expect_state_file_error_verbatim(tmp_path):
 
     missing_path = (folder / "missing.json").resolve()
     assert summary["results"][0]["error"] == f"expect_state_file not found: {missing_path}"
+
+
+def test_replay_suite_ignores_suite_and_golden_metadata_files(tmp_path) -> None:
+    folder = tmp_path / "suite"
+    folder.mkdir()
+
+    (folder / "suite.json").write_text("[]\n", encoding="utf-8")
+    (folder / "ep01_golden.json").write_text("{}\n", encoding="utf-8")
+    (folder / "01_pass.json").write_text(
+        json.dumps({"steps": [{"emit": "entered_zone", "zone_id": "ZoneOK"}], "expect": {"last_zone_id": "ZoneOK"}}),
+        encoding="utf-8",
+    )
+
+    summary = run_replay_suite(str(folder))
+    assert summary["total"] == 1
+    assert summary["failed"] == 0
+    assert summary["results"][0]["script"] == "01_pass.json"
+
+
+def test_replay_suite_ignores_campaign_chain_scripts(tmp_path) -> None:
+    folder = tmp_path / "suite"
+    folder.mkdir()
+
+    (folder / "campaign02.json").write_text(
+        json.dumps(
+            {
+                "campaign_id": "mini_campaign_02",
+                "scenes": [{"scene_id": "ep01", "steps": [{"action": "drain"}]}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (folder / "01_pass.json").write_text(
+        json.dumps({"steps": [{"emit": "entered_zone", "zone_id": "ZoneOK"}], "expect": {"last_zone_id": "ZoneOK"}}),
+        encoding="utf-8",
+    )
+
+    summary = run_replay_suite(str(folder))
+    assert summary["total"] == 1
+    assert summary["failed"] == 0
+    assert summary["results"][0]["script"] == "01_pass.json"

@@ -1,0 +1,85 @@
+from __future__ import annotations
+
+import threading
+import time
+from dataclasses import dataclass
+
+_LOCK = threading.Lock()
+
+
+@dataclass(frozen=True)
+class SwallowedSiteStats:
+    count: int
+    first_seen_ts: float
+    last_seen_ts: float
+
+
+_SITES: dict[str, SwallowedSiteStats] = {}
+_LAST_LOG_TS: dict[str, float] = {}
+_LOG_SAMPLE_SECONDS = 60.0
+
+
+def record_swallowed(site: str, exc: Exception) -> None:
+    """Record a swallowed exception site for diagnostics/guard rails."""
+    key = str(site or "<unknown>")
+    now = time.time()
+    with _LOCK:
+        previous = _SITES.get(key)
+        if previous is None:
+            _SITES[key] = SwallowedSiteStats(count=1, first_seen_ts=now, last_seen_ts=now)
+            return
+        _SITES[key] = SwallowedSiteStats(
+            count=previous.count + 1,
+            first_seen_ts=previous.first_seen_ts,
+            last_seen_ts=now,
+        )
+
+
+def should_log(site: str, sample_seconds: float = _LOG_SAMPLE_SECONDS) -> bool:
+    key = str(site or "<unknown>")
+    now = time.time()
+    with _LOCK:
+        last = _LAST_LOG_TS.get(key)
+        if last is None or now - last >= sample_seconds:
+            _LAST_LOG_TS[key] = now
+            return True
+        return False
+
+
+def read_counts() -> dict[str, int]:
+    with _LOCK:
+        return {site: stats.count for site, stats in _SITES.items()}
+
+
+def read_sites() -> dict[str, SwallowedSiteStats]:
+    with _LOCK:
+        return dict(_SITES)
+
+
+def get_and_reset_counts() -> dict[str, int]:
+    with _LOCK:
+        snapshot = {site: stats.count for site, stats in _SITES.items()}
+        _SITES.clear()
+        _LAST_LOG_TS.clear()
+    return snapshot
+
+
+def reset() -> None:
+    with _LOCK:
+        _SITES.clear()
+        _LAST_LOG_TS.clear()
+
+
+def format_swallowed_summary(limit: int = 20) -> str:
+    with _LOCK:
+        rows = sorted(_SITES.items(), key=lambda item: (-item[1].count, item[0]))
+    if limit >= 0:
+        rows = rows[:limit]
+    if not rows:
+        return "no swallowed exceptions recorded"
+    lines = ["swallowed_exceptions summary:"]
+    for site, stats in rows:
+        lines.append(
+            f"{site}: count={stats.count} first={stats.first_seen_ts:.3f} last={stats.last_seen_ts:.3f}"
+        )
+    return "\n".join(lines)

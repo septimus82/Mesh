@@ -51,3 +51,31 @@ def test_slot_missing_file_message_is_deterministic(tmp_path) -> None:
     assert ok is False
     assert str(payload_or_error) == f"[Mesh][Save] Save file '{missing}' not found"
 
+
+def test_slot_schema_validation_rejects_malformed_saved_state(tmp_path) -> None:
+    path = tmp_path / "slot.json"
+    path.write_text(
+        json.dumps(
+            {
+                "save_format_version": SAVE_FORMAT_VERSION,
+                "save_schema_version": 2,
+                "world_file": "worlds/act1_prologue.json",
+                "world_id": "act1_prologue",
+                "scene_id": "packs/core_regions/scenes/Act1_Prologue_Cabin.json",
+                "gold": 1,
+                "flags": [],
+                "saved_entities": "bad-type",
+                "saved_quests": [],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    ok, payload_or_error = save_io.load_slot_payload(path)
+    assert ok is False
+    msg = str(payload_or_error)
+    assert msg.startswith("[Mesh][Save] ERROR:")
+    assert "saved_entities must be a dict" in msg

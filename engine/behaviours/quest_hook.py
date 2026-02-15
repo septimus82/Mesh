@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Set
 
+from ..event_emit import emit_gameplay_event
 from ..gameplay_event_bus import EventConfigError, validate_event_type
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -206,7 +207,6 @@ class QuestHookBehaviour(Behaviour):
         **kwargs,
     ) -> None:
         """Emit a gameplay event."""
-        bus = getattr(self.window, "gameplay_event_bus", None)
         my_id = getattr(self.entity, "mesh_id", "")
         
         payload = {
@@ -216,16 +216,14 @@ class QuestHookBehaviour(Behaviour):
             "entity_name": getattr(self.entity, "mesh_name", ""),
             **kwargs,
         }
-        
-        if bus is not None:
-            bus.emit(
-                event_type,
-                source_entity=my_id,
-                source_behaviour="QuestHook",
-                **payload,
-            )
-        elif hasattr(self.window, "event_bus"):
-            self.window.event_bus.emit(event_type, **payload)
+
+        emit_gameplay_event(
+            self.window,
+            event_type,
+            payload,
+            source_entity_id=my_id,
+            source_behaviour="QuestHook",
+        )
     
     def _check_completion(self) -> None:
         """Check if target count reached and emit completion if so."""

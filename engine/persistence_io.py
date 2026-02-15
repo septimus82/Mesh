@@ -57,9 +57,15 @@ def dumps_json_deterministic(
     return text
 
 
-def write_text_atomic(path: Path | str, text: str, *, encoding: str = "utf-8") -> None:
+def write_text_atomic(
+    path: Path | str,
+    text: str,
+    *,
+    encoding: str = "utf-8",
+    durable: bool = False,
+) -> None:
     """Write text to `path` atomically (temp + replace)."""
-    json_io.write_text_atomic(path, text, encoding=encoding)
+    json_io.write_text_atomic(path, text, encoding=encoding, durable=durable)
 
 
 def write_json_atomic(
@@ -70,10 +76,11 @@ def write_json_atomic(
     sort_keys: bool = True,
     trailing_newline: bool = True,
     encoding: str = "utf-8",
+    durable: bool = False,
 ) -> None:
     _ = (indent, sort_keys, encoding)
     text = dumps_json_deterministic(payload, trailing_newline=trailing_newline)
-    json_io.write_text_atomic(path, text, encoding="utf-8")
+    json_io.write_text_atomic(path, text, encoding="utf-8", durable=durable)
 
 
 def read_json(path: Path | str, *, encoding: str = "utf-8") -> Any:

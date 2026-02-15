@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from engine.editor.debug_bundle import build_debug_bundle
+from engine.save_runtime.io import record_load_attempt
+from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 
 
 @dataclass
@@ -134,6 +136,8 @@ def test_debug_bundle_deterministic_output() -> None:
     assert [cmd["index"] for cmd in commands] == [0, 1]
     event_rows = payload["events"]["rows"]
     assert [row["sequence"] for row in event_rows] == [1, 2]
+    assert payload["hud"]["health"]["hp"] == 0.0
+    assert payload["hud"]["feed"] == []
 
 
 def test_debug_bundle_missing_subsystems_safe() -> None:
@@ -144,4 +148,45 @@ def test_debug_bundle_missing_subsystems_safe() -> None:
     assert payload["quests"]["inspector_state"] is None
     assert payload["quests"]["diagnostics"] == []
     assert payload["events"]["rows"] == []
+    assert payload["hud"]["feed"] == []
     assert payload["selected_entity"]["behaviours"] == []
+
+
+def test_debug_bundle_includes_combat_summary_from_event_history() -> None:
+    events = [
+        _StubEvent(
+            sequence=1,
+            event_type="combat_damage",
+            source_entity="archer",
+            source_behaviour="Projectile",
+            payload={"source": "archer", "target": "hero", "amount": 2.5},
+        ),
+        _StubEvent(
+            sequence=2,
+            event_type="died",
+            source_entity="",
+            source_behaviour="Health",
+            payload={"name": "hero"},
+        ),
+    ]
+    bundle = build_debug_bundle(_StubWindow(_StubEventBus(events)), None, deterministic=True)
+    payload = bundle.to_dict(deterministic=True)
+    summary = payload["events"]["combat_summary"]
+
+    assert summary["damage_event_count"] == 1
+    assert summary["death_event_count"] == 1
+    assert summary["damage_taken"]["hero"] == 2.5
+    assert summary["damage_dealt"]["archer"] == 2.5
+    hud_feed = payload["hud"]["feed"]
+    assert hud_feed[-1]["event_type"] == "combat_death"
+
+
+def test_debug_bundle_includes_save_runtime_diagnostics_summary() -> None:
+    aggregator = SaveDiagnosticsAggregator()
+    record_load_attempt(kind="slot", path=None, ok=True, aggregator=aggregator)
+    bundle = build_debug_bundle(None, None, deterministic=True)
+    payload = bundle.to_dict(deterministic=True)
+    summary = payload["world"]["save_runtime_diagnostics"]
+    assert "last_save_attempt" in summary
+    assert "last_load_attempt" in summary
+    assert isinstance(summary["last_load_attempt"]["counts"], dict)

@@ -4,6 +4,7 @@ import os
 from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 
+from engine.swallowed_exceptions import record_swallowed
 from engine.logging_tools import get_logger
 from engine.ui import maybe_auto_open_quest_log, maybe_enqueue_demo_interior_hint, maybe_enqueue_quest_progress_toast
 
@@ -98,8 +99,9 @@ def _apply_editor_sprite_ghosting(window: "GameWindow") -> tuple[list, dict]:
         _ghosting_cache["sprites_by_id"] = sprites_by_id
 
         return snapshots, sprites_by_id
-    except Exception:  # noqa: BLE001
-        # Fail silently - ghosting is visual polish only
+    except Exception as exc:  # noqa: BLE001
+        # Ghosting is visual polish only, but we still count swallow sites.
+        record_swallowed("engine.game_runtime.tick._apply_editor_sprite_ghosting", exc)
         _ghosting_cache["previous_state"] = None
         return [], {}
 
@@ -112,11 +114,16 @@ def _restore_editor_sprite_ghosting(snapshots: list, sprites_by_id: dict) -> Non
     try:
         from engine.editor.editor_sprite_ghosting import restore_ghosted_sprites
         restore_ghosted_sprites(snapshots, sprites_by_id)
-    except Exception:  # noqa: BLE001
-        pass  # Fail silently
+    except Exception as exc:  # noqa: BLE001
+        record_swallowed("engine.game_runtime.tick._restore_editor_sprite_ghosting", exc)
 
 
 def on_draw(window: "GameWindow") -> None:
+    # --- Post-processing: capture world rendering into offscreen FBO ---
+    pp = getattr(window, "post_process_pipeline", None)
+    if pp is not None:
+        pp.begin(window)
+
     window.clear()
     window.camera.use()
     render_queue = getattr(window, "render_queue", None)
@@ -154,6 +161,10 @@ def on_draw(window: "GameWindow") -> None:
 
     if render_queue is not None:
         render_queue.finalize(getattr(window, "perf_stats", None))
+
+    # --- Post-processing: apply effect chain and blit to screen ---
+    if pp is not None:
+        pp.end(window)
 
     # Switch to GUI camera for UI elements
     window.camera_controller.gui_camera.use()

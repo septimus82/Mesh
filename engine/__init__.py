@@ -11,8 +11,10 @@ from __future__ import annotations
 from importlib import import_module
 from typing import TYPE_CHECKING
 
+from .version import ENGINE_VERSION
+
 __all__ = ["GameWindow", "SceneLoader"]
-__version__ = "0.1.0"
+__version__ = ENGINE_VERSION
 
 if TYPE_CHECKING:
     from .game import GameWindow as GameWindow

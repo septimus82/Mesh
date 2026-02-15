@@ -291,11 +291,12 @@ class TestSavePipelineIntegration:
         # Get state and serialize
         state = runner.saveable_state()
         json_str = json.dumps(state)
+        inner = state["state"]
         
         # Verify roundtrip
         restored_dict = json.loads(json_str)
-        assert restored_dict["command_index"] == state["command_index"]
-        assert restored_dict["is_running"] == state["is_running"]
+        assert restored_dict["state"]["command_index"] == inner["command_index"]
+        assert restored_dict["state"]["is_running"] == inner["is_running"]
     
     def test_state_restoration_preserves_wait(self) -> None:
         """State restoration preserves mid-wait state."""
@@ -316,7 +317,7 @@ class TestSavePipelineIntegration:
         
         # Save mid-wait
         state = runner1.saveable_state()
-        assert state["wait_remaining"] == pytest.approx(1.5)
+        assert state["state"]["wait_remaining"] == pytest.approx(1.5)
         
         # Restore to new runner
         bus2 = MockEventBus()

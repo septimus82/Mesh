@@ -1,0 +1,42 @@
+{
+  "counts": {
+    "event_count": 52,
+    "snapshot_count": 28,
+    "world_digest_count": 28
+  },
+  "expected_event_digest": "f1879565cb92f086a7705784511fbadd600951e923c61274a925f6e780059ab2",
+  "expected_final_state_digest": "96a03f07002e4365a954709ad3d6bc5e1a49e3bb55b473c08a85b8ade9f79e56",
+  "expected_world_digest": "30aec0c3089a480242241459e7e8361809ee8a8f1c69a495969350c2e3df3bfa",
+  "id": "ep02",
+  "run_determinism": {
+    "digests_match": true,
+    "events_match": true,
+    "final_state_match": true
+  },
+  "run_ok": true,
+  "sample": {
+    "events_first": [
+      "ep02_entered",
+      "action_list_started",
+      "ep02_intro_start"
+    ],
+    "events_last": [
+      "action_list_started",
+      "go_to_episode_03_ep03",
+      "action_list_completed"
+    ],
+    "world_digests_first": [
+      "0808b01b62d2abb6c90da1e0678412fea41f45d506698f25c945b566697d6c22",
+      "27ab879ae9c52c9723366a4a795647ebefa023767db36db70bb890d198bf3270",
+      "dbb5970b6528c7ba92255fc6ce4cffb7d7c9bac1b736d47b999ea5f37c04bef3"
+    ],
+    "world_digests_last": [
+      "10a8fd754200ab0912458a42bb890a4026697e29c2b39a431a7637405be4ef20",
+      "3de814309ddf8b97c8a3d84df05e53b5a51739b5855068414b957c888d979231",
+      "7dbd296c6368698cafacfae9d5694cb734b1ca275e0592a57f80e757e8a4e2a5"
+    ]
+  },
+  "scene": "scenes/episode_02_ep02.json",
+  "schema_version": 1,
+  "script": "replays/ep02.json"
+}

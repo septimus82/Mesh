@@ -1,0 +1,187 @@
+﻿name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: tests (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.11"]
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      MESH_CI_SEED: "123"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            pytest.ini
+
+      - name: Cache mypy cache
+        uses: actions/cache@v4
+        with:
+          path: .mypy_cache
+          key: mypy-${{ runner.os }}-py${{ matrix.python }}-${{ hashFiles('pyproject.toml', 'tooling/mypy_baseline.txt', 'tooling/mypy_island.py') }}
+          restore-keys: |
+            mypy-${{ runner.os }}-py${{ matrix.python }}-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e ".[dev]"
+
+      - name: Install Xvfb (Linux)
+        if: runner.os != 'Windows'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Compile Python sources
+        run: |
+          python -m compileall -q engine mesh_cli tooling tests
+
+      - name: Run pytest (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m pytest -q -p no:cacheprovider
+
+      - name: Run pytest (Linux)
+        if: runner.os != 'Windows'
+        run: |
+          xvfb-run -a python -m pytest -q
+
+      - name: Run verify-all (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m mesh_cli verify-all --artifacts artifacts/verify_all
+
+      - name: Run verify-all (Linux)
+        if: runner.os != 'Windows'
+        run: |
+          xvfb-run -a python -m mesh_cli verify-all --artifacts artifacts/verify_all
+
+      - name: Build release bundle (seeded, Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed $env:MESH_CI_SEED
+
+      - name: Build release bundle (seeded, Linux)
+        if: runner.os != 'Windows'
+        run: |
+          xvfb-run -a python -m mesh_cli release bundle --out artifacts/release_bundle.zip --seed $env:MESH_CI_SEED
+
+      - name: Verify release bundle (strict, Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m mesh_cli bundle verify --zip artifacts/release_bundle.zip --strict
+          python -m mesh_cli bundle verify --zip artifacts/release_bundle.zip --strict --json | Out-File -Encoding utf8 artifacts/bundle_verify_report.json
+
+      - name: Verify release bundle (strict, Linux)
+        if: runner.os != 'Windows'
+        run: |
+          python -m mesh_cli bundle verify --zip artifacts/release_bundle.zip --strict
+          python -m mesh_cli bundle verify --zip artifacts/release_bundle.zip --strict --json | Out-File -Encoding utf8 artifacts/bundle_verify_report.json
+
+      - name: Upload release artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mesh_release_bundle_${{ matrix.os }}_py${{ matrix.python }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            artifacts/release_bundle.zip
+            artifacts/bundle_verify_report.json
+            artifacts/verify_all/**
+
+  ship:
+    name: ship (release branches)
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        startsWith(github.ref_name, 'release/') ||
+        (github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/'))
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+      MESH_CI_SEED: "123"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            pytest.ini
+
+      - name: Install Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run one-command ship
+        run: |
+          xvfb-run -a python -m mesh_cli release ship --out-dir artifacts/ship --seed $env:MESH_CI_SEED --quiet
+
+      - name: Run replay suite (golden ratchet)
+        run: |
+          python -m mesh_cli replays run --suite replays/suite.json --out-dir artifacts/replay_suite --seed $env:MESH_CI_SEED --budgets-only-on linux --quiet
+
+      - name: Verify promoted final bundle
+        run: |
+          python -m mesh_cli bundle verify --zip artifacts/ship/release_final.zip --strict
+          python -m mesh_cli bundle verify --zip artifacts/ship/release_final.zip --strict --json | Out-File -Encoding utf8 artifacts/ship/bundle_verify_report.json
+
+      - name: Upload ship artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mesh_ship_${{ github.run_id }}
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            artifacts/ship/**
+            artifacts/replay_suite/**

@@ -614,6 +614,7 @@ To add a prefab, append a new object with those fields to `assets/prefabs.json`.
   - In-game console: `selftest`
 - Output shows how many checks passed and lists any failing behaviours/scenes with their error messages.
 - Use this when editing behaviours/scenes to catch obvious breakage before shipping or running the full test suite.
+- For the full diagnostics pipeline (verify-all artifacts, debug-report/health-report CLIs, editor debug overlay), see [docs/debug_diagnostics.md](debug_diagnostics.md).
 
 ## XP & Player Stats
 

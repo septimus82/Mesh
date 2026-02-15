@@ -169,20 +169,60 @@ from .ui_overlays.hd2d_settings_panel_overlay import Hd2dSettingsPanelOverlay
 from .editor.editor_gizmo_overlay import EditorGizmoOverlay
 from .editor.selection_outline_overlay import SelectionOutlineOverlay
 from .editor.marquee_select_overlay import MarqueeSelectOverlay
-from .game_runtime import input_dispatch as game_input_dispatch
-from .game_runtime import scene_flow as game_scene_flow
 from .game_runtime import tick as game_tick
 from .game_runtime import ui_wiring as game_ui_wiring
 from .game_runtime import events as game_events
-from .game_runtime import undo as game_undo
 from .game_runtime.undo import UndoFrame
-from .game_runtime import scene_ops as game_scene_ops
+from .services import (
+    InputService,
+    PersistenceService,
+    ReplayService,
+    build_input_service,
+    build_persistence_service,
+    build_replay_service,
+)
 from .ui_overlays import providers as ui_providers
 
 _BEHAVIOUR_META_EXPLICIT = "__explicit_behaviour_keys__"
 _OPTIONAL_BEHAVIOUR_DEFAULTS: tuple[tuple[str, str], ...] = ()
 _MISSING = object()
 logger = get_logger(__name__)
+
+
+def _resolve_input_service(window: Any) -> InputService:
+    service = getattr(window, "input_service", None)
+    if isinstance(service, InputService):
+        return service
+    service = build_input_service()
+    try:
+        setattr(window, "input_service", service)
+    except Exception:
+        pass
+    return service
+
+
+def _resolve_persistence_service(window: Any) -> PersistenceService:
+    service = getattr(window, "persistence_service", None)
+    if isinstance(service, PersistenceService):
+        return service
+    service = build_persistence_service()
+    try:
+        setattr(window, "persistence_service", service)
+    except Exception:
+        pass
+    return service
+
+
+def _resolve_replay_service(window: Any) -> ReplayService:
+    service = getattr(window, "replay_service", None)
+    if isinstance(service, ReplayService):
+        return service
+    service = build_replay_service()
+    try:
+        setattr(window, "replay_service", service)
+    except Exception:
+        pass
+    return service
 
 
 class GameWindow(engine.optional_arcade.arcade.Window):
@@ -246,6 +286,9 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     golden_slice_demo_hud: GoldenSliceDemoHUDStripOverlay
     dev_browser_overlay: DevBrowserOverlay
     settings_overlay: SettingsOverlay
+    input_service: InputService
+    persistence_service: PersistenceService
+    replay_service: ReplayService
 
     def __init__(
         self,
@@ -603,7 +646,27 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.tilemap_chunk_size = 16
         self.render_queue = SpriteRenderQueue(ArcadeSpriteBatcher(self))
         self.perf_stats = PerfStats()
+
+        # Post-processing pipeline (empty by default — add effects at runtime)
+        from .post_processing import PostProcessPipeline
+        self.post_process_pipeline = PostProcessPipeline()
         self.strict_mode: bool = DEBUG_STRICT_EXCEPTIONS
+        self.input_service = build_input_service()
+        self.persistence_service = build_persistence_service()
+        self.replay_service = build_replay_service()
+
+        # Plugin / mod system
+        from .plugin_system import PluginManager
+        self.plugin_manager = PluginManager()
+        try:
+            from .repo_root import find_repo_root
+            _repo = find_repo_root()
+            _mods_dir = (_repo / "mods") if _repo else None
+            if _mods_dir and _mods_dir.is_dir():
+                self.plugin_manager.load_all(self, _mods_dir)
+                self.plugin_manager.enable_all()
+        except Exception as _exc:  # noqa: BLE001
+            logger.warning("[Mesh][Plugins] Plugin loading failed: %s", _exc)
 
         logger.info("[Mesh][GameWindow] Initialized %sx%s window", width, height)
 
@@ -635,35 +698,35 @@ class GameWindow(engine.optional_arcade.arcade.Window):
 
     def load_scene(self, scene_path: str) -> Dict[str, Any]:
         """Load entities from a JSON scene file and build sprites for them."""
-        return game_scene_flow.load_scene(self, scene_path)
+        return _resolve_persistence_service(self).load_scene(self, scene_path)
 
     def request_scene_reload(self, clear_assets: bool = False) -> None:
         """Request that the currently loaded scene reload on the next frame."""
-        game_scene_flow.request_scene_reload(self, clear_assets=clear_assets)
+        _resolve_persistence_service(self).request_scene_reload(self, clear_assets=clear_assets)
 
     def request_reload_current_scene(self, clear_assets: bool = False) -> None:
         """Request that the currently loaded scene reload on the next frame."""
-        game_scene_flow.request_reload_current_scene(self, clear_assets=clear_assets)
+        _resolve_persistence_service(self).request_reload_current_scene(self, clear_assets=clear_assets)
 
     def request_scene_change(self, scene_path: str) -> None:
         """Request that a different scene load on the next frame."""
-        game_scene_flow.request_scene_change(self, scene_path)
+        _resolve_persistence_service(self).request_scene_change(self, scene_path)
 
     def queue_scene_change(self, scene_path: str, *, spawn_id: str | None = None) -> None:
         """Request that the game switches to another scene at the end of the frame."""
-        game_scene_flow.queue_scene_change(self, scene_path, spawn_id=spawn_id)
+        _resolve_persistence_service(self).queue_scene_change(self, scene_path, spawn_id=spawn_id)
 
     def mark_scene_dirty(self, reason: str) -> None:
-        game_scene_ops.mark_scene_dirty(self, reason)
+        _resolve_persistence_service(self).mark_scene_dirty(self, reason)
 
     def record_recent_scene(self, scene_path: str) -> None:
-        game_scene_ops.record_recent_scene(self, scene_path)
+        _resolve_persistence_service(self).record_recent_scene(self, scene_path)
 
     def get_recent_scenes(self) -> list[str]:
-        return game_scene_ops.get_recent_scenes(self)
+        return _resolve_persistence_service(self).get_recent_scenes(self)
 
     def clear_scene_dirty(self) -> None:
-        game_scene_ops.clear_scene_dirty(self)
+        _resolve_persistence_service(self).clear_scene_dirty(self)
 
     def set_hot_reload_error(self, message: str, scene_path: str | None = None) -> None:
         self.hot_reload_error_message = str(message or "").strip()
@@ -676,58 +739,40 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.hot_reload_error_visible = False
 
     def _undo_enabled(self) -> bool:
-        return game_undo.undo_enabled(self)
+        return _resolve_persistence_service(self).undo_enabled(self)
 
     def _snapshot_current_authored_scene_payload(self) -> UndoFrame | None:
-        frame = game_undo.snapshot_current_authored_scene_payload(self)
-        if frame is None:
-            return None
-        # Convert the dict-based UndoFrame from game_undo to the local UndoFrame class
-        # Actually, game_undo.UndoFrame is identical to local UndoFrame.
-        # But we need to make sure the type matches if we are strict.
-        # Since we imported game_undo, we can use game_undo.UndoFrame or just cast.
-        # However, the local UndoFrame is defined in this file.
-        # Let's just return the frame, as duck typing should work or we can update the type hint.
-        # Wait, I defined UndoFrame in game_undo.py as well.
-        # I should probably use the one from game_undo.py in the type hint or alias it.
-        # For now, let's assume they are compatible.
-        return UndoFrame(
-            scene_path=frame.scene_path,
-            authored_scene_payload=frame.authored_scene_payload,
-            dirty_counter=frame.dirty_counter,
-            reason=frame.reason,
-            ts_counter=frame.ts_counter,
-        )
+        return _resolve_persistence_service(self).snapshot_current_authored_scene_payload(self)
 
     def push_undo_frame(self, reason: str) -> bool:
-        return game_undo.push_undo_frame(self, reason)
+        return _resolve_persistence_service(self).push_undo_frame(self, reason)
 
     def undo(self) -> bool:
-        return game_undo.undo(self)
+        return _resolve_persistence_service(self).undo(self)
 
     def redo(self) -> bool:
-        return game_undo.redo(self)
+        return _resolve_persistence_service(self).redo(self)
 
     def reload_scene_from_disk(self) -> bool:
-        return game_scene_ops.reload_scene_from_disk(self)
+        return _resolve_persistence_service(self).reload_scene_from_disk(self)
 
     def persist_scene_to_disk(self):
-        return game_scene_ops.persist_scene_to_disk(self)
+        return _resolve_persistence_service(self).persist_scene_to_disk(self)
 
     def save_scene_as(self, new_scene_path: str) -> Any:
-        return game_scene_ops.save_scene_as(self, new_scene_path)
+        return _resolve_persistence_service(self).save_scene_as(self, new_scene_path)
 
     def reload_scene(self, new_path: str | None = None) -> bool:
         """Hot reload the current (or provided) scene immediately."""
-        return game_scene_flow.reload_scene(self, new_path)
+        return _resolve_persistence_service(self).reload_scene(self, new_path)
 
     def reload_current_scene(self) -> None:
         """Debug: Reload the current scene from disk."""
-        game_scene_flow.reload_current_scene(self)
+        _resolve_persistence_service(self).reload_current_scene(self)
 
     def warp_to_scene(self, scene_path: str) -> None:
         """Debug: Warp to a specific scene."""
-        game_scene_flow.warp_to_scene(self, scene_path)
+        _resolve_persistence_service(self).warp_to_scene(self, scene_path)
 
     def track_scene_subscription(self, unsubscribe: Callable[[], None]) -> None:
         self.scene_controller.track_scene_subscription(unsubscribe)
@@ -945,13 +990,13 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             lighting.resize(int(width), int(height))
 
     def on_key_press(self, key: int, modifiers: int) -> None:  # noqa: D401 ARG002
-        game_input_dispatch.on_key_press(self, key, modifiers)
+        _resolve_input_service(self).on_key_press(self, key, modifiers)
 
     def on_key_release(self, key: int, modifiers: int) -> None:  # noqa: ARG002
-        game_input_dispatch.on_key_release(self, key, modifiers)
+        _resolve_input_service(self).on_key_release(self, key, modifiers)
 
     def on_mouse_motion(self, x: float, y: float, dx: float, dy: float) -> None:
-        game_input_dispatch.on_mouse_motion(self, x, y, dx, dy)
+        _resolve_input_service(self).on_mouse_motion(self, x, y, dx, dy)
 
     def on_mouse_drag(
         self,
@@ -962,22 +1007,20 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         buttons: int,
         modifiers: int,
     ) -> None:
-        game_input_dispatch.on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
+        _resolve_input_service(self).on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
 
     def on_mouse_release(self, x: float, y: float, button: int, modifiers: int) -> None:
-        game_input_dispatch.on_mouse_release(self, x, y, button, modifiers)
+        _resolve_input_service(self).on_mouse_release(self, x, y, button, modifiers)
 
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int) -> None:
-        game_input_dispatch.on_mouse_press(self, x, y, button, modifiers)
+        _resolve_input_service(self).on_mouse_press(self, x, y, button, modifiers)
 
     def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> None:
-        handler = getattr(game_input_dispatch, "on_mouse_scroll", None)
-        if callable(handler):
-            handler(self, x, y, scroll_x, scroll_y)
+        _resolve_input_service(self).on_mouse_scroll(self, x, y, scroll_x, scroll_y)
 
     def on_text(self, text: str) -> None:
         # logger.debug("GameWindow on_text: %r", text)
-        game_input_dispatch.on_text(self, text)
+        _resolve_input_service(self).on_text(self, text)
 
     def on_text_motion(self, motion: int) -> None:
         return
@@ -993,7 +1036,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
 
     def build_scene_snapshot(self, compact: bool = False) -> Dict[str, Any]:
         """Build a JSON-serializable snapshot of the current scene state."""
-        return self.scene_controller.build_scene_snapshot(compact=compact)
+        return _resolve_replay_service(self).build_scene_snapshot(self, compact=compact)
 
     def clamp_camera_to_world(
         self,

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence
 import engine.optional_arcade as optional_arcade
 
+from ..hud_model import HudViewModel, build_hud_view_model, merge_event_histories
 from .common import (
     _LOG_ONCE,
     UIElement,
@@ -496,6 +497,8 @@ class PlayerHUD(UIElement):
         from ..ui_toasts import ToastManager  # noqa: PLC0415
 
         self._toast_manager: ToastManager = ToastManager()
+        self._hud_frame: int = 0
+        self._latest_view_model: HudViewModel | None = None
         self._health_text = optional_arcade.arcade.Text(
             text="",
             x=20,
@@ -674,6 +677,7 @@ class PlayerHUD(UIElement):
         self._toast_manager.push_toast(message, ttl_s=seconds)
 
     def update(self, dt: float) -> None:
+        self._hud_frame += 1
         self._toast_manager.tick(float(dt))
 
         if getattr(getattr(self.window, "editor_controller", None), "active", False):
@@ -694,18 +698,13 @@ class PlayerHUD(UIElement):
         if not player:
             return
 
-        # Find health behaviour
-        health = None
-        behaviours = getattr(player, "mesh_behaviours_runtime", [])
-        # Avoid circular import if possible, or just check type name/attributes
-        # But we can import locally
-        from ..behaviours.health import Health  # noqa: PLC0415
-        for b in behaviours:
-            if isinstance(b, Health):
-                health = b
-                break
-
-        if not health:
+        self._latest_view_model = build_hud_view_model(
+            player,
+            self._collect_hud_history(limit=200),
+            now_frame_or_time=float(self._hud_frame),
+        )
+        health_state = self._latest_view_model.health_state
+        if health_state.max_hp <= 0:
             return
 
         # Draw Health Bar
@@ -724,7 +723,7 @@ class PlayerHUD(UIElement):
         )
 
         # Fill
-        ratio = max(0.0, min(1.0, health.hp / health.max_hp)) if health.max_hp > 0 else 0
+        ratio = max(0.0, min(1.0, health_state.hp / health_state.max_hp)) if health_state.max_hp > 0 else 0
         if ratio > 0:
             fill_width = bar_width * ratio
             _draw_rectangle_filled(
@@ -736,7 +735,7 @@ class PlayerHUD(UIElement):
             )
 
         # Text overlay
-        self._health_text.text = f"{int(health.hp)} / {int(health.max_hp)}"
+        self._health_text.text = f"{int(health_state.hp)} / {int(health_state.max_hp)}"
         self._health_text.x = bar_x + bar_width / 2
         self._health_text.y = bar_y - bar_height / 2
         self._health_text.anchor_x = "center"
@@ -849,6 +848,30 @@ class PlayerHUD(UIElement):
         self._level_text.anchor_x = "left"
         self._level_text.anchor_y = "center"
         self._level_text.draw()
+
+    def get_hud_view_model(self) -> HudViewModel | None:
+        return self._latest_view_model
+
+    def _collect_hud_history(self, *, limit: int) -> tuple[Any, ...]:
+        gameplay_history: list[Any] = []
+        gameplay_bus = getattr(self.window, "gameplay_event_bus", None)
+        gameplay_getter = getattr(gameplay_bus, "get_history", None) if gameplay_bus is not None else None
+        if callable(gameplay_getter):
+            try:
+                gameplay_history = list(gameplay_getter(limit))
+            except Exception:
+                gameplay_history = []
+
+        mesh_history: list[Any] = []
+        event_bus = getattr(self.window, "event_bus", None)
+        mesh_getter = getattr(event_bus, "get_recent_events", None) if event_bus is not None else None
+        if callable(mesh_getter):
+            try:
+                mesh_history = list(mesh_getter(limit))
+            except Exception:
+                mesh_history = []
+
+        return tuple(merge_event_histories(gameplay_history, mesh_history))
 
 
 def maybe_enqueue_controls_hint_toast(

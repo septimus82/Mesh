@@ -1,0 +1,42 @@
+{
+  "counts": {
+    "event_count": 51,
+    "snapshot_count": 30,
+    "world_digest_count": 30
+  },
+  "expected_event_digest": "e44eb98a06be1a4a3e9ff1d2aa12e7aa7b359e1f7e1f392eb8ef76c412527076",
+  "expected_final_state_digest": "e5a0460f1cd30ce1ea0d2a7e8ddbb79555f9f167c260d50f8a29b1937a9e3326",
+  "expected_world_digest": "73618cfba259e08309a61c405a43747e92d5dc7733d8ef68fb51e272a53c5eec",
+  "id": "ep06",
+  "run_determinism": {
+    "digests_match": true,
+    "events_match": true,
+    "final_state_match": true
+  },
+  "run_ok": true,
+  "sample": {
+    "events_first": [
+      "ep06_entered",
+      "action_list_started",
+      "ep06_intro_start"
+    ],
+    "events_last": [
+      "quest_stage_completed",
+      "quest_ep06_complete",
+      "quest_completed"
+    ],
+    "world_digests_first": [
+      "30d153330b8c779199361017a27d919aa93d38d4148e3b4a0c7352c1a378d5e0",
+      "28c9ea3a37df0a0aa65d8c50379aff8eec86ad82698faeaebcf419c036d51b93",
+      "be679943522f47a8e7acaf14ebe534147c44354754849006a140df8dd12da703"
+    ],
+    "world_digests_last": [
+      "e616b6325a86b518c63ff26beedd98c97df8ca9b5c6d0f2e0bb4c2a574067fad",
+      "8df994420829ea4c6d4b50e648497661c7e86d42b4af8ce1e984ff4afede8674",
+      "8cfae933e17f456cd28ba3fd52351e5faaa31f6cc5fd4e303b3342ef1fd0c969"
+    ]
+  },
+  "scene": "scenes/episode_06_ep06.json",
+  "schema_version": 1,
+  "script": "replays/ep06.json"
+}

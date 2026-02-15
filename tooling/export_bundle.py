@@ -156,9 +156,10 @@ class BundleManifest:
     file_count: int
     total_size: int
     files: list[dict[str, Any]]
+    provenance: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "version": self.version,
             "created_at": self.created_at,
             "repo_root": self.repo_root,
@@ -166,6 +167,9 @@ class BundleManifest:
             "total_size": self.total_size,
             "files": self.files,
         }
+        if self.provenance:
+            d["provenance"] = self.provenance
+        return d
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "BundleManifest":
@@ -176,6 +180,7 @@ class BundleManifest:
             file_count=data.get("file_count", 0),
             total_size=data.get("total_size", 0),
             files=data.get("files", []),
+            provenance=data.get("provenance"),
         )
 
 
@@ -418,6 +423,7 @@ def build_bundle(
     *,
     include_unused: bool = False,
     fail_on_missing: bool = True,
+    deterministic: bool = False,
 ) -> tuple[int, BundleManifest | None]:
     """Build an export bundle.
 
@@ -467,13 +473,25 @@ def build_bundle(
             return 1, None
 
     # Create bundle manifest
+    from engine.provenance import get_provenance, provenance_to_dict
+
+    if deterministic:
+        created_at = "1980-01-01T00:00:00Z"
+        repo_root_field = "."
+        provenance = provenance_to_dict(get_provenance(deterministic=True))
+    else:
+        created_at = datetime.now(timezone.utc).isoformat()
+        repo_root_field = repo_root.resolve().as_posix()
+        provenance = provenance_to_dict(get_provenance())
+
     manifest = BundleManifest(
         version=BUNDLE_MANIFEST_VERSION,
-        created_at=datetime.now(timezone.utc).isoformat(),
-        repo_root=repo_root.resolve().as_posix(),
+        created_at=created_at,
+        repo_root=repo_root_field,
         file_count=len(copied_files),
         total_size=sum(f.size for f in plan.files),
         files=copied_files,
+        provenance=provenance,
     )
 
     # Write manifest

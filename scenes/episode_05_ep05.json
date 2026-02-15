@@ -1,0 +1,642 @@
+{
+  "entities": [
+    {
+      "id": "episode_05_ep05_player",
+      "layer": "entities",
+      "name": "Episode05Player",
+      "prefab_id": "player",
+      "x": 72.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_05_ep05_entry_trigger",
+      "layer": "background",
+      "name": "Episode05EntryTrigger",
+      "prefab_id": "ep05_trigger",
+      "x": 112.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_05_ep05_vendor",
+      "layer": "entities",
+      "name": "Episode05Vendor",
+      "prefab_id": "ep05_vendor_npc",
+      "x": 300.0,
+      "y": 208.0
+    },
+    {
+      "id": "episode_05_ep05_notice_board",
+      "layer": "entities",
+      "name": "Episode05NoticeBoard",
+      "prefab_id": "ep05_notice_board",
+      "x": 228.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_05_ep05_night_gate",
+      "layer": "entities",
+      "name": "Episode05NightGate",
+      "prefab_id": "ep05_night_gate",
+      "x": 540.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_05_ep05_mentor",
+      "layer": "entities",
+      "name": "Episode05Mentor",
+      "prefab_id": "ep05_mentor",
+      "x": 620.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_05_ep05_reward_cache",
+      "layer": "entities",
+      "name": "Episode05RewardCache",
+      "prefab_id": "ep05_reward",
+      "x": 700.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_05_ep05_reward_bonus_cache",
+      "layer": "entities",
+      "name": "Episode05RewardBonusCache",
+      "prefab_id": "ep05_reward_bonus",
+      "x": 700.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_05_ep05_exit_door",
+      "layer": "entities",
+      "name": "Episode05ExitDoor",
+      "prefab_id": "ep05_door",
+      "x": 756.0,
+      "y": 224.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.entered",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep05_intro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep05_entered"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_intro_start_ctrl",
+      "layer": "background",
+      "name": "Episode05IntroStart",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.rumors_enabled",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep05.rumors_disabled",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep05_choice_made",
+              "payload": {
+                "choice": "rumors"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "Ask about rumors."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_choice_rumors_ctrl",
+      "layer": "background",
+      "name": "Episode05ChoiceRumors",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.rumors_disabled",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep05.rumors_enabled",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep05_choice_made",
+              "payload": {
+                "choice": "direct"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "Keep moving."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_choice_move_ctrl",
+      "layer": "background",
+      "name": "Episode05ChoiceMove",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.vendor.open",
+              "type": "set_flag"
+            }
+          ],
+          "listen_events": [
+            "ep05_vendor_opened"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_vendor_open_ctrl",
+      "layer": "background",
+      "name": "Episode05VendorOpen",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.vendor.open",
+              "type": "clear_flag"
+            }
+          ],
+          "listen_events": [
+            "ep05_vendor_closed"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_vendor_close_ctrl",
+      "layer": "background",
+      "name": "Episode05VendorClose",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.vendor.spoken",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep05_vendor_spoken",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep05_vendor_interact_attempt"
+          ],
+          "require_flags": [
+            "ep05.vendor.open"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_vendor_spoken_ctrl",
+      "layer": "background",
+      "name": "Episode05VendorSpoken",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.side_done",
+              "type": "set_flag"
+            }
+          ],
+          "forbid_flags": [
+            "ep05.vendor.spoken"
+          ],
+          "listen_events": [
+            "ep05_notice_board_read"
+          ],
+          "require_flags": [
+            "ep05.rumors_enabled"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_notice_side_ctrl",
+      "layer": "background",
+      "name": "Episode05NoticeSide",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.night_gate_open",
+              "type": "set_flag"
+            }
+          ],
+          "listen_events": [
+            "ep05_night_gate_opened"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_night_gate_open_ctrl",
+      "layer": "background",
+      "name": "Episode05NightGateOpen",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.tavern_met",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep05.exit_unlocked",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep05_tavern_met",
+              "type": "emit_event"
+            },
+            {
+              "event_type": "ep05_exit_unlocked",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep05_mentor_interact"
+          ],
+          "require_flags": [
+            "ep05.vendor.spoken",
+            "ep05.night_gate_open"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_tavern_meet_ctrl",
+      "layer": "background",
+      "name": "Episode05TavernMeet",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.reward_collected",
+              "type": "set_flag"
+            }
+          ],
+          "forbid_flags": [
+            "ep05.side_done"
+          ],
+          "listen_events": [
+            "ep05_reward_collected"
+          ],
+          "require_flags": [
+            "ep05.exit_unlocked"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_reward_std_ctrl",
+      "layer": "background",
+      "name": "Episode05RewardStandard",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.reward_collected",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep05.reward_bonus_collected",
+              "type": "set_flag"
+            }
+          ],
+          "forbid_flags": [
+            "campaign04.active"
+          ],
+          "listen_events": [
+            "ep05_reward_bonus_collected"
+          ],
+          "require_flags": [
+            "ep05.exit_unlocked",
+            "ep05.side_done"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_reward_bonus_ctrl",
+      "layer": "background",
+      "name": "Episode05RewardBonus",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "event_type": "ep05_outro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep05_exit_door_interact"
+          ],
+          "require_flags": [
+            "ep05.exit_unlocked",
+            "ep05.reward_collected"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_outro_ctrl",
+      "layer": "background",
+      "name": "Episode05OutroStart",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.complete",
+              "type": "set_flag"
+            }
+          ],
+          "listen_events": [
+            "ep05_complete"
+          ]
+        }
+      },
+      "id": "episode_05_ep05_complete_ctrl",
+      "layer": "background",
+      "name": "Episode05Complete",
+      "prefab_id": "ep05_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep05.reward_collected",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep05.reward_bonus_collected",
+              "type": "set_flag"
+            }
+          ],
+          "listen_events": [
+            "ep05_reward_bonus_collected"
+          ],
+          "require_flags": [
+            "campaign04.active",
+            "campaign04.helped_mentor",
+            "ep05.exit_unlocked",
+            "ep05.side_done"
+          ]
+        }
+      },
+      "id": "episode_05_campaign04_bonus_reward_ctrl",
+      "layer": "background",
+      "name": "Episode05Campaign04BonusReward",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign04.ep05_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep05.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.rumors_enabled",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.rumors_disabled",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.vendor.open",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.vendor.spoken",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.side_done",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.night_gate_open",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.tavern_met",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.reward_collected",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.reward_bonus_collected",
+              "type": "clear_flag"
+            }
+          ],
+          "forbid_flags": [
+            "campaign04.ep05_complete"
+          ],
+          "listen_events": [
+            "quest_ep05_complete"
+          ],
+          "require_flags": [
+            "campaign04.active"
+          ]
+        }
+      },
+      "id": "episode_05_campaign04_done_ctrl",
+      "layer": "background",
+      "name": "Episode05Campaign04Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign05.ep05_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep05.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.rumors_enabled",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.rumors_disabled",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.vendor.open",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.vendor.spoken",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.side_done",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.night_gate_open",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.tavern_met",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.reward_collected",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep05.reward_bonus_collected",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "go_to_episode_06_ep06",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign05.ep05_complete"
+          ],
+          "listen_events": [
+            "quest_ep05_complete"
+          ],
+          "require_flags": [
+            "campaign05.active"
+          ]
+        }
+      },
+      "id": "episode_05_campaign05_done_ctrl",
+      "layer": "background",
+      "name": "Episode05Campaign05Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "SceneExit": {
+          "listen_event": "go_to_episode_06_ep06",
+          "target_scene": "scenes/episode_06_ep06.json",
+          "target_spawn": ""
+        }
+      },
+      "id": "episode_05_exit_to_ep06",
+      "layer": "entities",
+      "name": "Episode05ExitToEpisode06",
+      "prefab_id": "campaign_portal",
+      "x": 780.0,
+      "y": 224.0
+    }
+  ],
+  "layers": [
+    {
+      "name": "background"
+    },
+    {
+      "name": "entities"
+    },
+    {
+      "name": "foreground"
+    }
+  ],
+  "name": "Episode 05: Hollowmere Market",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "#27414f",
+    "world_height": 448,
+    "world_width": 800
+  },
+  "version": 1
+}

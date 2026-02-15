@@ -18,9 +18,43 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from engine.diagnostics import Diagnostic, DiagnosticLevel
+from engine.log_utils import normalize_path
+
 
 # Schema version for quest state serialization
 QUEST_STATE_SCHEMA_VERSION = 1
+
+
+def _diagnostic(
+    *,
+    level: DiagnosticLevel,
+    code: str,
+    message: str,
+    source: str,
+    pointer: str,
+    hint: str | None = None,
+    context_extra: dict[str, Any] | None = None,
+) -> Diagnostic:
+    context: dict[str, Any] = {
+        "source": normalize_path(source),
+        "pointer": pointer,
+    }
+    if context_extra:
+        for key in sorted(context_extra.keys()):
+            context[str(key)] = context_extra[key]
+    return Diagnostic(
+        level=level,
+        code=code,
+        message=str(message),
+        context=context,
+        hint=hint,
+    )
+
+
+def _append_diagnostic(diagnostics: list[Diagnostic] | None, diagnostic: Diagnostic) -> None:
+    if diagnostics is not None:
+        diagnostics.append(diagnostic)
 
 
 @dataclass
@@ -218,7 +252,13 @@ def serialize_quests(quest_manager: Any) -> dict[str, Any]:
     return result
 
 
-def apply_quest_state(quest: Any, state: SavedQuestState) -> bool:
+def apply_quest_state(
+    quest: Any,
+    state: SavedQuestState,
+    *,
+    diagnostics: list[Diagnostic] | None = None,
+    source: str = "save_runtime/quest_state",
+) -> bool:
     """Apply saved state to an existing quest.
     
     Args:
@@ -251,13 +291,27 @@ def apply_quest_state(quest: Any, state: SavedQuestState) -> bool:
             quest.timestamp_completed = state.timestamp_completed
         
         return True
-    except Exception:
+    except Exception as exc:
+        _append_diagnostic(
+            diagnostics,
+            _diagnostic(
+                level=DiagnosticLevel.ERROR,
+                code="save.restore.quest_apply_failed",
+                message=f"Failed to apply quest '{state.quest_id}': {exc}",
+                source=source,
+                pointer=f"/saved_quests/quests/{state.quest_id}",
+                hint="Verify quest state payload fields and runtime quest object compatibility.",
+            ),
+        )
         return False
 
 
 def apply_quests(
     quest_manager: Any,
     saved_quests: dict[str, Any],
+    *,
+    diagnostics: list[Diagnostic] | None = None,
+    source: str = "save_runtime/quest_state",
 ) -> tuple[int, int]:
     """Apply saved quest states to quest manager.
     
@@ -269,10 +323,32 @@ def apply_quests(
         Tuple of (applied_count, created_count)
     """
     if not isinstance(saved_quests, dict):
+        _append_diagnostic(
+            diagnostics,
+            _diagnostic(
+                level=DiagnosticLevel.ERROR,
+                code="save.restore.quest_payload_invalid",
+                message="saved_quests payload must be an object.",
+                source=source,
+                pointer="/saved_quests",
+                hint="Expected {'schema_version': int, 'quests': {...}}.",
+            ),
+        )
         return (0, 0)
     
     quests_data = saved_quests.get("quests", saved_quests)
     if not isinstance(quests_data, dict):
+        _append_diagnostic(
+            diagnostics,
+            _diagnostic(
+                level=DiagnosticLevel.ERROR,
+                code="save.restore.quest_entries_invalid",
+                message="saved_quests.quests must be an object.",
+                source=source,
+                pointer="/saved_quests/quests",
+                hint="Provide quest-id keyed objects.",
+            ),
+        )
         return (0, 0)
     
     applied = 0
@@ -293,7 +369,12 @@ def apply_quests(
         
         if quest is not None:
             # Update existing quest
-            if apply_quest_state(quest, state):
+            if apply_quest_state(
+                quest,
+                state,
+                diagnostics=diagnostics,
+                source=source,
+            ):
                 applied += 1
         else:
             # Register new quest if manager supports it
@@ -305,10 +386,37 @@ def apply_quests(
                         "state": state.state,
                     })
                     if new_quest is not None:
-                        apply_quest_state(new_quest, state)
+                        apply_quest_state(
+                            new_quest,
+                            state,
+                            diagnostics=diagnostics,
+                            source=source,
+                        )
                         created += 1
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _append_diagnostic(
+                        diagnostics,
+                        _diagnostic(
+                            level=DiagnosticLevel.ERROR,
+                            code="save.restore.quest_register_failed",
+                            message=f"Failed to register quest '{state.quest_id}': {exc}",
+                            source=source,
+                            pointer=f"/saved_quests/quests/{state.quest_id}",
+                            hint="Ensure quest manager accepts dynamic register_quest payloads.",
+                        ),
+                    )
+            else:
+                _append_diagnostic(
+                    diagnostics,
+                    _diagnostic(
+                        level=DiagnosticLevel.WARN,
+                        code="save.restore.quest_manager_missing_register",
+                        message=f"Quest manager cannot register missing quest '{state.quest_id}'.",
+                        source=source,
+                        pointer=f"/saved_quests/quests/{state.quest_id}",
+                        hint="Provide quest definitions before loading saves with new quests.",
+                    ),
+                )
     
     return (applied, created)
 

@@ -50,6 +50,10 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
     written = payload["artifacts"]["written"]
     assert set(written.keys()) == {
         "verify_all_summary",
+        "verify_step_durations",
+        "verify_step_budget_check",
+        "shadow_backend",
+        "swallowed_exceptions",
         "scenes_index",
         "worlds_index",
         "replays_summary",
@@ -59,15 +63,21 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
         "macro_audit",
         "room_audit",
         "encounter_coverage_matrix",
+        "exception_budget",
+        "content_audit",
         "encounter_audit_summary",
         "encounter_audit_compact",
         "encounter_headroom",
     }
     assert written["verify_all_summary"] == "artifacts/verify_all_summary.json"
+    assert written["verify_step_durations"] == "artifacts/verify_step_durations.json"
+    assert written["verify_step_budget_check"] == "artifacts/verify_step_budget_check.json"
     assert written["scenes_index"] == "artifacts/scenes_index.json"
     assert written["worlds_index"] == "artifacts/worlds_index.json"
     assert written["replays_summary"] == "artifacts/replays_summary.json"
     assert written["encounter_coverage_matrix"] == "artifacts/encounter_coverage_matrix.json"
+    assert written["exception_budget"] == "artifacts/exception_budget.json"
+    assert written["content_audit"] is None
     assert written["stamp_audit"] == "artifacts/stamp_audit.json"
     assert written["brush_audit"] == "artifacts/brush_audit.json"
     assert written["macro_audit"] == "artifacts/macro_audit.json"
@@ -76,6 +86,8 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
     assert written["encounter_audit_summary"] == "artifacts/encounter_audit_summary.json"
     assert written["encounter_audit_compact"] == "artifacts/encounter_audit_compact.json"
     assert written["encounter_headroom"] == "artifacts/encounter_headroom.json"
+    assert written["shadow_backend"] == "artifacts/shadow_backend.json"
+    assert written["swallowed_exceptions"] == "artifacts/swallowed_exceptions.json"
     assert all("\\" not in (v or "") for v in written.values())
 
     assert [s["name"] for s in payload["steps"]] == list(mesh_cli.VERIFY_ALL_STEPS)
@@ -131,12 +143,18 @@ def test_verify_all_schema_failure_includes_skipped_steps(monkeypatch, tmp_path,
 
     written = payload["artifacts"]["written"]
     assert written["verify_all_summary"] == "artifacts/verify_all_summary.json"
+    assert written["verify_step_durations"] == "artifacts/verify_step_durations.json"
+    assert written["verify_step_budget_check"] == "artifacts/verify_step_budget_check.json"
+    assert written["shadow_backend"] == "artifacts/shadow_backend.json"
+    assert written["swallowed_exceptions"] == "artifacts/swallowed_exceptions.json"
     assert written["replays_summary"] == "artifacts/replays_summary.json"
     assert written["stamp_audit"] is None
     assert written["brush_audit"] is None
     assert written["macro_audit"] is None
     assert written["room_audit"] is None
     assert written["encounter_coverage_matrix"] is None
+    assert written["exception_budget"] is None
+    assert written["content_audit"] is None
     assert written["encounter_audit_summary"] is None
     assert written["encounter_audit_compact"] is None
     assert written["encounter_headroom"] is None

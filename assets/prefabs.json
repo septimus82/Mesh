@@ -1,540 +1,2937 @@
 [
   {
-    "id": "player",
-    "tags": ["player"],
-    "metadata": { "author": "core" },
     "display_name": "Player",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["PlayerController"]
-    }
+      "behaviours": [
+        "PlayerController"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "player",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "player"
+    ]
   },
   {
-    "id": "theme_enemy_placeholder",
-    "tags": ["enemy", "placeholder"],
-    "metadata": { "author": "core" },
     "display_name": "Theme Enemy Placeholder",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": []
-    }
+      "behaviours": [],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "theme_enemy_placeholder",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "placeholder"
+    ]
   },
   {
-    "id": "plant_minion",
-    "tags": ["enemy", "plant"],
-    "metadata": { "author": "core" },
     "display_name": "Plant Minion",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 10
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 2,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 10 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "plant_minion",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "plant"
+    ]
   },
   {
-    "id": "slime_blob",
-    "tags": ["enemy", "slime"],
-    "metadata": { "author": "core" },
     "display_name": "Slime Blob",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 5
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 1,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 5 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "slime_blob",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "slime"
+    ]
   },
   {
-    "id": "fire_imp",
-    "tags": ["enemy", "fire"],
-    "metadata": { "author": "core" },
     "display_name": "Fire Imp",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 8
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 2,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 8 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "fire_imp",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "fire"
+    ]
   },
   {
-    "id": "magma_cube",
-    "tags": ["enemy", "fire"],
-    "metadata": { "author": "core" },
     "display_name": "Magma Cube",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 15
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 3,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 15 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "magma_cube",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "fire"
+    ]
   },
   {
-    "id": "shadow_stalker",
-    "tags": ["enemy", "shadow"],
-    "metadata": { "author": "core" },
     "display_name": "Shadow Stalker",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 12
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 4,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 12 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "shadow_stalker",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "shadow"
+    ]
   },
   {
-    "id": "void_wisp",
-    "tags": ["enemy", "void"],
-    "metadata": { "author": "core" },
     "display_name": "Void Wisp",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 4
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 1,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 4 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "void_wisp",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "void"
+    ]
   },
   {
-    "id": "rat_scurrier",
-    "tags": ["enemy", "beast"],
-    "metadata": { "author": "core" },
     "display_name": "Rat Scurrier",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 6
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 1,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 6 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "rat_scurrier",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "beast"
+    ]
   },
   {
-    "id": "bone_dart",
-    "tags": ["enemy", "undead"],
-    "metadata": { "author": "core" },
     "display_name": "Bone Dart",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 10
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 2,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 10 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "bone_dart",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "undead"
+    ]
   },
   {
-    "id": "torch_wisp",
-    "tags": ["enemy", "fire"],
-    "metadata": { "author": "core" },
     "display_name": "Torch Wisp",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 8
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 2,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 8 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "torch_wisp",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "fire"
+    ]
   },
   {
-    "id": "ember_imp",
-    "tags": ["enemy", "fire"],
-    "metadata": { "author": "core" },
     "display_name": "Ember Imp",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 7
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 1,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 7 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ember_imp",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "fire"
+    ]
   },
   {
-    "id": "anvil_guard",
-    "tags": ["enemy", "construct"],
-    "metadata": { "author": "core" },
     "display_name": "Anvil Guard",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 14
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 4,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 14 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "anvil_guard",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "construct"
+    ]
   },
   {
-    "id": "glass_spitter",
-    "tags": ["enemy", "construct"],
-    "metadata": { "author": "core" },
     "display_name": "Glass Spitter",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 9
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 2,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 9 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "glass_spitter",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "construct"
+    ]
   },
   {
-    "id": "rust_drone",
-    "tags": ["enemy", "construct"],
-    "metadata": { "author": "core" },
     "display_name": "Rust Drone",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 11
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 3,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 11 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "rust_drone",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "construct"
+    ]
   },
   {
-    "id": "cinder_larva",
-    "tags": ["enemy", "fire"],
-    "metadata": { "author": "core" },
     "display_name": "Cinder Larva",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 6
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 1,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 6 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "cinder_larva",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "fire"
+    ]
   },
   {
-    "id": "rift_leech",
-    "tags": ["enemy", "void"],
-    "metadata": { "author": "core" },
     "display_name": "Rift Leech",
     "entity": {
+      "behaviour_config": {
+        "Health": {
+          "max": 7
+        }
+      },
+      "behaviours": [
+        "EnemyAI"
+      ],
       "encounter_cost": 1,
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["EnemyAI"],
-      "behaviour_config": { "Health": { "max": 7 } }
-    }
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "rift_leech",
+    "metadata": {
+      "author": "core"
+    },
+    "tags": [
+      "enemy",
+      "void"
+    ]
   },
   {
-    "id": "puzzle_rune_a",
-    "tags": ["puzzle", "rune"],
-    "metadata": { "author": "puzzle_room" },
     "display_name": "Puzzle Rune A",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["TriggerVolume"],
       "behaviour_config": {
         "TriggerVolume": {
-          "volume_type": "rect",
-          "width": 32,
           "height": 32,
-          "target_tags": ["player"],
-          "on_enter_event": "puzzle_rune_a"
+          "on_enter_event": "puzzle_rune_a",
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 32
         }
-      }
-    }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle_rune_a",
+    "metadata": {
+      "author": "puzzle_room"
+    },
+    "tags": [
+      "puzzle",
+      "rune"
+    ]
   },
   {
-    "id": "puzzle_rune_b",
-    "tags": ["puzzle", "rune"],
-    "metadata": { "author": "puzzle_room" },
     "display_name": "Puzzle Rune B",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["TriggerVolume"],
       "behaviour_config": {
         "TriggerVolume": {
-          "volume_type": "rect",
-          "width": 32,
           "height": 32,
-          "target_tags": ["player"],
-          "on_enter_event": "puzzle_rune_b"
+          "on_enter_event": "puzzle_rune_b",
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 32
         }
-      }
-    }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle_rune_b",
+    "metadata": {
+      "author": "puzzle_room"
+    },
+    "tags": [
+      "puzzle",
+      "rune"
+    ]
   },
   {
-    "id": "puzzle_rune_c",
-    "tags": ["puzzle", "rune"],
-    "metadata": { "author": "puzzle_room" },
     "display_name": "Puzzle Rune C",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["TriggerVolume"],
       "behaviour_config": {
         "TriggerVolume": {
-          "volume_type": "rect",
-          "width": 32,
           "height": 32,
-          "target_tags": ["player"],
-          "on_enter_event": "puzzle_rune_c"
+          "on_enter_event": "puzzle_rune_c",
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 32
         }
-      }
-    }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle_rune_c",
+    "metadata": {
+      "author": "puzzle_room"
+    },
+    "tags": [
+      "puzzle",
+      "rune"
+    ]
   },
   {
-    "id": "puzzle_hint_plaque",
-    "tags": ["puzzle", "hint"],
-    "metadata": { "author": "puzzle_room" },
     "display_name": "Puzzle Hint Plaque",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["Interactable", "DialogueRunner"],
       "behaviour_config": {
+        "DialogueRunner": {
+          "auto_advance": true,
+          "dialogue_id": "puzzle_hint_plaque",
+          "script": {
+            "start": {
+              "next": null,
+              "speaker": "Plaque",
+              "text": "The runes whisper: A, then C, then B."
+            }
+          },
+          "start_node": "start"
+        },
         "Interactable": {
           "interact_event": "hint_plaque_interact",
           "interact_label": "Read Plaque",
-          "target_tags": ["player"]
-        },
-        "DialogueRunner": {
-          "dialogue_id": "puzzle_hint_plaque",
-          "start_node": "start",
-          "auto_advance": true,
-          "script": {
-            "start": {
-              "speaker": "Plaque",
-              "text": "The runes whisper: A, then C, then B.",
-              "next": null
-            }
-          }
+          "target_tags": [
+            "player"
+          ]
         }
-      }
-    }
+      },
+      "behaviours": [
+        "Interactable",
+        "DialogueRunner"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle_hint_plaque",
+    "metadata": {
+      "author": "puzzle_room"
+    },
+    "tags": [
+      "puzzle",
+      "hint"
+    ]
   },
   {
-    "id": "puzzle_exit_door",
-    "tags": ["puzzle", "door"],
-    "metadata": { "author": "puzzle_room" },
     "display_name": "Puzzle Exit Door",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["Interactable"],
       "behaviour_config": {
         "Interactable": {
           "interact_event": "puzzle_exit_interact",
           "interact_label": "Exit",
-          "target_tags": ["player"]
+          "target_tags": [
+            "player"
+          ]
         }
       },
-      "require_flags": ["puzzle.solved"]
-    }
+      "behaviours": [
+        "Interactable"
+      ],
+      "require_flags": [
+        "puzzle.solved"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle_exit_door",
+    "metadata": {
+      "author": "puzzle_room"
+    },
+    "tags": [
+      "puzzle",
+      "door"
+    ]
   },
   {
-    "id": "puzzle_controller",
-    "tags": ["puzzle", "controller"],
-    "metadata": { "author": "puzzle_room" },
     "display_name": "Puzzle Controller",
     "entity": {
-      "sprite": null,
-      "behaviours": ["ActionListRunner"],
       "behaviour_config": {
         "ActionListRunner": {
-          "listen_events": [],
-          "actions": []
+          "actions": [],
+          "listen_events": []
         }
-      }
-    }
+      },
+      "behaviours": [
+        "ActionListRunner"
+      ],
+      "sprite": null
+    },
+    "id": "puzzle_controller",
+    "metadata": {
+      "author": "puzzle_room"
+    },
+    "tags": [
+      "puzzle",
+      "controller"
+    ]
   },
   {
-    "id": "puzzle_room_entry_trigger",
-    "tags": ["puzzle", "trigger"],
-    "metadata": { "author": "puzzle_room" },
     "display_name": "Puzzle Room Entry Trigger",
     "entity": {
-      "sprite": null,
-      "behaviours": ["TriggerVolume"],
       "behaviour_config": {
         "TriggerVolume": {
-          "volume_type": "rect",
-          "width": 120,
           "height": 120,
-          "target_tags": ["player"],
           "on_enter_event": "room_entered",
-          "one_shot": true
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 120
         }
-      }
-    }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "puzzle_room_entry_trigger",
+    "metadata": {
+      "author": "puzzle_room"
+    },
+    "tags": [
+      "puzzle",
+      "trigger"
+    ]
   },
   {
-    "id": "puzzle_room2_entry_trigger",
-    "tags": ["puzzle", "trigger"],
-    "metadata": { "author": "puzzle_room_02" },
     "display_name": "Puzzle Room 02 Entry Trigger",
     "entity": {
-      "sprite": null,
-      "behaviours": ["TriggerVolume"],
       "behaviour_config": {
         "TriggerVolume": {
-          "volume_type": "rect",
-          "width": 120,
           "height": 120,
-          "target_tags": ["player"],
           "on_enter_event": "room2_entered",
-          "one_shot": true
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 120
         }
-      }
-    }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "puzzle_room2_entry_trigger",
+    "metadata": {
+      "author": "puzzle_room_02"
+    },
+    "tags": [
+      "puzzle",
+      "trigger"
+    ]
   },
   {
-    "id": "puzzle2_rune_a",
-    "tags": ["puzzle", "rune"],
-    "metadata": { "author": "puzzle_room_02" },
     "display_name": "Puzzle Rune A (Room 02)",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["TriggerVolume"],
       "behaviour_config": {
         "TriggerVolume": {
-          "volume_type": "rect",
-          "width": 32,
           "height": 32,
-          "target_tags": ["player"],
-          "on_enter_event": "puzzle2_rune_a"
+          "on_enter_event": "puzzle2_rune_a",
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 32
         }
-      }
-    }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle2_rune_a",
+    "metadata": {
+      "author": "puzzle_room_02"
+    },
+    "tags": [
+      "puzzle",
+      "rune"
+    ]
   },
   {
-    "id": "puzzle2_rune_b",
-    "tags": ["puzzle", "rune"],
-    "metadata": { "author": "puzzle_room_02" },
     "display_name": "Puzzle Rune B (Room 02)",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["TriggerVolume"],
       "behaviour_config": {
         "TriggerVolume": {
-          "volume_type": "rect",
-          "width": 32,
           "height": 32,
-          "target_tags": ["player"],
-          "on_enter_event": "puzzle2_rune_b"
+          "on_enter_event": "puzzle2_rune_b",
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 32
         }
-      }
-    }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle2_rune_b",
+    "metadata": {
+      "author": "puzzle_room_02"
+    },
+    "tags": [
+      "puzzle",
+      "rune"
+    ]
   },
   {
-    "id": "puzzle2_rune_c",
-    "tags": ["puzzle", "rune"],
-    "metadata": { "author": "puzzle_room_02" },
     "display_name": "Puzzle Rune C (Room 02)",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["TriggerVolume"],
       "behaviour_config": {
         "TriggerVolume": {
-          "volume_type": "rect",
-          "width": 32,
           "height": 32,
-          "target_tags": ["player"],
-          "on_enter_event": "puzzle2_rune_c"
+          "on_enter_event": "puzzle2_rune_c",
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 32
         }
-      }
-    }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle2_rune_c",
+    "metadata": {
+      "author": "puzzle_room_02"
+    },
+    "tags": [
+      "puzzle",
+      "rune"
+    ]
   },
   {
-    "id": "puzzle2_hint_plaque",
-    "tags": ["puzzle", "hint"],
-    "metadata": { "author": "puzzle_room_02" },
     "display_name": "Puzzle Room 02 Hint Plaque",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["Interactable", "DialogueRunner"],
       "behaviour_config": {
+        "DialogueRunner": {
+          "auto_advance": true,
+          "dialogue_id": "puzzle2_hint_plaque",
+          "script": {
+            "start": {
+              "next": null,
+              "speaker": "Plaque",
+              "text": "The runes whisper: B, then A, then C."
+            }
+          },
+          "start_node": "start"
+        },
         "Interactable": {
           "interact_event": "hint2_plaque_interact",
           "interact_label": "Read Plaque",
-          "target_tags": ["player"]
-        },
-        "DialogueRunner": {
-          "dialogue_id": "puzzle2_hint_plaque",
-          "start_node": "start",
-          "auto_advance": true,
-          "script": {
-            "start": {
-              "speaker": "Plaque",
-              "text": "The runes whisper: B, then A, then C.",
-              "next": null
-            }
-          }
+          "target_tags": [
+            "player"
+          ]
         }
-      }
-    }
+      },
+      "behaviours": [
+        "Interactable",
+        "DialogueRunner"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle2_hint_plaque",
+    "metadata": {
+      "author": "puzzle_room_02"
+    },
+    "tags": [
+      "puzzle",
+      "hint"
+    ]
   },
   {
-    "id": "puzzle2_exit_door",
-    "tags": ["puzzle", "door"],
-    "metadata": { "author": "puzzle_room_02" },
     "display_name": "Puzzle Room 02 Exit Door",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["Interactable"],
       "behaviour_config": {
         "Interactable": {
           "interact_event": "door2_opened",
           "interact_label": "Exit",
-          "target_tags": ["player"]
+          "target_tags": [
+            "player"
+          ]
         }
-      }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
     },
-    "require_flags": ["puzzle2.solved"]
+    "id": "puzzle2_exit_door",
+    "metadata": {
+      "author": "puzzle_room_02"
+    },
+    "require_flags": [
+      "puzzle2.solved"
+    ],
+    "tags": [
+      "puzzle",
+      "door"
+    ]
   },
   {
-    "id": "puzzle2_timer",
-    "tags": ["puzzle", "timer"],
-    "metadata": { "author": "puzzle_room_02" },
     "display_name": "Puzzle Room 02 Timer",
     "entity": {
-      "sprite": null,
-      "behaviours": ["Timer"],
       "behaviour_config": {
         "Timer": {
-          "duration": 20.0,
           "auto_start": false,
+          "duration": 20.0,
           "timer_event": "puzzle2_timeout",
           "timer_id": "puzzle2_timer"
         }
-      }
-    }
+      },
+      "behaviours": [
+        "Timer"
+      ],
+      "sprite": null
+    },
+    "id": "puzzle2_timer",
+    "metadata": {
+      "author": "puzzle_room_02"
+    },
+    "tags": [
+      "puzzle",
+      "timer"
+    ]
   },
   {
-    "id": "puzzle2_sentinel",
-    "tags": ["puzzle", "sentinel"],
-    "metadata": { "author": "puzzle_room_02" },
     "display_name": "Puzzle Room 02 Sentinel",
     "entity": {
-      "sprite": "assets/placeholder.png",
-      "behaviours": ["PatrolPath"],
       "behaviour_config": {
         "PatrolPath": {
-          "waypoints": [
-            {"x": 160.0, "y": 112.0},
-            {"x": 352.0, "y": 112.0}
-          ],
-          "speed": 40.0,
           "mode": "pingpong",
-          "wait_time": 0.5
+          "speed": 40.0,
+          "wait_time": 0.5,
+          "waypoints": [
+            {
+              "x": 160.0,
+              "y": 112.0
+            },
+            {
+              "x": 352.0,
+              "y": 112.0
+            }
+          ]
         }
-      }
-    }
+      },
+      "behaviours": [
+        "PatrolPath"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle2_sentinel",
+    "metadata": {
+      "author": "puzzle_room_02"
+    },
+    "tags": [
+      "puzzle",
+      "sentinel"
+    ]
   },
   {
-    "id": "puzzle2_sentinel_vision",
-    "tags": ["puzzle", "trigger"],
-    "metadata": { "author": "puzzle_room_02" },
     "display_name": "Puzzle Room 02 Sentinel Vision",
     "entity": {
-      "sprite": null,
-      "behaviours": ["TriggerVolume"],
       "behaviour_config": {
         "TriggerVolume": {
-          "volume_type": "rect",
-          "width": 96,
           "height": 64,
-          "target_tags": ["player"],
-          "on_enter_event": "sentinel_spotted"
+          "on_enter_event": "sentinel_spotted",
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 96
         }
-      }
-    }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "puzzle2_sentinel_vision",
+    "metadata": {
+      "author": "puzzle_room_02"
+    },
+    "tags": [
+      "puzzle",
+      "trigger"
+    ]
   },
   {
-    "id": "puzzle2_cutscene_trigger",
-    "tags": ["puzzle", "cutscene"],
-    "metadata": { "author": "puzzle_room_02" },
     "display_name": "Puzzle Room 02 Reset Cutscene Trigger",
     "entity": {
-      "sprite": null,
-      "behaviours": ["CutsceneTrigger"],
       "behaviour_config": {
         "CutsceneTrigger": {
-          "listen_event": "puzzle2_failed",
-          "cutscene_id": "puzzle_room_02_reset"
+          "cutscene_id": "puzzle_room_02_reset",
+          "listen_event": "puzzle2_failed"
         }
-      }
-    }
+      },
+      "behaviours": [
+        "CutsceneTrigger"
+      ],
+      "sprite": null
+    },
+    "id": "puzzle2_cutscene_trigger",
+    "metadata": {
+      "author": "puzzle_room_02"
+    },
+    "tags": [
+      "puzzle",
+      "cutscene"
+    ]
+  },
+  {
+    "display_name": "Puzzle Room 03 Entry Trigger",
+    "entity": {
+      "behaviour_config": {
+        "TriggerVolume": {
+          "height": 120,
+          "on_enter_event": "room3_entered",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 120
+        }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "puzzle_room3_entry_trigger",
+    "metadata": {
+      "author": "puzzle_room_03"
+    },
+    "tags": [
+      "puzzle",
+      "trigger"
+    ]
+  },
+  {
+    "display_name": "Puzzle Room 03 Left Lever",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "lever_left_pulled",
+          "interact_label": "Pull Lever",
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle3_lever_left",
+    "metadata": {
+      "author": "puzzle_room_03"
+    },
+    "tags": [
+      "puzzle",
+      "lever"
+    ]
+  },
+  {
+    "display_name": "Puzzle Room 03 Right Lever",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "lever_right_pulled",
+          "interact_label": "Pull Lever",
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle3_lever_right",
+    "metadata": {
+      "author": "puzzle_room_03"
+    },
+    "tags": [
+      "puzzle",
+      "lever"
+    ]
+  },
+  {
+    "display_name": "Puzzle Room 03 Center Rune",
+    "entity": {
+      "behaviour_config": {
+        "TriggerVolume": {
+          "height": 32,
+          "on_enter_event": "puzzle3_rune_step",
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 32
+        }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle3_rune_center",
+    "metadata": {
+      "author": "puzzle_room_03"
+    },
+    "tags": [
+      "puzzle",
+      "rune"
+    ]
+  },
+  {
+    "display_name": "Puzzle Room 03 Exit Door",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "door3_opened",
+          "interact_label": "Exit",
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "puzzle3_exit_door",
+    "metadata": {
+      "author": "puzzle_room_03"
+    },
+    "require_flags": [
+      "puzzle3.solved"
+    ],
+    "tags": [
+      "puzzle",
+      "door"
+    ]
+  },
+  {
+    "display_name": "Puzzle Room 03 Timer",
+    "entity": {
+      "behaviour_config": {
+        "Timer": {
+          "auto_start": false,
+          "duration": 8.0,
+          "timer_event": "puzzle3_timeout",
+          "timer_id": "puzzle3_timer"
+        }
+      },
+      "behaviours": [
+        "Timer"
+      ],
+      "sprite": null
+    },
+    "id": "puzzle3_timer",
+    "metadata": {
+      "author": "puzzle_room_03"
+    },
+    "tags": [
+      "puzzle",
+      "timer"
+    ]
+  },
+  {
+    "display_name": "CV Arena Entry Trigger",
+    "entity": {
+      "behaviour_config": {
+        "TriggerVolume": {
+          "height": 64,
+          "on_enter_event": "cv_entered",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "width": 64
+        }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "cv_entry_trigger",
+    "metadata": {
+      "author": "combat_vignette_01"
+    },
+    "tags": [
+      "combat_vignette",
+      "trigger"
+    ]
+  },
+  {
+    "display_name": "Sentry Archer",
+    "entity": {
+      "behaviour_config": {
+        "Health": {
+          "hp": 10,
+          "max_hp": 10
+        },
+        "PatrolPath": {
+          "mode": "pingpong",
+          "speed": 50,
+          "waypoints": [
+            {
+              "x": 400,
+              "y": 256
+            },
+            {
+              "x": 500,
+              "y": 256
+            }
+          ]
+        },
+        "RangedEnemyAI": {
+          "attack_radius": 250,
+          "detect_radius": 300,
+          "flee_radius": 80,
+          "speed": 80,
+          "target_tag": "player"
+        },
+        "Shooter": {
+          "cooldown": 2.0,
+          "damage": 2,
+          "projectile_speed": 250,
+          "range": 350,
+          "target_tag": "player"
+        }
+      },
+      "behaviours": [
+        "Health",
+        "RangedEnemyAI",
+        "Shooter",
+        "PatrolPath"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "sentry_archer",
+    "metadata": {
+      "author": "combat_vignette_01"
+    },
+    "tags": [
+      "enemy",
+      "combat_vignette"
+    ]
+  },
+  {
+    "display_name": "CV Reward Chest",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "reward_collected",
+          "interact_label": "Open Chest",
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "chest_reward_cv",
+    "metadata": {
+      "author": "combat_vignette_01"
+    },
+    "require_flags": [
+      "cv.reward_unlocked"
+    ],
+    "tags": [
+      "combat_vignette",
+      "reward"
+    ]
+  },
+  {
+    "display_name": "CV Controller",
+    "entity": {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [],
+          "listen_events": []
+        }
+      },
+      "behaviours": [
+        "ActionListRunner"
+      ],
+      "sprite": null
+    },
+    "id": "cv_controller",
+    "metadata": {
+      "author": "combat_vignette_01"
+    },
+    "tags": [
+      "combat_vignette",
+      "controller"
+    ]
+  },
+  {
+    "display_name": "Town Entry Trigger",
+    "entity": {
+      "behaviour_config": {
+        "TriggerVolume": {
+          "height": 64,
+          "on_enter_event": "town_entered",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "width": 64
+        }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "town_entry_trigger",
+    "metadata": {
+      "author": "town_schedule_01"
+    },
+    "tags": [
+      "town_schedule",
+      "trigger"
+    ]
+  },
+  {
+    "display_name": "Town Vendor NPC",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "vendor_interact_attempt",
+          "interact_label": "Talk to Vendor",
+          "target_tags": [
+            "player"
+          ]
+        },
+        "NpcSchedule": {
+          "schedules": [
+            {
+              "end_hour": 12,
+              "enter_event": "vendor_opened",
+              "mode": "stand",
+              "start_hour": 6,
+              "x": 200,
+              "y": 256
+            },
+            {
+              "end_hour": 20,
+              "enter_event": "vendor_closed",
+              "mode": "stand",
+              "start_hour": 12,
+              "x": 400,
+              "y": 256
+            },
+            {
+              "end_hour": 6,
+              "mode": "stand",
+              "start_hour": 20,
+              "x": 100,
+              "y": 256
+            }
+          ]
+        }
+      },
+      "behaviours": [
+        "NpcSchedule",
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "town_vendor_npc",
+    "metadata": {
+      "author": "town_schedule_01"
+    },
+    "tags": [
+      "town_schedule",
+      "npc",
+      "vendor"
+    ]
+  },
+  {
+    "display_name": "Night Gate",
+    "entity": {
+      "behaviour_config": {
+        "TimeOfDayGate": {
+          "affect_visibility": true,
+          "end_hour": 6,
+          "invert": false,
+          "open_event": "gate_opened",
+          "start_hour": 20
+        }
+      },
+      "behaviours": [
+        "TimeOfDayGate"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "town_night_gate",
+    "metadata": {
+      "author": "town_schedule_01"
+    },
+    "tags": [
+      "town_schedule",
+      "gate"
+    ]
+  },
+  {
+    "display_name": "Secret Trigger",
+    "entity": {
+      "behaviour_config": {
+        "TriggerVolume": {
+          "height": 32,
+          "on_enter_event": "secret_found",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "width": 32
+        }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "town_secret_trigger",
+    "metadata": {
+      "author": "town_schedule_01"
+    },
+    "tags": [
+      "town_schedule",
+      "trigger"
+    ]
+  },
+  {
+    "display_name": "Town Controller",
+    "entity": {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [],
+          "listen_events": []
+        }
+      },
+      "behaviours": [
+        "ActionListRunner"
+      ],
+      "sprite": null
+    },
+    "id": "town_controller",
+    "metadata": {
+      "author": "town_schedule_01"
+    },
+    "tags": [
+      "town_schedule",
+      "controller"
+    ]
+  },
+  {
+    "display_name": "Campaign Portal",
+    "entity": {
+      "behaviour_config": {
+        "SceneExit": {
+          "listen_event": "use_exit",
+          "target_scene": "",
+          "target_spawn": ""
+        }
+      },
+      "behaviours": [
+        "SceneExit"
+      ],
+      "sprite": null
+    },
+    "id": "campaign_portal",
+    "tags": [
+      "campaign",
+      "portal"
+    ]
+  },
+  {
+    "display_name": "Campaign Controller",
+    "entity": {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [],
+          "listen_events": []
+        }
+      },
+      "behaviours": [
+        "ActionListRunner"
+      ],
+      "sprite": null
+    },
+    "id": "campaign_controller",
+    "tags": [
+      "campaign",
+      "controller"
+    ]
+  },
+  {
+    "display_name": "Episode 01 Mentor",
+    "entity": {
+      "behaviour_config": {
+        "DialogueRunner": {
+          "auto_advance": true,
+          "dialogue_id": "ep01_dialogue_intro",
+          "script": {
+            "confirm": {
+              "next": null,
+              "speaker": "Mentor",
+              "text": "Find the archive journal, then take the exit."
+            },
+            "help_path": {
+              "next": "confirm",
+              "speaker": "Mentor",
+              "text": "Good. We do this together."
+            },
+            "solo_path": {
+              "next": "confirm",
+              "speaker": "Mentor",
+              "text": "Then move fast and keep your notes close."
+            },
+            "start": {
+              "choices": [
+                {
+                  "next": "help_path",
+                  "text": "I can help."
+                },
+                {
+                  "next": "solo_path",
+                  "text": "I work alone."
+                }
+              ],
+              "speaker": "Mentor",
+              "text": "The archive door is sealed. Will you help stabilize the system?"
+            }
+          },
+          "start_node": "start"
+        }
+      },
+      "behaviours": [
+        "DialogueRunner"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "npc_mentor",
+    "metadata": {
+      "author": "episode_01"
+    },
+    "tags": [
+      "episode_01",
+      "npc",
+      "mentor"
+    ]
+  },
+  {
+    "display_name": "Episode 01 Entry Trigger",
+    "entity": {
+      "behaviour_config": {
+        "TriggerVolume": {
+          "height": 96,
+          "on_enter_event": "ep01_entered",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 96
+        }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "ep01_trigger",
+    "metadata": {
+      "author": "episode_01"
+    },
+    "tags": [
+      "episode_01",
+      "trigger"
+    ]
+  },
+  {
+    "display_name": "Episode 01 Exit Door",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep01_exit_door_interact",
+          "interact_label": "Exit",
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep01_door",
+    "metadata": {
+      "author": "episode_01"
+    },
+    "require_flags": [
+      "ep01.exit_unlocked"
+    ],
+    "tags": [
+      "episode_01",
+      "door"
+    ]
+  },
+  {
+    "display_name": "Episode 01 Archive Journal",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep01_clue_found",
+          "interact_label": "Read Journal",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep01_reward",
+    "metadata": {
+      "author": "episode_01"
+    },
+    "tags": [
+      "episode_01",
+      "journal",
+      "objective"
+    ]
+  },
+  {
+    "display_name": "Episode 01 Controller",
+    "entity": {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [],
+          "listen_events": []
+        }
+      },
+      "behaviours": [
+        "ActionListRunner"
+      ],
+      "sprite": null
+    },
+    "id": "ep01_controller",
+    "metadata": {
+      "author": "episode_01"
+    },
+    "tags": [
+      "episode_01",
+      "controller"
+    ]
+  },
+  {
+    "display_name": "Episode 02 Mentor",
+    "entity": {
+      "behaviour_config": {
+        "DialogueRunner": {
+          "auto_advance": true,
+          "dialogue_id": "ep02_dialogue_intro",
+          "script": {
+            "confirm": {
+              "next": null,
+              "speaker": "Mentor",
+              "text": "Touch the central terminal first. The exit unlocks when your plan completes."
+            },
+            "shutdown_path": {
+              "next": "confirm",
+              "speaker": "Mentor",
+              "text": "Pull the breaker once the terminal handshake is logged."
+            },
+            "stabilize_path": {
+              "next": "confirm",
+              "speaker": "Mentor",
+              "text": "Tune each relay in order: A, then B, then C."
+            },
+            "start": {
+              "choices": [
+                {
+                  "next": "stabilize_path",
+                  "text": "Stabilize the lattice."
+                },
+                {
+                  "next": "shutdown_path",
+                  "text": "Shut it down."
+                }
+              ],
+              "speaker": "Mentor",
+              "text": "The signal is looping. Choose your approach before the chamber locks down."
+            }
+          },
+          "start_node": "start"
+        }
+      },
+      "behaviours": [
+        "DialogueRunner"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep02_mentor",
+    "metadata": {
+      "author": "episode_02_ep02"
+    },
+    "tags": [
+      "episode_02",
+      "npc",
+      "mentor"
+    ]
+  },
+  {
+    "display_name": "Episode 02: Signal in the Dust Entry Trigger",
+    "entity": {
+      "behaviour_config": {
+        "TriggerVolume": {
+          "height": 96,
+          "on_enter_event": "ep02_entered",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 96
+        }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "ep02_trigger",
+    "metadata": {
+      "author": "episode_02_ep02"
+    },
+    "tags": [
+      "episode_02",
+      "trigger"
+    ]
+  },
+  {
+    "display_name": "Episode 02: Signal in the Dust Exit Door",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep02_exit_door_interact",
+          "interact_label": "Exit",
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep02_door",
+    "metadata": {
+      "author": "episode_02_ep02"
+    },
+    "require_flags": [
+      "ep02.exit_unlocked"
+    ],
+    "tags": [
+      "episode_02",
+      "door"
+    ]
+  },
+  {
+    "display_name": "Episode 02 Signal Terminal Node",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep02_terminal_touched",
+          "interact_label": "Inspect Node",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep02_reward",
+    "metadata": {
+      "author": "episode_02_ep02"
+    },
+    "tags": [
+      "episode_02",
+      "signal",
+      "objective"
+    ]
+  },
+  {
+    "display_name": "Episode 02: Signal in the Dust Controller",
+    "entity": {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [],
+          "listen_events": []
+        }
+      },
+      "behaviours": [
+        "ActionListRunner"
+      ],
+      "sprite": null
+    },
+    "id": "ep02_controller",
+    "metadata": {
+      "author": "episode_02_ep02"
+    },
+    "tags": [
+      "episode_02",
+      "controller"
+    ]
+  },
+  {
+    "display_name": "Episode 03 Mentor",
+    "entity": {
+      "behaviour_config": {
+        "DialogueRunner": {
+          "auto_advance": true,
+          "dialogue_id": "ep03_dialogue_intro",
+          "script": {
+            "end": {
+              "next": null,
+              "speaker": "Mentor",
+              "text": "Proceed when ready."
+            },
+            "help": {
+              "next": "end",
+              "speaker": "Mentor",
+              "text": "Use the plaque if you need a reminder. The sequence starts at sigil A."
+            },
+            "silent": {
+              "next": "end",
+              "speaker": "Mentor",
+              "text": "Then trust your memory. No second voice from me."
+            },
+            "start": {
+              "choices": [
+                {
+                  "next": "help",
+                  "text": "Ask for help."
+                },
+                {
+                  "next": "silent",
+                  "text": "Stay silent."
+                }
+              ],
+              "speaker": "Mentor",
+              "text": "Three sigils. One order. Speak now if you want guidance."
+            }
+          },
+          "start_node": "start"
+        }
+      },
+      "behaviours": [
+        "DialogueRunner"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep03_mentor",
+    "metadata": {
+      "author": "episode_03_ep03"
+    },
+    "tags": [
+      "episode_03",
+      "npc",
+      "mentor"
+    ]
+  },
+  {
+    "display_name": "Episode 03 Entry Trigger",
+    "entity": {
+      "behaviour_config": {
+        "TriggerVolume": {
+          "height": 96,
+          "on_enter_event": "ep03_entered",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 96
+        }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "ep03_trigger",
+    "metadata": {
+      "author": "episode_03_ep03"
+    },
+    "tags": [
+      "episode_03",
+      "trigger"
+    ]
+  },
+  {
+    "display_name": "Episode 03 Exit Door",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep03_exit_door_interact",
+          "interact_label": "Leave Chamber",
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep03_door",
+    "metadata": {
+      "author": "episode_03_ep03"
+    },
+    "require_flags": [
+      "ep03.solved"
+    ],
+    "tags": [
+      "episode_03",
+      "door"
+    ]
+  },
+  {
+    "display_name": "Episode 03 Controller",
+    "entity": {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [],
+          "listen_events": []
+        }
+      },
+      "behaviours": [
+        "ActionListRunner"
+      ],
+      "sprite": null
+    },
+    "id": "ep03_controller",
+    "metadata": {
+      "author": "episode_03_ep03"
+    },
+    "tags": [
+      "episode_03",
+      "controller"
+    ]
+  },
+  {
+    "display_name": "Episode 03 Sigil A",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep03_sigil_touched",
+          "interact_label": "Activate Sigil A",
+          "one_shot": false,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep03_sigil_a",
+    "metadata": {
+      "author": "episode_03_ep03"
+    },
+    "tags": [
+      "episode_03",
+      "sigil",
+      "objective"
+    ]
+  },
+  {
+    "display_name": "Episode 03 Sigil B",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep03_sigil_touched",
+          "interact_label": "Activate Sigil B",
+          "one_shot": false,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep03_sigil_b",
+    "metadata": {
+      "author": "episode_03_ep03"
+    },
+    "tags": [
+      "episode_03",
+      "sigil",
+      "objective"
+    ]
+  },
+  {
+    "display_name": "Episode 03 Sigil C",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep03_sigil_touched",
+          "interact_label": "Activate Sigil C",
+          "one_shot": false,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep03_sigil_c",
+    "metadata": {
+      "author": "episode_03_ep03"
+    },
+    "tags": [
+      "episode_03",
+      "sigil",
+      "objective"
+    ]
+  },
+  {
+    "display_name": "Episode 03 Hint Plaque",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep03_hint_requested",
+          "interact_label": "Read Hint Plaque",
+          "one_shot": false,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep03_hint_plaque",
+    "metadata": {
+      "author": "episode_03_ep03"
+    },
+    "tags": [
+      "episode_03",
+      "hint"
+    ]
+  },
+  {
+    "display_name": "Episode 04 Mentor",
+    "entity": {
+      "behaviour_config": {
+        "DialogueRunner": {
+          "auto_advance": true,
+          "dialogue_id": "ep04_dialogue_intro",
+          "script": {
+            "confirm": {
+              "next": null,
+              "speaker": "Mentor",
+              "text": "Clear the arena, collect the cache, then extract."
+            },
+            "hard": {
+              "next": "confirm",
+              "speaker": "Mentor",
+              "text": "Challenge route locked in. Two sentries will engage together."
+            },
+            "safe": {
+              "next": "confirm",
+              "speaker": "Mentor",
+              "text": "Safe route acknowledged. One sentry is active. Keep your guard up."
+            },
+            "start": {
+              "choices": [
+                {
+                  "next": "safe",
+                  "text": "Take the safe route."
+                },
+                {
+                  "next": "hard",
+                  "text": "Challenge yourself."
+                }
+              ],
+              "speaker": "Mentor",
+              "text": "Two sentry emplacements watch the causeway. Pick your route."
+            }
+          },
+          "start_node": "start"
+        }
+      },
+      "behaviours": [
+        "DialogueRunner"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep04_mentor",
+    "metadata": {
+      "author": "episode_04_ep04"
+    },
+    "tags": [
+      "episode_04",
+      "npc",
+      "mentor"
+    ]
+  },
+  {
+    "display_name": "Episode 04 Entry Trigger",
+    "entity": {
+      "behaviour_config": {
+        "TriggerVolume": {
+          "height": 96,
+          "on_enter_event": "ep04_entered",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 96
+        }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "ep04_trigger",
+    "metadata": {
+      "author": "episode_04_ep04"
+    },
+    "tags": [
+      "episode_04",
+      "trigger"
+    ]
+  },
+  {
+    "display_name": "Episode 04 Exit Door",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep04_exit_door_interact",
+          "interact_label": "Leave Causeway",
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep04_door",
+    "metadata": {
+      "author": "episode_04_ep04"
+    },
+    "require_flags": [
+      "ep04.exit_unlocked"
+    ],
+    "tags": [
+      "episode_04",
+      "door"
+    ]
+  },
+  {
+    "display_name": "Episode 04 Reward Cache",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep04_reward_collected",
+          "interact_label": "Collect Cache",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "forbid_flags": [
+      "campaign03.helped_mentor"
+    ],
+    "id": "ep04_reward",
+    "metadata": {
+      "author": "episode_04_ep04"
+    },
+    "require_flags": [
+      "ep04.exit_unlocked"
+    ],
+    "tags": [
+      "episode_04",
+      "reward"
+    ]
+  },
+  {
+    "display_name": "Episode 04 Bonus Reward Cache",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep04_reward_bonus_collected",
+          "interact_label": "Collect Mentor Cache",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep04_reward_bonus",
+    "metadata": {
+      "author": "episode_04_ep04"
+    },
+    "require_flags": [
+      "ep04.exit_unlocked",
+      "campaign03.helped_mentor"
+    ],
+    "tags": [
+      "episode_04",
+      "reward",
+      "bonus"
+    ]
+  },
+  {
+    "display_name": "Episode 04 Controller",
+    "entity": {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [],
+          "listen_events": []
+        }
+      },
+      "behaviours": [
+        "ActionListRunner"
+      ],
+      "sprite": null
+    },
+    "id": "ep04_controller",
+    "metadata": {
+      "author": "episode_04_ep04"
+    },
+    "tags": [
+      "episode_04",
+      "controller"
+    ]
+  },
+  {
+    "display_name": "Episode 04 Sentry (Safe)",
+    "entity": {
+      "behaviour_config": {
+        "Health": {
+          "hp": 10,
+          "max_hp": 10
+        },
+        "PatrolPath": {
+          "mode": "pingpong",
+          "speed": 45,
+          "waypoints": [
+            {
+              "x": 380,
+              "y": 214
+            },
+            {
+              "x": 470,
+              "y": 214
+            }
+          ]
+        },
+        "RangedEnemyAI": {
+          "attack_radius": 220,
+          "detect_radius": 280,
+          "flee_radius": 75,
+          "speed": 70,
+          "target_tag": "player"
+        },
+        "Shooter": {
+          "cooldown": 1.8,
+          "damage": 2,
+          "projectile_speed": 240,
+          "range": 280,
+          "target_tag": "player"
+        }
+      },
+      "behaviours": [
+        "Health",
+        "RangedEnemyAI",
+        "Shooter",
+        "PatrolPath"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep04_sentry",
+    "metadata": {
+      "author": "episode_04_ep04"
+    },
+    "require_flags": [
+      "ep04.easy_mode"
+    ],
+    "tags": [
+      "episode_04",
+      "enemy",
+      "sentry"
+    ]
+  },
+  {
+    "display_name": "Episode 04 Sentry (Hard)",
+    "entity": {
+      "behaviour_config": {
+        "Health": {
+          "hp": 12,
+          "max_hp": 12
+        },
+        "PatrolPath": {
+          "mode": "pingpong",
+          "speed": 50,
+          "waypoints": [
+            {
+              "x": 460,
+              "y": 264
+            },
+            {
+              "x": 560,
+              "y": 264
+            }
+          ]
+        },
+        "RangedEnemyAI": {
+          "attack_radius": 230,
+          "detect_radius": 300,
+          "flee_radius": 80,
+          "speed": 75,
+          "target_tag": "player"
+        },
+        "Shooter": {
+          "cooldown": 1.5,
+          "damage": 2,
+          "projectile_speed": 250,
+          "range": 300,
+          "target_tag": "player"
+        }
+      },
+      "behaviours": [
+        "Health",
+        "RangedEnemyAI",
+        "Shooter",
+        "PatrolPath"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep04_sentry_hard",
+    "metadata": {
+      "author": "episode_04_ep04"
+    },
+    "require_flags": [
+      "ep04.hard_mode"
+    ],
+    "tags": [
+      "episode_04",
+      "enemy",
+      "sentry"
+    ]
+  },
+  {
+    "display_name": "Episode 05 Mentor",
+    "entity": {
+      "behaviour_config": {
+        "DialogueRunner": {
+          "auto_advance": true,
+          "dialogue_id": "ep05_dialogue_intro",
+          "script": {
+            "confirm": {
+              "next": null,
+              "speaker": "Mentor",
+              "text": "Morning for trade, night for truth. Move when the clock allows it."
+            },
+            "direct_path": {
+              "next": "confirm",
+              "speaker": "Mentor",
+              "text": "Skip the chatter. Catch the vendor while the stall is open, then meet me at the tavern after dark."
+            },
+            "rumors_path": {
+              "next": "confirm",
+              "speaker": "Mentor",
+              "text": "Then read the notice board before you see the vendor. It changes what you find later."
+            },
+            "start": {
+              "choices": [
+                {
+                  "next": "rumors_path",
+                  "text": "Ask about rumors."
+                },
+                {
+                  "next": "direct_path",
+                  "text": "Keep moving."
+                }
+              ],
+              "speaker": "Mentor",
+              "text": "Hollowmere runs on schedules. Want rumor chatter or the direct route?"
+            }
+          },
+          "start_node": "start"
+        },
+        "Interactable": {
+          "interact_event": "ep05_mentor_interact",
+          "interact_label": "Talk to Mentor",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "DialogueRunner",
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep05_mentor",
+    "metadata": {
+      "author": "episode_05_ep05"
+    },
+    "require_flags": [
+      "ep05.night_gate_open",
+      "ep05.vendor.spoken"
+    ],
+    "tags": [
+      "episode_05",
+      "npc",
+      "mentor"
+    ]
+  },
+  {
+    "display_name": "Episode 05 Entry Trigger",
+    "entity": {
+      "behaviour_config": {
+        "TriggerVolume": {
+          "height": 96,
+          "on_enter_event": "ep05_entered",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 96
+        }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "ep05_trigger",
+    "metadata": {
+      "author": "episode_05_ep05"
+    },
+    "tags": [
+      "episode_05",
+      "trigger"
+    ]
+  },
+  {
+    "display_name": "Episode 05 Vendor",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep05_vendor_interact_attempt",
+          "interact_label": "Talk to Vendor",
+          "target_tags": [
+            "player"
+          ]
+        },
+        "NpcSchedule": {
+          "schedules": [
+            {
+              "end_hour": 12,
+              "enter_event": "ep05_vendor_opened",
+              "mode": "stand",
+              "start_hour": 6,
+              "x": 300,
+              "y": 208
+            },
+            {
+              "end_hour": 20,
+              "enter_event": "ep05_vendor_closed",
+              "mode": "stand",
+              "start_hour": 12,
+              "x": 420,
+              "y": 208
+            },
+            {
+              "end_hour": 6,
+              "enter_event": "ep05_vendor_closed",
+              "mode": "stand",
+              "start_hour": 20,
+              "x": 560,
+              "y": 224
+            }
+          ]
+        }
+      },
+      "behaviours": [
+        "NpcSchedule",
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep05_vendor_npc",
+    "metadata": {
+      "author": "episode_05_ep05"
+    },
+    "tags": [
+      "episode_05",
+      "npc",
+      "vendor"
+    ]
+  },
+  {
+    "display_name": "Episode 05 Notice Board",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep05_notice_board_read",
+          "interact_label": "Read Notice Board",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep05_notice_board",
+    "metadata": {
+      "author": "episode_05_ep05"
+    },
+    "tags": [
+      "episode_05",
+      "objective",
+      "side"
+    ]
+  },
+  {
+    "display_name": "Episode 05 Night Gate",
+    "entity": {
+      "behaviour_config": {
+        "TimeOfDayGate": {
+          "affect_visibility": true,
+          "end_hour": 6,
+          "invert": false,
+          "open_event": "ep05_night_gate_opened",
+          "start_hour": 20
+        }
+      },
+      "behaviours": [
+        "TimeOfDayGate"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep05_night_gate",
+    "metadata": {
+      "author": "episode_05_ep05"
+    },
+    "tags": [
+      "episode_05",
+      "gate"
+    ]
+  },
+  {
+    "display_name": "Episode 05 Exit Door",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep05_exit_door_interact",
+          "interact_label": "Leave Hollowmere",
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep05_door",
+    "metadata": {
+      "author": "episode_05_ep05"
+    },
+    "require_flags": [
+      "ep05.exit_unlocked",
+      "ep05.reward_collected"
+    ],
+    "tags": [
+      "episode_05",
+      "door"
+    ]
+  },
+  {
+    "display_name": "Episode 05 Reward Cache",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep05_reward_collected",
+          "interact_label": "Claim Reward",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "forbid_flags": [
+      "ep05.side_done"
+    ],
+    "id": "ep05_reward",
+    "metadata": {
+      "author": "episode_05_ep05"
+    },
+    "require_flags": [
+      "ep05.exit_unlocked"
+    ],
+    "tags": [
+      "episode_05",
+      "reward"
+    ]
+  },
+  {
+    "display_name": "Episode 05 Bonus Reward Cache",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep05_reward_bonus_collected",
+          "interact_label": "Claim Rumor Cache",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep05_reward_bonus",
+    "metadata": {
+      "author": "episode_05_ep05"
+    },
+    "require_flags": [
+      "ep05.exit_unlocked",
+      "ep05.side_done"
+    ],
+    "tags": [
+      "episode_05",
+      "reward",
+      "bonus"
+    ]
+  },
+  {
+    "display_name": "Episode 05 Controller",
+    "entity": {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [],
+          "listen_events": []
+        }
+      },
+      "behaviours": [
+        "ActionListRunner"
+      ],
+      "sprite": null
+    },
+    "id": "ep05_controller",
+    "metadata": {
+      "author": "episode_05_ep05"
+    },
+    "tags": [
+      "episode_05",
+      "controller"
+    ]
+  },
+  {
+    "display_name": "Episode 06 Mentor",
+    "entity": {
+      "behaviour_config": {
+        "DialogueRunner": {
+          "auto_advance": true,
+          "dialogue_id": "ep06_dialogue_intro",
+          "start_node": "start"
+        }
+      },
+      "behaviours": [
+        "DialogueRunner"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep06_mentor",
+    "metadata": {
+      "author": "episode_06_ep06"
+    },
+    "tags": [
+      "episode_06",
+      "npc",
+      "mentor"
+    ]
+  },
+  {
+    "display_name": "Episode 06 Entry Trigger",
+    "entity": {
+      "behaviour_config": {
+        "TriggerVolume": {
+          "height": 96,
+          "on_enter_event": "ep06_entered",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ],
+          "volume_type": "rect",
+          "width": 96
+        }
+      },
+      "behaviours": [
+        "TriggerVolume"
+      ],
+      "sprite": null
+    },
+    "id": "ep06_trigger",
+    "metadata": {
+      "author": "episode_06_ep06"
+    },
+    "tags": [
+      "episode_06",
+      "trigger"
+    ]
+  },
+  {
+    "display_name": "Episode 06 Exit Door",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep06_exit_door_interact",
+          "interact_label": "Leave Vault",
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep06_door",
+    "metadata": {
+      "author": "episode_06_ep06"
+    },
+    "require_flags": [
+      "ep06.exit_unlocked",
+      "ep06.reward_collected"
+    ],
+    "tags": [
+      "episode_06",
+      "door"
+    ]
+  },
+  {
+    "display_name": "Episode 06 Standard Cache",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep06_reward_collected",
+          "interact_label": "Claim Cache",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "forbid_flags": [
+      "ep06.puzzle_path"
+    ],
+    "id": "ep06_reward",
+    "metadata": {
+      "author": "episode_06_ep06"
+    },
+    "require_flags": [
+      "ep06.exit_unlocked"
+    ],
+    "tags": [
+      "episode_06",
+      "reward"
+    ]
+  },
+  {
+    "display_name": "Episode 06 Bonus Cache",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep06_reward_bonus_collected",
+          "interact_label": "Claim Side Cache",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep06_reward_bonus",
+    "metadata": {
+      "author": "episode_06_ep06"
+    },
+    "require_flags": [
+      "ep06.exit_unlocked",
+      "ep06.puzzle_path"
+    ],
+    "tags": [
+      "episode_06",
+      "reward",
+      "bonus"
+    ]
+  },
+  {
+    "display_name": "Episode 06 Controller",
+    "entity": {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [],
+          "listen_events": []
+        }
+      },
+      "behaviours": [
+        "ActionListRunner"
+      ],
+      "sprite": null
+    },
+    "id": "ep06_controller",
+    "metadata": {
+      "author": "episode_06_ep06"
+    },
+    "tags": [
+      "episode_06",
+      "controller"
+    ]
+  },
+  {
+    "display_name": "Episode 06 Fight Sentry",
+    "entity": {
+      "behaviour_config": {
+        "Health": {
+          "hp": 12,
+          "max_hp": 12
+        },
+        "PatrolPath": {
+          "mode": "pingpong",
+          "speed": 48,
+          "waypoints": [
+            {
+              "x": 440,
+              "y": 220
+            },
+            {
+              "x": 540,
+              "y": 220
+            }
+          ]
+        },
+        "RangedEnemyAI": {
+          "attack_radius": 230,
+          "detect_radius": 300,
+          "flee_radius": 80,
+          "speed": 75,
+          "target_tag": "player"
+        },
+        "Shooter": {
+          "cooldown": 1.5,
+          "damage": 2,
+          "projectile_speed": 250,
+          "range": 300,
+          "target_tag": "player"
+        }
+      },
+      "behaviours": [
+        "Health",
+        "RangedEnemyAI",
+        "Shooter",
+        "PatrolPath"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep06_fight_sentry",
+    "metadata": {
+      "author": "episode_06_ep06"
+    },
+    "require_flags": [
+      "ep06.fight_path"
+    ],
+    "tags": [
+      "episode_06",
+      "enemy",
+      "sentry"
+    ]
+  },
+  {
+    "display_name": "Episode 06 Puzzle Sentry",
+    "entity": {
+      "behaviour_config": {
+        "Health": {
+          "hp": 8,
+          "max_hp": 8
+        },
+        "PatrolPath": {
+          "mode": "pingpong",
+          "speed": 40,
+          "waypoints": [
+            {
+              "x": 560,
+              "y": 280
+            },
+            {
+              "x": 640,
+              "y": 280
+            }
+          ]
+        },
+        "RangedEnemyAI": {
+          "attack_radius": 210,
+          "detect_radius": 260,
+          "flee_radius": 70,
+          "speed": 60,
+          "target_tag": "player"
+        },
+        "Shooter": {
+          "cooldown": 1.9,
+          "damage": 1,
+          "projectile_speed": 220,
+          "range": 240,
+          "target_tag": "player"
+        }
+      },
+      "behaviours": [
+        "Health",
+        "RangedEnemyAI",
+        "Shooter",
+        "PatrolPath"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep06_puzzle_sentry",
+    "metadata": {
+      "author": "episode_06_ep06"
+    },
+    "require_flags": [
+      "ep06.puzzle_path"
+    ],
+    "tags": [
+      "episode_06",
+      "enemy",
+      "sentry"
+    ]
+  },
+  {
+    "display_name": "Episode 06 Rune A",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep06_puzzle_touched",
+          "interact_label": "Touch Rune A",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep06_rune_a",
+    "metadata": {
+      "author": "episode_06_ep06"
+    },
+    "tags": [
+      "episode_06",
+      "puzzle",
+      "rune"
+    ]
+  },
+  {
+    "display_name": "Episode 06 Rune B",
+    "entity": {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep06_puzzle_touched",
+          "interact_label": "Touch Rune B",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "behaviours": [
+        "Interactable"
+      ],
+      "sprite": "assets/placeholder.png"
+    },
+    "id": "ep06_rune_b",
+    "metadata": {
+      "author": "episode_06_ep06"
+    },
+    "tags": [
+      "episode_06",
+      "puzzle",
+      "rune"
+    ]
   }
 ]

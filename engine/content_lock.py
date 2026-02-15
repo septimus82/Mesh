@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from engine import json_io
 from engine.paths import get_content_index, resolve_path
+from engine.version import ENGINE_VERSION
 
 
 _MESH_LOCK_LOGGED_ONCE: set[str] = set()
@@ -65,8 +66,6 @@ def build_lock(world_path: str = "worlds/main_world.json") -> Dict[str, Any]:
     """Generate a lock dictionary representing the current content state."""
     index = get_content_index(refresh=True)
     index.build()
-
-    from engine.version import ENGINE_VERSION
 
     packs_data = []
     for p in index.packs:

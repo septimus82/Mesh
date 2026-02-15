@@ -16,9 +16,13 @@ Design principles:
 """
 from __future__ import annotations
 
+import inspect
 import sys
 from dataclasses import dataclass, field
 from typing import Any
+
+from engine.diagnostics import Diagnostic, DiagnosticLevel
+from engine.log_utils import normalize_path
 
 
 class SaveSerializationError(Exception):
@@ -27,6 +31,52 @@ class SaveSerializationError(Exception):
 
 # Schema version for entity state serialization
 ENTITY_STATE_SCHEMA_VERSION = 1
+
+
+def _diagnostic(
+    *,
+    level: DiagnosticLevel,
+    code: str,
+    message: str,
+    source: str,
+    pointer: str,
+    hint: str | None = None,
+    context_extra: dict[str, Any] | None = None,
+) -> Diagnostic:
+    context: dict[str, Any] = {
+        "source": normalize_path(source),
+        "pointer": pointer,
+    }
+    if context_extra:
+        for key in sorted(context_extra.keys()):
+            context[str(key)] = context_extra[key]
+    return Diagnostic(
+        level=level,
+        code=code,
+        message=str(message),
+        context=context,
+        hint=hint,
+    )
+
+
+def _append_diagnostic(
+    diagnostics: list[Diagnostic] | None,
+    diagnostic: Diagnostic,
+) -> None:
+    if diagnostics is not None:
+        diagnostics.append(diagnostic)
+
+
+def _coerce_non_strict_level(diag: Diagnostic, *, strict: bool) -> Diagnostic:
+    if strict or diag.level != DiagnosticLevel.ERROR:
+        return diag
+    return Diagnostic(
+        level=DiagnosticLevel.WARN,
+        code=diag.code,
+        message=diag.message,
+        context=dict(diag.context),
+        hint=diag.hint,
+    )
 
 
 @dataclass
@@ -154,6 +204,8 @@ def serialize_entity(
     *,
     errors: list[str] | None = None,
     strict: bool = False,
+    diagnostics: list[Diagnostic] | None = None,
+    source: str = "save_runtime/entity_state",
 ) -> SavedEntityState | None:
     """Extract SavedEntityState from a sprite/entity.
     
@@ -233,6 +285,17 @@ def serialize_entity(
                         f"on entity '{entity_id}': {exc}"
                     )
                     sys.stderr.write(f"[Mesh][Save] WARNING: {msg}\n")
+                    _append_diagnostic(
+                        diagnostics,
+                        _diagnostic(
+                            level=DiagnosticLevel.WARN,
+                            code="save.serialize.behaviour_state_failed",
+                            message=msg,
+                            source=source,
+                            pointer=f"/saved_entities/entities/{entity_id}/behaviour_state/{behaviour_name}",
+                            hint="Fix behaviour saveable_state() or run strict mode to fail fast.",
+                        ),
+                    )
                     if errors is not None:
                         errors.append(msg)
                     if strict:
@@ -253,6 +316,8 @@ def serialize_entities(
     scene_controller: Any,
     *,
     strict: bool = False,
+    diagnostics: list[Diagnostic] | None = None,
+    source: str = "save_runtime/entity_state",
 ) -> list[dict[str, Any]]:
     """Serialize all entities from a scene controller.
     
@@ -271,7 +336,13 @@ def serialize_entities(
     errors: list[str] = []
     states: list[SavedEntityState] = []
     for sprite in sprites:
-        state = serialize_entity(sprite, errors=errors, strict=strict)
+        state = serialize_entity(
+            sprite,
+            errors=errors,
+            strict=strict,
+            diagnostics=diagnostics,
+            source=source,
+        )
         if state is not None:
             states.append(state)
     
@@ -281,7 +352,40 @@ def serialize_entities(
     return [s.to_dict() for s in states]
 
 
-def apply_entity_state(sprite: Any, state: SavedEntityState) -> bool:
+def _invoke_restore_state(
+    behaviour: Any,
+    payload: dict[str, Any],
+    *,
+    strict: bool,
+    source: str,
+) -> None:
+    restore = getattr(behaviour, "restore_state", None)
+    if not callable(restore):
+        return
+    try:
+        signature = inspect.signature(restore)
+        has_strict = "strict" in signature.parameters
+        has_source = "source" in signature.parameters
+    except (TypeError, ValueError):
+        has_strict = False
+        has_source = False
+    if has_strict:
+        kwargs: dict[str, Any] = {"strict": bool(strict)}
+        if has_source:
+            kwargs["source"] = source
+        restore(payload, **kwargs)
+        return
+    restore(payload)
+
+
+def apply_entity_state(
+    sprite: Any,
+    state: SavedEntityState,
+    *,
+    strict: bool = False,
+    diagnostics: list[Diagnostic] | None = None,
+    source: str = "save_runtime/entity_state",
+) -> bool:
     """Apply saved state to an existing entity.
     
     Args:
@@ -318,10 +422,24 @@ def apply_entity_state(sprite: Any, state: SavedEntityState) -> bool:
                 try:
                     animator.play(state.animation_state)
                 except Exception as exc:
-                    sys.stderr.write(
-                        f"[Mesh][Save] WARNING: animator.play('{state.animation_state}') "
-                        f"failed for entity '{state.entity_id}': {exc}\n"
+                    msg = (
+                        f"animator.play('{state.animation_state}') "
+                        f"failed for entity '{state.entity_id}': {exc}"
                     )
+                    sys.stderr.write(f"[Mesh][Save] WARNING: {msg}\n")
+                    _append_diagnostic(
+                        diagnostics,
+                        _diagnostic(
+                            level=DiagnosticLevel.WARN,
+                            code="save.restore.animation_failed",
+                            message=msg,
+                            source=source,
+                            pointer=f"/saved_entities/entities/{state.entity_id}/animation_state",
+                            hint="Verify animation id exists for this entity animator.",
+                        ),
+                    )
+                    if strict:
+                        return False
         
         # Apply behaviour state
         if state.behaviour_state:
@@ -332,18 +450,54 @@ def apply_entity_state(sprite: Any, state: SavedEntityState) -> bool:
                     bstate = state.behaviour_state.get(behaviour_name)
                     if bstate and hasattr(behaviour, "restore_state") and callable(behaviour.restore_state):
                         try:
-                            behaviour.restore_state(bstate)
-                        except Exception as exc:
-                            sys.stderr.write(
-                                f"[Mesh][Save] WARNING: restore_state() failed for "
-                                f"{behaviour_name} on entity '{state.entity_id}': {exc}\n"
+                            _invoke_restore_state(
+                                behaviour,
+                                bstate,
+                                strict=bool(strict),
+                                source=f"{source}/{state.entity_id}/{behaviour_name}",
                             )
-        
+                            restore_diags = getattr(behaviour, "_last_restore_diagnostics", ())
+                            if isinstance(restore_diags, (list, tuple)):
+                                for diag in restore_diags:
+                                    if isinstance(diag, Diagnostic):
+                                        _append_diagnostic(
+                                            diagnostics,
+                                            _coerce_non_strict_level(diag, strict=bool(strict)),
+                                        )
+                        except Exception as exc:
+                            msg = (
+                                "restore_state() failed for "
+                                f"{behaviour_name} on entity '{state.entity_id}': {exc}"
+                            )
+                            sys.stderr.write(f"[Mesh][Save] WARNING: {msg}\n")
+                            _append_diagnostic(
+                                diagnostics,
+                                _diagnostic(
+                                    level=(DiagnosticLevel.ERROR if strict else DiagnosticLevel.WARN),
+                                    code="save.restore.behaviour_state_failed",
+                                    message=msg,
+                                    source=source,
+                                    pointer=f"/saved_entities/entities/{state.entity_id}/behaviour_state/{behaviour_name}",
+                                    hint="Ensure restore_state payload matches current wrapper schema.",
+                                ),
+                            )
+                            if strict:
+                                return False
+
         return True
     except Exception as exc:
-        sys.stderr.write(
-            f"[Mesh][Save] WARNING: apply_entity_state failed for "
-            f"entity '{state.entity_id}': {exc}\n"
+        msg = f"apply_entity_state failed for entity '{state.entity_id}': {exc}"
+        sys.stderr.write(f"[Mesh][Save] WARNING: {msg}\n")
+        _append_diagnostic(
+            diagnostics,
+            _diagnostic(
+                level=DiagnosticLevel.ERROR,
+                code="save.restore.entity_apply_failed",
+                message=msg,
+                source=source,
+                pointer=f"/saved_entities/entities/{state.entity_id}",
+                hint="Inspect entity transform/behaviour restore hooks.",
+            ),
         )
         return False
 
@@ -351,6 +505,10 @@ def apply_entity_state(sprite: Any, state: SavedEntityState) -> bool:
 def apply_entities(
     scene_controller: Any,
     saved_entities: list[dict[str, Any]],
+    *,
+    strict: bool = False,
+    diagnostics: list[Diagnostic] | None = None,
+    source: str = "save_runtime/entity_state",
 ) -> tuple[int, int]:
     """Apply saved entity states to matching entities in scene.
     
@@ -381,9 +539,26 @@ def apply_entities(
         
         if sprite is None:
             missing += 1
+            _append_diagnostic(
+                diagnostics,
+                _diagnostic(
+                    level=DiagnosticLevel.WARN,
+                    code="save.restore.entity_missing",
+                    message=f"Saved entity '{state.entity_id}' not present in scene.",
+                    source=source,
+                    pointer=f"/saved_entities/entities/{state.entity_id}",
+                    hint="Entity ids must stay stable between save and restore scenes.",
+                ),
+            )
             continue
-        
-        if apply_entity_state(sprite, state):
+
+        if apply_entity_state(
+            sprite,
+            state,
+            strict=bool(strict),
+            diagnostics=diagnostics,
+            source=source,
+        ):
             applied += 1
         else:
             missing += 1

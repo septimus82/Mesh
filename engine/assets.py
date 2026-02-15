@@ -5,7 +5,10 @@ from __future__ import annotations
 from typing import Dict, Optional, cast
 import engine.optional_arcade as optional_arcade
 
+from .logging_tools import get_logger
 from .paths import resolve_path
+
+logger = get_logger(__name__)
 
 
 class AssetManager:
@@ -21,10 +24,10 @@ class AssetManager:
     def _load_texture_internal(self, path: str) -> Optional[optional_arcade.arcade.Texture]:
         try:
             texture = optional_arcade.arcade.load_texture(path)
-            print(f"[Mesh][Assets] Loaded texture '{path}'")
+            logger.debug("Loaded texture '%s'", path)
             return texture
         except Exception as exc:  # noqa: BLE001
-            print(f"[Mesh][Assets] ERROR: Failed to load texture '{path}': {exc}")
+            logger.error("Failed to load texture '%s': %s", path, exc)
             return None
 
     def get_texture(self, path: str) -> Optional[optional_arcade.arcade.Texture]:
@@ -86,10 +89,10 @@ class AssetManager:
             # Trim to requested count
             textures = textures[:total_frames]
 
-            print(f"[Mesh][Assets] Loaded sprite sheet '{path}' (subset {len(textures)} frames)")
+            logger.debug("Loaded sprite sheet '%s' (subset %d frames)", path, len(textures))
             return textures
         except Exception as exc:
-            print(f"[Mesh][Assets] ERROR: Failed to load sprite sheet '{path}': {exc}")
+            logger.error("Failed to load sprite sheet '%s': %s", path, exc)
             return []
 
     def _get_placeholder_texture(self) -> Optional[optional_arcade.arcade.Texture]:
@@ -99,9 +102,9 @@ class AssetManager:
         placeholder_path = self._resolve_path("assets/placeholder.png")
         try:
             self._placeholder = optional_arcade.arcade.load_texture(placeholder_path)
-            print("[Mesh][Assets] Using 'assets/placeholder.png' as fallback texture")
+            logger.info("Using 'assets/placeholder.png' as fallback texture")
         except Exception:
-            print("[Mesh][Assets] Creating generated placeholder texture")
+            logger.info("Creating generated placeholder texture")
             self._placeholder = optional_arcade.arcade.make_soft_square_texture(16, optional_arcade.arcade.color.MAGENTA, 255, 255)
         return self._placeholder
 

@@ -172,6 +172,21 @@ def _single_line_error(message: str) -> str:
     return msg
 
 
+def _is_replay_script_file(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    name = path.name
+    if not name.endswith(".json"):
+        return False
+    if name.endswith(".hash.json"):
+        return False
+    if name == "suite.json":
+        return False
+    if name.endswith("_golden.json"):
+        return False
+    return True
+
+
 def _first_expectation_error(
     *,
     window: Any,
@@ -220,14 +235,7 @@ def run_replay_suite(folder: str, *, window_factory=None) -> dict[str, Any]:
     if not folder_path.exists() or not folder_path.is_dir():
         raise ValueError(f"Replay suite folder not found: {folder}")
 
-    scripts = sorted(
-        [
-            p
-            for p in folder_path.glob("*.json")
-            if p.is_file() and not p.name.endswith(".hash.json")
-        ],
-        key=lambda p: p.name,
-    )
+    scripts = sorted([p for p in folder_path.glob("*.json") if _is_replay_script_file(p)], key=lambda p: p.name)
 
     results: list[dict[str, Any]] = []
     passed = 0
@@ -241,6 +249,11 @@ def run_replay_suite(folder: str, *, window_factory=None) -> dict[str, Any]:
 
         try:
             script = replay_script.load_replay_script(path)
+            # Campaign chain scripts live beside replay scripts for the newer
+            # suite runner and should be ignored by this legacy verifier.
+            if isinstance(script, dict) and "steps" not in script:
+                if "campaign_id" in script and "scenes" in script:
+                    continue
             expect_obj = script.get("expect") if isinstance(script, dict) else None
             expect, parse_errors = _parse_expect(expect_obj)
             if parse_errors:

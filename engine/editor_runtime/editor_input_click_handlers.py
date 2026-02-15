@@ -116,7 +116,7 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
     if button == optional_arcade.arcade.MOUSE_BUTTON_LEFT:
         if controller.occluder_tool_active:
             if modifiers & optional_arcade.arcade.key.MOD_SHIFT:
-                return controller._insert_occluder_point(world_x, world_y)
+                return bool(controller._insert_occluder_point(world_x, world_y))
             controller._handle_occluder_mouse_press(world_x, world_y)
             return True
         if controller.lights_tool_active:
@@ -214,7 +214,7 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
         if ctx_result is not None:
             return ctx_result
         if controller.occluder_tool_active:
-            return controller._remove_occluder_point()
+            return bool(controller._remove_occluder_point())
     return False
 
 

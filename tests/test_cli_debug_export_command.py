@@ -44,6 +44,7 @@ def test_cli_debug_export_writes_bundle(monkeypatch, tmp_path) -> None:
             "filtered_count": 0,
             "rows": [],
         },
+        hud={"health": {"hp": 0.0, "max_hp": 0.0, "dead": True, "last_damage_time": None, "last_damage_amount": None}, "feed": []},
         selected_entity={"entity_id": None, "behaviours": []},
         created_at=None,
         engine_version="test",

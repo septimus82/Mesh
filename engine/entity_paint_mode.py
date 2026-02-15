@@ -16,6 +16,9 @@ class PrefabInfo:
 
 FILTER_ORDER: tuple[str, ...] = ("all", "enemy", "prop", "npc", "interactable")
 
+# Tags that belong to the known allowlist (everything in FILTER_ORDER except meta-modes).
+_KNOWN_FILTER_TAGS: frozenset[str] = frozenset(FILTER_ORDER) - frozenset({"all", "other"})
+
 
 @dataclass(slots=True)
 class EntityPaintState:
@@ -110,6 +113,8 @@ def _prefabs_for_filter(prefabs: Iterable[PrefabInfo], filter_mode: str) -> list
     mode = str(filter_mode or "").strip().lower()
     if mode in ("", "all"):
         return list(prefabs)
+    if mode == "other":
+        return [p for p in prefabs if p.tags and not any(t in _KNOWN_FILTER_TAGS for t in p.tags)]
     tag = mode
     out: list[PrefabInfo] = []
     for p in prefabs:
@@ -125,27 +130,33 @@ def get_filtered_prefab_ids(state: EntityPaintState) -> list[str]:
     return [p.prefab_id for p in prefabs]
 
 
+def get_available_filters(prefabs: Iterable[PrefabInfo]) -> list[str]:
+    """Return filter modes with matching prefabs, in stable FILTER_ORDER order.
+
+    Always starts with ``"all"``.  Appends ``"other"`` when prefabs exist
+    whose tags are entirely outside the known allowlist.
+    """
+    prefab_list = list(prefabs)
+    available: list[str] = ["all"]
+    for mode in FILTER_ORDER:
+        if mode == "all":
+            continue
+        if _prefabs_for_filter(prefab_list, mode):
+            available.append(mode)
+    if _prefabs_for_filter(prefab_list, "other"):
+        available.append("other")
+    return available
+
+
 def cycle_filter_mode(state: EntityPaintState, *, direction: int) -> None:
+    available = get_available_filters(state.prefabs)
     current = str(state.filter_mode or "all").strip().lower() or "all"
-    order = list(FILTER_ORDER)
-    if current not in order:
+    if current not in available:
         current = "all"
-    idx = order.index(current)
+    idx = available.index(current)
     step = 1 if int(direction) >= 0 else -1
-
-    for _ in range(len(order)):
-        idx = (idx + step) % len(order)
-        candidate = order[idx]
-        if candidate == "all":
-            state.filter_mode = "all"
-            state.selected_index = 0
-            return
-        if _prefabs_for_filter(state.prefabs, candidate):
-            state.filter_mode = candidate
-            state.selected_index = 0
-            return
-
-    state.filter_mode = "all"
+    idx = (idx + step) % len(available)
+    state.filter_mode = available[idx]
     state.selected_index = 0
 
 
@@ -192,7 +203,7 @@ def ensure_entities_list(scene_payload: dict[str, Any]) -> list[dict[str, Any]]:
     if not isinstance(entities, list):
         raise TypeError("scene.entities must be a list")
     if all(isinstance(entry, dict) for entry in entities):
-        return entities  # type: ignore[return-value]
+        return entities
 
     out: list[dict[str, Any]] = [entry for entry in entities if isinstance(entry, dict)]
     scene_payload["entities"] = out

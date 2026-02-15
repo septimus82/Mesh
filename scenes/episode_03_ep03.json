@@ -1,0 +1,757 @@
+{
+  "entities": [
+    {
+      "id": "episode_03_ep03_player",
+      "layer": "entities",
+      "name": "Episode03Player",
+      "prefab_id": "player",
+      "x": 88.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_03_ep03_entry_trigger",
+      "layer": "background",
+      "name": "Episode03EntryTrigger",
+      "prefab_id": "ep03_trigger",
+      "x": 120.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_03_ep03_mentor",
+      "layer": "entities",
+      "name": "Episode03Mentor",
+      "prefab_id": "ep03_mentor",
+      "x": 256.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_03_ep03_sigil_a",
+      "layer": "entities",
+      "name": "Episode03SigilA",
+      "prefab_id": "ep03_sigil_a",
+      "x": 392.0,
+      "y": 176.0
+    },
+    {
+      "id": "episode_03_ep03_sigil_b",
+      "layer": "entities",
+      "name": "Episode03SigilB",
+      "prefab_id": "ep03_sigil_b",
+      "x": 480.0,
+      "y": 224.0
+    },
+    {
+      "id": "episode_03_ep03_sigil_c",
+      "layer": "entities",
+      "name": "Episode03SigilC",
+      "prefab_id": "ep03_sigil_c",
+      "x": 568.0,
+      "y": 176.0
+    },
+    {
+      "id": "episode_03_ep03_hint_plaque",
+      "layer": "entities",
+      "name": "Episode03HintPlaque",
+      "prefab_id": "ep03_hint_plaque",
+      "x": 392.0,
+      "y": 296.0
+    },
+    {
+      "id": "episode_03_ep03_exit_door",
+      "layer": "entities",
+      "name": "Episode03ExitDoor",
+      "prefab_id": "ep03_door",
+      "x": 680.0,
+      "y": 224.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep03.entered",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep03_intro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep03_entered"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_intro_start_ctrl",
+      "layer": "background",
+      "name": "Episode03IntroStart",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep03.choice_committed",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep03.hints_enabled",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep03.no_hints",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep03_choice_made",
+              "payload": {
+                "choice": "help"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "Ask for help."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_choice_help_ctrl",
+      "layer": "background",
+      "name": "Episode03ChoiceHelp",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep03.choice_committed",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep03.no_hints",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep03.hints_enabled",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep03_choice_made",
+              "payload": {
+                "choice": "silent"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "Stay silent."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_choice_silent_ctrl",
+      "layer": "background",
+      "name": "Episode03ChoiceSilent",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep03.hint_seen",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep03_hint_shown",
+              "payload": {
+                "hint": "A-B-C"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep03_hint_requested"
+          ],
+          "require_flags": [
+            "ep03.hints_enabled"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_hint_ctrl",
+      "layer": "background",
+      "name": "Episode03HintController",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep03.seq1",
+              "type": "set_flag"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_03_ep03_sigil_a"
+          },
+          "forbid_flags": [
+            "ep03.seq1",
+            "ep03.solved"
+          ],
+          "listen_events": [
+            "ep03_sigil_touched"
+          ],
+          "require_flags": [
+            "ep03.choice_committed"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_sigil_a_ctrl",
+      "layer": "background",
+      "name": "Episode03SigilAController",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep03.seq2",
+              "type": "set_flag"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_03_ep03_sigil_b"
+          },
+          "forbid_flags": [
+            "ep03.seq2",
+            "ep03.solved"
+          ],
+          "listen_events": [
+            "ep03_sigil_touched"
+          ],
+          "require_flags": [
+            "ep03.choice_committed",
+            "ep03.seq1"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_sigil_b_ctrl",
+      "layer": "background",
+      "name": "Episode03SigilBController",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep03.solved",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep03_puzzle_solved",
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_03_ep03_sigil_c"
+          },
+          "forbid_flags": [
+            "ep03.solved"
+          ],
+          "listen_events": [
+            "ep03_sigil_touched"
+          ],
+          "require_flags": [
+            "ep03.choice_committed",
+            "ep03.seq2"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_sigil_c_ctrl",
+      "layer": "background",
+      "name": "Episode03SigilCController",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "event_type": "ep03_wrong_order",
+              "payload": {
+                "target": "sigil_b"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_03_ep03_sigil_b"
+          },
+          "forbid_flags": [
+            "ep03.seq1",
+            "ep03.solved"
+          ],
+          "listen_events": [
+            "ep03_sigil_touched"
+          ],
+          "require_flags": [
+            "ep03.choice_committed"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_wrong_order_b_ctrl",
+      "layer": "background",
+      "name": "Episode03WrongOrderB",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "event_type": "ep03_wrong_order",
+              "payload": {
+                "target": "sigil_c"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_03_ep03_sigil_c"
+          },
+          "forbid_flags": [
+            "ep03.seq2",
+            "ep03.solved"
+          ],
+          "listen_events": [
+            "ep03_sigil_touched"
+          ],
+          "require_flags": [
+            "ep03.choice_committed"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_wrong_order_c_ctrl",
+      "layer": "background",
+      "name": "Episode03WrongOrderC",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep03.seq1",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.seq2",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.solved",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep03_reset_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep03_wrong_order"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_wrong_order_reset_ctrl",
+      "layer": "background",
+      "name": "Episode03WrongOrderReset",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep03.exit_unlocked",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep03_exit_unlocked",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "ep03.exit_unlocked"
+          ],
+          "listen_events": [
+            "ep03_puzzle_solved"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_unlock_ctrl",
+      "layer": "background",
+      "name": "Episode03UnlockController",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "event_type": "ep03_outro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep03_exit_door_interact"
+          ],
+          "require_flags": [
+            "ep03.solved"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_outro_ctrl",
+      "layer": "background",
+      "name": "Episode03OutroController",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep03.complete",
+              "type": "set_flag"
+            }
+          ],
+          "listen_events": [
+            "ep03_complete"
+          ]
+        }
+      },
+      "id": "episode_03_ep03_complete_ctrl",
+      "layer": "background",
+      "name": "Episode03CompleteController",
+      "prefab_id": "ep03_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign02.ep03_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep03.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.choice_committed",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.hints_enabled",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.no_hints",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.seq1",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.seq2",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.solved",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.exit_unlocked",
+              "type": "clear_flag"
+            }
+          ],
+          "forbid_flags": [
+            "campaign02.ep03_complete"
+          ],
+          "listen_events": [
+            "quest_ep03_complete"
+          ]
+        }
+      },
+      "id": "episode_03_campaign02_done_ctrl",
+      "layer": "background",
+      "name": "Episode03Campaign02Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign03.ep03_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep03.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.choice_committed",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.hints_enabled",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.no_hints",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.seq1",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.seq2",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.solved",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "go_to_episode_04_ep04",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign03.ep03_complete"
+          ],
+          "listen_events": [
+            "quest_ep03_complete"
+          ],
+          "require_flags": [
+            "campaign03.active"
+          ]
+        }
+      },
+      "id": "episode_03_campaign03_done_ctrl",
+      "layer": "background",
+      "name": "Episode03Campaign03Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "SceneExit": {
+          "listen_event": "go_to_episode_04_ep04",
+          "target_scene": "scenes/episode_04_ep04.json",
+          "target_spawn": ""
+        }
+      },
+      "id": "episode_03_exit_to_ep04",
+      "layer": "entities",
+      "name": "Episode03ExitToEpisode04",
+      "prefab_id": "campaign_portal",
+      "x": 704.0,
+      "y": 224.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign04.ep03_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep03.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.choice_committed",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.hints_enabled",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.no_hints",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.seq1",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.seq2",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.solved",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "go_to_episode_04_ep04",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign04.ep03_complete"
+          ],
+          "listen_events": [
+            "quest_ep03_complete"
+          ],
+          "require_flags": [
+            "campaign04.active"
+          ]
+        }
+      },
+      "id": "episode_03_campaign04_done_ctrl",
+      "layer": "background",
+      "name": "Episode03Campaign04Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign05.ep03_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep03.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.choice_committed",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.hints_enabled",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.no_hints",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.seq1",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.seq2",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.solved",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep03.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "go_to_episode_04_ep04",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign05.ep03_complete"
+          ],
+          "listen_events": [
+            "quest_ep03_complete"
+          ],
+          "require_flags": [
+            "campaign05.active"
+          ]
+        }
+      },
+      "id": "episode_03_campaign05_done_ctrl",
+      "layer": "background",
+      "name": "Episode03Campaign05Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    }
+  ],
+  "layers": [
+    {
+      "name": "background"
+    },
+    {
+      "name": "entities"
+    },
+    {
+      "name": "foreground"
+    }
+  ],
+  "name": "Episode 03: The Three Sigils",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "#20202d",
+    "world_height": 448,
+    "world_width": 768
+  },
+  "version": 1
+}

@@ -10,7 +10,26 @@ import os
 import sys
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
+
+from .legacy.dispatch import build_parser as _build_parser
+from .legacy.dispatch import dispatch as _dispatch
+from .legacy.dispatch import main as _dispatch_main
+from .legacy.registry import TOOLING_EXPORT_NAMES, get_tooling_export
+
+if TYPE_CHECKING:
+    from engine.config import load_config as load_config
+    from engine.encounter_report import generate_encounter_report as generate_encounter_report
+    from engine.tooling import (
+        plan_linter as plan_linter,
+        replay_script as replay_script,
+        replay_suite as replay_suite,
+        state_dump as state_dump,
+        validate_all as validate_all,
+        verify_demo as verify_demo,
+    )
+    from engine.tooling.content_inventory import list_scenes as _inventory_list_scenes
+    from engine.tooling.content_inventory import list_worlds as _inventory_list_worlds
 
 _JSON_COMMANDS: set[str] = {
     "verify-demo",
@@ -25,9 +44,6 @@ _JSON_COMMANDS: set[str] = {
     "replay-script",
     "replay-suite",
 }
-
-from .verify import VERIFY_ALL_STEPS
-from engine.tooling_runtime.brush_report import _scene_tilemap_maybe_migrate_layers
 
 from .headless_arcade import install_arcade_stub_if_missing as _install_arcade_stub_if_missing
 
@@ -139,107 +155,14 @@ from engine.logging_tools import configure_logging, suppress_stdout  # noqa: E40
 if _json_mode:
     _configure_stdout_newline_for_json()
     configure_logging(json_mode=True)
-    with suppress_stdout():
-        from engine.config import load_config
-        from engine.version import ENGINE_VERSION
-        from engine.encounter_report import generate_encounter_report
-        from engine.encounter_report_diff import diff_reports, load_report
-        from engine.tooling import (
-            ai_plan_command,
-            build_demo_command,
-            check,
-            cli_snapshot_command,
-            content_commands,
-            dist_command,
-            docs_command,
-            doctor_command,
-            explain,
-            event_validator,
-            golden_slice_scaffold,
-            graph,
-            migrate_command,
-            pack_commands,
-            plan_cli,
-            plan_diff,
-            plan_fix_command,
-            plan_history,
-            plan_linter,
-            polish,
-            pipeline_runner,
-            prefab_cli,
-            preset_commands,
-            project_index,
-            recipes_command,
-            release_command,
-            replay_goldens_command,
-            scaffold,
-            scene_validate,
-            trace_command,
-            triage_command,
-            validate_all,
-            verify_demo,
-            wizard_command,
-            state_dump,
-            replay_script,
-            replay_suite,
-            replay_suite,
-        )
-        from engine.tooling.auto_wire import AutoWireController
-        from engine.tooling.plan_executor import PlanExecutor
-        from engine.tooling.plan_types import Action, Plan
-        from engine.tooling.content_inventory import list_scenes as _inventory_list_scenes
-        from engine.tooling.content_inventory import list_worlds as _inventory_list_worlds
 else:
     configure_logging()
-    from engine.config import load_config
-    from engine.version import ENGINE_VERSION
-    from engine.encounter_report import generate_encounter_report
-    from engine.encounter_report_diff import diff_reports, load_report
-    from engine.tooling import (
-        ai_plan_command,
-        build_demo_command,
-        check,
-        cli_snapshot_command,
-        content_commands,
-        dist_command,
-        docs_command,
-        doctor_command,
-        explain,
-        event_validator,
-        golden_slice_scaffold,
-        graph,
-        migrate_command,
-        pack_commands,
-        plan_cli,
-        plan_diff,
-        plan_fix_command,
-        plan_history,
-        plan_linter,
-        polish,
-        pipeline_runner,
-        prefab_cli,
-        preset_commands,
-        project_index,
-        recipes_command,
-        release_command,
-        replay_goldens_command,
-        scaffold,
-        scene_validate,
-        trace_command,
-        triage_command,
-        validate_all,
-        verify_demo,
-        wizard_command,
-        state_dump,
-        replay_script,
-        replay_suite,
-        replay_suite,
-    )
-    from engine.tooling.auto_wire import AutoWireController
-    from engine.tooling.plan_executor import PlanExecutor
-    from engine.tooling.plan_types import Action, Plan
-    from engine.tooling.content_inventory import list_scenes as _inventory_list_scenes
-    from engine.tooling.content_inventory import list_worlds as _inventory_list_worlds
+
+
+def __getattr__(name: str) -> Any:
+    if name in TOOLING_EXPORT_NAMES:
+        return get_tooling_export(name)
+    raise AttributeError(name)
 
 
 
@@ -277,7 +200,7 @@ def _emit_inventory(payload: dict, out_path: str | None) -> int:
 def _handle_list_scenes(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_list_scenes(args)
+    return int(scene_commands._handle_list_scenes(args))
 
 
 def _resolve_scene_paths(path: str) -> list[str]:
@@ -311,6 +234,7 @@ def _process_diff_result(diff, args: argparse.Namespace) -> int:
 def _handle_list_worlds(args: argparse.Namespace) -> int:
     try:
         from engine.repo_root import get_repo_root
+        from engine.tooling.content_inventory import list_worlds as _inventory_list_worlds
 
         with suppress_stdout():
             repo_root = get_repo_root(start=Path.cwd(), strict=True)
@@ -416,7 +340,7 @@ def _handle_verify_all(args: argparse.Namespace) -> int:
 def _handle_validate(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_validate_scene_file(args)
+    return int(scene_commands._handle_validate_scene_file(args))
 
 
 def _handle_index(args: argparse.Namespace) -> int:
@@ -439,7 +363,7 @@ def _handle_wizard(args: argparse.Namespace) -> int:
 def _handle_new_scene(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_new_scene(args)
+    return int(scene_commands._handle_new_scene(args))
 
 
 def _handle_new_behaviour(args: argparse.Namespace) -> int:
@@ -461,7 +385,7 @@ def _handle_selftest(_args: argparse.Namespace) -> int:
 def _handle_tidy_scene(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_tidy_scene(args)
+    return int(scene_commands._handle_tidy_scene(args))
 
 
 def _default_spawn_entity_id(scene_path: str, spawn_id: str, x: float, y: float) -> str:
@@ -475,35 +399,35 @@ def _format_placeholder_id_number(value: float) -> str:
     # Delegation-only wrapper kept for compatibility.
     from . import scene as scene_commands
 
-    return scene_commands._format_placeholder_id_number(value)
+    return str(scene_commands._format_placeholder_id_number(value))
 
 
 def _sanitize_entity_id_token(value: str) -> str:
     # Delegation-only wrapper kept for compatibility.
     from . import scene as scene_commands
 
-    return scene_commands._sanitize_entity_id_token(value)
+    return str(scene_commands._sanitize_entity_id_token(value))
 
 
 def _default_placeholder_entity_id(scene_path: str, x: float, y: float) -> str:
     # Delegation-only wrapper kept for compatibility.
     from . import scene as scene_commands
 
-    return scene_commands._default_placeholder_entity_id(scene_path, x, y)
+    return str(scene_commands._default_placeholder_entity_id(scene_path, x, y))
 
 
 def _default_prefab_entity_id(scene_path: str, prefab_id: str, x: float, y: float) -> str:
     # Delegation-only wrapper kept for compatibility.
     from . import scene as scene_commands
 
-    return scene_commands._default_prefab_entity_id(scene_path, prefab_id, x, y)
+    return str(scene_commands._default_prefab_entity_id(scene_path, prefab_id, x, y))
 
 
 def _default_transition_entity_id(scene_path: str, to_key: str, x: float, y: float) -> str:
     # Delegation-only wrapper kept for compatibility.
     from . import scene as scene_commands
 
-    return scene_commands._default_transition_entity_id(scene_path, to_key, x, y)
+    return str(scene_commands._default_transition_entity_id(scene_path, to_key, x, y))
 
 
 def _handle_scene_create(args: argparse.Namespace) -> int:
@@ -511,7 +435,7 @@ def _handle_scene_create(args: argparse.Namespace) -> int:
     # Delegation-only wrapper kept for monkeypatch seams.
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_create(args)
+    return int(scene_commands._handle_scene_create(args))
 
 def _handle_tilemap_validate(args: argparse.Namespace) -> int:
     scene_path = str(getattr(args, "scene_path", "") or "").strip()
@@ -553,20 +477,23 @@ def _tilemap_validate_scene_payload(
     # Delegation-only wrapper: share implementation with mesh_cli.scene.
     from . import scene as scene_commands
 
-    return scene_commands._tilemap_validate_scene_payload(scene_path_display, scene_path, scene)
+    return cast(
+        tuple[str, list[tuple[str, str, str, str]]],
+        scene_commands._tilemap_validate_scene_payload(scene_path_display, scene_path, scene),
+    )
 
 
 def _handle_scene_tilemap_add_layer(args: argparse.Namespace) -> int:
     # Delegation-only wrapper kept for monkeypatch seams.
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_tilemap_add_layer(args)
+    return int(scene_commands._handle_scene_tilemap_add_layer(args))
 
 
 def _handle_scene_tilemap_remove_layer(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_tilemap_remove_layer(args)
+    return int(scene_commands._handle_scene_tilemap_remove_layer(args))
 
 
 def _tilemap_resolve_dims_for_edit(
@@ -623,19 +550,19 @@ def _tilemap_resolve_dims_for_edit(
 def _handle_scene_tilemap_fill_rect(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_tilemap_fill_rect(args)
+    return int(scene_commands._handle_scene_tilemap_fill_rect(args))
 
 
 def _handle_scene_tilemap_clear_rect(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_tilemap_clear_rect(args)
+    return int(scene_commands._handle_scene_tilemap_clear_rect(args))
 
 
 def _handle_scene_tilemap_paint(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_tilemap_paint(args)
+    return int(scene_commands._handle_scene_tilemap_paint(args))
 
 
 def _handle_scene_tilemap_brush(args: argparse.Namespace) -> int:
@@ -647,7 +574,7 @@ def _handle_scene_tilemap_brush(args: argparse.Namespace) -> int:
     from engine.tilemap_edit import TilemapDims, ensure_tiles_array, get_layer_by_id
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_tilemap_brush(args)
+    return int(scene_commands._handle_scene_tilemap_brush(args))
 
 def _parse_tilemap_init_layer_spec(raw: str) -> tuple[str, int, float | None] | None:
     text = str(raw or "").strip()
@@ -812,18 +739,18 @@ def _handle_scene_tilemap_init(args: argparse.Namespace) -> int:
     """Initialize tilemap.tile_layers grids with in-scene dimensions (idempotent)."""
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_tilemap_init(args)
+    return int(scene_commands._handle_scene_tilemap_init(args))
 
 def _handle_scene_tilemap_resize(args: argparse.Namespace) -> int:
     """Resize tilemap.tile_layers grids, preserving content by anchor (idempotent)."""
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_tilemap_resize(args)
+    return int(scene_commands._handle_scene_tilemap_resize(args))
 
 def _handle_scene_tilemap_flood_fill(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_tilemap_flood_fill(args)
+    return int(scene_commands._handle_scene_tilemap_flood_fill(args))
 
 def _tilemap_try_resolve_tile_size_for_stamp(
     *,
@@ -887,24 +814,24 @@ def _handle_scene_stamp(args: argparse.Namespace) -> int:
     """Apply a stamp JSON: tile edits + optional prefab entity placements (idempotent)."""
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_stamp(args)
+    return int(scene_commands._handle_scene_stamp(args))
 
 def _handle_scene_stamp_report_legacy(args: argparse.Namespace) -> int:
     """Compute a dry-run report of what `scene stamp` would change (no writes)."""
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_stamp_report_legacy(args)
+    return int(scene_commands._handle_scene_stamp_report_legacy(args))
 
 def _handle_scene_stamp_report(args: argparse.Namespace) -> int:
     """Compute a dry-run report of what `scene stamp` would change (no writes)."""
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_stamp_report(args)
+    return int(scene_commands._handle_scene_stamp_report(args))
 
 def _handle_scene_macro_report(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_macro_report(args)
+    return int(scene_commands._handle_scene_macro_report(args))
 
 def _compute_scene_macro_apply(
     *,
@@ -933,7 +860,7 @@ def _compute_scene_macro_apply(
 def _handle_scene_macro_apply(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_macro_apply(args)
+    return int(scene_commands._handle_scene_macro_apply(args))
 
 def _dict_diffs(expected: dict, actual: dict, *, prefix: str = "") -> list[str]:
     diffs: list[str] = []
@@ -956,25 +883,25 @@ def _handle_scene_add_placeholder(args: argparse.Namespace) -> int:
     """Append a theme_enemy_placeholder entity into an existing scene JSON."""
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_add_placeholder(args)
+    return int(scene_commands._handle_scene_add_placeholder(args))
 
 def _handle_scene_add_entity(args: argparse.Namespace) -> int:
     """Insert or update a prefab-backed entity in a scene (idempotent)."""
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_add_entity(args)
+    return int(scene_commands._handle_scene_add_entity(args))
 
 def _handle_scene_add_triggerzone_objective(args: argparse.Namespace) -> int:
     """Insert a TriggerZone + SetGameStateOnEvent pair for objective beats."""
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_add_triggerzone_objective(args)
+    return int(scene_commands._handle_scene_add_triggerzone_objective(args))
 
 def _handle_scene_add_dialogue_choice_flag(args: argparse.Namespace) -> int:
     """Wire a Dialogue choice to a SetGameStateOnEvent flag setter."""
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_add_dialogue_choice_flag(args)
+    return int(scene_commands._handle_scene_add_dialogue_choice_flag(args))
 
 def _handle_validate_world(args: argparse.Namespace) -> int:
     """Validate world structure and links."""
@@ -1106,7 +1033,8 @@ def _handle_dump_state(args: argparse.Namespace) -> int:
     """Dump deterministic state snapshot."""
     from engine.logging_tools import suppress_stdout
     from engine.persistence_io import dumps_json_deterministic, write_json_atomic
-    from engine.tooling import state_dump
+    load_config = globals().get("load_config") or get_tooling_export("load_config")
+    state_dump = globals().get("state_dump") or get_tooling_export("state_dump")
 
     config = load_config()
     window = get_game_window()(
@@ -1319,224 +1247,25 @@ def _handle_cli_smoke(args: argparse.Namespace) -> int:
 def _handle_scene_validate_backgrounds(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_validate_backgrounds(args)
+    return int(scene_commands._handle_scene_validate_backgrounds(args))
 
 def _handle_scene_backgrounds_add_layer(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_backgrounds_add_layer(args)
+    return int(scene_commands._handle_scene_backgrounds_add_layer(args))
 
 def _handle_scene_backgrounds_remove_layer(args: argparse.Namespace) -> int:
     from . import scene as scene_commands
 
-    return scene_commands._handle_scene_backgrounds_remove_layer(args)
+    return int(scene_commands._handle_scene_backgrounds_remove_layer(args))
+
+
+def build_parser() -> argparse.ArgumentParser:
+    return _build_parser()
 
 
 def create_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Mesh Engine CLI")
-    parser.add_argument("--version", action="store_true", help="Show engine version")
-    subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
-
-    # --- Core Commands ---
-
-    # Play
-    from . import misc as misc_commands
-    misc_commands.register(subparsers)
-
-    # Debug bundle
-    from . import debug as debug_commands
-    debug_commands.register(subparsers)
-
-    # Check (Moved to qa.py)
-
-    # Verify commands (verify-demo/verify-strict/verify-replays/verify-all)
-    from . import verify as verify_commands
-
-    verify_commands.register(subparsers)
-
-    # Pack manifests/registry
-    from . import pack as pack_commands
-    pack_commands.register(subparsers)
-
-    # FX tooling
-    from . import fx as fx_commands
-    fx_commands.register(subparsers)
-
-    # Release contract
-    from . import release_contract as release_contract_commands
-    release_contract_commands.register(subparsers)
-
-    # Release pipeline
-    from . import release as release_commands
-    release_commands.register(subparsers)
-
-    # Perf Run
-    from engine.tooling import perf_command
-    perf_command.add_perf_run_command(subparsers)
-
-    # Inventory
-    list_worlds_parser = subparsers.add_parser("list-worlds", help="List and analyze world JSON files (no engine load)")
-    list_worlds_parser.add_argument("--out", help="Optional path to write JSON output")
-
-    list_presets_parser = subparsers.add_parser(
-        "list-encounter-presets", help="List available encounter preset ids (no engine load)"
-    )
-    list_presets_parser.add_argument("--out", help="Optional path to write JSON output")
-
-    lint_presets_parser = subparsers.add_parser(
-        "lint-presets",
-        help="Check that all scene encounter_preset_id values exist (no engine load)",
-    )
-    lint_presets_parser.add_argument("--out", help="Optional path to write JSON output")
-
-    # Asset doctor (Moved to assets.py)
-
-    # Dump state (Moved to misc.py)
-
-    # Replay script (Moved to replay.py)
-
-    # Replay suite (Moved to replay.py)
-
-    # Docs (Moved to misc.py)
-
-    # Wizard (Moved to misc.py)
-
-    # --- Content Management ---
-
-    from . import assets as asset_commands
-    asset_commands.register(subparsers)
-
-    # AI Audit (Moved to ai.py)
-
-    # Authoring Commands
-    from . import authoring as authoring_commands
-    authoring_commands.register(subparsers)
-
-    # New Prefab (Moved to prefabs.py)
-
-    # Place Prefab (Moved to prefabs.py)
-
-    # Add Puzzle (Moved to authoring.py)
-
-    # Scene utilities
-    from . import scene as scene_commands
-
-    scene_commands.register(subparsers)
-
-    # World authoring
-    from . import world as world_commands
-
-    world_commands.register(subparsers)
-
-    # Room scaffolding
-    from . import room as room_commands
-
-    room_commands.register(subparsers)
-
-    # Tilemap utilities
-    tilemap_parser = subparsers.add_parser("tilemap", help="Tilemap utilities")
-    tilemap_subparsers = tilemap_parser.add_subparsers(dest="tilemap_command", help="Tilemap subcommand")
-    tilemap_validate_parser = tilemap_subparsers.add_parser(
-        "validate",
-        help="Validate tilemap multi-layer configuration in a scene",
-    )
-    tilemap_validate_parser.add_argument("scene_path", help="Path to scene file")
-
-    # Stamp utilities (Moved to stamps.py)
-
-    # Brush utilities (Moved to stamps.py)
-
-    # Macro asset utilities
-    from . import macro as macro_commands
-
-    macro_commands.register(subparsers)
-
-    # Capture catalog utilities (Moved to stamps.py)
-
-    # Sprite utilities (Moved to assets.py)
-
-    # Schema Fix IDs (Moved to assets.py)
-
-    # Polish (Moved to assets.py)
-
-    # Migrate (Moved to assets.py)
-
-    # --- Validation ---
-
-    from . import qa as qa_commands
-    qa_commands.register(subparsers)
-
-    # Validate World (Moved to world.py)
-
-    # Validate Events (Moved to qa.py)
-
-    # Validate All (Moved to qa.py)
-
-    # Selftest
-    subparsers.add_parser("selftest", help="Run engine self-tests")
-
-    # Doctor (Moved to qa.py)
-
-    # Explain (Moved to qa.py)
-
-    from . import pipeline as pipeline_commands
-    pipeline_commands.register(subparsers)
-
-    # CLI Smoke (Moved to qa.py)
-
-
-
-    # Triage
-    triage_command.add_triage_command(subparsers)
-
-    # Assist
-    from engine.tooling import assist_command
-    assist_command.add_assist_command(subparsers)
-
-    # --- Planning & AI ---
-
-    # Plan
-    from . import plan as plan_commands
-
-    plan_commands.register(subparsers)
-
-
-    # AI & Planning
-    from . import ai as ai_commands
-    ai_commands.register(subparsers)
-
-    # Auto Wire (Moved to world.py)
-
-    # World Graph (Moved to world.py)
-
-    # Trace (Moved to replay.py)
-
-    from . import reports as report_commands
-    report_commands.register(subparsers)
-
-    from . import stamps as stamp_commands
-    stamp_commands.register(subparsers)
-
-    from . import prefabs as prefab_commands
-    prefab_commands.register(subparsers)
-
-    # --- Tooling Modules ---
-
-    from . import replay as replay_commands
-    replay_commands.register(subparsers)
-
-    from . import cutscene as cutscene_commands
-    cutscene_commands.register(subparsers)
-
-    from . import build as build_commands
-    build_commands.register(subparsers)
-
-    from . import export as export_commands
-    export_commands.register(subparsers)
-
-    # Prefab Management (Moved to prefabs.py)
-
-    return parser
+    return build_parser()
 
 
 def _handle_edit_scene(args: argparse.Namespace) -> int:
@@ -1550,270 +1279,12 @@ def _handle_add_puzzle(args: argparse.Namespace) -> int:
     return authoring_commands.handle(args)
 
 
+def dispatch(args: argparse.Namespace, *, parser: argparse.ArgumentParser | None = None) -> int:
+    return int(_dispatch(args, parser=parser, impl_module=sys.modules[__name__]))
+
+
 def main(argv: list[str] | None = None) -> int:
-    """Main entry point for the mesh CLI."""
-    parser = create_parser()
-    args = parser.parse_args(argv)
-
-    if args.version:
-        print(f"Mesh Engine {ENGINE_VERSION}")
-        return 0
-
-    if not args.command:
-        parser.print_help()
-        return 1
-
-    if args.command == "play":
-        return _handle_play(args)
-    if args.command == "demo":
-        if getattr(args, "demo_command", None) in (None, "", "run"):
-            return _handle_demo(args)
-        if getattr(args, "demo_command", None) == "scaffold-objective":
-            return _handle_demo_scaffold_objective(args)
-        print("[Mesh][CLI] Error: missing demo subcommand")
-        return 2
-    if args.command == "validate":
-        from . import scene as scene_commands
-
-        return scene_commands.handle(args)
-    if args.command == "index":
-        return _handle_index(args)
-    if args.command == "docs":
-        return _handle_docs(args)
-    if args.command == "wizard":
-        return _handle_wizard(args)
-    if args.command == "new-scene":
-        from . import scene as scene_commands
-
-        return scene_commands.handle(args)
-    if args.command == "new-behaviour":
-        return _handle_new_behaviour(args)
-    if args.command == "selftest":
-        return _handle_selftest(args)
-    if args.command == "ai-audit":
-        from . import ai as ai_commands
-        return ai_commands.handle(args)
-    if args.command == "tidy-scene":
-        from . import scene as scene_commands
-
-        return scene_commands.handle(args)
-    if args.command == "scene":
-        from . import scene as scene_commands
-
-        return scene_commands.handle(args)
-    if args.command == "world":
-        from . import world as world_commands
-
-        return world_commands.handle(args)
-    if args.command == "room":
-        from . import room as room_commands
-
-        return room_commands.handle(args)
-    if args.command == "tilemap":
-        if getattr(args, "tilemap_command", None) == "validate":
-            return _handle_tilemap_validate(args)
-        print("[Mesh][CLI] Error: missing tilemap subcommand")
-        return 2
-    if args.command == "stamp":
-        from . import stamps as stamp_commands
-
-        return stamp_commands.handle(args)
-
-    if args.command == "brush":
-        from . import stamps as stamp_commands
-
-        return stamp_commands.handle(args)
-
-    if args.command == "macro":
-        from . import macro as macro_commands
-
-        return macro_commands.handle(args)
-
-    if args.command == "pack":
-        from . import pack as pack_commands
-
-        return pack_commands.handle(args)
-
-    if args.command == "fx":
-        from . import fx as fx_commands
-
-        return fx_commands.handle(args)
-
-    if args.command == "capture":
-        from . import stamps as stamp_commands
-
-        return stamp_commands.handle(args)
-
-    if args.command == "sprite":
-        from . import assets as asset_commands
-
-        return asset_commands.handle(args)
-    if args.command == "validate-world":
-        from . import world as world_commands
-
-        return world_commands.handle(args)
-    if args.command == "validate-events":
-        from . import qa as qa_commands
-
-        return qa_commands.handle(args)
-    if args.command == "validate-all":
-        from . import qa as qa_commands
-
-        return qa_commands.handle(args)
-    if args.command == "doctor":
-        from . import qa as qa_commands
-
-        return qa_commands.handle(args)
-    if args.command == "explain":
-        from . import qa as qa_commands
-
-        return qa_commands.handle(args)
-    if args.command == "schema-fix-ids":
-        from engine.tooling import schema_fix_ids
-
-        argv2: list[str] = []
-        if getattr(args, "dry_run", False):
-            argv2.append("--dry-run")
-        schema_fix_paths = getattr(args, "paths", None)
-        if schema_fix_paths:
-            argv2.append("--paths")
-            argv2.extend(list(schema_fix_paths))
-        return schema_fix_ids.main(argv2)
-    if args.command == "new-quest":
-        return _handle_new_quest(args)
-    if args.command == "world-graph":
-        from . import world as world_commands
-
-        return world_commands.handle(args)
-    if args.command == "polish":
-        return _handle_polish(args)
-    if args.command == "new-npc":
-        return _handle_new_npc(args)
-    if args.command in {"new-prefab", "place-prefab", "prefab"}:
-        from . import prefabs as prefab_commands
-
-        return prefab_commands.handle(args)
-    if args.command == "check":
-        from . import qa as qa_commands
-
-        return qa_commands.handle(args)
-    if args.command in {"verify-demo", "verify-strict", "verify-replays", "verify-all"}:
-        from . import verify as verify_commands
-
-        return verify_commands.handle(args)
-    if args.command == "list-scenes":
-        from . import scene as scene_commands
-
-        return scene_commands.handle(args)
-    if args.command == "list-worlds":
-        return _handle_list_worlds(args)
-    if args.command == "list-encounter-presets":
-        return _handle_list_encounter_presets(args)
-    if args.command == "lint-presets":
-        return _handle_lint_presets(args)
-    if args.command == "doctor-assets":
-        return _handle_doctor_assets(args)
-    if args.command == "assets":
-        from . import assets as asset_commands
-
-        return asset_commands.handle(args)
-    if args.command == "release":
-        from . import release as release_commands
-
-        return release_commands.handle(args)
-    if args.command == "debug":
-        from . import debug as debug_commands
-
-        return debug_commands.handle(args)
-    if args.command == "dump-state":
-        return _handle_dump_state(args)
-    if args.command == "replay-script":
-        from . import replay as replay_commands
-
-        return replay_commands.handle(args)
-
-    if args.command == "replay-suite":
-        from . import replay as replay_commands
-
-        return replay_commands.handle(args)
-    if args.command == "replay-hash":
-        from . import replay as replay_commands
-
-        return replay_commands.handle(args)
-    if args.command == "demo":
-        return _handle_demo(args)
-    if args.command in {"pipeline", "recipes", "run-preset", "preset"}:
-        from . import pipeline as pipeline_commands
-
-        return pipeline_commands.handle(args)
-    if args.command == "place-npc":
-        return _handle_place_npc(args)
-    if args.command == "trace":
-        from . import replay as replay_commands
-
-        return replay_commands.handle(args)
-    if args.command in {"cutscene-simulate", "cutscene-validate"}:
-        from . import cutscene as cutscene_commands
-
-        return cutscene_commands.handle(args)
-    if args.command == "migrate":
-        return migrate_command.handle_migrate(args)
-    if args.command in {"build-demo", "dist", "release", "pack", "cli-snapshot", "replay-goldens", "golden-slice", "content"}:
-        from . import build as build_commands
-
-        return build_commands.handle(args)
-    if args.command == "apply-plan":
-        from . import ai as ai_commands
-        return ai_commands.handle(args)
-    if args.command == "undo-last-plan":
-        from . import ai as ai_commands
-        return ai_commands.handle(args)
-    if args.command == "plan":
-        from . import plan as plan_commands
-
-        return plan_commands.handle(args)
-    if args.command == "ai-generate-plan":
-        from . import ai as ai_commands
-        return ai_commands.handle(args)
-    if args.command == "ai-bundle":
-        from . import ai as ai_commands
-        return ai_commands.handle(args)
-    if args.command == "ai-history":
-        from . import ai as ai_commands
-        return ai_commands.handle(args)
-    if args.command == "ai-export-context":
-        from . import ai as ai_commands
-        return ai_commands.handle(args)
-    if args.command == "auto-wire-transitions":
-        from . import world as world_commands
-
-        return world_commands.handle(args)
-    if args.command == "cli-smoke":
-        from . import qa as qa_commands
-
-        return qa_commands._handle_cli_smoke(args)
-    if args.command in {"encounter-report", "drift-check"}:
-        from . import reports as report_commands
-
-        return report_commands.handle(args)
-    # if args.command == "drift-check":
-    #     return _handle_drift_check(args)
-    if args.command == "edit-scene":
-        from . import scene as scene_commands
-
-        return scene_commands.handle(args)
-    if args.command == "add-puzzle":
-        return _handle_add_puzzle(args)
-    if args.command == "export":
-        from . import export as export_commands
-
-        return export_commands.handle(args)
-    # Handle content commands
-    if hasattr(args, "func"):
-        result = args.func(args)
-        return int(result) if isinstance(result, int) else 0
-
-    return 1
+    return int(_dispatch_main(argv, impl_module=sys.modules[__name__]))
 
 
 if __name__ == "__main__":

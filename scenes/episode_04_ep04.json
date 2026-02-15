@@ -1,0 +1,768 @@
+{
+  "entities": [
+    {
+      "id": "episode_04_ep04_player",
+      "layer": "entities",
+      "name": "Episode04Player",
+      "prefab_id": "player",
+      "x": 64.0,
+      "y": 220.0
+    },
+    {
+      "id": "episode_04_ep04_entry_trigger",
+      "layer": "background",
+      "name": "Episode04EntryTrigger",
+      "prefab_id": "ep04_trigger",
+      "x": 104.0,
+      "y": 220.0
+    },
+    {
+      "id": "episode_04_ep04_mentor",
+      "layer": "entities",
+      "name": "Episode04Mentor",
+      "prefab_id": "ep04_mentor",
+      "x": 250.0,
+      "y": 220.0
+    },
+    {
+      "id": "episode_04_ep04_sentry_easy",
+      "layer": "entities",
+      "name": "Episode04SentryEasy",
+      "prefab_id": "ep04_sentry",
+      "x": 430.0,
+      "y": 220.0
+    },
+    {
+      "id": "episode_04_ep04_sentry_hard_a",
+      "layer": "entities",
+      "name": "Episode04SentryHardA",
+      "prefab_id": "ep04_sentry_hard",
+      "x": 500.0,
+      "y": 240.0
+    },
+    {
+      "behaviour_config": {
+        "PatrolPath": {
+          "waypoints": [
+            {
+              "x": 540,
+              "y": 300
+            },
+            {
+              "x": 640,
+              "y": 300
+            }
+          ]
+        }
+      },
+      "id": "episode_04_ep04_sentry_hard_b",
+      "layer": "entities",
+      "name": "Episode04SentryHardB",
+      "prefab_id": "ep04_sentry_hard",
+      "x": 560.0,
+      "y": 280.0
+    },
+    {
+      "id": "episode_04_ep04_reward_cache",
+      "layer": "entities",
+      "name": "Episode04RewardCache",
+      "prefab_id": "ep04_reward",
+      "x": 650.0,
+      "y": 220.0
+    },
+    {
+      "id": "episode_04_ep04_exit_door",
+      "layer": "entities",
+      "name": "Episode04ExitDoor",
+      "prefab_id": "ep04_door",
+      "x": 730.0,
+      "y": 220.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.entered",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep04_intro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep04_entered"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_intro_start_ctrl",
+      "layer": "background",
+      "name": "Episode04IntroStart",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.easy_mode",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep04.hard_mode",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep04_choice_made",
+              "payload": {
+                "choice": "safe"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "Take the safe route."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_choice_safe_ctrl",
+      "layer": "background",
+      "name": "Episode04ChoiceSafe",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.hard_mode",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep04.easy_mode",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep04_choice_made",
+              "payload": {
+                "choice": "hard"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "Challenge yourself."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_choice_hard_ctrl",
+      "layer": "background",
+      "name": "Episode04ChoiceHard",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.combat_started",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep04_combat_started",
+              "payload": {
+                "difficulty": "safe"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep04_choice_made"
+          ],
+          "require_flags": [
+            "ep04.easy_mode"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_combat_start_safe_ctrl",
+      "layer": "background",
+      "name": "Episode04CombatStartSafe",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.combat_started",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep04_combat_started",
+              "payload": {
+                "difficulty": "hard"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep04_choice_made"
+          ],
+          "require_flags": [
+            "ep04.hard_mode"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_combat_start_hard_ctrl",
+      "layer": "background",
+      "name": "Episode04CombatStartHard",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.easy_sentry_dead",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep04.all_enemies_dead",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep04.exit_unlocked",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep04_all_enemies_dead",
+              "type": "emit_event"
+            },
+            {
+              "event_type": "ep04_exit_unlocked",
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "name": "Episode04SentryEasy"
+          },
+          "listen_events": [
+            "died"
+          ],
+          "require_flags": [
+            "ep04.easy_mode"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_easy_dead_ctrl",
+      "layer": "background",
+      "name": "Episode04EasyDead",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.hard_sentry_a_dead",
+              "type": "set_flag"
+            }
+          ],
+          "event_filter": {
+            "name": "Episode04SentryHardA"
+          },
+          "listen_events": [
+            "died"
+          ],
+          "require_flags": [
+            "ep04.hard_mode"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_hard_a_dead_ctrl",
+      "layer": "background",
+      "name": "Episode04HardADead",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.hard_sentry_b_dead",
+              "type": "set_flag"
+            }
+          ],
+          "event_filter": {
+            "name": "Episode04SentryHardB"
+          },
+          "listen_events": [
+            "died"
+          ],
+          "require_flags": [
+            "ep04.hard_mode"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_hard_b_dead_ctrl",
+      "layer": "background",
+      "name": "Episode04HardBDead",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.all_enemies_dead",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep04.exit_unlocked",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep04_all_enemies_dead",
+              "type": "emit_event"
+            },
+            {
+              "event_type": "ep04_exit_unlocked",
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "name": "Episode04SentryHardA"
+          },
+          "listen_events": [
+            "died"
+          ],
+          "require_flags": [
+            "ep04.hard_mode",
+            "ep04.hard_sentry_b_dead"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_hard_complete_from_a_ctrl",
+      "layer": "background",
+      "name": "Episode04HardCompleteFromA",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.all_enemies_dead",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep04.exit_unlocked",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep04_all_enemies_dead",
+              "type": "emit_event"
+            },
+            {
+              "event_type": "ep04_exit_unlocked",
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "name": "Episode04SentryHardB"
+          },
+          "listen_events": [
+            "died"
+          ],
+          "require_flags": [
+            "ep04.hard_mode",
+            "ep04.hard_sentry_a_dead"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_hard_complete_from_b_ctrl",
+      "layer": "background",
+      "name": "Episode04HardCompleteFromB",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.reward_collected",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep04_outro_start",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign03.helped_mentor"
+          ],
+          "listen_events": [
+            "ep04_reward_collected"
+          ],
+          "require_flags": [
+            "ep04.exit_unlocked"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_reward_ctrl",
+      "layer": "background",
+      "name": "Episode04RewardCtrl",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.complete",
+              "type": "set_flag"
+            }
+          ],
+          "listen_events": [
+            "ep04_complete"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_complete_ctrl",
+      "layer": "background",
+      "name": "Episode04Complete",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "id": "episode_04_ep04_reward_bonus_cache",
+      "layer": "entities",
+      "name": "Episode04RewardBonusCache",
+      "prefab_id": "ep04_reward_bonus",
+      "x": 650.0,
+      "y": 220.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep04.reward_collected",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep04.reward_bonus_collected",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep04_outro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep04_reward_bonus_collected"
+          ],
+          "require_flags": [
+            "ep04.exit_unlocked",
+            "campaign03.helped_mentor"
+          ]
+        }
+      },
+      "id": "episode_04_ep04_reward_bonus_ctrl",
+      "layer": "background",
+      "name": "Episode04RewardBonusCtrl",
+      "prefab_id": "ep04_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign03.ep04_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep04.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.easy_mode",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.hard_mode",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.combat_started",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.easy_sentry_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.hard_sentry_a_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.hard_sentry_b_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.all_enemies_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.reward_collected",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.reward_bonus_collected",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "campaign03_complete",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign03.ep04_complete"
+          ],
+          "listen_events": [
+            "quest_ep04_complete"
+          ],
+          "require_flags": [
+            "campaign03.active"
+          ]
+        }
+      },
+      "id": "episode_04_campaign03_done_ctrl",
+      "layer": "background",
+      "name": "Episode04Campaign03Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign04.ep04_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep04.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.easy_mode",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.hard_mode",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.combat_started",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.easy_sentry_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.hard_sentry_a_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.hard_sentry_b_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.all_enemies_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.reward_collected",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.reward_bonus_collected",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "go_to_episode_05_ep05",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign04.ep04_complete"
+          ],
+          "listen_events": [
+            "quest_ep04_complete"
+          ],
+          "require_flags": [
+            "campaign04.active"
+          ]
+        }
+      },
+      "id": "episode_04_campaign04_done_ctrl",
+      "layer": "background",
+      "name": "Episode04Campaign04Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "SceneExit": {
+          "listen_event": "go_to_episode_05_ep05",
+          "target_scene": "scenes/episode_05_ep05.json",
+          "target_spawn": ""
+        }
+      },
+      "id": "episode_04_exit_to_ep05",
+      "layer": "entities",
+      "name": "Episode04ExitToEpisode05",
+      "prefab_id": "campaign_portal",
+      "x": 760.0,
+      "y": 220.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign05.ep04_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep04.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.easy_mode",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.hard_mode",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.combat_started",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.easy_sentry_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.hard_sentry_a_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.hard_sentry_b_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.all_enemies_dead",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.reward_collected",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep04.reward_bonus_collected",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "go_to_episode_05_ep05",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign05.ep04_complete"
+          ],
+          "listen_events": [
+            "quest_ep04_complete"
+          ],
+          "require_flags": [
+            "campaign05.active"
+          ]
+        }
+      },
+      "id": "episode_04_campaign05_done_ctrl",
+      "layer": "background",
+      "name": "Episode04Campaign05Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    }
+  ],
+  "layers": [
+    {
+      "name": "background"
+    },
+    {
+      "name": "entities"
+    },
+    {
+      "name": "foreground"
+    }
+  ],
+  "name": "Episode 04: Sentry at the Causeway",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "#1e2a38",
+    "world_height": 480,
+    "world_width": 800
+  },
+  "version": 1
+}

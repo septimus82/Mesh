@@ -178,11 +178,11 @@ def handle_input_legacy(
 
     if controller.occluder_tool_active:
         if key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN):
-            return controller._commit_occluder_polygon()
+            return bool(controller._commit_occluder_polygon())
         if key in (optional_arcade.arcade.key.BACKSPACE, optional_arcade.arcade.key.DELETE):
-            return controller._handle_occluder_key_input(key)
+            return bool(controller._handle_occluder_key_input(key))
         if key == optional_arcade.arcade.key.I:
-            return controller._handle_occluder_key_input(key)
+            return bool(controller._handle_occluder_key_input(key))
         if key == optional_arcade.arcade.key.ESCAPE:
             controller._toggle_occluder_mode(False)
             return True
@@ -227,7 +227,7 @@ def handle_input_legacy(
 
     # Palette filter Tab-to-insert should win over global Tab inspector toggle.
     if controller.palette_active and controller.palette_filter_active and key == optional_arcade.arcade.key.TAB:
-        return controller._handle_palette_input(key, modifiers)
+        return bool(controller._handle_palette_input(key, modifiers))
 
     # Cycle Zone Target (Ctrl+R)
     if key == optional_arcade.arcade.key.R and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
@@ -274,13 +274,13 @@ def handle_input_legacy(
             return True
 
     if controller.palette_active:
-        return controller._handle_palette_input(key, modifiers)
+        return bool(controller._handle_palette_input(key, modifiers))
 
     if controller.hierarchy_active:
-        return controller._handle_hierarchy_input(key, modifiers)
+        return bool(controller._handle_hierarchy_input(key, modifiers))
 
     if controller.inspector_active and controller.selected_entity:
-        return controller._handle_inspector_input(key, modifiers)
+        return bool(controller._handle_inspector_input(key, modifiers))
 
     # Tool-specific input
     if controller.tool_mode == "PATH":
@@ -291,4 +291,4 @@ def handle_input_legacy(
             return True
 
     # Default movement (fallback)
-    return controller._handle_movement_input(key, modifiers)
+    return bool(controller._handle_movement_input(key, modifiers))

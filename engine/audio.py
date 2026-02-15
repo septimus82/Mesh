@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from typing import Any, Dict, Optional
 import engine.optional_arcade as optional_arcade
 
+from .logging_tools import get_logger
 from .paths import resolve_path
+
+logger = get_logger(__name__)
 
 
 class AudioManager:
@@ -36,17 +39,17 @@ class AudioManager:
             resolved = resolve_path(path)
             sound = optional_arcade.arcade.Sound(resolved, streaming=False)
             self._sounds[path] = sound
-            print(f"[Mesh][Audio] Loaded sound '{path}'")
+            logger.debug("Loaded sound '%s'", path)
             return sound
         except Exception as exc:  # noqa: BLE001
-            print(f"[Mesh][Audio] ERROR loading sound '{path}': {exc}")
+            logger.error("Failed to load sound '%s': %s", path, exc)
             return None
 
     def clear_cache(self) -> None:
         """Clear cached sounds and stop any music."""
         self._sounds.clear()
         self.stop_music()
-        print("[Mesh][Audio] Cleared audio cache")
+        logger.info("Cleared audio cache")
 
     # ------------------------------------------------------------------
     # High-level API
@@ -90,7 +93,7 @@ class AudioManager:
                 self._music_player.volume = final
             except Exception as exc:  # noqa: BLE001
                 if not getattr(self, "_mesh_music_volume_error_logged", False):
-                    print(f"[Mesh][Audio] ERROR setting music volume: {exc}")
+                    logger.error("Failed to set music volume: %s", exc)
                     setattr(self, "_mesh_music_volume_error_logged", True)
 
     def play_sound(self, path: str, volume: float = 1.0) -> None:
@@ -103,7 +106,7 @@ class AudioManager:
             if final_volume > 0:
                 optional_arcade.arcade.play_sound(sound, volume=final_volume)
         except Exception as exc:  # noqa: BLE001
-            print(f"[Mesh][Audio] ERROR playing sound '{path}': {exc}")
+            logger.error("Failed to play sound '%s': %s", path, exc)
 
     def play_music(self, path: str, volume: float = 1.0, loop: bool = True) -> None:
         self.stop_music()
@@ -207,10 +210,10 @@ class AudioManager:
                 self._music_player.pause()
             except Exception as exc:  # noqa: BLE001
                 if not getattr(self, "_mesh_music_stop_error_logged", False):
-                    print(f"[Mesh][Audio] ERROR stopping music: {exc}")
+                    logger.error("Failed to stop music: %s", exc)
                     setattr(self, "_mesh_music_stop_error_logged", True)
         if self._music_player is not None or self._music is not None:
-            print("[Mesh][Audio] Stopped music")
+            logger.info("Stopped music")
         self._music_player = None
         self._music = None
         self._music_base_volume = 1.0
@@ -223,7 +226,7 @@ class AudioManager:
             resolved = resolve_path(path)
             music = optional_arcade.arcade.Sound(resolved, streaming=True)
         except Exception as exc:  # noqa: BLE001
-            print(f"[Mesh][Audio] ERROR loading music '{path}': {exc}")
+            logger.error("Failed to load music '%s': %s", path, exc)
             return
 
         self._music = music
@@ -237,9 +240,9 @@ class AudioManager:
                 * self._music_transition_scale
             )
             self._music_player = music.play(volume=final_volume, loop=loop)
-            print(f"[Mesh][Audio] Playing music '{path}' (loop={loop})")
+            logger.info("Playing music '%s' (loop=%s)", path, loop)
         except Exception as exc:  # noqa: BLE001
-            print(f"[Mesh][Audio] ERROR playing music '{path}': {exc}")
+            logger.error("Failed to play music '%s': %s", path, exc)
             self._music = None
             self._music_player = None
 

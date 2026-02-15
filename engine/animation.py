@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, cast, TYPE_CHECKING
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, cast
 import engine.optional_arcade as optional_arcade
 from PIL import Image
 from PIL.Image import Image as PILImageClass
 
 from .assets import AssetManager
+from .logging_tools import get_logger
 from .paths import resolve_path
 from .sprite_sheet_math import SpriteSheetSliceSpec, iter_sprite_sheet_frame_boxes
+
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,8 +61,8 @@ class SpriteSheetCache:
 
         textures = self._slice_frames(spec, base_texture)
         if not textures:
-            print(
-                f"[Mesh][Animation] WARNING: Sprite sheet '{spec.path}' produced no frames"  # noqa: T201
+            logger.warning(
+                "Sprite sheet '%s' produced no frames", spec.path
             )
             return None
 
@@ -80,7 +83,7 @@ class SpriteSheetCache:
                 resolved = resolve_path(spec.path)
                 sheet_image = Image.open(resolved).convert("RGBA")
             except Exception as exc:  # noqa: BLE001
-                print(f"[Mesh][Animation] WARNING: Could not load sprite sheet '{spec.path}': {exc}")  # noqa: T201
+                logger.warning("Could not load sprite sheet '%s': %s", spec.path, exc)  # noqa: T201
                 return []
 
         width = int(sheet_image.width)
@@ -116,8 +119,8 @@ class SpriteSheetCache:
                     )
                 )
             except Exception as exc:  # noqa: BLE001
-                print(
-                    f"[Mesh][Animation] WARNING: Failed to slice frame {index} from '{spec.path}': {exc}"  # noqa: T201
+                logger.warning(
+                    "Failed to slice frame %d from '%s': %s", index, spec.path, exc
                 )
         return textures
 
@@ -286,7 +289,7 @@ class AnimationPlayer:
 
     def _log(self, message: str) -> None:
         name = getattr(self.sprite, "mesh_name", "<unnamed>")
-        print(f"[Mesh][Animation] {name}: {message}")  # noqa: T201
+        logger.debug("%s: %s", name, message)
 
     def _advance_blend(self, dt: float) -> None:
         if self._blend_from_texture is None or self._blend_duration <= 0.0:
@@ -360,11 +363,9 @@ class AnimationPlayer:
         if image is None:
             return None
         if image.mode != "RGBA":
-            return image.convert("RGBA")
-        
-        if TYPE_CHECKING:
-            return cast(PILImageClass, image)
-        return image
+            converted = image.convert("RGBA")
+            return cast(PILImageClass, converted)
+        return cast(PILImageClass, image)
 
 
     def _handle_frame_events(self, clip: AnimationClip, frame_index: int) -> None:
@@ -493,8 +494,8 @@ class AnimationFactory:
         frame_w = self._optional_int(sheet.get("frame_width"))
         frame_h = self._optional_int(sheet.get("frame_height"))
         if frame_w is None or frame_h is None:
-            print(
-                "[Mesh][Animation] WARNING: sprite_sheet requires positive frame_width/frame_height",
+            logger.warning(
+                "sprite_sheet requires positive frame_width/frame_height: %s",
                 sheet,
             )
             return None
@@ -510,7 +511,7 @@ class AnimationFactory:
                 rows=self._optional_int(sheet.get("rows")),
             )
         except (TypeError, ValueError):
-            print("[Mesh][Animation] WARNING: Invalid sprite_sheet configuration", sheet)  # noqa: T201
+            logger.warning("Invalid sprite_sheet configuration: %s", sheet)
             return None
 
     def _build_clips(
@@ -562,13 +563,13 @@ class AnimationFactory:
                 frames.append(idx)
 
             if dropped:
-                print(
-                    f"[Mesh][Animation] WARNING: Dropped frame index(es) {dropped} from '{name}' "
-                    f"for entity '{entity_name}' (sheet frames: {max_index})",
+                logger.warning(
+                    "Dropped frame index(es) %s from '%s' for entity '%s' (sheet frames: %d)",
+                    dropped, name, entity_name, max_index,
                 )
 
             if not frames:
-                print(f"[Mesh][Animation] WARNING: Animation '{name}' has no valid frames")  # noqa: T201
+                logger.warning("Animation '%s' has no valid frames", name)
                 continue
 
             fps = self._coerce_fps(fps_value, default_fps)
@@ -614,9 +615,9 @@ class AnimationFactory:
         entity_name = entity_data.get("name") or getattr(player.sprite, "mesh_name", "<unnamed>")
         spec = player.sheet.spec
         states = ", ".join(player.available_states())
-        print(
-            f"[Mesh][Animation] Built '{entity_name}' @ {spec.path} "
-            f"[{spec.frame_width}x{spec.frame_height}] states: {states}"
+        logger.debug(
+            "Built '%s' @ %s [%dx%d] states: %s",
+            entity_name, spec.path, spec.frame_width, spec.frame_height, states,
         )
 
     @staticmethod
@@ -641,8 +642,8 @@ class AnimationFactory:
         if raw_events is None:
             return markers
         if not isinstance(raw_events, list):
-            print(
-                f"[Mesh][Animation] WARNING: events for '{clip_name}' on '{entity_name}' must be an array",
+            logger.warning(
+                "events for '%s' on '%s' must be an array", clip_name, entity_name,
             )
             return markers
         for index, entry in enumerate(raw_events):
@@ -659,24 +660,24 @@ class AnimationFactory:
             elif isinstance(entry, Sequence) and len(entry) >= 2:
                 frame_value, label_value = entry[0], entry[1]
             else:
-                print(
-                    f"[Mesh][Animation] WARNING: events[{index}] for '{clip_name}' must be an object or [frame,label] pair",
+                logger.warning(
+                    "events[%d] for '%s' must be an object or [frame,label] pair", index, clip_name,
                 )
                 continue
             frame_index = self._coerce_int(frame_value)
             if frame_index is None:
-                print(
-                    f"[Mesh][Animation] WARNING: events[{index}] for '{clip_name}' has invalid frame '{frame_value}'",
+                logger.warning(
+                    "events[%d] for '%s' has invalid frame '%s'", index, clip_name, frame_value,
                 )
                 continue
             if frame_index < 0 or (max_frame >= 0 and frame_index > max_frame):
-                print(
-                    f"[Mesh][Animation] WARNING: events[{index}] frame {frame_index} is outside clip '{clip_name}'",
+                logger.warning(
+                    "events[%d] frame %d is outside clip '%s'", index, frame_index, clip_name,
                 )
                 continue
             if not isinstance(label_value, str) or not label_value.strip():
-                print(
-                    f"[Mesh][Animation] WARNING: events[{index}] for '{clip_name}' requires a non-empty label",
+                logger.warning(
+                    "events[%d] for '%s' requires a non-empty label", index, clip_name,
                 )
                 continue
             markers.append(

@@ -2295,6 +2295,45 @@
       "title": "Puzzle Room 02"
     },
     {
+      "description": "Solve the lever and rune puzzle within a short window.",
+      "id": "puzzle_room_03",
+      "reward": {
+        "set_flags": {
+          "puzzle_room_03_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "type": "room3_entered"
+          },
+          "id": "step0",
+          "text": "Enter the third puzzle chamber.",
+          "title": "Enter Puzzle Room 03"
+        },
+        {
+          "complete_on": {
+            "type": "lever_left_pulled"
+          },
+          "id": "step1",
+          "text": "Pull the left lever first.",
+          "title": "Pull the Left Lever"
+        },
+        {
+          "complete_on": {
+            "type": "puzzle3_solved"
+          },
+          "emit_events_on_complete": [
+            "quest_room3_complete"
+          ],
+          "id": "step2",
+          "text": "Pull the right lever, then step on the rune before time runs out.",
+          "title": "Complete the Lever Sequence"
+        }
+      ],
+      "title": "Puzzle Room 03"
+    },
+    {
       "id": "showcase_fetch",
       "stages": [
         {
@@ -2321,10 +2360,453 @@
       "type": "side"
     },
     {
+      "description": "Enter the arena, defeat the sentry, claim the reward.",
+      "id": "combat_vignette_01",
+      "stages": [
+        {
+          "complete_on": "cv_entered",
+          "id": "step0",
+          "text": "Step into the combat arena.",
+          "title": "Enter the Arena"
+        },
+        {
+          "complete_on": "cv_enemy_dead",
+          "id": "step1",
+          "text": "Destroy the sentry archer.",
+          "title": "Defeat the Sentry"
+        },
+        {
+          "complete_on": "reward_collected",
+          "emit_events_on_complete": [
+            "quest_combat_vignette_complete"
+          ],
+          "id": "step2",
+          "text": "Open the reward chest.",
+          "title": "Claim Reward"
+        }
+      ],
+      "title": "Combat Vignette",
+      "type": "side"
+    },
+    {
+      "description": "Meet the vendor in the morning, then find the secret at night.",
+      "id": "town_schedule_01",
+      "stages": [
+        {
+          "complete_on": "town_entered",
+          "id": "step0",
+          "text": "Arrive at the town.",
+          "title": "Enter Town"
+        },
+        {
+          "complete_on": "vendor_interacted",
+          "id": "step1",
+          "text": "Interact with the vendor during morning hours.",
+          "title": "Meet the Vendor"
+        },
+        {
+          "complete_on": "secret_found",
+          "emit_events_on_complete": [
+            "quest_town_complete"
+          ],
+          "id": "step2",
+          "text": "Discover the secret behind the night gate.",
+          "title": "Find the Secret"
+        }
+      ],
+      "title": "Town Schedule",
+      "type": "side"
+    },
+    {
+      "description": "Meet the mentor, choose your approach, and escape the archive.",
+      "id": "episode_01",
+      "reward": {
+        "set_flags": {
+          "episode_01_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": "ep01_choice_made",
+          "id": "step0",
+          "text": "Speak with the mentor and choose how to proceed.",
+          "title": "Choose Your Approach"
+        },
+        {
+          "complete_on": "ep01_clue_found",
+          "id": "step1",
+          "text": "Inspect the archive journal to recover the exit clue.",
+          "title": "Find the Archive Clue"
+        },
+        {
+          "complete_on": "ep01_complete",
+          "emit_events_on_complete": [
+            "quest_episode_01_complete"
+          ],
+          "id": "step2",
+          "text": "Use the unlocked door and finish the briefing.",
+          "title": "Reach the Exit"
+        }
+      ],
+      "title": "Episode 01: Mentor's Gate",
+      "type": "main"
+    },
+    {
       "id": "test_quest",
       "steps": [],
       "title": "Test Quest",
       "type": null
+    },
+    {
+      "description": "Complete the town, puzzle room, and combat vignette in sequence.",
+      "id": "mini_campaign_01",
+      "stages": [
+        {
+          "complete_on": "quest_town_complete",
+          "id": "town",
+          "text": "Meet the vendor and find the secret.",
+          "title": "Complete the Town"
+        },
+        {
+          "complete_on": "quest_room3_complete",
+          "id": "puzzle",
+          "text": "Solve the lever-and-rune puzzle.",
+          "title": "Complete the Puzzle"
+        },
+        {
+          "complete_on": "quest_combat_vignette_complete",
+          "emit_events_on_complete": [
+            "campaign_complete"
+          ],
+          "id": "combat",
+          "text": "Defeat the sentry and claim the reward.",
+          "title": "Complete the Combat"
+        }
+      ],
+      "title": "Mini Campaign",
+      "type": "main"
+    },
+    {
+      "description": "Trace the signal pattern, then either stabilize the relay chain or shut it down.",
+      "id": "episode_02_ep02",
+      "reward": {
+        "set_flags": {
+          "episode_02_ep02_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": "ep02_intro_done",
+          "id": "step0",
+          "text": "Enter the chamber and wait for the briefing to finish.",
+          "title": "Witness the Signal"
+        },
+        {
+          "complete_on": "ep02_exit_unlocked",
+          "id": "step1",
+          "text": "Choose stabilize or shutdown, then complete that objective path.",
+          "title": "Resolve the Pattern"
+        },
+        {
+          "complete_on": "ep02_complete",
+          "emit_events_on_complete": [
+            "quest_ep02_complete"
+          ],
+          "id": "step2",
+          "text": "Use the unlocked exit and finish the episode.",
+          "title": "Leave the Chamber"
+        }
+      ],
+      "title": "Episode 02: Signal in the Dust",
+      "type": "main"
+    },
+    {
+      "description": "Solve the sigil order puzzle, unlock the gate, and leave the chamber.",
+      "id": "episode_03_ep03",
+      "reward": {
+        "set_flags": {
+          "episode_03_ep03_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": "ep03_intro_done",
+          "id": "step0",
+          "text": "Watch the briefing and prepare for the sigil sequence.",
+          "title": "Enter the Chamber"
+        },
+        {
+          "complete_on": "ep03_exit_unlocked",
+          "id": "step1",
+          "text": "Activate sigils A, B, then C to unlock the exit.",
+          "title": "Solve the Sigil Sequence"
+        },
+        {
+          "complete_on": "ep03_complete",
+          "emit_events_on_complete": [
+            "quest_ep03_complete"
+          ],
+          "id": "step2",
+          "text": "Use the unlocked gate to complete the episode.",
+          "title": "Leave Through the Gate"
+        }
+      ],
+      "title": "Episode 03: The Three Sigils",
+      "type": "main"
+    },
+    {
+      "description": "Complete Episode 01, Episode 02, and Episode 03 in sequence.",
+      "id": "mini_campaign_02",
+      "stages": [
+        {
+          "complete_on": "quest_episode_01_complete",
+          "id": "episode_01",
+          "text": "Enter Episode 01 and finish the archive briefing.",
+          "title": "Complete Episode 01"
+        },
+        {
+          "complete_on": "quest_ep02_complete",
+          "id": "episode_02",
+          "text": "Resolve the signal chamber and continue onward.",
+          "title": "Complete Episode 02"
+        },
+        {
+          "complete_on": "quest_ep03_complete",
+          "emit_events_on_complete": [
+            "campaign02_complete"
+          ],
+          "id": "episode_03",
+          "text": "Solve the sigil chamber and finish the campaign.",
+          "title": "Complete Episode 03"
+        }
+      ],
+      "title": "Mini Campaign 02: Episodes 01-03 Chain",
+      "type": "main"
+    },
+    {
+      "description": "Choose your risk level, clear the sentry encounter, and secure the causeway reward.",
+      "id": "episode_04_ep04",
+      "reward": {
+        "set_flags": {
+          "episode_04_ep04_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": "ep04_intro_done",
+          "id": "step0",
+          "text": "Enter the arena and complete the opening briefing.",
+          "title": "Hold the Line"
+        },
+        {
+          "complete_on": "ep04_all_enemies_dead",
+          "id": "step1",
+          "text": "Take the safe route (one sentry) or the challenge route (two sentries).",
+          "title": "Clear the Sentries"
+        },
+        {
+          "complete_on": "ep04_complete",
+          "emit_events_on_complete": [
+            "quest_ep04_complete"
+          ],
+          "id": "step2",
+          "text": "Collect the reward to trigger extraction and finish the episode.",
+          "title": "Claim the Cache"
+        }
+      ],
+      "title": "Episode 04: Sentry at the Causeway",
+      "type": "main"
+    },
+    {
+      "description": "Complete Episode 01 through Episode 04 in sequence, with mentor-help payoff persisting into Episode 04.",
+      "id": "mini_campaign_03",
+      "stages": [
+        {
+          "complete_on": "quest_episode_01_complete",
+          "id": "episode_01",
+          "text": "Finish Episode 01 and carry your mentor choice forward.",
+          "title": "Complete Episode 01"
+        },
+        {
+          "complete_on": "quest_ep02_complete",
+          "id": "episode_02",
+          "text": "Resolve Episode 02 and continue the signal trail.",
+          "title": "Complete Episode 02"
+        },
+        {
+          "complete_on": "quest_ep03_complete",
+          "id": "episode_03",
+          "text": "Solve Episode 03 and move to the causeway.",
+          "title": "Complete Episode 03"
+        },
+        {
+          "complete_on": "quest_ep04_complete",
+          "emit_events_on_complete": [
+            "campaign03_complete"
+          ],
+          "id": "episode_04",
+          "text": "Clear Episode 04 and resolve the mentor payoff ending.",
+          "title": "Complete Episode 04"
+        }
+      ],
+      "title": "Mini Campaign 03: Episodes 01-04 with Choice Payoff",
+      "type": "main"
+    },
+    {
+      "description": "Complete Episode 01 through Episode 05 in sequence, with mentor-help and side-objective payoff reflected in Episode 05 reward.",
+      "id": "mini_campaign_04",
+      "stages": [
+        {
+          "complete_on": "quest_episode_01_complete",
+          "id": "episode_01",
+          "text": "Finish Episode 01 and establish the mentor-help branch state.",
+          "title": "Complete Episode 01"
+        },
+        {
+          "complete_on": "quest_ep02_complete",
+          "id": "episode_02",
+          "text": "Resolve Episode 02 and continue the campaign chain.",
+          "title": "Complete Episode 02"
+        },
+        {
+          "complete_on": "quest_ep03_complete",
+          "id": "episode_03",
+          "text": "Solve Episode 03 and advance to the causeway.",
+          "title": "Complete Episode 03"
+        },
+        {
+          "complete_on": "quest_ep04_complete",
+          "id": "episode_04",
+          "text": "Clear Episode 04 and transition to Hollowmere.",
+          "title": "Complete Episode 04"
+        },
+        {
+          "complete_on": "quest_ep05_complete",
+          "emit_events_on_complete": [
+            "campaign04_complete"
+          ],
+          "id": "episode_05",
+          "text": "Complete Episode 05 to finish the full five-episode campaign.",
+          "title": "Complete Episode 05"
+        }
+      ],
+      "title": "Mini Campaign 04: Episodes 01-05 Dual-Payoff Chain",
+      "type": "main"
+    },
+    {
+      "description": "Enter Hollowmere, meet the vendor by day, then meet the mentor at night.",
+      "id": "episode_05_ep05",
+      "reward": {
+        "set_flags": {
+          "episode_05_ep05_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": "ep05_entered",
+          "id": "step0",
+          "text": "Arrive in the market district and receive the briefing.",
+          "title": "Enter Hollowmere"
+        },
+        {
+          "complete_on": "ep05_vendor_spoken",
+          "id": "step1",
+          "text": "Wait for morning and speak to the vendor while the stall is open.",
+          "title": "Speak with the Vendor"
+        },
+        {
+          "complete_on": "ep05_tavern_met",
+          "emit_events_on_complete": [
+            "quest_ep05_complete"
+          ],
+          "id": "step2",
+          "text": "Reach the tavern at night and report to the mentor.",
+          "title": "Meet the Mentor at Night"
+        }
+      ],
+      "title": "Episode 05: Hollowmere Market",
+      "type": "main"
+    },
+    {
+      "description": "Choose your route, clear the sentry gate, solve the conduit puzzle, and extract.",
+      "id": "episode_06_ep06",
+      "reward": {
+        "set_flags": {
+          "episode_06_ep06_complete": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": "ep06_intro_done",
+          "id": "step0",
+          "text": "Enter the chamber, complete the intro, and choose fight-through or solve-first.",
+          "title": "Commit to a Route"
+        },
+        {
+          "complete_on": "ep06_exit_unlocked",
+          "id": "step1",
+          "text": "Defeat the route sentry and solve the conduit rune order to unlock extraction.",
+          "title": "Clear the Hybrid Gate"
+        },
+        {
+          "complete_on": "ep06_complete",
+          "emit_events_on_complete": [
+            "quest_ep06_complete"
+          ],
+          "id": "step2",
+          "text": "Collect the route reward and leave through the vault door.",
+          "title": "Claim and Extract"
+        }
+      ],
+      "title": "Episode 06: Conduit of Ash",
+      "type": "main"
+    },
+    {
+      "description": "Complete Episode 01 through Episode 06 in sequence with deterministic branch handling.",
+      "id": "mini_campaign_05",
+      "stages": [
+        {
+          "complete_on": "quest_episode_01_complete",
+          "id": "episode_01",
+          "text": "Resolve Episode 01 and advance the campaign chain.",
+          "title": "Complete Episode 01"
+        },
+        {
+          "complete_on": "quest_ep02_complete",
+          "id": "episode_02",
+          "text": "Resolve Episode 02 and advance to the sigil vault.",
+          "title": "Complete Episode 02"
+        },
+        {
+          "complete_on": "quest_ep03_complete",
+          "id": "episode_03",
+          "text": "Resolve Episode 03 and advance to the causeway.",
+          "title": "Complete Episode 03"
+        },
+        {
+          "complete_on": "quest_ep04_complete",
+          "id": "episode_04",
+          "text": "Resolve Episode 04 and continue to Hollowmere.",
+          "title": "Complete Episode 04"
+        },
+        {
+          "complete_on": "quest_ep05_complete",
+          "id": "episode_05",
+          "text": "Resolve Episode 05 and transition to the conduit vault.",
+          "title": "Complete Episode 05"
+        },
+        {
+          "complete_on": "quest_ep06_complete",
+          "emit_events_on_complete": [
+            "campaign05_complete"
+          ],
+          "id": "episode_06",
+          "text": "Resolve Episode 06 hybrid gate to finish the six-episode chain.",
+          "title": "Complete Episode 06"
+        }
+      ],
+      "title": "Mini Campaign 05: Episodes 01-06 Hybrid Chain",
+      "type": "main"
     }
   ]
 }

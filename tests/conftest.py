@@ -28,6 +28,7 @@ _FAST_TEST_NODEIDS = (
     "test_optional_arcade_is_centralized.py",
     "test_tooling_no_runtime_entrypoints.py",
     "test_tooling_test_tiers_cli.py",
+    "test_no_arcade_static_imports_policy.py",
 )
 _INTEGRATION_NODEID_PARTS = (
     "perf_run",
@@ -40,7 +41,6 @@ _INTEGRATION_NODEID_PARTS = (
 )
 _SLOW_NODEID_PARTS = (
     "help_regressions",
-    "no_arcade_static_imports_policy",
     "release_contract",
     "verify_all",
     "wheel_includes_pack_data",
@@ -59,7 +59,13 @@ def _autoload_builtin_behaviours_marker(request):
         load_builtin_behaviours()
 
 
+@pytest.fixture(scope="session")
+def unmarked_test_nodeids(pytestconfig):
+    return list(getattr(pytestconfig, "_mesh_unmarked_nodeids", []))
+
+
 def pytest_collection_modifyitems(config, items):
+    unmarked: list[str] = []
     for item in items:
         nodeid = item.nodeid.replace("\\", "/")
         if any(part in nodeid for part in _FAST_TEST_NODEIDS):
@@ -73,7 +79,8 @@ def pytest_collection_modifyitems(config, items):
             for marker in item.iter_markers()
         )
         if not has_explicit:
-            item.add_marker(pytest.mark.integration)
+            unmarked.append(nodeid)
+    config._mesh_unmarked_nodeids = sorted(unmarked)
 
 
 @pytest.fixture

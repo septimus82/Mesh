@@ -9,6 +9,13 @@ from typing import Any, Sequence, Iterable
 import engine.optional_arcade as optional_arcade
 from .occluders import Rect
 from engine.geometry_tools import sanitize_poly
+from engine.swallowed_exceptions import record_swallowed
+from .shadow_backend import (
+    ShadowBackendDecision,
+    build_shadow_pipeline,
+    choose_shadow_backend,
+    decision_to_diagnostics,
+)
 
 Point = tuple[float, float]
 Polygon = list[Point]
@@ -16,6 +23,12 @@ Polygon = list[Point]
 MAX_SHADOW_POLYS_PER_LIGHT = 512
 _LOG_ONCE: set[str] = set()
 logger = logging.getLogger(__name__)
+_LAST_SHADOW_BACKEND_DIAGNOSTICS: dict[str, object] = {
+    "schema_version": 1,
+    "selected": "none",
+    "reason": "uninitialized",
+    "fallbacks": [],
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +37,25 @@ class Viewport:
     y: float
     width: float
     height: float
+
+
+def _set_shadow_backend_diagnostics(decision: ShadowBackendDecision) -> None:
+    global _LAST_SHADOW_BACKEND_DIAGNOSTICS
+    _LAST_SHADOW_BACKEND_DIAGNOSTICS = decision_to_diagnostics(decision)
+
+
+def get_shadow_backend_diagnostics() -> dict[str, object]:
+    raw_fallbacks = _LAST_SHADOW_BACKEND_DIAGNOSTICS.get("fallbacks", [])
+    if isinstance(raw_fallbacks, (list, tuple)):
+        fallbacks = [str(item) for item in raw_fallbacks]
+    else:
+        fallbacks = []
+    return {
+        "schema_version": 1,
+        "selected": str(_LAST_SHADOW_BACKEND_DIAGNOSTICS.get("selected", "none")),
+        "reason": str(_LAST_SHADOW_BACKEND_DIAGNOSTICS.get("reason", "")),
+        "fallbacks": fallbacks,
+    }
 
 
 def cull_occluders_for_light(
@@ -254,6 +286,14 @@ def render_shadow_mask(
     into the active framebuffer as a best-effort fallback and returns None.
     """
     if optional_arcade.arcade is None:  # pragma: no cover
+        _set_shadow_backend_diagnostics(
+            ShadowBackendDecision(
+                name="none",
+                reason="arcade unavailable",
+                fallbacks=[],
+                ok=False,
+            )
+        )
         return None
 
     polys = list(polygons)
@@ -289,27 +329,24 @@ def render_shadow_mask(
 
             # Best-effort record of prior binding for restore.
             prev_fbo = getattr(ctx, "active_framebuffer", None)
-
-            # Bind framebuffer (Arcade 3.x uses .use()).
-            use = getattr(fbo, "use", None)
-            if callable(use):
-                backend = "fbo.use"
-                use()
-            else:
-                activate = getattr(fbo, "activate", None)
-                if callable(activate):
-                    backend = "fbo.activate"
-                    activate_cm = activate()
-                    enter = getattr(activate_cm, "__enter__", None) if activate_cm is not None else None
-                    if callable(enter):
-                        enter()
-                else:
-                    # No known way to bind the target framebuffer.
-                    try:
-                        setattr(renderer, "_mesh_shadow_mask_backend", "none")
-                    except Exception:  # noqa: BLE001
-                        pass
-                    return None
+            decision = choose_shadow_backend(
+                env=os.environ,
+                flags=None,
+                capabilities={
+                    "has_use": callable(getattr(fbo, "use", None)),
+                    "has_activate": callable(getattr(fbo, "activate", None)),
+                },
+            )
+            _set_shadow_backend_diagnostics(decision)
+            pipeline = build_shadow_pipeline(decision, texture=texture, fbo=fbo)
+            backend = decision.name
+            activate_cm = pipeline.activate_cm
+            if not decision.ok:
+                try:
+                    setattr(renderer, "_mesh_shadow_mask_backend", "none")
+                except Exception:  # noqa: BLE001
+                    pass
+                return None
 
             if clear:
                 # Clear to white (lit everywhere).
@@ -342,6 +379,7 @@ def render_shadow_mask(
                 except Exception as exc:  # noqa: BLE001
                     # Keep the cleared white mask so composite can run (lit everywhere),
                     # but expose the failure when tracing is enabled.
+                    record_swallowed("engine.lighting.shadows.render_shadow_mask.draw_polygons", exc)
                     mask_error = repr(exc)
                     if os.environ.get("MESH_SHADOWS_TRACE") == "1" and "render_shadow_mask_trace" not in _LOG_ONCE:
                         logger.exception("[Mesh][Lighting] render_shadow_mask draw failed backend=%s", backend)
@@ -355,6 +393,7 @@ def render_shadow_mask(
                 pass
             return texture
         except Exception as exc:  # noqa: BLE001
+            record_swallowed("engine.lighting.shadows.render_shadow_mask.fbo_path", exc)
             mask_error = repr(exc)
             if os.environ.get("MESH_SHADOWS_TRACE") == "1" and "render_shadow_mask_trace" not in _LOG_ONCE:
                 logger.exception("[Mesh][Lighting] render_shadow_mask failed backend=%s", backend)
@@ -393,7 +432,23 @@ def render_shadow_mask(
 
     draw_filled = getattr(optional_arcade.arcade, "draw_polygon_filled", None)
     if not callable(draw_filled):
+        _set_shadow_backend_diagnostics(
+            ShadowBackendDecision(
+                name="none",
+                reason="draw_polygon_filled unavailable",
+                fallbacks=[],
+                ok=False,
+            )
+        )
         return None
+    _set_shadow_backend_diagnostics(
+        ShadowBackendDecision(
+            name="none",
+            reason="direct draw fallback",
+            fallbacks=[],
+            ok=True,
+        )
+    )
     vx = float(getattr(viewport, "x", 0.0) or 0.0)
     vy = float(getattr(viewport, "y", 0.0) or 0.0)
     for poly in polys:

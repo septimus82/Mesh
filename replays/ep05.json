@@ -1,0 +1,106 @@
+{
+  "actions": [
+    {
+      "event": "ep05_entered",
+      "t": 0,
+      "type": "emit"
+    },
+    {
+      "choice": 0,
+      "t": 2,
+      "type": "dialogue_choose"
+    },
+    {
+      "entity": "episode_05_ep05_notice_board",
+      "t": 3,
+      "type": "interact"
+    },
+    {
+      "event": "ep05_vendor_opened",
+      "t": 4,
+      "type": "emit"
+    },
+    {
+      "entity": "episode_05_ep05_vendor",
+      "t": 5,
+      "type": "interact"
+    },
+    {
+      "slot": "after_vendor",
+      "t": 6,
+      "type": "save"
+    },
+    {
+      "event": "ep05_night_gate_opened",
+      "t": 7,
+      "type": "emit"
+    },
+    {
+      "entity": "episode_05_ep05_mentor",
+      "t": 8,
+      "type": "interact"
+    },
+    {
+      "slot": "after_vendor",
+      "t": 9,
+      "type": "restore"
+    },
+    {
+      "event": "ep05_night_gate_opened",
+      "t": 10,
+      "type": "emit"
+    },
+    {
+      "entity": "episode_05_ep05_mentor",
+      "t": 11,
+      "type": "interact"
+    },
+    {
+      "entity": "episode_05_ep05_reward_bonus_cache",
+      "t": 12,
+      "type": "interact"
+    },
+    {
+      "flag": "ep05.reward_bonus_collected",
+      "t": 13,
+      "type": "assert_flag",
+      "value": true
+    },
+    {
+      "entity": "episode_05_ep05_exit_door",
+      "t": 14,
+      "type": "interact"
+    },
+    {
+      "flag": "ep05.complete",
+      "t": 16,
+      "type": "assert_flag",
+      "value": true
+    }
+  ],
+  "dt_schedule": [
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2
+  ],
+  "steps": [
+    {
+      "dump_state": true
+    }
+  ]
+}

@@ -1,0 +1,561 @@
+{
+  "campaign_id": "mini_campaign_05",
+  "description": "Deterministic scripted chain across episode_01 -> episode_06 (fight-path standard reward).",
+  "initial_flags": [
+    "campaign05.active",
+    "campaign05.started"
+  ],
+  "quests": [
+    "mini_campaign_05",
+    "episode_01",
+    "episode_02_ep02",
+    "episode_03_ep03",
+    "episode_04_ep04",
+    "episode_05_ep05",
+    "episode_06_ep06"
+  ],
+  "scenes": [
+    {
+      "scene_id": "ep01",
+      "scene_path": "scenes/episode_01_intro.json",
+      "steps": [
+        {
+          "action": "emit",
+          "event_type": "ep01_entered",
+          "payload": {}
+        },
+        {
+          "action": "emit",
+          "event_type": "campaign05_started",
+          "payload": {
+            "campaign_id": "mini_campaign_05"
+          }
+        },
+        {
+          "action": "emit",
+          "event_type": "campaign04_started",
+          "payload": {
+            "campaign_id": "mini_campaign_04"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "dialogue_choice",
+          "payload": {
+            "choice_text": "I can help."
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep01_clue_found",
+          "payload": {
+            "target": "episode_01_journal"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep01_exit_door_interact",
+          "payload": {
+            "target": "episode_01_exit_door"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep01_complete",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "process_quests"
+        },
+        {
+          "action": "save_restore_boundary"
+        },
+        {
+          "action": "checkpoint",
+          "label": "after_ep01"
+        }
+      ]
+    },
+    {
+      "scene_id": "ep02",
+      "scene_path": "scenes/episode_02_ep02.json",
+      "steps": [
+        {
+          "action": "emit",
+          "event_type": "ep02_entered",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "dialogue_choice",
+          "payload": {
+            "choice_text": "Stabilize the lattice."
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep02_intro_done",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep02_terminal_touched",
+          "payload": {
+            "target": "episode_02_ep02_signal_terminal"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep02_terminal_touched",
+          "payload": {
+            "target": "episode_02_ep02_relay_a"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep02_terminal_touched",
+          "payload": {
+            "target": "episode_02_ep02_relay_b"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep02_terminal_touched",
+          "payload": {
+            "target": "episode_02_ep02_relay_c"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep02_exit_door_interact",
+          "payload": {
+            "target": "episode_02_ep02_exit_door"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep02_complete",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "process_quests"
+        },
+        {
+          "action": "save_restore_boundary"
+        },
+        {
+          "action": "checkpoint",
+          "label": "after_ep02"
+        }
+      ]
+    },
+    {
+      "scene_id": "ep03",
+      "scene_path": "scenes/episode_03_ep03.json",
+      "steps": [
+        {
+          "action": "emit",
+          "event_type": "ep03_entered",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "dialogue_choice",
+          "payload": {
+            "choice_text": "Ask for help."
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep03_intro_done",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep03_sigil_touched",
+          "payload": {
+            "target": "episode_03_ep03_sigil_a"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep03_sigil_touched",
+          "payload": {
+            "target": "episode_03_ep03_sigil_b"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep03_sigil_touched",
+          "payload": {
+            "target": "episode_03_ep03_sigil_c"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep03_exit_door_interact",
+          "payload": {
+            "target": "episode_03_ep03_exit_door"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep03_complete",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "process_quests"
+        },
+        {
+          "action": "save_restore_boundary"
+        },
+        {
+          "action": "checkpoint",
+          "label": "after_ep03"
+        }
+      ]
+    },
+    {
+      "scene_id": "ep04",
+      "scene_path": "scenes/episode_04_ep04.json",
+      "steps": [
+        {
+          "action": "emit",
+          "event_type": "ep04_entered",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "dialogue_choice",
+          "payload": {
+            "choice_text": "Take the safe route."
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep04_intro_done",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "died",
+          "payload": {
+            "name": "Episode04SentryEasy"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep04_reward_collected",
+          "payload": {
+            "entity": "episode_04_ep04_reward_cache"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep04_complete",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "process_quests"
+        },
+        {
+          "action": "save_restore_boundary"
+        },
+        {
+          "action": "checkpoint",
+          "label": "after_ep04"
+        }
+      ]
+    },
+    {
+      "scene_id": "ep05",
+      "scene_path": "scenes/episode_05_ep05.json",
+      "steps": [
+        {
+          "action": "emit",
+          "event_type": "ep05_entered",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "dialogue_choice",
+          "payload": {
+            "choice_text": "Ask about rumors."
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep05_notice_board_read",
+          "payload": {
+            "target": "episode_05_ep05_notice_board"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep05_vendor_opened",
+          "payload": {
+            "entity": "episode_05_ep05_vendor"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep05_vendor_interact_attempt",
+          "payload": {
+            "target": "episode_05_ep05_vendor"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep05_night_gate_opened",
+          "payload": {
+            "entity": "episode_05_ep05_night_gate"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep05_mentor_interact",
+          "payload": {
+            "target": "episode_05_ep05_mentor"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep05_reward_bonus_collected",
+          "payload": {
+            "entity": "episode_05_ep05_reward_bonus_cache"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep05_exit_door_interact",
+          "payload": {
+            "target": "episode_05_ep05_exit_door"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep05_complete",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "process_quests"
+        },
+        {
+          "action": "checkpoint",
+          "label": "after_ep05"
+        }
+      ]
+    },
+    {
+      "scene_id": "ep06",
+      "scene_path": "scenes/episode_06_ep06.json",
+      "steps": [
+        {
+          "action": "emit",
+          "event_type": "ep06_entered",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "dialogue_choice",
+          "payload": {
+            "choice_text": "Fight through."
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep06_intro_done",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "died",
+          "payload": {
+            "name": "Episode06FightSentry"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep06_puzzle_touched",
+          "payload": {
+            "target": "episode_06_ep06_rune_a"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep06_puzzle_touched",
+          "payload": {
+            "target": "episode_06_ep06_rune_b"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep06_reward_collected",
+          "payload": {
+            "entity": "episode_06_ep06_reward_cache"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep06_exit_door_interact",
+          "payload": {
+            "target": "episode_06_ep06_exit_door"
+          }
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "emit",
+          "event_type": "ep06_complete",
+          "payload": {}
+        },
+        {
+          "action": "drain"
+        },
+        {
+          "action": "process_quests"
+        },
+        {
+          "action": "checkpoint",
+          "label": "after_ep06"
+        }
+      ]
+    }
+  ]
+}

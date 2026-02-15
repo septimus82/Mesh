@@ -5,16 +5,17 @@ from pathlib import Path
 
 from engine import json_io
 from engine.tooling import build_demo_command, check, cli_snapshot_command, plan_schema_command, release_command
-from engine.version import ENGINE_VERSION
+from mesh_cli.version_info import get_tool_version
 
 
 def handle_dist(args: argparse.Namespace) -> int:
-    dist_dir = Path(args.out) if args.out else Path("dist") / f"mesh_dist_{ENGINE_VERSION}"
+    engine_version = get_tool_version()
+    dist_dir = Path(args.out) if args.out else Path("dist") / f"mesh_dist_{engine_version}"
     if dist_dir.exists():
         shutil.rmtree(dist_dir)
     dist_dir.mkdir(parents=True)
 
-    print(f"[Mesh][Dist] Building distribution v{ENGINE_VERSION} to {dist_dir}...")
+    print(f"[Mesh][Dist] Building distribution v{engine_version} to {dist_dir}...")
 
     # 1. Quality Gate (Full)
     print("\n[Mesh][Dist] Step 1/6: Quality Gate")
@@ -128,7 +129,7 @@ def handle_dist(args: argparse.Namespace) -> int:
 
     # Create Dist Manifest
     dist_manifest = {
-        "engine_version": ENGINE_VERSION,
+        "engine_version": engine_version,
         "profile": args.profile,
         "world": args.world,
         "components": [

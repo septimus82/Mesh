@@ -13,6 +13,20 @@ if TYPE_CHECKING:
 
 _DEFAULT_FONT_NAME: tuple[str, ...] = ("calibri", "arial")
 
+# Global text scale multiplier (set via RuntimeSettings.apply)
+_text_scale: float = 1.0
+
+
+def set_text_scale(scale: float) -> None:
+    """Set the global text scale multiplier (clamped to 0.5–3.0)."""
+    global _text_scale
+    _text_scale = max(0.5, min(3.0, float(scale)))
+
+
+def get_text_scale() -> float:
+    """Return the current global text scale multiplier."""
+    return _text_scale
+
 class TextCacheKey(NamedTuple):
     text: str
     font_name: Optional[str | tuple[str, ...]]
@@ -66,6 +80,9 @@ def draw_text_cached(
 ) -> None:
     if engine.optional_arcade.arcade is None:
         return
+
+    # Apply global text scale
+    font_size = font_size * _text_scale
 
     if font_name is None:
         font_name = _DEFAULT_FONT_NAME

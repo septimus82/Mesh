@@ -70,7 +70,7 @@ def handle_mouse_drag(
         return True
 
     if controller.occluder_tool_active and controller.occluder_dragging and (buttons & optional_arcade.arcade.MOUSE_BUTTON_LEFT):
-        return controller._update_occluder_point(wx, wy, push_command=False)
+        return bool(controller._update_occluder_point(wx, wy, push_command=False))
 
     if (
         controller.shape_edit_mode

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, List
 
-from ..events import MeshEventBus
+from ..event_emit import emit_gameplay_event
 from .base import Behaviour, ParamDef
 from .patrol import PatrolBehaviour
 from .registry import register_behaviour
@@ -35,7 +35,6 @@ class NpcSchedule(Behaviour):
 
     def __init__(self, entity, window, **config: Any) -> None:
         super().__init__(entity, window, **config)
-        self._event_bus: MeshEventBus | None = getattr(window, "event_bus", None)
         self._patrol_behaviour: PatrolBehaviour | None = self._find_patrol_behaviour()
         self._schedules: list[dict[str, Any]] = [self._normalize_schedule(block) for block in (self.config.get("schedules") or [])]
         self._active_index: int | None = None
@@ -126,14 +125,19 @@ class NpcSchedule(Behaviour):
             self._apply_stand_schedule(sched)
 
         enter_event = sched.get("enter_event") or ""
-        if enter_event and isinstance(self._event_bus, MeshEventBus):
+        if enter_event:
             if initial or self._last_active_index != index:
                 try:
-                    self._event_bus.emit(
+                    emit_gameplay_event(
+                        self.window,
                         enter_event,
-                        entity=getattr(self.entity, "mesh_name", None),
-                        schedule_index=index,
-                        mode=mode,
+                        {
+                            "entity": getattr(self.entity, "mesh_name", None),
+                            "schedule_index": index,
+                            "mode": mode,
+                        },
+                        source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
+                        source_behaviour="NpcSchedule",
                     )
                 except Exception as exc:  # noqa: BLE001
                     self._log_exception_once("emit_enter_event", exc)

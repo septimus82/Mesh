@@ -1,0 +1,716 @@
+{
+  "entities": [
+    {
+      "id": "episode_02_ep02_player",
+      "layer": "entities",
+      "name": "Episode02Player",
+      "prefab_id": "player",
+      "x": 72.0,
+      "y": 208.0
+    },
+    {
+      "id": "episode_02_ep02_entry_trigger",
+      "layer": "background",
+      "name": "Episode02EntryTrigger",
+      "prefab_id": "ep02_trigger",
+      "x": 112.0,
+      "y": 208.0
+    },
+    {
+      "id": "episode_02_ep02_mentor",
+      "layer": "entities",
+      "name": "Episode02Mentor",
+      "prefab_id": "ep02_mentor",
+      "x": 256.0,
+      "y": 208.0
+    },
+    {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep02_terminal_touched",
+          "interact_label": "Inspect Signal Terminal",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_signal_terminal",
+      "layer": "entities",
+      "name": "Episode02SignalTerminal",
+      "prefab_id": "ep02_reward",
+      "x": 360.0,
+      "y": 208.0
+    },
+    {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep02_terminal_touched",
+          "interact_label": "Tune Relay A",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_relay_a",
+      "layer": "entities",
+      "name": "Episode02RelayA",
+      "prefab_id": "ep02_reward",
+      "x": 428.0,
+      "y": 144.0
+    },
+    {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep02_terminal_touched",
+          "interact_label": "Tune Relay B",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_relay_b",
+      "layer": "entities",
+      "name": "Episode02RelayB",
+      "prefab_id": "ep02_reward",
+      "x": 496.0,
+      "y": 208.0
+    },
+    {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep02_terminal_touched",
+          "interact_label": "Tune Relay C",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_relay_c",
+      "layer": "entities",
+      "name": "Episode02RelayC",
+      "prefab_id": "ep02_reward",
+      "x": 564.0,
+      "y": 144.0
+    },
+    {
+      "behaviour_config": {
+        "Interactable": {
+          "interact_event": "ep02_terminal_touched",
+          "interact_label": "Pull Breaker",
+          "one_shot": true,
+          "target_tags": [
+            "player"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_breaker",
+      "layer": "entities",
+      "name": "Episode02Breaker",
+      "prefab_id": "ep02_reward",
+      "x": 496.0,
+      "y": 288.0
+    },
+    {
+      "id": "episode_02_ep02_exit_door",
+      "layer": "entities",
+      "name": "Episode02ExitDoor",
+      "prefab_id": "ep02_door",
+      "x": 656.0,
+      "y": 208.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep02.entered",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep02_intro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep02_entered"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_intro_start_ctrl",
+      "layer": "background",
+      "name": "Episode02IntroStart",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep02.choice_stabilize",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep02.choice_shutdown",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep02_choice_made",
+              "payload": {
+                "choice": "stabilize"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "Stabilize the lattice."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_choice_stabilize_ctrl",
+      "layer": "background",
+      "name": "Episode02ChoiceStabilize",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep02.choice_shutdown",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep02.choice_stabilize",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep02_choice_made",
+              "payload": {
+                "choice": "shutdown"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "Shut it down."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_choice_shutdown_ctrl",
+      "layer": "background",
+      "name": "Episode02ChoiceShutdown",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep02.terminal_touched",
+              "type": "set_flag"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_02_ep02_signal_terminal"
+          },
+          "listen_events": [
+            "ep02_terminal_touched"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_terminal_touch_ctrl",
+      "layer": "background",
+      "name": "Episode02TerminalTouch",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep02.relay_1_done",
+              "type": "set_flag"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_02_ep02_relay_a"
+          },
+          "forbid_flags": [
+            "ep02.relay_1_done"
+          ],
+          "listen_events": [
+            "ep02_terminal_touched"
+          ],
+          "require_flags": [
+            "ep02.choice_stabilize",
+            "ep02.terminal_touched"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_relay_a_ctrl",
+      "layer": "background",
+      "name": "Episode02RelayAController",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep02.relay_2_done",
+              "type": "set_flag"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_02_ep02_relay_b"
+          },
+          "forbid_flags": [
+            "ep02.relay_2_done"
+          ],
+          "listen_events": [
+            "ep02_terminal_touched"
+          ],
+          "require_flags": [
+            "ep02.choice_stabilize",
+            "ep02.relay_1_done"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_relay_b_ctrl",
+      "layer": "background",
+      "name": "Episode02RelayBController",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep02.signal_stable",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep02_signal_stable",
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_02_ep02_relay_c"
+          },
+          "forbid_flags": [
+            "ep02.signal_stable"
+          ],
+          "listen_events": [
+            "ep02_terminal_touched"
+          ],
+          "require_flags": [
+            "ep02.choice_stabilize",
+            "ep02.relay_2_done"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_relay_c_ctrl",
+      "layer": "background",
+      "name": "Episode02RelayCController",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep02.signal_off",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep02_signal_off",
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "target": "episode_02_ep02_breaker"
+          },
+          "forbid_flags": [
+            "ep02.signal_off"
+          ],
+          "listen_events": [
+            "ep02_terminal_touched"
+          ],
+          "require_flags": [
+            "ep02.choice_shutdown",
+            "ep02.terminal_touched"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_shutdown_ctrl",
+      "layer": "background",
+      "name": "Episode02ShutdownController",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep02.exit_unlocked",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep02_exit_unlocked",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "ep02.exit_unlocked"
+          ],
+          "listen_events": [
+            "ep02_signal_stable"
+          ],
+          "require_flags": [
+            "ep02.choice_stabilize"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_unlock_stable_ctrl",
+      "layer": "background",
+      "name": "Episode02UnlockStable",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep02.exit_unlocked",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep02_exit_unlocked",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "ep02.exit_unlocked"
+          ],
+          "listen_events": [
+            "ep02_signal_off"
+          ],
+          "require_flags": [
+            "ep02.choice_shutdown"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_unlock_shutdown_ctrl",
+      "layer": "background",
+      "name": "Episode02UnlockShutdown",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "event_type": "ep02_outro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep02_exit_door_interact"
+          ],
+          "require_flags": [
+            "ep02.exit_unlocked"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_outro_ctrl",
+      "layer": "background",
+      "name": "Episode02OutroStart",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep02.complete",
+              "type": "set_flag"
+            }
+          ],
+          "listen_events": [
+            "ep02_complete"
+          ]
+        }
+      },
+      "id": "episode_02_ep02_complete_ctrl",
+      "layer": "background",
+      "name": "Episode02Complete",
+      "prefab_id": "ep02_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign02.ep02_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep02.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.terminal_touched",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.choice_stabilize",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.choice_shutdown",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.relay_1_done",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.relay_2_done",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.signal_stable",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.signal_off",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "go_to_episode_03_ep03",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign02.ep02_complete"
+          ],
+          "listen_events": [
+            "quest_ep02_complete"
+          ]
+        }
+      },
+      "id": "episode_02_campaign02_done_ctrl",
+      "layer": "background",
+      "name": "Episode02Campaign02Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "SceneExit": {
+          "listen_event": "go_to_episode_03_ep03",
+          "target_scene": "scenes/episode_03_ep03.json",
+          "target_spawn": ""
+        }
+      },
+      "id": "episode_02_exit_to_ep03",
+      "layer": "entities",
+      "name": "Episode02ExitToEpisode03",
+      "prefab_id": "campaign_portal",
+      "x": 704.0,
+      "y": 208.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign03.ep02_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep02.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.terminal_touched",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.choice_stabilize",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.choice_shutdown",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.relay_1_done",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.relay_2_done",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.signal_stable",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.signal_off",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "go_to_episode_03_ep03",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign03.ep02_complete"
+          ],
+          "listen_events": [
+            "quest_ep02_complete"
+          ],
+          "require_flags": [
+            "campaign03.active"
+          ]
+        }
+      },
+      "id": "episode_02_campaign03_done_ctrl",
+      "layer": "background",
+      "name": "Episode02Campaign03Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign04.ep02_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep02.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.terminal_touched",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.choice_stabilize",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.choice_shutdown",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.relay_1_done",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.relay_2_done",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.signal_stable",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.signal_off",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep02.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "go_to_episode_03_ep03",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign04.ep02_complete"
+          ],
+          "listen_events": [
+            "quest_ep02_complete"
+          ],
+          "require_flags": [
+            "campaign04.active"
+          ]
+        }
+      },
+      "id": "episode_02_campaign04_done_ctrl",
+      "layer": "background",
+      "name": "Episode02Campaign04Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    }
+  ],
+  "layers": [
+    {
+      "name": "background"
+    },
+    {
+      "name": "entities"
+    },
+    {
+      "name": "foreground"
+    }
+  ],
+  "name": "Episode 02: Signal in the Dust",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "#1a2230",
+    "world_height": 416,
+    "world_width": 736
+  },
+  "version": 1
+}

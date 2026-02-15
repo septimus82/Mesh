@@ -1,0 +1,87 @@
+{
+  "actions": [
+    {
+      "event": "ep02_entered",
+      "t": 0,
+      "type": "emit"
+    },
+    {
+      "choice": 0,
+      "t": 2,
+      "type": "dialogue_choose"
+    },
+    {
+      "entity": "episode_02_ep02_signal_terminal",
+      "t": 3,
+      "type": "interact"
+    },
+    {
+      "entity": "episode_02_ep02_relay_a",
+      "t": 4,
+      "type": "interact"
+    },
+    {
+      "slot": "mid_objective",
+      "t": 5,
+      "type": "save"
+    },
+    {
+      "entity": "episode_02_ep02_relay_b",
+      "t": 6,
+      "type": "interact"
+    },
+    {
+      "slot": "mid_objective",
+      "t": 7,
+      "type": "restore"
+    },
+    {
+      "entity": "episode_02_ep02_relay_b",
+      "t": 8,
+      "type": "interact"
+    },
+    {
+      "entity": "episode_02_ep02_relay_c",
+      "t": 9,
+      "type": "interact"
+    },
+    {
+      "flag": "ep02.signal_stable",
+      "t": 10,
+      "type": "assert_flag",
+      "value": true
+    },
+    {
+      "entity": "episode_02_ep02_exit_door",
+      "t": 11,
+      "type": "interact"
+    },
+    {
+      "flag": "ep02.complete",
+      "t": 13,
+      "type": "assert_flag",
+      "value": true
+    }
+  ],
+  "dt_schedule": [
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2
+  ],
+  "steps": [
+    {
+      "dump_state": true
+    }
+  ]
+}

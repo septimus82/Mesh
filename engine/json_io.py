@@ -36,20 +36,55 @@ def dumps_stable(payload: Any) -> str:
     )
 
 
-def write_text_atomic(path: str | Path, text: str, *, encoding: str = "utf-8") -> None:
+def _fsync_parent_directory(path: Path) -> None:
+    """Best-effort fsync of the parent directory after os.replace()."""
+    dir_path = path.parent
+    flags = os.O_RDONLY
+    if hasattr(os, "O_DIRECTORY"):
+        flags |= int(getattr(os, "O_DIRECTORY"))
+    try:
+        dir_fd = os.open(str(dir_path), flags)
+    except OSError:
+        return
+    try:
+        os.fsync(dir_fd)
+    except OSError:
+        pass
+    finally:
+        os.close(dir_fd)
+
+
+def write_text_atomic(
+    path: str | Path,
+    text: str,
+    *,
+    encoding: str = "utf-8",
+    durable: bool = False,
+) -> None:
     target = _coerce_path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = target.with_suffix(target.suffix + ".tmp")
     with open(tmp_path, "w", encoding=encoding, newline="\n") as handle:
         handle.write(text)
+        if durable:
+            handle.flush()
+            os.fsync(handle.fileno())
     os.replace(tmp_path, target)
+    if durable:
+        _fsync_parent_directory(target)
 
 
-def write_json_atomic(path: str | Path, payload: Any, *, trailing_newline: bool = True) -> None:
+def write_json_atomic(
+    path: str | Path,
+    payload: Any,
+    *,
+    trailing_newline: bool = True,
+    durable: bool = False,
+) -> None:
     text = dumps_stable(payload)
     if trailing_newline and not text.endswith("\n"):
         text += "\n"
-    write_text_atomic(path, text, encoding="utf-8")
+    write_text_atomic(path, text, encoding="utf-8", durable=durable)
 
 
 def read_json(path: str | Path) -> Any:

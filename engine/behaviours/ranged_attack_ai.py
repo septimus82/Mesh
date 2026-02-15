@@ -5,6 +5,11 @@ from __future__ import annotations
 import math
 import time
 
+from engine.combat_constants import (
+    EVENT_COMBAT_ATTACK,
+    EVENT_PROJECTILE_FIRED,
+)
+from engine.event_emit import emit_gameplay_event
 from engine.behaviours.base import Behaviour, ParamDef
 from engine.behaviours.registry import register_behaviour
 
@@ -86,18 +91,30 @@ class RangedAttackAI(Behaviour):
             dir_x = 1.0
             dir_y = 0.0
 
-        self.window.event_bus.emit("projectile_fired",
-            source=self.entity.name,
-            x=self.entity.x,
-            y=self.entity.y,
-            dir_x=dir_x,
-            dir_y=dir_y,
-            speed=self.projectile_speed
+        emit_gameplay_event(
+            self.window,
+            EVENT_PROJECTILE_FIRED,
+            {
+                "source": self.entity.name,
+                "x": self.entity.x,
+                "y": self.entity.y,
+                "dir_x": dir_x,
+                "dir_y": dir_y,
+                "speed": self.projectile_speed,
+            },
+            source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
+            source_behaviour="RangedAttackAI",
         )
         # Also emit combat event for quests
-        self.window.event_bus.emit("combat_attack",
-            attacker=self.entity.name,
-            target="Player",
-            type="ranged"
+        emit_gameplay_event(
+            self.window,
+            EVENT_COMBAT_ATTACK,
+            {
+                "attacker": self.entity.name,
+                "target": "Player",
+                "type": "ranged",
+            },
+            source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
+            source_behaviour="RangedAttackAI",
         )
 

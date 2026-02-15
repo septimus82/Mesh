@@ -4,6 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from engine.combat_constants import (
+    EVENT_COMBAT_ATTACK,
+    EVENT_PROJECTILE_FIRED,
+    KEY_ATTACKER,
+    KEY_SOURCE,
+    KEY_TARGET,
+)
+from engine.event_emit import emit_gameplay_event
+
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
@@ -98,6 +107,35 @@ class Shooter(Behaviour):
 
         # Spawn projectile
         self._spawn_projectile(angle_deg)
+
+        source_name = str(getattr(self.entity, "mesh_name", "") or "").strip() or "<unnamed>"
+        source_entity_id = str(getattr(self.entity, "mesh_id", "") or "")
+        emit_gameplay_event(
+            self.window,
+            EVENT_PROJECTILE_FIRED,
+            {
+                "source": source_name,
+                "x": float(self.entity.center_x),
+                "y": float(self.entity.center_y),
+                "target_x": float(target_x),
+                "target_y": float(target_y),
+                "speed": float(self.projectile_speed),
+            },
+            source_entity_id=source_entity_id,
+            source_behaviour="Shooter",
+        )
+        emit_gameplay_event(
+            self.window,
+            EVENT_COMBAT_ATTACK,
+            {
+                KEY_ATTACKER: source_name,
+                KEY_SOURCE: source_name,
+                KEY_TARGET: str(self.target_tag),
+                "type": "ranged",
+            },
+            source_entity_id=source_entity_id,
+            source_behaviour="Shooter",
+        )
 
         # Play sound
         if hasattr(self.window, "audio"):

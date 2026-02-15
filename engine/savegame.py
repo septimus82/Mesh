@@ -12,6 +12,8 @@ from .persistence_io import read_json, write_json_atomic
 from .save_runtime import constants as save_constants
 from .save_runtime import io as save_io
 from .save_runtime import payloads as save_payloads
+from .save_runtime.restore_policy import SNAPSHOT_POLICY
+from .save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 
 SNAPSHOT_VERSION = save_constants.SNAPSHOT_VERSION
 QUICK_SNAPSHOT_PATH = save_constants.QUICK_SNAPSHOT_PATH
@@ -332,7 +334,7 @@ def write_snapshot_file(path: Path, payload: dict[str, Any]) -> None:
 
 
 def read_snapshot_file(path: Path) -> dict[str, Any] | None:
-    ok, payload_or_error = save_io.load_snapshot_payload(path)
+    ok, payload_or_error = save_io.load_snapshot_payload(path, policy=SNAPSHOT_POLICY)
     if ok:
         return payload_or_error  # type: ignore[return-value]
     msg = str(payload_or_error or "")
@@ -366,7 +368,32 @@ def load_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> boo
         return False
 
     scene_id = payload.get("scene_id")
-    save_payloads.apply_loaded_payload(window, payload, mode="snapshot")
+    apply_diags = SaveDiagnosticsAggregator()
+    applied = save_payloads.apply_loaded_payload(
+        window,
+        payload,
+        mode="snapshot",
+        policy=SNAPSHOT_POLICY,
+        diagnostics=apply_diags,
+        source=path.as_posix(),
+    )
+    save_io.record_load_attempt(
+        kind="snapshot_apply",
+        path=path,
+        ok=bool(applied),
+        aggregator=apply_diags,
+    )
+    counts = apply_diags.counts()
+    should_write_sidecars = (
+        SNAPSHOT_POLICY.write_sidecars_on_failure and (
+            (not applied) or int(counts.get("warnings", 0)) > 0 or int(counts.get("errors", 0)) > 0
+        )
+    )
+    if should_write_sidecars:
+        save_io.write_diagnostics_sidecars(path, apply_diags)
+    if not applied:
+        sys.stderr.write(save_io.format_load_error("[Mesh][Snapshot]", apply_diags) + "\n")
+        return False
 
     # Request scene change last.
     requester = getattr(window, "request_scene_change", None)

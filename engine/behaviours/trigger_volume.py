@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Set, Tuple
 
-from ..events import MeshEvent
+from ..event_emit import emit_gameplay_event
 from ..gameplay_event_bus import EventConfigError, validate_event_type
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -245,30 +245,20 @@ class TriggerVolumeBehaviour(Behaviour):
     
     def _emit_event(self, event_type: str, entity_id: str, sprite) -> None:
         """Emit a gameplay event."""
-        bus = getattr(self.window, "gameplay_event_bus", None)
-        if bus is None:
-            # Fallback to engine event bus
-            if hasattr(self.window, "event_bus"):
-                self.window.event_bus.emit(
-                    event_type,
-                    zone=getattr(self.entity, "mesh_id", ""),
-                    zone_name=getattr(self.entity, "mesh_name", ""),
-                    entity=entity_id,
-                    entity_name=getattr(sprite, "mesh_name", ""),
-                    position=(float(sprite.center_x), float(sprite.center_y)),
-                )
-            return
-        
         my_id = getattr(self.entity, "mesh_id", "")
-        bus.emit(
+        payload = {
+            "zone": my_id,
+            "zone_name": getattr(self.entity, "mesh_name", ""),
+            "entity": entity_id,
+            "entity_name": getattr(sprite, "mesh_name", ""),
+            "position": (float(sprite.center_x), float(sprite.center_y)),
+        }
+        emit_gameplay_event(
+            self.window,
             event_type,
-            source_entity=my_id,
+            payload,
+            source_entity_id=my_id,
             source_behaviour="TriggerVolume",
-            zone=my_id,
-            zone_name=getattr(self.entity, "mesh_name", ""),
-            entity=entity_id,
-            entity_name=getattr(sprite, "mesh_name", ""),
-            position=(float(sprite.center_x), float(sprite.center_y)),
         )
     
     def update(self, dt: float) -> None:
@@ -321,25 +311,19 @@ class TriggerVolumeBehaviour(Behaviour):
         # Check for exits (deterministic order)
         for entity_id in sorted_ids:
             if entity_id in self._entities_inside and entity_id not in current_inside:
-                # Entity just exited - need to find sprite or use cached data
-                # For exits, we emit even without sprite reference
-                if hasattr(self.window, "gameplay_event_bus"):
-                    bus = self.window.gameplay_event_bus
-                    my_id = getattr(self.entity, "mesh_id", "")
-                    bus.emit(
-                        self.on_exit_event,
-                        source_entity=my_id,
-                        source_behaviour="TriggerVolume",
-                        zone=my_id,
-                        zone_name=getattr(self.entity, "mesh_name", ""),
-                        entity=entity_id,
-                    )
-                elif hasattr(self.window, "event_bus"):
-                    self.window.event_bus.emit(
-                        self.on_exit_event,
-                        zone=getattr(self.entity, "mesh_id", ""),
-                        entity=entity_id,
-                    )
+                my_id = getattr(self.entity, "mesh_id", "")
+                payload = {
+                    "zone": my_id,
+                    "zone_name": getattr(self.entity, "mesh_name", ""),
+                    "entity": entity_id,
+                }
+                emit_gameplay_event(
+                    self.window,
+                    self.on_exit_event,
+                    payload,
+                    source_entity_id=my_id,
+                    source_behaviour="TriggerVolume",
+                )
         
         # Update state
         self._entities_inside = current_inside

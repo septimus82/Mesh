@@ -19,7 +19,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Sequence
 
+from ..diagnostics import Diagnostic, diagnostics_to_text
 from ..gameplay_event_bus import GameplayEvent
+from ..save_runtime.state_codec import decode_state, encode_state
 from ..save_runtime.quest_state import SavedQuestState, QUEST_STATE_SCHEMA_VERSION
 from .normalize import normalize_quest
 from .validation import (
@@ -147,6 +149,9 @@ class QuestRunner:
             event_bus.emit_event(event)
     """
     
+    TYPE_ID = "quest_runner"
+    STATE_VERSION = 1
+
     def __init__(self, *, emit_sequence_start: int = 10000) -> None:
         """Initialize QuestRunner.
         
@@ -159,6 +164,7 @@ class QuestRunner:
         self._emit_sequence = emit_sequence_start
         self._diagnostics: list[StepCompletionDiagnostic] = []
         self._diagnostics_limit = 50
+        self._last_restore_diagnostics: tuple[Diagnostic, ...] = ()
     
     # ------------------------------------------------------------------
     # Definition Loading
@@ -717,6 +723,33 @@ class QuestRunner:
             count += 1
         
         return count
+
+    def saveable_state(self) -> dict[str, Any]:
+        return encode_state(self.TYPE_ID, self.STATE_VERSION, self.get_state())
+
+    def restore_state(
+        self,
+        payload: dict[str, Any],
+        *,
+        strict: bool = True,
+        source: str = "quest_runner",
+    ) -> None:
+        inner_state, diagnostics = decode_state(
+            payload,
+            expected_type_id=self.TYPE_ID,
+            supported_versions={self.STATE_VERSION},
+            strict=bool(strict),
+            source=str(source),
+        )
+        self._last_restore_diagnostics = tuple(diagnostics)
+        if inner_state is None:
+            if strict:
+                details = diagnostics_to_text(self._last_restore_diagnostics).strip()
+                if details:
+                    raise ValueError(details)
+                raise ValueError("quest_runner restore failed")
+            return
+        self.apply_state(inner_state)
     
     def get_quest_state(self, quest_id: str) -> QuestRunnerState | None:
         """Get internal state for a specific quest."""

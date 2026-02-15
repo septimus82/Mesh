@@ -3,8 +3,7 @@ import os
 import re
 import pytest
 
-# Policy scan is a full repo walk; keep it in slow/integration tier.
-pytestmark = [pytest.mark.slow, pytest.mark.integration]
+pytestmark = [pytest.mark.fast]
 
 # Files that are allowed to import arcade directly/statically
 # engine/optional_arcade.py is the bridge, so it must import it.
@@ -52,7 +51,7 @@ def test_no_arcade_imports():
                     if not is_file_excluded(rel_path):
                         files_to_scan.append(rel_path)
 
-    for rel_path in files_to_scan:
+    for rel_path in sorted(files_to_scan):
         abs_path = os.path.join(root_dir, rel_path)
         try:
             with open(abs_path, 'r', encoding='utf-8') as f:

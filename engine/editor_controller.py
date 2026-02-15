@@ -27,7 +27,6 @@ from .behaviours.utils import (
 from .editor_palette import DEFAULT_PREFAB_PATH
 from .editor_entity_ops import EntitySummary
 from .editor_prefab_variant_ops import DiffRow
-from .editor_runtime import input as editor_input
 from .editor_runtime import ops as editor_ops
 from engine.editor.editor_search_controller import EditorSearchController
 from engine.editor.editor_file_ops_controller import EditorFileOpsController
@@ -92,13 +91,11 @@ from .editor_light_occluder_ops import (
     ensure_scene_occluders,
     find_closest_edge_insert_index,
     invert_occluder_command,
-    snap_world_point,
     toggle_light_flicker,
     update_light_property,
 )
 from .import_tools import repair_package_submodule_attr
 from .i18n import tr
-from .logging_tools import get_logger
 from .path_norm import normalize_scene_path
 from .ui_overlays.common import (
     _draw_rectangle_filled,
@@ -111,8 +108,6 @@ if TYPE_CHECKING:
     from .game import GameWindow
     from .scene_index import SceneRow
     from engine.workspace_settings import WorkspaceSettings
-
-logger = get_logger(__name__)
 
 # Import from extracted modules
 from .editor.state import (
@@ -133,7 +128,6 @@ from .editor.scene_opening import (
     open_scene_by_id as _open_scene_by_id_impl,
 )
 from .editor.editor_asset_browser_controller import EditorAssetBrowserController
-
 from .editor.editor_workspace_controller import EditorWorkspaceController
 from .editor.editor_selection_controller import EditorSelectionController
 from .editor.editor_scene_ops import EditorSceneOpsController
@@ -141,6 +135,13 @@ from .editor.editor_undo_controller import EditorUndoController
 from .editor.editor_ui_flow_controller import EditorUIFlowController
 from .editor.editor_session_controller import EditorSessionController
 from .editor.editor_unsaved_changes_controller import EditorUnsavedChangesController
+from .editor.input_router import bind_input_router_methods as _bind_input_router_methods
+from .editor.selection_clipboard import (
+    bind_selection_clipboard_methods as _bind_selection_clipboard_methods,
+)
+from .editor.overlays_modals import (
+    bind_overlays_modals_methods as _bind_overlays_modals_methods,
+)
 
 ZONE_BEHAVIOUR_CANONICAL = TRIGGER_ZONE_CANONICAL | HITBOX_CANONICAL
 ZONE_BEHAVIOUR_CLASSNAMES = TRIGGER_ZONE_CLASSNAMES | HITBOX_CLASSNAMES
@@ -529,6 +530,11 @@ class EditorModeController:
         self.shape_snap_enabled: bool = False
         self._status_message: str | None = None
         self._status_until: float = 0.0
+        self._show_swallowed_exceptions_overlay: bool = False
+        self._swallowed_exceptions_overlay_summary: str = "no swallowed exceptions recorded"
+        self._swallowed_exceptions_overlay_distinct_sites: int = 0
+        self._swallowed_exceptions_overlay_total_count: int = 0
+        self._swallowed_exceptions_overlay_next_refresh_ts: float = 0.0
 
         # UI Text Objects (Optimization)
         self._overlay_text_obj = optional_arcade.arcade.Text(
@@ -562,6 +568,9 @@ class EditorModeController:
     def ui_flow(self) -> EditorUIFlowController:
         return self._ui_flow_ctl
 
+    def __getattr__(self, name: str) -> Any:
+        raise AttributeError(name)
+
     @property
     def selection(self) -> EditorSelectionController:
         return self._selection_ctl
@@ -574,62 +583,6 @@ class EditorModeController:
     def workspace(self) -> EditorWorkspaceController:
         return self._workspace_ctl
 
-    @property
-    def confirm_open(self) -> bool:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return False
-        return confirm.is_open
-
-    @confirm_open.setter
-    def confirm_open(self, value: bool) -> None:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return
-        confirm.set_open(bool(value))
-
-    @property
-    def confirm_reason(self) -> str:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return ""
-        return confirm.reason
-
-    @confirm_reason.setter
-    def confirm_reason(self, value: str) -> None:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return
-        confirm.reason = str(value or "")
-
-    @property
-    def confirm_selection_index(self) -> int:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return 0
-        return confirm.selection_index
-
-    @confirm_selection_index.setter
-    def confirm_selection_index(self, value: int) -> None:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return
-        confirm.selection_index = int(value)
-
-    @property
-    def pending_action(self) -> Callable[[], None] | None:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return None
-        return confirm.pending_action
-
-    @pending_action.setter
-    def pending_action(self, value: Callable[[], None] | None) -> None:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return
-        confirm.pending_action = value
-    
     # -- EditorUiFlowHost Protocol Implementation --
     
     def ui_activate_command(self, cmd_id: str) -> bool:
@@ -691,24 +644,6 @@ class EditorModeController:
     @scene_switcher_recent.setter
     def scene_switcher_recent(self, value: List[str]) -> None:
         self._workspace_ctl.recent_scenes = value
-
-    @property
-    def _selected_entity_ids(self) -> List[str]:
-        return self._selection_ctl.selected_ids
-
-    @_selected_entity_ids.setter
-    def _selected_entity_ids(self, value: List[str]) -> None:
-        if value is None:
-            value = []
-        self._selection_ctl.selected_ids = value
-
-    @property
-    def _primary_entity_id(self) -> Optional[str]:
-        return self._selection_ctl.primary_selected_id
-
-    @_primary_entity_id.setter
-    def _primary_entity_id(self, value: Optional[str]) -> None:
-        self._selection_ctl.primary_selected_id = value
 
     @property
     def undo_stack(self) -> List[Dict[str, Any]]:
@@ -897,52 +832,6 @@ class EditorModeController:
     def _sync_occluders_runtime(self) -> None:
         self.lights.sync_occluders_runtime()
 
-    def toggle(self) -> None:
-        if self.play_session.is_playing:
-            self.stop_playing()
-            return
-        if self.active:
-            if self.confirm_unsaved_changes("Exit Editor Mode", self._disable_editor_mode):
-                return
-            self._disable_editor_mode()
-            return
-        self._enable_editor_mode()
-
-    def _enable_editor_mode(self) -> None:
-        self.active = True
-        logger.info("[Editor] Mode ENABLED")
-        # Pause game logic to prevent interference
-        self.window.paused = True
-        self.inspector.set_inspector_active(False)
-        self.palette_active = False
-        self.palette_filter_active = False
-
-    def _disable_editor_mode(self) -> None:
-        self._flush_workspace_autosave()
-        self.active = False
-        logger.info("[Editor] Mode DISABLED")
-        self.selected_entity = None
-        self.shape.reset_zone_selection_state()
-        self.window.paused = False
-        self.inspector.set_inspector_active(False)
-        self.palette_active = False
-        self.palette_filter_active = False
-        self.panels.close_command_palette()
-        self.search.clear_command_palette_state()
-        self.scene_browser_active = False
-        self.scene_browser_query = ""
-        self.scene_browser_index = 0
-        self._cancel_hierarchy_rename()
-        self._close_dialogue_panel()
-        self._close_animation_panel()
-        self._close_tile_panel()
-        self.scene_switcher_active = False
-        self.scene_switcher_query = ""
-        self.scene_switcher_index = 0
-        self._toggle_lights_mode(False)
-        self._toggle_occluder_mode(False)
-        self.shape.cancel_shape_edit()
-
     # -------------------------------------------------------------------------
     # Play Session
     # DELEGATED to EditorPlayController
@@ -997,37 +886,11 @@ class EditorModeController:
         """
         self.play._spawn_player()
 
-    def handle_mouse_click(self, x: float, y: float, button: int, modifiers: int) -> bool:
-        return editor_input.handle_mouse_click(self, x, y, button, modifiers)
-
-    def handle_input(self, key: int, modifiers: int) -> bool:
-        """Handle keyboard input when editor is active. Returns True if consumed."""
-        # Check UI Layer Stack first (modals, etc)
-        panels = getattr(self, "panels", None)
-        if panels is not None and panels.dispatch_input(key, modifiers):
-            return True
-            
-        return editor_input.handle_input(self, key, modifiers)
-
     def run_editor_action(self, action_id: str) -> bool:
         """Run a registered editor action by id."""
         from engine.editor.editor_actions import run_editor_action  # noqa: PLC0415
 
         return run_editor_action(action_id, self, self.window)
-
-    def on_text(self, text: str) -> bool:
-        """Handle text input when editor is active. Returns True if consumed."""
-        panels = getattr(self, "panels", None)
-        if panels is not None and panels.dispatch_text(text):
-            return True
-        # Future: Route to focused widget?
-        return False
-
-    def _cycle_tool_mode(self) -> None:
-        self.tool.cycle_tool_mode()
-
-    def _handle_palette_input(self, key: int, modifiers: int) -> bool:
-        return self.palette.handle_palette_input(key, modifiers)
 
     def _prefab_sprite_path(self, prefab: Dict[str, Any]) -> str | None:
         return self.palette.prefab_sprite_path(prefab)
@@ -1062,39 +925,9 @@ class EditorModeController:
     def _get_palette_thumb_texture(self, prefab: Dict[str, Any]) -> Optional[optional_arcade.arcade.Texture]:
         return self.palette.get_palette_thumb_texture(prefab)
 
-    def _handle_movement_input(self, key: int, modifiers: int) -> bool:
-        if not self.selected_entity:
-            return False
-
-        grid = self.grid_size
-        dx, dy = 0.0, 0.0
-
-        if key == optional_arcade.arcade.key.LEFT:
-            dx = -grid
-        elif key == optional_arcade.arcade.key.RIGHT:
-            dx = grid
-        elif key == optional_arcade.arcade.key.UP:
-            dy = grid
-        elif key == optional_arcade.arcade.key.DOWN:
-            dy = -grid
-        else:
-            return False
-
-        self.nudge_selected(dx, dy)
-        return True
-
-    def _handle_inspector_input(self, key: int, modifiers: int) -> bool:
-        return self.inspector.handle_inspector_input(key, modifiers)
-
     # ------------------------------------------------------------------
     # Dialogue / Quest editing
     # ------------------------------------------------------------------
-    def toggle_dialogue_panel(self) -> None:
-        self.dialogue.toggle_dialogue_panel()
-
-    def _close_dialogue_panel(self) -> None:
-        self.dialogue.close_dialogue_panel()
-
     def _entity_has_dialogue(self, sprite: Optional[optional_arcade.arcade.Sprite]) -> bool:
         return self.dialogue.entity_has_dialogue(sprite)
 
@@ -1115,9 +948,6 @@ class EditorModeController:
 
     def _get_selected_choice(self, node: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         return self.dialogue.get_selected_choice(node)
-
-    def _handle_dialogue_input(self, key: int, modifiers: int) -> bool:
-        return self.dialogue.handle_dialogue_input(key, modifiers)
 
     def _next_dialogue_field(self, current: str, *, has_choice: bool) -> str:
         return self.dialogue.next_dialogue_field(current, has_choice=has_choice)
@@ -1146,12 +976,6 @@ class EditorModeController:
     # ------------------------------------------------------------------
     # Animation panel helpers
     # ------------------------------------------------------------------
-    def toggle_animation_panel(self) -> None:
-        self.animation.toggle_animation_panel()
-
-    def _close_animation_panel(self) -> None:
-        self.animation.close_animation_panel()
-
     def _entity_has_animator(self, sprite: Optional[optional_arcade.arcade.Sprite]) -> bool:
         return self.animation.entity_has_animator(sprite)
 
@@ -1166,9 +990,6 @@ class EditorModeController:
 
     def _apply_animator_runtime(self, sprite: optional_arcade.arcade.Sprite, animator_cfg: Dict[str, Any]) -> None:
         self.animation.apply_animator_runtime(sprite, animator_cfg)
-
-    def _handle_animation_input(self, key: int, modifiers: int) -> bool:
-        return self.animation.handle_animation_input(key, modifiers)
 
     def _next_animation_field(self, current: str) -> str:
         return self.animation.next_animation_field(current)
@@ -1201,12 +1022,6 @@ class EditorModeController:
     def _set_tile_panel_active(self, value: bool) -> None:
         self.tile.set_tile_panel_active(value)
 
-    def toggle_tile_panel(self) -> None:
-        self.tile.toggle_tile_panel()
-
-    def _close_tile_panel(self) -> None:
-        self.tile.close_tile_panel()
-
     def _refresh_tile_palette(self) -> None:
         self.tile.refresh_tile_palette()
 
@@ -1219,18 +1034,9 @@ class EditorModeController:
     def _current_tile_layer(self) -> str:
         return self.tile.current_tile_layer()
 
-    def _handle_tile_input(self, key: int, modifiers: int) -> bool:
-        return self.tile.handle_tile_input(key, modifiers)
-
     # ------------------------------------------------------------------
     # Lights tool
     # ------------------------------------------------------------------
-    def _handle_lights_mouse_press(self, world_x: float, world_y: float) -> None:
-        self.lights.handle_lights_mouse_press(world_x, world_y)
-
-    def _handle_lights_key_input(self, key: int, modifiers: int) -> bool:
-        return self.lights.handle_lights_key_input(key, modifiers)
-
     def _hit_test_light(self, world_x: float, world_y: float, pick_radius: float = 16.0) -> Optional[int]:
         return self.lights.hit_test_light(world_x, world_y, pick_radius=pick_radius)
 
@@ -1240,77 +1046,12 @@ class EditorModeController:
     def _delete_selected_light(self) -> None:
         self.lights.delete_selected_light()
 
-    def handle_mouse_drag(self, x: float, y: float, dx: float, dy: float, buttons: int, modifiers: int) -> bool:
-        return editor_input.handle_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
-
-    def handle_mouse_release(self, x: float, y: float, button: int, modifiers: int) -> bool:
-        return editor_input.handle_mouse_release(self, x, y, button, modifiers)
-
     def _draw_lights_overlay(self) -> None:
         self.lights.draw_lights_overlay()
 
     # ------------------------------------------------------------------
     # Scene occluder tool
     # ------------------------------------------------------------------
-    def toggle_occluder_tool(self) -> None:
-        self.lights.toggle_occluder_tool()
-
-    def _toggle_occluder_mode(self, enabled: bool) -> None:
-        self.lights.toggle_occluder_mode(enabled)
-
-    def _handle_occluder_mouse_press(self, world_x: float, world_y: float) -> None:
-        self.lights.handle_occluder_mouse_press(world_x, world_y)
-
-    def _hit_test_occluder_vertex(self, world_x: float, world_y: float, *, radius_px: float = 10.0) -> Optional[tuple[int, int]]:
-        return self.lights.hit_test_occluder_vertex(world_x, world_y, radius_px=radius_px)
-
-    def _commit_occluder_polygon(self) -> bool:
-        return self.lights.commit_occluder_polygon()
-
-    def _remove_occluder_point(self) -> bool:
-        return self.lights.remove_occluder_point()
-
-    def _update_occluder_point(self, world_x: float, world_y: float, *, push_command: bool = True) -> bool:
-        return self.lights.update_occluder_point(world_x, world_y, push_command=push_command)
-
-    def _get_occluder_point(self, occ_idx: int, pt_idx: int) -> Optional[tuple[float, float]]:
-        return self.lights.get_occluder_point(occ_idx, pt_idx)
-
-    def _build_move_occluder_cmd(
-        self,
-        occ_idx: int,
-        pt_idx: int,
-        start: tuple[float, float],
-        end: tuple[float, float],
-    ) -> Any | None:
-        return self.lights.build_move_occluder_cmd(occ_idx, pt_idx, start, end)
-
-    def _snap_world_point(self, world_x: float, world_y: float) -> tuple[float, float]:
-        if not self.snap_enabled:
-            return (float(world_x), float(world_y))
-        tile_size = None
-        instance = getattr(self.window.scene_controller, "tilemap_instance", None)
-        if instance is not None:
-            tile_size_value = getattr(instance, "tile_size", None)
-            if isinstance(tile_size_value, tuple) and len(tile_size_value) >= 1:
-                try:
-                    tile_size = int(tile_size_value[0])
-                except Exception:  # noqa: BLE001
-                    tile_size = None
-        return snap_world_point((float(world_x), float(world_y)), self.snap_mode, tile_size)
-
-    def _delete_selected_occluder(self) -> bool:
-        return self.lights.delete_selected_occluder()
-
-    def _remove_selected_occluder_vertex(self) -> bool:
-        return self.lights.remove_selected_occluder_vertex()
-
-    def _handle_occluder_key_input(self, key: int) -> bool:
-        return self.lights.handle_occluder_key_input(key)
-
-    def _insert_occluder_point(self, world_x: float, world_y: float) -> bool:
-        return self.lights.insert_occluder_point(world_x, world_y)
-
     def _update_param(self, behaviour_name: str, param_name: str, value: Any) -> None:
         self.inspector.update_param(behaviour_name, param_name, value)
 
@@ -1346,9 +1087,6 @@ class EditorModeController:
     def _build_inspector_items(self) -> List[Dict[str, Any]]:
         return self.inspector.build_inspector_items()
 
-    def nudge_selected(self, dx: float, dy: float) -> None:
-        editor_ops.nudge_selected(self, dx, dy)
-
     def save_current_scene(self) -> None:
         self._flush_workspace_autosave()
         editor_ops.save_current_scene(self)
@@ -1358,20 +1096,6 @@ class EditorModeController:
     # DELEGATED to EditorProblemsActionsController
     # -------------------------------------------------------------------------
 
-    def problems_jump_to_selected(self) -> bool:
-        """Jump to the selected problem (load scene, select entity, reveal in explorer).
-
-        DELEGATED to EditorProblemsActionsController.
-        """
-        return self.problems_actions.jump_to_selected()
-
-    def problems_copy_location(self) -> bool:
-        """Copy the selected problem's location to clipboard (native only).
-
-        DELEGATED to EditorProblemsActionsController.
-        """
-        return self.problems_actions.copy_location()
-
     def _reveal_in_project_explorer(self, path: str) -> bool:
         """Reveal a path in the Project Explorer.
 
@@ -1379,77 +1103,8 @@ class EditorModeController:
         """
         return self.problems_actions._reveal_in_project_explorer(path)
 
-    def _toast_problems(self, message: str, seconds: float = 2.5) -> None:
-        """Show a toast notification for problems panel actions.
-
-        DELEGATED to EditorProblemsActionsController.
-        """
-        self.problems_actions._toast(message, seconds=seconds)
-
-    def toggle_palette(self) -> None:
-        self.palette.toggle_palette()
-
-    def move_palette_selection(self, delta: int) -> None:
-        self.palette.move_palette_selection(delta)
-
-    def select_palette_index(self, index: int) -> None:
-        self.palette.select_palette_index(index)
-
-    def toggle_lights_tool(self) -> None:
-        self.lights.toggle_lights_tool()
-
-    def _toggle_lights_mode(self, enabled: bool) -> None:
-        self.lights.toggle_lights_mode(enabled)
-
-    @property
-    def palette_selected_prefab(self) -> Optional[str]:
-        return self.palette.palette_selected_prefab()
-
     def place_entity_at_mouse(self, x: float, y: float) -> None:
         editor_ops.place_entity_at_mouse(self, x, y)
-
-    def duplicate_selected(self) -> None:
-        editor_ops.duplicate_selected(self)
-
-    def delete_selected(self) -> None:
-        if self.project_explorer_actions.delete_selected_paths_if_active():
-            return
-        editor_ops.delete_selected(self)
-
-    def copy_selected_entity_to_clipboard(self) -> None:
-        """Copy the selected entity to the internal clipboard."""
-        self.clipboard.copy_selected_entity()
-
-    def paste_entity_from_clipboard(
-        self, spawn_world_xy: tuple[float, float] | None = None
-    ) -> None:
-        """Paste an entity from the internal clipboard."""
-        self.clipboard.paste_entity(spawn_world_xy)
-
-    # Clipboard state property accessors for backward compatibility
-    @property
-    def _entity_clipboard(self) -> Optional[Dict[str, Any]]:
-        return self.clipboard.entity_clipboard
-
-    @_entity_clipboard.setter
-    def _entity_clipboard(self, value: Optional[Dict[str, Any]]) -> None:
-        self.clipboard.entity_clipboard = value
-
-    @property
-    def _entity_clipboard_source_id(self) -> Optional[str]:
-        return self.clipboard.entity_clipboard_source_id
-
-    @_entity_clipboard_source_id.setter
-    def _entity_clipboard_source_id(self, value: Optional[str]) -> None:
-        self.clipboard.entity_clipboard_source_id = value
-
-    @property
-    def _hd2d_overrides_clipboard(self) -> Optional[Dict[str, Any]]:
-        return self.clipboard.hd2d_overrides_clipboard
-
-    @_hd2d_overrides_clipboard.setter
-    def _hd2d_overrides_clipboard(self, value: Optional[Dict[str, Any]]) -> None:
-        self.clipboard.hd2d_overrides_clipboard = value
 
     # HD2D preview state accessors (DELEGATED to EditorHd2dController)
     @property
@@ -1500,38 +1155,6 @@ class EditorModeController:
     @_alt_dup_pivot_new_id.setter
     def _alt_dup_pivot_new_id(self, value: str | None) -> None:
         self.duplicate.pivot_new_id = value
-
-    @property
-    def _alt_dup_drag_start_world(self) -> Tuple[float, float] | None:
-        return self.duplicate.drag_start_world
-
-    @_alt_dup_drag_start_world.setter
-    def _alt_dup_drag_start_world(self, value: Tuple[float, float] | None) -> None:
-        self.duplicate.drag_start_world = value
-
-    @property
-    def _alt_dup_last_world(self) -> Tuple[float, float] | None:
-        return self.duplicate.last_world
-
-    @_alt_dup_last_world.setter
-    def _alt_dup_last_world(self, value: Tuple[float, float] | None) -> None:
-        self.duplicate.last_world = value
-
-    @property
-    def _alt_dup_original_selection(self) -> List[str] | None:
-        return self.duplicate.original_selection
-
-    @_alt_dup_original_selection.setter
-    def _alt_dup_original_selection(self, value: List[str] | None) -> None:
-        self.duplicate.original_selection = value
-
-    @property
-    def _alt_dup_original_primary(self) -> str | None:
-        return self.duplicate.original_primary
-
-    @_alt_dup_original_primary.setter
-    def _alt_dup_original_primary(self, value: str | None) -> None:
-        self.duplicate.original_primary = value
 
     # Marquee selection state accessors (DELEGATED to EditorMarqueeController)
     @property
@@ -1592,18 +1215,6 @@ class EditorModeController:
 
     def _related_quest_ids(self, sprite: Optional[optional_arcade.arcade.Sprite]) -> set[str]:
         return self.dialogue._related_quest_ids(sprite)
-
-
-    def set_status(self, message: str, *, seconds: float = 1.5) -> None:
-        self._status_message = str(message)
-        self._status_until = float(time.time()) + float(seconds)
-
-    def _update_status(self) -> None:
-        if not self._status_message:
-            return
-        if float(time.time()) >= float(self._status_until):
-            self._status_message = None
-            self._status_until = 0.0
 
     def _resolve_prefab_source_path(self, prefab_id: str) -> tuple["Path", bool]:
         return self.prefab.resolve_prefab_source_path(prefab_id)
@@ -1722,36 +1333,6 @@ class EditorModeController:
         self.scene_dirty = False
         self.dirty_state.is_dirty = False
 
-    def confirm_unsaved_changes(self, reason: str, action: Callable[[], None]) -> bool:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return False
-        return confirm.confirm_unsaved_changes(reason, action)
-
-    def _close_unsaved_confirm(self, *, clear_pending: bool = False) -> None:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return
-        confirm.close(clear_pending=clear_pending)
-
-    def _run_pending_confirm_action(self) -> None:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return
-        confirm._run_pending_confirm_action()
-
-    def _apply_unsaved_confirm_choice(self, choice_index: int) -> None:
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return
-        confirm.apply_choice(choice_index)
-
-    def _handle_unsaved_confirm_input(self, key: int, modifiers: int) -> bool:  # noqa: ARG002
-        confirm = getattr(self, "unsaved_confirm", None)
-        if confirm is None:
-            return False
-        return confirm.handle_input(key, modifiers)
-
     # -------------------------------------------------------------------------
     # Entity CRUD and Transform Operations
     # DELEGATED to EditorEntityOpsController
@@ -1851,30 +1432,9 @@ class EditorModeController:
         """Delete entity sprite. DELEGATED to EditorEntityOpsController."""
         self.entity_ops.delete_entity_internal(sprite)
 
-    def toggle_hierarchy(self) -> None:
-        self.hierarchy.toggle_hierarchy()
-
-    def toggle_entity_panels(self) -> bool:
-        return self.entity_panels_controller.toggle_entity_panels()
-
-    def toggle_scene_switcher(self) -> bool:
-        return self.scene_browse.toggle_scene_switcher()
-
-    def toggle_scene_browser(self) -> bool:
-        return self.scene_browse.toggle_scene_browser()
-
-    def toggle_command_palette(self) -> bool:
-        return self.search.toggle_command_palette()
-
     # -------------------------------------------------------------------------
     # Find Everything (Ctrl+K)
     # -------------------------------------------------------------------------
-
-    def toggle_find_everything(self) -> bool:
-        return self.search.toggle_find_everything()
-
-    def close_find_everything(self) -> None:
-        self.search.close_find_everything()
 
     # -------------------------------------------------------------------------
     # HD-2D Preset Preview (non-destructive preview while browsing)
@@ -2037,12 +1597,6 @@ class EditorModeController:
         """
         return self.find_actions.activate_find_problem(issue_id)
 
-    def _handle_find_everything_input(self, key: int, modifiers: int) -> bool:
-        return self.search.handle_find_everything_input(key, modifiers)
-
-    def toggle_asset_browser(self) -> bool:
-        return self.asset_browser.toggle_asset_browser()
-
     def refresh_asset_browser(self) -> None:
         self.asset_browser.refresh_asset_browser()
 
@@ -2057,9 +1611,6 @@ class EditorModeController:
 
     def asset_browser_move_selection(self, delta: int) -> None:
         self.asset_browser.asset_browser_move_selection(delta)
-
-    def _handle_asset_browser_input(self, key: int, modifiers: int) -> bool:
-        return self.asset_browser.handle_asset_browser_input(key, modifiers)
 
     def _activate_selected_asset(self) -> None:
         self.asset_browser._activate_selected_asset()
@@ -2139,9 +1690,6 @@ class EditorModeController:
     def _activate_project_explorer_selected(self) -> bool:
         return self.project_explorer_actions.activate_selected()
 
-    def _handle_project_explorer_input(self, key: int, modifiers: int) -> bool:
-        return self.project_explorer_actions.handle_input(key, modifiers)
-
     def _project_explorer_handle_mouse_click(self, x: float, y: float, button: int, modifiers: int) -> bool:
         return self.project_explorer_actions.handle_mouse_click(x, y, button, modifiers)
 
@@ -2205,9 +1753,6 @@ class EditorModeController:
     def jump_undo_history_to(self, cursor_index: int) -> bool:
         return self.history.jump_to(cursor_index)
 
-    def _handle_history_input(self, key: int, modifiers: int) -> bool:  # noqa: ARG002
-        return self.history.handle_input(key, modifiers)
-
     def _history_handle_mouse_click(self, x: float, y: float, button: int) -> bool:
         return self.history.handle_mouse_click(x, y, button)
 
@@ -2250,23 +1795,11 @@ class EditorModeController:
         # Managed by content controller
         pass
 
-    def _problems_input_blocked(self) -> bool:
-        return self.problems.input_blocked(self)
-
     def apply_selected_problem_fix(self) -> bool:
         return self._apply_selected_problem_fix(advance=False)
 
     def apply_fix_all_safe(self) -> bool:
         return self._apply_all_safe_problem_fixes()
-
-    def _open_problems_preview(self) -> bool:
-        return self.problems.open_preview(self)
-
-    def _close_problems_preview(self) -> None:
-        self.problems.close_preview(self)
-
-    def _toggle_problems_preview(self) -> bool:
-        return self.problems.toggle_preview(self)
 
     def _apply_selected_problem_fix(self, *, advance: bool) -> bool:
         return self.problems.apply_selected_fix(self, advance=advance)
@@ -2274,23 +1807,14 @@ class EditorModeController:
     def _apply_all_safe_problem_fixes(self) -> bool:
         return self.problems.apply_all_safe_fixes(self)
 
-    def _problems_toast_no_fix(self) -> None:
-        self.problems._toast_no_fix(self)
-
     def _apply_scene_fix_update(self, new_scene: dict[str, Any]) -> None:
         self.problems._apply_scene_fix_update(self, new_scene)
 
     def _refresh_after_scene_fix(self) -> None:
         self.problems._refresh_after_scene_fix(self)
 
-    def _handle_problems_input(self, key: int, modifiers: int) -> bool:
-        return self.problems.handle_input(self, key, modifiers)
-
     def _problems_handle_mouse_click(self, x: float, y: float, button: int) -> bool:
         return self.problems.handle_mouse_click(self, x, y, button)
-
-    def _debug_handle_mouse_click(self, x: float, y: float, button: int) -> bool:
-        return self.debug_panels.handle_mouse_click(x, y, button)
 
     def _refresh_hierarchy_list(self) -> None:
         self.hierarchy.refresh_hierarchy_list()
@@ -2467,122 +1991,6 @@ class EditorModeController:
         """Compute cursor hint. DELEGATED to EditorCursorController."""
         return self.cursor._compute_cursor_hint(window_w, window_h)
 
-    # -------------------------------------------------------------------------
-    # Marquee Box Selection
-    # DELEGATED to EditorMarqueeController
-    # -------------------------------------------------------------------------
-
-    def begin_marquee(self, world_x: float, world_y: float, shift: bool) -> None:
-        """Begin a marquee box selection.
-
-        DELEGATED to EditorMarqueeController.
-
-        Args:
-            world_x: Start X in world coordinates.
-            world_y: Start Y in world coordinates.
-            shift: Whether Shift modifier is held.
-        """
-        self.marquee.begin(world_x, world_y, shift)
-
-    def update_marquee(self, world_x: float, world_y: float) -> None:
-        """Update marquee end point during drag.
-
-        DELEGATED to EditorMarqueeController.
-
-        Args:
-            world_x: Current X in world coordinates.
-            world_y: Current Y in world coordinates.
-        """
-        self.marquee.update(world_x, world_y)
-
-    def end_marquee(self) -> None:
-        """Commit marquee selection and deactivate.
-
-        DELEGATED to EditorMarqueeController.
-        """
-        self.marquee.end()
-
-    def cancel_marquee(self) -> None:
-        """Cancel marquee selection without committing.
-
-        DELEGATED to EditorMarqueeController.
-        """
-        self.marquee.cancel()
-
-    def _reset_marquee(self) -> None:
-        """Reset marquee state.
-
-        DELEGATED to EditorMarqueeController.
-        """
-        self.marquee.reset()
-
-    # -------------------------------------------------------------------------
-    # Alt-Drag Duplicate
-    # DELEGATED to EditorDuplicateController
-    # -------------------------------------------------------------------------
-
-    def begin_alt_drag_duplicate(self, world_x: float, world_y: float) -> None:
-        """Begin alt-drag duplicate operation.
-
-        DELEGATED to EditorDuplicateController.
-
-        Args:
-            world_x: Start X in world coordinates.
-            world_y: Start Y in world coordinates.
-        """
-        self.duplicate.begin(world_x, world_y)
-
-    def update_alt_drag_duplicate(self, world_x: float, world_y: float) -> None:
-        """Update alt-drag duplicate positions during drag.
-
-        DELEGATED to EditorDuplicateController.
-
-        Args:
-            world_x: Current X in world coordinates.
-            world_y: Current Y in world coordinates.
-        """
-        self.duplicate.update(world_x, world_y)
-
-    def cancel_alt_drag_duplicate(self) -> None:
-        """Cancel alt-drag duplicate and remove duplicated entities.
-
-        DELEGATED to EditorDuplicateController.
-        """
-        self.duplicate.cancel()
-
-    def end_alt_drag_duplicate(self) -> None:
-        """Commit alt-drag duplicate and push undo command.
-
-        DELEGATED to EditorDuplicateController.
-        """
-        self.duplicate.end()
-
-    def _reset_alt_drag_duplicate(self) -> None:
-        """Reset alt-drag duplicate state.
-
-        DELEGATED to EditorDuplicateController.
-        """
-        self.duplicate.reset()
-
-    def _get_entity_tags(self, sprite: optional_arcade.arcade.Sprite) -> List[str]:
-        tags: List[str] = []
-        entity_data = getattr(sprite, "mesh_entity_data", {}) or {}
-        raw_tags = entity_data.get("tags")
-        if isinstance(raw_tags, (list, tuple, set)):
-            for entry in raw_tags:
-                if isinstance(entry, str) and entry.strip():
-                    tags.append(entry.strip())
-        elif isinstance(raw_tags, str) and raw_tags.strip():
-            tags.append(raw_tags.strip())
-
-        single_tag = getattr(sprite, "mesh_tag", None)
-        if isinstance(single_tag, str) and single_tag.strip():
-            tag_value = single_tag.strip()
-            if tag_value not in tags:
-                tags.append(tag_value)
-
-        return tags
-
     def _entity_panels_outliner_lines(self) -> list[str]:
         return self.entity_panels_controller.entity_panels_outliner_lines()
 
@@ -2637,9 +2045,6 @@ class EditorModeController:
     # Component Inspector Input Handling
     # --------------------------------------------------------------------------
 
-    def _handle_inspector_component_input(self, key: int, modifiers: int) -> bool:
-        return self.inspector.handle_inspector_component_input(key, modifiers)
-
     def _get_selected_entity_json_for_inspector(self) -> dict[str, Any] | None:
         return self.inspector.get_selected_entity_json_for_inspector()
 
@@ -2661,18 +2066,9 @@ class EditorModeController:
     def _apply_inspector_to_sprite(self, field_key: str, value: Any) -> None:
         self.inspector.apply_inspector_to_sprite(field_key, value)
 
-    def _handle_inspector_text_input(self, text: str) -> bool:
-        return self.inspector.handle_inspector_text_input(text)
-
     # --------------------------------------------------------------------------
     # Component Inspector v1 Input Handling
     # --------------------------------------------------------------------------
-
-    def _handle_component_inspector_v1_input(self, key: int, modifiers: int) -> bool:
-        return self.inspector.handle_component_inspector_v1_input(key, modifiers)
-
-    def _handle_add_component_picker_input(self, key: int, entity_json: Dict[str, Any]) -> bool:
-        return self.inspector.handle_add_component_picker_input(key, entity_json)
 
     def _component_inspector_commit_text_edit(
         self, entity_json: Dict[str, Any], selection: Optional[Dict[str, Any]]
@@ -2727,43 +2123,8 @@ class EditorModeController:
     def _select_hierarchy_item(self, index: int) -> None:
         self.hierarchy.select_hierarchy_item(index)
 
-    def _handle_hierarchy_input(self, key: int, modifiers: int) -> bool:
-        return self.hierarchy.handle_hierarchy_input(key, modifiers)
 
-    def _handle_entity_panels_input(self, key: int, modifiers: int) -> bool:
-        return self.entity_panels_controller.handle_entity_panels_input(key, modifiers)
+_bind_input_router_methods(EditorModeController)
+_bind_selection_clipboard_methods(EditorModeController)
+_bind_overlays_modals_methods(EditorModeController)
 
-    def _handle_scene_switcher_input(self, key: int, modifiers: int) -> bool:  # noqa: ARG002
-        return self.scene_browse.handle_scene_switcher_input(key, modifiers)
-
-    def _handle_scene_browser_input(self, key: int, modifiers: int) -> bool:  # noqa: ARG002
-        return self.scene_browse.handle_scene_browser_input(key, modifiers)
-
-    def _handle_entity_panels_text_input(self, text: str) -> bool:
-        return self.entity_panels_controller.handle_entity_panels_text_input(text)
-
-    def _handle_scene_switcher_text_input(self, text: str) -> bool:
-        return self.scene_browse.handle_scene_switcher_text_input(text)
-
-    def _handle_scene_browser_text_input(self, text: str) -> bool:
-        return self.scene_browse.handle_scene_browser_text_input(text)
-
-    def _handle_context_menu_input(self, key: int, modifiers: int) -> bool:
-        """Handle key input for the project explorer context menu (modal)."""
-        from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
-
-        if not panels_is_open(self, "project_context_menu"):
-            return False
-        # Route through scoped shortcut dispatch
-        return editor_input._handle_editor_action_shortcut(self, key, modifiers)
-        
-    def open_project_explorer_context_menu(self, x: int, y: int) -> None:
-        """Open the project explorer context menu."""
-        self.project_explorer_actions.open_context_menu(x, y)
-
-    def open_project_explorer_context_menu_at_selection(self) -> None:
-        """Open the context menu anchored to the selected row (keyboard open)."""
-        self.project_explorer_actions.open_context_menu_at_selection()
-
-    def handle_text_input(self, text: str) -> None:
-        editor_input.handle_text_input(self, text)

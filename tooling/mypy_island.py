@@ -67,6 +67,21 @@ ISLAND_PATHFINDING = [
     "engine/pathfinding/astar.py",
 ]
 
+# Services and singleton registry (Phase 38 architecture hardening island)
+ISLAND_SERVICES = [
+    "engine/services/input_service.py",
+    "engine/services/persistence_service.py",
+    "engine/services/replay_service.py",
+    "engine/singletons.py",
+    "engine/log_utils.py",
+    "engine/diagnostics.py",
+    "engine/combat_constants.py",
+    "engine/combat_model.py",
+    "engine/hud_model.py",
+    "engine/player_actions.py",
+    "mesh_cli/replay_digest_projection.py",
+]
+
 # Combine all island modules
 TYPED_ISLAND_MODULES: tuple[str, ...] = tuple(
     ISLAND_INPUT_RUNTIME
@@ -75,6 +90,7 @@ TYPED_ISLAND_MODULES: tuple[str, ...] = tuple(
     + ISLAND_EDITOR_MODELS
     + ISLAND_SPRITE
     + ISLAND_PATHFINDING
+    + ISLAND_SERVICES
 )
 
 

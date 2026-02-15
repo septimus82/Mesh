@@ -1,18 +1,16 @@
 import os
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 from .config import EngineConfig, load_config
+from .content_index import ContentIndex
 from .repo_root import find_repo_root
-
-if TYPE_CHECKING:
-    from .content_index import ContentIndex
 
 _CACHED_CONFIG: Optional[EngineConfig] = None
 _CONTENT_ROOTS: Optional[List[Path]] = None
 _CONTENT_ROOTS_SIG: Optional[tuple[str, str]] = None
-_CONTENT_INDEX: Optional["ContentIndex"] = None
+_CONTENT_INDEX: Optional[ContentIndex] = None
 _CONTENT_INDEX_ROOTS: Optional[tuple[Path, ...]] = None
 
 def _relativize(target: Path, base: Path) -> Path:
@@ -111,11 +109,9 @@ def reset_path_caches() -> None:
     _CONTENT_INDEX = None
     _CONTENT_INDEX_ROOTS = None
 
-def get_content_index(refresh: bool = False) -> "ContentIndex":
+def get_content_index(refresh: bool = False) -> ContentIndex:
     """Get or create the content index."""
     global _CONTENT_INDEX, _CONTENT_INDEX_ROOTS
-    # Import here to avoid circular dependency
-    from .content_index import ContentIndex
 
     current_roots = tuple(get_content_roots())
     if _CONTENT_INDEX is None or _CONTENT_INDEX_ROOTS != current_roots:

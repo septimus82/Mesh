@@ -1,0 +1,170 @@
+{
+  "name": "Town Schedule 01",
+  "version": 1,
+  "schema_version": 1,
+  "settings": {
+    "tilemap": null,
+    "background_color": "#2a3a4a"
+  },
+  "entities": [
+    {
+      "id": "player",
+      "name": "Player",
+      "prefab_id": "player",
+      "x": 64,
+      "y": 256
+    },
+    {
+      "id": "town_entry_trigger",
+      "name": "TownEntryTrigger",
+      "prefab_id": "town_entry_trigger",
+      "x": 128,
+      "y": 256
+    },
+    {
+      "id": "vendor_npc",
+      "name": "VendorNpc",
+      "prefab_id": "town_vendor_npc",
+      "x": 200,
+      "y": 256
+    },
+    {
+      "id": "night_gate",
+      "name": "NightGate",
+      "prefab_id": "town_night_gate",
+      "x": 500,
+      "y": 256
+    },
+    {
+      "id": "secret_trigger",
+      "name": "SecretTrigger",
+      "prefab_id": "town_secret_trigger",
+      "x": 550,
+      "y": 256
+    },
+
+    {
+      "id": "town_init",
+      "name": "TownInit",
+      "prefab_id": "town_controller",
+      "x": 0,
+      "y": 0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["town_entered"],
+          "actions": [
+            { "type": "set_flag", "flag": "town.entered" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "vendor_open_ctrl",
+      "name": "VendorOpenCtrl",
+      "prefab_id": "town_controller",
+      "x": 0,
+      "y": 0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["vendor_opened"],
+          "actions": [
+            { "type": "set_flag", "flag": "vendor.open" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "vendor_close_ctrl",
+      "name": "VendorCloseCtrl",
+      "prefab_id": "town_controller",
+      "x": 0,
+      "y": 0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["vendor_closed"],
+          "actions": [
+            { "type": "clear_flag", "flag": "vendor.open" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "vendor_interact_gate",
+      "name": "VendorInteractGate",
+      "prefab_id": "town_controller",
+      "x": 0,
+      "y": 0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["vendor_interact_attempt"],
+          "require_flags": ["vendor.open"],
+          "actions": [
+            { "type": "set_flag", "flag": "vendor.met" },
+            { "type": "emit_event", "event_type": "vendor_interacted" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "gate_open_ctrl",
+      "name": "GateOpenCtrl",
+      "prefab_id": "town_controller",
+      "x": 0,
+      "y": 0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["gate_opened"],
+          "actions": [
+            { "type": "set_flag", "flag": "gate.open" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "secret_found_ctrl",
+      "name": "SecretFoundCtrl",
+      "prefab_id": "town_controller",
+      "x": 0,
+      "y": 0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["secret_found"],
+          "require_flags": ["gate.open"],
+          "actions": [
+            { "type": "set_flag", "flag": "secret.found" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "campaign_town_done_ctrl",
+      "name": "CampaignTownDone",
+      "prefab_id": "campaign_controller",
+      "x": 0,
+      "y": 0,
+      "behaviour_config": {
+        "ActionListRunner": {
+          "listen_events": ["quest_town_complete"],
+          "actions": [
+            { "type": "set_flag", "flag": "campaign.town_complete" },
+            { "type": "emit_event", "event_type": "go_to_puzzle_room_03" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "town_exit_to_puzzle",
+      "name": "TownExitToPuzzle",
+      "prefab_id": "campaign_portal",
+      "x": 600,
+      "y": 256,
+      "behaviour_config": {
+        "SceneExit": {
+          "listen_event": "go_to_puzzle_room_03",
+          "target_scene": "scenes/puzzle_room_03.json",
+          "target_spawn": "puzzle_room_03_player"
+        }
+      }
+    }
+  ]
+}

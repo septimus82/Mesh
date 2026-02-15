@@ -1,5 +1,5 @@
 from typing import Callable, List, Optional
-from engine.optional_arcade import arcade
+import engine.optional_arcade as optional_arcade
 from typing import TYPE_CHECKING
 from engine.editor.confirm_modal_window_model import clamp_scroll, slice_lines
 
@@ -65,38 +65,38 @@ class EditorConfirmModalController:
 
     def handle_input(self, key: int, modifiers: int) -> bool:
         """Handle input for the modal (Enter/Esc/D/Nav)."""
-        if key == arcade.key.ENTER:
+        if key == optional_arcade.arcade.key.ENTER:
             self.execute_confirm()
             return True
-        elif key == arcade.key.ESCAPE:
+        elif key == optional_arcade.arcade.key.ESCAPE:
             self.execute_cancel()
             return True
-        elif key == arcade.key.D:
+        elif key == optional_arcade.arcade.key.D:
             self.details_expanded = not self.details_expanded
             # Re-clamp scroll if viewport shrank
             self._clamp_scroll()
             return True
-        elif key == arcade.key.UP:
+        elif key == optional_arcade.arcade.key.UP:
             self.scroll_y -= 1
             self._clamp_scroll()
             return True
-        elif key == arcade.key.DOWN:
+        elif key == optional_arcade.arcade.key.DOWN:
             self.scroll_y += 1
             self._clamp_scroll()
             return True
-        elif key == arcade.key.PAGE_UP:
+        elif key == optional_arcade.arcade.key.PAGE_UP:
             self.scroll_y -= self.visible_rows_count
             self._clamp_scroll()
             return True
-        elif key == arcade.key.PAGE_DOWN:
+        elif key == optional_arcade.arcade.key.PAGE_DOWN:
             self.scroll_y += self.visible_rows_count
             self._clamp_scroll()
             return True
-        elif key == arcade.key.HOME:
+        elif key == optional_arcade.arcade.key.HOME:
             self.scroll_y = 0
             self._clamp_scroll()
             return True
-        elif key == arcade.key.END:
+        elif key == optional_arcade.arcade.key.END:
             self.scroll_y = len(self._all_message_lines)
             self._clamp_scroll()
             return True

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from ..event_emit import emit_gameplay_event
 from ..gameplay_event_bus import EventConfigError, validate_event_type
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -174,27 +175,21 @@ class TimerBehaviour(Behaviour):
     
     def _emit_event(self) -> None:
         """Emit the timer event."""
-        bus = getattr(self.window, "gameplay_event_bus", None)
         my_id = getattr(self.entity, "mesh_id", "")
-        
-        if bus is not None:
-            bus.emit(
-                self.timer_event,
-                source_entity=my_id,
-                source_behaviour="Timer",
-                timer_id=self.timer_id or my_id,
-                entity=my_id,
-                entity_name=getattr(self.entity, "mesh_name", ""),
-                fire_count=self._fire_count,
-                duration=self.duration,
-            )
-        elif hasattr(self.window, "event_bus"):
-            self.window.event_bus.emit(
-                self.timer_event,
-                timer_id=self.timer_id or my_id,
-                entity=my_id,
-                fire_count=self._fire_count,
-            )
+        payload = {
+            "timer_id": self.timer_id or my_id,
+            "entity": my_id,
+            "entity_name": getattr(self.entity, "mesh_name", ""),
+            "fire_count": self._fire_count,
+            "duration": self.duration,
+        }
+        emit_gameplay_event(
+            self.window,
+            self.timer_event,
+            payload,
+            source_entity_id=my_id,
+            source_behaviour="Timer",
+        )
     
     def update(self, dt: float) -> None:
         """Update timer and fire if duration reached."""

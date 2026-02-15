@@ -1,0 +1,51 @@
+{
+  "actions": [
+    {
+      "event": "ep01_entered",
+      "t": 0,
+      "type": "emit"
+    },
+    {
+      "choice": 0,
+      "t": 2,
+      "type": "dialogue_choose"
+    },
+    {
+      "entity": "episode_01_journal",
+      "t": 3,
+      "type": "interact"
+    },
+    {
+      "flag": "ep01.exit_unlocked",
+      "t": 4,
+      "type": "assert_flag",
+      "value": true
+    },
+    {
+      "entity": "episode_01_exit_door",
+      "t": 5,
+      "type": "interact"
+    },
+    {
+      "flag": "ep01.complete",
+      "t": 7,
+      "type": "assert_flag",
+      "value": true
+    }
+  ],
+  "dt_schedule": [
+    0.2,
+    0.2,
+    0.2,
+    0.1,
+    0.1,
+    0.2,
+    0.2,
+    0.2
+  ],
+  "steps": [
+    {
+      "dump_state": true
+    }
+  ]
+}

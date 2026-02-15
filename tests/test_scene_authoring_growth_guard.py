@@ -43,39 +43,40 @@ def _collect_illegal_scene_controller_imports(module: ast.AST) -> list[str]:
 
 def test_scene_authoring_does_not_regrow() -> None:
     """
-    Guard against `engine/scene_runtime/authoring.py` regrowing.
+    Guard against `engine/scene_runtime/authoring/__init__.py` regrowing.
 
     This is intentionally text-based (no imports) to avoid side-effects and to keep it fast.
     """
 
-    authoring_path = (Path(__file__).resolve().parents[1] / "engine" / "scene_runtime" / "authoring.py").resolve()
-    assert authoring_path.exists(), f"missing authoring module: {authoring_path}"
+    package_root = (Path(__file__).resolve().parents[1] / "engine" / "scene_runtime" / "authoring").resolve()
+    authoring_path = (package_root / "__init__.py").resolve()
+    assert package_root.exists(), f"missing authoring package: {package_root}"
+    assert authoring_path.exists(), f"missing authoring facade: {authoring_path}"
 
     text = authoring_path.read_text(encoding="utf-8")
     lines = text.splitlines()
     nonempty = [line for line in lines if line.strip()]
 
-    # Baseline captured when this guard was introduced.
-    BASELINE_NONEMPTY_LINES = 1514
+    # Baseline captured when the facade split landed.
+    BASELINE_NONEMPTY_LINES = 103
 
     # Allow small incidental growth, but fail on large additions in a single PR.
-    MAX_NONEMPTY_GROWTH = 30
+    MAX_NONEMPTY_GROWTH = 20
 
     # Hard budget slightly above the current baseline.
-    NONEMPTY_BUDGET = 1560
+    NONEMPTY_BUDGET = 140
 
     assert len(nonempty) <= NONEMPTY_BUDGET, (
         f"{authoring_path} grew too large: nonempty_lines={len(nonempty)} > budget={NONEMPTY_BUDGET}. "
-        "Move unrelated runtime logic out of authoring helpers and keep it focused on debug/authoring utilities."
+        "Keep authoring/__init__.py as a thin facade and move logic into authoring/*_ops modules."
     )
 
     assert len(nonempty) <= BASELINE_NONEMPTY_LINES + MAX_NONEMPTY_GROWTH, (
         f"{authoring_path} regrew unexpectedly: nonempty_lines={len(nonempty)} > "
         f"baseline={BASELINE_NONEMPTY_LINES} + max_growth={MAX_NONEMPTY_GROWTH}. "
-        "Refactor shared helpers into smaller modules instead of adding more logic here."
+        "Refactor shared helpers into authoring/*_ops modules instead of expanding the facade."
     )
 
     parsed = ast.parse(text, filename=str(authoring_path))
     illegal_imports = _collect_illegal_scene_controller_imports(parsed)
     assert not illegal_imports, f"{authoring_path} must not import scene_controller at runtime:\n" + "\n".join(illegal_imports)
-

@@ -16,12 +16,22 @@ def _clamp01(value: Any, default: float) -> float:
     return f
 
 
+def _clamp_text_scale(value: Any, default: float = 1.0) -> float:
+    """Clamp text_scale to [0.5, 3.0]."""
+    try:
+        f = float(value)
+    except Exception:  # noqa: BLE001
+        f = float(default)
+    return max(0.5, min(3.0, f))
+
+
 @dataclass(slots=True)
 class RuntimeSettings:
     music_volume: float = 1.0
     sfx_volume: float = 1.0
     fog_enabled: bool = False
     soft_shadows_enabled: bool = False
+    text_scale: float = 1.0
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -29,6 +39,7 @@ class RuntimeSettings:
             "sfx_volume": float(_clamp01(self.sfx_volume, 1.0)),
             "fog_enabled": bool(self.fog_enabled),
             "soft_shadows_enabled": bool(self.soft_shadows_enabled),
+            "text_scale": float(_clamp_text_scale(self.text_scale)),
         }
 
     @classmethod
@@ -38,6 +49,7 @@ class RuntimeSettings:
             sfx_volume=_clamp01(getattr(cfg, "sfx_volume", 1.0), 1.0),
             fog_enabled=bool(getattr(cfg, "fog_enabled", False)),
             soft_shadows_enabled=bool(getattr(cfg, "soft_shadows_enabled", False)),
+            text_scale=_clamp_text_scale(getattr(cfg, "text_scale", 1.0)),
         )
 
     @classmethod
@@ -55,17 +67,20 @@ class RuntimeSettings:
                 sfx_volume=base.sfx_volume,
                 fog_enabled=base.fog_enabled,
                 soft_shadows_enabled=base.soft_shadows_enabled,
+                text_scale=base.text_scale,
             )
         return cls(
             music_volume=_clamp01(payload.get("music_volume", base.music_volume), base.music_volume),
             sfx_volume=_clamp01(payload.get("sfx_volume", base.sfx_volume), base.sfx_volume),
             fog_enabled=bool(payload.get("fog_enabled", base.fog_enabled)),
             soft_shadows_enabled=bool(payload.get("soft_shadows_enabled", base.soft_shadows_enabled)),
+            text_scale=_clamp_text_scale(payload.get("text_scale", base.text_scale)),
         )
 
     def apply(self, window: Any) -> None:
         self.music_volume = _clamp01(self.music_volume, 1.0)
         self.sfx_volume = _clamp01(self.sfx_volume, 1.0)
+        self.text_scale = _clamp_text_scale(self.text_scale)
 
         audio = getattr(window, "audio", None)
         if audio is not None:
@@ -94,6 +109,13 @@ class RuntimeSettings:
                 cfg.soft_shadows_enabled = bool(self.soft_shadows_enabled)
             except Exception:  # noqa: BLE001
                 pass
+
+        # Push text scale to the text drawing module
+        try:
+            from engine.text_draw import set_text_scale
+            set_text_scale(self.text_scale)
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def ensure_runtime_settings(window: Any) -> RuntimeSettings:

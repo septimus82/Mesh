@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import engine.console_controller as console_module
+import engine.console_runtime.handlers_ai as ai_handler_module
 from engine.console_controller import ConsoleController
 
 
@@ -25,8 +25,8 @@ def test_ai_job_calls_ops_and_reload(monkeypatch, tmp_path: Path):
         assert str(path) == str(job_path)
         return job
 
-    monkeypatch.setattr(console_module, "AIOps", DummyOps)
-    monkeypatch.setattr(console_module, "load_job", fake_load_job)
+    monkeypatch.setattr(ai_handler_module, "AIOps", DummyOps)
+    monkeypatch.setattr(ai_handler_module, "load_job", fake_load_job)
 
     class DummyWindow:
         def __init__(self):

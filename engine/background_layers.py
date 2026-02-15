@@ -4,7 +4,10 @@ from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 import engine.optional_arcade as optional_arcade
 
+from .logging_tools import get_logger
 from .paths import resolve_path
+
+logger = get_logger(__name__)
 
 
 class TextureLike(Protocol):
@@ -36,12 +39,12 @@ class BackgroundTextureCache:
         if cached is not None:
             return cached
         if not resolved.exists():
-            print(f"[Mesh][Backgrounds] WARNING: missing background texture '{raw}'")
+            logger.warning("Missing background texture '%s'", raw)
             return None
         try:
             tex = optional_arcade.arcade.load_texture(str(resolved))
         except Exception as exc:  # noqa: BLE001
-            print(f"[Mesh][Backgrounds] WARNING: failed to load texture '{raw}': {exc}")
+            logger.warning("Failed to load texture '%s': %s", raw, exc)
             return None
         self._cache[key] = tex
         return tex
@@ -76,41 +79,41 @@ def parse_background_layers(scene_payload: dict[str, Any]) -> list[BackgroundLay
     if raw is None:
         return []
     if not isinstance(raw, list):
-        print("[Mesh][Backgrounds] WARNING: scene.background_layers must be an array; ignoring")
+        logger.warning("scene.background_layers must be an array; ignoring")
         return []
 
     layers: list[BackgroundLayer] = []
     seen: set[str] = set()
     for idx, entry in enumerate(raw):
         if not isinstance(entry, dict):
-            print(f"[Mesh][Backgrounds] WARNING: background_layers[{idx}] must be an object; skipping")
+            logger.warning("background_layers[%d] must be an object; skipping", idx)
             continue
         layer_id = entry.get("id")
         if not isinstance(layer_id, str) or not layer_id.strip():
-            print(f"[Mesh][Backgrounds] WARNING: background_layers[{idx}].id must be a non-empty string; skipping")
+            logger.warning("background_layers[%d].id must be a non-empty string; skipping", idx)
             continue
         layer_id = layer_id.strip()
         if layer_id in seen:
-            print(f"[Mesh][Backgrounds] WARNING: duplicate background layer id '{layer_id}'; skipping")
+            logger.warning("Duplicate background layer id '%s'; skipping", layer_id)
             continue
         seen.add(layer_id)
 
         path = entry.get("path")
         if not isinstance(path, str) or not path.strip():
-            print(f"[Mesh][Backgrounds] WARNING: background_layers[{idx}].path must be a non-empty string; skipping")
+            logger.warning("background_layers[%d].path must be a non-empty string; skipping", idx)
             continue
 
         z = entry.get("z")
         if not isinstance(z, int):
-            print(f"[Mesh][Backgrounds] WARNING: background_layers[{idx}].z must be an int; skipping")
+            logger.warning("background_layers[%d].z must be an int; skipping", idx)
             continue
 
         parallax_value = entry.get("parallax", 1.0)
         try:
             parallax = float(parallax_value)
         except (TypeError, ValueError):
-            print(
-                f"[Mesh][Backgrounds] WARNING: background_layers[{idx}].parallax must be a number; defaulting to 1.0"
+            logger.warning(
+                "background_layers[%d].parallax must be a number; defaulting to 1.0", idx
             )
             parallax = 1.0
         parallax = max(0.0, min(2.0, parallax))

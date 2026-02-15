@@ -67,6 +67,11 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     scaffold_obj.add_argument("--flag-mid", required=True, dest="flag_mid", help="Objective midpoint flag")
     scaffold_obj.add_argument("--flag-done", required=True, dest="flag_done", help="Objective done flag")
 
+    # Demo pipeline (full orchestration)
+    from . import demo as demo_pipeline  # noqa: PLC0415
+
+    demo_pipeline.register_subcommand(demo_subparsers)
+
     # Wizard
     wizard_parser = subparsers.add_parser("wizard", help="Interactive content wizard")
     wizard_command.add_wizard_arguments(wizard_parser)

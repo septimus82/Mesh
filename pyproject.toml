@@ -64,6 +64,7 @@ exclude = [
     "tests",
     "build",
     "dist",
+    "artifacts",
 ]
 
 [[tool.mypy.overrides]]
@@ -87,6 +88,25 @@ module = [
     "engine.sensors_model",
     "engine.editor.project_explorer_rank_model",
     "engine.physics_broadphase_key_model",
+    "engine.spatial_hash_model",
+    "engine.render_sort_model",
+    "engine.scene_entity_ops_model",
+    "engine.scene_lifecycle_model",
+    "engine.scene_navigation_model",
+    "engine.scene_transition_policy_model",
+    "engine.scene_update_model",
+    "engine.depth_tint_model",
+    "engine.hd2d_debug_model",
+    "engine.hud_model",
+    "engine.combat_model",
+    "engine.events",
+    "engine.game_state_controller",
+    "engine.camera_controller",
+    "engine.audio",
+    "engine.assets",
+    "engine.config",
+    "engine.rng_service",
+    "engine.json_io",
 ]
 disallow_any_generics = true
 warn_return_any = true

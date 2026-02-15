@@ -6,6 +6,7 @@ from pathlib import Path
 
 from engine import json_io
 from engine.tooling import check, polish
+from mesh_cli.version_info import get_tool_version
 
 
 def handle_build_demo(args: argparse.Namespace) -> int:
@@ -102,11 +103,9 @@ def handle_build_demo(args: argparse.Namespace) -> int:
 
     fingerprint = compute_content_fingerprint(lock_data)
     print(f"[Mesh][Build] Content Fingerprint: {fingerprint[:12]}")
-    from engine.version import ENGINE_VERSION
-
     manifest = {
         "build_timestamp": time.time(),
-        "engine_version": ENGINE_VERSION,
+        "engine_version": get_tool_version(),
         "world_id": "main_world",
         "content_fingerprint": fingerprint,
         "audit_summary": {

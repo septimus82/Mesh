@@ -3,7 +3,7 @@
 import ast
 from pathlib import Path
 
-MAX_SCENE_CONTROLLER_LINES = 2419
+MAX_SCENE_CONTROLLER_LINES = 2379
 MAX_METHOD_LINES = {
     "load_scene": 20,
     "reload_scene": 20,

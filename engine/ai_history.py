@@ -3,6 +3,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, NotRequired, Sequence, TypedDict, cast
 
+from engine.logging_tools import get_logger
+
+logger = get_logger(__name__)
+
 HISTORY_FILE = Path(".mesh/ai_history.jsonl")
 
 
@@ -34,7 +38,7 @@ def append_history_entry(
         with open(HISTORY_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
     except Exception as e:
-        print(f"[Mesh][History] Warning: Failed to append history: {e}")
+        logger.warning("Failed to append history: %s", e)
 
 def load_history() -> list[AIHistoryEntry]:
     """Load all history entries from the log."""
@@ -53,7 +57,7 @@ def load_history() -> list[AIHistoryEntry]:
                     except json.JSONDecodeError:
                         continue
     except Exception as e:
-        print(f"[Mesh][History] Warning: Failed to load history: {e}")
+        logger.warning("Failed to load history: %s", e)
 
     return entries
 

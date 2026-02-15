@@ -1,0 +1,522 @@
+{
+  "entities": [
+    {
+      "id": "episode_01_player",
+      "layer": "entities",
+      "name": "Episode01Player",
+      "prefab_id": "player",
+      "x": 64.0,
+      "y": 192.0
+    },
+    {
+      "id": "episode_01_entry_trigger",
+      "layer": "background",
+      "name": "Episode01EntryTrigger",
+      "prefab_id": "ep01_trigger",
+      "x": 96.0,
+      "y": 192.0
+    },
+    {
+      "id": "episode_01_mentor",
+      "layer": "entities",
+      "name": "Episode01Mentor",
+      "prefab_id": "npc_mentor",
+      "x": 256.0,
+      "y": 192.0
+    },
+    {
+      "id": "episode_01_journal",
+      "layer": "entities",
+      "name": "Episode01Journal",
+      "prefab_id": "ep01_reward",
+      "x": 352.0,
+      "y": 192.0
+    },
+    {
+      "id": "episode_01_exit_door",
+      "layer": "entities",
+      "name": "Episode01ExitDoor",
+      "prefab_id": "ep01_door",
+      "x": 512.0,
+      "y": 192.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep01.entered",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep01_intro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep01_entered"
+          ]
+        }
+      },
+      "id": "episode_01_intro_start_ctrl",
+      "layer": "background",
+      "name": "Episode01IntroStart",
+      "prefab_id": "ep01_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep01.choice_help",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep01.choice_solo",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep01_choice_made",
+              "payload": {
+                "choice": "help"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "I can help."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_01_choice_help_ctrl",
+      "layer": "background",
+      "name": "Episode01ChoiceHelp",
+      "prefab_id": "ep01_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep01.choice_solo",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep01.choice_help",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "ep01_choice_made",
+              "payload": {
+                "choice": "solo"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "I work alone."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ]
+        }
+      },
+      "id": "episode_01_choice_solo_ctrl",
+      "layer": "background",
+      "name": "Episode01ChoiceSolo",
+      "prefab_id": "ep01_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep01.exit_unlocked",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep01_exit_unlocked",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep01_clue_found"
+          ],
+          "require_flags": [
+            "ep01.choice_help"
+          ]
+        }
+      },
+      "id": "episode_01_unlock_help_ctrl",
+      "layer": "background",
+      "name": "Episode01UnlockHelp",
+      "prefab_id": "ep01_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep01.exit_unlocked",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "ep01_exit_unlocked",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep01_clue_found"
+          ],
+          "require_flags": [
+            "ep01.choice_solo"
+          ]
+        }
+      },
+      "id": "episode_01_unlock_solo_ctrl",
+      "layer": "background",
+      "name": "Episode01UnlockSolo",
+      "prefab_id": "ep01_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "event_type": "ep01_outro_start",
+              "type": "emit_event"
+            }
+          ],
+          "listen_events": [
+            "ep01_exit_door_interact"
+          ],
+          "require_flags": [
+            "ep01.exit_unlocked"
+          ]
+        }
+      },
+      "id": "episode_01_outro_ctrl",
+      "layer": "background",
+      "name": "Episode01OutroStart",
+      "prefab_id": "ep01_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "ep01.complete",
+              "type": "set_flag"
+            }
+          ],
+          "listen_events": [
+            "ep01_complete"
+          ]
+        }
+      },
+      "id": "episode_01_complete_ctrl",
+      "layer": "background",
+      "name": "Episode01Complete",
+      "prefab_id": "ep01_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign02.started",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "campaign02_started",
+              "payload": {
+                "campaign_id": "mini_campaign_02"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign02.started"
+          ],
+          "listen_events": [
+            "ep01_entered"
+          ]
+        }
+      },
+      "id": "episode_01_campaign02_start_ctrl",
+      "layer": "background",
+      "name": "Episode01Campaign02Start",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign02.ep01_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep01.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep01.choice_help",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep01.choice_solo",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep01.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "go_to_episode_02_ep02",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign02.ep01_complete"
+          ],
+          "listen_events": [
+            "quest_episode_01_complete"
+          ]
+        }
+      },
+      "id": "episode_01_campaign02_done_ctrl",
+      "layer": "background",
+      "name": "Episode01Campaign02Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "SceneExit": {
+          "listen_event": "go_to_episode_02_ep02",
+          "target_scene": "scenes/episode_02_ep02.json",
+          "target_spawn": ""
+        }
+      },
+      "id": "episode_01_exit_to_ep02",
+      "layer": "entities",
+      "name": "Episode01ExitToEpisode02",
+      "prefab_id": "campaign_portal",
+      "x": 600.0,
+      "y": 192.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign03.helped_mentor",
+              "type": "set_flag"
+            },
+            {
+              "event_type": "campaign03.helped_mentor",
+              "payload": {
+                "choice": "help"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "I can help."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ],
+          "require_flags": [
+            "campaign03.active"
+          ]
+        }
+      },
+      "id": "episode_01_campaign03_help_payoff_ctrl",
+      "layer": "background",
+      "name": "Episode01Campaign03HelpPayoff",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign03.helped_mentor",
+              "type": "clear_flag"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "I work alone."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ],
+          "require_flags": [
+            "campaign03.active"
+          ]
+        }
+      },
+      "id": "episode_01_campaign03_solo_payoff_ctrl",
+      "layer": "background",
+      "name": "Episode01Campaign03SoloPayoff",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign03.started",
+              "type": "set_flag"
+            },
+            {
+              "flag": "campaign03.helped_mentor",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "campaign03_started",
+              "payload": {
+                "campaign_id": "mini_campaign_03"
+              },
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign03.started"
+          ],
+          "listen_events": [
+            "ep01_entered"
+          ],
+          "require_flags": [
+            "campaign03.active"
+          ]
+        }
+      },
+      "id": "episode_01_campaign03_start_ctrl",
+      "layer": "background",
+      "name": "Episode01Campaign03Start",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign03.ep01_complete",
+              "type": "set_flag"
+            },
+            {
+              "flag": "ep01.entered",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep01.choice_help",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep01.choice_solo",
+              "type": "clear_flag"
+            },
+            {
+              "flag": "ep01.exit_unlocked",
+              "type": "clear_flag"
+            },
+            {
+              "event_type": "go_to_episode_02_ep02",
+              "type": "emit_event"
+            }
+          ],
+          "forbid_flags": [
+            "campaign03.ep01_complete"
+          ],
+          "listen_events": [
+            "quest_episode_01_complete"
+          ],
+          "require_flags": [
+            "campaign03.active"
+          ]
+        }
+      },
+      "id": "episode_01_campaign03_done_ctrl",
+      "layer": "background",
+      "name": "Episode01Campaign03Done",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "behaviour_config": {
+        "ActionListRunner": {
+          "actions": [
+            {
+              "flag": "campaign04.helped_mentor",
+              "type": "set_flag"
+            }
+          ],
+          "event_filter": {
+            "choice_text": "I can help."
+          },
+          "listen_events": [
+            "dialogue_choice"
+          ],
+          "require_flags": [
+            "campaign04.active"
+          ]
+        }
+      },
+      "id": "episode_01_campaign04_help_payoff_ctrl",
+      "layer": "background",
+      "name": "Episode01Campaign04HelpPayoff",
+      "prefab_id": "campaign_controller",
+      "x": 0.0,
+      "y": 0.0
+    }
+  ],
+  "layers": [
+    {
+      "name": "background"
+    },
+    {
+      "name": "entities"
+    },
+    {
+      "name": "foreground"
+    }
+  ],
+  "name": "Episode 01 Intro",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "#1e2a38",
+    "world_height": 384,
+    "world_width": 640
+  },
+  "version": 1
+}

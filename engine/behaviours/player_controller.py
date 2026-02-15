@@ -5,6 +5,12 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING
 
+from ..player_actions import (
+    PlayerActionState,
+    build_player_input_snapshot,
+    dispatch_attack_action,
+    map_input_to_actions,
+)
 from ..animation_state import request_animation_state
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -38,7 +44,7 @@ class PlayerController(Behaviour):
     def __init__(self, entity: "optional_arcade.arcade.Sprite", window, **config):  # type: ignore[override]
         super().__init__(entity, window, **config)
         self.speed = float(self.config.get("speed", 150.0))
-        self._interact_was_down = False
+        self._action_state = PlayerActionState()
         self._facing = "down"
 
     def update(self, dt: float) -> None:
@@ -47,13 +53,31 @@ class PlayerController(Behaviour):
 
         if self._player_input_disabled():
             if input_manager is not None:
-                self._interact_was_down = input_manager.is_action_down("interact")
+                _, self._action_state = map_input_to_actions(
+                    build_player_input_snapshot(
+                        input_manager,
+                        move_x=0.0,
+                        move_y=0.0,
+                    ),
+                    self._action_state,
+                )
             self._sync_animation_state(0.0, 0.0)
             return
 
+        decision = None
         if input_manager is not None:
             vx = input_manager.get_axis("move_left", "move_right")
             vy = input_manager.get_axis("move_down", "move_up")
+            decision, self._action_state = map_input_to_actions(
+                build_player_input_snapshot(
+                    input_manager,
+                    move_x=vx,
+                    move_y=vy,
+                ),
+                self._action_state,
+            )
+            vx = decision.move_x
+            vy = decision.move_y
         else:  # Fallback for legacy windows without an InputManager.
             keys = self.window.get_pressed_keys()
             vx = 0.0
@@ -119,8 +143,8 @@ class PlayerController(Behaviour):
                 )
                 dispatch_events(scene_controller, b_events)
 
-        self._handle_interact(input_manager)
-        self._handle_attack(input_manager)
+        self._handle_interact(decision.interact_triggered if decision is not None else False)
+        self._handle_attack(decision.attack_triggered if decision is not None else False)
 
     def on_sensor_enter(self, sensor_id: str) -> None:
         """Hook for sensor entry."""
@@ -166,29 +190,19 @@ class PlayerController(Behaviour):
                         setattr(self, "_mesh_set_facing_error_logged", True)
                 break
 
-    def _handle_interact(self, input_manager) -> None:
-        if input_manager is None:
-            return
-
-        interact_down = input_manager.is_action_down("interact")
-        if interact_down and not self._interact_was_down:
+    def _handle_interact(self, interact_triggered: bool) -> None:
+        if interact_triggered:
             if getattr(self.window, "_mesh_interact_consumed", False):
                 setattr(self.window, "_mesh_interact_consumed", False)
             else:
                 self._perform_interaction()
             request_animation_state(self.entity, "interact", priority=25.0, ttl=0.35)
-        self._interact_was_down = interact_down
 
-    def _handle_attack(self, input_manager) -> None:
-        if input_manager is None:
+    def _handle_attack(self, attack_triggered: bool) -> None:
+        if not attack_triggered:
             return
 
-        if input_manager.is_action_down("attack"):
-            behaviours = getattr(self.entity, "mesh_behaviours_runtime", [])
-            for behaviour in behaviours:
-                if hasattr(behaviour, "attack"):
-                    behaviour.attack()
-                    break
+        dispatch_attack_action(self.entity, self.window)
 
     def _perform_interaction(self) -> None:
         window = getattr(self, "window", None)

@@ -1,0 +1,42 @@
+{
+  "counts": {
+    "event_count": 241,
+    "snapshot_count": 47,
+    "world_digest_count": 47
+  },
+  "expected_event_digest": "c7e25476e2a7efb425143c2d63860d66a3f71dbc74bf849e4181a0c6849600d8",
+  "expected_final_state_digest": "03d738348c53d18fce4e70c0172fefad4a76b76ce4358b8e925f7400ca1b5a1b",
+  "expected_world_digest": "deb15f527d6e582f42b3a213bf85615c940ac8e8f6effb9d793ee392bfaa1707",
+  "id": "campaign04_bonus",
+  "run_determinism": {
+    "digests_match": true,
+    "events_match": true,
+    "final_state_match": true
+  },
+  "run_ok": true,
+  "sample": {
+    "events_first": [
+      "ep01_entered",
+      "campaign04_started",
+      "action_list_started"
+    ],
+    "events_last": [
+      "ep05_complete",
+      "action_list_started",
+      "action_list_completed"
+    ],
+    "world_digests_first": [
+      "59258c143d875782a2dd4a745de8e21f7d12e93cbf90889db535df1df7f0a20b",
+      "32cb77787e0630319fa40d5bfb70f9c5e630c3ddc676a849068ff22c3295b098",
+      "06efe8ea33384c36c82f7964e68464bbe869e02292a2aedfbc43aeeda7a58419"
+    ],
+    "world_digests_last": [
+      "cd6e7b7761d6f2431718b1fbdea58f716b1f9d4781fc2d23cc64dd1c0905b933",
+      "31c8902a2581c2d5079e69f7550b85e4a184f72bdf65ad27dce0be0583fdab36",
+      "31c8902a2581c2d5079e69f7550b85e4a184f72bdf65ad27dce0be0583fdab36"
+    ]
+  },
+  "scene": "scenes/episode_01_intro.json",
+  "schema_version": 1,
+  "script": "replays/campaign04_bonus.json"
+}

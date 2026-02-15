@@ -18,6 +18,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Sequence, Protocol, runtime_checkable
 
+from ..diagnostics import Diagnostic, diagnostics_to_text
+from ..event_emit import emit_gameplay_event
+from ..save_runtime.state_codec import decode_state, encode_state
 from .schema import (
     CUTSCENE_SCHEMA_VERSION,
     migrate_cutscene_script,
@@ -146,6 +149,9 @@ class CutsceneRunner:
             # Process emitted events...
     """
     
+    TYPE_ID = "cutscene_runner"
+    STATE_VERSION = 1
+
     def __init__(
         self,
         event_bus: EventEmitter | None = None,
@@ -174,6 +180,7 @@ class CutsceneRunner:
         
         # Diagnostics
         self._last_validation_errors: list[CutsceneValidationError] = []
+        self._last_restore_diagnostics: tuple[Diagnostic, ...] = ()
     
     @property
     def script_id(self) -> str:
@@ -526,11 +533,12 @@ class CutsceneRunner:
             **payload,
         }
         
-        self._event_bus.emit(
+        emit_gameplay_event(
+            self._event_bus,
             event_type,
-            source_entity="",
+            full_payload,
+            source_entity_id="",
             source_behaviour="CutsceneRunner",
-            **full_payload,
         )
         
         return {"type": event_type, "payload": full_payload}
@@ -578,11 +586,32 @@ class CutsceneRunner:
     
     def saveable_state(self) -> dict[str, Any]:
         """Return JSON-serializable state dict."""
-        return self._state.to_dict()
+        return encode_state(self.TYPE_ID, self.STATE_VERSION, self._state.to_dict())
     
-    def restore_state(self, state: dict[str, Any]) -> None:
+    def restore_state(
+        self,
+        state: dict[str, Any],
+        *,
+        strict: bool = True,
+        source: str = "cutscene_runner",
+    ) -> None:
         """Apply previously saved state from dict."""
-        self._state = CutsceneRunnerState.from_dict(state)
+        inner_state, diagnostics = decode_state(
+            state,
+            expected_type_id=self.TYPE_ID,
+            supported_versions={self.STATE_VERSION},
+            strict=bool(strict),
+            source=str(source),
+        )
+        self._last_restore_diagnostics = tuple(diagnostics)
+        if inner_state is None:
+            if strict:
+                details = diagnostics_to_text(self._last_restore_diagnostics).strip()
+                if details:
+                    raise ValueError(details)
+                raise ValueError("cutscene_runner restore failed")
+            return
+        self._state = CutsceneRunnerState.from_dict(inner_state)
     
     # Inspection API
     
@@ -719,7 +748,7 @@ def simulate_cutscene(
         "ok": True,
         "errors": [],
         "steps": steps,
-        "final_state": runner.saveable_state(),
+        "final_state": runner.get_state().to_dict(),
         "emitted_events": emitted_events,
         "flags": dict(flag_store),
     }

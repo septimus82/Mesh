@@ -3,5 +3,6 @@
   "music_volume": 0.5,
   "sfx_volume": 0.5,
   "soft_shadows_enabled": true,
+  "text_scale": 1.0,
   "version": 1
 }

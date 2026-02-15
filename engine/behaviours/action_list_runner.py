@@ -24,6 +24,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional, Set
 
+from ..event_emit import emit_gameplay_event
 from ..gameplay_event_bus import EventConfigError, validate_event_type
 from ..state_runtime import flags as state_flags
 from .base import Behaviour, ParamDef
@@ -185,7 +186,6 @@ class ActionListRunnerBehaviour(Behaviour):
     
     def _emit_event(self, event_type: str, **kwargs) -> None:
         """Emit a gameplay event."""
-        bus = getattr(self.window, "gameplay_event_bus", None)
         my_id = getattr(self.entity, "mesh_id", "")
         
         payload = {
@@ -193,16 +193,14 @@ class ActionListRunnerBehaviour(Behaviour):
             "entity_name": getattr(self.entity, "mesh_name", ""),
             **kwargs,
         }
-        
-        if bus is not None:
-            bus.emit(
-                event_type,
-                source_entity=my_id,
-                source_behaviour="ActionListRunner",
-                **payload,
-            )
-        elif hasattr(self.window, "event_bus"):
-            self.window.event_bus.emit(event_type, **payload)
+
+        emit_gameplay_event(
+            self.window,
+            event_type,
+            payload,
+            source_entity_id=my_id,
+            source_behaviour="ActionListRunner",
+        )
     
     def _can_trigger(self) -> bool:
         """Check if action list can be triggered."""

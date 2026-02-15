@@ -1,0 +1,196 @@
+{
+  "dialogues": [
+    {
+      "id": "ep02_dialogue_intro",
+      "schema_version": 1,
+      "script": {
+        "confirm": {
+          "next": null,
+          "speaker": "Mentor",
+          "text": "Touch the central terminal first. The exit unlocks when your plan completes."
+        },
+        "shutdown_path": {
+          "next": "confirm",
+          "speaker": "Mentor",
+          "text": "Pull the breaker once the terminal handshake is logged."
+        },
+        "stabilize_path": {
+          "next": "confirm",
+          "speaker": "Mentor",
+          "text": "Tune each relay in order: A, then B, then C."
+        },
+        "start": {
+          "choices": [
+            {
+              "next": "stabilize_path",
+              "text": "Stabilize the lattice."
+            },
+            {
+              "next": "shutdown_path",
+              "text": "Shut it down."
+            }
+          ],
+          "speaker": "Mentor",
+          "text": "The signal is looping. Choose your approach before the chamber locks down."
+        }
+      },
+      "start_node": "start"
+    },
+    {
+      "id": "ep03_dialogue_intro",
+      "schema_version": 1,
+      "script": {
+        "end": {
+          "next": null,
+          "speaker": "Mentor",
+          "text": "Proceed when ready."
+        },
+        "help": {
+          "next": "end",
+          "speaker": "Mentor",
+          "text": "Use the plaque if you need a reminder. The sequence starts at sigil A."
+        },
+        "silent": {
+          "next": "end",
+          "speaker": "Mentor",
+          "text": "Then trust your memory. No second voice from me."
+        },
+        "start": {
+          "choices": [
+            {
+              "next": "help",
+              "text": "Ask for help."
+            },
+            {
+              "next": "silent",
+              "text": "Stay silent."
+            }
+          ],
+          "speaker": "Mentor",
+          "text": "Three sigils. One order. Speak now if you want guidance."
+        }
+      },
+      "start_node": "start"
+    },
+    {
+      "id": "ep03_dialogue_hint",
+      "schema_version": 1,
+      "script": {
+        "start": {
+          "next": null,
+          "speaker": "Plaque",
+          "text": "Hint: trace the sigils in ascending order: A, then B, then C."
+        }
+      },
+      "start_node": "start"
+    },
+    {
+      "id": "ep04_dialogue_intro",
+      "schema_version": 1,
+      "script": {
+        "confirm": {
+          "next": null,
+          "speaker": "Mentor",
+          "text": "Clear the arena, collect the cache, then extract."
+        },
+        "hard": {
+          "next": "confirm",
+          "speaker": "Mentor",
+          "text": "Challenge route locked in. Two sentries will engage together."
+        },
+        "safe": {
+          "next": "confirm",
+          "speaker": "Mentor",
+          "text": "Safe route acknowledged. One sentry is active. Keep your guard up."
+        },
+        "start": {
+          "choices": [
+            {
+              "next": "safe",
+              "text": "Take the safe route."
+            },
+            {
+              "next": "hard",
+              "text": "Challenge yourself."
+            }
+          ],
+          "speaker": "Mentor",
+          "text": "Two sentry emplacements watch the causeway. Pick your route."
+        }
+      },
+      "start_node": "start"
+    },
+    {
+      "id": "ep05_dialogue_intro",
+      "schema_version": 1,
+      "script": {
+        "confirm": {
+          "next": null,
+          "speaker": "Mentor",
+          "text": "Morning for trade, night for truth. Move when the clock allows it."
+        },
+        "direct_path": {
+          "next": "confirm",
+          "speaker": "Mentor",
+          "text": "Skip the chatter. Catch the vendor while the stall is open, then meet me at the tavern after dark."
+        },
+        "rumors_path": {
+          "next": "confirm",
+          "speaker": "Mentor",
+          "text": "Then read the notice board before you see the vendor. It changes what you find later."
+        },
+        "start": {
+          "choices": [
+            {
+              "next": "rumors_path",
+              "text": "Ask about rumors."
+            },
+            {
+              "next": "direct_path",
+              "text": "Keep moving."
+            }
+          ],
+          "speaker": "Mentor",
+          "text": "Hollowmere runs on schedules. Want rumor chatter or the direct route?"
+        }
+      },
+      "start_node": "start"
+    },
+    {
+      "id": "ep06_dialogue_intro",
+      "schema_version": 1,
+      "script": {
+        "confirm": {
+          "next": null,
+          "speaker": "Mentor",
+          "text": "Whatever route you choose, extraction only opens when both gates are satisfied."
+        },
+        "fight_path": {
+          "next": "confirm",
+          "speaker": "Mentor",
+          "text": "Break the sentry line first, then complete the runes to vent the chamber."
+        },
+        "puzzle_path": {
+          "next": "confirm",
+          "speaker": "Mentor",
+          "text": "Take the side lane: solve the runes, then clear the guard and claim the hidden cache."
+        },
+        "start": {
+          "choices": [
+            {
+              "next": "fight_path",
+              "text": "Fight through."
+            },
+            {
+              "next": "puzzle_path",
+              "text": "Solve first."
+            }
+          ],
+          "speaker": "Mentor",
+          "text": "The conduit is unstable. Pick your route before the vault seals."
+        }
+      },
+      "start_node": "start"
+    }
+  ]
+}

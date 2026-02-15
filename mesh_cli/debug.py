@@ -7,7 +7,7 @@ from pathlib import Path
 
 from engine.config import load_config
 from engine.logging_tools import suppress_stdout
-from engine.persistence_io import write_json_atomic
+from engine.services import build_replay_service
 
 GameWindow = None
 
@@ -87,7 +87,6 @@ def handle(args: argparse.Namespace) -> int:
 
 def _handle_export(args: argparse.Namespace) -> int:
     """Export debug bundle snapshot."""
-    from engine.editor.debug_bundle import build_debug_bundle  # noqa: PLC0415
     from engine.repo_root import get_repo_root  # noqa: PLC0415
 
     config = load_config()
@@ -115,14 +114,16 @@ def _handle_export(args: argparse.Namespace) -> int:
         out_path = repo_root / "artifacts" / "debug_bundle.json"
 
     deterministic = bool(getattr(args, "deterministic", False))
+    replay_service = build_replay_service()
 
     try:
         with suppress_stdout():
             window.load_scene(config.start_scene)
-            bundle = build_debug_bundle(window, None, deterministic=deterministic)
-
-        payload = bundle.to_dict(deterministic=deterministic)
-        write_json_atomic(out_path, payload, indent=2, sort_keys=True, trailing_newline=True)
+        replay_service.export_debug_bundle(
+            window=window,
+            out_path=out_path,
+            deterministic=deterministic,
+        )
         print(f"[Mesh][Debug] wrote bundle to {out_path}")
         return 0
     except Exception as exc:  # noqa: BLE001

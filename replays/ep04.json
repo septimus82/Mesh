@@ -1,0 +1,75 @@
+{
+  "actions": [
+    {
+      "event": "ep04_entered",
+      "t": 0,
+      "type": "emit"
+    },
+    {
+      "choice": 0,
+      "t": 2,
+      "type": "dialogue_choose"
+    },
+    {
+      "event": "died",
+      "payload": {
+        "name": "Episode04SentryEasy"
+      },
+      "t": 3,
+      "type": "emit"
+    },
+    {
+      "slot": "post_kill_pre_reward",
+      "t": 4,
+      "type": "save"
+    },
+    {
+      "entity": "episode_04_ep04_reward_cache",
+      "t": 5,
+      "type": "interact"
+    },
+    {
+      "slot": "post_kill_pre_reward",
+      "t": 6,
+      "type": "restore"
+    },
+    {
+      "entity": "episode_04_ep04_reward_cache",
+      "t": 7,
+      "type": "interact"
+    },
+    {
+      "flag": "ep04.all_enemies_dead",
+      "t": 9,
+      "type": "assert_flag",
+      "value": true
+    },
+    {
+      "flag": "ep04.complete",
+      "t": 11,
+      "type": "assert_flag",
+      "value": true
+    }
+  ],
+  "dt_schedule": [
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2,
+    0.2
+  ],
+  "steps": [
+    {
+      "dump_state": true
+    }
+  ]
+}

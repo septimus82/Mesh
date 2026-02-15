@@ -41,7 +41,6 @@ engine/editor/editor_keymap_controller.py:69: error: Incompatible types in assig
 engine/editor/editor_keymap_controller.py:75: error: Argument 2 to "apply_keymap_overrides" has incompatible type "dict[str, str]"; expected "dict[tuple[str, str], str]"  [arg-type]
 engine/editor_palette_thumbs.py:110: error: Unused "type: ignore" comment  [unused-ignore]
 engine/encounter_report.py:704: error: Unused "type: ignore" comment  [unused-ignore]
-engine/entity_paint_mode.py:195: error: Unused "type: ignore" comment  [unused-ignore]
 engine/lighting/lighting_geometry.py:206: error: Argument 3 to "compute_light_geometry" has incompatible type "list[list[tuple[float, float]]]"; expected "Sequence[tuple[tuple[float, float], ...]]"  [arg-type]
 engine/quest_manager.py:134: error: Unused "type: ignore" comment  [unused-ignore]
 engine/quest_manager.py:153: error: Unused "type: ignore" comment  [unused-ignore]
