@@ -12,6 +12,83 @@ if TYPE_CHECKING:
     from ...scene_controller import SceneController
 
 
+# ---------------------------------------------------------------------------
+# Private helpers – shared scaffolding for debug_* authoring ops
+# ---------------------------------------------------------------------------
+
+def _sorted_dedup_ids(raw_ids: list[str] | None) -> list[str]:
+    """Return sorted, deduplicated, stripped, non-empty entity IDs."""
+    return sorted(
+        {str(i).strip() for i in (raw_ids or []) if isinstance(i, str) and str(i).strip()}
+    )
+
+
+def _build_entity_index(entities: list[Dict[str, Any]]) -> dict[str, Dict[str, Any]]:
+    """Build an ``{id: entity_dict}`` index in O(N) for fast lookup."""
+    idx: dict[str, Dict[str, Any]] = {}
+    for ent in entities:
+        if isinstance(ent, dict):
+            eid = ent.get("id")
+            if isinstance(eid, str) and eid.strip():
+                idx[eid.strip()] = ent
+    return idx
+
+
+def _collect_participants(
+    sorted_ids: list[str],
+    index: dict[str, Dict[str, Any]],
+    is_player_entity: Callable[[dict[str, Any]], bool],
+    *,
+    require_position: bool = False,
+    skip_group_entity: bool = False,
+) -> tuple[list[tuple[str, dict]], int]:
+    """Gather participant entities from *sorted_ids* using an index.
+
+    Returns ``(participants, skipped_count)``.  *participants* is a list of
+    ``(id, entity_dict)`` pairs in the same order as *sorted_ids*.
+    """
+    participants: list[tuple[str, dict]] = []
+    skipped = 0
+    for eid in sorted_ids:
+        ent = index.get(eid)
+        if not isinstance(ent, dict):
+            skipped += 1
+            continue
+        if is_player_entity(ent):
+            skipped += 1
+            continue
+        if require_position and ("x" not in ent or "y" not in ent):
+            skipped += 1
+            continue
+        if skip_group_entity and _is_group_entity(ent):
+            skipped += 1
+            continue
+        participants.append((eid, ent))
+    return participants, skipped
+
+
+def _build_used_id_set(entities: list[Dict[str, Any]]) -> set[str]:
+    """Collect all entity IDs currently in the scene for collision avoidance."""
+    used: set[str] = set()
+    for ent in entities:
+        if isinstance(ent, dict):
+            eid = ent.get("id")
+            if isinstance(eid, str) and eid.strip():
+                used.add(eid.strip())
+    return used
+
+
+def _next_unique_dup_id(orig_id: str, used_ids: set[str]) -> str:
+    """Allocate the next ``{orig_id}__dup{k}`` that isn't in *used_ids*, and add it."""
+    k = 1
+    while True:
+        candidate = f"{orig_id}__dup{k}"
+        if candidate not in used_ids:
+            used_ids.add(candidate)
+            return candidate
+        k += 1
+
+
 def get_authored_scene_payload(controller: "SceneController") -> Dict[str, Any]:
     """Return a copy of the scene payload before runtime-only mutations (e.g., themed spawn resolution)."""
     return controller._loaded_scene_source_data
@@ -281,7 +358,7 @@ def debug_set_prefab_id(controller: "SceneController", selected_ids: list[str], 
     Operates on the authored payload only and reapplies it (no disk I/O).
     Returns (changed_count, skipped_player_count).
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     wanted = str(prefab_id or "").strip()
     if not isinstance(selected_ids, list) or not selected_ids or not wanted:
@@ -292,11 +369,12 @@ def debug_set_prefab_id(controller: "SceneController", selected_ids: list[str], 
         return (0, 0)
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     changed = 0
     skipped_player = 0
-    for entity_id in sorted({str(i).strip() for i in selected_ids if isinstance(i, str) and str(i).strip()}):
-        ent = find_entity_by_id(entities, entity_id)
+    for entity_id in _sorted_dedup_ids(selected_ids):
+        ent = index.get(entity_id)
         if not isinstance(ent, dict):
             continue
         if is_player_entity(ent):
@@ -318,7 +396,7 @@ def debug_add_behaviour(controller: "SceneController", selected_ids: list[str], 
     Operates on the authored payload only and reapplies it (no disk I/O).
     Returns (changed_count, skipped_player_count).
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     wanted = str(behaviour_name or "").strip()
     if not isinstance(selected_ids, list) or not selected_ids or not wanted:
@@ -329,11 +407,12 @@ def debug_add_behaviour(controller: "SceneController", selected_ids: list[str], 
         return (0, 0)
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     changed = 0
     skipped_player = 0
-    for entity_id in sorted({str(i).strip() for i in selected_ids if isinstance(i, str) and str(i).strip()}):
-        ent = find_entity_by_id(entities, entity_id)
+    for entity_id in _sorted_dedup_ids(selected_ids):
+        ent = index.get(entity_id)
         if not isinstance(ent, dict):
             continue
         if is_player_entity(ent):
@@ -366,7 +445,7 @@ def debug_remove_behaviour(controller: "SceneController", selected_ids: list[str
     Operates on the authored payload only and reapplies it (no disk I/O).
     Returns (changed_count, skipped_player_count).
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     wanted = str(behaviour_name or "").strip()
     if not isinstance(selected_ids, list) or not selected_ids or not wanted:
@@ -377,11 +456,12 @@ def debug_remove_behaviour(controller: "SceneController", selected_ids: list[str
         return (0, 0)
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     changed = 0
     skipped_player = 0
-    for entity_id in sorted({str(i).strip() for i in selected_ids if isinstance(i, str) and str(i).strip()}):
-        ent = find_entity_by_id(entities, entity_id)
+    for entity_id in _sorted_dedup_ids(selected_ids):
+        ent = index.get(entity_id)
         if not isinstance(ent, dict):
             continue
         if is_player_entity(ent):
@@ -419,7 +499,7 @@ def debug_set_name(controller: "SceneController", primary_id: str, name: str) ->
     Operates on the authored payload only and reapplies it (no disk I/O).
     Returns (changed_count, skipped_player_count).
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     entity_id = str(primary_id or "").strip()
     wanted = str(name or "").strip()
@@ -431,7 +511,8 @@ def debug_set_name(controller: "SceneController", primary_id: str, name: str) ->
         return (0, 0)
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
-    ent = find_entity_by_id(entities, entity_id)
+    index = _build_entity_index(entities)
+    ent = index.get(entity_id)
     if not isinstance(ent, dict):
         return (0, 0)
     if is_player_entity(ent):
@@ -451,7 +532,7 @@ def debug_add_tag(controller: "SceneController", selected_ids: list[str], tag: s
     Operates on the authored payload only and reapplies it (no disk I/O).
     Returns (changed_count, skipped_player_count).
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     wanted = str(tag or "").strip()
     if not isinstance(selected_ids, list) or not selected_ids or not wanted:
@@ -462,11 +543,12 @@ def debug_add_tag(controller: "SceneController", selected_ids: list[str], tag: s
         return (0, 0)
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     changed = 0
     skipped_player = 0
-    for entity_id in sorted({str(i).strip() for i in selected_ids if isinstance(i, str) and str(i).strip()}):
-        ent = find_entity_by_id(entities, entity_id)
+    for entity_id in _sorted_dedup_ids(selected_ids):
+        ent = index.get(entity_id)
         if not isinstance(ent, dict):
             continue
         if is_player_entity(ent):
@@ -492,7 +574,7 @@ def debug_remove_tag(controller: "SceneController", selected_ids: list[str], tag
     Operates on the authored payload only and reapplies it (no disk I/O).
     Returns (changed_count, skipped_player_count).
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     wanted = str(tag or "").strip()
     if not isinstance(selected_ids, list) or not selected_ids or not wanted:
@@ -503,11 +585,12 @@ def debug_remove_tag(controller: "SceneController", selected_ids: list[str], tag
         return (0, 0)
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     changed = 0
     skipped_player = 0
-    for entity_id in sorted({str(i).strip() for i in selected_ids if isinstance(i, str) and str(i).strip()}):
-        ent = find_entity_by_id(entities, entity_id)
+    for entity_id in _sorted_dedup_ids(selected_ids):
+        ent = index.get(entity_id)
         if not isinstance(ent, dict):
             continue
         if is_player_entity(ent):
@@ -533,7 +616,7 @@ def debug_toggle_tag(controller: "SceneController", selected_ids: list[str], tag
     Operates on the authored payload only and reapplies it (no disk I/O).
     Returns (added_count, removed_count, skipped_player_count).
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     wanted = str(tag or "").strip()
     if not isinstance(selected_ids, list) or not selected_ids or not wanted:
@@ -544,12 +627,13 @@ def debug_toggle_tag(controller: "SceneController", selected_ids: list[str], tag
         return (0, 0, 0)
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     added = 0
     removed = 0
     skipped_player = 0
-    for entity_id in sorted({str(i).strip() for i in selected_ids if isinstance(i, str) and str(i).strip()}):
-        ent = find_entity_by_id(entities, entity_id)
+    for entity_id in _sorted_dedup_ids(selected_ids):
+        ent = index.get(entity_id)
         if not isinstance(ent, dict):
             continue
         if is_player_entity(ent):
@@ -581,7 +665,7 @@ def debug_batch_rename(controller: "SceneController", selected_ids: list[str], p
     Operates on the authored payload only and reapplies it (no disk I/O).
     Returns (changed_count, skipped_player_count).
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     pfx = str(prefix or "")
     sfx = str(suffix or "")
@@ -593,11 +677,12 @@ def debug_batch_rename(controller: "SceneController", selected_ids: list[str], p
         return (0, 0)
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     changed = 0
     skipped_player = 0
-    for entity_id in sorted({str(i).strip() for i in selected_ids if isinstance(i, str) and str(i).strip()}):
-        ent = find_entity_by_id(entities, entity_id)
+    for entity_id in _sorted_dedup_ids(selected_ids):
+        ent = index.get(entity_id)
         if not isinstance(ent, dict):
             continue
         if is_player_entity(ent):
@@ -630,7 +715,7 @@ def debug_set_names(
 
     Returns a dict with keys: ok, renamed, skipped, base, start, width.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     cleaned_base = str(base or "").strip()
     if not cleaned_base:
@@ -649,12 +734,13 @@ def debug_set_names(
         return {"ok": True, "renamed": 0, "skipped": 0, "base": cleaned_base, "start": start, "width": width}
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     renamed = 0
     skipped = 0
     idx = 0
-    for entity_id in sorted({str(i).strip() for i in entity_ids if isinstance(i, str) and str(i).strip()}):
-        ent = find_entity_by_id(entities, entity_id)
+    for entity_id in _sorted_dedup_ids(entity_ids):
+        ent = index.get(entity_id)
         if not isinstance(ent, dict):
             continue
         if is_player_entity(ent):
@@ -740,7 +826,7 @@ def debug_align_selection(
 
     Returns ``{ok, moved, skipped, axis, mode, reference}``.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     ax = str(axis or "").strip().lower()
     md = str(mode or "").strip().lower()
@@ -756,7 +842,7 @@ def debug_align_selection(
     if ref not in _ALIGN_VALID_REFS:
         return fail
 
-    sorted_ids = sorted({str(i).strip() for i in (entity_ids or []) if isinstance(i, str) and str(i).strip()})
+    sorted_ids = _sorted_dedup_ids(entity_ids)
     if len(sorted_ids) < 2:
         return fail
 
@@ -765,12 +851,13 @@ def debug_align_selection(
         return fail
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     # Gather bounds for all selected non-player entities.
     bounds_map: dict[str, tuple[float, float, float, float]] = {}
     skipped = 0
     for eid in sorted_ids:
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             skipped += 1
             continue
@@ -811,7 +898,7 @@ def debug_align_selection(
         delta = target - current_anchor
         if abs(delta) < 1e-6:
             continue
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             continue
         if ax == "x":
@@ -852,7 +939,7 @@ def debug_distribute_selection(
 
     Returns ``{ok, moved, skipped, axis, mode, reference}``.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     ax = str(axis or "").strip().lower()
     md = str(mode or "gap").strip().lower()
@@ -867,7 +954,7 @@ def debug_distribute_selection(
     if ref not in _ALIGN_VALID_REFS:
         return fail
 
-    sorted_ids = sorted({str(i).strip() for i in (entity_ids or []) if isinstance(i, str) and str(i).strip()})
+    sorted_ids = _sorted_dedup_ids(entity_ids)
     if len(sorted_ids) < 3:
         return fail
 
@@ -876,12 +963,13 @@ def debug_distribute_selection(
         return fail
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     # Gather bounds.
     bounds_map: dict[str, tuple[float, float, float, float]] = {}
     skipped = 0
     for eid in sorted_ids:
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             skipped += 1
             continue
@@ -919,7 +1007,7 @@ def debug_distribute_selection(
             delta = target_center - current_center
             if abs(delta) < 1e-6:
                 continue
-            ent = find_entity_by_id(entities, eid)
+            ent = index.get(eid)
             if not isinstance(ent, dict):
                 continue
             if ax == "x":
@@ -950,7 +1038,7 @@ def debug_distribute_selection(
             cursor = target_center + entity_half + gap
             if abs(delta) < 1e-6:
                 continue
-            ent = find_entity_by_id(entities, eid)
+            ent = index.get(eid)
             if not isinstance(ent, dict):
                 continue
             if ax == "x":
@@ -1004,7 +1092,7 @@ def debug_snap_to_grid(
 
     Returns ``{ok, moved, skipped, step, axes, mode}``.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     ax = str(axes or "xy").strip().lower()
     md = str(mode or "nearest").strip().lower()
@@ -1019,7 +1107,7 @@ def debug_snap_to_grid(
     if st <= 0:
         return fail
 
-    sorted_ids = sorted({str(i).strip() for i in (entity_ids or []) if isinstance(i, str) and str(i).strip()})
+    sorted_ids = _sorted_dedup_ids(entity_ids)
     if not sorted_ids:
         return fail
 
@@ -1028,6 +1116,7 @@ def debug_snap_to_grid(
         return fail
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     moved = 0
     skipped = 0
@@ -1035,7 +1124,7 @@ def debug_snap_to_grid(
     snap_y = "y" in ax
 
     for eid in sorted_ids:
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             skipped += 1
             continue
@@ -1090,7 +1179,7 @@ def debug_nudge_selection(
 
     Returns ``{ok, moved, skipped, dx, dy, count, step}``.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     cnt = int(count) if isinstance(count, (int, float)) else 0
     raw_dx = float(dx)
@@ -1118,7 +1207,7 @@ def debug_nudge_selection(
     if abs(eff_dx) < 1e-9 and abs(eff_dy) < 1e-9:
         return result_base  # no-op, ok=true
 
-    sorted_ids = sorted({str(i).strip() for i in (entity_ids or []) if isinstance(i, str) and str(i).strip()})
+    sorted_ids = _sorted_dedup_ids(entity_ids)
     if not sorted_ids:
         fail["dx"] = eff_dx
         fail["dy"] = eff_dy
@@ -1131,12 +1220,13 @@ def debug_nudge_selection(
         return fail
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     moved = 0
     skipped = 0
 
     for eid in sorted_ids:
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             skipped += 1
             continue
@@ -1185,7 +1275,7 @@ def debug_rotate_selection(
     Returns ``{ok, rotated, moved, skipped, deg, about}``.
     """
     import math  # noqa: PLC0415
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     ab = str(about or "self").strip().lower()
     d = float(deg)
@@ -1198,7 +1288,7 @@ def debug_rotate_selection(
     if abs(d) < 1e-9:
         return {"ok": True, "rotated": 0, "moved": 0, "skipped": 0, "deg": d, "about": ab}
 
-    sorted_ids = sorted({str(i).strip() for i in (entity_ids or []) if isinstance(i, str) and str(i).strip()})
+    sorted_ids = _sorted_dedup_ids(entity_ids)
     if not sorted_ids:
         return {"ok": True, "rotated": 0, "moved": 0, "skipped": 0, "deg": d, "about": ab}
 
@@ -1207,12 +1297,13 @@ def debug_rotate_selection(
         return fail
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     # Collect participating entities (skip player / missing position).
     participants: list[tuple[str, dict]] = []
     skipped = 0
     for eid in sorted_ids:
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             skipped += 1
             continue
@@ -1229,7 +1320,7 @@ def debug_rotate_selection(
     if ab == "primary":
         pid = str(primary_id or "").strip()
         if pid:
-            pent = find_entity_by_id(entities, pid)
+            pent = index.get(pid)
             if isinstance(pent, dict) and "x" in pent and "y" in pent:
                 pivot = (float(pent["x"]), float(pent["y"]))
         if pivot is None:
@@ -1306,7 +1397,7 @@ def debug_mirror_selection(
 
     Returns ``{ok, moved, rotated, skipped, axis, about, include_rotation}``.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     ax = str(axis or "").strip().lower()
     ab = str(about or "group").strip().lower()
@@ -1322,7 +1413,7 @@ def debug_mirror_selection(
     if ab not in _MIRROR_VALID_ABOUT:
         return fail
 
-    sorted_ids = sorted({str(i).strip() for i in (entity_ids or []) if isinstance(i, str) and str(i).strip()})
+    sorted_ids = _sorted_dedup_ids(entity_ids)
     if not sorted_ids:
         return {"ok": True, "moved": 0, "rotated": 0, "skipped": 0, "axis": ax, "about": ab, "include_rotation": inc_rot}
 
@@ -1331,12 +1422,13 @@ def debug_mirror_selection(
         return fail
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     # Collect participating entities (have position, not player).
     participants: list[tuple[str, dict]] = []
     skipped = 0
     for eid in sorted_ids:
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             skipped += 1
             continue
@@ -1356,7 +1448,7 @@ def debug_mirror_selection(
         pid = str(primary_id or "").strip()
         if not pid:
             return fail
-        pent = find_entity_by_id(entities, pid)
+        pent = index.get(pid)
         if not isinstance(pent, dict) or "x" not in pent or "y" not in pent:
             return fail
         pivot = (float(pent["x"]), float(pent["y"]))
@@ -1469,7 +1561,7 @@ def debug_group_selection(
 
     Returns ``{ok, group_id, group_name, members, linked, skipped}``.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     ab = str(about or "group").strip().lower()
     base = str(name_base or "Group").strip() or "Group"
@@ -1482,9 +1574,7 @@ def debug_group_selection(
     if ab not in _GROUP_VALID_ABOUT:
         return fail
 
-    sorted_ids = sorted(
-        {str(i).strip() for i in (entity_ids or []) if isinstance(i, str) and str(i).strip()}
-    )
+    sorted_ids = _sorted_dedup_ids(entity_ids)
     if not sorted_ids:
         return fail
 
@@ -1493,12 +1583,13 @@ def debug_group_selection(
         return fail
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     # Collect participants (have position, not player, not already grouped).
     participants: list[tuple[str, dict]] = []
     skipped = 0
     for eid in sorted_ids:
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             skipped += 1
             continue
@@ -1525,7 +1616,7 @@ def debug_group_selection(
         pid = str(primary_id or "").strip()
         if not pid:
             return fail
-        pent = find_entity_by_id(entities, pid)
+        pent = index.get(pid)
         if not isinstance(pent, dict) or "x" not in pent or "y" not in pent:
             return fail
         pivot = (float(pent["x"]), float(pent["y"]))
@@ -1535,12 +1626,7 @@ def debug_group_selection(
         pivot = (sum(xs) / len(xs), sum(ys) / len(ys))
 
     # Build used-id set for collision avoidance.
-    used_ids: set[str] = set()
-    for ent in entities:
-        if isinstance(ent, dict):
-            ent_id = ent.get("id")
-            if isinstance(ent_id, str) and ent_id.strip():
-                used_ids.add(ent_id.strip())
+    used_ids = _build_used_id_set(entities)
 
     group_id = _next_group_id(used_ids)
     group_name = _next_group_name(entities, base)
@@ -1592,16 +1678,14 @@ def debug_ungroup_selection(
 
     Returns ``{ok, group_id, unlinked, deleted_group, skipped}``.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     fail: dict = {
         "ok": False, "group_id": "", "unlinked": 0,
         "deleted_group": False, "skipped": 0,
     }
 
-    sorted_ids = sorted(
-        {str(i).strip() for i in (entity_ids or []) if isinstance(i, str) and str(i).strip()}
-    )
+    sorted_ids = _sorted_dedup_ids(entity_ids)
     if not sorted_ids:
         return fail
 
@@ -1610,6 +1694,7 @@ def debug_ungroup_selection(
         return fail
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     # --- Determine target group_id ---
     target_group_id = ""
@@ -1617,7 +1702,7 @@ def debug_ungroup_selection(
 
     # Pass 1: check if any selected entity *is* a group entity.
     for eid in sorted_ids:
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             skipped += 1
             continue
@@ -1632,7 +1717,7 @@ def debug_ungroup_selection(
     if not target_group_id:
         candidate_gids: list[str] = []
         for eid in sorted_ids:
-            ent = find_entity_by_id(entities, eid)
+            ent = index.get(eid)
             if not isinstance(ent, dict):
                 continue
             gid = ent.get("group_id")
@@ -1712,7 +1797,7 @@ def debug_duplicate_to_grid(
     Returns ``{ok, created, skipped, rows, cols, dx, dy,
     include_original, name_mode}``.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     ori = str(origin or "selection").strip().lower()
     nm = str(name_mode or "none").strip().lower()
@@ -1737,9 +1822,7 @@ def debug_duplicate_to_grid(
     if nm not in _DUPLICATE_GRID_VALID_NAME_MODES:
         return fail
 
-    sorted_ids = sorted(
-        {str(i).strip() for i in (entity_ids or []) if isinstance(i, str) and str(i).strip()}
-    )
+    sorted_ids = _sorted_dedup_ids(entity_ids)
     if not sorted_ids:
         return fail
 
@@ -1748,12 +1831,13 @@ def debug_duplicate_to_grid(
         return fail
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     # Collect participants (have position, not player).
     participants: list[tuple[str, dict]] = []
     skipped = 0
     for eid in sorted_ids:
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             skipped += 1
             continue
@@ -1785,12 +1869,7 @@ def debug_duplicate_to_grid(
         }
 
     # Build used-id set.
-    used_ids: set[str] = set()
-    for ent in entities:
-        if isinstance(ent, dict):
-            ent_id = ent.get("id")
-            if isinstance(ent_id, str) and ent_id.strip():
-                used_ids.add(ent_id.strip())
+    used_ids = _build_used_id_set(entities)
 
     created = 0
 
@@ -1804,14 +1883,7 @@ def debug_duplicate_to_grid(
             cell_dy = float(r) * float(dy)
 
             for orig_id, orig_ent in participants:
-                # Generate unique ID (same __dup{k} convention).
-                k = 1
-                while True:
-                    candidate = f"{orig_id}__dup{k}"
-                    if candidate not in used_ids:
-                        break
-                    k += 1
-                used_ids.add(candidate)
+                candidate = _next_unique_dup_id(orig_id, used_ids)
 
                 clone: Dict[str, Any] = copy.deepcopy(orig_ent)
                 clone["id"] = candidate
@@ -1887,7 +1959,7 @@ def debug_duplicate_along_path(
     """
     import math  # noqa: PLC0415
 
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     nm = str(name_mode or "none").strip().lower()
 
@@ -1911,9 +1983,7 @@ def debug_duplicate_along_path(
     fx, fy = float(from_x), float(from_y)
     tx, ty = float(to_x), float(to_y)
 
-    sorted_ids = sorted(
-        {str(i).strip() for i in (entity_ids or []) if isinstance(i, str) and str(i).strip()}
-    )
+    sorted_ids = _sorted_dedup_ids(entity_ids)
     if not sorted_ids:
         return fail
 
@@ -1922,12 +1992,13 @@ def debug_duplicate_along_path(
         return fail
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     # Collect participants.
     participants: list[tuple[str, dict]] = []
     skipped = 0
     for eid in sorted_ids:
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             skipped += 1
             continue
@@ -1953,12 +2024,7 @@ def debug_duplicate_along_path(
         seg_angle = math.degrees(math.atan2(ty - fy, tx - fx)) % 360.0
 
     # Build used-id set.
-    used_ids: set[str] = set()
-    for ent in entities:
-        if isinstance(ent, dict):
-            ent_id = ent.get("id")
-            if isinstance(ent_id, str) and ent_id.strip():
-                used_ids.add(ent_id.strip())
+    used_ids = _build_used_id_set(entities)
 
     created = 0
 
@@ -1977,13 +2043,7 @@ def debug_duplicate_along_path(
         offset_y = pt_y - fy
 
         for orig_id, orig_ent in participants:
-            k = 1
-            while True:
-                candidate = f"{orig_id}__dup{k}"
-                if candidate not in used_ids:
-                    break
-                k += 1
-            used_ids.add(candidate)
+            candidate = _next_unique_dup_id(orig_id, used_ids)
 
             clone: Dict[str, Any] = copy.deepcopy(orig_ent)
             clone["id"] = candidate
@@ -2059,7 +2119,7 @@ def debug_scatter_selection(
     import math   # noqa: PLC0415
     import random  # noqa: PLC0415
 
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     nm = str(name_mode or "none").strip().lower()
     sh = str(shape or "circle").strip().lower()
@@ -2100,9 +2160,7 @@ def debug_scatter_selection(
         return fail
 
     # Collect sorted, deduplicated ids.
-    sorted_ids = sorted(
-        {str(i).strip() for i in (entity_ids or []) if isinstance(i, str) and str(i).strip()}
-    )
+    sorted_ids = _sorted_dedup_ids(entity_ids)
     if not sorted_ids:
         return fail
 
@@ -2111,12 +2169,13 @@ def debug_scatter_selection(
         return fail
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     # Collect participants.
     participants: list[tuple[str, dict]] = []
     skipped = 0
     for eid in sorted_ids:
-        ent = find_entity_by_id(entities, eid)
+        ent = index.get(eid)
         if not isinstance(ent, dict):
             skipped += 1
             continue
@@ -2149,7 +2208,7 @@ def debug_scatter_selection(
                 break
         if primary_id is None:
             return fail
-        pent = find_entity_by_id(entities, primary_id)
+        pent = index.get(primary_id)
         if not isinstance(pent, dict) or "x" not in pent or "y" not in pent:
             return fail
         try:
@@ -2171,12 +2230,7 @@ def debug_scatter_selection(
         pivot_y = sum_y / len(participants)
 
     # Build used-id set.
-    used_ids: set[str] = set()
-    for ent in entities:
-        if isinstance(ent, dict):
-            ent_id = ent.get("id")
-            if isinstance(ent_id, str) and ent_id.strip():
-                used_ids.add(ent_id.strip())
+    used_ids = _build_used_id_set(entities)
 
     # Deterministic RNG.
     rng = random.Random(seed)
@@ -2233,13 +2287,7 @@ def debug_scatter_selection(
                     pass
 
             # Unique ID.
-            k = 1
-            while True:
-                candidate = f"{orig_id}__dup{k}"
-                if candidate not in used_ids:
-                    break
-                k += 1
-            used_ids.add(candidate)
+            candidate = _next_unique_dup_id(orig_id, used_ids)
 
             clone: Dict[str, Any] = copy.deepcopy(orig_ent)
             clone["id"] = candidate
@@ -2478,7 +2526,7 @@ def _debug_config_mutate_for_behaviour(
     behaviour_name: str,
     mutate: "Callable[[dict[str, Any]], bool]",
 ) -> tuple[int, int, int]:
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     if not isinstance(selected_ids, list) or not selected_ids:
         return (0, 0, 0)
@@ -2492,13 +2540,14 @@ def _debug_config_mutate_for_behaviour(
 
     authored_copy = copy.deepcopy(authored)
     entities = ensure_entities_list(authored_copy)
+    index = _build_entity_index(entities)
 
     changed = 0
     skipped_player = 0
     skipped_no_behaviour = 0
 
-    for entity_id in sorted({str(i).strip() for i in selected_ids if isinstance(i, str) and str(i).strip()}):
-        ent = find_entity_by_id(entities, entity_id)
+    for entity_id in _sorted_dedup_ids(selected_ids):
+        ent = index.get(entity_id)
         if not isinstance(ent, dict):
             continue
         if is_player_entity(ent):

@@ -1,0 +1,73 @@
+name: Weekly Health Check
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # Every Monday at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  health:
+    name: weekly-health
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            pytest.ini
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e ".[dev]"
+
+      - name: Compile Python sources
+        run: |
+          python -m compileall -q engine mesh_cli tooling tests
+
+      - name: Run tests
+        run: |
+          python -m pytest -q -W error
+
+      - name: Verify-all + CI bundle
+        run: |
+          python -m mesh_cli verify-all --artifacts artifacts --ci-bundle
+
+      - name: Validate artifact bundle
+        run: |
+          python -m mesh_cli artifacts-validate --artifacts artifacts
+
+      - name: Print verify diagnostics on failure
+        if: failure()
+        run: |
+          python -m mesh_cli verify-report --artifacts artifacts
+
+      - name: Show artifact index on failure
+        if: failure()
+        run: |
+          echo "=== artifacts/index.json ==="
+          if [ -f artifacts/index.json ]; then cat artifacts/index.json; else echo "(missing artifacts/index.json)"; fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-mesh-artifacts-${{ github.run_id }}
+          retention-days: 14
+          path: artifacts/

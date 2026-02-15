@@ -216,6 +216,217 @@ def _build_verify_step_budget_check_payload(
     }
 
 
+# ---------------------------------------------------------------------------
+# Authoring-trace budget guard (default-off, growth-only ratchet)
+# ---------------------------------------------------------------------------
+
+_AUTHORING_TRACE_BUDGET_SCHEMA_VERSION = 1
+_AUTHORING_TRACE_BUDGET_DEFAULT_TOLERANCE_MS = 5
+
+
+class _AuthoringTraceBudgetCheckRow(TypedDict):
+    name: str
+    budget_ms: int
+    tolerance_ms: int
+    current_ms: int
+    delta_ms: int
+    ok: bool
+
+
+def _authoring_trace_budget_update_command(artifacts_dir: Path | None) -> str:
+    """Return a deterministic Windows-safe one-liner that regenerates the baseline."""
+    artifacts_rel = "artifacts"
+    if artifacts_dir is not None:
+        artifacts_rel = Path(artifacts_dir).as_posix()
+    return (
+        "python -c \"from pathlib import Path; import json, mesh_cli.verify as m; "
+        f"src=Path(r'{artifacts_rel}') / 'authoring_trace.json'; "
+        "repo=Path(m.__file__).resolve().parent.parent; "
+        "src=src if src.is_absolute() else repo / src; "
+        "data=json.loads(src.read_text(encoding='utf-8')); "
+        "target=repo / 'tooling' / 'metrics' / 'authoring_trace_budget.json'; "
+        "budget={'schema_version':1,'tolerance_ms':5,'total_ms_budget':int(data.get('total_ms',0) or 0),"
+        "'functions':{f['name']:int(f.get('total_ms',0) or 0) for f in data.get('functions',[])}};  "
+        "target.parent.mkdir(parents=True,exist_ok=True); "
+        "target.write_text(json.dumps(budget,indent=2,sort_keys=True)+'\\n',encoding='utf-8'); "
+        "print(f'updated {target.as_posix()} from {src.as_posix()}')\""
+    )
+
+
+def _build_authoring_trace_budget_check_payload(
+    *,
+    ok: bool,
+    tolerance_ms: int,
+    total_budget_ms: int | None,
+    total_current_ms: int | None,
+    checked_functions: list[_AuthoringTraceBudgetCheckRow],
+) -> dict[str, object]:
+    offenders = [
+        {
+            "name": row["name"],
+            "delta_ms": int(row["delta_ms"]),
+            "current_ms": int(row["current_ms"]),
+        }
+        for row in sorted(
+            (r for r in checked_functions if not bool(r["ok"])),
+            key=lambda row: (-int(row["delta_ms"]), row["name"]),
+        )
+    ]
+    ordered_checked = sorted(checked_functions, key=lambda row: row["name"])
+    return {
+        "schema_version": _AUTHORING_TRACE_BUDGET_SCHEMA_VERSION,
+        "ok": bool(ok),
+        "tolerance_ms": max(0, int(tolerance_ms)),
+        "total_budget_ms": total_budget_ms,
+        "total_current_ms": total_current_ms,
+        "checked_functions": ordered_checked,
+        "offenders": offenders,
+    }
+
+
+def _evaluate_authoring_trace_budget_guard(
+    *,
+    authoring_trace_payload: dict[str, object],
+    baseline_path: Path,
+    update_command: str,
+) -> tuple[int, str, dict[str, object]]:
+    """Compare authoring-trace totals against baseline budgets.
+
+    Returns ``(code, error_message, check_payload)`` matching the step-budget
+    guard convention.  *code* is ``0`` = pass, ``2`` = budget exceeded,
+    ``1`` = structural error.  Default-off: callers should only invoke this
+    when ``MESH_AUTHORING_TRACE_ARTIFACT`` is set AND the trace artifact
+    indicates ``enabled=true``.
+    """
+    # ---- guard: baseline may not exist yet --------------------------------
+    if not baseline_path.exists():
+        payload = _build_authoring_trace_budget_check_payload(
+            ok=True,
+            tolerance_ms=_AUTHORING_TRACE_BUDGET_DEFAULT_TOLERANCE_MS,
+            total_budget_ms=None,
+            total_current_ms=None,
+            checked_functions=[],
+        )
+        return 0, "", payload
+
+    # ---- load baseline ----------------------------------------------------
+    try:
+        baseline_raw = json.loads(baseline_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        payload = _build_authoring_trace_budget_check_payload(
+            ok=False,
+            tolerance_ms=_AUTHORING_TRACE_BUDGET_DEFAULT_TOLERANCE_MS,
+            total_budget_ms=None,
+            total_current_ms=None,
+            checked_functions=[],
+        )
+        return 1, f"authoring-trace-budget baseline parse failed: {type(exc).__name__}: {exc}", payload
+
+    if not isinstance(baseline_raw, dict):
+        payload = _build_authoring_trace_budget_check_payload(
+            ok=False,
+            tolerance_ms=_AUTHORING_TRACE_BUDGET_DEFAULT_TOLERANCE_MS,
+            total_budget_ms=None,
+            total_current_ms=None,
+            checked_functions=[],
+        )
+        return 1, "authoring-trace-budget baseline must be an object", payload
+
+    tolerance_raw = baseline_raw.get("tolerance_ms")
+    tolerance_ms = (
+        max(0, int(tolerance_raw))
+        if isinstance(tolerance_raw, (int, float))
+        else _AUTHORING_TRACE_BUDGET_DEFAULT_TOLERANCE_MS
+    )
+
+    # ---- extract current totals from the trace payload --------------------
+    functions_list = authoring_trace_payload.get("functions", [])
+    if not isinstance(functions_list, list):
+        functions_list = []
+    current_by_name: dict[str, int] = {}
+    for entry in functions_list:
+        if isinstance(entry, dict) and "name" in entry:
+            current_by_name[str(entry["name"])] = int(entry.get("total_ms", 0) or 0)
+
+    total_current_ms_raw = authoring_trace_payload.get("total_ms")
+    total_current_ms = int(total_current_ms_raw) if isinstance(total_current_ms_raw, (int, float)) else 0
+
+    # ---- check total_ms_budget --------------------------------------------
+    total_budget_raw = baseline_raw.get("total_ms_budget")
+    total_budget_ms = (
+        max(0, int(total_budget_raw))
+        if isinstance(total_budget_raw, (int, float))
+        else None
+    )
+
+    total_ok = True
+    if total_budget_ms is not None:
+        total_ok = total_current_ms <= total_budget_ms + tolerance_ms
+
+    # ---- check per-function budgets ---------------------------------------
+    functions_raw = baseline_raw.get("functions")
+    if not isinstance(functions_raw, dict):
+        functions_raw = {}
+
+    checked_functions: list[_AuthoringTraceBudgetCheckRow] = []
+    for func_name in sorted(str(n) for n in functions_raw):
+        budget_raw = functions_raw.get(func_name)
+        if not isinstance(budget_raw, (int, float)):
+            continue
+        budget_ms = max(0, int(budget_raw))
+        current_ms = max(0, current_by_name.get(func_name, 0))
+        threshold_ms = budget_ms + tolerance_ms
+        delta_ms = current_ms - threshold_ms
+        func_ok = current_ms <= threshold_ms
+        checked_functions.append(
+            {
+                "name": func_name,
+                "budget_ms": budget_ms,
+                "tolerance_ms": tolerance_ms,
+                "current_ms": current_ms,
+                "delta_ms": delta_ms,
+                "ok": bool(func_ok),
+            }
+        )
+
+    offenders = sorted(
+        (row for row in checked_functions if not bool(row["ok"])),
+        key=lambda row: (-int(row["delta_ms"]), row["name"]),
+    )
+    all_ok = total_ok and len(offenders) == 0
+
+    payload = _build_authoring_trace_budget_check_payload(
+        ok=all_ok,
+        tolerance_ms=tolerance_ms,
+        total_budget_ms=total_budget_ms,
+        total_current_ms=total_current_ms,
+        checked_functions=checked_functions,
+    )
+    if all_ok:
+        return 0, "", payload
+
+    parts: list[str] = []
+    if not total_ok and total_budget_ms is not None:
+        parts.append(
+            f"total: budget_ms={total_budget_ms} tolerance_ms={tolerance_ms} "
+            f"current_ms={total_current_ms} delta_ms={total_current_ms - (total_budget_ms + tolerance_ms)}"
+        )
+    for row in offenders:
+        parts.append(
+            f"{row['name']}: budget_ms={row['budget_ms']} tolerance_ms={row['tolerance_ms']} "
+            f"current_ms={row['current_ms']} delta_ms={row['delta_ms']}"
+        )
+    offender_text = ", ".join(parts)
+    return (
+        2,
+        (
+            f"authoring-trace budget exceeded: {offender_text}; "
+            f"update baseline with: {update_command}"
+        ),
+        payload,
+    )
+
+
 def _fetch_swallowed_exceptions_snapshot() -> dict[str, object]:
     """Snapshot swallowed-exception counts without resetting them.
 
@@ -248,6 +459,37 @@ def _fetch_swallowed_exceptions_snapshot() -> dict[str, object]:
             "distinct": 0,
             "per_site": [],
         }
+
+
+def _fetch_authoring_trace_snapshot() -> dict[str, object] | None:
+    """Return an authoring-trace snapshot when ``MESH_AUTHORING_TRACE_ARTIFACT=1``.
+
+    Default-off: returns *None* (and the artifact is not written) unless the
+    environment variable is set to a truthy value.  When enabled but no live
+    trace data is available, a deterministic empty snapshot is returned.
+    """
+    if not os.getenv("MESH_AUTHORING_TRACE_ARTIFACT"):
+        return None
+    # Attempt to read a module-level snapshot if one was stashed by a prior
+    # engine run.  In typical verify-all this will be empty because the
+    # engine is never booted — that's fine; we still write the artifact.
+    try:
+        from engine.scene_controller import SceneController  # noqa: PLC0415
+
+        sc = object.__new__(SceneController)
+        sc._authoring_trace_enabled = False
+        sc._authoring_trace_data = {}
+        snap = sc.get_authoring_trace_snapshot(limit=50)
+        if isinstance(snap, dict) and "schema_version" in snap:
+            return snap
+    except Exception:  # noqa: BLE001
+        pass
+    return {
+        "schema_version": 1,
+        "enabled": False,
+        "total_calls": 0,
+        "functions": [],
+    }
 
 
 def _fetch_shadow_backend_diagnostics() -> dict[str, object]:
@@ -706,6 +948,59 @@ def _run_verify_replays_summary(folder_path):
         return 1, {"ok": False, "code": 1, "error": "replays.failed"}
 
 
+def _build_artifact_index_payload(
+    *,
+    overall_ok: bool,
+    artifacts_dir: "Path",
+    artifacts_written: dict[str, str | None],
+    normalize: "Callable",
+    repo_root: "Path",
+) -> dict:
+    """Build the ``index.json`` manifest payload (schema v1)."""
+    import json as _json
+
+    verify_all_path = artifacts_written.get("verify_all_summary")
+
+    schemas: dict[str, int] = {}
+    readable: dict[str, bool] = {}
+
+    for key, rel_path in sorted(artifacts_written.items()):
+        if rel_path is None:
+            readable[key] = False
+            continue
+        # Resolve to absolute path for reading
+        abs_path = artifacts_dir / (rel_path.split("/")[-1]) if "/" in rel_path else artifacts_dir / rel_path
+        if not abs_path.is_file():
+            readable[key] = False
+            continue
+        try:
+            raw = abs_path.read_text(encoding="utf-8")
+            data = _json.loads(raw)
+        except Exception:
+            readable[key] = False
+            continue
+        if not isinstance(data, dict):
+            readable[key] = False
+            continue
+        readable[key] = True
+        sv = data.get("schema_version")
+        if isinstance(sv, int):
+            schemas[key] = sv
+
+    generated_files = sorted({v for v in artifacts_written.values() if v is not None})
+
+    return {
+        "schema_version": 1,
+        "bundle_schema_version": 1,
+        "ok": bool(overall_ok),
+        "verify_all": verify_all_path,
+        "written": dict(sorted(artifacts_written.items())),
+        "schemas": dict(sorted(schemas.items())),
+        "readable": dict(sorted(readable.items())),
+        "generated_files": generated_files,
+    }
+
+
 def _handle_verify_all(args: argparse.Namespace) -> int:
     import contextlib
     import io
@@ -713,12 +1008,62 @@ def _handle_verify_all(args: argparse.Namespace) -> int:
 
     from engine.persistence_io import dumps_json_deterministic
 
+    # --ci-bundle implies --report-json-artifact and --artifact-index
+    if getattr(args, "ci_bundle", False):
+        args.report_json_artifact = True
+        args.artifact_index = True
+
     # Keep verify-all stdout pure JSON by discarding any noisy prints from deeper
     # engine/tooling layers while computing the payload.
     with contextlib.redirect_stdout(io.StringIO()):
         payload, exit_code = _build_verify_all_payload(args)
 
     sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
+
+    # --report: append human-friendly diagnostics from verify_report
+    if getattr(args, "report", False):
+        artifacts_dir_arg = str(getattr(args, "artifacts", "") or "").strip()
+        if artifacts_dir_arg:
+            try:
+                from pathlib import Path as _Path
+
+                from .verify_report import build_report_text
+
+                _artifacts = _Path(artifacts_dir_arg)
+                if not _artifacts.is_absolute():
+                    from engine.repo_root import get_repo_root
+
+                    _artifacts = (get_repo_root(start=_Path.cwd(), strict=False) / _artifacts).resolve()
+                if _artifacts.is_dir():
+                    sys.stdout.write("\n")
+                    sys.stdout.write(build_report_text(_artifacts))
+                    sys.stdout.write("\n")
+            except Exception:  # noqa: BLE001
+                pass  # best-effort; keep original exit code
+
+    # --report-json: append machine-readable JSON diagnostics
+    if getattr(args, "report_json", False):
+        artifacts_dir_arg = str(getattr(args, "artifacts", "") or "").strip()
+        if artifacts_dir_arg:
+            try:
+                from pathlib import Path as _Path
+
+                from .verify_report import build_report_payload
+
+                _artifacts = _Path(artifacts_dir_arg)
+                if not _artifacts.is_absolute():
+                    from engine.repo_root import get_repo_root
+
+                    _artifacts = (get_repo_root(start=_Path.cwd(), strict=False) / _artifacts).resolve()
+                if _artifacts.is_dir():
+                    import json as _json
+
+                    sys.stdout.write("\n")
+                    sys.stdout.write(_json.dumps(build_report_payload(_artifacts), indent=2, sort_keys=True))
+                    sys.stdout.write("\n")
+            except Exception:  # noqa: BLE001
+                pass  # best-effort; keep original exit code
+
     return int(exit_code)
 
 
@@ -801,6 +1146,8 @@ def _build_verify_all_payload(args: argparse.Namespace):
                     "encounter_audit_summary": None,
                     "encounter_audit_compact": None,
                     "encounter_headroom": None,
+                    "authoring_trace": None,
+                    "authoring_trace_budget_check": None,
                 },
             },
         }
@@ -837,6 +1184,10 @@ def _build_verify_all_payload(args: argparse.Namespace):
         "encounter_audit_summary": None,
         "encounter_audit_compact": None,
         "encounter_headroom": None,
+        "authoring_trace": None,
+        "authoring_trace_budget_check": None,
+        "verify_report": None,
+        "artifact_index": None,
     }
 
     write_scenes: Path | None = None
@@ -984,6 +1335,107 @@ def _build_verify_all_payload(args: argparse.Namespace):
                 trailing_newline=True,
             )
 
+        # Authoring trace snapshot artifact (optional, default-off)
+        authoring_trace_payload = _fetch_authoring_trace_snapshot()
+        if authoring_trace_payload is not None:
+            with suppress_stdout():
+                write_json_atomic(
+                    artifacts_dir / "authoring_trace.json",
+                    authoring_trace_payload,
+                    indent=2,
+                    sort_keys=True,
+                    trailing_newline=True,
+                )
+            artifacts_written["authoring_trace"] = _normalize_path_for_json(
+                artifacts_dir / "authoring_trace.json", repo_root=repo_root
+            )
+
+            # Authoring-trace budget guard (optional, default-off)
+            if (
+                authoring_trace_payload.get("schema_version") == 1
+                and authoring_trace_payload.get("enabled") is True
+            ):
+                trace_budget_baseline = repo_root / "tooling" / "metrics" / "authoring_trace_budget.json"
+                trace_budget_update_cmd = _authoring_trace_budget_update_command(artifacts_dir)
+                try:
+                    trace_budget_code, trace_budget_error, trace_budget_payload = _evaluate_authoring_trace_budget_guard(
+                        authoring_trace_payload=authoring_trace_payload,
+                        baseline_path=trace_budget_baseline,
+                        update_command=trace_budget_update_cmd,
+                    )
+                except Exception as exc:
+                    trace_budget_code = 1
+                    trace_budget_error = f"authoring-trace-budget guard failed: {type(exc).__name__}: {exc}"
+                    trace_budget_payload = _build_authoring_trace_budget_check_payload(
+                        ok=False,
+                        tolerance_ms=_AUTHORING_TRACE_BUDGET_DEFAULT_TOLERANCE_MS,
+                        total_budget_ms=None,
+                        total_current_ms=None,
+                        checked_functions=[],
+                    )
+
+                with suppress_stdout():
+                    write_json_atomic(
+                        artifacts_dir / "authoring_trace_budget_check.json",
+                        trace_budget_payload,
+                        indent=2,
+                        sort_keys=True,
+                        trailing_newline=True,
+                    )
+                artifacts_written["authoring_trace_budget_check"] = _normalize_path_for_json(
+                    artifacts_dir / "authoring_trace_budget_check.json", repo_root=repo_root
+                )
+                if trace_budget_code != 0:
+                    overall_ok = False
+                    if exit_code == 0:
+                        exit_code = 2 if trace_budget_code == 2 else 1
+                    if trace_budget_error:
+                        print(f"[Mesh][Verify] {trace_budget_error}", file=sys.stderr)
+
+    # --report-json-artifact: write verify_report.json to artifacts dir
+    if artifacts_dir is not None and getattr(args, "report_json_artifact", False):
+        try:
+            from .verify_report import build_report_payload
+
+            _report_payload = build_report_payload(artifacts_dir)
+            with suppress_stdout():
+                write_json_atomic(
+                    artifacts_dir / "verify_report.json",
+                    _report_payload,
+                    indent=2,
+                    sort_keys=True,
+                    trailing_newline=True,
+                )
+            artifacts_written["verify_report"] = _normalize_path_for_json(
+                artifacts_dir / "verify_report.json", repo_root=repo_root
+            )
+        except Exception:  # noqa: BLE001
+            pass  # best-effort; keep exit code unchanged
+
+    # --artifact-index: write artifacts/index.json manifest
+    if artifacts_dir is not None and getattr(args, "artifact_index", False):
+        try:
+            _index_payload = _build_artifact_index_payload(
+                overall_ok=overall_ok,
+                artifacts_dir=artifacts_dir,
+                artifacts_written=artifacts_written,
+                normalize=_normalize_path_for_json,
+                repo_root=repo_root,
+            )
+            with suppress_stdout():
+                write_json_atomic(
+                    artifacts_dir / "index.json",
+                    _index_payload,
+                    indent=2,
+                    sort_keys=True,
+                    trailing_newline=True,
+                )
+            artifacts_written["artifact_index"] = _normalize_path_for_json(
+                artifacts_dir / "index.json", repo_root=repo_root
+            )
+        except Exception:  # noqa: BLE001
+            pass  # best-effort; keep exit code unchanged
+
     payload = {
         "ok": bool(overall_ok),
         "steps": steps,
@@ -1043,6 +1495,40 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         "--no-index",
         action="store_true",
         help="Disable writing indices even if --out-dir is provided",
+    )
+    verify_all_parser.add_argument(
+        "--report",
+        action="store_true",
+        default=False,
+        help="Print a human-friendly diagnostics report after the JSON summary",
+    )
+    verify_all_parser.add_argument(
+        "--report-json",
+        action="store_true",
+        default=False,
+        dest="report_json",
+        help="Print a machine-readable JSON diagnostics report after the JSON summary",
+    )
+    verify_all_parser.add_argument(
+        "--report-json-artifact",
+        action="store_true",
+        default=False,
+        dest="report_json_artifact",
+        help="Write a verify_report.json artifact to the artifacts directory",
+    )
+    verify_all_parser.add_argument(
+        "--artifact-index",
+        action="store_true",
+        default=False,
+        dest="artifact_index",
+        help="Write an index.json artifact manifest to the artifacts directory",
+    )
+    verify_all_parser.add_argument(
+        "--ci-bundle",
+        action="store_true",
+        default=False,
+        dest="ci_bundle",
+        help="Convenience flag: implies --report-json-artifact and --artifact-index",
     )
     verify_all_parser.add_argument(
         "pytest_args",

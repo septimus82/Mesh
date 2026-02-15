@@ -58,6 +58,9 @@ def register_commands(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     from .. import health_report as health_report_commands
     health_report_commands.register(subparsers)
 
+    from .. import verify_report as verify_report_commands
+    verify_report_commands.register(subparsers)
+
     from .. import verify as verify_commands
     verify_commands.register(subparsers)
 
@@ -78,6 +81,15 @@ def register_commands(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
 
     from .. import bundle_verify as bundle_verify_commands
     bundle_verify_commands.register(subparsers)
+
+    from .. import artifacts_validate as artifacts_validate_commands
+    artifacts_validate_commands.register(subparsers)
+
+    from .. import artifacts_diff as artifacts_diff_commands
+    artifacts_diff_commands.register(subparsers)
+
+    from .. import baseline_update as baseline_update_commands
+    baseline_update_commands.register(subparsers)
 
     from engine.tooling import perf_command
     perf_command.add_perf_run_command(subparsers)

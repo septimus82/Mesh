@@ -68,6 +68,10 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
         "encounter_audit_summary",
         "encounter_audit_compact",
         "encounter_headroom",
+        "authoring_trace",
+        "authoring_trace_budget_check",
+        "verify_report",
+        "artifact_index",
     }
     assert written["verify_all_summary"] == "artifacts/verify_all_summary.json"
     assert written["verify_step_durations"] == "artifacts/verify_step_durations.json"
@@ -88,6 +92,10 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
     assert written["encounter_headroom"] == "artifacts/encounter_headroom.json"
     assert written["shadow_backend"] == "artifacts/shadow_backend.json"
     assert written["swallowed_exceptions"] == "artifacts/swallowed_exceptions.json"
+    assert written["authoring_trace"] is None
+    assert written["authoring_trace_budget_check"] is None
+    assert written["verify_report"] is None
+    assert written["artifact_index"] is None
     assert all("\\" not in (v or "") for v in written.values())
 
     assert [s["name"] for s in payload["steps"]] == list(mesh_cli.VERIFY_ALL_STEPS)
@@ -161,6 +169,10 @@ def test_verify_all_schema_failure_includes_skipped_steps(monkeypatch, tmp_path,
     assert written["scenes_index"] is None
     assert written["worlds_index"] is None
     assert written["doctor_assets"] is None
+    assert written["authoring_trace"] is None
+    assert written["authoring_trace_budget_check"] is None
+    assert written["verify_report"] is None
+    assert written["artifact_index"] is None
 
 
 def test_verify_all_path_normalization_uses_forward_slashes(tmp_path):

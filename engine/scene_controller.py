@@ -61,6 +61,7 @@ import logging
 import math
 import os
 import random
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Iterator, Sequence
 import engine.optional_arcade as optional_arcade
@@ -987,6 +988,87 @@ class SceneController:
             authoring_runtime=_authoring_runtime,
         )
 
+    # ------------------------------------------------------------------
+    # Generic authoring-call proxy
+    # ------------------------------------------------------------------
+
+    _authoring_trace_enabled: bool = False
+    _authoring_trace_data: dict[str, dict[str, Any]] = {}  # noqa: RUF012
+
+    def _call_authoring(self, fn_name: str, *args: Any, **kwargs: Any) -> Any:
+        """Dispatch to ``engine.scene_runtime.authoring.<fn_name>(self, *args, **kwargs)``."""
+        fn = getattr(_authoring_runtime, fn_name)
+        if not self._authoring_trace_enabled:
+            return fn(self, *args, **kwargs)
+        start = time.perf_counter()
+        try:
+            return fn(self, *args, **kwargs)
+        except Exception as exc:
+            entry = self._authoring_trace_data.get(fn_name)
+            if entry is not None:
+                entry["last_err"] = f"{type(exc).__name__}:{str(exc)[:120]}"
+            else:
+                self._authoring_trace_data[fn_name] = {
+                    "count": 0,
+                    "total_ms": 0,
+                    "last_err": f"{type(exc).__name__}:{str(exc)[:120]}",
+                }
+            raise
+        finally:
+            elapsed_ms = int((time.perf_counter() - start) * 1000)
+            entry = self._authoring_trace_data.get(fn_name)
+            if entry is not None:
+                entry["count"] += 1
+                entry["total_ms"] += elapsed_ms
+            else:
+                self._authoring_trace_data[fn_name] = {
+                    "count": 1,
+                    "total_ms": elapsed_ms,
+                    "last_err": None,
+                }
+
+    # ------------------------------------------------------------------
+    # Authoring trace API (debug-only)
+    # ------------------------------------------------------------------
+
+    def enable_authoring_trace(self, enabled: bool) -> None:
+        """Enable or disable per-function tracing for authoring proxy calls."""
+        self._authoring_trace_enabled = bool(enabled)
+        if enabled and not isinstance(self.__dict__.get("_authoring_trace_data"), dict):
+            self._authoring_trace_data = {}
+
+    def reset_authoring_trace(self) -> None:
+        """Clear all accumulated trace data."""
+        self._authoring_trace_data = {}
+
+    def get_authoring_trace_snapshot(self, limit: int = 20) -> dict[str, Any]:
+        """Return a snapshot of authoring proxy trace stats.
+
+        The returned dict has *schema_version=1*, the *enabled* flag,
+        *total_calls*, and a *functions* list sorted by *total_ms* desc
+        then *name* asc, capped at *limit* entries.
+        """
+        data = self._authoring_trace_data
+        total_calls = sum(e["count"] for e in data.values())
+        items: list[dict[str, Any]] = []
+        for name, entry in data.items():
+            count = entry["count"]
+            total_ms = entry["total_ms"]
+            items.append({
+                "name": name,
+                "count": count,
+                "total_ms": total_ms,
+                "avg_ms": total_ms // count if count else 0,
+                "last_err": entry["last_err"],
+            })
+        items.sort(key=lambda it: (-it["total_ms"], it["name"]))
+        return {
+            "schema_version": 1,
+            "enabled": self._authoring_trace_enabled,
+            "total_calls": total_calls,
+            "functions": items[:limit],
+        }
+
     def refresh_tilemap_layers(self) -> bool:
         """Debug-only: rebuild tilemap sprite layers from the current loaded scene payload."""
         scene_path = str(self.current_scene_path or "").strip()
@@ -1004,25 +1086,25 @@ class SceneController:
         return True
 
     def debug_find_sprite_by_entity_id(self, entity_id: str) -> optional_arcade.arcade.Sprite | None:
-        return _authoring_runtime.debug_find_sprite_by_entity_id(self, entity_id)
+        return self._call_authoring("debug_find_sprite_by_entity_id", entity_id)
 
     def _debug_iter_authoring_payloads(self) -> list[Dict[str, Any]]:
-        return _authoring_runtime._debug_iter_authoring_payloads(self)
+        return self._call_authoring("_debug_iter_authoring_payloads")
 
     def _debug_remove_sprite(self, sprite: optional_arcade.arcade.Sprite) -> None:
-        _authoring_runtime._debug_remove_sprite(self, sprite)
+        self._call_authoring("_debug_remove_sprite", sprite)
 
     def debug_add_entity_payload(self, entity_payload: Dict[str, Any]) -> bool:
-        return _authoring_runtime.debug_add_entity_payload(self, entity_payload)
+        return self._call_authoring("debug_add_entity_payload", entity_payload)
 
     def debug_remove_entity_by_id(self, entity_id: str) -> bool:
-        return _authoring_runtime.debug_remove_entity_by_id(self, entity_id)
+        return self._call_authoring("debug_remove_entity_by_id", entity_id)
 
     def debug_move_entity_by_id(self, entity_id: str, *, x: float, y: float) -> bool:
-        return _authoring_runtime.debug_move_entity_by_id(self, entity_id, x=x, y=y)
+        return self._call_authoring("debug_move_entity_by_id", entity_id, x=x, y=y)
 
     def debug_duplicate_entities_by_ids(self, ids: list[str], *, dx: float, dy: float) -> dict[str, str]:
-        return _authoring_runtime.debug_duplicate_entities_by_ids(self, ids, dx=dx, dy=dy)
+        return self._call_authoring("debug_duplicate_entities_by_ids", ids, dx=dx, dy=dy)
 
     def debug_copy_entities_by_ids(
         self,
@@ -1037,7 +1119,7 @@ class SceneController:
         - Skips player entities silently.
         - Deterministic: entities sorted by orig_id.
         """
-        return _authoring_runtime.debug_copy_entities_by_ids(self, ids, primary_id=primary_id)
+        return self._call_authoring("debug_copy_entities_by_ids", ids, primary_id=primary_id)
 
     def debug_paste_entities_from_clipboard(
         self,
@@ -1054,12 +1136,9 @@ class SceneController:
         - Deterministic ordering: paste in sorted orig_id order.
         - Returns (pasted_ids_sorted, pasted_primary_id).
         """
-        return _authoring_runtime.debug_paste_entities_from_clipboard(
-            self,
-            clipboard,
-            anchor_x=anchor_x,
-            anchor_y=anchor_y,
-            snap_to_tile=snap_to_tile,
+        return self._call_authoring(
+            "debug_paste_entities_from_clipboard", clipboard,
+            anchor_x=anchor_x, anchor_y=anchor_y, snap_to_tile=snap_to_tile,
         )
 
     def debug_transform_entities_by_ids(
@@ -1079,34 +1158,34 @@ class SceneController:
 
         Returns the number of entities transformed.
         """
-        return _authoring_runtime.debug_transform_entities_by_ids(self, ids, op=op, snap_to_tile=snap_to_tile)
+        return self._call_authoring("debug_transform_entities_by_ids", ids, op=op, snap_to_tile=snap_to_tile)
 
     def debug_set_prefab_id(self, selected_ids: list[str], prefab_id: str) -> tuple[int, int]:
-        return _authoring_runtime.debug_set_prefab_id(self, selected_ids, prefab_id)
+        return self._call_authoring("debug_set_prefab_id", selected_ids, prefab_id)
 
     def debug_add_behaviour(self, selected_ids: list[str], behaviour_name: str) -> tuple[int, int]:
-        return _authoring_runtime.debug_add_behaviour(self, selected_ids, behaviour_name)
+        return self._call_authoring("debug_add_behaviour", selected_ids, behaviour_name)
 
     def debug_remove_behaviour(self, selected_ids: list[str], behaviour_name: str) -> tuple[int, int]:
-        return _authoring_runtime.debug_remove_behaviour(self, selected_ids, behaviour_name)
+        return self._call_authoring("debug_remove_behaviour", selected_ids, behaviour_name)
 
     def debug_set_name(self, primary_id: str, name: str) -> tuple[int, int]:
-        return _authoring_runtime.debug_set_name(self, primary_id, name)
+        return self._call_authoring("debug_set_name", primary_id, name)
 
     def debug_add_tag(self, selected_ids: list[str], tag: str) -> tuple[int, int]:
-        return _authoring_runtime.debug_add_tag(self, selected_ids, tag)
+        return self._call_authoring("debug_add_tag", selected_ids, tag)
 
     def debug_remove_tag(self, selected_ids: list[str], tag: str) -> tuple[int, int]:
-        return _authoring_runtime.debug_remove_tag(self, selected_ids, tag)
+        return self._call_authoring("debug_remove_tag", selected_ids, tag)
 
     def debug_toggle_tag(self, selected_ids: list[str], tag: str) -> tuple[int, int, int]:
-        return _authoring_runtime.debug_toggle_tag(self, selected_ids, tag)
+        return self._call_authoring("debug_toggle_tag", selected_ids, tag)
 
     def debug_batch_rename(self, selected_ids: list[str], prefix: str = "", suffix: str = "") -> tuple[int, int]:
-        return _authoring_runtime.debug_batch_rename(self, selected_ids, prefix=prefix, suffix=suffix)
+        return self._call_authoring("debug_batch_rename", selected_ids, prefix=prefix, suffix=suffix)
 
     def debug_set_names(self, entity_ids: list[str], base: str, start: int = 1, width: int = 3) -> dict:
-        return _authoring_runtime.debug_set_names(self, entity_ids, base, start=start, width=width)
+        return self._call_authoring("debug_set_names", entity_ids, base, start=start, width=width)
 
     def debug_align_selection(
         self,
@@ -1116,8 +1195,9 @@ class SceneController:
         reference: str = "primary",
         primary_id: str = "",
     ) -> dict:
-        return _authoring_runtime.debug_align_selection(
-            self, entity_ids, axis, mode, reference=reference, primary_id=primary_id,
+        return self._call_authoring(
+            "debug_align_selection", entity_ids, axis, mode,
+            reference=reference, primary_id=primary_id,
         )
 
     def debug_distribute_selection(
@@ -1128,8 +1208,9 @@ class SceneController:
         reference: str = "group",
         primary_id: str = "",
     ) -> dict:
-        return _authoring_runtime.debug_distribute_selection(
-            self, entity_ids, axis, mode, reference=reference, primary_id=primary_id,
+        return self._call_authoring(
+            "debug_distribute_selection", entity_ids, axis, mode,
+            reference=reference, primary_id=primary_id,
         )
 
     def debug_snap_to_grid(
@@ -1139,9 +1220,7 @@ class SceneController:
         axes: str = "xy",
         mode: str = "nearest",
     ) -> dict:
-        return _authoring_runtime.debug_snap_to_grid(
-            self, entity_ids, step, axes=axes, mode=mode,
-        )
+        return self._call_authoring("debug_snap_to_grid", entity_ids, step, axes=axes, mode=mode)
 
     def debug_nudge_selection(
         self,
@@ -1151,9 +1230,7 @@ class SceneController:
         count: int = 1,
         step: float | None = None,
     ) -> dict:
-        return _authoring_runtime.debug_nudge_selection(
-            self, entity_ids, dx, dy, count=count, step=step,
-        )
+        return self._call_authoring("debug_nudge_selection", entity_ids, dx, dy, count=count, step=step)
 
     def debug_rotate_selection(
         self,
@@ -1162,8 +1239,8 @@ class SceneController:
         about: str = "self",
         primary_id: str = "",
     ) -> dict:
-        return _authoring_runtime.debug_rotate_selection(
-            self, entity_ids, deg, about=about, primary_id=primary_id,
+        return self._call_authoring(
+            "debug_rotate_selection", entity_ids, deg, about=about, primary_id=primary_id,
         )
 
     def debug_mirror_selection(
@@ -1174,9 +1251,9 @@ class SceneController:
         primary_id: str = "",
         include_rotation: bool = True,
     ) -> dict:
-        return _authoring_runtime.debug_mirror_selection(
-            self, entity_ids, axis, about=about, primary_id=primary_id,
-            include_rotation=include_rotation,
+        return self._call_authoring(
+            "debug_mirror_selection", entity_ids, axis,
+            about=about, primary_id=primary_id, include_rotation=include_rotation,
         )
 
     def debug_group_selection(
@@ -1186,9 +1263,9 @@ class SceneController:
         about: str = "group",
         primary_id: str = "",
     ) -> dict:
-        return _authoring_runtime.debug_group_selection(
-            self, entity_ids, name_base=name_base, about=about,
-            primary_id=primary_id,
+        return self._call_authoring(
+            "debug_group_selection", entity_ids,
+            name_base=name_base, about=about, primary_id=primary_id,
         )
 
     def debug_ungroup_selection(
@@ -1196,9 +1273,7 @@ class SceneController:
         entity_ids: list[str],
         mode: str = "auto",
     ) -> dict:
-        return _authoring_runtime.debug_ungroup_selection(
-            self, entity_ids, mode=mode,
-        )
+        return self._call_authoring("debug_ungroup_selection", entity_ids, mode=mode)
 
     def debug_duplicate_to_grid(
         self,
@@ -1211,10 +1286,10 @@ class SceneController:
         include_original: bool = True,
         name_mode: str = "none",
     ) -> dict:
-        return _authoring_runtime.debug_duplicate_to_grid(
-            self, entity_ids, rows=rows, cols=cols, dx=dx, dy=dy,
-            origin=origin, include_original=include_original,
-            name_mode=name_mode,
+        return self._call_authoring(
+            "debug_duplicate_to_grid", entity_ids,
+            rows=rows, cols=cols, dx=dx, dy=dy, origin=origin,
+            include_original=include_original, name_mode=name_mode,
         )
 
     def debug_duplicate_along_path(
@@ -1230,11 +1305,11 @@ class SceneController:
         name_mode: str = "none",
         orient: bool = False,
     ) -> dict:
-        return _authoring_runtime.debug_duplicate_along_path(
-            self, entity_ids, from_x=from_x, from_y=from_y,
-            to_x=to_x, to_y=to_y, count=count,
-            include_original=include_original, origin=origin,
-            name_mode=name_mode, orient=orient,
+        return self._call_authoring(
+            "debug_duplicate_along_path", entity_ids,
+            from_x=from_x, from_y=from_y, to_x=to_x, to_y=to_y,
+            count=count, include_original=include_original,
+            origin=origin, name_mode=name_mode, orient=orient,
         )
 
     def debug_scatter_selection(
@@ -1252,12 +1327,11 @@ class SceneController:
         include_original: bool = True,
         name_mode: str = "none",
     ) -> dict:
-        return _authoring_runtime.debug_scatter_selection(
-            self, entity_ids, n=n, shape=shape,
-            radius=radius, width=width, height=height,
-            center=center, seed=seed,
-            jitter_rot_deg=jitter_rot_deg, snap_step=snap_step,
-            include_original=include_original,
+        return self._call_authoring(
+            "debug_scatter_selection", entity_ids,
+            n=n, shape=shape, radius=radius, width=width, height=height,
+            center=center, seed=seed, jitter_rot_deg=jitter_rot_deg,
+            snap_step=snap_step, include_original=include_original,
             name_mode=name_mode,
         )
 
@@ -1267,7 +1341,7 @@ class SceneController:
 
         Returns (changed_count, skipped_player_count, skipped_missing_behaviour_count).
         """
-        return _authoring_runtime.debug_config_triggerzone_set_zone_id(self, selected_ids, zone_id)
+        return self._call_authoring("debug_config_triggerzone_set_zone_id", selected_ids, zone_id)
 
     def debug_config_triggerzone_set_radius(self, selected_ids: list[str], trigger_radius: float) -> tuple[int, int, int]:
         """
@@ -1275,7 +1349,7 @@ class SceneController:
 
         Returns (changed_count, skipped_player_count, skipped_missing_behaviour_count).
         """
-        return _authoring_runtime.debug_config_triggerzone_set_radius(self, selected_ids, trigger_radius)
+        return self._call_authoring("debug_config_triggerzone_set_radius", selected_ids, trigger_radius)
 
     def debug_config_set_game_state_set_toast(
         self,
@@ -1290,8 +1364,8 @@ class SceneController:
         - If toast_seconds is None: keep existing toast_seconds if present, else use 3.0.
         Returns (changed_count, skipped_player_count, skipped_missing_behaviour_count).
         """
-        return _authoring_runtime.debug_config_set_game_state_set_toast(
-            self,
+        return self._call_authoring(
+            "debug_config_set_game_state_set_toast",
             selected_ids,
             toast=toast,
             toast_seconds=toast_seconds,
@@ -1303,7 +1377,7 @@ class SceneController:
 
         Returns (changed_count, skipped_player_count, skipped_missing_behaviour_count).
         """
-        return _authoring_runtime.debug_config_set_game_state_add_require_flag(self, selected_ids, flag)
+        return self._call_authoring("debug_config_set_game_state_add_require_flag", selected_ids, flag)
 
     def debug_config_set_game_state_add_forbid_flag(self, selected_ids: list[str], flag: str) -> tuple[int, int, int]:
         """
@@ -1311,7 +1385,7 @@ class SceneController:
 
         Returns (changed_count, skipped_player_count, skipped_missing_behaviour_count).
         """
-        return _authoring_runtime.debug_config_set_game_state_add_forbid_flag(self, selected_ids, flag)
+        return self._call_authoring("debug_config_set_game_state_add_forbid_flag", selected_ids, flag)
 
     def debug_config_set_game_state_set_flag_true(self, selected_ids: list[str], flag_key: str) -> tuple[int, int, int]:
         """
@@ -1319,7 +1393,7 @@ class SceneController:
 
         Returns (changed_count, skipped_player_count, skipped_missing_behaviour_count).
         """
-        return _authoring_runtime.debug_config_set_game_state_set_flag_true(self, selected_ids, flag_key)
+        return self._call_authoring("debug_config_set_game_state_set_flag_true", selected_ids, flag_key)
 
     def debug_config_scene_transition_set_target_scene(self, selected_ids: list[str], target_scene: str) -> tuple[int, int, int]:
         """
@@ -1327,7 +1401,7 @@ class SceneController:
 
         Returns (changed_count, skipped_player_count, skipped_missing_behaviour_count).
         """
-        return _authoring_runtime.debug_config_scene_transition_set_target_scene(self, selected_ids, target_scene)
+        return self._call_authoring("debug_config_scene_transition_set_target_scene", selected_ids, target_scene)
 
     def debug_config_scene_transition_set_spawn_id(self, selected_ids: list[str], spawn_id: str) -> tuple[int, int, int]:
         """
@@ -1335,10 +1409,10 @@ class SceneController:
 
         Returns (changed_count, skipped_player_count, skipped_missing_behaviour_count).
         """
-        return _authoring_runtime.debug_config_scene_transition_set_spawn_id(self, selected_ids, spawn_id)
+        return self._call_authoring("debug_config_scene_transition_set_spawn_id", selected_ids, spawn_id)
 
     def _debug_config_entity_has_behaviour(self, entity_payload: dict[str, Any], behaviour_name: str) -> bool:
-        return _authoring_runtime._debug_config_entity_has_behaviour(self, entity_payload, behaviour_name)
+        return self._call_authoring("_debug_config_entity_has_behaviour", entity_payload, behaviour_name)
 
     def _debug_config_mutate_for_behaviour(
         self,
@@ -1347,8 +1421,8 @@ class SceneController:
         behaviour_name: str,
         mutate: "Callable[[dict[str, Any]], bool]",
     ) -> tuple[int, int, int]:
-        return _authoring_runtime._debug_config_mutate_for_behaviour(
-            self,
+        return self._call_authoring(
+            "_debug_config_mutate_for_behaviour",
             selected_ids,
             behaviour_name=behaviour_name,
             mutate=mutate,
@@ -1362,8 +1436,8 @@ class SceneController:
         field_path: tuple[str, ...],
         value: Any,
     ) -> tuple[int, int, int]:
-        return _authoring_runtime._debug_config_set_field_for_behaviour(
-            self,
+        return self._call_authoring(
+            "_debug_config_set_field_for_behaviour",
             selected_ids,
             behaviour_name=behaviour_name,
             field_path=field_path,
@@ -1388,8 +1462,8 @@ class SceneController:
 
         Returns (new_payload, created_count, updated_count). Does not mutate scene state by itself.
         """
-        return _authoring_runtime.debug_build_macro_objective_zone_payload(
-            self,
+        return self._call_authoring(
+            "debug_build_macro_objective_zone_payload",
             center_x=center_x,
             center_y=center_y,
             zone_id=zone_id,
@@ -1417,8 +1491,8 @@ class SceneController:
 
         Returns (new_payload, created_count, updated_count). Does not mutate scene state by itself.
         """
-        return _authoring_runtime.debug_build_macro_door_transition_payload(
-            self,
+        return self._call_authoring(
+            "debug_build_macro_door_transition_payload",
             center_x=center_x,
             center_y=center_y,
             target_scene=target_scene,
@@ -1442,8 +1516,8 @@ class SceneController:
 
         Returns (new_payload, created_count, updated_count). Does not mutate scene state by itself.
         """
-        return _authoring_runtime.debug_build_macro_dialogue_choice_flag_payload(
-            self,
+        return self._call_authoring(
+            "debug_build_macro_dialogue_choice_flag_payload",
             speaker_id=speaker_id,
             choice_id=choice_id,
             choice_text=choice_text,
@@ -1452,7 +1526,7 @@ class SceneController:
         )
 
     def _debug_preview_diff(self, before_payload: Dict[str, Any], after_payload: Dict[str, Any]) -> Dict[str, Any]:
-        return _authoring_runtime._debug_preview_diff(self, before_payload, after_payload)
+        return self._call_authoring("_debug_preview_diff", before_payload, after_payload)
 
     def debug_preview_macro_objective_zone(
         self,
@@ -1467,8 +1541,8 @@ class SceneController:
         forbid_flags: list[str] | None = None,
         toast_seconds: float | None = None,
     ) -> Dict[str, Any]:
-        return _authoring_runtime.debug_preview_macro_objective_zone(
-            self,
+        return self._call_authoring(
+            "debug_preview_macro_objective_zone",
             center_x=center_x,
             center_y=center_y,
             zone_id=zone_id,
@@ -1489,8 +1563,8 @@ class SceneController:
         spawn_id: str,
         primary_id: str | None,
     ) -> Dict[str, Any]:
-        return _authoring_runtime.debug_preview_macro_door_transition(
-            self,
+        return self._call_authoring(
+            "debug_preview_macro_door_transition",
             center_x=center_x,
             center_y=center_y,
             target_scene=target_scene,
@@ -1507,8 +1581,8 @@ class SceneController:
         set_flag: str,
         toast: str | None,
     ) -> Dict[str, Any]:
-        return _authoring_runtime.debug_preview_macro_dialogue_choice_flag(
-            self,
+        return self._call_authoring(
+            "debug_preview_macro_dialogue_choice_flag",
             speaker_id=speaker_id,
             choice_id=choice_id,
             choice_text=choice_text,

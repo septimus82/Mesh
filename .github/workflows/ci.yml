@@ -78,12 +78,62 @@ jobs:
       - name: Run verify-all (Windows)
         if: runner.os == 'Windows'
         run: |
-          python -m mesh_cli verify-all --artifacts artifacts/verify_all
+          python -m mesh_cli verify-all --artifacts artifacts --ci-bundle
 
       - name: Run verify-all (Linux)
         if: runner.os != 'Windows'
         run: |
-          xvfb-run -a python -m mesh_cli verify-all --artifacts artifacts/verify_all
+          xvfb-run -a python -m mesh_cli verify-all --artifacts artifacts --ci-bundle
+
+      - name: Validate artifact bundle
+        run: |
+          python -m mesh_cli artifacts-validate --artifacts artifacts
+
+      - name: Diff against baseline
+        run: |
+          python -m mesh_cli artifacts-diff --base tooling/metrics/ci_baseline_artifacts --curr artifacts --fail-on-regression
+
+      - name: Print baseline diff on failure
+        if: failure()
+        run: |
+          python -m mesh_cli artifacts-diff --base tooling/metrics/ci_baseline_artifacts --curr artifacts --format markdown || true
+
+      - name: Print verify diagnostics
+        if: failure()
+        run: |
+          python -m mesh_cli verify-report --artifacts artifacts
+
+      - name: Show artifact index on failure (Linux)
+        if: failure() && runner.os != 'Windows'
+        shell: bash
+        run: |
+          echo "=== artifacts/index.json ==="
+          if [ -f artifacts/index.json ]; then cat artifacts/index.json; else echo "(missing artifacts/index.json)"; fi
+
+      - name: Show artifact index on failure (Windows)
+        if: failure() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "=== artifacts/index.json ==="
+          if (Test-Path "artifacts/index.json") { Get-Content "artifacts/index.json" } else { Write-Host "(missing artifacts/index.json)" }
+
+      - name: Verify report (head) on failure (Linux)
+        if: failure() && runner.os != 'Windows'
+        shell: bash
+        run: |
+          echo "=== verify-report (first 60 lines) ==="
+          python -m mesh_cli verify-report --artifacts artifacts | head -n 60 || echo "(verify-report unavailable)"
+
+      - name: Verify report (head) on failure (Windows)
+        if: failure() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "=== verify-report (first 60 lines) ==="
+          try {
+            python -m mesh_cli verify-report --artifacts artifacts | Select-Object -First 60
+          } catch {
+            Write-Host "(verify-report unavailable)"
+          }
 
       - name: Build release bundle (seeded, Windows)
         if: runner.os == 'Windows'
@@ -111,13 +161,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mesh_release_bundle_${{ matrix.os }}_py${{ matrix.python }}
+          name: mesh-artifacts-${{ matrix.os }}-py${{ matrix.python }}
           retention-days: 7
           if-no-files-found: error
           path: |
-            artifacts/release_bundle.zip
-            artifacts/bundle_verify_report.json
-            artifacts/verify_all/**
+            artifacts/
 
   ship:
     name: ship (release branches)

@@ -1,0 +1,87 @@
+{
+  "artifacts_dir": "D:/Games/Mesh/artifacts",
+  "authoring_trace": null,
+  "budgets": {
+    "exception_budget": {
+      "baseline_count": 34,
+      "current_count": 34,
+      "ok": true
+    },
+    "verify_step_budget": {
+      "ok": true,
+      "worst_offender": null
+    }
+  },
+  "read_files": [
+    "verify_all_summary.json",
+    "exception_budget.json",
+    "verify_step_durations.json",
+    "verify_step_budget_check.json",
+    "swallowed_exceptions.json",
+    "shadow_backend.json"
+  ],
+  "runtime_diagnostics": {
+    "shadow_backend": {
+      "fallbacks": [],
+      "reason": "uninitialized",
+      "selected": "none"
+    },
+    "swallowed_exceptions": {
+      "distinct": 0,
+      "ok": true,
+      "top5_sites": [],
+      "total": 0
+    }
+  },
+  "schema_version": 1,
+  "timing": {
+    "top5": [
+      {
+        "ms": 24427,
+        "name": "verify-demo"
+      },
+      {
+        "ms": 11549,
+        "name": "mypy-gate"
+      },
+      {
+        "ms": 429,
+        "name": "verify-strict"
+      },
+      {
+        "ms": 65,
+        "name": "verify-replays"
+      },
+      {
+        "ms": 0,
+        "name": "brush-audit"
+      }
+    ],
+    "total_ms": 36470
+  },
+  "verify_summary": {
+    "artifacts_written": [
+      "brush_audit",
+      "content_audit",
+      "doctor_assets",
+      "encounter_audit_compact",
+      "encounter_audit_summary",
+      "encounter_coverage_matrix",
+      "encounter_headroom",
+      "exception_budget",
+      "macro_audit",
+      "replays_summary",
+      "room_audit",
+      "scenes_index",
+      "shadow_backend",
+      "stamp_audit",
+      "swallowed_exceptions",
+      "verify_all_summary",
+      "verify_step_budget_check",
+      "verify_step_durations",
+      "worlds_index"
+    ],
+    "failing_steps": [],
+    "ok": true
+  }
+}

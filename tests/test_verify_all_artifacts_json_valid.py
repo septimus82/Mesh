@@ -105,3 +105,44 @@ def test_verify_all_artifacts_are_valid_json_objects_and_have_required_keys(monk
         assert isinstance(data, dict), f"{filename}: expected dict"
         for key in keys:
             assert key in data, f"{filename}: missing key {key!r}"
+
+    # verify_report.json is only written with --report-json-artifact flag;
+    # when present, validate its schema.
+    verify_report_path = artifacts_dir / "verify_report.json"
+    if verify_report_path.exists():
+        report_data = json.loads(verify_report_path.read_text(encoding="utf-8"))
+        assert isinstance(report_data, dict), "verify_report.json: expected dict"
+        for key in [
+            "schema_version",
+            "artifacts_dir",
+            "verify_summary",
+            "budgets",
+            "timing",
+            "runtime_diagnostics",
+            "authoring_trace",
+            "read_files",
+        ]:
+            assert key in report_data, f"verify_report.json: missing key {key!r}"
+        assert report_data["schema_version"] == 1
+
+    # index.json is only written with --artifact-index flag;
+    # when present, validate its schema.
+    index_path = artifacts_dir / "index.json"
+    if index_path.exists():
+        index_data = json.loads(index_path.read_text(encoding="utf-8"))
+        assert isinstance(index_data, dict), "index.json: expected dict"
+        for key in [
+            "schema_version",
+            "bundle_schema_version",
+            "ok",
+            "verify_all",
+            "written",
+            "readable",
+            "generated_files",
+        ]:
+            assert key in index_data, f"index.json: missing key {key!r}"
+        assert index_data["schema_version"] == 1
+        assert index_data["bundle_schema_version"] == 1
+        assert "artifact_index" in index_data["written"]
+        assert isinstance(index_data["generated_files"], list)
+        assert index_data["generated_files"] == sorted(index_data["generated_files"])

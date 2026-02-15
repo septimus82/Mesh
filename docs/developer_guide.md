@@ -114,6 +114,8 @@ python -m tooling.test_tiers tier1 --xdist
 python -m tooling.test_tiers tier2 --xdist --jobs 4
 ```
 
+> See also: [CI Verify Bundle Pipeline](ci_verify_bundle.md) for GitHub Actions / GitLab CI integration.
+
 ## Clean Export
 
 Create a clean source ZIP containing only git-tracked files needed to run/build.

@@ -64,6 +64,7 @@ class EditorDebugOverlayController:
             lines.append("----------------")
 
         self._append_swallowed_exceptions_lines(lines)
+        self._append_authoring_trace_lines(lines)
 
         if editor.tool_mode == TOOL_MODE_PATH:
             lines.append("PATH TOOL:")
@@ -184,6 +185,42 @@ class EditorDebugOverlayController:
         lines.append("----------------")
         self._append_shadow_backend_lines(lines)
         self._append_verify_health_snapshot_lines(lines)
+
+    def _append_authoring_trace_lines(self, lines: list[str]) -> None:
+        editor = self._editor
+        window = getattr(editor, "window", None)
+        if not bool(getattr(window, "show_debug", False)):
+            return
+        sc = getattr(window, "scene_controller", None)
+        if sc is None:
+            return
+        get_snap = getattr(sc, "get_authoring_trace_snapshot", None)
+        if not callable(get_snap):
+            return
+        snapshot = get_snap(limit=10)
+        if not isinstance(snapshot, dict):
+            return
+        enabled = bool(snapshot.get("enabled", False))
+        if not enabled:
+            return
+        total_calls = int(snapshot.get("total_calls", 0))
+        lines.append("Authoring Trace")
+        lines.append(f"enabled: true  total_calls: {total_calls}")
+        functions = snapshot.get("functions")
+        if isinstance(functions, list):
+            for entry in functions:
+                if not isinstance(entry, dict):
+                    continue
+                name = str(entry.get("name", "?"))
+                count = int(entry.get("count", 0))
+                total_ms = int(entry.get("total_ms", 0))
+                avg_ms = int(entry.get("avg_ms", 0))
+                last_err = entry.get("last_err")
+                line = f"  {name}  count={count}  total_ms={total_ms}  avg_ms={avg_ms}"
+                if last_err:
+                    line += f"  err={last_err}"
+                lines.append(line)
+        lines.append("----------------")
 
     def _append_shadow_backend_lines(self, lines: list[str]) -> None:
         diagnostics = self._resolve_shadow_backend_snapshot()
