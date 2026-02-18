@@ -58,6 +58,12 @@ def register_commands(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     from .. import health_report as health_report_commands
     health_report_commands.register(subparsers)
 
+    from .. import release_preflight as release_preflight_commands
+    release_preflight_commands.register(subparsers)
+
+    from .. import release_notes as release_notes_commands
+    release_notes_commands.register(subparsers)
+
     from .. import verify_report as verify_report_commands
     verify_report_commands.register(subparsers)
 
@@ -79,6 +85,9 @@ def register_commands(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     from .. import version as version_commands
     version_commands.register(subparsers)
 
+    from .. import version_bump as version_bump_commands
+    version_bump_commands.register(subparsers)
+
     from .. import bundle_verify as bundle_verify_commands
     bundle_verify_commands.register(subparsers)
 
@@ -90,6 +99,12 @@ def register_commands(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
 
     from .. import baseline_update as baseline_update_commands
     baseline_update_commands.register(subparsers)
+
+    from .. import trends_update as trends_update_commands
+    trends_update_commands.register(subparsers)
+
+    from .. import trends_report as trends_report_commands
+    trends_report_commands.register(subparsers)
 
     from engine.tooling import perf_command
     perf_command.add_perf_run_command(subparsers)

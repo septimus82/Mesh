@@ -136,6 +136,7 @@ class TestDefaultFlow:
         # Verify baseline files created
         assert (baseline / "verify_report.json").exists()
         assert (baseline / "index.json").exists()
+        assert (baseline / "BASELINE_META.json").exists()
 
         # Verify temp dir cleaned up
         assert len(removed) == 1
@@ -217,6 +218,7 @@ class TestArtifactsFlag:
 
         # Baseline updated
         assert (baseline / "verify_report.json").exists()
+        assert (baseline / "BASELINE_META.json").exists()
 
     def test_missing_artifacts_dir_exit_2(self, tmp_path: Path) -> None:
         from mesh_cli.baseline_update import baseline_update
@@ -400,3 +402,50 @@ class TestCLIHandler:
         code = mod._handle_baseline_update(args)
         assert code == 0
         assert (baseline / "verify_report.json").exists()
+
+
+class TestBaselineMeta:
+    def test_writes_meta_with_required_keys_and_deterministic_bytes(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from mesh_cli import baseline_update as mod
+
+        artifacts = tmp_path / "arts"
+        _make_bundle(artifacts)
+
+        monkeypatch.setattr(mod, "_utc_now_iso", lambda: "2026-02-17T00:00:00Z")
+        monkeypatch.setattr(mod, "_get_source_commit", lambda repo_root: "deadbeef")
+        monkeypatch.setattr(mod, "_read_package_version", lambda repo_root: "0.4.0")
+        monkeypatch.setattr(mod, "_read_public_api_semver", lambda repo_root: "1.0.0")
+        monkeypatch.setenv("GITHUB_RUN_ID", "12345")
+
+        baseline1 = tmp_path / "baseline1"
+        baseline2 = tmp_path / "baseline2"
+        code1, _ = mod.baseline_update(
+            baseline_dir=baseline1,
+            artifacts_dir=artifacts,
+            run_cmd=FakeRunner(),
+        )
+        code2, _ = mod.baseline_update(
+            baseline_dir=baseline2,
+            artifacts_dir=artifacts,
+            run_cmd=FakeRunner(),
+        )
+        assert code1 == 0
+        assert code2 == 0
+
+        meta1 = baseline1 / "BASELINE_META.json"
+        meta2 = baseline2 / "BASELINE_META.json"
+        assert meta1.exists()
+        assert meta2.exists()
+        assert meta1.read_bytes() == meta2.read_bytes()
+
+        payload = json.loads(meta1.read_text(encoding="utf-8"))
+        assert payload["schema_version"] == 1
+        assert payload["created_utc"] == "2026-02-17T00:00:00Z"
+        assert payload["source_commit"] == "deadbeef"
+        assert payload["source_workflow_run_id"] == "12345"
+        assert payload["package_version"] == "0.4.0"
+        assert payload["public_api_semver"] == "1.0.0"

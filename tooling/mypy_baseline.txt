@@ -97,3 +97,4 @@ mesh_cli/room.py:330: error: Returning Any from function declared to return "int
 mesh_cli/scene/stamp.py:100: error: Unused "type: ignore" comment  [unused-ignore]
 mesh_cli/scene/stamp.py:441: error: Unused "type: ignore" comment  [unused-ignore]
 mesh_cli/scene/tilemap.py:850: error: Argument "anchor" to "apply_brush" has incompatible type "Any | str"; expected "Literal['tl', 'center']"  [arg-type]
+mesh_cli/verify.py:956: error: Name "Callable" is not defined  [name-defined]

@@ -1,0 +1,20 @@
+{
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.11",
+  "include": [
+    "engine",
+    "mesh_cli",
+    "tooling",
+    "tests",
+    "examples"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "build",
+    "dist",
+    "artifacts",
+    ".mesh",
+    ".venv_arcade3_wheel*"
+  ]
+}

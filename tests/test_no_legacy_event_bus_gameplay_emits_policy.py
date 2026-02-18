@@ -28,6 +28,7 @@ MESH_EVENT_BUS_IMPORT_ALLOWLIST: dict[str, str] = {
     "engine/behaviours/toggle_scene_lights.py:7": "legacy lighting integration",
     "engine/behaviours/vendor.py:6": "legacy vendor integration",
     "engine/game.py:101": "core engine legacy bus owner",
+    "engine/public_api/runtime.py:69": "stable public API re-export",
     "engine/tooling/trace_command.py:8": "legacy tracing harness",
     "tooling/campaign_replay.py:17": "legacy replay harness bridge",
 }

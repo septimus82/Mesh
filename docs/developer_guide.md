@@ -59,6 +59,12 @@ For CI/dev validation, prefer the first-class `verify-all` pipeline:
 python -m mesh_cli verify-all --artifacts artifacts
 ```
 
+### Arcade 3 migration notes
+
+Arcade 3 migration status, shim ownership (long-term vs temporary), and sign-off checklist:
+
+- `docs/arcade3_migration.md`
+
 ### pytest-fast durations guard
 
 The `verify-all` pipeline runs `pytest-fast` with `--write-durations` and records per-test timings in:

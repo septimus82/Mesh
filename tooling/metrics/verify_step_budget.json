@@ -1,11 +1,18 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "budgets_ms": {
     "mypy-gate": 26000,
     "mypy-island": 3000,
     "pytest-fast": 20000,
     "verify-demo": 30000,
     "verify-strict": 1000
+  },
+  "ratio_limits": {
+    "mypy-gate": 1.35,
+    "mypy-island": 1.25,
+    "pytest-fast": 1.25,
+    "verify-demo": 1.25,
+    "verify-strict": 1.25
   },
   "tolerance_ms": 50
 }

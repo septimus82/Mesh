@@ -11,22 +11,28 @@ Headless-safe — no engine or arcade imports at module level.
 from __future__ import annotations
 
 import argparse
+import json
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import tomllib
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 _DEFAULT_BASELINE_DIR = "tooling/metrics/ci_baseline_artifacts"
+_BASELINE_META_FILENAME = "BASELINE_META.json"
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+_VERSION_LINE_RE = re.compile(r'^(PUBLIC_API_SEMVER\s*=\s*")([^"]+)(".*)$', re.MULTILINE)
 
 
 # ---------------------------------------------------------------------------
@@ -56,6 +62,88 @@ def _run_cmd(argv: list[str], *, label: str) -> tuple[bool, str]:
 
     ok = result.returncode == 0
     return ok, output
+
+
+def _utc_now_iso() -> str:
+    try:
+        now = datetime.now(UTC).replace(microsecond=0)
+        return now.isoformat().replace("+00:00", "Z")
+    except Exception:
+        return "1970-01-01T00:00:00Z"
+
+
+def _get_source_commit(repo_root: Path) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+        )
+    except Exception:
+        return "unknown"
+    if result.returncode != 0:
+        return "unknown"
+    text = str(result.stdout or "").strip()
+    return text if text else "unknown"
+
+
+def _read_package_version(repo_root: Path) -> str:
+    pyproject = repo_root / "pyproject.toml"
+    if not pyproject.exists() or not pyproject.is_file():
+        return "unknown"
+    try:
+        payload = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+    except Exception:
+        return "unknown"
+    if not isinstance(payload, dict):
+        return "unknown"
+    project = payload.get("project")
+    if not isinstance(project, dict):
+        return "unknown"
+    version = project.get("version")
+    if isinstance(version, str) and version.strip():
+        return version.strip()
+    return "unknown"
+
+
+def _read_public_api_semver(repo_root: Path) -> str:
+    version_py = repo_root / "engine" / "public_api" / "version.py"
+    if not version_py.exists() or not version_py.is_file():
+        return "unknown"
+    try:
+        text = version_py.read_text(encoding="utf-8")
+    except Exception:
+        return "unknown"
+    match = _VERSION_LINE_RE.search(text)
+    if match is None:
+        return "unknown"
+    value = str(match.group(2)).strip()
+    return value if value else "unknown"
+
+
+def _build_baseline_meta(repo_root: Path) -> dict[str, Any]:
+    run_id = str(os.getenv("GITHUB_RUN_ID", "") or "").strip() or None
+    payload: dict[str, Any] = {
+        "schema_version": 1,
+        "created_utc": _utc_now_iso(),
+        "source_commit": _get_source_commit(repo_root),
+        "source_workflow_run_id": run_id,
+        "package_version": _read_package_version(repo_root),
+        "public_api_semver": _read_public_api_semver(repo_root),
+    }
+    return payload
+
+
+def _write_baseline_meta(baseline_dir: Path, repo_root: Path) -> Path:
+    baseline_dir.mkdir(parents=True, exist_ok=True)
+    payload = _build_baseline_meta(repo_root)
+    target = baseline_dir / _BASELINE_META_FILENAME
+    target.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return target
 
 
 # ---------------------------------------------------------------------------
@@ -157,11 +245,15 @@ def baseline_update(
             lines.append("error: update-baseline failed")
             return 2, lines
 
+        meta_path = _write_baseline_meta(baseline_dir, _REPO_ROOT)
+        lines.append(f"updated: {meta_path.as_posix()}")
+
         # Summary
         lines.append("")
         lines.append("Baseline updated:")
         lines.append(f"  index.json -> {(baseline_dir / 'index.json').as_posix()}")
         lines.append(f"  verify_report.json -> {(baseline_dir / 'verify_report.json').as_posix()}")
+        lines.append(f"  BASELINE_META.json -> {(baseline_dir / _BASELINE_META_FILENAME).as_posix()}")
         lines.append("")
         lines.append("Note: timing.total_ms is preserved as-is from the run.")
         lines.append("Set total_ms to 0 in verify_report.json to use the timing sentinel")

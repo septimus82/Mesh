@@ -185,6 +185,35 @@ def test_path_normalization_strips_prefix(tmp_path: Path) -> None:
     assert _normalize_written_path("artifacts/sub/bar.json") == "sub/bar.json"
 
 
+def test_validate_artifacts_accepts_index_paths_prefixed_with_artifacts_dir_name(tmp_path: Path) -> None:
+    """Paths like artifacts/<bundle_dir>/file.json still resolve against artifacts dir."""
+    from mesh_cli.artifacts_validate import validate_artifacts
+
+    d = tmp_path / "artifacts_preflight_1"
+    _make_minimal_bundle(d)
+    index_path = d / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    written = index.get("written", {})
+    generated = index.get("generated_files", [])
+    assert isinstance(written, dict)
+    assert isinstance(generated, list)
+
+    bundle_name = d.name
+    for key, value in list(written.items()):
+        if isinstance(value, str):
+            written[key] = f"artifacts/{bundle_name}/" + value.replace("\\", "/").split("/")[-1]
+    index["generated_files"] = sorted(
+        f"artifacts/{bundle_name}/" + str(v).replace("\\", "/").split("/")[-1]
+        for v in generated
+        if isinstance(v, str)
+    )
+    index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    ok, issues = validate_artifacts(d)
+    assert ok is True
+    assert issues == []
+
+
 def test_null_written_values_skipped(tmp_path: Path) -> None:
     """Null written values do not trigger missing_file checks."""
     from mesh_cli.artifacts_validate import validate_artifacts
@@ -258,3 +287,22 @@ def test_cli_reports_all_issues(tmp_path: Path, capsys) -> None:
     lines = out.strip().split("\n")
     bullet_lines = [l for l in lines if l.strip().startswith("- ")]
     assert len(bullet_lines) >= 2
+
+
+def test_non_json_written_artifact_is_existence_only(tmp_path: Path) -> None:
+    """Markdown artifacts should not be parsed as JSON."""
+    from mesh_cli.artifacts_validate import validate_artifacts
+
+    d = tmp_path / "artifacts"
+    _make_minimal_bundle(d)
+    (d / "release_notes.md").write_text("# notes\n", encoding="utf-8")
+    index_path = d / "index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    written = index.get("written", {})
+    assert isinstance(written, dict)
+    written["release_notes_md"] = "artifacts/release_notes.md"
+    index_path.write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    ok, issues = validate_artifacts(d)
+    assert ok is True
+    assert issues == []

@@ -54,6 +54,8 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
         "verify_step_budget_check",
         "shadow_backend",
         "swallowed_exceptions",
+        "release_notes_json",
+        "release_notes_md",
         "scenes_index",
         "worlds_index",
         "replays_summary",
@@ -92,6 +94,8 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
     assert written["encounter_headroom"] == "artifacts/encounter_headroom.json"
     assert written["shadow_backend"] == "artifacts/shadow_backend.json"
     assert written["swallowed_exceptions"] == "artifacts/swallowed_exceptions.json"
+    assert written["release_notes_json"] is None
+    assert written["release_notes_md"] is None
     assert written["authoring_trace"] is None
     assert written["authoring_trace_budget_check"] is None
     assert written["verify_report"] is None
@@ -155,6 +159,8 @@ def test_verify_all_schema_failure_includes_skipped_steps(monkeypatch, tmp_path,
     assert written["verify_step_budget_check"] == "artifacts/verify_step_budget_check.json"
     assert written["shadow_backend"] == "artifacts/shadow_backend.json"
     assert written["swallowed_exceptions"] == "artifacts/swallowed_exceptions.json"
+    assert written["release_notes_json"] is None
+    assert written["release_notes_md"] is None
     assert written["replays_summary"] == "artifacts/replays_summary.json"
     assert written["stamp_audit"] is None
     assert written["brush_audit"] is None

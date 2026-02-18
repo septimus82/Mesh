@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Mapping
+from engine.arcade_compat import activate_framebuffer
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,18 +60,13 @@ def build_shadow_pipeline(
 ) -> ShadowPipeline:
     activate_cm: Any | None = None
     if decision.name == "fbo.use":
-        use = getattr(fbo, "use", None)
-        if not callable(use):
+        bound_backend, activate_cm = activate_framebuffer(fbo, backend="fbo.use")
+        if bound_backend != "fbo.use":
             raise RuntimeError("fbo.use unavailable")
-        use()
     elif decision.name == "fbo.activate":
-        activate = getattr(fbo, "activate", None)
-        if not callable(activate):
+        bound_backend, activate_cm = activate_framebuffer(fbo, backend="fbo.activate")
+        if bound_backend != "fbo.activate":
             raise RuntimeError("fbo.activate unavailable")
-        activate_cm = activate()
-        enter = getattr(activate_cm, "__enter__", None) if activate_cm is not None else None
-        if callable(enter):
-            enter()
     elif decision.name != "none":
         raise ValueError(f"unknown shadow backend: {decision.name}")
     return ShadowPipeline(texture=texture, fbo=fbo, decision=decision, activate_cm=activate_cm)
@@ -83,4 +79,3 @@ def decision_to_diagnostics(decision: ShadowBackendDecision) -> dict[str, object
         "reason": str(decision.reason),
         "fallbacks": list(decision.fallbacks),
     }
-

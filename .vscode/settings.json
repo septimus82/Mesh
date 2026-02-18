@@ -1,4 +1,8 @@
 {
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}"
+  ],
   "files.exclude": {
     "**/dist/**": true,
     "**/__pycache__/**": true,
@@ -14,4 +18,3 @@
     "**/build/**": true
   }
 }
-

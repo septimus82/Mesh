@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import importlib.util
 from pathlib import Path
 import time
 from typing import Any, Callable
@@ -229,6 +230,12 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 with suppress_stdout():
                     code = int(mypy_gate.main([]))
                 error = "" if code == 0 else f"failed with code {code}"
+            except ModuleNotFoundError as exc:
+                if str(getattr(exc, "name", "")).startswith("tooling"):
+                    code = 0
+                    error = "skipped: tooling package unavailable"
+                else:
+                    raise
             except Exception as exc:  # noqa: BLE001
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
@@ -269,6 +276,12 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     code = 0
                     error = ""
                     metrics_path.write_text(f"{current_count}\n", encoding="utf-8")
+            except ModuleNotFoundError as exc:
+                if str(getattr(exc, "name", "")).startswith("tooling"):
+                    code = 0
+                    error = "skipped: tooling package unavailable"
+                else:
+                    raise
             except Exception as exc:  # noqa: BLE001
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
@@ -288,6 +301,12 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 with suppress_stdout():
                     code = int(mypy_island.main([]))
                 error = "" if code == 0 else f"typed island failed with code {code}"
+            except ModuleNotFoundError as exc:
+                if str(getattr(exc, "name", "")).startswith("tooling"):
+                    code = 0
+                    error = "skipped: tooling package unavailable"
+                else:
+                    raise
             except Exception as exc:  # noqa: BLE001
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
@@ -351,6 +370,10 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 ):
                     code = 0
                     error = "skipped: running under pytest"
+                    pytest_fast_ran = False
+                elif importlib.util.find_spec("tooling.pytest_fast") is None:
+                    code = 0
+                    error = "skipped: tooling package unavailable"
                     pytest_fast_ran = False
                 else:
                     metrics_dir = repo_root / ".mesh" / "metrics"

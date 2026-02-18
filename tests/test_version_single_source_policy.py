@@ -16,6 +16,7 @@ SEMVER_LITERAL_ALLOWLIST: set[tuple[str, str]] = {
     ("engine/tooling/pack_commands.py", "0.1.0"),
     ("engine/tooling_runtime/pack_manifest.py", "0.0.0-dev"),
     ("engine/plugin_system.py", "0.0.0"),  # default plugin manifest version
+    ("engine/public_api/version.py", "1.0.0"),  # public API semver contract constant
 }
 
 # Only these modules may define version constants directly.

@@ -1,0 +1,30 @@
+{
+  "name": "Template Cellar",
+  "version": 1,
+  "settings": {
+    "background_color": "dark_blue_gray"
+  },
+  "layers": [
+    {
+      "name": "background"
+    },
+    {
+      "name": "entities"
+    },
+    {
+      "name": "foreground"
+    }
+  ],
+  "entities": [
+    {
+      "name": "Player",
+      "tag": "player",
+      "x": 400,
+      "y": 300,
+      "sprite": "assets/placeholder.png",
+      "layer": "entities",
+      "behaviours": [],
+      "behaviour_config": {}
+    }
+  ]
+}

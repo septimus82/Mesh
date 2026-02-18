@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mesh-engine"
-version = "0.4.0"
+version = "0.5.0"
 description = "Mesh Game Engine"
 readme = "README.md"
+license = "LicenseRef-Proprietary"
 requires-python = ">=3.11"
 dependencies = [
-    # arcade: supports 2.6.17+ and 3.x series. Upper bound prevents untested major versions.
-    # When arcade 4.x releases, test and update this bound deliberately.
-    "arcade>=2.6.17,<4.0",
-    "pillow",
+    # Runtime line after Arcade 3.x migration.
+    "arcade>=3,<4",
+    "pillow>=10,<12",
 ]
 
 [project.optional-dependencies]
@@ -65,6 +65,7 @@ exclude = [
     "build",
     "dist",
     "artifacts",
+    "examples",
 ]
 
 [[tool.mypy.overrides]]

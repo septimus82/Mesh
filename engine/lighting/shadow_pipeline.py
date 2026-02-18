@@ -7,10 +7,92 @@ import os
 from typing import Any
 
 import engine.optional_arcade
+from engine.arcade_compat import activate_framebuffer, clear_framebuffer, close_framebuffer_activation
 
 from engine.log_once import log_once_with_counter
 
 from . import occluder_utils as _occluder_utils
+
+
+def _ambient_rgb_from_rgba(ambient: tuple[int, int, int, int] | tuple[int, int, int]) -> tuple[int, int, int]:
+    if len(ambient) >= 3:
+        return (int(ambient[0]), int(ambient[1]), int(ambient[2]))
+    return (0, 0, 0)
+
+
+def _draw_layer_target_compat(
+    draw: Any,
+    *,
+    offset: tuple[float, float],
+    target_fbo: Any,
+    ambient_color: tuple[int, int, int, int] | tuple[int, int, int],
+) -> bool:
+    """Best-effort LightLayer.draw(...) call for target rendering across Arcade variants.
+
+    Keep branch order deterministic and only fall back on signature mismatches.
+    """
+    rgb = _ambient_rgb_from_rgba(ambient_color)
+    try:
+        draw(position=offset, target=target_fbo, ambient_color=ambient_color)
+        return True
+    except TypeError:
+        pass
+    try:
+        draw(target=target_fbo, ambient_color=ambient_color)
+        return True
+    except TypeError:
+        pass
+    # FBO is already activated by caller; these variants avoid requiring target kwarg.
+    try:
+        draw(position=offset, ambient_color=ambient_color)
+        return True
+    except TypeError:
+        pass
+    try:
+        draw(ambient_color=ambient_color)
+        return True
+    except TypeError:
+        pass
+    try:
+        draw(rgb)
+        return True
+    except TypeError:
+        pass
+    try:
+        draw()
+        return True
+    except TypeError:
+        return False
+
+
+def _draw_layer_screen_compat(
+    draw: Any,
+    *,
+    offset: tuple[float, float],
+    ambient_color: tuple[int, int, int, int] | tuple[int, int, int],
+) -> bool:
+    """Best-effort LightLayer.draw(...) for on-screen fallback rendering."""
+    rgb = _ambient_rgb_from_rgba(ambient_color)
+    try:
+        draw(position=offset, ambient_color=ambient_color)
+        return True
+    except TypeError:
+        pass
+    try:
+        draw(ambient_color=ambient_color)
+        return True
+    except TypeError:
+        pass
+    try:
+        draw(rgb)
+        return True
+    except TypeError:
+        pass
+    try:
+        draw()
+        return True
+    except TypeError:
+        return False
 
 
 def end_hard_shadows_overlay(manager: Any) -> bool:
@@ -298,14 +380,17 @@ def end_hard_shadows_composite(manager: Any) -> bool:
     except Exception:  # noqa: BLE001
         offset = (0.0, 0.0)
 
+    light_activation_cm: Any | None = None
     try:
-        targets.light_fbo.use()
-        targets.light_fbo.clear()
+        backend, light_activation_cm = activate_framebuffer(targets.light_fbo, backend="auto")
+        if backend != "none":
+            clear_framebuffer(getattr(window, "ctx", None), targets.light_fbo, 0.0, 0.0, 0.0, 0.0)
     except Exception:  # noqa: BLE001
         pass
 
     draw = getattr(layer, "draw", None)
     if not callable(draw):
+        close_framebuffer_activation(light_activation_cm)
         manager._last_lighting_stats = {
             "shadows_mode": manager.shadows_mode,
             "occluder_count": len(rects),
@@ -321,8 +406,16 @@ def end_hard_shadows_composite(manager: Any) -> bool:
         }
         return False
     try:
-        draw(position=offset, target=targets.light_fbo, ambient_color=manager._ambient_rgba())
+        draw_ok = _draw_layer_target_compat(
+            draw,
+            offset=offset,
+            target_fbo=targets.light_fbo,
+            ambient_color=manager._ambient_rgba(),
+        )
+        if not draw_ok:
+            raise TypeError("LightLayer.draw signature unsupported for hard-shadow target render")
     except Exception:
+        close_framebuffer_activation(light_activation_cm)
         manager._last_lighting_stats = {
             "shadows_mode": manager.shadows_mode,
             "occluder_count": len(rects),
@@ -345,6 +438,7 @@ def end_hard_shadows_composite(manager: Any) -> bool:
         manager._apply_light_shafts(target_fbo=targets.light_fbo, offset=offset)
     except Exception:  # noqa: BLE001
         pass
+    close_framebuffer_activation(light_activation_cm)
 
     cull_debug: dict[str, Any] = {}
     culled = cull_occluders_for_light(lx, ly, radius, rects, debug=cull_debug)
@@ -421,19 +515,17 @@ def end_hard_shadows_composite(manager: Any) -> bool:
     if mask_tex is None:
         mask_fallback_used = True
         mask_tex = getattr(targets, "mask_tex", None)
+        mask_activation_cm: Any | None = None
         try:
             fbo = getattr(targets, "mask_fbo", None)
             if fbo is not None:
-                fbo.use()
-                fbo.clear()
-                try:
-                    ctx = getattr(window, "ctx", None)
-                    if ctx is not None:
-                        ctx.clear(1.0, 1.0, 1.0, 1.0)
-                except Exception:  # noqa: BLE001
-                    pass
+                backend, mask_activation_cm = activate_framebuffer(fbo, backend="auto")
+                if backend != "none":
+                    clear_framebuffer(getattr(window, "ctx", None), fbo, 1.0, 1.0, 1.0, 1.0)
         except Exception:  # noqa: BLE001
             pass
+        finally:
+            close_framebuffer_activation(mask_activation_cm)
 
     diffuse_tex = getattr(layer, "diffuse_texture", None)
     light_tex = getattr(targets, "light_tex", None)
@@ -547,7 +639,11 @@ def draw_hard_shadow_fallback(
     stats.setdefault("fallback_drawn", False)
 
     try:
-        draw(position=offset, ambient_color=manager._ambient_rgba())
+        _draw_layer_screen_compat(
+            draw,
+            offset=offset,
+            ambient_color=manager._ambient_rgba(),
+        )
     except Exception:  # noqa: BLE001
         pass
 

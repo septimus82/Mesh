@@ -1,0 +1,12 @@
+{
+  "width": 1280,
+  "height": 720,
+  "title": "Mesh Template Game",
+  "fullscreen": false,
+  "vsync": true,
+  "start_scene": "scenes/cellar.json",
+  "world_file": null,
+  "content_roots": [
+    "."
+  ]
+}

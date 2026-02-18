@@ -65,6 +65,7 @@ from __future__ import annotations
 import math
 import os
 import importlib.util
+import importlib
 import zlib
 from contextlib import nullcontext
 from typing import Any, Iterable, Optional, TYPE_CHECKING
@@ -91,28 +92,49 @@ if TYPE_CHECKING:
         from arcade.experimental.lights import LightLayer as _LightLayer
     except ImportError:
         try:
-            from arcade.future.light import Light as _Light
-            from arcade.future.light import LightLayer as _LightLayer
+            from arcade.lights import Light as _Light
+            from arcade.lights import LightLayer as _LightLayer
         except ImportError:
-            _Light = Any
-            _LightLayer = Any
+            try:
+                from arcade.future.light import Light as _Light
+                from arcade.future.light import LightLayer as _LightLayer
+            except ImportError:
+                _Light = Any
+                _LightLayer = Any
 else:
     _Light = None
     _LightLayer = None
 
+_LIGHT_MODULE_CANDIDATES: tuple[str, ...] = (
+    "arcade.experimental.lights",
+    "arcade.lights",
+    "arcade.future.light",
+)
+
+
+def _resolve_light_symbols(
+    *,
+    find_spec_func: Any = None,
+    import_module_func: Any = None,
+) -> tuple[Any | None, Any | None]:
+    finder = find_spec_func or importlib.util.find_spec
+    importer = import_module_func or importlib.import_module
+    for mod_name in _LIGHT_MODULE_CANDIDATES:
+        try:
+            if finder(mod_name) is None:
+                continue
+            mod = importer(mod_name)
+            light = getattr(mod, "Light", None)
+            layer = getattr(mod, "LightLayer", None)
+            if light is not None and layer is not None:
+                return light, layer
+        except Exception:  # noqa: BLE001
+            continue
+    return None, None
+
+
 if engine.optional_arcade.arcade is not None:
-    try:
-        if importlib.util.find_spec("arcade.experimental.lights") is not None:
-            _mod = importlib.import_module("arcade.experimental.lights")
-            _Light = getattr(_mod, "Light", None)
-            _LightLayer = getattr(_mod, "LightLayer", None)
-        elif importlib.util.find_spec("arcade.future.light") is not None:
-            _mod = importlib.import_module("arcade.future.light")
-            _Light = getattr(_mod, "Light", None)
-            _LightLayer = getattr(_mod, "LightLayer", None)
-    except Exception:  # noqa: BLE001
-        _Light = None
-        _LightLayer = None
+    _Light, _LightLayer = _resolve_light_symbols()
 
 
 class LightManager:

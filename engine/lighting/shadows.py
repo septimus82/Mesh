@@ -4,12 +4,17 @@ import math
 import os
 import logging
 from dataclasses import dataclass
-from contextlib import nullcontext
 from typing import Any, Sequence, Iterable
 import engine.optional_arcade as optional_arcade
 from .occluders import Rect
 from engine.geometry_tools import sanitize_poly
 from engine.swallowed_exceptions import record_swallowed
+from engine.arcade_compat import (
+    capture_active_framebuffer,
+    clear_framebuffer,
+    close_framebuffer_activation,
+    restore_framebuffer,
+)
 from .shadow_backend import (
     ShadowBackendDecision,
     build_shadow_pipeline,
@@ -328,7 +333,7 @@ def render_shadow_mask(
             fbo = target_fbo if target_fbo is not None else ctx.framebuffer(color_attachments=[texture])
 
             # Best-effort record of prior binding for restore.
-            prev_fbo = getattr(ctx, "active_framebuffer", None)
+            prev_fbo = capture_active_framebuffer(ctx)
             decision = choose_shadow_backend(
                 env=os.environ,
                 flags=None,
@@ -350,22 +355,7 @@ def render_shadow_mask(
 
             if clear:
                 # Clear to white (lit everywhere).
-                cleared = False
-                try:
-                    clear_fn = getattr(fbo, "clear", None)
-                    if callable(clear_fn):
-                        try:
-                            clear_fn(1.0, 1.0, 1.0, 1.0)
-                        except TypeError:
-                            clear_fn()
-                        cleared = True
-                except Exception:  # noqa: BLE001
-                    cleared = False
-                if not cleared:
-                    try:
-                        ctx.clear(1.0, 1.0, 1.0, 1.0)
-                    except Exception:  # noqa: BLE001
-                        pass
+                clear_framebuffer(ctx, fbo, 1.0, 1.0, 1.0, 1.0)
 
             # Draw shadow polys as black into the active framebuffer.
             draw_filled = getattr(optional_arcade.arcade, "draw_polygon_filled", None)
@@ -410,25 +400,9 @@ def render_shadow_mask(
                 except Exception:  # noqa: BLE001
                     pass
             # Ensure activate() context managers are closed.
-            if activate_cm is not None:
-                exit_ = getattr(activate_cm, "__exit__", None)
-                if callable(exit_):
-                    try:
-                        exit_(None, None, None)
-                    except Exception:  # noqa: BLE001
-                        pass
+            close_framebuffer_activation(activate_cm)
             # Restore framebuffer binding best-effort.
-            try:
-                screen = getattr(ctx, "screen", None)
-                screen_use = getattr(screen, "use", None) if screen is not None else None
-                if callable(screen_use):
-                    screen_use()
-                elif prev_fbo is not None:
-                    prev_use = getattr(prev_fbo, "use", None)
-                    if callable(prev_use):
-                        prev_use()
-            except Exception:  # noqa: BLE001
-                pass
+            restore_framebuffer(ctx, prev_fbo)
 
     draw_filled = getattr(optional_arcade.arcade, "draw_polygon_filled", None)
     if not callable(draw_filled):

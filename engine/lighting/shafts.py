@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade
+from engine.arcade_compat import activate_framebuffer, close_framebuffer_activation
 
 from .flicker import FlickerNoise, apply_light_flicker
 
@@ -163,12 +164,10 @@ def apply_light_shafts(manager: Any, *, target_fbo: Any, offset: tuple[float, fl
     draw_rect = getattr(engine.optional_arcade.arcade, "draw_rectangle_filled", None)
     if not callable(draw_rect):
         return 0
+    activation_cm = None
     try:
         if target_fbo is not None:
-            try:
-                target_fbo.use()
-            except Exception:  # noqa: BLE001
-                pass
+            _backend, activation_cm = activate_framebuffer(target_fbo, backend="auto")
         for spec in specs:
             color = spec.get("color_rgba")
             if not isinstance(color, (list, tuple)) or len(color) < 4:
@@ -185,4 +184,6 @@ def apply_light_shafts(manager: Any, *, target_fbo: Any, offset: tuple[float, fl
             )
     except Exception:  # noqa: BLE001
         return 0
+    finally:
+        close_framebuffer_activation(activation_cm)
     return len(specs)

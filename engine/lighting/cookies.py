@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade
+from engine.arcade_compat import activate_framebuffer, close_framebuffer_activation
 
 
 def normalize_cookie_offset(value: Any) -> tuple[float, float]:
@@ -144,12 +145,10 @@ def apply_light_cookies(manager: Any, *, target_fbo: Any, offset: tuple[float, f
     if not multiply_available and not manager._cookie_blend_warned:
         manager._cookie_blend_warned = True
         print("[Mesh][Lighting] WARNING: cookie multiply blend unavailable; using normal blend")
+    activation_cm = None
     try:
         if target_fbo is not None:
-            try:
-                target_fbo.use()
-            except Exception:  # noqa: BLE001
-                pass
+            _backend, activation_cm = activate_framebuffer(target_fbo, backend="auto")
         for spec in specs:
             cookie_id = spec["cookie_id"]
             texture = load_cookie_texture(manager, cookie_id)
@@ -170,6 +169,7 @@ def apply_light_cookies(manager: Any, *, target_fbo: Any, offset: tuple[float, f
                 alpha=255,
             )
     finally:
+        close_framebuffer_activation(activation_cm)
         if ctx is not None and gl is not None and hasattr(ctx, "blend_func"):
             try:
                 ctx.blend_func = gl.BLEND_DEFAULT

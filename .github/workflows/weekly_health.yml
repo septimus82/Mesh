@@ -53,6 +53,61 @@ jobs:
         run: |
           python -m mesh_cli artifacts-validate --artifacts artifacts
 
+      - name: Update weekly trends
+        run: |
+          python -m mesh_cli trends-update --artifacts artifacts
+
+      - name: Weekly trends to Step Summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          trends_path = Path("tooling/metrics/weekly_trends.json")
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+
+          def _append(lines):
+              with summary_path.open("a", encoding="utf-8", newline="\n") as fh:
+                  fh.write("\n".join(lines) + "\n")
+
+          lines = ["## Weekly trends", ""]
+          if not trends_path.exists():
+              lines.append("_(weekly trends unavailable)_")
+              _append(lines)
+              raise SystemExit(0)
+
+          try:
+              payload = json.loads(trends_path.read_text(encoding="utf-8"))
+          except Exception:
+              lines.append("_(weekly trends unavailable)_")
+              _append(lines)
+              raise SystemExit(0)
+
+          entries = payload.get("entries", []) if isinstance(payload, dict) else []
+          if not isinstance(entries, list) or not entries:
+              lines.append("_(weekly trends unavailable)_")
+              _append(lines)
+              raise SystemExit(0)
+
+          tail = [row for row in entries if isinstance(row, dict)][-8:]
+          verify_vals = [str(row.get("verify_total_ms", "?")) for row in tail]
+          swallowed_vals = [str(row.get("swallowed_total", "?")) for row in tail]
+          current = tail[-1]
+
+          lines.append(f"- verify_total_ms (last 8): {', '.join(verify_vals)}")
+          lines.append(f"- swallowed_total (last 8): {', '.join(swallowed_vals)}")
+          lines.append(
+              "- current: "
+              f"verify_ok={current.get('verify_ok', '?')} "
+              f"mypy_budget_ok={current.get('mypy_budget_ok', '?')} "
+              f"exception_budget_ok={current.get('exception_budget_ok', '?')} "
+              f"shadow_backend={current.get('shadow_backend_selected', '?')}"
+          )
+          _append(lines)
+          PY
+
       - name: Print verify diagnostics on failure
         if: failure()
         run: |

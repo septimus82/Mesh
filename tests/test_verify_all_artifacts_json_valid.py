@@ -125,6 +125,44 @@ def test_verify_all_artifacts_are_valid_json_objects_and_have_required_keys(monk
             assert key in report_data, f"verify_report.json: missing key {key!r}"
         assert report_data["schema_version"] == 1
 
+    # release_notes artifacts are optional via --release-notes-artifact;
+    # when present, validate schema and markdown header.
+    release_notes_json_path = artifacts_dir / "release_notes.json"
+    if release_notes_json_path.exists():
+        release_notes_data = json.loads(release_notes_json_path.read_text(encoding="utf-8"))
+        assert isinstance(release_notes_data, dict), "release_notes.json: expected dict"
+        for key in [
+            "schema_version",
+            "title",
+            "package_version",
+            "public_api_semver",
+            "bundle",
+            "snapshot",
+            "files_read",
+        ]:
+            assert key in release_notes_data, f"release_notes.json: missing key {key!r}"
+        assert release_notes_data["schema_version"] == 1
+        release_notes_md_path = artifacts_dir / "release_notes.md"
+        assert release_notes_md_path.exists(), "release_notes.md missing when release_notes.json exists"
+        assert release_notes_md_path.read_text(encoding="utf-8").startswith("#")
+
+    # baseline_diff.json is optional (written by CI baseline diff workflow steps);
+    # when present, validate schema.
+    baseline_diff_path = artifacts_dir / "baseline_diff.json"
+    if baseline_diff_path.exists():
+        baseline_diff_data = json.loads(baseline_diff_path.read_text(encoding="utf-8"))
+        assert isinstance(baseline_diff_data, dict), "baseline_diff.json: expected dict"
+        for key in [
+            "schema_version",
+            "regressions",
+            "improvements",
+            "changed",
+            "counts",
+            "ok",
+        ]:
+            assert key in baseline_diff_data, f"baseline_diff.json: missing key {key!r}"
+        assert baseline_diff_data["schema_version"] == 1
+
     # index.json is only written with --artifact-index flag;
     # when present, validate its schema.
     index_path = artifacts_dir / "index.json"

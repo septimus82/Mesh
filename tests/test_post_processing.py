@@ -293,6 +293,43 @@ class TestPipelineBeginEnd:
         pp.begin(window)
         assert pp._active is False
 
+    def test_begin_end_supports_activate_fallback(self, monkeypatch):
+        """Arcade compatibility path supports fbo.activate() fallback."""
+        pp = PostProcessPipeline()
+        pp.add_effect(Vignette())
+        pp.add_effect(ColorGrading())
+        window = _make_window()
+        entered: list[str] = []
+        exited: list[str] = []
+
+        class _Activation:
+            def __enter__(self):  # noqa: ANN204
+                entered.append("enter")
+                return self
+
+            def __exit__(self, *_args: object) -> bool:
+                exited.append("exit")
+                return False
+
+        activation = _Activation()
+
+        def _fake_activate(_fbo, *, backend="auto"):  # noqa: ANN001
+            activation.__enter__()
+            return ("fbo.activate", activation)
+
+        monkeypatch.setattr("engine.post_processing.activate_framebuffer", _fake_activate)
+
+        mock_quad = MagicMock()
+        with patch("engine.post_processing.PostProcessPipeline._ensure_quad", return_value=mock_quad):
+            pp.begin(window)
+            assert pp._active is True
+            assert pp._begin_fbo_activation_cm is activation
+            pp.end(window)
+
+        assert entered == ["enter", "enter"]
+        assert exited == ["exit", "exit"]
+        assert pp._begin_fbo_activation_cm is None
+
 
 class TestPipelineEdgeCases:
     def test_ctx_unavailable(self):

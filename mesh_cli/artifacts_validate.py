@@ -55,6 +55,15 @@ def _normalize_written_path(value: str) -> str:
     return parts[0]
 
 
+def _strip_artifacts_dir_name_prefix(path_value: str, artifacts_dir_name: str) -> str:
+    """Strip a leading ``<artifacts_dir_name>/`` path prefix when present."""
+    normalized = path_value.replace("\\", "/").lstrip("/")
+    prefix = f"{artifacts_dir_name.strip().replace('\\', '/').strip('/')}/"
+    if prefix and normalized.startswith(prefix):
+        return normalized[len(prefix) :]
+    return normalized
+
+
 # ---------------------------------------------------------------------------
 # Core validation
 # ---------------------------------------------------------------------------
@@ -107,9 +116,14 @@ def validate_artifacts(artifacts_dir: Path) -> tuple[bool, list[str]]:
         if value is None:
             continue
         basename = _normalize_written_path(str(value))
+        basename = _strip_artifacts_dir_name_prefix(basename, artifacts_dir.name)
         full_path = artifacts_dir / basename
         if not full_path.exists() or not full_path.is_file():
             issues.append(f"missing_file: {key}: {full_path.as_posix()}")
+            continue
+
+        # Non-JSON artifacts (e.g. release_notes.md) are existence-only checks.
+        if full_path.suffix.lower() != ".json":
             continue
 
         # 3) JSON parse + schema checks

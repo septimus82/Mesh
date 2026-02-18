@@ -78,6 +78,26 @@ def _make_bundle(d: Path, report: dict, schemas: dict | None = None) -> None:
     )
 
 
+def _make_baseline_meta(
+    d: Path,
+    *,
+    source_commit: str = "abc123",
+    package_version: str = "0.4.0",
+    public_api_semver: str = "1.0.0",
+) -> None:
+    _write(
+        d / "BASELINE_META.json",
+        {
+            "schema_version": 1,
+            "created_utc": "2026-02-17T00:00:00Z",
+            "source_commit": source_commit,
+            "source_workflow_run_id": None,
+            "package_version": package_version,
+            "public_api_semver": public_api_semver,
+        },
+    )
+
+
 # ---------------------------------------------------------------------------
 # compute_diff unit tests
 # ---------------------------------------------------------------------------
@@ -406,6 +426,29 @@ class TestDiffArtifactsIntegration:
         assert "# Artifacts Diff" in output
         assert "## Regressions" in output
 
+    def test_markdown_includes_baseline_header_when_meta_present(self, tmp_path: Path) -> None:
+        from mesh_cli.artifacts_diff import diff_artifacts
+
+        base_dir = tmp_path / "base"
+        curr_dir = tmp_path / "curr"
+        _make_bundle(base_dir, _make_report(ok=True))
+        _make_bundle(curr_dir, _make_report(ok=False))
+        _make_baseline_meta(base_dir, source_commit="deadbeef", package_version="0.4.1", public_api_semver="1.0.1")
+
+        output, _ = diff_artifacts(base_dir, curr_dir, fmt="markdown")
+        assert "Baseline: commit=deadbeef package=0.4.1 public_api=1.0.1" in output
+
+    def test_markdown_without_meta_has_no_baseline_header(self, tmp_path: Path) -> None:
+        from mesh_cli.artifacts_diff import diff_artifacts
+
+        base_dir = tmp_path / "base"
+        curr_dir = tmp_path / "curr"
+        _make_bundle(base_dir, _make_report(ok=True))
+        _make_bundle(curr_dir, _make_report(ok=False))
+
+        output, _ = diff_artifacts(base_dir, curr_dir, fmt="markdown")
+        assert "Baseline: commit=" not in output
+
     def test_missing_report_error(self, tmp_path: Path) -> None:
         from mesh_cli.artifacts_diff import diff_artifacts
 
@@ -565,6 +608,48 @@ class TestFormatOutput:
 
         output = format_markdown([])
         assert "No differences" in output
+
+    def test_json_schema_counts_and_ok(self) -> None:
+        from mesh_cli.artifacts_diff import DiffItem, format_json
+
+        items = [
+            DiffItem("a", True, False, "regression"),
+            DiffItem("b", 1, 0, "improvement"),
+            DiffItem("c", "x", "y", "changed"),
+        ]
+        payload = json.loads(format_json(items))
+        assert payload["schema_version"] == 1
+        assert isinstance(payload["regressions"], list)
+        assert isinstance(payload["improvements"], list)
+        assert isinstance(payload["changed"], list)
+        assert payload["counts"]["regressions"] == len(payload["regressions"])
+        assert payload["counts"]["improvements"] == len(payload["improvements"])
+        assert payload["counts"]["changed"] == len(payload["changed"])
+        assert payload["ok"] is False
+
+    def test_json_output_deterministic(self, tmp_path: Path) -> None:
+        from mesh_cli.artifacts_diff import diff_artifacts
+
+        base_dir = tmp_path / "base"
+        curr_dir = tmp_path / "curr"
+        _make_bundle(base_dir, _make_report(ok=True, swallowed_total=1))
+        _make_bundle(curr_dir, _make_report(ok=True, swallowed_total=0))
+        out1, _ = diff_artifacts(base_dir, curr_dir, fmt="json")
+        out2, _ = diff_artifacts(base_dir, curr_dir, fmt="json")
+        assert out1 == out2
+
+    def test_json_counts_match_lists(self, tmp_path: Path) -> None:
+        from mesh_cli.artifacts_diff import diff_artifacts
+
+        base_dir = tmp_path / "base"
+        curr_dir = tmp_path / "curr"
+        _make_bundle(base_dir, _make_report(ok=True))
+        _make_bundle(curr_dir, _make_report(ok=False))
+        output, _ = diff_artifacts(base_dir, curr_dir, fmt="json")
+        payload = json.loads(output)
+        assert payload["counts"]["regressions"] == len(payload["regressions"])
+        assert payload["counts"]["improvements"] == len(payload["improvements"])
+        assert payload["counts"]["changed"] == len(payload["changed"])
 
 
 # ---------------------------------------------------------------------------

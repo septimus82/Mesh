@@ -21,6 +21,7 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 _DEFAULT_TIMING_THRESHOLD_MS = 50
+_BASELINE_META_FILENAME = "BASELINE_META.json"
 
 
 # ---------------------------------------------------------------------------
@@ -338,6 +339,55 @@ def format_markdown(items: list[DiffItem]) -> str:
     return "\n".join(lines)
 
 
+def format_markdown_with_meta(items: list[DiffItem], baseline_meta: dict[str, Any] | None) -> str:
+    """Render markdown and include a short baseline header when metadata exists."""
+    text = format_markdown(items)
+    if not isinstance(baseline_meta, dict):
+        return text
+    commit = str(baseline_meta.get("source_commit", "?") or "?")
+    package_version = str(baseline_meta.get("package_version", "?") or "?")
+    public_api_semver = str(baseline_meta.get("public_api_semver", "?") or "?")
+    header = f"Baseline: commit={commit} package={package_version} public_api={public_api_semver}"
+    lines = text.splitlines()
+    if lines and lines[0].strip() == "# Artifacts Diff":
+        rest = "\n".join(lines[1:]).lstrip("\n")
+        if rest:
+            return f"# Artifacts Diff\n\n{header}\n\n{rest}"
+        return f"# Artifacts Diff\n\n{header}\n"
+    return f"# Artifacts Diff\n\n{header}\n\n{text}"
+
+
+def _diff_item_to_json_obj(item: DiffItem) -> dict[str, Any]:
+    return {
+        "field": item.field,
+        "base": item.base_val,
+        "current": item.curr_val,
+    }
+
+
+def build_json_payload(items: list[DiffItem]) -> dict[str, Any]:
+    regressions = [_diff_item_to_json_obj(it) for it in items if it.category == "regression"]
+    improvements = [_diff_item_to_json_obj(it) for it in items if it.category == "improvement"]
+    changed = [_diff_item_to_json_obj(it) for it in items if it.category == "changed"]
+    payload: dict[str, Any] = {
+        "schema_version": 1,
+        "regressions": regressions,
+        "improvements": improvements,
+        "changed": changed,
+        "counts": {
+            "regressions": len(regressions),
+            "improvements": len(improvements),
+            "changed": len(changed),
+        },
+        "ok": len(regressions) == 0,
+    }
+    return payload
+
+
+def format_json(items: list[DiffItem]) -> str:
+    return json.dumps(build_json_payload(items), indent=2, sort_keys=True)
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -369,6 +419,7 @@ def diff_artifacts(
 
     base_schemas = _get_index_schemas(base_dir)
     curr_schemas = _get_index_schemas(curr_dir)
+    baseline_meta = _safe_read_json(base_dir / _BASELINE_META_FILENAME)
 
     items = compute_diff(
         base_report,
@@ -381,7 +432,9 @@ def diff_artifacts(
     has_regressions = any(it.category == "regression" for it in items)
 
     if fmt == "markdown":
-        output = format_markdown(items)
+        output = format_markdown_with_meta(items, baseline_meta)
+    elif fmt == "json":
+        output = format_json(items)
     else:
         output = format_text(items)
 
@@ -460,8 +513,15 @@ def _handle_artifacts_diff(args: argparse.Namespace) -> int:
 
     fmt = getattr(args, "format", "text") or "text"
     fail_on_regression = getattr(args, "fail_on_regression", False)
+    out_path_raw = str(getattr(args, "out", "") or "").strip()
+    out_path = Path(out_path_raw) if out_path_raw else None
 
     output, has_regressions = diff_artifacts(base_dir, curr_dir, fmt=fmt)
+    if out_path is not None:
+        if not out_path.is_absolute():
+            out_path = Path.cwd() / out_path
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(output + "\n", encoding="utf-8")
     print(output)
 
     if fail_on_regression and has_regressions:
@@ -488,9 +548,14 @@ def register(
     )
     parser.add_argument(
         "--format",
-        choices=["text", "markdown"],
+        choices=["text", "markdown", "json"],
         default="text",
         help="Output format (default: text)",
+    )
+    parser.add_argument(
+        "--out",
+        default="",
+        help="Optional output path to write formatted diff content",
     )
     parser.add_argument(
         "--fail-on-regression",

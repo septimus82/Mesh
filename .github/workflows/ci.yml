@@ -10,10 +10,132 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  arcade3-canary:
+    name: arcade3-canary (required, py3.11)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            pytest.ini
+
+      - name: Install dependencies (Arcade 3.x canary)
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e ".[dev]"
+          python -m pip install "arcade>=3,<4"
+          python -m pip show arcade
+
+      - name: Install Xvfb
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Arcade 3.x smoke tests
+        run: |
+          python -m compileall -q engine mesh_cli tooling tests
+          xvfb-run -a python -m pytest -q -W error \
+            tests/test_shadow_backend_selection_determinism.py \
+            tests/test_render_shadow_mask_fbo_use.py \
+            tests/test_shadow_mask_fbo_binding.py \
+            tests/test_hard_shadows_composite_activate_fallback.py \
+            tests/test_hard_shadows_composite_draw_signature_fallback.py \
+            tests/test_lighting_module_path_resolution.py \
+            tests/test_post_processing.py \
+            tests/test_mesh_cli_headless_imports.py
+
+      - name: Arcade 3.x runtime replay smoke
+        run: |
+          mkdir -p artifacts/arcade3_canary
+          xvfb-run -a python -m mesh_cli replay-hash \
+            --replay replays/00_smoke_dump_state.json \
+            --frames 120 \
+            --warmup 20 \
+            --expect replays/00_smoke_dump_state.hash.json \
+            --out artifacts/arcade3_canary/replay_hash.json
+
+      - name: Arcade 3 canary replay summary
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_path = Path("artifacts/arcade3_canary/replay_hash.json")
+          lines = ["## Arcade 3 canary replay smoke", ""]
+          if summary_path.exists():
+            try:
+              payload = json.loads(summary_path.read_text(encoding="utf-8"))
+              replay = str(payload.get("replay", "?"))
+              digest = str(payload.get("hash", "?"))
+              frames = int(payload.get("frames", 0) or 0)
+              warmup = int(payload.get("warmup", 0) or 0)
+              lines.append(f"- replay: `{replay}`")
+              lines.append(f"- hash: `{digest}`")
+              lines.append(f"- frames={frames}, warmup={warmup}")
+            except Exception:
+              lines.append("- replay hash artifact: unreadable")
+          else:
+            lines.append("- replay hash artifact: missing")
+          lines.append("")
+          out = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          with out.open("a", encoding="utf-8") as fh:
+            fh.write("\n".join(lines))
+          PY
+
+      - name: Arcade 3.x installed wheel replay smoke
+        run: |
+          python -m pip install build
+          python -m build --wheel
+          python -m venv .venv_arcade3_wheel
+          source .venv_arcade3_wheel/bin/activate
+          python -m pip install -U pip
+          python -m pip install dist/*.whl "arcade>=3,<4"
+          xvfb-run -a python -m mesh_cli replay-hash \
+            --replay replays/00_smoke_dump_state.json \
+            --frames 120 \
+            --warmup 20 \
+            --expect replays/00_smoke_dump_state.hash.json \
+            --out artifacts/arcade3_canary/wheel_replay_hash.json
+
+      - name: Upload Arcade 3 canary artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: arcade3-canary-artifacts
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            artifacts/arcade3_canary/**
+
   tests:
     name: tests (${{ matrix.os }}, py${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
+    permissions:
+      contents: read
+      pull-requests: write
     strategy:
       fail-fast: true
       matrix:
@@ -78,20 +200,176 @@ jobs:
       - name: Run verify-all (Windows)
         if: runner.os == 'Windows'
         run: |
-          python -m mesh_cli verify-all --artifacts artifacts --ci-bundle
+          python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact
 
       - name: Run verify-all (Linux)
         if: runner.os != 'Windows'
         run: |
-          xvfb-run -a python -m mesh_cli verify-all --artifacts artifacts --ci-bundle
+          xvfb-run -a python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact
 
       - name: Validate artifact bundle
         run: |
           python -m mesh_cli artifacts-validate --artifacts artifacts
 
       - name: Diff against baseline
+        id: diff_against_baseline
         run: |
           python -m mesh_cli artifacts-diff --base tooling/metrics/ci_baseline_artifacts --curr artifacts --fail-on-regression
+
+      - name: Baseline diff markdown artifact
+        if: always()
+        run: |
+          python -m mesh_cli artifacts-diff --base tooling/metrics/ci_baseline_artifacts --curr artifacts --format markdown --out artifacts/baseline_diff.md
+
+      - name: Baseline diff JSON artifact
+        if: always()
+        run: |
+          python -m mesh_cli artifacts-diff --base tooling/metrics/ci_baseline_artifacts --curr artifacts --format json --out artifacts/baseline_diff.json
+
+      - name: Build baseline diff insights (Linux)
+        id: baseline_diff_insights
+        if: always() && runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          payload_path = Path("artifacts/baseline_diff.json")
+          mode = "none"
+          improvements = 0
+          changed = 0
+          regressions = 0
+          items: list[dict[str, object]] = []
+
+          if payload_path.exists():
+            try:
+              payload = json.loads(payload_path.read_text(encoding="utf-8"))
+              if isinstance(payload, dict):
+                counts = payload.get("counts", {})
+                if isinstance(counts, dict):
+                  regressions = int(counts.get("regressions", 0) or 0)
+                  improvements = int(counts.get("improvements", 0) or 0)
+                  changed = int(counts.get("changed", 0) or 0)
+                improvements_list = payload.get("improvements", [])
+                changed_list = payload.get("changed", [])
+                if isinstance(improvements_list, list):
+                  items.extend([it for it in improvements_list if isinstance(it, dict)])
+                if isinstance(changed_list, list):
+                  items.extend([it for it in changed_list if isinstance(it, dict)])
+            except Exception:
+              pass
+
+          if regressions > 0:
+            mode = "regression"
+          elif improvements > 0 or changed > 0:
+            mode = "delta"
+          else:
+            mode = "none"
+
+          summary_lines: list[str] = []
+          comment_lines: list[str] = []
+          if mode == "delta":
+            summary_lines.append("## Mesh CI baseline diff")
+            summary_lines.append("")
+            summary_lines.append(f"No regressions. Improvements: {improvements}, Changed: {changed}")
+            summary_lines.append("")
+            summary_lines.append("Top changes:")
+            summary_lines.append("")
+            for item in items[:10]:
+              field = str(item.get("field", "?"))
+              base = item.get("base", "?")
+              current = item.get("current", "?")
+              summary_lines.append(f"- `{field}`: `{base}` -> `{current}`")
+
+            comment_lines.append("<!-- mesh-baseline-diff -->")
+            comment_lines.append("## Mesh baseline diff (CI)")
+            comment_lines.append("")
+            comment_lines.append(f"No regressions. Improvements: {improvements}, Changed: {changed}")
+            comment_lines.append("")
+            comment_lines.append("Top changes:")
+            comment_lines.append("")
+            for item in items[:10]:
+              field = str(item.get("field", "?"))
+              base = item.get("base", "?")
+              current = item.get("current", "?")
+              comment_lines.append(f"- `{field}`: `{base}` -> `{current}`")
+
+          summary_path = Path("artifacts/baseline_diff_summary.md")
+          comment_path = Path("artifacts/baseline_diff_comment.md")
+          summary_path.write_text("\n".join(summary_lines).rstrip() + ("\n" if summary_lines else ""), encoding="utf-8")
+          comment_path.write_text("\n".join(comment_lines).rstrip() + ("\n" if comment_lines else ""), encoding="utf-8")
+
+          output_path = Path(os.environ["GITHUB_OUTPUT"])
+          with output_path.open("a", encoding="utf-8") as fh:
+            fh.write(f"mode={mode}\n")
+            fh.write(f"regressions={regressions}\n")
+            fh.write(f"improvements={improvements}\n")
+            fh.write(f"changed={changed}\n")
+          PY
+
+      - name: Baseline diff delta to Step Summary (Linux)
+        if: always() && runner.os != 'Windows' && steps.baseline_diff_insights.outputs.mode == 'delta'
+        shell: bash
+        run: |
+          cat artifacts/baseline_diff_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Find existing baseline diff comment
+        id: find_baseline_diff_comment
+        if: always() && github.event_name == 'pull_request' && runner.os != 'Windows'
+        continue-on-error: true
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: "github-actions[bot]"
+          body-includes: "<!-- mesh-baseline-diff -->"
+
+      - name: Upsert baseline diff PR comment
+        if: always() && github.event_name == 'pull_request' && runner.os != 'Windows' && steps.baseline_diff_insights.outputs.mode == 'delta'
+        continue-on-error: true
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-id: ${{ steps.find_baseline_diff_comment.outputs.comment-id }}
+          edit-mode: replace
+          body-path: artifacts/baseline_diff_comment.md
+
+      - name: Delete baseline diff PR comment when no diffs
+        if: always() && github.event_name == 'pull_request' && runner.os != 'Windows' && steps.baseline_diff_insights.outputs.mode == 'none' && steps.find_baseline_diff_comment.outputs.comment-id != ''
+        continue-on-error: true
+        uses: peter-evans/delete-comment@v3
+        with:
+          comment-id: ${{ steps.find_baseline_diff_comment.outputs.comment-id }}
+
+      - name: Release notes to Step Summary (Linux)
+        if: always() && runner.os != 'Windows'
+        shell: bash
+        run: |
+          echo "## Mesh release notes" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f artifacts/release_notes.md ]; then
+            sed -n '1,120p' artifacts/release_notes.md >> "$GITHUB_STEP_SUMMARY" || true
+          else
+            echo "_(release notes unavailable)_" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Release notes to Step Summary (Windows)
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "## Mesh release notes"
+          Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value ""
+          if (Test-Path "artifacts/release_notes.md") {
+            try {
+              Get-Content "artifacts/release_notes.md" | Select-Object -First 120 | Add-Content -Path $env:GITHUB_STEP_SUMMARY
+            } catch {
+              Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "_(release notes unavailable)_"
+            }
+          } else {
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value "_(release notes unavailable)_"
+          }
 
       - name: Print baseline diff on failure
         if: failure()

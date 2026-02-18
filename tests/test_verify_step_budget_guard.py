@@ -60,6 +60,8 @@ def test_verify_step_budget_guard_no_history_uses_current(tmp_path: Path) -> Non
     assert isinstance(checked_steps, list)
     assert [row["name"] for row in checked_steps] == ["step_a"]
     assert checked_steps[0]["current_ms"] == 105
+    assert checked_steps[0]["ratio_limit"] == pytest.approx(1.25)
+    assert checked_steps[0]["threshold_ms"] == 125
     assert checked_steps[0]["median_ms"] is None
     assert checked_steps[0]["effective_ms"] == 105
     assert payload["offenders"] == []
@@ -77,6 +79,7 @@ def test_verify_step_budget_guard_with_history_uses_max_current_median(tmp_path:
         {
             "schema_version": 1,
             "budgets_ms": {"step_x": 120},
+            "ratio_limits": {"step_x": 1.0},
             "tolerance_ms": 5,
         },
     )
@@ -94,6 +97,8 @@ def test_verify_step_budget_guard_with_history_uses_max_current_median(tmp_path:
     assert f"update baseline with: {update_command}" in error
     assert "step_x: budget_ms=120" in error
     assert "tolerance_ms=5" in error
+    assert "ratio_limit=1.00" in error
+    assert "threshold_ms=125" in error
     assert "current_ms=100" in error
     assert "median_ms=140" in error
     assert "effective_ms=140" in error
@@ -108,9 +113,104 @@ def test_verify_step_budget_guard_with_history_uses_max_current_median(tmp_path:
     assert [row["name"] for row in offenders] == ["step_x"]
     assert payload["ok"] is False
     checked = payload["checked_steps"][0]
+    assert checked["ratio_limit"] == pytest.approx(1.0)
+    assert checked["threshold_ms"] == 125
     assert checked["median_ms"] == 140
     assert checked["effective_ms"] == 140
     assert checked["delta_ms"] == 15
+
+
+def test_verify_step_budget_guard_passes_when_over_tolerance_but_under_ratio(tmp_path: Path) -> None:
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    step_durations_payload = _durations_payload({"step_a": 120})
+    baseline_path = tmp_path / "verify_step_budget.json"
+    _write_json(
+        baseline_path,
+        {
+            "schema_version": 2,
+            "budgets_ms": {"step_a": 100},
+            "ratio_limits": {"step_a": 1.25},
+            "tolerance_ms": 5,
+        },
+    )
+
+    code, error, payload = verify_mod._evaluate_verify_step_budget_guard(
+        step_durations_payload=step_durations_payload,
+        baseline_path=baseline_path,
+        update_command="python -c \"noop\"",
+        artifacts_dir=artifacts_dir,
+    )
+
+    assert code == 0
+    assert error == ""
+    checked = payload["checked_steps"][0]
+    assert checked["ratio_limit"] == pytest.approx(1.25)
+    assert checked["threshold_ms"] == 125
+    assert checked["effective_ms"] == 120
+    assert checked["ok"] is True
+
+
+def test_verify_step_budget_guard_passes_when_over_ratio_but_under_tolerance(tmp_path: Path) -> None:
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    step_durations_payload = _durations_payload({"step_a": 120})
+    baseline_path = tmp_path / "verify_step_budget.json"
+    _write_json(
+        baseline_path,
+        {
+            "schema_version": 2,
+            "budgets_ms": {"step_a": 100},
+            "ratio_limits": {"step_a": 1.05},
+            "tolerance_ms": 30,
+        },
+    )
+
+    code, error, payload = verify_mod._evaluate_verify_step_budget_guard(
+        step_durations_payload=step_durations_payload,
+        baseline_path=baseline_path,
+        update_command="python -c \"noop\"",
+        artifacts_dir=artifacts_dir,
+    )
+
+    assert code == 0
+    assert error == ""
+    checked = payload["checked_steps"][0]
+    assert checked["ratio_limit"] == pytest.approx(1.05)
+    assert checked["threshold_ms"] == 130
+    assert checked["effective_ms"] == 120
+    assert checked["ok"] is True
+
+
+def test_verify_step_budget_guard_fails_when_exceeding_hybrid_threshold(tmp_path: Path) -> None:
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    step_durations_payload = _durations_payload({"step_a": 131})
+    baseline_path = tmp_path / "verify_step_budget.json"
+    _write_json(
+        baseline_path,
+        {
+            "schema_version": 2,
+            "budgets_ms": {"step_a": 100},
+            "ratio_limits": {"step_a": 1.10},
+            "tolerance_ms": 20,
+        },
+    )
+
+    code, error, payload = verify_mod._evaluate_verify_step_budget_guard(
+        step_durations_payload=step_durations_payload,
+        baseline_path=baseline_path,
+        update_command="python -c \"noop\"",
+        artifacts_dir=artifacts_dir,
+    )
+
+    assert code == 2
+    assert "verify slow-step budget exceeded" in error
+    assert "step_a: budget_ms=100" in error
+    assert "threshold_ms=120" in error
+    assert "effective_ms=131" in error
+    assert "delta_ms=11" in error
+    assert payload["ok"] is False
 
 
 def test_verify_step_budget_guard_history_opt_out_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -163,3 +263,28 @@ def test_collect_recent_step_durations_selects_most_recent_deterministically(tmp
         "verify_step_durations_new.json",
         "verify_step_durations_old.json",
     ]
+
+
+def test_verify_step_budget_guard_checked_steps_sorted_deterministically(tmp_path: Path) -> None:
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    step_durations_payload = _durations_payload({"step_b": 160, "step_a": 170})
+    baseline_path = tmp_path / "verify_step_budget.json"
+    _write_json(
+        baseline_path,
+        {
+            "schema_version": 2,
+            "budgets_ms": {"step_b": 100, "step_a": 100},
+            "ratio_limits": {"step_b": 1.1, "step_a": 1.2},
+            "tolerance_ms": 5,
+        },
+    )
+    code, _error, payload = verify_mod._evaluate_verify_step_budget_guard(
+        step_durations_payload=step_durations_payload,
+        baseline_path=baseline_path,
+        update_command="python -c \"noop\"",
+        artifacts_dir=artifacts_dir,
+    )
+    assert code == 2
+    checked_steps = payload["checked_steps"]
+    assert [row["name"] for row in checked_steps] == ["step_a", "step_b"]

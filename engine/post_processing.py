@@ -21,6 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from engine.arcade_compat import activate_framebuffer, clear_framebuffer, close_framebuffer_activation
 from engine.logging_tools import get_logger
 
 logger = get_logger(__name__)
@@ -259,6 +260,7 @@ class PostProcessPipeline:
         self._targets: Optional[_PingPongTargets] = None
         self._quad: Any = None
         self._active: bool = False
+        self._begin_fbo_activation_cm: Any | None = None
 
     # Public API ----------------------------------------------------------
 
@@ -299,18 +301,29 @@ class PostProcessPipeline:
         if targets is None:
             return
 
+        close_framebuffer_activation(self._begin_fbo_activation_cm)
+        self._begin_fbo_activation_cm = None
+        backend, activation_cm = activate_framebuffer(targets.fbo_a, backend="auto")
+        if backend == "none":
+            return
+        ctx = self._get_ctx(window)
+        if ctx is None:
+            close_framebuffer_activation(activation_cm)
+            return
         self._active = True
-        targets.fbo_a.use()
-        targets.fbo_a.clear()
+        self._begin_fbo_activation_cm = activation_cm
+        clear_framebuffer(ctx, targets.fbo_a, 0.0, 0.0, 0.0, 0.0)
 
     def end(self, window: Any) -> None:
         """Run the effect chain and blit the result to the screen."""
         if not self._active:
             return
         self._active = False
+        close_framebuffer_activation(self._begin_fbo_activation_cm)
+        self._begin_fbo_activation_cm = None
 
         targets = self._targets
-        if targets is None:  # pragma: no cover — defensive
+        if targets is None:  # pragma: no cover - defensive
             window.use()
             return
 
@@ -329,43 +342,47 @@ class PostProcessPipeline:
         src_tex = targets.tex_a
         for i, effect in enumerate(enabled):
             is_last = (i == len(enabled) - 1)
+            pass_activation_cm: Any | None = None
+            try:
+                if is_last:
+                    # Final effect draws directly to the screen.
+                    window.use()
+                else:
+                    dst_fbo = targets.fbo_b if (i % 2 == 0) else targets.fbo_a
+                    backend, pass_activation_cm = activate_framebuffer(dst_fbo, backend='auto')
+                    if backend == 'none':
+                        window.use()
+                    clear_framebuffer(ctx, dst_fbo, 0.0, 0.0, 0.0, 0.0)
 
-            if is_last:
-                # Final effect draws directly to the screen
-                window.use()
-            else:
-                dst_fbo = targets.fbo_b if (i % 2 == 0) else targets.fbo_a
-                dst_fbo.use()
-                dst_fbo.clear()
+                program = effect._get_program(ctx)
+                src_tex.use(0)
+                program['u_texture'] = 0
 
-            program = effect._get_program(ctx)
-            src_tex.use(0)
-            program["u_texture"] = 0
+                # Set effect-specific uniforms.
+                for uname, uval in effect.uniforms().items():
+                    try:
+                        program[uname] = uval
+                    except Exception:  # noqa: BLE001
+                        pass
 
-            # Set effect-specific uniforms
-            for uname, uval in effect.uniforms().items():
-                try:
-                    program[uname] = uval
-                except Exception:  # noqa: BLE001
-                    pass
+                # CRT needs resolution.
+                if 'u_resolution' in {
+                    m.name for m in getattr(program, 'members', {}).values() if hasattr(m, 'name')
+                } or effect.name == 'crt':
+                    try:
+                        program['u_resolution'] = (float(targets.width), float(targets.height))
+                    except Exception:  # noqa: BLE001
+                        pass
 
-            # CRT needs resolution
-            if "u_resolution" in {
-                m.name for m in getattr(program, "members", {}).values()
-                if hasattr(m, "name")
-            } or effect.name == "crt":
-                try:
-                    program["u_resolution"] = (float(targets.width), float(targets.height))
-                except Exception:  # noqa: BLE001
-                    pass
+                quad = self._ensure_quad(window)
+                if quad is not None:
+                    quad.render(program)
 
-            quad = self._ensure_quad(window)
-            if quad is not None:
-                quad.render(program)
-
-            # Swap source for next iteration
-            if not is_last:
-                src_tex = targets.tex_b if (i % 2 == 0) else targets.tex_a
+                # Swap source for next iteration.
+                if not is_last:
+                    src_tex = targets.tex_b if (i % 2 == 0) else targets.tex_a
+            finally:
+                close_framebuffer_activation(pass_activation_cm)
 
     # Internal helpers ----------------------------------------------------
 

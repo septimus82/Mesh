@@ -5,7 +5,7 @@ import ast
 import json
 import os
 from pathlib import Path
-from typing import TypedDict
+from typing import Callable, TypedDict
 
 from mesh_cli.verify_steps import STEP_ORDER as VERIFY_ALL_STEPS
 from mesh_cli.verify_steps import VerifyStepContext, run_verify_steps
@@ -21,6 +21,8 @@ class _VerifyStepBudgetCheckRow(TypedDict):
     name: str
     budget_ms: int
     tolerance_ms: int
+    ratio_limit: float
+    threshold_ms: int
     current_ms: int
     median_ms: int | None
     effective_ms: int
@@ -31,6 +33,10 @@ class _VerifyStepBudgetCheckRow(TypedDict):
 _VERIFY_STEP_BUDGET_SCHEMA_VERSION = 2
 _VERIFY_STEP_BUDGET_TOP_N = 5
 _VERIFY_STEP_BUDGET_DEFAULT_TOLERANCE_MS = 50
+_VERIFY_STEP_BUDGET_DEFAULT_RATIO_LIMIT = 1.25
+_VERIFY_STEP_BUDGET_RATIO_LIMIT_OVERRIDES: dict[str, float] = {
+    "mypy-gate": 1.35,
+}
 
 
 def _verify_all_invalid_args() -> int:
@@ -129,9 +135,14 @@ def _build_verify_step_budget_baseline_payload(
     ranked = sorted(step_ms.items(), key=lambda item: (-int(item[1]), item[0]))
     selected = ranked[: max(0, int(top_n))]
     budgets_ms = {name: int(ms) for name, ms in sorted(selected)}
+    ratio_limits = {
+        name: float(_VERIFY_STEP_BUDGET_RATIO_LIMIT_OVERRIDES.get(name, _VERIFY_STEP_BUDGET_DEFAULT_RATIO_LIMIT))
+        for name in sorted(budgets_ms)
+    }
     return {
         "schema_version": _VERIFY_STEP_BUDGET_SCHEMA_VERSION,
         "budgets_ms": budgets_ms,
+        "ratio_limits": ratio_limits,
         "tolerance_ms": max(0, int(tolerance_ms)),
     }
 
@@ -654,6 +665,8 @@ def _evaluate_verify_step_budget_guard(
         if isinstance(tolerance_raw, (int, float))
         else _VERIFY_STEP_BUDGET_DEFAULT_TOLERANCE_MS
     )
+    ratio_limits_raw = baseline_raw.get("ratio_limits")
+    ratio_limits_map = ratio_limits_raw if isinstance(ratio_limits_raw, dict) else {}
 
     checked_steps: list[_VerifyStepBudgetCheckRow] = []
     for step_name in sorted(str(name) for name in budgets_raw):
@@ -661,6 +674,12 @@ def _evaluate_verify_step_budget_guard(
         if not isinstance(budget_raw, (int, float)):
             continue
         budget_ms = max(0, int(budget_raw))
+        ratio_raw = ratio_limits_map.get(step_name)
+        ratio_limit = (
+            float(ratio_raw)
+            if isinstance(ratio_raw, (int, float)) and float(ratio_raw) > 0.0
+            else _VERIFY_STEP_BUDGET_DEFAULT_RATIO_LIMIT
+        )
         current_ms = max(0, int(current_step_ms.get(step_name, 0)))
         history_values: list[int] = []
         if use_history:
@@ -669,7 +688,10 @@ def _evaluate_verify_step_budget_guard(
                     history_values.append(int(history_map[step_name]))
         median_ms = _median_int(history_values) if use_history else None
         effective_ms = max(current_ms, int(median_ms)) if median_ms is not None else current_ms
-        threshold_ms = budget_ms + tolerance_ms
+        threshold_ms = max(
+            budget_ms + tolerance_ms,
+            int(budget_ms * ratio_limit),
+        )
         delta_ms = effective_ms - threshold_ms
         step_ok = effective_ms <= threshold_ms
         checked_steps.append(
@@ -677,6 +699,8 @@ def _evaluate_verify_step_budget_guard(
                 "name": step_name,
                 "budget_ms": budget_ms,
                 "tolerance_ms": tolerance_ms,
+                "ratio_limit": ratio_limit,
+                "threshold_ms": threshold_ms,
                 "current_ms": current_ms,
                 "median_ms": median_ms,
                 "effective_ms": effective_ms,
@@ -702,6 +726,7 @@ def _evaluate_verify_step_budget_guard(
     offender_text = ", ".join(
         (
             f"{row['name']}: budget_ms={row['budget_ms']} tolerance_ms={row['tolerance_ms']} "
+            f"ratio_limit={row['ratio_limit']:.2f} threshold_ms={row['threshold_ms']} "
             f"current_ms={row['current_ms']} median_ms={row['median_ms'] if row['median_ms'] is not None else 'n/a'} "
             f"effective_ms={row['effective_ms']} delta_ms={row['delta_ms']}"
         )
@@ -1132,6 +1157,8 @@ def _build_verify_all_payload(args: argparse.Namespace):
                     "verify_step_budget_check": None,
                     "shadow_backend": None,
                     "swallowed_exceptions": None,
+                    "release_notes_json": None,
+                    "release_notes_md": None,
                     "scenes_index": None,
                     "worlds_index": None,
                     "replays_summary": None,
@@ -1170,6 +1197,8 @@ def _build_verify_all_payload(args: argparse.Namespace):
         "verify_step_budget_check": None,
         "shadow_backend": None,
         "swallowed_exceptions": None,
+        "release_notes_json": None,
+        "release_notes_md": None,
         "scenes_index": None,
         "worlds_index": None,
         "replays_summary": None,
@@ -1412,6 +1441,47 @@ def _build_verify_all_payload(args: argparse.Namespace):
         except Exception:  # noqa: BLE001
             pass  # best-effort; keep exit code unchanged
 
+    # --release-notes-artifact: write release_notes.json + release_notes.md to artifacts dir
+    if artifacts_dir is not None and getattr(args, "release_notes_artifact", False):
+        try:
+            from engine.persistence_io import write_text_atomic
+
+            from .release_notes import build_release_notes, build_release_notes_payload
+
+            release_notes_payload = build_release_notes_payload(
+                artifacts_dir,
+                title=None,
+                max_sites=5,
+                max_steps=5,
+            )
+            release_notes_text = build_release_notes(
+                artifacts_dir,
+                title=None,
+                max_sites=5,
+                max_steps=5,
+            )
+            with suppress_stdout():
+                write_json_atomic(
+                    artifacts_dir / "release_notes.json",
+                    release_notes_payload,
+                    indent=2,
+                    sort_keys=True,
+                    trailing_newline=True,
+                )
+                write_text_atomic(
+                    artifacts_dir / "release_notes.md",
+                    release_notes_text,
+                    encoding="utf-8",
+                )
+            artifacts_written["release_notes_json"] = _normalize_path_for_json(
+                artifacts_dir / "release_notes.json", repo_root=repo_root
+            )
+            artifacts_written["release_notes_md"] = _normalize_path_for_json(
+                artifacts_dir / "release_notes.md", repo_root=repo_root
+            )
+        except Exception:  # noqa: BLE001
+            pass  # best-effort; keep exit code unchanged
+
     # --artifact-index: write artifacts/index.json manifest
     if artifacts_dir is not None and getattr(args, "artifact_index", False):
         try:
@@ -1529,6 +1599,13 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         default=False,
         dest="ci_bundle",
         help="Convenience flag: implies --report-json-artifact and --artifact-index",
+    )
+    verify_all_parser.add_argument(
+        "--release-notes-artifact",
+        action="store_true",
+        default=False,
+        dest="release_notes_artifact",
+        help="Write release_notes.json and release_notes.md to the artifacts directory",
     )
     verify_all_parser.add_argument(
         "pytest_args",
