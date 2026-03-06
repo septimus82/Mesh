@@ -6,7 +6,9 @@ from engine.input_runtime.capture_runtime_focus_model import CaptureFocusSnapsho
 from engine.command_palette_controller import (
     handle_command_palette_activate,
     handle_command_palette_cancel_or_close,
+    handle_command_palette_history_navigate,
     handle_command_palette_navigate,
+    handle_command_palette_toggle_help,
     handle_command_palette_toggle,
 )
 
@@ -66,12 +68,18 @@ def dispatch_ui_action(
             return handle_command_palette_navigate(window, -1)
         if action_id == "capture.command_palette.down":
             return handle_command_palette_navigate(window, 1)
+        if action_id == "capture.command_palette.history_prev":
+            return handle_command_palette_history_navigate(window, -1)
+        if action_id == "capture.command_palette.history_next":
+            return handle_command_palette_history_navigate(window, 1)
         if action_id == "capture.command_palette.activate":
             return handle_command_palette_activate(window, snapshot, repeat=False)
         if action_id == "capture.command_palette.activate_repeat":
             return handle_command_palette_activate(window, snapshot, repeat=True)
         if action_id == "capture.command_palette.toggle":
             return handle_command_palette_toggle(window)
+        if action_id == "capture.command_palette.help_toggle":
+            return handle_command_palette_toggle_help(window)
         return False
 
     if action_id.startswith("capture.console."):

@@ -5,6 +5,18 @@ from typing import Any, NotRequired, Sequence, TypedDict, cast
 
 from engine.logging_tools import get_logger
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 logger = get_logger(__name__)
 
 HISTORY_FILE = Path(".mesh/ai_history.jsonl")
@@ -117,6 +129,7 @@ def extract_scenes_from_plan(plan_data: dict[str, Any]) -> list[str]:
                 stem = Path(p).stem
                 scenes.add(stem)
             except Exception:
+                _log_swallow("AIHI-001", "engine/ai_history.py pass-only blanket swallow")
                 pass
 
     return sorted(list(scenes))

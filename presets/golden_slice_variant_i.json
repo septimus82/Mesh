@@ -1,0 +1,30 @@
+{
+  "description": "Signal cache objective: quest + reward toast (content-only)",
+  "lighting_showcase": false,
+  "notes": "Secure the cache beyond the boss",
+  "steps": [
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice_variant_i.json",
+        "--dry-run",
+        "--strict",
+        "--check-refs"
+      ],
+      "cmd": "pipeline"
+    },
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice_variant_i.json",
+        "--dry-run",
+        "--demo"
+      ],
+      "cmd": "pipeline"
+    }
+  ]
+}

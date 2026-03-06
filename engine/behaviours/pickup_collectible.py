@@ -62,7 +62,7 @@ class PickupCollectible(Behaviour):
         "item_amount": ParamDef(int, default=1, description="Quantity granted for item_id"),
     }
 
-    def __init__(self, entity: Sprite, window, **config) -> None:  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         merged: Dict[str, Any] = dict(getattr(entity, "mesh_entity_data", {}) or {})
         if config:
             merged.update(config)

@@ -2,11 +2,16 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
+from .diagnostics import add_exception as diag_add_exception
+from .diagnostics import error as diag_error
+from .diagnostics import info as diag_info
+from .diagnostics import warn as diag_warn
 from .persistence_io import SAVE_FORMAT_VERSION
 from .persistence_io import read_json, write_json_atomic
 from .save_runtime import constants as save_constants
@@ -14,6 +19,128 @@ from .save_runtime import io as save_io
 from .save_runtime import payloads as save_payloads
 from .save_runtime.restore_policy import SNAPSHOT_POLICY
 from .save_runtime.save_diagnostics import SaveDiagnosticsAggregator
+from .save_runtime.ux_codes import (
+    LOAD_APPLY_FAILED,
+    LOAD_FALLBACK_TO_START_SCENE,
+    LOAD_NOT_FOUND,
+    LOAD_PARSE_FAILED,
+    LOAD_SCHEMA_INVALID,
+    SAVE_IO_PERMISSION,
+    SAVE_SERIALIZE_FAILED,
+    SAVE_WRITE_FAILED,
+)
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+_DIAG_SOURCE = "engine.savegame"
+_SLOT_RE = re.compile(r"(\d+)")
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
+def _classify_save_exception(exc: Exception) -> tuple[str, str]:
+    if isinstance(exc, PermissionError):
+        return SAVE_IO_PERMISSION, "Check write permissions for the target save location."
+    if isinstance(exc, (TypeError, ValueError)):
+        return SAVE_SERIALIZE_FAILED, "The save payload is invalid and could not be serialized."
+    return SAVE_WRITE_FAILED, "Retry after checking disk space and permissions."
+
+
+def _slot_index_from_path(path: str | Path | None) -> int | None:
+    raw = str(path or "").strip()
+    if not raw:
+        return None
+    stem = Path(raw).stem
+    match = _SLOT_RE.search(stem)
+    if match is None:
+        return None
+    try:
+        return int(match.group(1))
+    except (TypeError, ValueError):
+        return None
+
+
+def _diag_context(
+    *,
+    operation: str,
+    save_path: str | Path | None,
+    pointer: str = "$",
+    slot: int | None = None,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if isinstance(save_path, Path):
+        normalized_path = save_path.as_posix()
+    else:
+        normalized_path = str(save_path or "").replace("\\", "/")
+    context: dict[str, Any] = {
+        "operation": str(operation),
+        "pointer": str(pointer),
+        "save_path": normalized_path,
+    }
+    slot_value = _slot_index_from_path(save_path) if slot is None else slot
+    if slot_value is not None:
+        context["slot"] = int(slot_value)
+    if extra:
+        for key in sorted(extra.keys()):
+            context[str(key)] = extra[key]
+    return context
+
+
+def _fallback_to_start_scene(
+    window: Any,
+    *,
+    reason_code: str,
+    failed_path: str,
+    slot: int | None = None,
+) -> None:
+    cfg = getattr(window, "engine_config", None)
+    target_scene = str(getattr(cfg, "start_scene", "") or "").strip()
+    requester = getattr(window, "request_scene_change", None)
+    if not target_scene or not callable(requester):
+        return
+    try:
+        requester(target_scene)
+        diag_info(
+            LOAD_FALLBACK_TO_START_SCENE,
+            "Load failed. Falling back to start scene.",
+            _DIAG_SOURCE,
+            location=target_scene,
+            context=_diag_context(
+                operation="load",
+                save_path=failed_path,
+                pointer="$",
+                slot=slot,
+                extra={
+                    "reason_code": str(reason_code or ""),
+                    "target_scene": target_scene,
+                },
+            ),
+            hint="Try a different slot or delete the corrupt save.",
+        )
+    except Exception as exc:  # noqa: BLE001  # REASON: savegame resilience fallback
+        _log_swallow("SAVE-003", "load_fallback_start_scene diag", once=True)
+        diag_add_exception(
+            LOAD_FALLBACK_TO_START_SCENE,
+            exc,
+            _DIAG_SOURCE,
+            location=target_scene,
+            context=_diag_context(
+                operation="load",
+                save_path=failed_path,
+                pointer="$",
+                slot=slot,
+                extra={"target_scene": target_scene},
+            ),
+            severity="warning",
+            hint="Try selecting Start Game manually.",
+        )
 
 SNAPSHOT_VERSION = save_constants.SNAPSHOT_VERSION
 QUICK_SNAPSHOT_PATH = save_constants.QUICK_SNAPSHOT_PATH
@@ -148,7 +275,7 @@ def capture_savegame_from_window(window: Any) -> SaveGameV1 | None:
     if callable(finder):
         try:
             player_sprite = finder()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: savegame resilience fallback
             player_sprite = None
     if player_sprite is None:
         player_sprite = getattr(window, "player_sprite", None)
@@ -157,7 +284,8 @@ def capture_savegame_from_window(window: Any) -> SaveGameV1 | None:
         try:
             player_x = float(getattr(player_sprite, "center_x", 0.0))
             player_y = float(getattr(player_sprite, "center_y", 0.0))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: savegame resilience fallback
+            _log_swallow("SAVE-005", "player position parse", once=True)
             player_x = 0.0
             player_y = 0.0
 
@@ -179,7 +307,8 @@ def capture_savegame_from_window(window: Any) -> SaveGameV1 | None:
             payload = manager.to_dict()
             if isinstance(payload, dict):
                 quests = payload
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: savegame resilience fallback
+            _log_swallow("SAVE-006", "quests to_dict", once=True)
             quests = {}
 
     return SaveGameV1(
@@ -195,7 +324,24 @@ def save_savegame(path: str | Path | None, save: SaveGameV1) -> None:
     if _is_web_runtime():
         return
     out_path = Path(path) if path is not None else resolve_savegame_path()
-    write_json_atomic(out_path, save.to_payload(), indent=2, sort_keys=True, trailing_newline=True)
+    try:
+        write_json_atomic(out_path, save.to_payload(), indent=2, sort_keys=True, trailing_newline=True)
+    except Exception as exc:  # noqa: BLE001  # REASON: savegame resilience fallback
+        code, hint = _classify_save_exception(exc)
+        diag_add_exception(
+            code,
+            exc,
+            _DIAG_SOURCE,
+            location=out_path.as_posix(),
+            context=_diag_context(
+                operation="save",
+                save_path=out_path,
+                pointer="$",
+            ),
+            severity="error",
+            hint=hint,
+        )
+        raise
 
 
 def load_savegame(path: str | Path | None) -> SaveGameV1 | None:
@@ -203,14 +349,67 @@ def load_savegame(path: str | Path | None) -> SaveGameV1 | None:
         return None
     in_path = Path(path) if path is not None else resolve_savegame_path()
     if not in_path.exists():
+        diag_warn(
+            LOAD_NOT_FOUND,
+            "Save file not found.",
+            _DIAG_SOURCE,
+            location=in_path.as_posix(),
+            context=_diag_context(
+                operation="load",
+                save_path=in_path,
+                pointer="$",
+            ),
+            hint="Start a new game and create a save before using Continue.",
+        )
         return None
     try:
         raw = read_json(in_path)
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: savegame resilience fallback
+        _log_swallow("SAVE-007", "read_json parse", once=True)
+        diag_add_exception(
+            LOAD_PARSE_FAILED,
+            exc,
+            _DIAG_SOURCE,
+            location=in_path.as_posix(),
+            context=_diag_context(
+                operation="load",
+                save_path=in_path,
+                pointer="$",
+            ),
+            severity="error",
+            hint="The save file is not valid JSON. Restore from backup or create a new save.",
+        )
         return None
     if not isinstance(raw, dict):
+        diag_error(
+            LOAD_PARSE_FAILED,
+            "Save payload root must be a JSON object.",
+            _DIAG_SOURCE,
+            location=in_path.as_posix(),
+            context=_diag_context(
+                operation="load",
+                save_path=in_path,
+                pointer="$",
+            ),
+            hint="Replace the save with a valid save file.",
+        )
         return None
-    return SaveGameV1.from_payload(raw)
+    parsed = SaveGameV1.from_payload(raw)
+    if parsed is None:
+        diag_error(
+            LOAD_SCHEMA_INVALID,
+            "Save payload schema is invalid or unsupported.",
+            _DIAG_SOURCE,
+            location=in_path.as_posix(),
+            context=_diag_context(
+                operation="load",
+                save_path=in_path,
+                pointer="$/version",
+            ),
+            hint="Create a new save with this game version.",
+        )
+        return None
+    return parsed
 
 
 def apply_savegame_to_window(window: Any, save: SaveGameV1) -> None:
@@ -219,7 +418,21 @@ def apply_savegame_to_window(window: Any, save: SaveGameV1) -> None:
     if state is not None and hasattr(state, "flags"):
         try:
             state.flags = dict(save.flags)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: savegame resilience fallback
+            _log_swallow("SAVE-001", "engine/savegame.py pass-only blanket swallow")
+            diag_add_exception(
+                LOAD_APPLY_FAILED,
+                exc,
+                _DIAG_SOURCE,
+                location=str(save.scene_path or ""),
+                context=_diag_context(
+                    operation="load",
+                    save_path=str(save.scene_path or ""),
+                    pointer="$/flags",
+                ),
+                severity="warning",
+                hint="Start a new game if this save cannot be applied cleanly.",
+            )
             pass
 
     manager = _resolve_quest_manager(window)
@@ -227,7 +440,21 @@ def apply_savegame_to_window(window: Any, save: SaveGameV1) -> None:
         if isinstance(save.quests, dict):
             try:
                 manager.load_from_dict(save.quests)
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: savegame resilience fallback
+                _log_swallow("SAVE-002", "engine/savegame.py pass-only blanket swallow")
+                diag_add_exception(
+                    LOAD_APPLY_FAILED,
+                    exc,
+                    _DIAG_SOURCE,
+                    location=str(save.scene_path or ""),
+                    context=_diag_context(
+                        operation="load",
+                        save_path=str(save.scene_path or ""),
+                        pointer="$/quests",
+                    ),
+                    severity="warning",
+                    hint="Start a new game if this save cannot be applied cleanly.",
+                )
                 pass
 
     # Teleport after scene load (SceneController will consume this if wired).
@@ -262,18 +489,23 @@ def _apply_pending_savegame_player_pos(window: Any) -> bool:
         return False
     try:
         player_sprite = finder()
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: savegame resilience fallback
+        _log_swallow("SAVE-008", "player_sprite find for teleport", once=True)
         return False
     if player_sprite is None:
         return False
 
+    # Cast needed: finder callable returns untyped object
+    # Type is optional_arcade.arcade.Sprite at runtime but using Any to avoid import
+    sprite = cast(Any, player_sprite)
     try:
-        player_sprite.center_x = float(x)
-        player_sprite.center_y = float(y)
-    except Exception:  # noqa: BLE001
+        sprite.center_x = float(x)
+        sprite.center_y = float(y)
+    except Exception:  # noqa: BLE001  # REASON: savegame resilience fallback
+        _log_swallow("SAVE-009", "player_sprite position set", once=True)
         return False
 
-    entity_data = getattr(player_sprite, "mesh_entity_data", None)
+    entity_data = getattr(sprite, "mesh_entity_data", None)
     if isinstance(entity_data, dict):
         entity_data["x"] = float(x)
         entity_data["y"] = float(y)
@@ -293,6 +525,22 @@ def build_savegame(window: Any) -> dict[str, Any] | None:
 def apply_savegame(window: Any, payload: dict[str, Any]) -> bool:
     save = SaveGameV1.from_payload(payload)
     if save is None:
+        diag_error(
+            LOAD_SCHEMA_INVALID,
+            "Cannot apply savegame payload because schema validation failed.",
+            _DIAG_SOURCE,
+            context=_diag_context(
+                operation="load",
+                save_path="<memory>",
+                pointer="$",
+            ),
+            hint="Start a new game and create a fresh save file.",
+        )
+        _fallback_to_start_scene(
+            window,
+            reason_code=LOAD_SCHEMA_INVALID,
+            failed_path="<memory>",
+        )
         return False
     apply_savegame_to_window(window, save)
     return True
@@ -336,8 +584,56 @@ def write_snapshot_file(path: Path, payload: dict[str, Any]) -> None:
 def read_snapshot_file(path: Path) -> dict[str, Any] | None:
     ok, payload_or_error = save_io.load_snapshot_payload(path, policy=SNAPSHOT_POLICY)
     if ok:
-        return payload_or_error  # type: ignore[return-value]
+        return cast(dict[str, Any], payload_or_error)
     msg = str(payload_or_error or "")
+    code = LOAD_NOT_FOUND if not path.exists() else LOAD_PARSE_FAILED
+    if path.exists():
+        snapshot = save_io.get_save_runtime_diagnostics_snapshot()
+        attempt = snapshot.get("last_load_attempt", {})
+        if isinstance(attempt, dict):
+            diagnostics = attempt.get("diagnostics", {})
+            if isinstance(diagnostics, dict):
+                rows = diagnostics.get("diagnostics", [])
+                if isinstance(rows, list):
+                    codes = [str(item.get("code", "") or "").strip().lower() for item in rows if isinstance(item, dict)]
+                    if any(row_code == "save.load.schema_validation_error" for row_code in codes):
+                        code = LOAD_SCHEMA_INVALID
+                    elif any(row_code == "save.load.schema_migration_error" for row_code in codes):
+                        code = LOAD_SCHEMA_INVALID
+                    elif any(row_code == "save.load.read_error" for row_code in codes):
+                        code = LOAD_PARSE_FAILED
+    hint = (
+        "Start a new game and create a new snapshot."
+        if code == LOAD_NOT_FOUND
+        else "Snapshot data is invalid. Create a fresh snapshot in this game version."
+    )
+    if code == LOAD_NOT_FOUND:
+        diag_warn(
+            code,
+            "Snapshot file not found.",
+            _DIAG_SOURCE,
+            location=path.as_posix(),
+            context=_diag_context(
+                operation="load",
+                save_path=path,
+                pointer="$",
+            ),
+            hint=hint,
+        )
+    else:
+        diag_error(
+            code,
+            "Snapshot load failed.",
+            _DIAG_SOURCE,
+            location=path.as_posix(),
+            context=_diag_context(
+                operation="load",
+                save_path=path,
+                pointer="$",
+                extra={"error": msg},
+            ),
+            hint=hint,
+        )
     if msg:
         sys.stderr.write(msg + "\n")
     return None
@@ -346,6 +642,18 @@ def read_snapshot_file(path: Path) -> dict[str, Any] | None:
 def save_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> bool:
     controller = getattr(window, "game_state_controller", None)
     if controller is None:
+        diag_error(
+            SAVE_WRITE_FAILED,
+            "Quick snapshot failed because game_state_controller is missing.",
+            _DIAG_SOURCE,
+            location=path.as_posix(),
+            context=_diag_context(
+                operation="save",
+                save_path=path,
+                pointer="$",
+            ),
+            hint="Retry after loading into gameplay.",
+        )
         return False
 
     payload = dump_snapshot(controller)
@@ -353,7 +661,21 @@ def save_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> boo
         write_snapshot_file(path, payload)
         sys.stderr.write(f"[Mesh][Snapshot] Saved quick snapshot to '{path}'\n")
         return True
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: savegame resilience fallback
+        code, hint = _classify_save_exception(exc)
+        diag_add_exception(
+            code,
+            exc,
+            _DIAG_SOURCE,
+            location=path.as_posix(),
+            context=_diag_context(
+                operation="save",
+                save_path=path,
+                pointer="$",
+            ),
+            severity="error",
+            hint=hint,
+        )
         sys.stderr.write(f"[Mesh][Snapshot] ERROR: Failed to save snapshot: {exc}\n")
         return False
 
@@ -361,10 +683,28 @@ def save_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> boo
 def load_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> bool:
     payload = read_snapshot_file(path)
     if payload is None:
+        _fallback_to_start_scene(
+            window,
+            reason_code=LOAD_PARSE_FAILED,
+            failed_path=path.as_posix(),
+        )
         return False
 
     controller = getattr(window, "game_state_controller", None)
     if controller is None:
+        diag_error(
+            LOAD_APPLY_FAILED,
+            "Quick snapshot load failed because game_state_controller is missing.",
+            _DIAG_SOURCE,
+            location=path.as_posix(),
+            context=_diag_context(
+                operation="load",
+                save_path=path,
+                pointer="$",
+            ),
+            hint="Retry after entering gameplay.",
+        )
+        _fallback_to_start_scene(window, reason_code=LOAD_APPLY_FAILED, failed_path=path.as_posix())
         return False
 
     scene_id = payload.get("scene_id")
@@ -392,7 +732,28 @@ def load_quick_snapshot(window: object, path: Path = QUICK_SNAPSHOT_PATH) -> boo
     if should_write_sidecars:
         save_io.write_diagnostics_sidecars(path, apply_diags)
     if not applied:
+        primary = apply_diags.primary()
+        pointer = "$"
+        inner_code = ""
+        if primary is not None:
+            context = primary.context if isinstance(primary.context, dict) else {}
+            pointer = str(context.get("pointer", "$") or "$")
+            inner_code = str(primary.code or "")
+        diag_error(
+            LOAD_APPLY_FAILED,
+            "Quick snapshot apply failed.",
+            _DIAG_SOURCE,
+            location=path.as_posix(),
+            context=_diag_context(
+                operation="load",
+                save_path=path,
+                pointer=pointer,
+                extra={"apply_code": inner_code},
+            ),
+            hint="Start a new game and create a fresh snapshot.",
+        )
         sys.stderr.write(save_io.format_load_error("[Mesh][Snapshot]", apply_diags) + "\n")
+        _fallback_to_start_scene(window, reason_code=LOAD_APPLY_FAILED, failed_path=path.as_posix())
         return False
 
     # Request scene change last.

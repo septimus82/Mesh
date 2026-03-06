@@ -9,6 +9,18 @@ from typing import Any
 from . import occluder_utils as _occluder_utils
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def build_lighting_stats(manager: Any) -> dict[str, Any]:
     stats = dict(getattr(manager, "_last_lighting_stats", None) or {})
     stats.setdefault("shadows_mode", manager.shadows_mode)
@@ -94,5 +106,6 @@ def build_lighting_stats(manager: Any) -> dict[str, Any]:
         if os.environ.get("MESH_SHADOWS_TRACE") == "1":
             stats.setdefault("mask_error", getattr(manager.window, "_mesh_shadow_mask_error", None))
     except Exception:  # noqa: BLE001
+        _log_swallow("LIGH-001", "engine/lighting/lighting_stats.py pass-only blanket swallow")
         pass
     return stats

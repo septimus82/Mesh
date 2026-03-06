@@ -2,6 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 HINT_LABEL = "Ctrl+P Palette  Ctrl+O Scenes  Ctrl+S Save"
 
@@ -121,7 +132,8 @@ def _entity_display_name(editor_state: Any, sprite: Any) -> str:
     if callable(getter):
         try:
             name = getter(sprite)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("ESTA-001", "engine/editor_status.py blanket swallow", once=True)
             name = ""
         if isinstance(name, str) and name.strip():
             return name.strip()
@@ -145,7 +157,8 @@ def _light_selection_label(editor_state: Any, index: int) -> str:
     if callable(getter):
         try:
             lights = getter()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("ESTA-002", "engine/editor_status.py blanket swallow", once=True)
             lights = None
         if isinstance(lights, list) and 0 <= index < len(lights):
             light = lights[index]
@@ -162,7 +175,8 @@ def _occluder_selection_label(editor_state: Any, index: int) -> str:
     if callable(getter):
         try:
             occluders = getter()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("ESTA-003", "engine/editor_status.py blanket swallow", once=True)
             occluders = None
         if isinstance(occluders, list) and 0 <= index < len(occluders):
             occluder = occluders[index]
@@ -193,6 +207,32 @@ def _selection_label(editor_state: Any) -> str:
     return f"Entity: {_entity_display_name(editor_state, sprite)}"
 
 
+def _problems_indicator(editor_state: Any) -> str | None:
+    problems = getattr(editor_state, "problems", None)
+    if problems is None:
+        return None
+    refresher = getattr(problems, "refresh_structured_diagnostics", None)
+    if callable(refresher):
+        try:
+            refresher()
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("ESTA-004", "engine/editor_status.py blanket swallow", once=True)
+            return None
+    has_new = bool(getattr(problems, "has_new_error_indicator", lambda: False)())
+    if not has_new:
+        return None
+    counts_getter = getattr(problems, "get_severity_counts", None)
+    if not callable(counts_getter):
+        return "Problems: new errors"
+    try:
+        counts = counts_getter()
+    except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+        _log_swallow("ESTA-005", "engine/editor_status.py blanket swallow", once=True)
+        return "Problems: new errors"
+    errors = int(counts.get("error", 0)) if isinstance(counts, dict) else 0
+    return f"Problems: {errors} new error(s)"
+
+
 def build_editor_status(editor_state: Any, window_w: int = 800, window_h: int = 600) -> dict[str, str | None]:
     """Build editor status bar data.
 
@@ -216,7 +256,8 @@ def build_editor_status(editor_state: Any, window_w: int = 800, window_h: int = 
     if callable(get_hint):
         try:
             cursor_hint = get_hint(window_w, window_h)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("ESTA-006", "engine/editor_status.py blanket swallow", once=True)
             cursor_hint = None
 
     return {
@@ -226,4 +267,5 @@ def build_editor_status(editor_state: Any, window_w: int = 800, window_h: int = 
         "hint_label": HINT_LABEL,
         "operation_banner": build_editor_operation_banner(editor_state),
         "cursor_hint": cursor_hint,
+        "problems_indicator": _problems_indicator(editor_state),
     }

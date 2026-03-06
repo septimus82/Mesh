@@ -1,0 +1,341 @@
+{
+  "description": "Act 3 Chapter 6 shortcuts: affinity A/B unlock doctrine shortcuts, neutral or missing affinity takes main route.",
+  "name": "Act 3 Chapter 6 - Shortcuts",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter6_shortcuts_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter6_shortcuts_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch6_shortcut_a",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter6ShortcutAZone"
+        }
+      },
+      "id": "act3_chapter6_shortcuts_shortcutazone_340_240_0_0",
+      "name": "Act3Chapter6ShortcutAZone",
+      "require_flags": [
+        "act3_ch3_affinity_a"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 340,
+      "y": 240
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter6ShortcutAZone",
+          "set_flags": {
+            "act3_ch6_shortcut_used": true
+          },
+          "require_flags": [
+            "act3_ch3_affinity_a"
+          ],
+          "forbid_flags": [
+            "act3_ch6_shortcut_used"
+          ],
+          "once": true,
+          "toast": "Shortcut opened: A.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter6_shortcuts_shortcutastatesync_m1000_m1000_0_0",
+      "name": "Act3Ch6ShortcutAStateSync",
+      "require_flags": [
+        "act3_ch3_affinity_a"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch6_shortcut_b",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter6ShortcutBZone"
+        }
+      },
+      "id": "act3_chapter6_shortcuts_shortcutbzone_340_360_0_0",
+      "name": "Act3Chapter6ShortcutBZone",
+      "require_flags": [
+        "act3_ch3_affinity_b"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 340,
+      "y": 360
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter6ShortcutBZone",
+          "set_flags": {
+            "act3_ch6_shortcut_used": true
+          },
+          "require_flags": [
+            "act3_ch3_affinity_b"
+          ],
+          "forbid_flags": [
+            "act3_ch6_shortcut_used"
+          ],
+          "once": true,
+          "toast": "Shortcut opened: B.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter6_shortcuts_shortcutbstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch6ShortcutBStateSync",
+      "require_flags": [
+        "act3_ch3_affinity_b"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "id": "act3_chapter6_shortcuts_affinityapickup_520_240_0_0",
+      "mesh_name": "Act3Ch6AffinityAPickup",
+      "name": "Act3Ch6AffinityAPickup",
+      "require_flags": [
+        "act3_ch3_affinity_a"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 520,
+      "y": 240
+    },
+    {
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "id": "act3_chapter6_shortcuts_affinitybpickup_520_360_0_0",
+      "mesh_name": "Act3Ch6AffinityBPickup",
+      "name": "Act3Ch6AffinityBPickup",
+      "require_flags": [
+        "act3_ch3_affinity_b"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 520,
+      "y": 360
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch6_neutral_hint",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter6NeutralHintZone"
+        }
+      },
+      "id": "act3_chapter6_shortcuts_neutralhintzone_240_300_0_0",
+      "name": "Act3Chapter6NeutralHintZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 240,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter6NeutralHintZone",
+          "set_flags": {
+            "act3_ch6_hint_seen": true
+          },
+          "forbid_flags": [
+            "act3_ch3_affinity_a",
+            "act3_ch3_affinity_b",
+            "act3_ch6_hint_seen"
+          ],
+          "once": true,
+          "toast": "Notice: your doctrine cannot open these shortcuts. Proceed via the main route.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter6_shortcuts_neutralhintstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch6NeutralHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch6_main_route_progress",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter6MainRouteProgressZone"
+        }
+      },
+      "id": "act3_chapter6_shortcuts_mainrouteprogresszone_820_300_0_0",
+      "name": "Act3Chapter6MainRouteProgressZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 820,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter6MainRouteProgressZone",
+          "set_flags": {
+            "act3_ch6_main_route_taken": true
+          },
+          "forbid_flags": [
+            "act3_ch6_main_route_taken"
+          ],
+          "once": true
+        }
+      },
+      "id": "act3_chapter6_shortcuts_mainrouteprogressstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch6MainRouteProgressStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter6_Exit.json"
+        }
+      },
+      "id": "act3_chapter6_shortcuts_toexit_1040_300_0_0",
+      "name": "ToAct3Chapter6Exit",
+      "require_flags": [
+        "act3_ch6_started"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter6_Entry.json"
+        }
+      },
+      "id": "act3_chapter6_shortcuts_returntoentry_60_300_0_0",
+      "name": "ReturnToAct3Chapter6Entry",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch6_shortcut_used": true
+          },
+          "require_flags": [
+            "act3_ch6_shortcut_used"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter6_shortcuts_shortcutusedrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch6ShortcutUsedRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

@@ -14,6 +14,18 @@ from engine.tooling import plan_history, polish, scaffold
 from engine.tooling.plan_types import Action, Plan
 from engine.tooling.validate_all import UnifiedValidator
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 BACKUP_DIR = Path(".mesh/plan_backups")
 
 class PlanExecutionSummary(TypedDict):
@@ -410,6 +422,7 @@ class PlanExecutor:
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
             except Exception:
+                _log_swallow("PLAN-001", "engine/tooling/plan_executor.py pass-only blanket swallow")
                 pass
 
         if not any(q["id"] == args["id"] for q in data.get("quests", [])):

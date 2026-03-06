@@ -9,6 +9,16 @@ from engine.arcade_compat import activate_framebuffer, close_framebuffer_activat
 
 from .flicker import FlickerNoise, apply_light_flicker
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+
+def _log_swallow(tag: str, context: str) -> None:
+    if tag in _SWALLOW_ONCE_TAGS:
+        return
+    _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 def collect_shafts_draw_specs(manager: Any, offset: tuple[float, float]) -> list[dict[str, Any]]:
     from .light_shafts import build_shafts_params  # noqa: PLC0415
@@ -17,7 +27,8 @@ def collect_shafts_draw_specs(manager: Any, offset: tuple[float, float]) -> list
     try:
         offset_x = float(offset[0])
         offset_y = float(offset[1])
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: light shafts resilience fallback
+        _log_swallow("SHFT-001", "collect_shafts_draw_specs: offset parse")
         offset_x = 0.0
         offset_y = 0.0
 
@@ -34,7 +45,8 @@ def collect_shafts_draw_specs(manager: Any, offset: tuple[float, float]) -> list
             light_x = float(cfg.get("x", 0.0))
             light_y = float(cfg.get("y", 0.0))
             radius = float(cfg.get("radius", 0.0))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: light shafts resilience fallback
+            _log_swallow("SHFT-002", "collect_shafts_draw_specs: static light coords")
             continue
         static_count += 1
         color = manager._resolve_light_color(cfg)
@@ -44,7 +56,8 @@ def collect_shafts_draw_specs(manager: Any, offset: tuple[float, float]) -> list
                 seed_value = flicker_index
             try:
                 seed = int(seed_value)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: light shafts resilience fallback
+                _log_swallow("SHFT-003", "collect_shafts_draw_specs: flicker_seed parse")
                 seed = 0
             flicker_index += 1
             speed = float(cfg.get("flicker_speed", 1.0))
@@ -53,11 +66,13 @@ def collect_shafts_draw_specs(manager: Any, offset: tuple[float, float]) -> list
             intensity = cfg.get("flicker_intensity")
             try:
                 radius_px = float(radius_px) if radius_px is not None else None
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: light shafts resilience fallback
+                _log_swallow("SHFT-004", "collect_shafts_draw_specs: static flicker_radius_px")
                 radius_px = None
             try:
                 intensity = float(intensity) if intensity is not None else None
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: light shafts resilience fallback
+                _log_swallow("SHFT-005", "collect_shafts_draw_specs: static flicker_intensity")
                 intensity = None
             noise = FlickerNoise(seed)
             _radius, color = apply_light_flicker(
@@ -91,7 +106,8 @@ def collect_shafts_draw_specs(manager: Any, offset: tuple[float, float]) -> list
             try:
                 dyn_x, dyn_y = light.position
                 got_position = True
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: light shafts resilience fallback
+                _log_swallow("SHFT-006", "collect_shafts_draw_specs: dynamic light.position")
                 dyn_x = 0.0
                 dyn_y = 0.0
         if not got_position:
@@ -99,7 +115,8 @@ def collect_shafts_draw_specs(manager: Any, offset: tuple[float, float]) -> list
             try:
                 dyn_x = float(getattr(owner, "center_x", 0.0)) + float(getattr(handle, "offset_x", 0.0))
                 dyn_y = float(getattr(owner, "center_y", 0.0)) + float(getattr(handle, "offset_y", 0.0))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: light shafts resilience fallback
+                _log_swallow("SHFT-007", "collect_shafts_draw_specs: dynamic owner position")
                 dyn_x = 0.0
                 dyn_y = 0.0
         dyn_radius = getattr(light, "radius", None)
@@ -107,7 +124,8 @@ def collect_shafts_draw_specs(manager: Any, offset: tuple[float, float]) -> list
             dyn_radius = getattr(handle, "base_radius", 0.0)
         try:
             dyn_radius = float(dyn_radius or 0.0)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: light shafts resilience fallback
+            _log_swallow("SHFT-008", "collect_shafts_draw_specs: dyn_radius parse")
             dyn_radius = 0.0
         base_color = getattr(handle, "color_rgba", None) or getattr(handle, "base_color", (255, 255, 255, 255))
         color = manager._normalize_color(base_color)
@@ -116,12 +134,14 @@ def collect_shafts_draw_specs(manager: Any, offset: tuple[float, float]) -> list
             radius_px = getattr(handle, "flicker_radius_px", None)
             try:
                 radius_px = float(radius_px) if radius_px is not None else None
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: light shafts resilience fallback
+                _log_swallow("SHFT-009", "collect_shafts_draw_specs: dynamic flicker_radius_px")
                 radius_px = None
             intensity = getattr(handle, "flicker_intensity", None)
             try:
                 intensity = float(intensity) if intensity is not None else None
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: light shafts resilience fallback
+                _log_swallow("SHFT-010", "collect_shafts_draw_specs: dynamic flicker_intensity")
                 intensity = None
             noise = FlickerNoise(seed)
             _radius, color = apply_light_flicker(
@@ -182,7 +202,8 @@ def apply_light_shafts(manager: Any, *, target_fbo: Any, offset: tuple[float, fl
                 color,
                 float(spec.get("rotation_deg", 0.0)),
             )
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: light shafts resilience fallback
+        _log_swallow("SHFT-011", "apply_light_shafts: draw loop failed")
         return 0
     finally:
         close_framebuffer_activation(activation_cm)

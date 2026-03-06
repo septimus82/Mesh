@@ -73,6 +73,19 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
         if handled:
             return True
 
+    if getattr(controller, "_find_everything_open", False):
+        search = getattr(controller, "search", None)
+        handler = getattr(search, "handle_find_everything_mouse_press", None)
+        if callable(handler) and handler(x, y, button, modifiers):
+            return True
+
+    if getattr(controller, "asset_browser_active", False):
+        asset_browser = getattr(controller, "asset_browser", None)
+        handler = getattr(asset_browser, "handle_asset_browser_mouse_click", None) if asset_browser is not None else None
+        if callable(handler):
+            return bool(handler(x, y, button, modifiers))
+        return True
+
     if is_scene_browser_active(controller):
         handler = getattr(controller, "_scene_browser_handle_mouse_click", None)
         if callable(handler):

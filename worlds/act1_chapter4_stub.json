@@ -10,6 +10,14 @@
         "start"
       ]
     },
+    "act1_chapter4_bastion": {
+      "path": "packs/core_regions/scenes/Act1_Chapter4_Bastion.json",
+      "label": "Act 1 Chapter 4 Bastion",
+      "tags": [
+        "combat",
+        "gated"
+      ]
+    },
     "act1_chapter4_fork": {
       "path": "packs/core_regions/scenes/Act1_Chapter4_Fork.json",
       "label": "Act 1 Chapter 4 Fork",
@@ -34,6 +42,21 @@
     }
   },
   "links": [
+    {
+      "from": "act1_chapter4_stub",
+      "to": "act1_chapter4_bastion",
+      "via": "ToCh4Bastion"
+    },
+    {
+      "from": "act1_chapter4_bastion",
+      "to": "act1_chapter4_stub",
+      "via": "ReturnToChapter4Stub"
+    },
+    {
+      "from": "act1_chapter4_bastion",
+      "to": "act1_chapter4_fork",
+      "via": "ToChapter4ForkFromBastion"
+    },
     {
       "from": "act1_chapter4_stub",
       "to": "act1_chapter4_fork",

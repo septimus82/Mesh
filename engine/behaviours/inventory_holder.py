@@ -42,7 +42,7 @@ class InventoryHolder(Behaviour):
         "consume_on_transfer": ParamDef(bool, default=True, description="Remove held items after transfer."),
     }
 
-    def __init__(self, entity, window, **config):  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         super().__init__(entity, window, **config)
         self.consume_on_transfer = bool(self.config.get("consume_on_transfer", True))
         raw_items = self.config.get("items")

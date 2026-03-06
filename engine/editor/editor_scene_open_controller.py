@@ -28,6 +28,11 @@ class EditorSceneOpenController:
                 if callable(change):
                     change(normalized)
             self._editor.record_recent_scene(normalized)
+            problems = getattr(self._editor, "problems", None)
+            if problems is not None:
+                refresher = getattr(problems, "refresh_structured_diagnostics", None)
+                if callable(refresher):
+                    refresher()
 
         if self._editor.confirm_unsaved_changes("Switch Scene", _apply):
             return False

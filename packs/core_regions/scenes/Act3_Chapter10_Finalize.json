@@ -1,0 +1,252 @@
+{
+  "description": "Act 3 Chapter 10 finalize: final narrative beats and act completion commit.",
+  "name": "Act 3 Chapter 10 - Finalize",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter10_finalize_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter10_finalize_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch10_beat_one",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter10BeatOneZone"
+        }
+      },
+      "id": "act3_chapter10_finalize_beatonezone_280_300_0_0",
+      "name": "Act3Chapter10BeatOneZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 280,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter10BeatOneZone",
+          "set_flags": {
+            "act3_ch10_beat_one_seen": true
+          },
+          "forbid_flags": [
+            "act3_ch10_beat_one_seen"
+          ],
+          "once": true,
+          "toast": "The uplink hums with a familiar pattern.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter10_finalize_beatonestatesync_m1000_m1000_0_0",
+      "name": "Act3Ch10BeatOneStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch10_beat_two",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter10BeatTwoZone"
+        }
+      },
+      "id": "act3_chapter10_finalize_beattwozone_460_300_0_0",
+      "name": "Act3Chapter10BeatTwoZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 460,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter10BeatTwoZone",
+          "set_flags": {
+            "act3_ch10_beat_two_seen": true
+          },
+          "forbid_flags": [
+            "act3_ch10_beat_two_seen"
+          ],
+          "once": true,
+          "toast": "A final handshake waits for your consent.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter10_finalize_beattwostatesync_m1000_m1000_0_0",
+      "name": "Act3Ch10BeatTwoStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch10_finalize",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter10FinalizeZone"
+        }
+      },
+      "id": "act3_chapter10_finalize_finalizezone_760_300_0_0",
+      "name": "Act3Chapter10FinalizeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 760,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter10FinalizeZone",
+          "set_flags": {
+            "act3_act_complete": true
+          },
+          "forbid_flags": [
+            "act3_act_complete"
+          ],
+          "once": true,
+          "toast": "Act 3 complete.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter10_finalize_finalizestatesync_m1000_m1000_0_0",
+      "name": "Act3Ch10FinalizeStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch10_backup_finalize",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter10BackupFinalizeZone"
+        }
+      },
+      "id": "act3_chapter10_finalize_backupfinalizezone_920_300_0_0",
+      "name": "Act3Chapter10BackupFinalizeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 920,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter10BackupFinalizeZone",
+          "set_flags": {
+            "act3_act_complete": true
+          },
+          "forbid_flags": [
+            "act3_act_complete"
+          ],
+          "once": true,
+          "toast": "Act 3 complete.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter10_finalize_backupfinalizestatesync_m1000_m1000_0_0",
+      "name": "Act3Ch10BackupFinalizeStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter10_Exit.json"
+        }
+      },
+      "id": "act3_chapter10_finalize_toexit_1040_300_0_0",
+      "name": "ToAct3Chapter10Exit",
+      "require_flags": [
+        "act3_act_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter10_Entry.json"
+        }
+      },
+      "id": "act3_chapter10_finalize_returntoentry_60_300_0_0",
+      "name": "ReturnToAct3Chapter10Entry",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ]
+}

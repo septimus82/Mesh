@@ -1,0 +1,290 @@
+{
+  "description": "Act 2 Chapter 4 Path A: short suppression timing segment.",
+  "name": "Act 2 Chapter 4 - Path A",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter4_patha_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter4_patha_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch4_patha_suppression_start",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter4_patha_suppressionstartzone_180_300_0_0"
+        }
+      },
+      "id": "act2_chapter4_patha_suppressionstartzone_180_300_0_0",
+      "name": "Act2Chapter4PathASuppressionStartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 180,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4PathASuppressionStartZone",
+          "set_flags": {
+            "act2_ch4_patha_suppressed": true
+          },
+          "once": false,
+          "toast": "Suppression active.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_patha_suppressionstartstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4PathASuppressionStartStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 6.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act2_chapter4_patha_hazarddamagea_320_300_0_0",
+      "name": "Act2Ch4PathAHazardDamageA",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch4_patha_suppressed"
+      ],
+      "x": 320,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 6.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act2_chapter4_patha_hazarddamageb_420_300_0_0",
+      "name": "Act2Ch4PathAHazardDamageB",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch4_patha_suppressed"
+      ],
+      "x": 420,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch4_patha_expire",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter4_patha_suppressionexpirezone_500_300_0_0"
+        }
+      },
+      "id": "act2_chapter4_patha_suppressionexpirezone_500_300_0_0",
+      "name": "Act2Chapter4PathASuppressionExpireZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 500,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4PathASuppressionExpireZone",
+          "set_flags": {
+            "act2_ch4_patha_suppressed": false
+          },
+          "require_flags": [
+            "act2_ch4_patha_suppressed"
+          ],
+          "once": false,
+          "toast": "Suppression faded.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_patha_expirestatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4PathAExpireStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch4_patha_mid_refresh",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter4_patha_midrefreshzone_620_260_0_0"
+        }
+      },
+      "id": "act2_chapter4_patha_midrefreshzone_620_260_0_0",
+      "name": "Act2Chapter4PathAMidRefreshZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 620,
+      "y": 260
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4PathAMidRefreshZone",
+          "set_flags": {
+            "act2_ch4_patha_suppressed": true
+          },
+          "once": false,
+          "toast": "Suppression restored.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_patha_midrefreshstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4PathAMidRefreshStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch4_patha_clear",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter4_patha_pathclearzone_900_300_0_0"
+        }
+      },
+      "id": "act2_chapter4_patha_pathclearzone_900_300_0_0",
+      "name": "Act2Chapter4PathClearZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 900,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4PathClearZone",
+          "set_flags": {
+            "act2_ch4_path_clear": true
+          },
+          "forbid_flags": [
+            "act2_ch4_path_clear"
+          ],
+          "once": true,
+          "toast": "Objective complete: Path cleared.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_patha_pathclearstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4PathAClearStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter4_Final.json"
+        }
+      },
+      "id": "act2_chapter4_patha_toch4final_1020_300_0_0",
+      "name": "ToAct2Chapter4FinalFromA",
+      "require_flags": [
+        "act2_ch4_path_clear"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1020,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter4_Hub.json"
+        }
+      },
+      "id": "act2_chapter4_patha_returntohub_60_300_0_0",
+      "name": "ReturnToAct2Chapter4HubFromA",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import re
 
 EDITOR_CONTROLLER_PATH = Path("engine/editor_controller.py")
 EDITOR_DIR = Path("engine/editor")
-BASELINE_NONEMPTY_LINES = 1640
+BASELINE_NONEMPTY_LINES = 1142
 DRAW_OVERLAY_MAX_LINES = 331
 
 

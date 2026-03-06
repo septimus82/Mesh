@@ -10,6 +10,18 @@ from engine.scene_loader import SceneLoader
 from engine.tilemap_edit import TilemapDims, ensure_tiles_array, get_layer_by_id
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 class StampReportError(Exception):
     def __init__(self, message: str, *, exit_code: int = 1) -> None:
         super().__init__(message)
@@ -111,6 +123,7 @@ def _tilemap_resolve_dims_for_edit(
             if w > 0 and h > 0:
                 return w, h
         except Exception:
+            _log_swallow("STAM-001", "engine/tooling_runtime/stamp_report.py pass-only blanket swallow")
             pass
 
     w_value = tilemap.get("width")
@@ -226,7 +239,7 @@ def compute_scene_stamp_report(
         entities: list[dict[str, Any]] = []
         scene["entities"] = entities
     elif isinstance(entities_value, list):
-        entities = entities_value  # type: ignore[assignment]
+        entities = entities_value
     else:
         raise StampReportError(f"scene.entities must be a list: {scene_path_display}")
 

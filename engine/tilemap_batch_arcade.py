@@ -5,6 +5,18 @@ import engine.optional_arcade as optional_arcade
 from engine.tilemap_batch import TilemapBatchState, TilemapBatchStats
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 class TilemapBatcher:
     def __init__(self, window: Any, state: TilemapBatchState) -> None:
         self.window = window
@@ -19,6 +31,7 @@ class TilemapBatcher:
                     try:
                         sprite_list.clear()
                     except Exception:
+                        _log_swallow("TILE-001", "engine/tilemap_batch_arcade.py pass-only blanket swallow")
                         pass
         self._layer_chunks.clear()
 

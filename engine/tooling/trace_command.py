@@ -1,7 +1,7 @@
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from engine.config import EngineConfig, load_config
 from engine.constants import EVENT_COLLECTED
@@ -16,7 +16,7 @@ class HeadlessGame:
     def __init__(self, config: EngineConfig):
         self.config = config
         self.event_bus = MeshEventBus()
-        self.game_state_controller = GameStateController(self) # type: ignore
+        self.game_state_controller = GameStateController(cast(Any, self))
         # GameStateController has .quests, not .quest_manager
         self.quest_manager = self.game_state_controller.quests
         # We need to mimic GameWindow's event consumption for QuestManager
@@ -31,7 +31,7 @@ class HeadlessGame:
 
         # Disable auto-completion in lightweight quest manager during replay
         # because it lacks full logic (stages) and might prematurely complete quests.
-        self.game_state_controller.quests.update_quest_states = (  # type: ignore[method-assign,assignment]  # intentional headless monkeypatch
+        cast(Any, self.game_state_controller.quests).update_quest_states = (  # intentional headless monkeypatch
             lambda game_state: None
         )
 

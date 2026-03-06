@@ -1,8 +1,20 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from engine.input_runtime.capture_runtime_focus_model import CaptureFocusSnapshot
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def dispatch_palette_action(
@@ -155,6 +167,15 @@ def _handle_capture_mode_execute(window: Any, capture_state: Any, *, validate_on
     tile_w, tile_h = getattr(instance, "tile_size", (0, 0))
 
     mode = str(getattr(capture_state, "mode", "stamp")).strip().lower()
+    from engine.capture_mode import BrushFilterMode  # noqa: PLC0415
+
+    brush_filter_mode_raw = str(getattr(capture_state, "brush_filter_mode", "nonzero")).strip().lower()
+    mode_order: tuple[BrushFilterMode, ...] = ("nonzero", "tile", "all")
+    brush_filter_mode = cast(
+        BrushFilterMode,
+        brush_filter_mode_raw if brush_filter_mode_raw in mode_order else "nonzero",
+    )
+
     header, out = build_capture_payload(
         scene_payload,
         mode=("brush" if mode == "brush" else "stamp"),
@@ -165,7 +186,7 @@ def _handle_capture_mode_execute(window: Any, capture_state: Any, *, validate_on
         tile_height=int(tile_h) if isinstance(tile_h, int) else None,
         include_entities=bool(getattr(capture_state, "include_entities", True)),
         layer_id=str(getattr(capture_state, "layer_id", "") or "").strip(),
-        brush_filter_mode=str(getattr(capture_state, "brush_filter_mode", "nonzero")),  # type: ignore[arg-type]
+        brush_filter_mode=brush_filter_mode,
         brush_filter_value=int(getattr(capture_state, "brush_filter_value", 0)),
     )
 
@@ -201,6 +222,7 @@ def _handle_capture_mode_execute(window: Any, capture_state: Any, *, validate_on
                 from engine.palette_mode import get_state  # noqa: PLC0415
                 get_state().hot_add_item(rel_path=str(capture_persist_result.rel_path))
             except Exception:  # noqa: BLE001
+                _log_swallow("CAPT-001", "engine/input_runtime/capture_key_router_handlers_palette.py pass-only blanket swallow")
                 pass
     return True
 

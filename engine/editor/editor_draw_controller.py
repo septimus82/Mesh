@@ -128,18 +128,21 @@ class EditorDrawController:
 
     def _draw_zone_visuals(self, editor: EditorModeController) -> None:
         """Draw zone/hitbox shapes for the selected entity."""
-        zone_behaviours = editor._get_zone_behaviours(editor.selected_entity)
+        selected = editor.selected_entity
+        if selected is None:
+            return
+        zone_behaviours = editor._get_zone_behaviours(selected)
         active_behaviour = (
-            editor._get_zone_behaviour(editor.selected_entity)
+            editor._get_zone_behaviour(selected)
             if zone_behaviours
             else None
         )
 
         for behaviour in zone_behaviours:
             is_active = behaviour is active_behaviour
-            owner = getattr(behaviour, "entity", editor.selected_entity)
-            cx = getattr(owner, "center_x", editor.selected_entity.center_x)
-            cy = getattr(owner, "center_y", editor.selected_entity.center_y)
+            owner = getattr(behaviour, "entity", selected)
+            cx = getattr(owner, "center_x", selected.center_x)
+            cy = getattr(owner, "center_y", selected.center_y)
 
             if hasattr(behaviour, "radius"):
                 self._draw_circle_zone(cx, cy, behaviour, is_active)
@@ -181,13 +184,16 @@ class EditorDrawController:
         """Draw shape edit mode vertices and outline."""
         if not editor.shape_edit_mode:
             return
-        if editor.shape_edit_entity is not editor.selected_entity:
+        selected = editor.selected_entity
+        if selected is None:
+            return
+        if editor.shape_edit_entity is not selected:
             return
 
         points = [
             (
-                editor.selected_entity.center_x + px,
-                editor.selected_entity.center_y + py,
+                selected.center_x + px,
+                selected.center_y + py,
             )
             for px, py in editor.shape_edit_points
         ]

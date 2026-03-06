@@ -124,6 +124,53 @@ class Aabb:
 
 
 @dataclass
+class Circle:
+    """Circle collider shape centered in world space."""
+
+    x: float
+    y: float
+    radius: float
+
+    def bounds(self) -> Aabb:
+        r = max(0.0, float(self.radius))
+        d = r * 2.0
+        return Aabb(float(self.x), float(self.y), d, d)
+
+
+def circle_circle_overlap(
+    c1: Tuple[float, float],
+    r1: float,
+    c2: Tuple[float, float],
+    r2: float,
+) -> bool:
+    """Return True when two circles overlap (strict, non-touching)."""
+    rr = max(0.0, float(r1)) + max(0.0, float(r2))
+    if rr <= 0.0:
+        return False
+    dx = float(c1[0]) - float(c2[0])
+    dy = float(c1[1]) - float(c2[1])
+    return (dx * dx) + (dy * dy) < (rr * rr)
+
+
+def circle_aabb_overlap(
+    circle_center: Tuple[float, float],
+    radius: float,
+    aabb: Aabb,
+) -> bool:
+    """Return True when circle overlaps AABB (strict, non-touching)."""
+    r = max(0.0, float(radius))
+    if r <= 0.0:
+        return False
+    cx = float(circle_center[0])
+    cy = float(circle_center[1])
+    nearest_x = min(max(cx, aabb.left), aabb.right)
+    nearest_y = min(max(cy, aabb.bottom), aabb.top)
+    dx = cx - nearest_x
+    dy = cy - nearest_y
+    return (dx * dx) + (dy * dy) < (r * r)
+
+
+@dataclass
 class Hit:
     """Describes a collision detected during movement.
 

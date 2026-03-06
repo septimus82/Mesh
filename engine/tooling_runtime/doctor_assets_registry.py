@@ -11,6 +11,17 @@ from typing import Any, Callable, Iterable, Literal, Tuple
 from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 
 log = logging.getLogger(__name__)
+logger = log
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    logger.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 @dataclass(frozen=True)
@@ -64,10 +75,12 @@ def _normalize_path_for_json(path: Path | str, *, repo_root: Path) -> str:
     try:
         p = p.resolve()
     except Exception:
+        _log_swallow("DARG-001", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
         pass
     try:
         return p.relative_to(repo_root.resolve()).as_posix()
     except Exception:
+        _log_swallow("DARG-002", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
         return p.as_posix()
 
 
@@ -128,6 +141,7 @@ def _try_read_json(path: Path) -> tuple[bool, Any | None, str]:
         with open(path, "r", encoding="utf-8") as handle:
             return True, json.load(handle), ""
     except Exception as exc:  # noqa: BLE001
+        _log_swallow("DARG-003", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
         return False, None, _single_line(f"{type(exc).__name__}: {exc}")
 
 
@@ -137,6 +151,7 @@ def _load_image_cache(path: Path) -> tuple[dict[str, dict[str, int]], bool]:
     try:
         raw_cache = json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:  # noqa: BLE001
+        _log_swallow("DARG-004", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
         log.warning("[Assets] image size cache invalid: %s", exc)
         return {}, True
     if not isinstance(raw_cache, dict):
@@ -162,6 +177,7 @@ def _write_image_cache_atomic(path: Path, payload: dict[str, dict[str, int]]) ->
         try:
             os.fsync(handle.fileno())
         except Exception:
+            _log_swallow("DARG-005", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
             pass
     os.replace(tmp_path, path)
 
@@ -172,6 +188,7 @@ def _maybe_fix_trailing_newline(path: Path, *, payload: Any, fixes: list[_Entry]
     try:
         raw_bytes = path.read_bytes()
     except Exception:
+        _log_swallow("DARG-006", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
         return
     if raw_bytes.endswith(b"\n"):
         return
@@ -437,6 +454,7 @@ def run_scene_entity_checks(ctx: DoctorContext) -> None:
 
                     sanitized = sanitize_poly(points)
                 except Exception:  # noqa: BLE001
+                    _log_swallow("DARG-007", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
                     sanitized = []
                 if sanitized:
                     continue
@@ -552,6 +570,7 @@ def run_prefab_asset_checks(ctx: DoctorContext) -> None:
             try:
                 resolved = resolve_path(path_text)
             except Exception:
+                _log_swallow("DARG-008", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
                 resolved = None
             if resolved is None or not resolved.exists():
                 missing_prefab_assets.append(
@@ -590,6 +609,7 @@ def run_prefab_asset_checks(ctx: DoctorContext) -> None:
                 rel = _normalize_asset_path(path)
                 key = f"{rel}|{stat.st_mtime_ns}|{stat.st_size}"
             except Exception:
+                _log_swallow("DARG-009", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
                 key = None
             if key and key in image_cache:
                 cached = image_cache.get(key, {})
@@ -606,6 +626,7 @@ def run_prefab_asset_checks(ctx: DoctorContext) -> None:
                 from PIL import Image as PilImage
                 Image = PilImage
             except Exception:
+                _log_swallow("DARG-010", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
                 Image = None
             if Image is not None:
                 try:
@@ -619,10 +640,12 @@ def run_prefab_asset_checks(ctx: DoctorContext) -> None:
                             cache_dirty = True
                         return width, height
                 except Exception:
+                    _log_swallow("DARG-011", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
                     pass
             try:
                 raw = path.read_bytes()
             except Exception:
+                _log_swallow("DARG-012", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
                 return None
             signature = b"\x89PNG\r\n\x1a\n"
             if len(raw) < 24 or not raw.startswith(signature):
@@ -662,6 +685,7 @@ def run_prefab_asset_checks(ctx: DoctorContext) -> None:
 
                     sanitized = sanitize_poly(points)
                 except Exception:  # noqa: BLE001
+                    _log_swallow("DARG-013", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
                     sanitized = []
                 if sanitized:
                     continue
@@ -733,9 +757,11 @@ def run_prefab_asset_checks(ctx: DoctorContext) -> None:
             try:
                 _write_image_cache_atomic(image_cache_path, image_cache)
             except Exception:
+                _log_swallow("DARG-014", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
                 pass
         cache_stats = {"hits": cache_hits, "misses": cache_misses, "entries": cache_entries_written}
     except Exception:
+        _log_swallow("DARG-015", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
         missing_prefab_assets = []
         missing_prefab_assets_warnings = []
         cache_stats = {"hits": 0, "misses": 0, "entries": 0}

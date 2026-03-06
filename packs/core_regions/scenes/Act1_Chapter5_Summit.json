@@ -1,0 +1,240 @@
+{
+  "description": "Act 1 Chapter 5 summit: final briefing and chapter completion handoff.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter5_summit_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter5_summit_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "event": {
+                    "type": "act1_ch5_finale_accept"
+                  },
+                  "id": "ch5_finale_accept",
+                  "text": "I'm ready to finish this."
+                },
+                {
+                  "end": true,
+                  "event": {
+                    "type": "act1_ch5_summit_complete"
+                  },
+                  "id": "ch5_summit_complete",
+                  "require_flags": [
+                    "act1_ch5_ready_for_summit"
+                  ],
+                  "text": "The route is clear."
+                }
+              ],
+              "text": "Warden Spirit: Hold the summit. Once the lane is clear, report and seal the chapter."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter5_summit_wardenspirit_320_300_0_0",
+      "mesh_name": "Ch5WardenSpirit",
+      "name": "Warden Spirit",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 320,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch5_summit_seal",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter5_summit_chapter5summitsealzone_520_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter5_summit_chapter5summitsealzone_520_300_0_0",
+      "name": "Chapter5SummitSealZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter5_Gauntlet.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter5_summit_returntochapter5gauntlet_60_300_0_0",
+      "name": "ReturnToChapter5Gauntlet",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Chapter5SummitSealZone",
+          "set_flags": {
+            "act1_chapter5_complete": true
+          },
+          "forbid_flags": [
+            "act1_chapter5_complete"
+          ],
+          "once": true,
+          "toast": "Objective complete: Act 1 Chapter 5.",
+          "toast_seconds": 2.0,
+          "require_flags": [
+            "act1_ch5_ready_for_summit"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter5_summit_ch5chaptercomplete_sync_m1000_m1000_0_0",
+      "name": "Ch5ChapterCompleteStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Chapter5SummitSealZone",
+          "set_flags": {
+            "act1_ch5_reward_cache_key": true
+          },
+          "forbid_flags": [
+            "act1_ch5_reward_cache_key"
+          ],
+          "once": true,
+          "toast": "Key acquired: Summit Cache Key.",
+          "toast_seconds": 2.0,
+          "require_flags": [
+            "act1_ch5_ready_for_summit"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter5_summit_ch5rewardkey_sync_m1000_m1000_0_0",
+      "name": "Ch5RewardKeyStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch5_checkpoint_reached",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter5_summit_ch5checkpointzone_560_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter5_summit_ch5checkpointzone_560_300_0_0",
+      "name": "Ch5CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 560,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch5CheckpointZone",
+          "set_flags": {
+            "act1_ch5_checkpoint": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch5_ready_for_summit"
+          ],
+          "forbid_flags": [
+            "act1_ch5_checkpoint"
+          ],
+          "toast": "Checkpoint reached: Chapter 5",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter5_summit_ch5checkpointstatesync_m1000_m1000_0_0",
+      "name": "Ch5CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter6_Approach.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter5_summit_tochapter6approach_860_300_0_0",
+      "name": "ToChapter6Approach",
+      "require_flags": [
+        "act1_chapter5_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 860,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Chapter 5 - Summit",
+  "schema_version": 1,
+  "version": 1
+}

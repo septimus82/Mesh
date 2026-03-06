@@ -80,7 +80,7 @@ class QuestProgressOnEvent(Behaviour):
         "once": ParamDef(bool, default=False, description="If true the behaviour only fires the first time"),
     }
 
-    def __init__(self, entity, window, **config) -> None:  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         merged: Dict[str, Any] = dict(getattr(entity, "mesh_entity_data", {}) or {})
         if config:
             merged.update(config)

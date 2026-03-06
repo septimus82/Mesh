@@ -1,0 +1,648 @@
+{
+  "id": "act3_chapter1_stub",
+  "start_scene": "act3_chapter1_entry",
+  "start_spawn": "default",
+  "scenes": {
+    "act2_chapter5_epilogue": {
+      "path": "packs/core_regions/scenes/Act2_Chapter5_Epilogue.json",
+      "label": "Act 2 Chapter 5 Epilogue",
+      "tags": [
+        "bridge"
+      ]
+    },
+    "act3_chapter1_entry": {
+      "path": "packs/core_regions/scenes/Act3_Chapter1_Entry.json",
+      "label": "Act 3 Chapter 1 Entry",
+      "tags": [
+        "start",
+        "setup"
+      ]
+    },
+    "act3_chapter1_field_gate": {
+      "path": "packs/core_regions/scenes/Act3_Chapter1_FieldGate.json",
+      "label": "Act 3 Chapter 1 Field Gate",
+      "tags": [
+        "hazard",
+        "shard_gate"
+      ]
+    },
+    "act3_chapter1_relay": {
+      "path": "packs/core_regions/scenes/Act3_Chapter1_Relay.json",
+      "label": "Act 3 Chapter 1 Relay",
+      "tags": [
+        "checkpoint",
+        "reward"
+      ]
+    },
+    "act3_chapter2_entry": {
+      "path": "packs/core_regions/scenes/Act3_Chapter2_Entry.json",
+      "label": "Act 3 Chapter 2 Entry",
+      "tags": [
+        "start",
+        "setup"
+      ]
+    },
+    "act3_chapter2_route_hub": {
+      "path": "packs/core_regions/scenes/Act3_Chapter2_RouteHub.json",
+      "label": "Act 3 Chapter 2 Route Hub",
+      "tags": [
+        "routing",
+        "teaching"
+      ]
+    },
+    "act3_chapter2_exit": {
+      "path": "packs/core_regions/scenes/Act3_Chapter2_Exit.json",
+      "label": "Act 3 Chapter 2 Exit",
+      "tags": [
+        "checkpoint",
+        "completion"
+      ]
+    },
+    "act3_chapter3_entry": {
+      "path": "packs/core_regions/scenes/Act3_Chapter3_Entry.json",
+      "label": "Act 3 Chapter 3 Entry",
+      "tags": [
+        "start",
+        "setup"
+      ]
+    },
+    "act3_chapter3_commit": {
+      "path": "packs/core_regions/scenes/Act3_Chapter3_Commit.json",
+      "label": "Act 3 Chapter 3 Commit",
+      "tags": [
+        "choice",
+        "stateful"
+      ]
+    },
+    "act3_chapter3_outcome": {
+      "path": "packs/core_regions/scenes/Act3_Chapter3_Outcome.json",
+      "label": "Act 3 Chapter 3 Outcome",
+      "tags": [
+        "checkpoint",
+        "outcome"
+      ]
+    },
+    "act3_chapter4_entry": {
+      "path": "packs/core_regions/scenes/Act3_Chapter4_Entry.json",
+      "label": "Act 3 Chapter 4 Entry",
+      "tags": [
+        "start",
+        "setup"
+      ]
+    },
+    "act3_chapter4_split": {
+      "path": "packs/core_regions/scenes/Act3_Chapter4_Split.json",
+      "label": "Act 3 Chapter 4 Split",
+      "tags": [
+        "tokens",
+        "stateful"
+      ]
+    },
+    "act3_chapter4_exit": {
+      "path": "packs/core_regions/scenes/Act3_Chapter4_Exit.json",
+      "label": "Act 3 Chapter 4 Exit",
+      "tags": [
+        "checkpoint",
+        "completion"
+      ]
+    },
+    "act3_chapter5_entry": {
+      "path": "packs/core_regions/scenes/Act3_Chapter5_Entry.json",
+      "label": "Act 3 Chapter 5 Entry",
+      "tags": [
+        "start",
+        "setup"
+      ]
+    },
+    "act3_chapter5_phase_field": {
+      "path": "packs/core_regions/scenes/Act3_Chapter5_PhaseField.json",
+      "label": "Act 3 Chapter 5 Phase Field",
+      "tags": [
+        "phase",
+        "stateful"
+      ]
+    },
+    "act3_chapter5_exit": {
+      "path": "packs/core_regions/scenes/Act3_Chapter5_Exit.json",
+      "label": "Act 3 Chapter 5 Exit",
+      "tags": [
+        "checkpoint",
+        "completion"
+      ]
+    },
+    "act3_chapter6_entry": {
+      "path": "packs/core_regions/scenes/Act3_Chapter6_Entry.json",
+      "label": "Act 3 Chapter 6 Entry",
+      "tags": [
+        "start",
+        "setup"
+      ]
+    },
+    "act3_chapter6_shortcuts": {
+      "path": "packs/core_regions/scenes/Act3_Chapter6_Shortcuts.json",
+      "label": "Act 3 Chapter 6 Shortcuts",
+      "tags": [
+        "affinity",
+        "shortcuts"
+      ]
+    },
+    "act3_chapter6_exit": {
+      "path": "packs/core_regions/scenes/Act3_Chapter6_Exit.json",
+      "label": "Act 3 Chapter 6 Exit",
+      "tags": [
+        "checkpoint",
+        "completion"
+      ]
+    },
+    "act3_chapter7_entry": {
+      "path": "packs/core_regions/scenes/Act3_Chapter7_Entry.json",
+      "label": "Act 3 Chapter 7 Entry",
+      "tags": [
+        "start",
+        "setup"
+      ]
+    },
+    "act3_chapter7_threshold": {
+      "path": "packs/core_regions/scenes/Act3_Chapter7_Threshold.json",
+      "label": "Act 3 Chapter 7 Threshold",
+      "tags": [
+        "one_way",
+        "threshold"
+      ]
+    },
+    "act3_chapter7_exit": {
+      "path": "packs/core_regions/scenes/Act3_Chapter7_Exit.json",
+      "label": "Act 3 Chapter 7 Exit",
+      "tags": [
+        "checkpoint",
+        "completion"
+      ]
+    },
+    "act3_chapter8_entry": {
+      "path": "packs/core_regions/scenes/Act3_Chapter8_Entry.json",
+      "label": "Act 3 Chapter 8 Entry",
+      "tags": [
+        "start",
+        "setup"
+      ]
+    },
+    "act3_chapter8_normalize": {
+      "path": "packs/core_regions/scenes/Act3_Chapter8_Normalize.json",
+      "label": "Act 3 Chapter 8 Normalize",
+      "tags": [
+        "recovery",
+        "normalization"
+      ]
+    },
+    "act3_chapter8_exit": {
+      "path": "packs/core_regions/scenes/Act3_Chapter8_Exit.json",
+      "label": "Act 3 Chapter 8 Exit",
+      "tags": [
+        "checkpoint",
+        "completion"
+      ]
+    },
+    "act3_chapter9_entry": {
+      "path": "packs/core_regions/scenes/Act3_Chapter9_Entry.json",
+      "label": "Act 3 Chapter 9 Entry",
+      "tags": [
+        "start",
+        "setup"
+      ]
+    },
+    "act3_chapter9_briefing": {
+      "path": "packs/core_regions/scenes/Act3_Chapter9_Briefing.json",
+      "label": "Act 3 Chapter 9 Briefing",
+      "tags": [
+        "handoff",
+        "narrative"
+      ]
+    },
+    "act3_chapter9_exit": {
+      "path": "packs/core_regions/scenes/Act3_Chapter9_Exit.json",
+      "label": "Act 3 Chapter 9 Exit",
+      "tags": [
+        "checkpoint",
+        "completion"
+      ]
+    },
+    "act3_chapter10_entry": {
+      "path": "packs/core_regions/scenes/Act3_Chapter10_Entry.json",
+      "label": "Act 3 Chapter 10 Entry",
+      "tags": [
+        "start",
+        "setup"
+      ]
+    },
+    "act3_chapter10_finalize": {
+      "path": "packs/core_regions/scenes/Act3_Chapter10_Finalize.json",
+      "label": "Act 3 Chapter 10 Finalize",
+      "tags": [
+        "finale",
+        "handoff"
+      ]
+    },
+    "act3_chapter10_exit": {
+      "path": "packs/core_regions/scenes/Act3_Chapter10_Exit.json",
+      "label": "Act 3 Chapter 10 Exit",
+      "tags": [
+        "checkpoint",
+        "completion"
+      ]
+    },
+    "act4_chapter1_entry_stub": {
+      "path": "packs/core_regions/scenes/Act4_Chapter1_Entry_Stub.json",
+      "label": "Act 4 Chapter 1 Entry Stub",
+      "tags": [
+        "bridge",
+        "stub"
+      ]
+    },
+    "act4_chapter1_entry": {
+      "path": "packs/core_regions/scenes/Act4_Chapter1_Entry.json",
+      "label": "Act 4 Chapter 1 Entry",
+      "tags": [
+        "start",
+        "induction"
+      ]
+    },
+    "act4_chapter1_teach": {
+      "path": "packs/core_regions/scenes/Act4_Chapter1_Teach.json",
+      "label": "Act 4 Chapter 1 Teach",
+      "tags": [
+        "teaching",
+        "authorization"
+      ]
+    },
+    "act4_chapter1_exit": {
+      "path": "packs/core_regions/scenes/Act4_Chapter1_Exit.json",
+      "label": "Act 4 Chapter 1 Exit",
+      "tags": [
+        "checkpoint",
+        "completion"
+      ]
+    }
+  },
+  "links": [
+    {
+      "from": "act2_chapter5_epilogue",
+      "to": "act3_chapter1_entry",
+      "via": "ToAct3Chapter1Entry"
+    },
+    {
+      "from": "act3_chapter1_entry",
+      "to": "act2_chapter5_epilogue",
+      "via": "ReturnToAct2Chapter5Epilogue"
+    },
+    {
+      "from": "act3_chapter1_entry",
+      "to": "act3_chapter1_field_gate",
+      "via": "ToAct3Chapter1FieldGate"
+    },
+    {
+      "from": "act3_chapter1_field_gate",
+      "to": "act3_chapter1_entry",
+      "via": "ReturnToAct3Chapter1Entry"
+    },
+    {
+      "from": "act3_chapter1_field_gate",
+      "to": "act3_chapter1_relay",
+      "via": "ToAct3Chapter1Relay"
+    },
+    {
+      "from": "act3_chapter1_field_gate",
+      "to": "act3_chapter1_relay",
+      "via": "ToAct3Chapter1RelayBypass"
+    },
+    {
+      "from": "act3_chapter1_relay",
+      "to": "act3_chapter1_field_gate",
+      "via": "ReturnToAct3Chapter1FieldGate"
+    },
+    {
+      "from": "act3_chapter1_relay",
+      "to": "act3_chapter2_entry",
+      "via": "ToAct3Chapter2Entry"
+    },
+    {
+      "from": "act3_chapter2_entry",
+      "to": "act3_chapter1_relay",
+      "via": "ReturnToAct3Chapter1Relay"
+    },
+    {
+      "from": "act3_chapter2_entry",
+      "to": "act3_chapter2_route_hub",
+      "via": "ToAct3Chapter2RouteHub"
+    },
+    {
+      "from": "act3_chapter2_route_hub",
+      "to": "act3_chapter2_entry",
+      "via": "ReturnToAct3Chapter2Entry"
+    },
+    {
+      "from": "act3_chapter2_route_hub",
+      "to": "act3_chapter2_exit",
+      "via": "ToAct3Chapter2Exit"
+    },
+    {
+      "from": "act3_chapter2_route_hub",
+      "to": "act3_chapter2_exit",
+      "via": "ToAct3Chapter2ExitBypass"
+    },
+    {
+      "from": "act3_chapter2_exit",
+      "to": "act3_chapter2_route_hub",
+      "via": "ReturnToAct3Chapter2RouteHub"
+    },
+    {
+      "from": "act3_chapter2_exit",
+      "to": "act3_chapter3_entry",
+      "via": "ToAct3Chapter3Entry"
+    },
+    {
+      "from": "act3_chapter3_entry",
+      "to": "act3_chapter2_exit",
+      "via": "ReturnToAct3Chapter2Exit"
+    },
+    {
+      "from": "act3_chapter3_entry",
+      "to": "act3_chapter3_commit",
+      "via": "ToAct3Chapter3Commit"
+    },
+    {
+      "from": "act3_chapter3_commit",
+      "to": "act3_chapter3_entry",
+      "via": "ReturnToAct3Chapter3Entry"
+    },
+    {
+      "from": "act3_chapter3_commit",
+      "to": "act3_chapter3_outcome",
+      "via": "ToAct3Chapter3Outcome"
+    },
+    {
+      "from": "act3_chapter3_outcome",
+      "to": "act3_chapter3_commit",
+      "via": "ReturnToAct3Chapter3Commit"
+    },
+    {
+      "from": "act3_chapter3_outcome",
+      "to": "act3_chapter4_entry",
+      "via": "ToAct3Chapter4Entry"
+    },
+    {
+      "from": "act3_chapter4_entry",
+      "to": "act3_chapter3_outcome",
+      "via": "ReturnToAct3Chapter3Outcome"
+    },
+    {
+      "from": "act3_chapter4_entry",
+      "to": "act3_chapter4_split",
+      "via": "ToAct3Chapter4Split"
+    },
+    {
+      "from": "act3_chapter4_split",
+      "to": "act3_chapter4_entry",
+      "via": "ReturnToAct3Chapter4Entry"
+    },
+    {
+      "from": "act3_chapter4_split",
+      "to": "act3_chapter4_exit",
+      "via": "ToAct3Chapter4Exit"
+    },
+    {
+      "from": "act3_chapter4_exit",
+      "to": "act3_chapter4_split",
+      "via": "ReturnToAct3Chapter4Split"
+    },
+    {
+      "from": "act3_chapter4_exit",
+      "to": "act3_chapter5_entry",
+      "via": "ToAct3Chapter5Entry"
+    },
+    {
+      "from": "act3_chapter5_entry",
+      "to": "act3_chapter4_exit",
+      "via": "ReturnToAct3Chapter4Exit"
+    },
+    {
+      "from": "act3_chapter5_entry",
+      "to": "act3_chapter5_phase_field",
+      "via": "ToAct3Chapter5PhaseField"
+    },
+    {
+      "from": "act3_chapter5_phase_field",
+      "to": "act3_chapter5_entry",
+      "via": "ReturnToAct3Chapter5Entry"
+    },
+    {
+      "from": "act3_chapter5_phase_field",
+      "to": "act3_chapter5_exit",
+      "via": "ToAct3Chapter5Exit"
+    },
+    {
+      "from": "act3_chapter5_phase_field",
+      "to": "act3_chapter5_exit",
+      "via": "ToAct3Chapter5ExitBypass"
+    },
+    {
+      "from": "act3_chapter5_exit",
+      "to": "act3_chapter5_phase_field",
+      "via": "ReturnToAct3Chapter5PhaseField"
+    },
+    {
+      "from": "act3_chapter5_exit",
+      "to": "act3_chapter6_entry",
+      "via": "ToAct3Chapter6Entry"
+    },
+    {
+      "from": "act3_chapter6_entry",
+      "to": "act3_chapter5_exit",
+      "via": "ReturnToAct3Chapter5Exit"
+    },
+    {
+      "from": "act3_chapter6_entry",
+      "to": "act3_chapter6_shortcuts",
+      "via": "ToAct3Chapter6Shortcuts"
+    },
+    {
+      "from": "act3_chapter6_shortcuts",
+      "to": "act3_chapter6_entry",
+      "via": "ReturnToAct3Chapter6Entry"
+    },
+    {
+      "from": "act3_chapter6_shortcuts",
+      "to": "act3_chapter6_exit",
+      "via": "ToAct3Chapter6Exit"
+    },
+    {
+      "from": "act3_chapter6_exit",
+      "to": "act3_chapter6_shortcuts",
+      "via": "ReturnToAct3Chapter6Shortcuts"
+    },
+    {
+      "from": "act3_chapter6_exit",
+      "to": "act3_chapter7_entry",
+      "via": "ToAct3Chapter7Entry"
+    },
+    {
+      "from": "act3_chapter7_entry",
+      "to": "act3_chapter6_exit",
+      "via": "ReturnToAct3Chapter6Exit"
+    },
+    {
+      "from": "act3_chapter7_entry",
+      "to": "act3_chapter7_threshold",
+      "via": "ToAct3Chapter7Threshold"
+    },
+    {
+      "from": "act3_chapter7_threshold",
+      "to": "act3_chapter7_entry",
+      "via": "ReturnToAct3Chapter7Entry"
+    },
+    {
+      "from": "act3_chapter7_threshold",
+      "to": "act3_chapter6_exit",
+      "via": "ReturnToAct3Chapter6Exit"
+    },
+    {
+      "from": "act3_chapter7_threshold",
+      "to": "act3_chapter7_exit",
+      "via": "ToAct3Chapter7Exit"
+    },
+    {
+      "from": "act3_chapter7_exit",
+      "to": "act3_chapter7_threshold",
+      "via": "ReturnToAct3Chapter7Threshold"
+    },
+    {
+      "from": "act3_chapter7_exit",
+      "to": "act3_chapter8_entry",
+      "via": "ToAct3Chapter8Entry"
+    },
+    {
+      "from": "act3_chapter8_entry",
+      "to": "act3_chapter7_exit",
+      "via": "ReturnToAct3Chapter7Exit"
+    },
+    {
+      "from": "act3_chapter8_entry",
+      "to": "act3_chapter8_normalize",
+      "via": "ToAct3Chapter8Normalize"
+    },
+    {
+      "from": "act3_chapter8_normalize",
+      "to": "act3_chapter8_entry",
+      "via": "ReturnToAct3Chapter8Entry"
+    },
+    {
+      "from": "act3_chapter8_normalize",
+      "to": "act3_chapter8_exit",
+      "via": "ToAct3Chapter8Exit"
+    },
+    {
+      "from": "act3_chapter8_exit",
+      "to": "act3_chapter8_normalize",
+      "via": "ReturnToAct3Chapter8Normalize"
+    },
+    {
+      "from": "act3_chapter8_exit",
+      "to": "act3_chapter9_entry",
+      "via": "ToAct3Chapter9Entry"
+    },
+    {
+      "from": "act3_chapter9_entry",
+      "to": "act3_chapter8_exit",
+      "via": "ReturnToAct3Chapter8Exit"
+    },
+    {
+      "from": "act3_chapter9_entry",
+      "to": "act3_chapter9_briefing",
+      "via": "ToAct3Chapter9Briefing"
+    },
+    {
+      "from": "act3_chapter9_briefing",
+      "to": "act3_chapter9_entry",
+      "via": "ReturnToAct3Chapter9Entry"
+    },
+    {
+      "from": "act3_chapter9_briefing",
+      "to": "act3_chapter9_exit",
+      "via": "ToAct3Chapter9Exit"
+    },
+    {
+      "from": "act3_chapter9_exit",
+      "to": "act3_chapter9_briefing",
+      "via": "ReturnToAct3Chapter9Briefing"
+    },
+    {
+      "from": "act3_chapter9_exit",
+      "to": "act3_chapter10_entry",
+      "via": "ToAct3Chapter10Entry"
+    },
+    {
+      "from": "act3_chapter10_entry",
+      "to": "act3_chapter9_exit",
+      "via": "ReturnToAct3Chapter9Exit"
+    },
+    {
+      "from": "act3_chapter10_entry",
+      "to": "act3_chapter10_finalize",
+      "via": "ToAct3Chapter10Finalize"
+    },
+    {
+      "from": "act3_chapter10_finalize",
+      "to": "act3_chapter10_entry",
+      "via": "ReturnToAct3Chapter10Entry"
+    },
+    {
+      "from": "act3_chapter10_finalize",
+      "to": "act3_chapter10_exit",
+      "via": "ToAct3Chapter10Exit"
+    },
+    {
+      "from": "act3_chapter10_exit",
+      "to": "act3_chapter10_finalize",
+      "via": "ReturnToAct3Chapter10Finalize"
+    },
+    {
+      "from": "act3_chapter10_exit",
+      "to": "act4_chapter1_entry_stub",
+      "via": "ToAct4Chapter1EntryStub"
+    },
+    {
+      "from": "act4_chapter1_entry_stub",
+      "to": "act3_chapter10_exit",
+      "via": "ReturnToAct3Chapter10Exit"
+    },
+    {
+      "from": "act4_chapter1_entry_stub",
+      "to": "act4_chapter1_entry",
+      "via": "ToAct4Chapter1Entry"
+    },
+    {
+      "from": "act4_chapter1_entry",
+      "to": "act4_chapter1_entry_stub",
+      "via": "ReturnToAct4Chapter1EntryStub"
+    },
+    {
+      "from": "act4_chapter1_entry",
+      "to": "act4_chapter1_teach",
+      "via": "ToAct4Chapter1Teach"
+    },
+    {
+      "from": "act4_chapter1_teach",
+      "to": "act4_chapter1_entry",
+      "via": "ReturnToAct4Chapter1Entry"
+    },
+    {
+      "from": "act4_chapter1_teach",
+      "to": "act4_chapter1_exit",
+      "via": "ToAct4Chapter1Exit"
+    },
+    {
+      "from": "act4_chapter1_exit",
+      "to": "act4_chapter1_teach",
+      "via": "ReturnToAct4Chapter1Teach"
+    }
+  ]
+}

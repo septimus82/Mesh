@@ -1,0 +1,161 @@
+{
+  "description": "Act 4 Chapter 1 entry: induction setup and safe-mode warning fallback.",
+  "name": "Act 4 Chapter 1 - Entry",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act4_chapter1_entry_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act4_chapter1_entry_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act4_ch1_entry_briefing",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "Act4Chapter1EntryBriefingZone"
+        }
+      },
+      "id": "act4_chapter1_entry_briefingzone_280_300_0_0",
+      "name": "Act4Chapter1EntryBriefingZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 280,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act4Chapter1EntryBriefingZone",
+          "set_flags": {
+            "act4_ch1_started": true
+          },
+          "forbid_flags": [
+            "act4_ch1_started"
+          ],
+          "once": true,
+          "toast": "Act 4 begins.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act4_chapter1_entry_startedstatesync_m1000_m1000_0_0",
+      "name": "Act4Ch1StartedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act4_ch1_safe_mode_warning",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act4Chapter1SafeModeWarningZone"
+        }
+      },
+      "id": "act4_chapter1_entry_safemodewarningzone_460_300_0_0",
+      "name": "Act4Chapter1SafeModeWarningZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 460,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act4Chapter1SafeModeWarningZone",
+          "set_flags": {
+            "act4_safe_mode": true
+          },
+          "forbid_flags": [
+            "act3_act_complete",
+            "act4_safe_mode"
+          ],
+          "once": true,
+          "toast": "Warning: prior completion state missing. Proceeding in safe mode.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act4_chapter1_entry_safemodewarningsync_m1000_m1000_0_0",
+      "name": "Act4Ch1SafeModeWarningStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act4_Chapter1_Teach.json"
+        }
+      },
+      "id": "act4_chapter1_entry_toact4chapter1teach_980_300_0_0",
+      "name": "ToAct4Chapter1Teach",
+      "require_flags": [
+        "act4_ch1_started"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 980,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act4_Chapter1_Entry_Stub.json"
+        }
+      },
+      "id": "act4_chapter1_entry_returntoact4chapter1entrystub_60_300_0_0",
+      "name": "ReturnToAct4Chapter1EntryStub",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ]
+}

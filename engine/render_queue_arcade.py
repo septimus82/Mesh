@@ -6,6 +6,18 @@ from engine.paths import resolve_path
 from engine.render_queue import BatchKey, DrawSpriteCmd, RenderQueueStats, SpriteDrawList
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 class ArcadeSpriteBatcher:
     def __init__(self, window: Any) -> None:
         self.window = window
@@ -70,6 +82,7 @@ class ArcadeSpriteBatcher:
             try:
                 sprite.color = cmd.color
             except Exception:
+                _log_swallow("REND-001", "engine/render_queue_arcade.py pass-only blanket swallow")
                 pass
 
     def _acquire_sprite(self, key: BatchKey, texture: Any) -> Any:
@@ -79,6 +92,7 @@ class ArcadeSpriteBatcher:
             try:
                 sprite.texture = texture
             except Exception:
+                _log_swallow("REND-002", "engine/render_queue_arcade.py pass-only blanket swallow")
                 pass
             return sprite
         return optional_arcade.arcade.Sprite(texture)
@@ -135,6 +149,7 @@ class ArcadeSpriteBatcher:
         try:
             ctx.enable(ctx.BLEND)
         except Exception:
+            _log_swallow("REND-003", "engine/render_queue_arcade.py pass-only blanket swallow")
             pass
         try:
             ctx.blend_func = gl.BLEND_ADDITIVE
@@ -171,6 +186,7 @@ class ArcadeSpriteBatcher:
             try:
                 sprite_list.clear()
             except Exception:
+                _log_swallow("REND-004", "engine/render_queue_arcade.py pass-only blanket swallow")
                 pass
         self._sprite_pool.clear()
         self._sprite_lists.clear()

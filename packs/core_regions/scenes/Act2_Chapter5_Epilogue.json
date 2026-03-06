@@ -1,0 +1,196 @@
+{
+  "description": "Act 2 Chapter 5 epilogue: checkpoint, resolution dialogue, and act completion.",
+  "name": "Act 2 Chapter 5 - Epilogue",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter5_epilogue_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter5_epilogue_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Act complete."
+                }
+              ],
+              "text": "Overseer relay severed. Hazard network quieting across the region."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act2_chapter5_epilogue_resolveguide_340_300_0_0",
+      "mesh_name": "Act2Ch5ResolveGuide",
+      "name": "Act2Ch5ResolveGuide",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 340,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_checkpoint_end",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_epilogue_checkpointzone_520_300_0_0"
+        }
+      },
+      "id": "act2_chapter5_epilogue_checkpointzone_520_300_0_0",
+      "name": "Act2Chapter5EpilogueCheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5EpilogueCheckpointZone",
+          "set_flags": {
+            "act2_ch5_checkpoint_end": true
+          },
+          "require_flags": [
+            "act2_ch5_boss_defeated"
+          ],
+          "forbid_flags": [
+            "act2_ch5_checkpoint_end"
+          ],
+          "once": true,
+          "toast": "Checkpoint reached: Act 2 Chapter 5 (Epilogue)",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_epilogue_checkpointstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5EpilogueCheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_complete",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_epilogue_completezone_760_300_0_0"
+        }
+      },
+      "id": "act2_chapter5_epilogue_completezone_760_300_0_0",
+      "name": "Act2Chapter5CompleteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 760,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5CompleteZone",
+          "set_flags": {
+            "act2_chapter5_complete": true,
+            "act2_act_complete": true
+          },
+          "require_flags": [
+            "act2_ch5_boss_defeated"
+          ],
+          "forbid_flags": [
+            "act2_chapter5_complete"
+          ],
+          "once": true,
+          "toast": "Objective complete: Act 2 complete.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_epilogue_completestatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5CompleteStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter5_Overseer.json"
+        }
+      },
+      "id": "act2_chapter5_epilogue_returntooverseer_60_300_0_0",
+      "name": "ReturnToAct2Chapter5Overseer",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter1_Entry.json"
+        }
+      },
+      "id": "act2_chapter5_epilogue_toact3chapter1entry_980_300_0_0",
+      "name": "ToAct3Chapter1Entry",
+      "require_flags": [
+        "act2_act_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 980,
+      "y": 300
+    }
+  ]
+}

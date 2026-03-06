@@ -1,0 +1,596 @@
+{
+  "description": "Act 2 Chapter 1 hazard hall: hazard zone tutorial with bypass route and recovery pickup.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter1_hazardhall_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter1_hazardhall_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Stay clear."
+                }
+              ],
+              "text": "Hazard sign: Hazard: stay out of the red zone."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act2_chapter1_hazardhall_hazardwarningsign_170_330_0_0",
+      "mesh_name": "Act2Ch1HazardWarningSign",
+      "name": "Act2Ch1HazardWarningSign",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 170,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Take the high line."
+                }
+              ],
+              "text": "Bypass marker: The upper lane is safer than the red floor."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act2_chapter1_hazardhall_hazardsafebypassmarker_300_220_0_0",
+      "mesh_name": "Act2Ch1HazardSafeBypassMarker",
+      "name": "Act2Ch1HazardSafeBypassMarker",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 300,
+      "y": 220
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch1_hazard_warn",
+          "trigger_radius": 52.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter1_hazardhall_act2chapter1hazardwarnzone_260_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter1_hazardhall_act2chapter1hazardwarnzone_260_300_0_0",
+      "name": "Act2Chapter1HazardWarnZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 260,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1HazardWarnZone",
+          "set_flags": {
+            "act2_ch1_hazard_warned": true
+          },
+          "forbid_flags": [
+            "act2_ch1_hazard_warned"
+          ],
+          "once": true,
+          "toast": "Hazard: stay out of the red zone.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_hazardhall_act2ch1hazardwarnstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1HazardWarnStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 4.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "id": "act2_chapter1_hazardhall_hazarddamagea_420_300_0_0",
+      "name": "Act2Ch1HazardDamageA",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "x": 420,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 4.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "id": "act2_chapter1_hazardhall_hazarddamageb_520_300_0_0",
+      "name": "Act2Ch1HazardDamageB",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 4.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "id": "act2_chapter1_hazardhall_hazarddamagec_620_300_0_0",
+      "name": "Act2Ch1HazardDamageC",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "x": 620,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch1_hazard_clear",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter1_hazardhall_act2chapter1hazardclearzone_780_220_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter1_hazardhall_act2chapter1hazardclearzone_780_220_0_0",
+      "name": "Act2Chapter1HazardClearZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 780,
+      "y": 220
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch1_hazard_clear_fallback",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter1_hazardhall_act2chapter1hazardclearfallbackzone_900_220_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter1_hazardhall_act2chapter1hazardclearfallbackzone_900_220_0_0",
+      "name": "Act2Chapter1HazardClearFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 900,
+      "y": 220
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1HazardClearZone",
+          "set_flags": {
+            "act2_ch1_hazard_cleared": true
+          },
+          "forbid_flags": [
+            "act2_ch1_hazard_cleared"
+          ],
+          "once": true,
+          "toast": "Objective complete: Hazard cleared.",
+          "toast_seconds": 2.0,
+          "clear_flags": [
+            "act2_ch1_hazard_tick_armed"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_hazardhall_act2ch1hazardclearstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1HazardClearStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1HazardClearFallbackZone",
+          "set_flags": {
+            "act2_ch1_hazard_cleared": true
+          },
+          "forbid_flags": [
+            "act2_ch1_hazard_cleared"
+          ],
+          "once": true,
+          "toast": "Objective complete: Hazard cleared.",
+          "toast_seconds": 2.0,
+          "clear_flags": [
+            "act2_ch1_hazard_tick_armed"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_hazardhall_act2ch1hazardclearfbstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1HazardClearFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "id": "act2_chapter1_hazardhall_act2ch1hazardrecoverypickup_820_220_0_0",
+      "mesh_name": "Act2Ch1HazardRecoveryPickup",
+      "name": "Act2Ch1HazardRecoveryPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 920,
+      "y": 220
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter1_SafeRoom.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter1_hazardhall_toact2chapter1saferoom_940_220_0_0",
+      "name": "ToAct2Chapter1SafeRoom",
+      "require_flags": [
+        "act2_ch1_hazard_cleared"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 940,
+      "y": 220
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter1_Threshold.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter1_hazardhall_returntoact2chapter1threshold_60_300_0_0",
+      "name": "ReturnToAct2Chapter1Threshold",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Take the bypass."
+                }
+              ],
+              "text": "Safe route above."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act2_chapter1_hazardhall_hazardsaferoutesign_250_220_0_0",
+      "mesh_name": "Act2Ch1HazardSafeRouteSign",
+      "name": "Act2Ch1HazardSafeRouteSign",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 250,
+      "y": 220
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1HazardWarnZone",
+          "set_flags": {
+            "act2_ch1_hazard_warn_seen": true
+          },
+          "forbid_flags": [
+            "act2_ch1_hazard_warn_seen"
+          ],
+          "once": true,
+          "toast": "Warning: damage ticks every 1s. Step out to recover.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_hazardhall_act2ch1hazardwarnseenstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1HazardWarnSeenStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1HazardWarnZone",
+          "set_flags": {
+            "act2_ch1_hazard_tick_armed": true
+          },
+          "forbid_flags": [
+            "act2_ch1_hazard_tick_armed"
+          ],
+          "once": true
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_hazardhall_act2ch1hazardtickarmedstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1HazardTickArmedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch1_hazard_tick_a_trigger",
+          "trigger_radius": 30.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter1_hazardhall_act2chapter1hazardtickzonea_420_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter1_hazardhall_act2chapter1hazardtickzonea_420_300_0_0",
+      "name": "Act2Chapter1HazardTickZoneA",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 420,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1HazardTickZoneA",
+          "set_flags": {
+            "act2_ch1_hazard_tick_a": true
+          },
+          "require_flags": [
+            "act2_ch1_hazard_tick_armed"
+          ],
+          "forbid_flags": [
+            "act2_ch1_hazard_cleared",
+            "act2_ch1_hazard_tick_a"
+          ],
+          "once": true
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_hazardhall_act2ch1hazardtickastatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1HazardTickAStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch1_hazard_tick_b_trigger",
+          "trigger_radius": 30.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter1_hazardhall_act2chapter1hazardtickzoneb_520_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter1_hazardhall_act2chapter1hazardtickzoneb_520_300_0_0",
+      "name": "Act2Chapter1HazardTickZoneB",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1HazardTickZoneB",
+          "set_flags": {
+            "act2_ch1_hazard_tick_b": true
+          },
+          "require_flags": [
+            "act2_ch1_hazard_tick_armed"
+          ],
+          "forbid_flags": [
+            "act2_ch1_hazard_cleared",
+            "act2_ch1_hazard_tick_b"
+          ],
+          "once": true
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_hazardhall_act2ch1hazardtickbstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1HazardTickBStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch1_hazard_tick_c_trigger",
+          "trigger_radius": 30.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter1_hazardhall_act2chapter1hazardtickzonec_620_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter1_hazardhall_act2chapter1hazardtickzonec_620_300_0_0",
+      "name": "Act2Chapter1HazardTickZoneC",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 620,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1HazardTickZoneC",
+          "set_flags": {
+            "act2_ch1_hazard_tick_c": true
+          },
+          "require_flags": [
+            "act2_ch1_hazard_tick_armed"
+          ],
+          "forbid_flags": [
+            "act2_ch1_hazard_cleared",
+            "act2_ch1_hazard_tick_c"
+          ],
+          "once": true
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_hazardhall_act2ch1hazardtickcstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1HazardTickCStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch1_hazard_cleared": true
+          },
+          "require_flags": [
+            "act2_ch1_hazard_cleared"
+          ],
+          "once": false
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_hazardhall_act2ch1hazardclearsceneloadrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1HazardClearSceneLoadRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 2 Chapter 1 - Hazard Hall",
+  "schema_version": 1,
+  "version": 1
+}

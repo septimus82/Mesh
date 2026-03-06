@@ -9,6 +9,17 @@ from typing import Any, Iterable
 from engine.paths import get_content_roots, resolve_path
 from engine.tooling_runtime.pack_manifest import PackManifest
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 @dataclass(frozen=True)
 class AssetEntry:
@@ -47,7 +58,8 @@ def build_asset_registry(
                 continue
             try:
                 payload = json.loads(source_path.read_text(encoding="utf-8"))
-            except Exception:
+            except Exception:  # noqa: BLE001  # REASON: registry-scan-skip-invalid-json
+                _log_swallow("PREG-001", f"json_load={source_path}")
                 continue
             refs = _extract_asset_refs(payload)
             if not refs:
@@ -172,16 +184,19 @@ def _resolve_asset_ref(pack_root: Path, ref: str) -> Path | None:
 def _format_path(path: Path, roots: list[Path]) -> str:
     try:
         resolved = path.resolve()
-    except Exception:
+    except Exception:  # noqa: BLE001  # REASON: path-resolve-fallback
+        _log_swallow("PREG-002", f"path.resolve={path}")
         resolved = path
     for root in roots:
         try:
             root_resolved = root.resolve()
-        except Exception:
+        except Exception:  # noqa: BLE001  # REASON: root-resolve-fallback
+            _log_swallow("PREG-003", f"root.resolve={root}")
             root_resolved = root
         try:
             rel = resolved.relative_to(root_resolved)
-        except Exception:
+        except Exception:  # noqa: BLE001  # REASON: relative-path-not-under-root
+            _log_swallow("PREG-004", f"relative_to root={root_resolved} path={resolved}")
             continue
         return rel.as_posix()
     return path.as_posix()
@@ -190,16 +205,19 @@ def _format_path(path: Path, roots: list[Path]) -> str:
 def _pack_id_for_path(path: Path, pack_roots: list[tuple[Path, str]]) -> str:
     try:
         resolved = path.resolve()
-    except Exception:
+    except Exception:  # noqa: BLE001  # REASON: path-resolve-fallback
+        _log_swallow("PREG-005", f"path.resolve={path}")
         resolved = path
     for root, pack_id in sorted(pack_roots, key=lambda item: len(item[0].as_posix()), reverse=True):
         try:
             root_resolved = root.resolve()
-        except Exception:
+        except Exception:  # noqa: BLE001  # REASON: root-resolve-fallback
+            _log_swallow("PREG-006", f"root.resolve={root}")
             root_resolved = root
         try:
             resolved.relative_to(root_resolved)
-        except Exception:
+        except Exception:  # noqa: BLE001  # REASON: relative-path-not-under-root
+            _log_swallow("PREG-007", f"relative_to root={root_resolved} path={resolved}")
             continue
         return pack_id
     return "unknown"

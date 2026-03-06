@@ -203,6 +203,7 @@ class TestQuestRunnerGoldenProgression:
         assert emitted[1].payload["stage_id"] == "stage_2"
         
         state = runner.get_quest_state("simple_quest")
+        assert state is not None
         assert state.current_stage == "stage_2"
         assert "stage_1" in state.completed_stages
         
@@ -218,6 +219,7 @@ class TestQuestRunnerGoldenProgression:
         assert emitted[1].payload["quest_id"] == "simple_quest"
         
         state = runner.get_quest_state("simple_quest")
+        assert state is not None
         assert state.status == "completed"
 
     def test_gated_quest_requires_start_trigger(self, gated_quest_def):
@@ -227,6 +229,7 @@ class TestQuestRunnerGoldenProgression:
         runner.start_quest("gated_quest")
         
         state = runner.get_quest_state("gated_quest")
+        assert state is not None
         # First stage has start trigger, so awaiting
         assert state.awaiting_stage == "intro"
         assert state.current_stage is None
@@ -244,6 +247,7 @@ class TestQuestRunnerGoldenProgression:
         assert emitted[0].event_type == "quest_stage_started"
         
         state = runner.get_quest_state("gated_quest")
+        assert state is not None
         assert state.current_stage == "intro"
         assert state.awaiting_stage is None
 
@@ -290,6 +294,7 @@ class TestQuestRunnerGoldenProgression:
         assert emitted == []
         
         state = runner.get_quest_state("counter_quest")
+        assert state is not None
         assert state.current_stage == "kill_enemies"
         
         # Correct payload value
@@ -346,6 +351,7 @@ class TestQuestRunnerSaveRestore:
         runner2.apply_state(saved)
         
         state = runner2.get_quest_state("simple_quest")
+        assert state is not None
         assert state.status == "active"
         assert state.current_stage == "stage_2"
         assert "stage_1" in state.completed_stages
@@ -364,6 +370,7 @@ class TestQuestRunnerSaveRestore:
         
         # Manually set counter
         state = runner.get_quest_state("simple_quest")
+        assert state is not None
         state.counters["test_counter"] = 42
         
         # Save and restore
@@ -374,6 +381,7 @@ class TestQuestRunnerSaveRestore:
         runner2.apply_state(saved)
         
         state2 = runner2.get_quest_state("simple_quest")
+        assert state2 is not None
         assert state2.counters.get("test_counter") == 42
 
     def test_state_roundtrip_with_saved_quest_state(self, simple_quest_def):
@@ -388,6 +396,7 @@ class TestQuestRunnerSaveRestore:
         
         # Get internal state
         state = runner.get_quest_state("simple_quest")
+        assert state is not None
         
         # Convert to SavedQuestState and back
         saved = state.to_saved_state()

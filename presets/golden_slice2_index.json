@@ -1,0 +1,12 @@
+{
+  "description": "Golden Slice 2 canonical variant index (Hollowmere Outskirts)",
+  "notes": "Canonical source for picker/HUD; delegates to golden_slice2_showcase_all",
+  "steps": [
+    {
+      "args": [
+        "golden_slice2_showcase_all"
+      ],
+      "cmd": "run-preset"
+    }
+  ]
+}

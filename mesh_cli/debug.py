@@ -9,6 +9,18 @@ from engine.config import load_config
 from engine.logging_tools import suppress_stdout
 from engine.services import build_replay_service
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 GameWindow = None
 
 
@@ -133,6 +145,7 @@ def _handle_export(args: argparse.Namespace) -> int:
         try:
             window.close()
         except Exception:
+            _log_swallow("DEBU-001", "mesh_cli/debug.py pass-only blanket swallow")
             pass
 
 

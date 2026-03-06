@@ -1,0 +1,7 @@
+{
+  "action": "check",
+  "args": {
+    "full": true
+  },
+  "description": "Run full project validation"
+}

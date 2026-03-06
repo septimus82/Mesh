@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from engine.logging_tools import is_json_mode, suppress_stdout
+from engine.logging_tools import get_logger, is_json_mode, suppress_stdout
 from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 from engine.paths import reset_path_caches, set_content_roots
 from engine.repo_root import get_repo_root
@@ -24,6 +24,19 @@ from engine.sprite_sheet_math import (
     iter_sprite_sheet_frame_boxes,
     parse_anim_spec,
 )
+
+
+logger = get_logger(__name__)
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    logger.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def _single_line_error(text: str) -> str:
@@ -53,6 +66,7 @@ def _normalize_path_for_json(path: Path | str, *, repo_root: Path | None = None)
     try:
         p = p.resolve()
     except Exception:
+        _log_swallow("ASST-001", "mesh_cli.assets blanket exception fallback")
         pass
 
     root = repo_root
@@ -60,10 +74,12 @@ def _normalize_path_for_json(path: Path | str, *, repo_root: Path | None = None)
         try:
             root = Path(root).resolve()
         except Exception:
+            _log_swallow("ASST-002", "mesh_cli.assets blanket exception fallback")
             root = Path(root)
         try:
             return p.relative_to(root).as_posix()
         except Exception:
+            _log_swallow("ASST-003", "mesh_cli.assets blanket exception fallback")
             pass
     return p.as_posix()
 
@@ -350,7 +366,8 @@ def _handle_assets_reload(args: argparse.Namespace) -> int:
             f"(packs={len(order)} presets={len(preset_records)} assets={assets_count})"
         )
         return 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("ASST-004", "mesh_cli.assets blanket exception fallback")
         print(f"[Mesh][Assets] ERROR reload failed: {exc}")
         return 1
     finally:
@@ -558,7 +575,8 @@ def _handle_doctor_assets(args: argparse.Namespace) -> int:
             from engine.tooling.asset_doctor import doctor_assets
 
             payload = doctor_assets(repo_root=repo_root, fix=fix, strict=strict, packs=packs)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("ASST-005", "mesh_cli.assets blanket exception fallback")
         payload = {
             "ok": False,
             "errors": [
@@ -693,6 +711,7 @@ def _handle_assets_import_sprites(args: argparse.Namespace) -> int:
     try:
         repo_root = get_repo_root(start=Path.cwd(), strict=False)
     except Exception:
+        _log_swallow("ASST-006", "mesh_cli.assets blanket exception fallback")
         repo_root = None
     base_dir = repo_root or Path.cwd()
     sprites_dir_raw = str(getattr(args, "sprites_dir", "") or "assets/sprites").strip() or "assets/sprites"
@@ -718,7 +737,8 @@ def _handle_assets_import_sprites(args: argparse.Namespace) -> int:
     prefabs_path = resolve_path(out_path_raw)
     try:
         existing = json.loads(prefabs_path.read_text(encoding="utf-8")) if prefabs_path.exists() else []
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("ASST-007", "mesh_cli.assets blanket exception fallback")
         print(f"[Mesh][Sprite] ERROR: failed to read '{prefabs_path}': {exc}")
         return 1
 
@@ -807,7 +827,8 @@ def _upsert_sprite_prefab(
     out_path = Path(out_path_raw)
     try:
         existing = json.loads(out_path.read_text(encoding="utf-8")) if out_path.exists() else []
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("ASST-008", "mesh_cli.assets blanket exception fallback")
         print(f"[Mesh][Sprite] ERROR: failed to read '{out_path_raw}': {exc}")
         return 1
 
@@ -891,7 +912,8 @@ def _handle_sprite_import_sheet(args: argparse.Namespace) -> int:
         with Image.open(image_path) as img:
             sheet_w = int(img.width)
             sheet_h = int(img.height)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("ASST-009", "mesh_cli.assets blanket exception fallback")
         print(f"[Mesh][Sprite] ERROR: failed to read image '{image_path_raw}': {exc}")
         return 1
 
@@ -942,6 +964,7 @@ def _handle_sprite_import_sheet(args: argparse.Namespace) -> int:
     try:
         repo_root = get_repo_root(start=Path.cwd(), strict=False)
     except Exception:
+        _log_swallow("ASST-010", "mesh_cli.assets blanket exception fallback")
         repo_root = None
 
     sprite_path_for_json = _normalize_path_for_json(image_path_raw, repo_root=repo_root)
@@ -963,6 +986,7 @@ def _handle_sprite_import_sheet(args: argparse.Namespace) -> int:
             x_str, y_str = str(anchor_raw).split(",", 1)
             entity["anchor"] = [float(x_str), float(y_str)]
         except Exception:
+            _log_swallow("ASST-011", "mesh_cli.assets blanket exception fallback")
             print("[Mesh][Sprite] ERROR: --anchor must be formatted as x,y")
             return 1
 
@@ -977,6 +1001,7 @@ def _handle_sprite_import_sheet(args: argparse.Namespace) -> int:
                 "h": float(h_str),
             }
         except Exception:
+            _log_swallow("ASST-012", "mesh_cli.assets blanket exception fallback")
             print("[Mesh][Sprite] ERROR: --hitbox must be formatted as x,y,w,h")
             return 1
 
@@ -1013,7 +1038,8 @@ def _handle_sprite_import_aseprite(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(json_path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("ASST-013", "mesh_cli.assets blanket exception fallback")
         print(f"[Mesh][Sprite] ERROR: failed to read JSON '{json_path_raw}': {exc}")
         return 1
 
@@ -1067,7 +1093,8 @@ def _handle_sprite_import_aseprite(args: argparse.Namespace) -> int:
             with Image.open(image_path) as img:
                 sheet_w = int(img.width)
                 sheet_h = int(img.height)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+            _log_swallow("ASST-014", "mesh_cli.assets blanket exception fallback")
             print(f"[Mesh][Sprite] ERROR: failed to read image '{image_path}': {exc}")
             return 1
 
@@ -1252,6 +1279,7 @@ def _handle_sprite_import_aseprite(args: argparse.Namespace) -> int:
     try:
         repo_root = get_repo_root(start=Path.cwd(), strict=False)
     except Exception:
+        _log_swallow("ASST-015", "mesh_cli.assets blanket exception fallback")
         repo_root = None
 
     sprite_path_for_json = _normalize_path_for_json(image_path, repo_root=repo_root)
@@ -1275,6 +1303,7 @@ def _handle_sprite_import_aseprite(args: argparse.Namespace) -> int:
             x_str, y_str = str(anchor_raw).split(",", 1)
             entity["anchor"] = [float(x_str), float(y_str)]
         except Exception:
+            _log_swallow("ASST-016", "mesh_cli.assets blanket exception fallback")
             print("[Mesh][Sprite] ERROR: --anchor must be formatted as x,y")
             return 1
 
@@ -1289,6 +1318,7 @@ def _handle_sprite_import_aseprite(args: argparse.Namespace) -> int:
                 "h": float(h_str),
             }
         except Exception:
+            _log_swallow("ASST-017", "mesh_cli.assets blanket exception fallback")
             print("[Mesh][Sprite] ERROR: --hitbox must be formatted as x,y,w,h")
             return 1
 

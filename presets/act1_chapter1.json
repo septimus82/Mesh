@@ -1,0 +1,16 @@
+{
+  "description": "Act 1 Chapter 1 entrypoint",
+  "steps": [
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/act1_chapter1.json",
+        "--dry-run",
+        "--demo"
+      ],
+      "cmd": "pipeline"
+    }
+  ]
+}

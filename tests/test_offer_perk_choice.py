@@ -1,4 +1,5 @@
 import arcade
+from unittest.mock import MagicMock
 
 from engine.behaviours.offer_perk_choice import OfferPerkChoice
 from engine.events import MeshEvent

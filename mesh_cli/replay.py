@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
@@ -9,6 +10,17 @@ from engine.logging_tools import suppress_stdout
 from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 from engine.tooling import replay_script, replay_suite, trace_command
 from engine.tooling.replay_hash import hash_payload
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:
@@ -82,7 +94,8 @@ def _handle_replay_script(args: argparse.Namespace) -> int:
 
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
         return 0
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("RPLY-001", "replay_script failed", once=True)
         payload = {"ok": False, "code": 1, "error": "replay_script.failed"}
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
         return 1
@@ -108,7 +121,8 @@ def _handle_replay_suite(args: argparse.Namespace) -> int:
         except (TypeError, ValueError):
             failed_int = 1
         return 0 if failed_int == 0 else 1
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("RPLY-002", "replay_suite failed", once=True)
         payload = {"ok": False, "code": 1, "error": "replay_suite.failed"}
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
         return 1
@@ -167,20 +181,23 @@ def _handle_replay_hash(args: argparse.Namespace) -> int:
 
     try:
         script = replay_script.load_replay_script(replay_path)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("RPLY-003", "load_replay_script failed", once=True)
         print(f"[Mesh][ReplayHash] ERROR: failed to load replay: {exc}")
         return 1
 
     try:
         with suppress_stdout():
             payload = replay_script.run_replay_script(script, script_path=replay_path)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("RPLY-004", "run_replay_script failed", once=True)
         print(f"[Mesh][ReplayHash] ERROR: replay failed: {exc}")
         return 1
 
     try:
         digest = hash_payload(payload, decimals=decimals)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("RPLY-005", "hash_payload failed", once=True)
         print(f"[Mesh][ReplayHash] ERROR: hash failed: {exc}")
         return 1
 
@@ -189,7 +206,8 @@ def _handle_replay_hash(args: argparse.Namespace) -> int:
         from engine.tooling.perf_command import _get_engine_git_sha
 
         engine_sha = _get_engine_git_sha()
-    except Exception:
+    except Exception as exc:
+        _log_swallow("RPLY-006", "_get_engine_git_sha failed", once=True)
         engine_sha = None
 
     report = {
@@ -210,7 +228,8 @@ def _handle_replay_hash(args: argparse.Namespace) -> int:
     if expect_path:
         try:
             expected_hash = _load_expected_hash(Path(expect_path))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+            _log_swallow("RPLY-007", "_load_expected_hash failed", once=True)
             print(f"[Mesh][ReplayHash] ERROR: {exc}")
             return 1
         if expected_hash != digest:

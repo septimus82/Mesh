@@ -1,0 +1,487 @@
+{
+  "description": "Act 1 Chapter 6 Warden arena: mini-boss encounter with aggro and AoE warning radii.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter6_warden_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter6_warden_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch6_warden_aggro",
+          "trigger_radius": 120.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter6_warden_ch6wardenaggrozone_360_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter6_warden_ch6wardenaggrozone_360_300_0_0",
+      "name": "Ch6WardenAggroZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 360,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch6_warden_aoe_warn",
+          "trigger_radius": 96.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter6_warden_ch6wardenaoewarnzone_540_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter6_warden_ch6wardenaoewarnzone_540_300_0_0",
+      "name": "Ch6WardenAoeWarnZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 540,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Move now."
+                }
+              ],
+              "text": "Warning ring: Heavy strike lands in 2 seconds. Reposition before impact."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter6_warden_ch6wardenaoewarnmarker_520_260_0_0",
+      "mesh_name": "Ch6WardenAoeWarnMarker",
+      "name": "Ch6WardenAoeWarnMarker",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 520,
+      "y": 260
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 24
+            }
+          ],
+          "seed": 4601
+        },
+        "EnemyAI": {
+          "detect_radius": 280.0,
+          "speed": 62.0
+        },
+        "Health": {
+          "hp": 180,
+          "max_hp": 180
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "act1_chapter6_warden_ch6wardenboss_560_300_0_0",
+      "mesh_name": "Act1Ch6WardenBoss",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 560,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "id": "act1_chapter6_warden_ch6wardensupplywest_420_240_0_0",
+      "mesh_name": "Ch6WardenSupplyWest",
+      "name": "Ch6WardenSupplyWest",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 390,
+      "y": 230
+    },
+    {
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "id": "act1_chapter6_warden_ch6wardensupplyeast_680_360_0_0",
+      "mesh_name": "Ch6WardenSupplyEast",
+      "name": "Ch6WardenSupplyEast",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 730,
+      "y": 370
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch6_warden_defeat",
+          "trigger_radius": 52.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter6_warden_ch6wardendefeatzone_780_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter6_warden_ch6wardendefeatzone_780_300_0_0",
+      "name": "Ch6WardenDefeatZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 780,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch6_warden_defeat_fallback",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter6_warden_ch6wardendefeatfallbackzone_880_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter6_warden_ch6wardendefeatfallbackzone_880_300_0_0",
+      "name": "Ch6WardenDefeatFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 880,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch6_checkpoint_reached",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter6_warden_ch6checkpointzone_900_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter6_warden_ch6checkpointzone_900_300_0_0",
+      "name": "Ch6CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 900,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter7_Aftermath.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter6_warden_tochapter7aftermath_960_300_0_0",
+      "name": "ToChapter7Aftermath",
+      "require_flags": [
+        "act1_ch6_warden_defeated"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 960,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter6_Approach.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter6_warden_returntochapter6approach_60_300_0_0",
+      "name": "ReturnToChapter6Approach",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch6WardenAggroZone",
+          "set_flags": {
+            "act1_ch6_warden_engaged": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act1_ch6_warden_engaged",
+            "act1_ch6_warden_defeated"
+          ],
+          "toast": "Objective updated: Defeat the Warden.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter6_warden_ch6wardenaggrostatesync_m1000_m1000_0_0",
+      "name": "Ch6WardenAggroStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch6WardenAoeWarnZone",
+          "set_flags": {
+            "act1_ch6_aoe_warning_seen": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch6_warden_engaged"
+          ],
+          "forbid_flags": [
+            "act1_ch6_warden_defeated",
+            "act1_ch6_aoe_warning_seen"
+          ],
+          "toast": "Warning: Heavy strike radius. Impact in 2s. Reposition now.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter6_warden_ch6wardenaoewarnstatesync_m1000_m1000_0_0",
+      "name": "Ch6WardenAoeWarningStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch6WardenDefeatZone",
+          "set_flags": {
+            "act1_ch6_warden_defeated": true,
+            "act1_ch6_key_fragment": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act1_ch6_warden_defeated"
+          ],
+          "toast": "Objective complete: Warden defeated. Fragment secured.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter6_warden_ch6wardendefeatstatesync_m1000_m1000_0_0",
+      "name": "Ch6WardenDefeatStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch6WardenDefeatFallbackZone",
+          "set_flags": {
+            "act1_ch6_warden_defeated": true,
+            "act1_ch6_key_fragment": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act1_ch6_warden_defeated"
+          ],
+          "toast": "Objective complete: Warden defeated. Fragment secured.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter6_warden_ch6wardendefeatfbstatesync_m1000_m1000_0_0",
+      "name": "Ch6WardenDefeatFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch6CheckpointZone",
+          "set_flags": {
+            "act1_ch6_checkpoint": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch6_warden_defeated"
+          ],
+          "forbid_flags": [
+            "act1_ch6_checkpoint"
+          ],
+          "toast": "Checkpoint reached: Chapter 6",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter6_warden_ch6checkpointstatesync_m1000_m1000_0_0",
+      "name": "Ch6CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch6_warden_reentry_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter6_warden_ch6wardenreentryprobezone_130_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter6_warden_ch6wardenreentryprobezone_130_300_0_0",
+      "name": "Ch6WardenReentryProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 130,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch6WardenReentryProbeZone",
+          "set_flags": {
+            "act1_ch6_warden_reentry_2": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch6_warden_reentry_1"
+          ],
+          "forbid_flags": [
+            "act1_ch6_warden_defeated",
+            "act1_ch6_warden_reentry_2"
+          ],
+          "toast": "Hint: Pull the Warden wide and use the side supplies.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter6_warden_ch6wardenreentryhintstatesync_m1000_m1000_0_0",
+      "name": "Ch6WardenReentryHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch6WardenReentryProbeZone",
+          "set_flags": {
+            "act1_ch6_warden_reentry_1": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act1_ch6_warden_defeated",
+            "act1_ch6_warden_reentry_1"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter6_warden_ch6wardenreentryvisitstatesync_m1000_m1000_0_0",
+      "name": "Ch6WardenReentryVisitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 1 Chapter 6 - Warden",
+  "schema_version": 1,
+  "version": 1
+}

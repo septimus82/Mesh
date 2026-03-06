@@ -19,6 +19,17 @@ from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from engine.save_runtime.schema import SAVE_SCHEMA_VERSION
 from engine.world_controller import WorldController
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 def _diagnostic(
     *,
@@ -201,7 +212,8 @@ def _apply_world_from_snapshot(
     if cfg is not None:
         try:
             cfg.world_file = str(world_file)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: payloads fallback isolation
+            _log_swallow("PYLD-001", "world_file assignment", once=True)
             _append_diagnostic(
                 diagnostics,
                 _diagnostic(
@@ -222,7 +234,8 @@ def _apply_world_from_snapshot(
         raw = json.loads(path.read_text(encoding="utf-8"))
         raw = migrate_payload("world", raw)
         setattr(window, "world_controller", WorldController(raw))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: payloads fallback isolation
+        _log_swallow("PYLD-002", "world load", once=True)
         _append_diagnostic(
             diagnostics,
             _diagnostic(
@@ -296,7 +309,8 @@ def apply_loaded_payload(
             return False
         try:
             apply_snapshot_to_game_state(controller, payload)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: payloads fallback isolation
+            _log_swallow("PYLD-003", "snapshot apply_state", once=True)
             _append_diagnostic(
                 diagnostics_local,
                 _diagnostic(
@@ -314,7 +328,8 @@ def apply_loaded_payload(
         if callable(setter) and spawn_zone_id:
             try:
                 setter(str(spawn_zone_id))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: payloads fallback isolation
+                _log_swallow("PYLD-004", "spawn_zone apply snapshot", once=True)
                 _append_diagnostic(
                     diagnostics_local,
                     _diagnostic(
@@ -337,7 +352,8 @@ def apply_loaded_payload(
                 controller.import_state(state_block)
             else:
                 controller.replace_state(state_block)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: payloads fallback isolation
+            _log_swallow("PYLD-005", "game_state apply", once=True)
             _append_diagnostic(
                 diagnostics_local,
                 _diagnostic(
@@ -431,7 +447,8 @@ def apply_loaded_payload(
     if callable(setter) and spawn_zone_id:
         try:
             setter(str(spawn_zone_id))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: payloads fallback isolation
+            _log_swallow("PYLD-006", "spawn_zone apply slot", once=True)
             _append_diagnostic(
                 diagnostics_local,
                 _diagnostic(
@@ -447,7 +464,8 @@ def apply_loaded_payload(
     if hasattr(window, "ui_controller"):
         try:
             window.ui_controller.reset_transient_state()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: payloads fallback isolation
+            _log_swallow("PYLD-007", "ui_controller reset", once=True)
             _append_diagnostic(
                 diagnostics_local,
                 _diagnostic(
@@ -517,7 +535,8 @@ def build_slot_payload(
     if controller is not None and hasattr(controller, "get_var"):
         try:
             spawn_zone_id = controller.get_var("last_zone_id", None)
-        except Exception:
+        except Exception:  # noqa: BLE001  # REASON: payloads fallback isolation
+            _log_swallow("PYLD-008", "last_zone_id get", once=True)
             spawn_zone_id = None
     cleaned_zone = str(spawn_zone_id or "").strip() or None
     snapshot["spawn_zone_id"] = cleaned_zone

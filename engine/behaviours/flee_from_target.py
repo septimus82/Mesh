@@ -16,7 +16,7 @@ Save/restore:
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple, cast
 
 from ..event_emit import emit_gameplay_event
 from ..gameplay_event_bus import EventConfigError
@@ -210,7 +210,8 @@ class FleeFromTargetBehaviour(Behaviour):
         scene = getattr(self.window, "scene_controller", None)
         getter = getattr(scene, "get_nav_grid", None) if scene else None
         if callable(getter):
-            return getter()
+            result = getter()
+            return cast(NavGrid, result) if result is not None else None
         return None
     
     @staticmethod
@@ -232,7 +233,8 @@ class FleeFromTargetBehaviour(Behaviour):
         
         getter = getattr(scene, "get_all_entities", None)
         if callable(getter):
-            return list(getter())
+            result = getter()
+            return list(result) if isinstance(result, Iterable) else []
         
         sprites = getattr(scene, "all_sprites", None)
         return list(sprites) if sprites else []
@@ -359,7 +361,7 @@ class FleeFromTargetBehaviour(Behaviour):
             
             # Check if tile is walkable
             tile = grid.world_to_tile(cx, cy)
-            if grid.is_walkable(*tile):
+            if grid.is_walkable(tile):
                 # Score by distance from threat
                 threat_dist = math.hypot(cx - tx, cy - ty)
                 candidates.append((cx, cy, threat_dist))

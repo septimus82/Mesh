@@ -4,7 +4,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 from json import JSONDecodeError
 
 from engine.config import EngineConfig, load_config
@@ -24,7 +24,7 @@ class ReplayWindow:
     quest_manager: QuestManager = field(init=False)
 
     def __post_init__(self) -> None:
-        self.game_state_controller = GameStateController(self)  # type: ignore[arg-type]
+        self.game_state_controller = GameStateController(cast(Any, self))
 
         repo_root = Path(__file__).resolve().parents[2]
         quests_path = repo_root / "assets" / "data" / "quests.json"

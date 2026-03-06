@@ -1,0 +1,18 @@
+{
+  "description": "Master demo: Golden Slice then Act 1",
+  "notes": "Deterministic master run: golden_slice_demo_all then act1_full_demo",
+  "steps": [
+    {
+      "args": [
+        "golden_slice_demo_all"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "act1_full_demo"
+      ],
+      "cmd": "run-preset"
+    }
+  ]
+}

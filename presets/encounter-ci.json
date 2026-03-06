@@ -1,0 +1,17 @@
+{
+  "description": "Run encounter report for CI",
+  "steps": [
+    {
+      "args": [
+        "worlds/main_world.json",
+        "--only-dungeons",
+        "--difficulty",
+        "easy,normal,hard",
+        "--out",
+        ".mesh/reports/encounter_report.json",
+        "--json"
+      ],
+      "cmd": "encounter-report"
+    }
+  ]
+}

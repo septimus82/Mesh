@@ -16,6 +16,7 @@ from .legacy.dispatch import build_parser as _build_parser
 from .legacy.dispatch import dispatch as _dispatch
 from .legacy.dispatch import main as _dispatch_main
 from .legacy.registry import TOOLING_EXPORT_NAMES, get_tooling_export
+from engine.logging_tools import get_logger
 
 if TYPE_CHECKING:
     from engine.config import load_config as load_config
@@ -49,6 +50,18 @@ from .headless_arcade import install_arcade_stub_if_missing as _install_arcade_s
 
 _install_arcade_stub_if_missing()
 
+logger = get_logger(__name__)
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    logger.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 GameWindow = None
 
 def get_game_window():
@@ -66,6 +79,7 @@ def _configure_stdout_newline_for_json() -> None:
         if callable(reconfigure):
             reconfigure(newline="\n")
     except Exception:
+        _log_swallow("LEGI-001", "mesh_cli.legacy_impl blanket exception fallback")
         return
 
 
@@ -83,6 +97,7 @@ def _normalize_path_for_json(path: Path | str, *, repo_root: Path | None = None)
     try:
         p = p.resolve()
     except Exception:
+        _log_swallow("LEGI-002", "mesh_cli.legacy_impl blanket exception fallback")
         pass
 
     root = repo_root
@@ -90,10 +105,12 @@ def _normalize_path_for_json(path: Path | str, *, repo_root: Path | None = None)
         try:
             root = Path(root).resolve()
         except Exception:
+            _log_swallow("LEGI-003", "mesh_cli.legacy_impl blanket exception fallback")
             root = Path(root)
         try:
             return p.relative_to(root).as_posix()
         except Exception:
+            _log_swallow("LEGI-004", "mesh_cli.legacy_impl blanket exception fallback")
             pass
     return p.as_posix()
 
@@ -129,7 +146,8 @@ def _maybe_run_content_inventory_early() -> None:
                 payload = lint_encounter_preset_references(repo_root=repo_root)
             else:
                 payload = list_encounter_presets(repo_root=repo_root)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("LEGI-005", "mesh_cli.legacy_impl blanket exception fallback")
         payload = {"ok": False, "error": _single_line_error(f"{type(exc).__name__}: {exc}")}
         text = dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True)
         _configure_stdout_newline_for_json()
@@ -239,7 +257,8 @@ def _handle_list_worlds(args: argparse.Namespace) -> int:
         with suppress_stdout():
             repo_root = get_repo_root(start=Path.cwd(), strict=True)
             payload = _inventory_list_worlds(repo_root=repo_root)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("LEGI-006", "mesh_cli.legacy_impl blanket exception fallback")
         payload = {"ok": False, "error": _single_line_error(f"{type(exc).__name__}: {exc}")}
     out_path = str(getattr(args, "out", "") or "").strip() or None
     return _emit_inventory(payload, out_path)
@@ -253,7 +272,8 @@ def _handle_list_encounter_presets(args: argparse.Namespace) -> int:
         with suppress_stdout():
             repo_root = get_repo_root(start=Path.cwd(), strict=True)
             payload = list_encounter_presets(repo_root=repo_root)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("LEGI-007", "mesh_cli.legacy_impl blanket exception fallback")
         payload = {"ok": False, "error": _single_line_error(f"{type(exc).__name__}: {exc}")}
     out_path = str(getattr(args, "out", "") or "").strip() or None
     return _emit_inventory(payload, out_path)
@@ -270,7 +290,8 @@ def _handle_lint_presets(args: argparse.Namespace) -> int:
         with suppress_stdout():
             repo_root = get_repo_root(start=Path.cwd(), strict=True)
             payload = lint_encounter_preset_references(repo_root=repo_root)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("LEGI-008", "mesh_cli.legacy_impl blanket exception fallback")
         payload = {"ok": False, "error": _single_line_error(f"{type(exc).__name__}: {exc}")}
 
     if out_path:
@@ -452,7 +473,8 @@ def _handle_tilemap_validate(args: argparse.Namespace) -> int:
 
     try:
         scene = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("LEGI-009", "mesh_cli.legacy_impl blanket exception fallback")
         from engine.path_norm import normalize_scene_path
 
         print(f"[Mesh][Tilemap] ERROR: failed to parse '{normalize_scene_path(scene_path)}': {exc}")
@@ -526,6 +548,7 @@ def _tilemap_resolve_dims_for_edit(
             if w > 0 and h > 0:
                 return w, h
         except Exception:
+            _log_swallow("LEGI-010", "mesh_cli.legacy_impl blanket exception fallback")
             pass
 
     w_value = tilemap.get("width")
@@ -538,6 +561,7 @@ def _tilemap_resolve_dims_for_edit(
         w = int(w_value)
         h = int(h_value)
     except Exception:
+        _log_swallow("LEGI-011", "mesh_cli.legacy_impl blanket exception fallback")
         print(f"[Mesh][CLI] Error: cannot determine tilemap dimensions for {scene_path_display}")
         print("[Mesh][CLI] Provide a valid tilemap.path (with width/height) or scene.tilemap.width/height.")
         return None
@@ -589,12 +613,14 @@ def _parse_tilemap_init_layer_spec(raw: str) -> tuple[str, int, float | None] | 
     try:
         z = int(parts[1])
     except Exception:
+        _log_swallow("LEGI-012", "mesh_cli.legacy_impl blanket exception fallback")
         return None
     parallax: float | None = None
     if len(parts) == 3:
         try:
             parallax = float(parts[2])
         except Exception:
+            _log_swallow("LEGI-013", "mesh_cli.legacy_impl blanket exception fallback")
             return None
     return layer_id, z, parallax
 
@@ -612,6 +638,7 @@ def _parse_tilemap_init_fill_spec(raw: str) -> tuple[str, int] | None:
     try:
         tile = int(tile_str.strip())
     except Exception:
+        _log_swallow("LEGI-014", "mesh_cli.legacy_impl blanket exception fallback")
         return None
     return layer_id, tile
 
@@ -630,6 +657,7 @@ def _parse_scene_create_spawn_spec(raw: str) -> tuple[str, float, float] | None:
         x = float(parts[1])
         y = float(parts[2])
     except Exception:
+        _log_swallow("LEGI-015", "mesh_cli.legacy_impl blanket exception fallback")
         return None
     return spawn_id, x, y
 
@@ -649,6 +677,7 @@ def _parse_scene_create_bg_spec(raw: str) -> dict[str, Any] | None:
         z = int(parts[2])
         parallax = float(parts[3])
     except Exception:
+        _log_swallow("LEGI-016", "mesh_cli.legacy_impl blanket exception fallback")
         return None
 
     def parse_bool(value: str) -> bool:
@@ -784,11 +813,13 @@ def _tilemap_try_resolve_tile_size_for_stamp(
     try:
         tiled = json.loads(chosen_map_path.read_text(encoding="utf-8"))
     except Exception:
+        _log_swallow("LEGI-017", "mesh_cli.legacy_impl blanket exception fallback")
         return None
     try:
         tw = int(tiled.get("tilewidth", 0))
         th = int(tiled.get("tileheight", 0))
     except Exception:
+        _log_swallow("LEGI-018", "mesh_cli.legacy_impl blanket exception fallback")
         return None
     if tw > 0 and th > 0:
         return tw, th
@@ -1059,7 +1090,8 @@ def _handle_dump_state(args: argparse.Namespace) -> int:
 
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
         return 0
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("LEGI-019", "mesh_cli.legacy_impl blanket exception fallback")
         payload = {"ok": False, "code": 1, "error": "dump_state.failed"}
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
         return 1
@@ -1067,6 +1099,7 @@ def _handle_dump_state(args: argparse.Namespace) -> int:
         try:
             window.close()
         except Exception:
+            _log_swallow("LEGI-020", "mesh_cli.legacy_impl blanket exception fallback")
             pass
 
 

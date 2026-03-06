@@ -10,6 +10,18 @@ from engine.editor.shortcut_resolver_model import normalize_shortcut_text
 # Re-export scope constants for convenience
 from engine.editor.editor_actions import SHORTCUT_SCOPE_GLOBAL  # noqa: F401
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 # Type alias for scoped overrides: {(scope, action_id): shortcut_or_empty}
 ScopedOverrides = dict[tuple[str, str], str]
 
@@ -125,6 +137,7 @@ def apply_keymap_overrides(
         try:
             updated[idx] = replace(action, shortcut=str(new_shortcut))
         except Exception:
+            _log_swallow("KEYM-001", "engine/editor/keymap_override_model.py pass-only blanket swallow")
             pass
 
     return updated, unknown_scopes, unknown_keys

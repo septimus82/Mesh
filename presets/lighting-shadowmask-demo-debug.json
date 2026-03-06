@@ -1,0 +1,21 @@
+{
+  "description": "Lighting demo: shadow mask + debug rays",
+  "env": {
+    "MESH_SHADOWCAST_DEBUG": "1",
+    "MESH_SHADOWCAST_MASK": "1"
+  },
+  "notes": "Shadow mask + rays",
+  "steps": [
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice_variant_e.json",
+        "--dry-run",
+        "--demo"
+      ],
+      "cmd": "pipeline"
+    }
+  ]
+}

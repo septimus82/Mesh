@@ -1,0 +1,294 @@
+{
+  "description": "Act 1 Chapter 6 approach: receive final briefing before entering the Warden arena.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter6_approach_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter6_approach_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Understood. I will enter the arena."
+                }
+              ],
+              "text": "Watch Captain: The Warden controls the arena center. Keep your spacing and watch the warning rings."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter6_approach_watchcaptain_280_300_0_0",
+      "mesh_name": "Ch6WatchCaptain",
+      "name": "Watch Captain",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 280,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Move with intent."
+                }
+              ],
+              "text": "Approach marker: Keep distance when the Warden marks a heavy strike radius."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter6_approach_ch6hintmarker_170_330_0_0",
+      "mesh_name": "Ch6ApproachHintMarker",
+      "name": "Ch6 Approach Hint Marker",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 170,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch6_approach_briefing",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter6_approach_chapter6approachbriefingzone_340_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter6_approach_chapter6approachbriefingzone_340_300_0_0",
+      "name": "Chapter6ApproachBriefingZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 340,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch6_approach_briefing_fallback",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter6_approach_ch6approachbriefingfallbackzone_700_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter6_approach_ch6approachbriefingfallbackzone_700_300_0_0",
+      "name": "Ch6ApproachBriefingFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter6_Warden.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter6_approach_tochapter6warden_820_300_0_0",
+      "name": "ToChapter6Warden",
+      "require_flags": [
+        "act1_ch6_briefed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 820,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter5_Summit.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter6_approach_returntochapter5summit_60_300_0_0",
+      "name": "ReturnToChapter5Summit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Chapter6ApproachBriefingZone",
+          "set_flags": {
+            "act1_ch6_briefed": true
+          },
+          "forbid_flags": [
+            "act1_ch6_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Enter the Warden arena.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter6_approach_ch6briefedstatesync_m1000_m1000_0_0",
+      "name": "Ch6BriefedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch6ApproachBriefingFallbackZone",
+          "set_flags": {
+            "act1_ch6_briefed": true
+          },
+          "forbid_flags": [
+            "act1_ch6_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Enter the Warden arena.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter6_approach_ch6briefedfbstatesync_m1000_m1000_0_0",
+      "name": "Ch6BriefedFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch6_approach_reentry_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter6_approach_ch6approachreentryprobezone_130_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter6_approach_ch6approachreentryprobezone_130_300_0_0",
+      "name": "Ch6ApproachReentryProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 130,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch6ApproachReentryProbeZone",
+          "set_flags": {
+            "act1_ch6_approach_reentry_2": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch6_approach_reentry_1"
+          ],
+          "forbid_flags": [
+            "act1_ch6_briefed",
+            "act1_ch6_approach_reentry_2"
+          ],
+          "toast": "Hint: Speak with the watch captain before entering the arena.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter6_approach_ch6approachreentryhintstatesync_m1000_m1000_0_0",
+      "name": "Ch6ApproachReentryHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch6ApproachReentryProbeZone",
+          "set_flags": {
+            "act1_ch6_approach_reentry_1": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act1_ch6_briefed",
+            "act1_ch6_approach_reentry_1"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter6_approach_ch6approachreentryvisitstatesync_m1000_m1000_0_0",
+      "name": "Ch6ApproachReentryVisitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 1 Chapter 6 - Approach",
+  "schema_version": 1,
+  "version": 1
+}

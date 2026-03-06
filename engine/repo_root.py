@@ -7,6 +7,18 @@ from typing import Iterable, Optional
 from .logging_tools import get_logger
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 _MARKERS: tuple[str, ...] = ("pyproject.toml", "config.json")
 _LOG = get_logger("engine.repo_root")
 
@@ -83,6 +95,7 @@ def find_repo_root(start: Optional[Path] = None) -> Optional[Path]:
             elif _has_any_marker(candidate, _MARKERS):
                 return candidate
         except Exception:
+            _log_swallow("REPO-001", "engine/repo_root.py pass-only blanket swallow")
             pass
 
     probe = start or Path.cwd()

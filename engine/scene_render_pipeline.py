@@ -6,7 +6,11 @@ Extracts sorting, culling, and draw order logic from SceneController.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Protocol, Union
+from typing import Any, Callable, Dict, List, Optional, Protocol, Union, cast
+
+from engine.logging_tools import get_logger
+
+logger = get_logger(__name__)
 
 import engine.optional_arcade as optional_arcade
 from engine.culling import Rect, is_sprite_visible, sprite_bounds
@@ -411,6 +415,25 @@ def execute_scene_plan(
         _execute_sprite_op(op, render_queue, use_batching, camera_rect, use_culling)
 
 
+def _draw_sprite_compat(sprite: Any) -> None:
+    draw_method = getattr(sprite, "draw", None)
+    if callable(draw_method):
+        draw_method()
+        return
+
+    render_method = getattr(sprite, "render", None)
+    if callable(render_method):
+        render_method()
+        return
+
+    arcade_draw_sprite = getattr(optional_arcade.arcade, "draw_sprite", None)
+    if callable(arcade_draw_sprite):
+        arcade_draw_sprite(sprite)
+        return
+
+    raise AttributeError("Sprite object has no compatible draw method (draw/render/draw_sprite)")
+
+
 def _execute_outline_ops(
     op: SpriteDrawOp,
     render_queue: Any,
@@ -434,16 +457,16 @@ def _execute_outline_ops(
             try:
                 sprite.color = call.color
             except Exception:
-                pass
+                logger.debug("Failed to set outline color on sprite %s", getattr(sprite, 'mesh_name', '?'), exc_info=True)
             try:
                 sprite.alpha = int(call.alpha)
             except Exception:
-                pass
+                logger.debug("Failed to set outline alpha on sprite %s", getattr(sprite, 'mesh_name', '?'), exc_info=True)
             
             if use_batching and render_queue:
                 _submit_to_queue(sprite, render_queue, camera_rect, use_culling)
             else:
-                 sprite.draw()
+                 _draw_sprite_compat(sprite)
     finally:
          _restore_sprite_state(sprite, original_x, original_y, original_color, original_alpha)
 
@@ -461,7 +484,7 @@ def _execute_sprite_op(
         if use_batching and render_queue:
             _submit_to_queue(sprite, render_queue, camera_rect, use_culling)
         else:
-            sprite.draw()
+            _draw_sprite_compat(sprite)
         return
 
     # Apply tint
@@ -472,7 +495,7 @@ def _execute_sprite_op(
         if use_batching and render_queue:
             _submit_to_queue(sprite, render_queue, camera_rect, use_culling)
         else:
-            sprite.draw()
+            _draw_sprite_compat(sprite)
     finally:
         try:
              if original_color is None:
@@ -480,7 +503,7 @@ def _execute_sprite_op(
              else:
                  sprite.color = original_color
         except Exception:
-            pass
+            logger.debug("Failed to restore sprite color after tint", exc_info=True)
 
 
 def _submit_to_queue(sprite: Any, render_queue: Any, camera_rect: Optional[Rect], use_culling: bool) -> None:
@@ -500,7 +523,7 @@ def _submit_to_queue(sprite: Any, render_queue: Any, camera_rect: Optional[Rect]
         except (TypeError, ValueError):
              scale_value = 1.0
     else:
-        scale_value = float(scale)  # type: ignore
+        scale_value = float(cast(Any, scale))
 
     alpha = getattr(sprite, "alpha", 255)
     rotation = getattr(sprite, "angle", 0.0)
@@ -559,4 +582,4 @@ def _restore_sprite_state(sprite, x, y, color, alpha):
         if alpha is not None:
              sprite.alpha = alpha
     except Exception:
-        pass
+        logger.debug("Failed to restore sprite state for %s", getattr(sprite, 'mesh_name', '?'), exc_info=True)

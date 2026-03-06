@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from typing import Any, Dict
 
 from . import json_io
+from .diagnostics import add_exception as diag_add_exception
+from .diagnostics import error as diag_error
+from .diagnostics import warn as diag_warn
 from .repo_root import find_repo_root
 
 
@@ -70,6 +74,10 @@ class EngineConfig:
     day_length_seconds: float = 600.0
     day_start_hour: float = 21.0
     input_bindings: dict[str, list[str]] = field(default_factory=dict)
+    input: dict[str, Any] = field(default_factory=lambda: {
+        "rumble_enabled": False,
+        "rumble_strength": 1.0,
+    })
 
     # XP / Stats
     xp_base: int = 50
@@ -130,7 +138,47 @@ def _coerce_type(value: Any, target_type: Any) -> Any:
         if not getattr(_coerce_type, "_mesh_error_logged", False):
             print(f"[Mesh][Config] ERROR coercing config value: {exc}")
             setattr(_coerce_type, "_mesh_error_logged", True)
+        diag_add_exception(
+            "config.coerce_type_failed",
+            exc,
+            "engine.config",
+            context={"target_type": str(target_type)},
+        )
         return value
+
+
+_PRESETS_DIR_NAME = "presets"
+_PRESETS_COMPAT_MIRROR_NAME = "config_presets.json"
+_PRESET_FILE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*\.json$")
+
+
+def _iter_split_preset_files(presets_dir: Path) -> list[Path]:
+    files: list[Path] = []
+    if not presets_dir.exists() or not presets_dir.is_dir():
+        return files
+    for path in sorted(presets_dir.glob("*.json"), key=lambda p: p.name):
+        if path.name == _PRESETS_COMPAT_MIRROR_NAME:
+            continue
+        if not _PRESET_FILE_PATTERN.fullmatch(path.name):
+            continue
+        files.append(path)
+    return files
+
+
+def _load_split_presets_or_none(presets_dir: Path) -> dict[str, Any] | None:
+    files = _iter_split_preset_files(presets_dir)
+    if not files:
+        return None
+    loaded: dict[str, Any] = {}
+    for path in files:
+        preset_id = path.stem
+        raw = json.loads(path.read_text(encoding="utf-8-sig"))
+        if not isinstance(raw, dict):
+            raise ValueError(f"preset file '{path.as_posix()}' root must be an object")
+        if preset_id in loaded:
+            raise ValueError(f"duplicate preset id '{preset_id}' in '{path.as_posix()}'")
+        loaded[preset_id] = raw
+    return loaded
 
 
 def load_config(path: str | None = None) -> EngineConfig:
@@ -152,6 +200,12 @@ def load_config(path: str | None = None) -> EngineConfig:
 
     if not cfg_path.exists():
         print(f"[Mesh][Config] No config file at '{cfg_path}', using defaults")
+        diag_warn(
+            "config.file_missing",
+            f"No config file at '{cfg_path}', using defaults",
+            "engine.config",
+            location=str(cfg_path),
+        )
         return cfg
 
     try:
@@ -160,6 +214,12 @@ def load_config(path: str | None = None) -> EngineConfig:
             raise ValueError("config root is not an object")
     except Exception as exc:
         print(f"[Mesh][Config] Failed to load '{cfg_path}': {exc}; using defaults")
+        diag_add_exception(
+            "config.load_failed",
+            exc,
+            "engine.config",
+            location=str(cfg_path),
+        )
         return cfg
 
     setattr(cfg, "_loaded_keys", set(raw.keys()))
@@ -169,10 +229,49 @@ def load_config(path: str | None = None) -> EngineConfig:
     for key, value in raw.items():
         if key not in field_types:
             print(f"[Mesh][Config] WARNING: Unknown config key '{key}' ignored")
+            diag_warn(
+                "config.unknown_key",
+                f"Unknown config key '{key}' ignored",
+                "engine.config",
+                location=str(cfg_path),
+                context={"key": str(key)},
+            )
             continue
         expected = field_types[key]
         coerced = _coerce_type(value, expected)
         setattr(cfg, key, coerced)
+
+    # Presets source of truth:
+    # 1) Split files under presets/*.json (excluding compatibility mirror)
+    # 2) Fallback to inline config.json "presets" map
+    presets_dir = cfg_path.parent / _PRESETS_DIR_NAME
+    inline_presets = cfg.presets if isinstance(cfg.presets, dict) else {}
+    try:
+        split_presets = _load_split_presets_or_none(presets_dir)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[Mesh][Config] WARNING: Failed to load split presets from '{presets_dir}': {exc}")
+        diag_add_exception(
+            "config.presets.split_load_failed",
+            exc,
+            "engine.config",
+            location=str(presets_dir),
+        )
+        split_presets = None
+    if split_presets is not None:
+        cfg.presets = split_presets
+        setattr(cfg, "_presets_source", "split_files")
+        setattr(cfg, "_presets_dir", str(presets_dir))
+    else:
+        cfg.presets = inline_presets
+        setattr(cfg, "_presets_source", "config_inline")
+        if inline_presets:
+            diag_warn(
+                "config.presets.fallback_inline",
+                "Using inline presets fallback from config.json",
+                "engine.config",
+                location=str(cfg_path),
+                context={"presets_count": int(len(inline_presets))},
+            )
 
     return cfg
 

@@ -121,5 +121,6 @@ class SpriteRenderQueue:
             return
         setter("render_sprites_submitted", self.stats.sprites_submitted)
         setter("render_batches_drawn", self.stats.batches_drawn)
+        setter("render.draw_calls", self.stats.draw_calls_estimate)
         setter("render_draw_calls", self.stats.draw_calls_estimate)
         setter("render_sprites_drawn", self.stats.sprites_drawn)

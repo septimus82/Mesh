@@ -1323,6 +1323,20 @@
       "payload": {
         "quest_id": "string"
       }
+    },
+    {
+      "name": "act2_ch2_switch_pull",
+      "description": "Fired when the Act 2 Chapter 2 hazard control switch is activated.",
+      "payload": {
+        "source": "object"
+      }
+    },
+    {
+      "name": "act2_ch2_midpoint_switch",
+      "description": "Fired when the Act 2 Chapter 2 midpoint suppression switch is activated.",
+      "payload": {
+        "source": "object"
+      }
     }
   ]
 }

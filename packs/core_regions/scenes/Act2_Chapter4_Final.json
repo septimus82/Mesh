@@ -1,0 +1,166 @@
+{
+  "description": "Act 2 Chapter 4 final chamber: checkpoint and completion.",
+  "name": "Act 2 Chapter 4 - Final",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter4_final_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter4_final_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch4_checkpoint",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter4_final_checkpointzone_520_300_0_0"
+        }
+      },
+      "id": "act2_chapter4_final_checkpointzone_520_300_0_0",
+      "name": "Act2Chapter4CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4CheckpointZone",
+          "set_flags": {
+            "act2_ch4_checkpoint": true
+          },
+          "require_flags": [
+            "act2_ch4_path_clear"
+          ],
+          "forbid_flags": [
+            "act2_ch4_checkpoint"
+          ],
+          "once": true,
+          "toast": "Checkpoint reached: Act 2 Chapter 4",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_final_checkpointstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch4_complete",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter4_final_completezone_700_300_0_0"
+        }
+      },
+      "id": "act2_chapter4_final_completezone_700_300_0_0",
+      "name": "Act2Chapter4CompleteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4CompleteZone",
+          "set_flags": {
+            "act2_chapter4_complete": true
+          },
+          "require_flags": [
+            "act2_ch4_path_clear"
+          ],
+          "forbid_flags": [
+            "act2_chapter4_complete"
+          ],
+          "once": true,
+          "toast": "Objective complete: Act 2 Chapter 4.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_final_completestatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4CompleteStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter4_Hub.json"
+        }
+      },
+      "id": "act2_chapter4_final_returntohub_60_300_0_0",
+      "name": "ReturnToAct2Chapter4Hub",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter5_Antechamber.json"
+        }
+      },
+      "id": "act2_chapter4_final_toact2chapter5antechamber_900_300_0_0",
+      "name": "ToAct2Chapter5Antechamber",
+      "require_flags": [
+        "act2_chapter4_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 900,
+      "y": 300
+    }
+  ]
+}

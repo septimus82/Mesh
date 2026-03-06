@@ -1,0 +1,18 @@
+{
+  "description": "Golden Slice Demo (all): runs location 1 then location 2",
+  "notes": "Deterministic demo: golden_slice_index then golden_slice2_index",
+  "steps": [
+    {
+      "args": [
+        "golden_slice_index"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "golden_slice2_index"
+      ],
+      "cmd": "run-preset"
+    }
+  ]
+}

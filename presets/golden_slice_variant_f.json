@@ -1,0 +1,30 @@
+{
+  "description": "Prefab showcase: variant patch set",
+  "lighting_showcase": false,
+  "notes": "Uses variant_id wiring (no new systems)",
+  "steps": [
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice_variant_f.json",
+        "--dry-run",
+        "--strict",
+        "--check-refs"
+      ],
+      "cmd": "pipeline"
+    },
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice_variant_f.json",
+        "--dry-run",
+        "--demo"
+      ],
+      "cmd": "pipeline"
+    }
+  ]
+}

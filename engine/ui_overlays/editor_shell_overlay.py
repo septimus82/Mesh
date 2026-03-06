@@ -11,25 +11,12 @@ Draws ONLY when editor mode is active. Renders behind other editor overlays.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
 
 from ..text_draw import draw_text_cached, TextCache
 from .common import UIElement, draw_panel_bg
-from ..editor.editor_shell_layout import (
-    compute_editor_shell_layout,
-    compute_top_bar_controls,
-    EditorShellLayout,
-    DockTabState,
-    Rect,
-    TopBarControls,
-)
-from ..editor.editor_dock_query import (
-    get_dock_collapsed,
-    get_effective_dock_widths,
-    get_viewport_maximized,
-)
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -54,7 +41,7 @@ class EditorShellOverlay(UIElement):
     def __init__(self, window: "GameWindow") -> None:
         super().__init__(window)
         self._text_cache = TextCache(max_size=128)
-        self._cached_layout: EditorShellLayout | None = None
+        self._cached_layout: Any = None
         self._cached_size: tuple[int, int] = (0, 0)
         self._cached_dock_widths: tuple[int, int] = (320, 320)
 
@@ -68,10 +55,14 @@ class EditorShellOverlay(UIElement):
         controller = getattr(self.window, "editor_controller", None)
         if controller is None:
             return (320, 320)
+        from ..editor.editor_dock_query import get_effective_dock_widths
+
         return get_effective_dock_widths(controller, self.window.width)
 
-    def _get_layout(self) -> EditorShellLayout:
+    def _get_layout(self) -> Any:
         """Get or compute the current layout."""
+        from ..editor.editor_shell_layout import compute_editor_shell_layout
+
         size = (self.window.width, self.window.height)
         dock_widths = self._get_dock_widths()
         if (self._cached_layout is None or 
@@ -84,8 +75,10 @@ class EditorShellOverlay(UIElement):
             self._cached_dock_widths = dock_widths
         return self._cached_layout
 
-    def _get_dock_tab_state(self) -> DockTabState:
+    def _get_dock_tab_state(self) -> Any:
         """Get dock tab state from controller."""
+        from ..editor.editor_shell_layout import DockTabState
+
         controller = getattr(self.window, "editor_controller", None)
         if controller is None:
             return DockTabState()
@@ -96,6 +89,11 @@ class EditorShellOverlay(UIElement):
         return DockTabState(left_tab=left_tab, right_tab=right_tab)
 
     def draw(self) -> None:
+        from ..editor.editor_dock_query import (
+            get_dock_collapsed,
+            get_viewport_maximized,
+        )
+
         controller = getattr(self.window, "editor_controller", None)
         if controller is None or not getattr(controller, "active", False):
             return
@@ -122,7 +120,7 @@ class EditorShellOverlay(UIElement):
 
     def _draw_top_bar(
         self,
-        layout: EditorShellLayout,
+        layout: Any,
         controller: object,
         cache: TextCache,
         viewport_maximized: bool = False,
@@ -130,6 +128,8 @@ class EditorShellOverlay(UIElement):
         right_collapsed: bool = False,
     ) -> None:
         """Draw the top bar with title, scene name, dirty indicator, and dock controls."""
+        from ..editor.editor_shell_layout import compute_top_bar_controls
+
         bar = layout.top_bar
 
         # Background
@@ -194,7 +194,7 @@ class EditorShellOverlay(UIElement):
             cache=cache,
         )
 
-    def _draw_top_bar_button(self, rect: Rect, label: str, is_active: bool, cache: TextCache) -> None:
+    def _draw_top_bar_button(self, rect: Any, label: str, is_active: bool, cache: TextCache) -> None:
         """Draw a top bar toggle button.
 
         Args:
@@ -226,7 +226,7 @@ class EditorShellOverlay(UIElement):
             cache=cache,
         )
 
-    def _draw_left_dock(self, layout: EditorShellLayout, tab_state: DockTabState, cache: TextCache) -> None:
+    def _draw_left_dock(self, layout: Any, tab_state: Any, cache: TextCache) -> None:
         """Draw the left dock panel with tab headers."""
         dock = layout.left_dock
 
@@ -272,7 +272,7 @@ class EditorShellOverlay(UIElement):
         # Right edge border
         draw_panel_bg(dock.right - 1, dock.right, dock.bottom, dock.top, SHELL_BORDER_COLOR)
 
-    def _draw_right_dock(self, layout: EditorShellLayout, tab_state: DockTabState, cache: TextCache) -> None:
+    def _draw_right_dock(self, layout: Any, tab_state: Any, cache: TextCache) -> None:
         """Draw the right dock panel with tab headers."""
         dock = layout.right_dock
 
@@ -318,7 +318,7 @@ class EditorShellOverlay(UIElement):
         # Left edge border
         draw_panel_bg(dock.left, dock.left + 1, dock.bottom, dock.top, SHELL_BORDER_COLOR)
 
-    def _draw_viewport_frame(self, layout: EditorShellLayout) -> None:
+    def _draw_viewport_frame(self, layout: Any) -> None:
         """Draw a subtle frame around the viewport area."""
         vp = layout.viewport
 

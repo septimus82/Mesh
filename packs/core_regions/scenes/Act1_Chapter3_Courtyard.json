@@ -1,0 +1,375 @@
+{
+  "description": "Act 1 Chapter 3 courtyard: clear the encounter to open the Chapter 4 route.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter3_courtyard_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter3_courtyard_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "EnemyAI": {
+          "detect_radius": 200.0,
+          "speed": 60.0
+        },
+        "Health": {
+          "hp": 80,
+          "max_hp": 80
+        },
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 10
+            }
+          ],
+          "seed": 4301
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "act1_chapter3_courtyard_raideralpha_420_280_0_0",
+      "mesh_name": "Act1Ch3RaiderAlpha",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 420,
+      "y": 250
+    },
+    {
+      "behaviour_config": {
+        "EnemyAI": {
+          "detect_radius": 150.0,
+          "speed": 56.0
+        },
+        "Health": {
+          "hp": 72,
+          "max_hp": 72
+        },
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 7
+            }
+          ],
+          "seed": 4302
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "act1_chapter3_courtyard_raiderbeta_500_340_0_0",
+      "mesh_name": "Act1Ch3RaiderBeta",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 700,
+      "y": 350
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Hold spacing."
+                }
+              ],
+              "text": "Courtyard marker: Secure the courtyard and use cover to break line of attack."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter3_courtyard_ch3courtyardhintmarker_160_330_0_0",
+      "mesh_name": "Ch3CourtyardHintMarker",
+      "name": "Ch3 Courtyard Hint Marker",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 160,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch3_courtyard_clear",
+          "trigger_radius": 52.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter3_courtyard_ch3courtyardclearzone_760_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter3_courtyard_ch3courtyardclearzone_760_300_0_0",
+      "name": "Ch3CourtyardClearZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 760,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter4_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter3_courtyard_tochapter4fromcourtyard_920_300_0_0",
+      "name": "ToChapter4FromCourtyard",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 920,
+      "y": 300,
+      "require_flags": [
+        "act1_ch3_courtyard_cleared"
+      ]
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter3_Archive.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter3_courtyard_returntochapter3archive_60_300_0_0",
+      "name": "ReturnToChapter3Archive",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 8
+            }
+          ],
+          "seed": 4303
+        },
+        "EnemyAI": {
+          "detect_radius": 120.0,
+          "speed": 54.0
+        },
+        "Health": {
+          "hp": 74,
+          "max_hp": 74
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "act1_chapter3_courtyard_raidergamma_780_260_0_0",
+      "mesh_name": "Act1Ch3RaiderGamma",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 860,
+      "y": 240
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter3_courtyard_ch3courtyardcoverwest_520_300_0_0",
+      "name": "Ch3CourtyardCoverWest",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "tag": "solid",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter3_courtyard_ch3courtyardcovereast_700_300_0_0",
+      "name": "Ch3CourtyardCoverEast",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "tag": "solid",
+      "x": 760,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "id": "act1_chapter3_courtyard_ch3courtyardsupplypickup_660_280_0_0",
+      "mesh_name": "Ch3CourtyardSupplyPickup",
+      "name": "Ch3CourtyardSupplyPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 740,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch3_courtyard_clear_fallback",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter3_courtyard_ch3courtyardclearfallbackzone_900_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter3_courtyard_ch3courtyardclearfallbackzone_900_300_0_0",
+      "name": "Ch3CourtyardClearFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 900,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch3CourtyardClearZone",
+          "set_flags": {
+            "act1_ch3_courtyard_cleared": true
+          },
+          "forbid_flags": [
+            "act1_ch3_courtyard_cleared"
+          ],
+          "once": true,
+          "toast": "Objective complete: Courtyard secured.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter3_courtyard_ch3courtyardclearedstatesync_m1000_m1000_0_0",
+      "name": "Ch3CourtyardClearedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch3CourtyardClearFallbackZone",
+          "set_flags": {
+            "act1_ch3_courtyard_cleared": true
+          },
+          "forbid_flags": [
+            "act1_ch3_courtyard_cleared"
+          ],
+          "once": true,
+          "toast": "Objective complete: Courtyard secured.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter3_courtyard_ch3courtyardclearedfbstatesync_m1000_m1000_0_0",
+      "name": "Ch3CourtyardClearedFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch3_checkpoint_reached",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter3_courtyard_ch3checkpointzone_900_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter3_courtyard_ch3checkpointzone_900_300_0_0",
+      "name": "Ch3CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 900,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch3CheckpointZone",
+          "set_flags": {
+            "act1_ch3_checkpoint": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch3_courtyard_cleared"
+          ],
+          "forbid_flags": [
+            "act1_ch3_checkpoint"
+          ],
+          "toast": "Checkpoint reached: Chapter 3",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter3_courtyard_ch3checkpointstatesync_m1000_m1000_0_0",
+      "name": "Ch3CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 1 Chapter 3 - Courtyard",
+  "schema_version": 1,
+  "version": 1
+}

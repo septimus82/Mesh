@@ -1,0 +1,474 @@
+{
+  "description": "Act 2 Chapter 2 hazard run: cross a suppression window with midpoint retry switch.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter2_hazardrun_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter2_hazardrun_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch2_hazard_run_start",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter2_hazardrun_act2chapter2hazardrunstartzone_180_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter2_hazardrun_act2chapter2hazardrunstartzone_180_300_0_0",
+      "name": "Act2Chapter2HazardRunStartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 180,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Move now."
+                }
+              ],
+              "text": "Run marker: suppression is temporary. Keep moving between safe pockets."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act2_chapter2_hazardrun_hazardrunmarker_220_330_0_0",
+      "mesh_name": "Act2Ch2HazardRunMarker",
+      "name": "Act2Ch2HazardRunMarker",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 220,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Suppression is live."
+                }
+              ],
+              "text": "Status light: Green means hazards are suppressed."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act2_chapter2_hazardrun_suppressionactivemarker_300_250_0_0",
+      "mesh_name": "Act2Ch2SuppressionActiveMarker",
+      "name": "Act2Ch2SuppressionActiveMarker",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 300,
+      "y": 250
+    },
+    {
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 6.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "id": "act2_chapter2_hazardrun_hazarddamagea_320_300_0_0",
+      "name": "Act2Ch2HazardDamageA",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch2_hazard_suppressed"
+      ],
+      "x": 320,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 6.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "id": "act2_chapter2_hazardrun_hazarddamageb_420_300_0_0",
+      "name": "Act2Ch2HazardDamageB",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch2_hazard_suppressed"
+      ],
+      "x": 420,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter2_hazardrun_midpointalcovewall_520_300_0_0",
+      "name": "Act2Ch2MidpointAlcoveWall",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "tag": "solid",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch2_suppression_expire",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter2_hazardrun_act2chapter2suppressionexpirezone_500_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter2_hazardrun_act2chapter2suppressionexpirezone_500_300_0_0",
+      "name": "Act2Chapter2SuppressionExpireZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 500,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter2SuppressionExpireZone",
+          "set_flags": {
+            "act2_ch2_hazard_suppressed": false,
+            "act2_ch2_hazard_suppressed_until": false
+          },
+          "require_flags": [
+            "act2_ch2_hazard_suppressed"
+          ],
+          "once": false,
+          "toast": "Suppression faded. Use the midpoint switch.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_hazardrun_act2ch2suppressionexpirestatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2SuppressionExpireStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "event_id": "act2_ch2_midpoint_switch",
+          "one_shot": false
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "act2_chapter2_hazardrun_act2ch2midpointswitch_560_240_0_0",
+      "name": "Act2Ch2MidpointSwitch",
+      "sprite": "assets/placeholder.png",
+      "tag": "interactable",
+      "x": 560,
+      "y": 240
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "act2_ch2_midpoint_switch",
+          "set_flags": {
+            "act2_ch2_hazard_suppressed": true,
+            "act2_ch2_hazard_suppressed_until": true
+          },
+          "once": false,
+          "toast": "Hazard suppression refreshed.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_hazardrun_act2ch2midpointswitchstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2MidpointSwitchStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "id": "act2_chapter2_hazardrun_act2ch2alcovepickup_600_240_0_0",
+      "mesh_name": "Act2Ch2AlcovePickup",
+      "name": "Act2Ch2AlcovePickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 600,
+      "y": 240
+    },
+    {
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 6.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "id": "act2_chapter2_hazardrun_hazarddamagec_700_300_0_0",
+      "name": "Act2Ch2HazardDamageC",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch2_hazard_suppressed"
+      ],
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 6.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "id": "act2_chapter2_hazardrun_hazarddamaged_800_300_0_0",
+      "name": "Act2Ch2HazardDamageD",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch2_hazard_suppressed"
+      ],
+      "x": 800,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch2_run_clear",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter2_hazardrun_act2chapter2runclearzone_940_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter2_hazardrun_act2chapter2runclearzone_940_300_0_0",
+      "name": "Act2Chapter2RunClearZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 940,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch2_run_clear_fallback",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter2_hazardrun_act2chapter2runclearfallbackzone_1000_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter2_hazardrun_act2chapter2runclearfallbackzone_1000_300_0_0",
+      "name": "Act2Chapter2RunClearFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 1000,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter2RunClearZone",
+          "set_flags": {
+            "act2_ch2_run_clear": true
+          },
+          "clear_flags": [
+            "act2_ch2_hazard_suppressed",
+            "act2_ch2_hazard_suppressed_until"
+          ],
+          "forbid_flags": [
+            "act2_ch2_run_clear"
+          ],
+          "once": true,
+          "toast": "Objective complete: Hazard run cleared.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_hazardrun_act2ch2runclearstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2RunClearStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter2RunClearFallbackZone",
+          "set_flags": {
+            "act2_ch2_run_clear": true
+          },
+          "clear_flags": [
+            "act2_ch2_hazard_suppressed",
+            "act2_ch2_hazard_suppressed_until"
+          ],
+          "forbid_flags": [
+            "act2_ch2_run_clear"
+          ],
+          "once": true,
+          "toast": "Objective complete: Hazard run cleared.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_hazardrun_act2ch2runclearfbstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2RunClearFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter2_Sanctum.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter2_hazardrun_toact2chapter2sanctum_1080_300_0_0",
+      "name": "ToAct2Chapter2Sanctum",
+      "require_flags": [
+        "act2_ch2_run_clear"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1080,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter2_SwitchRoom.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter2_hazardrun_returntoact2chapter2switchroom_60_300_0_0",
+      "name": "ReturnToAct2Chapter2SwitchRoom",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch2_run_clear": true
+          },
+          "require_flags": [
+            "act2_ch2_run_clear"
+          ],
+          "once": false
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_hazardrun_act2ch2runclearrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2RunClearRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 2 Chapter 2 - Hazard Run",
+  "schema_version": 1,
+  "version": 1
+}

@@ -1,0 +1,30 @@
+{
+  "description": "Hollowmere Outskirts: Beacon objective (Golden Slice 2)",
+  "lighting_showcase": false,
+  "notes": "Second location (linear) - reach the beacon beyond the boss",
+  "steps": [
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice2_variant_g.json",
+        "--dry-run",
+        "--strict",
+        "--check-refs"
+      ],
+      "cmd": "pipeline"
+    },
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice2_variant_g.json",
+        "--dry-run",
+        "--demo"
+      ],
+      "cmd": "pipeline"
+    }
+  ]
+}

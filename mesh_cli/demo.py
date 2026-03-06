@@ -330,7 +330,7 @@ def run_demo(
 # ---------------------------------------------------------------------------
 
 
-def register_subcommand(demo_subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg,unused-ignore]
+def register_subcommand(demo_subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     """Register the ``demo pipeline`` subcommand on an existing demo parser."""
     run_parser = demo_subparsers.add_parser(
         "pipeline",

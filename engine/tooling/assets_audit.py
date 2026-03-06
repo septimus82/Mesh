@@ -10,6 +10,17 @@ from engine.behaviours.particle_emitter import validate_particle_emitter_config
 from engine.fx_presets import FxPresetRegistry, collect_presets_and_errors
 from engine.paths import reset_path_caches, resolve_path, set_content_roots
 from engine.prefabs import get_prefab_manager
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 from engine.tooling.content_contract import (
     find_particle_emitters,
     _build_prefab_index,
@@ -579,6 +590,7 @@ def _scan_tileset_file(
             tree = ET.parse(tileset_path)
             root = tree.getroot()
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("AAUD-001", f"_check_tileset_tsx: parse failed: {tileset_path}", once=False)
             errors.append(
                 AssetAuditError(
                     kind="invalid_value",
@@ -964,6 +976,7 @@ def _load_json(path: Path, repo_root: Path, errors: list[AssetAuditError]) -> di
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:  # noqa: BLE001
+        _log_swallow("AAUD-002", f"_load_json: parse failed: {path}", once=False)
         errors.append(
             AssetAuditError(
                 kind="invalid_value",
@@ -1027,6 +1040,7 @@ def _is_non_negative_int(value: Any) -> bool:
     try:
         return isinstance(value, int) and value >= 0
     except Exception:
+        _log_swallow("AAUD-003", "_is_non_negative_int")
         return False
 
 
@@ -1036,6 +1050,7 @@ def _is_non_negative_pair(value: Any) -> bool:
     try:
         return int(value[0]) >= 0 and int(value[1]) >= 0
     except Exception:
+        _log_swallow("AAUD-004", "_is_non_negative_pair")
         return False
 
 
@@ -1045,6 +1060,7 @@ def _is_positive_pair(value: Any) -> bool:
     try:
         return int(value[0]) > 0 and int(value[1]) > 0
     except Exception:
+        _log_swallow("AAUD-005", "_is_positive_pair")
         return False
 
 
@@ -1053,6 +1069,7 @@ def _display_path(path: Path, repo_root: Path) -> str:
         rel = path.resolve().relative_to(repo_root.resolve())
         return rel.as_posix()
     except Exception:
+        _log_swallow("AAUD-006", f"_display_path: relative_to failed: {path}")
         return path.as_posix()
 
 
@@ -1061,6 +1078,7 @@ def _infer_pack_id(path: Path, repo_root: Path) -> str | None:
         rel = path.resolve().relative_to(repo_root.resolve())
         parts = rel.parts
     except Exception:
+        _log_swallow("AAUD-007", f"_infer_pack_id: relative_to failed: {path}")
         parts = path.parts
     for idx, part in enumerate(parts):
         if part.lower() == "packs" and idx + 1 < len(parts):
@@ -1095,6 +1113,7 @@ def _normalize_asset_path(absolute_path: Path, repo_root: Path, fallback: str) -
         rel = absolute_path.resolve().relative_to(repo_root.resolve())
         return rel.as_posix()
     except Exception:
+        _log_swallow("AAUD-008", f"_normalize_asset_path: relative_to failed: {absolute_path}")
         return fallback.replace("\\", "/")
 
 
@@ -1147,6 +1166,7 @@ def _load_pack_audit_config(pack_order: list[Any], repo_root: Path) -> dict[str,
                     allow_orphans = _coerce_glob_list(audit_cfg.get("allow_orphans"))
                     allow_external = _coerce_glob_list(audit_cfg.get("allow_external"))
             except Exception:
+                _log_swallow("AAUD-009", f"_load_pack_audit_config: parse pack.json failed: {manifest_path}", once=False)
                 allow_orphans = []
                 allow_external = []
         config[pack_id.strip()] = {
@@ -1340,6 +1360,7 @@ def _relative_to_pack(path: Path, pack_root: Path) -> str | None:
         rel = path.resolve().relative_to(pack_root.resolve())
         return rel.as_posix()
     except Exception:
+        _log_swallow("AAUD-010", f"_relative_to_pack: relative_to failed: {path}")
         return None
 
 
@@ -1435,5 +1456,6 @@ def _hash_file(path: Path) -> str | None:
             for chunk in iter(lambda: handle.read(65536), b""):
                 hasher.update(chunk)
     except Exception:
+        _log_swallow("AAUD-011", f"_hash_file: read failed: {path}", once=False)
         return None
     return hasher.hexdigest()

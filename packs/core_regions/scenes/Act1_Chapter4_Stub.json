@@ -66,6 +66,23 @@
       "behaviour_config": {
         "SceneTransition": {
           "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter4_Bastion.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter4_stub_toch4bastion_660_260_0_0",
+      "name": "ToCh4Bastion",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 660,
+      "y": 260
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
           "target_scene": "packs/core_regions/scenes/Act1_Chapter4_Fork.json"
         }
       },

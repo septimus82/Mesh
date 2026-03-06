@@ -15,6 +15,18 @@ from engine.editor.editor_dock_model import (
 from engine.editor.editor_shell_layout import DOCK_WIDTH
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 class EditorDockController:
     def __init__(
         self,
@@ -226,6 +238,13 @@ class EditorDockController:
         autosave = getattr(host, "_autosave_workspace", None)
         if callable(autosave):
             autosave()
+        try:
+            from engine.editor.editor_ui_state import save_editor_ui_state_for_editor  # noqa: PLC0415
+
+            save_editor_ui_state_for_editor(host)
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("EDIT-001", "engine/editor/editor_dock_controller.py pass-only blanket swallow")
+            pass
 
     def toggle_right_dock(self, host: Any) -> None:
         if self._viewport_maximized:
@@ -234,6 +253,13 @@ class EditorDockController:
         autosave = getattr(host, "_autosave_workspace", None)
         if callable(autosave):
             autosave()
+        try:
+            from engine.editor.editor_ui_state import save_editor_ui_state_for_editor  # noqa: PLC0415
+
+            save_editor_ui_state_for_editor(host)
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("EDIT-002", "engine/editor/editor_dock_controller.py pass-only blanket swallow")
+            pass
 
     def toggle_viewport_maximized(self, host: Any) -> None:
         if self._viewport_maximized:
@@ -247,6 +273,13 @@ class EditorDockController:
         autosave = getattr(host, "_autosave_workspace", None)
         if callable(autosave):
             autosave()
+        try:
+            from engine.editor.editor_ui_state import save_editor_ui_state_for_editor  # noqa: PLC0415
+
+            save_editor_ui_state_for_editor(host)
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("EDIT-003", "engine/editor/editor_dock_controller.py pass-only blanket swallow")
+            pass
 
     def get_effective_dock_widths(self, window_w: int) -> tuple[int, int]:
         from engine.editor.editor_shell_layout import resolve_effective_dock_widths  # noqa: PLC0415
@@ -304,6 +337,13 @@ class EditorDockController:
             autosave = getattr(host, "_autosave_workspace", None)
             if callable(autosave):
                 autosave()
+            try:
+                from engine.editor.editor_ui_state import save_editor_ui_state_for_editor  # noqa: PLC0415
+
+                save_editor_ui_state_for_editor(host)
+            except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+                _log_swallow("EDIT-004", "engine/editor/editor_dock_controller.py pass-only blanket swallow")
+                pass
             return True
 
         if dock == "right":
@@ -321,6 +361,7 @@ class EditorDockController:
                         try:
                             problems.preview_open = False
                         except Exception:
+                            _log_swallow("EDIT-005", "engine/editor/editor_dock_controller.py pass-only blanket swallow")
                             pass
 
             if tab == "Inspector":
@@ -338,6 +379,14 @@ class EditorDockController:
             elif tab == "Problems":
                 if not getattr(host, "_problems_issues", []):
                     host.scan_scene_problems()
+                problems = getattr(host, "problems", None)
+                if problems is not None:
+                    refresher = getattr(problems, "refresh_structured_diagnostics", None)
+                    if callable(refresher):
+                        refresher()
+                    seen = getattr(problems, "mark_diagnostics_seen", None)
+                    if callable(seen):
+                        seen()
 
             logger = logging.getLogger(__name__)
             logger.info("[Editor] Right dock tab switched to %s", tab)
@@ -348,6 +397,13 @@ class EditorDockController:
             autosave = getattr(host, "_autosave_workspace", None)
             if callable(autosave):
                 autosave()
+            try:
+                from engine.editor.editor_ui_state import save_editor_ui_state_for_editor  # noqa: PLC0415
+
+                save_editor_ui_state_for_editor(host)
+            except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+                _log_swallow("EDIT-006", "engine/editor/editor_dock_controller.py pass-only blanket swallow")
+                pass
             return True
 
         return False

@@ -1,0 +1,12 @@
+{
+  "description": "Golden Slice canonical variant index (Ridge Outpost)",
+  "notes": "Canonical source for picker/HUD; delegates to golden_slice_showcase_all",
+  "steps": [
+    {
+      "args": [
+        "golden_slice_showcase_all"
+      ],
+      "cmd": "run-preset"
+    }
+  ]
+}

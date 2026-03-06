@@ -10,8 +10,20 @@ import engine.optional_arcade
 from engine.arcade_compat import activate_framebuffer, clear_framebuffer, close_framebuffer_activation
 
 from engine.log_once import log_once_with_counter
+from engine.logging_tools import get_logger
 
 from . import occluder_utils as _occluder_utils
+
+logger = get_logger(__name__)
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+
+def _log_swallow(tag: str, where: str, purpose: str, *, once: bool = False) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    logger.debug("SWALLOW[%s] %s %s", tag, where, purpose, exc_info=True)
 
 
 def _ambient_rgb_from_rgba(ambient: tuple[int, int, int, int] | tuple[int, int, int]) -> tuple[int, int, int]:
@@ -121,8 +133,12 @@ def end_hard_shadows_overlay(manager: Any) -> bool:
     if selected is None:
         try:
             manager._draw_layer_safe()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+            _log_swallow(
+                "SHDW-001",
+                "engine.lighting.shadow_pipeline.end_hard_shadows_overlay",
+                "draw_layer_safe_no_selected_light",
+            )
         manager._last_lighting_stats = {
             "shadows_mode": manager.shadows_mode,
             "occluder_count": len(manager._static_occluders),
@@ -142,8 +158,12 @@ def end_hard_shadows_overlay(manager: Any) -> bool:
     if float(radius) <= 0:
         try:
             manager._draw_layer_safe()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+            _log_swallow(
+                "SHDW-002",
+                "engine.lighting.shadow_pipeline.end_hard_shadows_overlay",
+                "draw_layer_safe_nonpositive_radius",
+            )
         manager._last_lighting_stats = {
             "shadows_mode": manager.shadows_mode,
             "occluder_count": len(manager._static_occluders),
@@ -192,14 +212,24 @@ def end_hard_shadows_overlay(manager: Any) -> bool:
 
     try:
         manager._draw_layer_safe()
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+        _log_swallow(
+            "SHDW-003",
+            "engine.lighting.shadow_pipeline.end_hard_shadows_overlay",
+            "draw_layer_safe_before_mask",
+        )
 
     drawn = 0
     try:
         render_shadow_mask(window, polys, viewport, target_texture=None, target_fbo=None)
         drawn = int(len(polys))
-    except Exception:  # pragma: no cover - best-effort  # noqa: BLE001
+    except Exception:  # pragma: no cover - best-effort  # noqa: BLE001  # REASON: shadow pipeline fallback
+        _log_swallow(
+            "SHDW-004",
+            "engine.lighting.shadow_pipeline.end_hard_shadows_overlay",
+            "render_shadow_mask_overlay",
+            once=True,
+        )
         drawn = 0
 
     manager._last_lighting_stats = {
@@ -233,12 +263,22 @@ def draw_pending_shadow_fallback(manager: Any) -> None:
         if ctx is not None and hasattr(ctx, "blend_func") and callable(getattr(ctx, "enable", None)):
             try:
                 ctx.enable(ctx.BLEND)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+                _log_swallow(
+                    "SHDW-005",
+                    "engine.lighting.shadow_pipeline.draw_pending_shadow_fallback",
+                    "ctx_enable_blend",
+                    once=True,
+                )
             try:
                 ctx.blend_func = gl.BLEND_DEFAULT
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+                _log_swallow(
+                    "SHDW-006",
+                    "engine.lighting.shadow_pipeline.draw_pending_shadow_fallback",
+                    "set_blend_func",
+                    once=True,
+                )
     draw_poly = getattr(engine.optional_arcade.arcade, "draw_polygon_filled", None)
     if not callable(draw_poly):
         return
@@ -292,7 +332,13 @@ def draw_direct_shadows(manager: Any) -> None:
     for poly in polys:
         try:
             draw_poly(poly, shadow_color)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+            _log_swallow(
+                "SHDW-007",
+                "engine.lighting.shadow_pipeline.draw_direct_shadows",
+                "draw_polygon_filled",
+                once=True,
+            )
             continue
 
     manager._last_lighting_stats = {
@@ -377,7 +423,12 @@ def end_hard_shadows_composite(manager: Any) -> bool:
     cam_pos = getattr(cam, "position", (0.0, 0.0)) if cam is not None else (0.0, 0.0)
     try:
         offset = (float(cam_pos[0]), float(cam_pos[1]))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+        _log_swallow(
+            "SHDW-008",
+            "engine.lighting.shadow_pipeline.end_hard_shadows_composite",
+            "compute_camera_offset",
+        )
         offset = (0.0, 0.0)
 
     light_activation_cm: Any | None = None
@@ -385,8 +436,13 @@ def end_hard_shadows_composite(manager: Any) -> bool:
         backend, light_activation_cm = activate_framebuffer(targets.light_fbo, backend="auto")
         if backend != "none":
             clear_framebuffer(getattr(window, "ctx", None), targets.light_fbo, 0.0, 0.0, 0.0, 0.0)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+        _log_swallow(
+            "SHDW-009",
+            "engine.lighting.shadow_pipeline.end_hard_shadows_composite",
+            "activate_or_clear_light_fbo",
+            once=True,
+        )
 
     draw = getattr(layer, "draw", None)
     if not callable(draw):
@@ -415,6 +471,12 @@ def end_hard_shadows_composite(manager: Any) -> bool:
         if not draw_ok:
             raise TypeError("LightLayer.draw signature unsupported for hard-shadow target render")
     except Exception:
+        _log_swallow(
+            "SHDW-010",
+            "engine.lighting.shadow_pipeline.end_hard_shadows_composite",
+            "draw_layer_target_compat",
+            once=True,
+        )
         close_framebuffer_activation(light_activation_cm)
         manager._last_lighting_stats = {
             "shadows_mode": manager.shadows_mode,
@@ -432,12 +494,22 @@ def end_hard_shadows_composite(manager: Any) -> bool:
         return False
     try:
         manager._apply_light_cookies(target_fbo=targets.light_fbo, offset=offset)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+        _log_swallow(
+            "SHDW-011",
+            "engine.lighting.shadow_pipeline.end_hard_shadows_composite",
+            "apply_light_cookies",
+            once=True,
+        )
     try:
         manager._apply_light_shafts(target_fbo=targets.light_fbo, offset=offset)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+        _log_swallow(
+            "SHDW-012",
+            "engine.lighting.shadow_pipeline.end_hard_shadows_composite",
+            "apply_light_shafts",
+            once=True,
+        )
     close_framebuffer_activation(light_activation_cm)
 
     cull_debug: dict[str, Any] = {}
@@ -522,8 +594,13 @@ def end_hard_shadows_composite(manager: Any) -> bool:
                 backend, mask_activation_cm = activate_framebuffer(fbo, backend="auto")
                 if backend != "none":
                     clear_framebuffer(getattr(window, "ctx", None), fbo, 1.0, 1.0, 1.0, 1.0)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+            _log_swallow(
+                "SHDW-013",
+                "engine.lighting.shadow_pipeline.end_hard_shadows_composite",
+                "activate_or_clear_mask_fbo_fallback",
+                once=True,
+            )
         finally:
             close_framebuffer_activation(mask_activation_cm)
 
@@ -644,8 +721,13 @@ def draw_hard_shadow_fallback(
             offset=offset,
             ambient_color=manager._ambient_rgba(),
         )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+        _log_swallow(
+            "SHDW-014",
+            "engine.lighting.shadow_pipeline.draw_hard_shadow_fallback",
+            "draw_layer_screen_compat",
+            once=True,
+        )
 
     if os.environ.get("MESH_SHADOWS_FALLBACK_DRAW", "1") != "1":
         stats["fallback_drawn"] = False
@@ -663,12 +745,22 @@ def draw_hard_shadow_fallback(
         if ctx is not None and hasattr(ctx, "blend_func") and callable(getattr(ctx, "enable", None)):
             try:
                 ctx.enable(ctx.BLEND)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+                _log_swallow(
+                    "SHDW-015",
+                    "engine.lighting.shadow_pipeline.draw_hard_shadow_fallback",
+                    "ctx_enable_blend",
+                    once=True,
+                )
             try:
                 ctx.blend_func = gl.BLEND_DEFAULT
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+                _log_swallow(
+                    "SHDW-016",
+                    "engine.lighting.shadow_pipeline.draw_hard_shadow_fallback",
+                    "set_blend_func",
+                    once=True,
+                )
 
     draw_poly = getattr(engine.optional_arcade.arcade, "draw_polygon_filled", None)
     if not callable(draw_poly):
@@ -686,7 +778,13 @@ def draw_hard_shadow_fallback(
         try:
             draw_poly(pts, (0, 0, 0, 140))
             drawn += 1
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: shadow pipeline fallback
+            _log_swallow(
+                "SHDW-017",
+                "engine.lighting.shadow_pipeline.draw_hard_shadow_fallback",
+                "draw_polygon_filled",
+                once=True,
+            )
             continue
 
     stats["fallback_drawn"] = bool(drawn)

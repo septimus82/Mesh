@@ -5,10 +5,6 @@ from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from ..scene_controller import SceneController
-    try:
-        import arcade
-    except ImportError:
-        arcade = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 _LOG_ONCE: set[str] = set()
@@ -95,11 +91,12 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
                 behaviour_type = cfg.get("type")
                 if not behaviour_type:
                     continue
-                params = cfg.get("params") if isinstance(cfg.get("params"), dict) else {}
+                params_raw = cfg.get("params")
+                params: dict[str, Any] = dict(params_raw) if isinstance(params_raw, dict) else {}
                 normalized_behaviours.append(
                     {
                         "type": behaviour_type,
-                        "params": dict(params),  # type: ignore
+                        "params": params,
                     }
                 )
             if normalized_behaviours:

@@ -86,7 +86,7 @@ class Dialogue(Behaviour):
         "dialogue_nodes": ParamDef(dict, default={}, description="Graph-based dialogue nodes map"),
     }
 
-    def __init__(self, entity: Sprite, window, **config) -> None:  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         merged = self._merge_entity_data(entity, config)
         super().__init__(entity, window, **merged)
         self.entity_name = getattr(entity, "mesh_name", "<unnamed>")

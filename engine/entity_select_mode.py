@@ -4,6 +4,18 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 @dataclass
 class EntitySelectState:
     selected_ids: list[str] = field(default_factory=list)
@@ -71,6 +83,7 @@ def other_authoring_modes_active(window: Any) -> bool:
         if bool(get_state().enabled):
             return True
     except Exception:  # noqa: BLE001
+        _log_swallow("ENTI-001", "engine/entity_select_mode.py pass-only blanket swallow")
         pass
 
     capture_state = getattr(window, "capture_state", None)

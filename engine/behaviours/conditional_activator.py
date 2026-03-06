@@ -45,7 +45,7 @@ class ConditionalActivator(Behaviour):
         "refresh_rate": ParamDef(float, default=0.0, description="Seconds between requirement checks (0 = every frame)"),
     }
 
-    def __init__(self, entity: "optional_arcade.arcade.Sprite", window, **config) -> None:  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         merged = self._merge_entity_data(entity, config)
         super().__init__(entity, window, **merged)
 

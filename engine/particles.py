@@ -10,20 +10,27 @@ from .culling import is_sprite_visible, sprite_bounds
 from .paths import resolve_path
 from .render_queue import DrawSpriteCmd
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 if TYPE_CHECKING:
     # Use TYPE_CHECKING import to allow type hints without runtime dependency
-    try:
-        from arcade import Sprite, SpriteList, Texture
-    except ImportError:
-        Sprite: TypeAlias = Any  # type: ignore
-        SpriteList: TypeAlias = Any  # type: ignore
-        Texture: TypeAlias = Any  # type: ignore
+    from arcade import Sprite, SpriteList, Texture
 
     from .game import GameWindow
 else:
-    Sprite = object  # type: ignore[misc,assignment]
-    SpriteList = object  # type: ignore[misc,assignment]
-    Texture = object  # type: ignore[misc,assignment]
+    Sprite = Any
+    SpriteList = Any
+    Texture = Any
 
 _DEFAULT_WHITE = (255, 255, 255)
 _DEFAULT_GOLD = (255, 215, 0)
@@ -35,6 +42,7 @@ if optional_arcade.arcade is not None:
         _DEFAULT_GOLD = optional_arcade.arcade.color.GOLD
         _DEFAULT_RED = optional_arcade.arcade.color.RED
     except Exception:
+        _log_swallow("PART-001", "engine/particles.py pass-only blanket swallow")
         pass
 
 
@@ -51,6 +59,7 @@ def _resolve_particle_seed(window: Any) -> int | None:
     try:
         return int(seed_value)
     except Exception:  # noqa: BLE001
+        _log_swallow("PART-001", "engine/particles.py blanket swallow", once=True)
         return None
 
 
@@ -375,10 +384,12 @@ class ParticleManager:
         try:
             ctx.enable(ctx.BLEND)
         except Exception:
+            _log_swallow("PART-002", "engine/particles.py pass-only blanket swallow")
             pass
         try:
             ctx.blend_func = gl.BLEND_ADDITIVE
         except Exception:
+            _log_swallow("PART-002", "engine/particles.py blanket swallow", once=True)
             self._log_additive_unavailable_once()
             return False
         return True
@@ -393,6 +404,7 @@ class ParticleManager:
         try:
             ctx.blend_func = gl.BLEND_DEFAULT
         except Exception:
+            _log_swallow("PART-003", "engine/particles.py blanket swallow", once=True)
             return
 
     def _log_additive_unavailable_once(self) -> None:
@@ -448,6 +460,7 @@ class ParticleManager:
                     else:
                         texture = optional_arcade.arcade.load_texture(resolved)
             except Exception:
+                _log_swallow("PART-004", "engine/particles.py blanket swallow", once=True)
                 texture = None
         else:
             shape = key[1] if len(key) > 1 else "circle"
@@ -492,6 +505,7 @@ class ParticleManager:
         try:
             sprite.texture = texture
         except Exception:
+            _log_swallow("PART-005", "engine/particles.py blanket swallow", once=True)
             return
         setattr(sprite, "_particle_texture_key", texture_key)
 

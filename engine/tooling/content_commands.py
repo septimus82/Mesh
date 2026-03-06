@@ -16,6 +16,17 @@ from engine.tooling.content_contract import (
     run_content_contract,
 )
 from engine.validators.reference_validator import ReferenceValidator
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 
 def index_content_command(args: argparse.Namespace) -> None:
@@ -119,6 +130,7 @@ def diff_content_command(args: argparse.Namespace) -> None:
     try:
         old_lock = read_lock(Path(args.old_lock))
     except Exception as e:
+        _log_swallow("CTCM-001", "engine/tooling/content_commands.py blanket swallow", once=True)
         print(f"[Mesh][Diff] ERROR: Failed to read old lock '{args.old_lock}': {e}")
         return
 
@@ -127,6 +139,7 @@ def diff_content_command(args: argparse.Namespace) -> None:
         try:
             new_lock = read_lock(Path(args.new_lock))
         except Exception as e:
+            _log_swallow("CTCM-002", "engine/tooling/content_commands.py blanket swallow", once=True)
             print(f"[Mesh][Diff] ERROR: Failed to read new lock '{args.new_lock}': {e}")
             return
     else:
@@ -200,6 +213,7 @@ def changelog_command(args: argparse.Namespace) -> None:
         old_lock = read_lock(Path(args.old_lock))
         new_lock = read_lock(Path(args.new_lock))
     except Exception as e:
+        _log_swallow("CTCM-003", "engine/tooling/content_commands.py blanket swallow", once=True)
         print(f"[Mesh][Changelog] ERROR: {e}")
         return
 
@@ -298,6 +312,7 @@ def audit_content_command(args: argparse.Namespace) -> None:
                         deltas[f"category_{cat}"] = count - base_count
 
         except Exception as e:
+            _log_swallow("CTCM-004", "engine/tooling/content_commands.py blanket swallow", once=True)
             print(f"[Mesh][Audit] ERROR: Failed to load baseline: {e}")
 
     # Enrich report with baseline info
@@ -423,6 +438,7 @@ def audit_trend_command(args: argparse.Namespace) -> None:
             }
             trend_data.append(entry)
         except Exception as e:
+            _log_swallow("CTCM-005", "engine/tooling/content_commands.py blanket swallow", once=True)
             print(f"[Mesh][Trend] Warning: Failed to read {p}: {e}")
 
     # Compute deltas
@@ -546,6 +562,7 @@ def content_contract_command(args: argparse.Namespace) -> int:
             log_path.parent.mkdir(parents=True, exist_ok=True)
             log_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("CTCM-006", "engine/tooling/content_commands.py blanket swallow", once=True)
             print(f"[Mesh][Contract] ERROR failed to write log: {exc}")
             return 1
 

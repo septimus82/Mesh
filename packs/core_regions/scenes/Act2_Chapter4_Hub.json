@@ -1,0 +1,356 @@
+{
+  "description": "Act 2 Chapter 4 hub: shard consequence branch to Path A or Path B.",
+  "name": "Act 2 Chapter 4 - Hub",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter4_hub_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter4_hub_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Route A is open."
+                }
+              ],
+              "text": "A Door: responds to Shard A resonance."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act2_chapter4_hub_adoorsign_320_250_0_0",
+      "mesh_name": "Act2Ch4ADoorSign",
+      "name": "Act2Ch4ADoorSign",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 320,
+      "y": 250
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Route B is open."
+                }
+              ],
+              "text": "B Door: answers to Shard B signal."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act2_chapter4_hub_bdoorsign_320_350_0_0",
+      "mesh_name": "Act2Ch4BDoorSign",
+      "name": "Act2Ch4BDoorSign",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 320,
+      "y": 350
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch4_hub_entry",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter4_hub_hubentryzone_170_300_0_0"
+        }
+      },
+      "id": "act2_chapter4_hub_hubentryzone_170_300_0_0",
+      "name": "Act2Chapter4HubEntryZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 170,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4HubEntryZone",
+          "set_flags": {
+            "act2_ch4_started": true
+          },
+          "forbid_flags": [
+            "act2_ch4_started"
+          ],
+          "once": true,
+          "toast": "Objective updated: Use your shard to proceed.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_hub_startedstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4StartedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4HubEntryZone",
+          "set_flags": {
+            "act2_ch4_hint_a_seen": true
+          },
+          "require_flags": [
+            "act2_ch3_reward_shard_a"
+          ],
+          "forbid_flags": [
+            "act2_ch4_hint_a_seen"
+          ],
+          "once": true,
+          "toast": "The A Door hums in your hand.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_hub_hintastatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4HintAStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4HubEntryZone",
+          "set_flags": {
+            "act2_ch4_hint_b_seen": true
+          },
+          "require_flags": [
+            "act2_ch3_reward_shard_b"
+          ],
+          "forbid_flags": [
+            "act2_ch4_hint_b_seen"
+          ],
+          "once": true,
+          "toast": "The B Door answers your touch.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_hub_hintbstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4HintBStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4HubEntryZone",
+          "set_flags": {
+            "act2_ch4_missing_shard_warned": true
+          },
+          "forbid_flags": [
+            "act2_ch3_reward_shard_a",
+            "act2_ch3_reward_shard_b",
+            "act2_ch4_missing_shard_warned"
+          ],
+          "once": true,
+          "toast": "Warning: no shard resonance detected. Use the recovery beacon.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_hub_missingshardwarnstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4MissingShardWarnStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch4_recovery_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter4_hub_recoveryshardzone_230_330_0_0"
+        }
+      },
+      "id": "act2_chapter4_hub_recoveryshardzone_230_330_0_0",
+      "name": "Act2Chapter4RecoveryShardZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 230,
+      "y": 330
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4RecoveryShardZone",
+          "set_flags": {
+            "act2_ch4_recovery_shard_granted": true,
+            "act2_ch3_reward_shard_a": true
+          },
+          "require_flags": [
+            "act2_ch4_missing_shard_warned"
+          ],
+          "forbid_flags": [
+            "act2_ch3_reward_shard_a",
+            "act2_ch3_reward_shard_b",
+            "act2_ch4_recovery_shard_granted"
+          ],
+          "once": true,
+          "toast": "Failsafe: Stabilizer attuned to A Door.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_hub_recoveryshardstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4RecoveryShardStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter4_PathA.json"
+        }
+      },
+      "id": "act2_chapter4_hub_toch4patha_620_250_0_0",
+      "name": "ToAct2Chapter4PathA",
+      "require_flags": [
+        "act2_ch3_reward_shard_a"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 620,
+      "y": 250
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter4_PathB.json"
+        }
+      },
+      "id": "act2_chapter4_hub_toch4pathb_620_350_0_0",
+      "name": "ToAct2Chapter4PathB",
+      "require_flags": [
+        "act2_ch3_reward_shard_b"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 620,
+      "y": 350
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter3_Rejoin.json"
+        }
+      },
+      "id": "act2_chapter4_hub_returntoact2chapter3rejoin_60_300_0_0",
+      "name": "ReturnToAct2Chapter3Rejoin",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch4_started": true
+          },
+          "require_flags": [
+            "act2_ch4_started"
+          ],
+          "once": false
+        }
+      },
+      "id": "act2_chapter4_hub_startedrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4StartedRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

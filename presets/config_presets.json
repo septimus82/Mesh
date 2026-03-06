@@ -1,0 +1,1172 @@
+{
+  "act1_chapter1": {
+    "description": "Act 1 Chapter 1 entrypoint",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/act1_chapter1.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "act1_chapter2": {
+    "description": "Act 1 Chapter 2 stub entrypoint",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/act1_chapter2_stub.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "act1_chapter3": {
+    "description": "Act 1 Chapter 3 stub entrypoint",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/act1_chapter3_stub.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "act1_chapter4": {
+    "description": "Act 1 Chapter 4 stub entrypoint",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/act1_chapter4_stub.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "act1_chapter5": {
+    "description": "Act 1 Chapter 5 finale stub entrypoint",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/act1_chapter5_stub.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "act1_demo": {
+    "description": "Act 1 short demo: prologue \u2192 chapter 1",
+    "notes": "Compatibility preset; act1_full_demo is the canonical chain.",
+    "steps": [
+      {
+        "args": [
+          "act1_prologue"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "act1_chapter1"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "act1_demo_extended": {
+    "description": "Act 1 medium demo: prologue \u2192 chapter 1 \u2192 chapter 2",
+    "notes": "Compatibility preset; act1_full_demo is the canonical chain.",
+    "steps": [
+      {
+        "args": [
+          "act1_demo"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "act1_chapter2"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "act1_full_demo": {
+    "description": "Act 1 full demo: prologue \u2192 chapter 1 \u2192 chapter 2 \u2192 chapter 3 \u2192 chapter 4 \u2192 chapter 5",
+    "notes": "Deterministic run: act1_prologue then act1_chapter1 then act1_chapter2 then act1_chapter3 then act1_chapter4 then act1_chapter5",
+    "steps": [
+      {
+        "args": [
+          "act1_prologue"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "act1_chapter1"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "act1_chapter2"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "act1_chapter3"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "act1_chapter4"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "act1_chapter5"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "act1_index": {
+    "description": "Act 1 index (picker entry)",
+    "notes": "Stable entrypoint for the Variant Picker; chains to act1_full_demo.",
+    "steps": [
+      {
+        "args": [
+          "act1_full_demo"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "act1_prologue": {
+    "description": "Act 1 Prologue entrypoint",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/act1_prologue.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "agent-ci": {
+    "description": "Agent safety + determinism gates",
+    "steps": [
+      {
+        "args": [
+          "mesh_cli.py",
+          "preset",
+          "lint"
+        ],
+        "cmd": "python"
+      },
+      {
+        "args": [
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_agent_rules_doc_guard.py"
+        ],
+        "cmd": "python"
+      },
+      {
+        "args": [
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_plan_executor_write_seam_gate.py"
+        ],
+        "cmd": "python"
+      },
+      {
+        "args": [
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_mesh_assist_diff_coverage_contract.py"
+        ],
+        "cmd": "python"
+      },
+      {
+        "args": [
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_plan_action_classification_guard.py"
+        ],
+        "cmd": "python"
+      },
+      {
+        "args": [
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_plan_schema_sync_guard.py"
+        ],
+        "cmd": "python"
+      },
+      {
+        "args": [
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_plan_schema_metadata_coverage.py"
+        ],
+        "cmd": "python"
+      },
+      {
+        "args": [
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_plan_schema_ai_out_deterministic.py"
+        ],
+        "cmd": "python"
+      },
+      {
+        "args": [
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_mesh_triage_artifacts_deterministic.py"
+        ],
+        "cmd": "python"
+      },
+      {
+        "args": [
+          "-m",
+          "pytest",
+          "-q",
+          "tests/test_mesh_assist_summary_json_deterministic.py"
+        ],
+        "cmd": "python"
+      }
+    ]
+  },
+  "ai-authoring-check": {
+    "description": "Validate AI planning schemas and examples",
+    "steps": [
+      {
+        "args": [
+          "schema",
+          "--ai-out",
+          "docs/generated/plan_ai_schema.json"
+        ],
+        "cmd": "plan"
+      },
+      {
+        "args": [
+          "lint-ai",
+          "docs/examples/ai_plan_example.json"
+        ],
+        "cmd": "plan"
+      },
+      {
+        "args": [
+          "test-ai",
+          "docs/examples/ai_plan_example.json"
+        ],
+        "cmd": "plan"
+      }
+    ]
+  },
+  "assist-golden-slice-dryrun": {
+    "description": "Agent dry-run summary (no writes) for Golden Slice",
+    "steps": [
+      {
+        "args": [
+          "--world",
+          "worlds/main_world.json",
+          "--dry-run",
+          "--summary-json"
+        ],
+        "cmd": "assist"
+      }
+    ]
+  },
+  "ci-check": {
+    "action": "check",
+    "args": {
+      "full": true
+    },
+    "description": "Run full project validation"
+  },
+  "demo_master": {
+    "description": "Master demo: Golden Slice then Act 1",
+    "notes": "Deterministic master run: golden_slice_demo_all then act1_full_demo",
+    "steps": [
+      {
+        "args": [
+          "golden_slice_demo_all"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "act1_full_demo"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "encounter-balance-sweep": {
+    "description": "Full encounter balance analysis",
+    "steps": [
+      {
+        "args": [
+          "worlds/main_world.json",
+          "--only-dungeons",
+          "--themes",
+          "moss,magma,void",
+          "--difficulty",
+          "easy,normal,hard",
+          "--out",
+          ".mesh/reports/encounter_report_full.json",
+          "--json"
+        ],
+        "cmd": "encounter-report"
+      }
+    ]
+  },
+  "encounter-ci": {
+    "description": "Run encounter report for CI",
+    "steps": [
+      {
+        "args": [
+          "worlds/main_world.json",
+          "--only-dungeons",
+          "--difficulty",
+          "easy,normal,hard",
+          "--out",
+          ".mesh/reports/encounter_report.json",
+          "--json"
+        ],
+        "cmd": "encounter-report"
+      }
+    ]
+  },
+  "encounter-ci-diff": {
+    "description": "Compare encounter report against baseline",
+    "steps": [
+      {
+        "args": [
+          "encounter-ci"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "diff",
+          ".mesh/reports/encounter_report_baseline.json",
+          ".mesh/reports/encounter_report.json",
+          "--max-elite-delta",
+          "0",
+          "--max-spawn-delta",
+          "2",
+          "--fail-on-overrun"
+        ],
+        "cmd": "encounter-report"
+      }
+    ]
+  },
+  "golden_slice": {
+    "description": "Standard progression path",
+    "lighting_showcase": false,
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/main_world.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/main_world.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice2_index": {
+    "description": "Golden Slice 2 canonical variant index (Hollowmere Outskirts)",
+    "notes": "Canonical source for picker/HUD; delegates to golden_slice2_showcase_all",
+    "steps": [
+      {
+        "args": [
+          "golden_slice2_showcase_all"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "golden_slice2_showcase": {
+    "description": "Golden Slice 2 showcase: runs G/J/K in order",
+    "notes": "Deterministic demo: golden_slice2_variant_g, _j, _k",
+    "steps": [
+      {
+        "args": [
+          "golden_slice2_variant_g"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice2_variant_j"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice2_variant_k"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "golden_slice2_showcase_all": {
+    "description": "Golden Slice 2 showcase (all): runs G/J/K/M/N in order",
+    "notes": "Deterministic demo: golden_slice2_variants g/j/k/m/n",
+    "steps": [
+      {
+        "args": [
+          "golden_slice2_variant_g"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice2_variant_j"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice2_variant_k"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice2_variant_m"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice2_variant_n"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "golden_slice2_variant_g": {
+    "description": "Hollowmere Outskirts: Beacon objective (Golden Slice 2)",
+    "lighting_showcase": false,
+    "notes": "Second location (linear) - reach the beacon beyond the boss",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice2_variant_g.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice2_variant_g.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice2_variant_j": {
+    "description": "Hollowmere Outskirts: Branching choice (Golden Slice 2)",
+    "lighting_showcase": false,
+    "notes": "Second location (choice) - pick A or B, mutually exclusive",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice2_variant_j.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice2_variant_j.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice2_variant_k": {
+    "description": "Hollowmere Outskirts: Puzzle-lite switch gate (Golden Slice 2)",
+    "lighting_showcase": false,
+    "notes": "Second location (puzzle-lite) - unlock then reach goal",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice2_variant_k.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice2_variant_k.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice2_variant_m": {
+    "description": "Hollowmere Outskirts: branching_choice (scaffolded)",
+    "lighting_showcase": false,
+    "notes": "Scaffolded golden_slice2 variant M2",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice2_variant_m.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice2_variant_m.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice2_variant_n": {
+    "description": "Hollowmere Outskirts: puzzle_lite (scaffolded)",
+    "lighting_showcase": false,
+    "notes": "Scaffolded golden_slice2 variant N2",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice2_variant_n.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice2_variant_n.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice_demo_all": {
+    "description": "Golden Slice Demo (all): runs location 1 then location 2",
+    "notes": "Deterministic demo: golden_slice_index then golden_slice2_index",
+    "steps": [
+      {
+        "args": [
+          "golden_slice_index"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice2_index"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "golden_slice_index": {
+    "description": "Golden Slice canonical variant index (Ridge Outpost)",
+    "notes": "Canonical source for picker/HUD; delegates to golden_slice_showcase_all",
+    "steps": [
+      {
+        "args": [
+          "golden_slice_showcase_all"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "golden_slice_showcase": {
+    "description": "Golden Slice showcase pack: runs G/H/I/J/K in order",
+    "notes": "Deterministic demo: golden_slice_variant_g, _h, _i, _j, _k",
+    "steps": [
+      {
+        "args": [
+          "golden_slice_variant_g"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice_variant_h"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice_variant_i"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice_variant_j"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice_variant_k"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "golden_slice_showcase_all": {
+    "description": "Golden Slice showcase (all): runs G/H/I/J/K/L in order",
+    "notes": "Deterministic demo: golden_slice_variants g/h/i/j/k/l",
+    "steps": [
+      {
+        "args": [
+          "golden_slice_variant_g"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice_variant_h"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice_variant_i"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice_variant_j"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice_variant_k"
+        ],
+        "cmd": "run-preset"
+      },
+      {
+        "args": [
+          "golden_slice_variant_l"
+        ],
+        "cmd": "run-preset"
+      }
+    ]
+  },
+  "golden_slice_variant_b": {
+    "description": "Alternative starting loadout",
+    "lighting_showcase": false,
+    "notes": "Focus on ranged combat",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_b.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_b.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice_variant_c": {
+    "description": "Hard mode with scarce resources",
+    "lighting_showcase": false,
+    "notes": "Good luck!",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_c.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_c.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice_variant_d": {
+    "description": "Speedrun mode: faster opener, earlier boss, same rewards",
+    "lighting_showcase": false,
+    "notes": "Timer starts on input",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_d.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_d.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice_variant_e": {
+    "description": "Lantern halls: occluders showcase",
+    "lighting_showcase": true,
+    "notes": "Best with lighting-shadowmask-demo",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_e.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_e.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice_variant_f": {
+    "description": "Prefab showcase: variant patch set",
+    "lighting_showcase": false,
+    "notes": "Uses variant_id wiring (no new systems)",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_f.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_f.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice_variant_g": {
+    "description": "Beacon objective: quest + reward toast",
+    "lighting_showcase": false,
+    "notes": "Reach the beacon behind the boss",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_g.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_g.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice_variant_h": {
+    "description": "Relay objective: quest + reward toast (content-only)",
+    "lighting_showcase": false,
+    "notes": "Reactivate the relay beyond the boss",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_h.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_h.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice_variant_i": {
+    "description": "Signal cache objective: quest + reward toast (content-only)",
+    "lighting_showcase": false,
+    "notes": "Secure the cache beyond the boss",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_i.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_i.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice_variant_j": {
+    "description": "Signal fork: branching choice (content-only)",
+    "lighting_showcase": false,
+    "notes": "Choose Path A or Path B",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_j.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_j.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice_variant_k": {
+    "description": "Puzzle-lite switch gate: unlock event gates goal quest (content-only)",
+    "lighting_showcase": false,
+    "notes": "Flip the switch, then reach the exit",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_k.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_k.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "golden_slice_variant_l": {
+    "description": "Ridge Outpost: linear (scaffolded)",
+    "lighting_showcase": false,
+    "notes": "Scaffolded golden_slice variant L",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_l.json",
+          "--dry-run",
+          "--strict",
+          "--check-refs"
+        ],
+        "cmd": "pipeline"
+      },
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_l.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "lighting-shadowmask-demo": {
+    "description": "Lighting demo: shadow mask prototype",
+    "env": {
+      "MESH_SHADOWCAST_MASK": "1"
+    },
+    "notes": "Shadow mask enabled",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_e.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "lighting-shadowmask-demo-debug": {
+    "description": "Lighting demo: shadow mask + debug rays",
+    "env": {
+      "MESH_SHADOWCAST_DEBUG": "1",
+      "MESH_SHADOWCAST_MASK": "1"
+    },
+    "notes": "Shadow mask + rays",
+    "steps": [
+      {
+        "args": [
+          "--plan",
+          "plans/golden_slice_noop.json",
+          "--world",
+          "worlds/golden_slice_variant_e.json",
+          "--dry-run",
+          "--demo"
+        ],
+        "cmd": "pipeline"
+      }
+    ]
+  },
+  "lighting-showcase": {
+    "description": "Comprehensive lighting demo: static lights, dynamic lights, flicker, shafts, shadows, occluders",
+    "env": {
+      "MESH_SHADOWCAST_MASK": "1"
+    },
+    "notes": "All lighting features enabled with shadow mask",
+    "steps": [
+      {
+        "args": [
+          "--scene",
+          "scenes/lighting_showcase.json"
+        ],
+        "cmd": "demo"
+      }
+    ]
+  },
+  "lighting-showcase-debug": {
+    "description": "Lighting showcase with debug geometry overlay",
+    "env": {
+      "MESH_LIGHTING_DEBUG_GEOMETRY": "1",
+      "MESH_SHADOWCAST_DEBUG": "1",
+      "MESH_SHADOWCAST_MASK": "1"
+    },
+    "notes": "Shadow mask + debug rays + occluder outlines",
+    "steps": [
+      {
+        "args": [
+          "--scene",
+          "scenes/lighting_showcase.json"
+        ],
+        "cmd": "demo"
+      }
+    ]
+  }
+}

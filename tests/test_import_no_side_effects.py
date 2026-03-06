@@ -13,6 +13,7 @@ def test_importing_editor_controller_does_not_load_prefab_palette(monkeypatch):
         lambda *a, **k: (_ for _ in ()).throw(AssertionError("load_prefab_palette should not run at import time")),
     )
 
+    sys.modules.pop("engine.editor_controller_core", None)
     sys.modules.pop("engine.editor_controller", None)
     mod = importlib.import_module("engine.editor_controller")
     assert getattr(mod, "PREFAB_PALETTE") is None

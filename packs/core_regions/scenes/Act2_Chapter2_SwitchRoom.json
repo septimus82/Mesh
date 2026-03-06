@@ -1,0 +1,315 @@
+{
+  "description": "Act 2 Chapter 2 switch room: teach hazard suppression switch before the run.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter2_switchroom_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter2_switchroom_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "I will pull the switch."
+                }
+              ],
+              "text": "Control tech: Pull the hazard switch, then move before suppression fades."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act2_chapter2_switchroom_controltech_260_300_0_0",
+      "mesh_name": "Act2Ch2ControlTech",
+      "name": "Act2Ch2ControlTech",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 260,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Understood."
+                }
+              ],
+              "text": "Switch panel: Hazard suppression is temporary."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act2_chapter2_switchroom_switchsign_310_330_0_0",
+      "mesh_name": "Act2Ch2SwitchSign",
+      "name": "Act2Ch2SwitchSign",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 310,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch2_switch_briefing",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter2_switchroom_act2chapter2switchroombriefingzone_220_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter2_switchroom_act2chapter2switchroombriefingzone_220_300_0_0",
+      "name": "Act2Chapter2SwitchRoomBriefingZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 220,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter2SwitchRoomBriefingZone",
+          "set_flags": {
+            "act2_ch2_switch_briefed": true
+          },
+          "forbid_flags": [
+            "act2_ch2_switch_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Pull the hazard control switch.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_switchroom_act2ch2switchbriefedstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2SwitchBriefedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "event_id": "act2_ch2_switch_pull",
+          "one_shot": true
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "act2_chapter2_switchroom_act2ch2hazardcontrolswitch_360_300_0_0",
+      "name": "Act2Ch2HazardControlSwitch",
+      "sprite": "assets/placeholder.png",
+      "tag": "interactable",
+      "x": 360,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "act2_ch2_switch_pull",
+          "set_flags": {
+            "act2_ch2_switch_pulled": true,
+            "act2_ch2_hazard_suppressed": true,
+            "act2_ch2_hazard_suppressed_until": true
+          },
+          "forbid_flags": [
+            "act2_ch2_switch_pulled"
+          ],
+          "once": true,
+          "toast": "Hazard suppression active.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_switchroom_act2ch2switchpulledstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2SwitchPulledStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter2_HazardRun.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter2_switchroom_toact2chapter2hazardrun_860_300_0_0",
+      "name": "ToAct2Chapter2HazardRun",
+      "require_flags": [
+        "act2_ch2_switch_pulled"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 860,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter1_SafeRoom.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter2_switchroom_returntoact2chapter1saferoom_60_300_0_0",
+      "name": "ReturnToAct2Chapter1SafeRoom",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch2_switchroom_reentry_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter2_switchroom_act2chapter2switchroomreentryprobezone_130_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter2_switchroom_act2chapter2switchroomreentryprobezone_130_300_0_0",
+      "name": "Act2Chapter2SwitchRoomReentryProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 130,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter2SwitchRoomReentryProbeZone",
+          "set_flags": {
+            "act2_ch2_switchroom_reentry_1": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act2_ch2_switch_pulled",
+            "act2_ch2_switchroom_reentry_1"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_switchroom_act2ch2switchroomreentryvisitstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2SwitchRoomReentryVisitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter2SwitchRoomReentryProbeZone",
+          "set_flags": {
+            "act2_ch2_switchroom_reentry_2": true
+          },
+          "once": true,
+          "require_flags": [
+            "act2_ch2_switchroom_reentry_1"
+          ],
+          "forbid_flags": [
+            "act2_ch2_switch_pulled",
+            "act2_ch2_switchroom_reentry_2"
+          ],
+          "toast": "Hint: Pull the hazard control switch before entering the run.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_switchroom_act2ch2switchroomreentryhintstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2SwitchRoomReentryHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch2_switch_pulled": true
+          },
+          "require_flags": [
+            "act2_ch2_switch_pulled"
+          ],
+          "once": false
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_switchroom_act2ch2switchpulledrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2SwitchPulledRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 2 Chapter 2 - Switch Room",
+  "schema_version": 1,
+  "version": 1
+}

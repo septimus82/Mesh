@@ -1,11 +1,21 @@
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any, Callable, List, cast
 
 from ..event_emit import emit_gameplay_event
 from .base import Behaviour, ParamDef
 from .patrol import PatrolBehaviour
 from .registry import register_behaviour
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+
+def _log_swallow(tag: str, context: str) -> None:
+    if tag in _SWALLOW_ONCE_TAGS:
+        return
+    _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def _norm_hour(value: float) -> float:
@@ -75,7 +85,7 @@ class NpcSchedule(Behaviour):
             if isinstance(beh, PatrolBehaviour):
                 return beh
             if hasattr(beh, "set_path_id") or hasattr(beh, "patrol_points"):
-                return beh  # type: ignore[return-value]
+                return cast(PatrolBehaviour, beh)
         return None
 
     def _get_time_of_day_hours(self) -> float:
@@ -85,12 +95,14 @@ class NpcSchedule(Behaviour):
             if callable(getter):
                 try:
                     return float(getter())
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: npc schedule fallback isolation
+                    _log_swallow("NPCS-001", "get_time_of_day_hours:getter")
                     self._log_exception_once("get_time_of_day_hours:getter", exc)
             if hasattr(dn, "hour"):
                 try:
                     return float(getattr(dn, "hour"))
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: npc schedule fallback isolation
+                    _log_swallow("NPCS-002", "get_time_of_day_hours:hour")
                     self._log_exception_once("get_time_of_day_hours:hour", exc)
         gs = getattr(self.window, "game_state_controller", None)
         if gs is not None:
@@ -139,7 +151,8 @@ class NpcSchedule(Behaviour):
                         source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
                         source_behaviour="NpcSchedule",
                     )
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: npc schedule fallback isolation
+                    _log_swallow("NPCS-003", "emit_enter_event")
                     self._log_exception_once("emit_enter_event", exc)
 
     # Stand mode ------------------------------------------------------
@@ -149,12 +162,14 @@ class NpcSchedule(Behaviour):
         if x is not None:
             try:
                 self.entity.center_x = float(x)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: npc schedule fallback isolation
+                _log_swallow("NPCS-004", "set_center_x")
                 self._log_exception_once("set_center_x", exc)
         if y is not None:
             try:
                 self.entity.center_y = float(y)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: npc schedule fallback isolation
+                _log_swallow("NPCS-005", "set_center_y")
                 self._log_exception_once("set_center_y", exc)
         facing = sched.get("facing")
         if facing:
@@ -162,7 +177,8 @@ class NpcSchedule(Behaviour):
             if controller is not None and hasattr(controller, "set_facing"):
                 try:
                     controller.set_facing(str(facing))
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: npc schedule fallback isolation
+                    _log_swallow("NPCS-006", "set_facing")
                     self._log_exception_once("set_facing", exc)
         self._disable_patrol()
 
@@ -176,15 +192,18 @@ class NpcSchedule(Behaviour):
                 try:
                     points.append((float(p["x"]), float(p["y"])))
                 except Exception:
+                    _log_swallow("NPCS-007", "_apply_patrol_schedule: parse patrol point")
                     continue
             self._patrol_behaviour.points = points
             self._patrol_behaviour.current_index = 0
             self._patrol_behaviour._disabled = len(points) < 2
         if patrol_id and self._patrol_behaviour is not None:
-            if hasattr(self._patrol_behaviour, "set_path_id"):
+            set_path_id = getattr(self._patrol_behaviour, "set_path_id", None)
+            if callable(set_path_id):
                 try:
-                    self._patrol_behaviour.set_path_id(patrol_id)  # type: ignore[attr-defined]
-                except Exception as exc:  # noqa: BLE001
+                    cast(Callable[[Any], None], set_path_id)(patrol_id)
+                except Exception as exc:  # noqa: BLE001  # REASON: npc schedule fallback isolation
+                    _log_swallow("NPCS-008", "set_path_id")
                     self._log_exception_once("set_path_id", exc)
             else:
                 cfg = getattr(self._patrol_behaviour, "config", None)
@@ -195,22 +214,26 @@ class NpcSchedule(Behaviour):
     def _enable_patrol(self) -> None:
         if self._patrol_behaviour is None:
             return
-        if hasattr(self._patrol_behaviour, "set_enabled"):
+        set_enabled = getattr(self._patrol_behaviour, "set_enabled", None)
+        if callable(set_enabled):
             try:
-                self._patrol_behaviour.set_enabled(True)  # type: ignore[attr-defined]
+                cast(Callable[[bool], None], set_enabled)(True)
                 return
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: npc schedule fallback isolation
+                _log_swallow("NPCS-009", "enable_patrol")
                 self._log_exception_once("enable_patrol", exc)
         self._patrol_behaviour._disabled = False
 
     def _disable_patrol(self) -> None:
         if self._patrol_behaviour is None:
             return
-        if hasattr(self._patrol_behaviour, "set_enabled"):
+        set_enabled = getattr(self._patrol_behaviour, "set_enabled", None)
+        if callable(set_enabled):
             try:
-                self._patrol_behaviour.set_enabled(False)  # type: ignore[attr-defined]
+                cast(Callable[[bool], None], set_enabled)(False)
                 return
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: npc schedule fallback isolation
+                _log_swallow("NPCS-010", "disable_patrol")
                 self._log_exception_once("disable_patrol", exc)
         self._patrol_behaviour._disabled = True
 

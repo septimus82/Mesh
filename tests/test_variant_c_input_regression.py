@@ -1,5 +1,6 @@
 
 import unittest
+from typing import Any
 from unittest.mock import MagicMock, patch
 import arcade
 from engine.ui_controller import UIController
@@ -7,9 +8,9 @@ from engine.input_controller import InputController
 from engine.ui import UIElement
 
 class MockGameWindow:
-    def __init__(self):
-        self.ui_controller = None
-        self.input_controller = None
+    def __init__(self) -> None:
+        self.ui_controller: Any = None
+        self.input_controller: Any = None
         self.console_controller = MagicMock()
         self.console_controller.active = False  # Ensure console is not active by default
         self.console_controller.process_key = MagicMock(return_value=False)
@@ -39,8 +40,8 @@ class TestVariantCInputRegression(unittest.TestCase):
         self.window = MockGameWindow()
         
         # Initialize controllers manually
-        self.window.ui_controller = UIController(self.window)
-        self.window.input_controller = InputController(self.window)
+        self.window.ui_controller = UIController(self.window)  # type: ignore[arg-type]
+        self.window.input_controller = InputController(self.window)  # type: ignore[arg-type]
         
     def test_not_blocked_on_start(self):
         """Assert ui_controller.input_blocked is False after init."""
@@ -99,7 +100,7 @@ class TestVariantCInputRegression(unittest.TestCase):
                     return True
                 return False
 
-        blocking_ui = BlockingUI(self.window)
+        blocking_ui = BlockingUI(self.window)  # type: ignore[arg-type]
         self.window.ui_controller.register_ui_element(blocking_ui)
         
         self.assertTrue(self.window.ui_controller.input_blocked)
@@ -126,7 +127,7 @@ class TestVariantCInputRegression(unittest.TestCase):
             def blocks_input(self):
                 return self.visible
 
-        blocking_ui = BlockingActionUI(self.window)
+        blocking_ui = BlockingActionUI(self.window)  # type: ignore[arg-type]
         self.window.ui_controller.register_ui_element(blocking_ui)
         self.assertTrue(self.window.ui_controller.input_blocked)
         

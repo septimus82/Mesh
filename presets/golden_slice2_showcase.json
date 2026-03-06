@@ -1,0 +1,24 @@
+{
+  "description": "Golden Slice 2 showcase: runs G/J/K in order",
+  "notes": "Deterministic demo: golden_slice2_variant_g, _j, _k",
+  "steps": [
+    {
+      "args": [
+        "golden_slice2_variant_g"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "golden_slice2_variant_j"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "golden_slice2_variant_k"
+      ],
+      "cmd": "run-preset"
+    }
+  ]
+}

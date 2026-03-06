@@ -1,0 +1,408 @@
+{
+  "description": "Act 3 Chapter 2 routing hub: engage Route A or B to route power, with fail-safe bypass.",
+  "name": "Act 3 Chapter 2 - Route Hub",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter2_routehub_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter2_routehub_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Switch route."
+                }
+              ],
+              "text": "Console A energizes upper conduits."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act3_chapter2_routehub_routeaconsole_360_300_0_0",
+      "mesh_name": "Act3Ch2RouteAConsole",
+      "name": "Act3Ch2RouteAConsole",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 360,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Switch route."
+                }
+              ],
+              "text": "Console B energizes lower conduits."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act3_chapter2_routehub_routebconsole_560_300_0_0",
+      "mesh_name": "Act3Ch2RouteBConsole",
+      "name": "Act3Ch2RouteBConsole",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 560,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch2_route_a_console",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter2RouteAConsoleZone"
+        }
+      },
+      "id": "act3_chapter2_routehub_routeaconsolezone_360_300_0_0",
+      "name": "Act3Chapter2RouteAConsoleZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 360,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch2_route_b_console",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter2RouteBConsoleZone"
+        }
+      },
+      "id": "act3_chapter2_routehub_routebconsolezone_560_300_0_0",
+      "name": "Act3Chapter2RouteBConsoleZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 560,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter2RouteAConsoleZone",
+          "set_flags": {
+            "act3_ch2_route_a": true,
+            "act3_ch2_route_b": false
+          },
+          "once": false,
+          "toast": "Route A engaged.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter2_routehub_routeastatesync_m1000_m1000_0_0",
+      "name": "Act3Ch2RouteAStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter2RouteBConsoleZone",
+          "set_flags": {
+            "act3_ch2_route_b": true,
+            "act3_ch2_route_a": false
+          },
+          "once": false,
+          "toast": "Route B engaged.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter2_routehub_routebstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch2RouteBStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch2_power_junction",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter2PowerJunctionZone"
+        }
+      },
+      "id": "act3_chapter2_routehub_powerjunctionzone_760_300_0_0",
+      "name": "Act3Chapter2PowerJunctionZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 760,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter2PowerJunctionZone",
+          "set_flags": {
+            "act3_ch2_power_routed": true
+          },
+          "require_flags": [
+            "act3_ch2_route_a"
+          ],
+          "forbid_flags": [
+            "act3_ch2_power_routed"
+          ],
+          "once": true,
+          "toast": "Power routed. Exit unlocked.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter2_routehub_routeapowerstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch2RouteAPowerStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter2PowerJunctionZone",
+          "set_flags": {
+            "act3_ch2_power_routed": true
+          },
+          "require_flags": [
+            "act3_ch2_route_b"
+          ],
+          "forbid_flags": [
+            "act3_ch2_power_routed"
+          ],
+          "once": true,
+          "toast": "Power routed. Exit unlocked.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter2_routehub_routebpowerstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch2RouteBPowerStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch2_bypass_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter2BypassProbeZone"
+        }
+      },
+      "id": "act3_chapter2_routehub_bypassprobezone_180_300_0_0",
+      "name": "Act3Chapter2BypassProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 180,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter2BypassProbeZone",
+          "set_flags": {
+            "act3_ch2_bypass_open": true
+          },
+          "forbid_flags": [
+            "act3_ch2_route_a",
+            "act3_ch2_route_b",
+            "act3_ch2_power_routed",
+            "act3_ch2_bypass_open"
+          ],
+          "once": true,
+          "toast": "Warning: no route engaged. Bypass opened.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter2_routehub_bypassstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch2BypassStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter2_Exit.json"
+        }
+      },
+      "id": "act3_chapter2_routehub_toexit_1040_300_0_0",
+      "name": "ToAct3Chapter2Exit",
+      "require_flags": [
+        "act3_ch2_power_routed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter2_Exit.json"
+        }
+      },
+      "id": "act3_chapter2_routehub_toexitbypass_1040_220_0_0",
+      "name": "ToAct3Chapter2ExitBypass",
+      "require_flags": [
+        "act3_ch2_bypass_open"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 220
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter2_Entry.json"
+        }
+      },
+      "id": "act3_chapter2_routehub_returntoentry_60_300_0_0",
+      "name": "ReturnToAct3Chapter2Entry",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch2_power_routed": true
+          },
+          "require_flags": [
+            "act3_ch2_power_routed"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter2_routehub_powerrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch2PowerRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch2_bypass_open": true
+          },
+          "require_flags": [
+            "act3_ch2_bypass_open"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter2_routehub_bypassrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch2BypassRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

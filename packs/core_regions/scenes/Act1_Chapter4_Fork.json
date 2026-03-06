@@ -134,7 +134,10 @@
       "sprite": "assets/placeholder.png",
       "tag": "door",
       "x": 820,
-      "y": 300
+      "y": 300,
+      "require_flags": [
+        "act1_ch4_bastion_cleared"
+      ]
     },
     {
       "behaviour_config": {
@@ -152,6 +155,55 @@
       "tag": "door",
       "x": 60,
       "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch4_checkpoint_reached",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter4_fork_ch4checkpointzone_780_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter4_fork_ch4checkpointzone_780_300_0_0",
+      "name": "Ch4CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 780,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch4CheckpointZone",
+          "set_flags": {
+            "act1_ch4_checkpoint": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch4_bastion_cleared"
+          ],
+          "forbid_flags": [
+            "act1_ch4_checkpoint"
+          ],
+          "toast": "Checkpoint reached: Chapter 4",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter4_fork_ch4checkpointstatesync_m1000_m1000_0_0",
+      "name": "Ch4CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
     }
   ],
   "name": "Act 1 Chapter 4 - Fork",

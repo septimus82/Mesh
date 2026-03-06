@@ -364,6 +364,11 @@ class EditorDebugOverlayController:
         editor._verify_snapshot_cached_text = "\n".join(self._format_verify_health_snapshot_lines(snapshot))
         editor._verify_snapshot_cached_mtime_map = mtime_map
         editor._verify_snapshot_next_refresh_ts = now + 0.5
+        problems = getattr(editor, "problems", None)
+        if problems is not None:
+            refresher = getattr(problems, "refresh_structured_diagnostics", None)
+            if callable(refresher):
+                refresher()
         return self._normalize_verify_snapshot_payload(snapshot)
 
     def _resolve_verify_artifacts_dir(self) -> Path | None:

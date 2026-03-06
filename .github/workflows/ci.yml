@@ -129,6 +129,64 @@ jobs:
           path: |
             artifacts/arcade3_canary/**
 
+  web-smoke:
+    name: web-smoke (required, py3.11)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            pyproject.toml
+            pytest.ini
+
+      - name: Install dependencies (web smoke)
+        run: |
+          python -m pip install -U pip
+          python -m pip install -e ".[dev]"
+          python -m pip install pygbag
+
+      - name: Build web target
+        run: |
+          python -m mesh_cli build-web --out artifacts/web_build
+
+      - name: Runtime-only smoke (no editor imports)
+        run: |
+          python -m mesh_cli play-runtime --headless-smoke --smoke-artifact artifacts/runtime_smoke_web_gate.json
+
+      - name: Web structural smoke
+        run: |
+          python -m mesh_cli web-smoke --build-dir artifacts/web_build --artifact artifacts/web_smoke.json
+
+      - name: Upload web smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-smoke-artifacts
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            artifacts/web_build/**
+            artifacts/web_smoke.json
+            artifacts/runtime_smoke_web_gate.json
+
   tests:
     name: tests (${{ matrix.os }}, py${{ matrix.python }})
     runs-on: ${{ matrix.os }}

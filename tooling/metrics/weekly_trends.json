@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "exception_budget_ok": true,
+      "mypy_budget_ok": true,
+      "package_version": "0.5.0",
+      "public_api_semver": "1.0.0",
+      "shadow_backend_selected": "none",
+      "swallowed_total": 0,
+      "timestamp_utc": "2026-02-18T19:55:28Z",
+      "verify_ok": true,
+      "verify_total_ms": 65527
+    }
+  ],
+  "schema_version": 1
+}

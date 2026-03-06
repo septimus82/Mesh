@@ -35,6 +35,12 @@ def handle_text_input(controller: EditorController, text: str) -> None:
             appender(text)
         return
 
+    if getattr(controller, "asset_browser_active", False):
+        asset_browser = getattr(controller, "asset_browser", None)
+        handler = getattr(asset_browser, "handle_asset_browser_text_input", None) if asset_browser is not None else None
+        if callable(handler) and handler(text):
+            return
+
     if is_scene_browser_active(controller):
         handler = getattr(controller, "_handle_scene_browser_text_input", None)
         if callable(handler) and handler(text):

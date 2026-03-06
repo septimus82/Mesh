@@ -6,7 +6,7 @@ import os
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 from unittest.mock import MagicMock
 
 from engine.encounter_sets import get_theme_manager
@@ -14,6 +14,17 @@ from engine.encounter_cost import get_effective_encounter_cost, is_boss_payload,
 from engine.prefabs import get_prefab_manager
 from engine.scene_loader import SceneLoader
 from engine.path_norm import normalize_scene_path
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 
 @dataclass
@@ -143,6 +154,7 @@ class HeadlessSceneController:
             try:
                 preset = get_theme_manager().get_encounter_preset(preset_id)
             except Exception:
+                _log_swallow("ENCR-001", "engine/encounter_report.py blanket swallow", once=True)
                 preset = None
 
         base_budget = settings.get("encounter_budget")
@@ -430,6 +442,7 @@ def generate_encounter_report(
                 if "encounter_budget_profiles" in data:
                     profiles = data["encounter_budget_profiles"]
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("ENCR-002", "engine/encounter_report.py blanket swallow", once=True)
             if not getattr(generate_encounter_report, "_mesh_profile_load_error_logged", False):
                 print(f"[Mesh][EncounterReport] ERROR loading encounter budget profiles: {exc}")
                 setattr(generate_encounter_report, "_mesh_profile_load_error_logged", True)
@@ -448,6 +461,7 @@ def generate_encounter_report(
             # Load raw scene data
             original_scene_data = loader.load_scene(path)
         except Exception as e:
+            _log_swallow("ENCR-003", "engine/encounter_report.py blanket swallow", once=True)
             print(f"Failed to load {path}: {e}")
             continue
 
@@ -505,6 +519,7 @@ def _extract_stats(scene_data: Dict[str, Any], path: str, difficulty: str, contr
         try:
             preset = get_theme_manager().get_encounter_preset(preset_id)
         except Exception:
+            _log_swallow("ENCR-004", "engine/encounter_report.py blanket swallow", once=True)
             preset = None
 
     total_cost = 0.0
@@ -701,8 +716,9 @@ def compute_current_scene_encounter_report(scene_controller: Any) -> EncounterSc
     profile = settings.get("encounter_budget_profile") if isinstance(settings, dict) else None
     difficulty = str(profile).strip() if isinstance(profile, str) and profile.strip() else "normal"
     try:
-        return _extract_stats(scene_data, scene_path, difficulty, scene_controller)  # type: ignore[arg-type]
+        return _extract_stats(scene_data, scene_path, difficulty, cast(HeadlessSceneController, scene_controller))
     except Exception:  # noqa: BLE001
+        _log_swallow("ENCR-005", "engine/encounter_report.py blanket swallow", once=True)
         return None
 
 

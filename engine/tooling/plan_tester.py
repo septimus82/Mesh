@@ -4,13 +4,25 @@ import shutil
 import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from engine import json_io
 from engine.game_state_controller import GameStateController
 from engine.paths import get_content_roots, set_content_roots
 from engine.scene_loader import SceneLoader
 from engine.tooling.plan_types import Plan
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 @dataclass
@@ -167,6 +179,7 @@ class PlanTester:
                 elif isinstance(data, list):
                     all_quests.extend(data)
             except Exception as e:
+                _log_swallow("PLNT-001", "engine/tooling/plan_tester.py blanket swallow", once=True)
                 print(f"[Mesh][Tester] Failed to load quests.json: {e}")
 
         # Load pack quests
@@ -182,6 +195,7 @@ class PlanTester:
                         elif isinstance(data, list):
                             all_quests.extend(data)
                     except Exception as e:
+                        _log_swallow("PLNT-002", "engine/tooling/plan_tester.py blanket swallow", once=True)
                         print(f"[Mesh][Tester] Failed to load quests from {pack_dir.name}: {e}")
 
         # Convert list to dict keyed by ID for QuestManager
@@ -216,6 +230,7 @@ class PlanTester:
                 result["error"] = str(e)
                 all_passed = False
             except Exception as e:
+                _log_swallow("PLNT-003", "engine/tooling/plan_tester.py blanket swallow", once=True)
                 print(f"ERROR: {e}")
                 result["error"] = str(e)
                 all_passed = False
@@ -230,7 +245,7 @@ class PlanTester:
 
     def _run_quest_test(self, test: TestSpec, quests_data: Dict[str, Any]):
         game = MockGame()
-        controller = GameStateController(game) # type: ignore
+        controller = GameStateController(cast(Any, game))
         controller.quests.load_from_dict(quests_data)
 
         # Setup
@@ -357,6 +372,7 @@ class PlanTester:
                     if resolved.exists():
                         continue
                 except Exception:
+                    _log_swallow("PLAN-001", "engine/tooling/plan_tester.py pass-only blanket swallow")
                     pass
 
                 # 2. Try resolving as Scene ID in known worlds
@@ -377,6 +393,7 @@ class PlanTester:
                                         found = True
                                         break
                         except Exception:
+                            _log_swallow("PLNT-004", "engine/tooling/plan_tester.py blanket swallow", once=True)
                             continue
 
                 if found:
@@ -397,6 +414,7 @@ class PlanTester:
                                 if scene_path.exists():
                                     found = True
                     except Exception:
+                        _log_swallow("PLAN-002", "engine/tooling/plan_tester.py pass-only blanket swallow")
                         pass
 
                 if found:
@@ -495,6 +513,7 @@ def run_test_ai(plan_path: str, out: str | None = None, junit: str | None = None
     try:
         plan = Plan.from_dict(json.loads(p.read_text(encoding="utf-8")))
     except Exception as e:
+        _log_swallow("PLNT-005", "engine/tooling/plan_tester.py blanket swallow", once=True)
         print(f"Invalid plan: {e}")
         return 1
 

@@ -9,6 +9,18 @@ from engine.tooling.plan_apply import apply_plan
 from engine.tooling.tool_result import Issue, ToolResult
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def launch_demo(start_scene: str | None = None, world_path: str | None = None) -> int:
     """Patchable wrapper for launching the demo without importing `arcade` at module import time."""
     from engine.tooling.demo_runner import launch_demo as _launch_demo
@@ -123,6 +135,7 @@ def run_pipeline_result(
                             if isinstance(scene_entry, dict) and "path" in scene_entry:
                                 start_scene = scene_entry["path"]
             except Exception: # noqa: S110
+                _log_swallow("PIPE-001", "engine/tooling/pipeline_runner.py pass-only blanket swallow")
                 pass
 
         rc = _run_step("demo", lambda: launch_demo(start_scene=start_scene, world_path=world_path))

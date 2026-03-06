@@ -2,9 +2,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import importlib.util
+from engine.logging_tools import get_logger
 from pathlib import Path
 import time
-from typing import Any, Callable
+from typing import Any, Callable, cast
+
+logger = get_logger(__name__)
+
+def _log_swallow(tag: str, where: str, purpose: str) -> None:
+    logger.debug(
+        "SWALLOWED_EXCEPTION SWALLOW[%s] %s %s",
+        tag,
+        where,
+        purpose,
+        exc_info=True,
+    )
+
 
 
 @dataclass(slots=True)
@@ -154,7 +167,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                                 )
                             )
                     error = "" if code == 0 else f"failed with code {code}"
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: verify-demo step isolation
+                    _log_swallow("VSTP-001", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                     code = 1
                     error = f"{type(exc).__name__}: {exc}"
                 _add_step("verify-demo", code, error=error, artifact=None)
@@ -193,7 +207,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 if code != 0:
                     failure_seen = True
                     exit_code = 1 if code != 2 else 2
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: verify-replays step isolation
+                _log_swallow("VSTP-002", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 _add_step("verify-replays", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
                 failure_seen = True
                 exit_code = 1
@@ -212,7 +227,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 with suppress_stdout():
                     code = int(validate_all.main([world_path, "--strict", "--schema-strict"]))
                 error = "" if code == 0 else f"failed with code {code}"
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: verify-strict step isolation
+                _log_swallow("VSTP-003", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
             _add_step("verify-strict", code, error=error, artifact=None)
@@ -236,7 +252,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     error = "skipped: tooling package unavailable"
                 else:
                     raise
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: mypy-gate step isolation
+                _log_swallow("VSTP-004", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -264,7 +281,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 if metrics_path.exists():
                     try:
                         previous_count = int(metrics_path.read_text(encoding="utf-8").strip() or "0")
-                    except Exception:
+                    except Exception:  # REASON: mypy-baseline-guard metrics fallback
+                        _log_swallow("VSTP-005", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                         previous_count = current_count
                 else:
                     previous_count = current_count
@@ -282,7 +300,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     error = "skipped: tooling package unavailable"
                 else:
                     raise
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: mypy-baseline-guard step isolation
+                _log_swallow("VSTP-006", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -307,7 +326,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     error = "skipped: tooling package unavailable"
                 else:
                     raise
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: mypy-island step isolation
+                _log_swallow("VSTP-007", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -345,7 +365,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             trailing_newline=True,
                         )
                     artifacts_written["exception_budget"] = _normalize_path_for_json(target, repo_root=repo_root)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: exception-budget-guard step isolation
+                _log_swallow("VSTP-008", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -354,7 +375,136 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 failure_seen = True
                 exit_code = 1 if code != 2 else 2
 
-        # Step 8: pytest-fast (exclude slow/e2e tests for local sanity)
+        # Step 8: swallow-scan-gate (ban pass-only blanket swallows)
+        if failure_seen:
+            _skipped_step("swallow-scan-gate")
+        else:
+            artifact = None
+            try:
+                import json
+                from tooling import find_blanket_swallow
+
+                with suppress_stdout():
+                    code = int(find_blanket_swallow.main(["--roots", "engine", "mesh_cli"]))
+
+                scan_path = repo_root / "artifacts" / "swallow_scan.json"
+                if scan_path.exists():
+                    artifact = _normalize_path_for_json(scan_path, repo_root=repo_root)
+                    artifacts_written["swallow_scan"] = artifact
+
+                if code == 0:
+                    error = ""
+                else:
+                    error = "pass-only blanket swallows found"
+                    if scan_path.exists():
+                        try:
+                            payload = json.loads(scan_path.read_text(encoding="utf-8"))
+                            total_matches = int(payload.get("total_matches", 0))
+                            error = f"pass-only blanket swallows found: {total_matches}"
+                        except Exception:  # REASON: swallow-scan-gate error parsing fallback
+                            _log_swallow("VSTP-043", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
+            except ModuleNotFoundError as exc:
+                if str(getattr(exc, "name", "")).startswith("tooling"):
+                    code = 0
+                    error = "skipped: tooling package unavailable"
+                else:
+                    raise
+            except Exception as exc:  # noqa: BLE001  # REASON: swallow-scan-gate step isolation
+                _log_swallow("VSTP-044", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
+                code = 1
+                error = f"{type(exc).__name__}: {exc}"
+
+            _add_step("swallow-scan-gate", code, error=error, artifact=artifact)
+            if code != 0:
+                failure_seen = True
+                exit_code = 1 if code != 2 else 2
+
+        # Step 9: exception-policy-scan (BLE001 ratchet + silent broad catches)
+        if failure_seen:
+            _skipped_step("exception-policy-scan")
+        else:
+            artifact_ep = None
+            try:
+                from tooling import scan_exception_policies
+
+                with suppress_stdout():
+                    ep_result = scan_exception_policies.scan(
+                        ["engine", "mesh_cli", "tooling"],
+                        repo_root=repo_root,
+                    )
+
+                if artifacts_dir is not None:
+                    import json as _json_ep
+
+                    ep_target = artifacts_dir / "exception_policy_scan.json"
+                    ep_target.parent.mkdir(parents=True, exist_ok=True)
+                    ep_target.write_text(
+                        _json_ep.dumps(ep_result, indent=2, sort_keys=False) + "\n",
+                        encoding="utf-8",
+                    )
+                    artifact_ep = _normalize_path_for_json(ep_target, repo_root=repo_root)
+                    artifacts_written["exception_policy_scan"] = artifact_ep
+
+                # --- Ratchet: BLE001 cap ---
+                baseline_path_ep = repo_root / "tooling" / "exception_policy_baseline.json"
+                if baseline_path_ep.exists():
+                    import json as _json_ep2
+                    bl = _json_ep2.loads(baseline_path_ep.read_text(encoding="utf-8"))
+                    bl_ble001 = int(bl.get("ble001_count_total", 0))
+                    bl_silent = int(bl.get("silent_broad_catch_count_total", 0))
+                    bl_silent_max = int(bl.get("silent_broad_catch_max", bl_silent))
+                    bl_ble001_missing_reason_max = int(bl.get("ble001_missing_reason_max", 999999))
+                    cur_ble001 = int(ep_result.get("ble001_count_total", 0))
+                    cur_silent = int(ep_result.get("silent_broad_catch_count_total", 0))
+                    cur_ble001_missing_reason = int(ep_result.get("ble001_missing_reason_count", 0))
+
+                    violations: list[str] = []
+                    if cur_ble001 > bl_ble001:
+                        violations.append(
+                            f"BLE001 grew: {bl_ble001} -> {cur_ble001}"
+                        )
+                    if cur_silent > bl_silent_max:
+                        violations.append(
+                            f"silent broad catches ({cur_silent}) exceed max ({bl_silent_max})"
+                        )
+                    if cur_ble001_missing_reason > bl_ble001_missing_reason_max:
+                        violations.append(
+                            f"BLE001 missing REASON annotations ({cur_ble001_missing_reason}) exceed max ({bl_ble001_missing_reason_max})"
+                        )
+                    # Report missing reasons as info
+                    if cur_ble001_missing_reason > 0:
+                        logger.info(
+                            "[exception-policy-scan] BLE001 suppressions missing REASON annotation: %d",
+                            cur_ble001_missing_reason,
+                        )
+                    if violations:
+                        code = 1
+                        error = "; ".join(violations)
+                    else:
+                        code = 0
+                        error = ""
+                else:
+                    # No baseline yet → pass but warn
+                    code = 0
+                    error = ""
+
+            except ModuleNotFoundError as exc:
+                if str(getattr(exc, "name", "")).startswith("tooling"):
+                    code = 0
+                    error = "skipped: tooling package unavailable"
+                else:
+                    raise
+            except Exception as exc:  # noqa: BLE001  # REASON: exception-policy-scan step isolation
+                _log_swallow("VSTP-045", "mesh_cli.verify_steps.pipeline", "exception-policy-scan fallback")
+                code = 1
+                error = f"{type(exc).__name__}: {exc}"
+
+            _add_step("exception-policy-scan", code, error=error, artifact=artifact_ep)
+            if code != 0:
+                failure_seen = True
+                exit_code = 1 if code != 2 else 2
+
+        # Step 10: pytest-fast (exclude slow/e2e tests for local sanity)
         if failure_seen:
             _skipped_step("pytest-fast")
         else:
@@ -391,7 +541,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     code = int(pytest_result.returncode)
                     error = "" if code == 0 else f"failed with code {code}"
                     pytest_fast_ran = True
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: pytest-fast step isolation
+                _log_swallow("VSTP-009", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -400,7 +551,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 failure_seen = True
                 exit_code = 1 if code != 2 else 2
 
-        # Step 9: pytest-fast-duration-guard (ratchet against slowdowns)
+        # Step 10: pytest-fast-duration-guard (ratchet against slowdowns)
         if failure_seen:
             _skipped_step("pytest-fast-duration-guard")
         elif not pytest_fast_ran:
@@ -418,7 +569,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 pytest_fast_metrics["total"] = total_seconds
                 pytest_fast_metrics["top10"] = top10_seconds
                 pytest_fast_metrics["ok"] = ok
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: pytest-fast-duration-guard step isolation
+                _log_swallow("VSTP-010", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 pytest_fast_metrics["ok"] = False
@@ -428,7 +580,219 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 failure_seen = True
                 exit_code = 1 if code != 2 else 2
 
-        # Step 10: world-progression-check (start -> key milestones)
+        # Step 11: runtime-player-smoke (runtime-only CI smoke)
+        if failure_seen:
+            _skipped_step("runtime-player-smoke")
+        else:
+            try:
+                import subprocess
+                import sys
+
+                smoke_scene: str | None = None
+                smoke_candidates: list[str] = ["scenes/runtime_smoke_scene.json", "scenes/main.json"]
+                try:
+                    cfg = load_config()
+                    cfg_scene = str(getattr(cfg, "start_scene", "") or "").strip()
+                    if cfg_scene:
+                        smoke_candidates.append(cfg_scene)
+                except Exception:  # REASON: runtime-player-smoke config fallback
+                    _log_swallow("VSTP-011", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
+                    pass
+                seen_candidates: set[str] = set()
+                for candidate in smoke_candidates:
+                    if candidate in seen_candidates:
+                        continue
+                    seen_candidates.add(candidate)
+                    if (repo_root / candidate).exists():
+                        smoke_scene = candidate
+                        break
+
+                runtime_smoke_artifact: str | None = None
+                if smoke_scene:
+                    cmd = [sys.executable, "-m", "mesh_cli", "play-runtime", "--headless-smoke"]
+                    cmd.extend(["--smoke-scene", smoke_scene])
+                    if artifacts_dir is not None:
+                        runtime_smoke_artifact = _normalize_path_for_json(
+                            artifacts_dir / "runtime_smoke.json", repo_root=repo_root
+                        )
+                        artifacts_written["runtime_smoke"] = runtime_smoke_artifact
+                        artifacts_written["runtime_diagnostics_snapshot"] = _normalize_path_for_json(
+                            artifacts_dir / "runtime_diagnostics_snapshot.json",
+                            repo_root=repo_root,
+                        )
+                        cmd.extend(["--smoke-artifact", str(artifacts_dir / "runtime_smoke.json")])
+                        cmd.extend(["--diagnostics-artifact", str(artifacts_dir / "runtime_diagnostics_snapshot.json")])
+                    with suppress_stdout():
+                        smoke_result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(repo_root))
+                    code = int(smoke_result.returncode)
+                    error = "" if code == 0 else f"failed with code {code}"
+                else:
+                    code = 0
+                    error = ""
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime-player-smoke step isolation
+                _log_swallow("VSTP-012", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
+                code = 1
+                error = f"{type(exc).__name__}: {exc}"
+                runtime_smoke_artifact = None
+
+            _add_step("runtime-player-smoke", code, error=error, artifact=runtime_smoke_artifact)
+            if code != 0:
+                failure_seen = True
+                exit_code = 1 if code != 2 else 2
+
+        # Step 11: player-package-gate (deterministic runtime-only package + smoke)
+        if failure_seen:
+            _skipped_step("player-package-gate")
+        else:
+            try:
+                import json
+                import subprocess
+                import sys
+
+                has_packaging_sources = bool((repo_root / "engine").is_dir() and (repo_root / "mesh_cli").is_dir())
+                has_smoke_scene = bool((repo_root / "scenes" / "runtime_smoke_scene.json").is_file())
+                if not has_packaging_sources or not has_smoke_scene:
+                    code = 0
+                    error = ""
+                else:
+                    package_root = (artifacts_dir / "player_pkg") if artifacts_dir is not None else (repo_root / ".mesh" / "player_pkg")
+                    manifest_path = package_root / "manifest.json"
+                    cmd = [
+                        sys.executable,
+                        "-m",
+                        "mesh_cli",
+                        "package-player",
+                        "--out",
+                        str(package_root),
+                        "--manifest",
+                        str(manifest_path),
+                        "--smoke",
+                        "--diagnostics-artifact",
+                        str(package_root / "runtime_diagnostics_snapshot.json"),
+                    ]
+                    with suppress_stdout():
+                        package_result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(repo_root))
+                    code = int(package_result.returncode)
+                    error = "" if code == 0 else f"failed with code {code}"
+                    if code == 0:
+                        check_path = package_root / "package_check.json"
+                        if not check_path.exists():
+                            code = 1
+                            error = "missing package_check.json"
+                        else:
+                            check_payload = json.loads(check_path.read_text(encoding="utf-8"))
+                            if not isinstance(check_payload, dict):
+                                code = 1
+                                error = "invalid package_check.json payload"
+                            elif not bool(check_payload.get("ok", False)):
+                                code = 1
+                                error = "package_check reported failure"
+                    if code == 0 and artifacts_dir is not None:
+                        artifacts_written["player_package_manifest"] = _normalize_path_for_json(
+                            package_root / "manifest.json",
+                            repo_root=repo_root,
+                        )
+                        artifacts_written["player_package_check"] = _normalize_path_for_json(
+                            package_root / "package_check.json",
+                            repo_root=repo_root,
+                        )
+                        artifacts_written["player_package_runtime_smoke"] = _normalize_path_for_json(
+                            package_root / "runtime_smoke.json",
+                            repo_root=repo_root,
+                        )
+                        artifacts_written["player_package_runtime_diagnostics_snapshot"] = _normalize_path_for_json(
+                            package_root / "runtime_diagnostics_snapshot.json",
+                            repo_root=repo_root,
+                        )
+            except Exception as exc:  # noqa: BLE001  # REASON: player-package-gate step isolation
+                _log_swallow("VSTP-013", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
+                code = 1
+                error = f"{type(exc).__name__}: {exc}"
+
+            _add_step(
+                "player-package-gate",
+                code,
+                error=error,
+                artifact=artifacts_written.get("player_package_check"),
+            )
+            if code != 0:
+                failure_seen = True
+                exit_code = 1 if code != 2 else 2
+
+        # Step 12: world-progression-check (start -> key milestones)
+        if failure_seen:
+            _skipped_step("perf-baseline-compare")
+        else:
+            try:
+                from engine.persistence_io import write_json_atomic
+                from engine.tooling.perf_baselines import compare_perf_run_to_baseline
+                from engine.tooling.perf_baselines import load_perf_baseline
+                from engine.tooling.perf_baselines import run_perf_scene_capture
+
+                scene_set_path = repo_root / "tooling" / "perf_baselines" / "scenes.json"
+                baseline_path = repo_root / "tooling" / "perf_baselines" / "baselines.json"
+                if scene_set_path.exists() and baseline_path.exists():
+                    with suppress_stdout():
+                        perf_run_payload = run_perf_scene_capture(
+                            scene_set_path=scene_set_path,
+                            ticks=120,
+                        )
+                    baseline_payload = load_perf_baseline(baseline_path)
+                    perf_compare_payload = compare_perf_run_to_baseline(
+                        run_payload=perf_run_payload,
+                        baseline_payload=baseline_payload,
+                    )
+                    regressions = perf_compare_payload.get("regressions", [])
+                    has_regressions = isinstance(regressions, list) and len(regressions) > 0
+                    code = 1 if has_regressions else 0
+                    if has_regressions:
+                        first = regressions[0] if isinstance(regressions[0], dict) else {}
+                        error = (
+                            f"regression: {first.get('scene_id')} {first.get('metric')} "
+                            f"{first.get('baseline')} -> {first.get('current')}"
+                        )
+                    else:
+                        error = ""
+
+                    if artifacts_dir is not None:
+                        target_run = artifacts_dir / "perf_run.json"
+                        target_compare = artifacts_dir / "perf_compare.json"
+                        with suppress_stdout():
+                            write_json_atomic(
+                                target_run,
+                                perf_run_payload,
+                                indent=2,
+                                sort_keys=True,
+                                trailing_newline=True,
+                            )
+                            write_json_atomic(
+                                target_compare,
+                                perf_compare_payload,
+                                indent=2,
+                                sort_keys=True,
+                                trailing_newline=True,
+                            )
+                        artifacts_written["perf_run"] = _normalize_path_for_json(target_run, repo_root=repo_root)
+                        artifacts_written["perf_compare"] = _normalize_path_for_json(target_compare, repo_root=repo_root)
+                else:
+                    code = 0
+                    error = ""
+            except Exception as exc:  # noqa: BLE001  # REASON: perf-baseline-compare step isolation
+                _log_swallow("VSTP-014", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
+                code = 1
+                error = f"{type(exc).__name__}: {exc}"
+
+            _add_step(
+                "perf-baseline-compare",
+                code,
+                error=error,
+                artifact=artifacts_written.get("perf_compare"),
+            )
+            if code != 0:
+                failure_seen = True
+                exit_code = 1 if code != 2 else 2
+
+        # Step 13: world-progression-check (start -> key milestones)
         if failure_seen:
             _skipped_step("world-progression-check")
         else:
@@ -455,7 +819,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                                 configured = raw.get("progression_required_scene_paths")
                                 if isinstance(configured, list):
                                     required_paths = tuple(str(p) for p in configured if isinstance(p, str) and p.strip())
-                    except Exception:
+                    except Exception:  # REASON: world-progression-check config parsing fallback
+                        _log_swallow("VSTP-015", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                         required_paths = ()
 
                     result = check_world_progression(
@@ -471,7 +836,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     missing = payload.get("missing_scene_paths") or []
                     missing_text = ", ".join(str(x) for x in missing) if isinstance(missing, list) else str(missing)
                     error = f"missing required reachable scenes: {missing_text}"
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: world-progression-check step isolation
+                _log_swallow("VSTP-016", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -514,7 +880,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         error = f"{scene} {pid} {reason} target={target_id} dist={dist_text}"
                     else:
                         error = "spawn-placeholder-safety found errors"
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: spawn-placeholder-safety step isolation
+                _log_swallow("VSTP-017", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -582,7 +949,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                                     )
                 except StampReportError:
                     raise
-                except Exception:
+                except Exception:  # REASON: stamp-audit config parsing fallback
+                    _log_swallow("VSTP-018", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                     stamp_cases_raw = []
 
                 stamp_cases_raw.sort(
@@ -609,14 +977,16 @@ def run_verify_steps(state: VerifyStepContext) -> None:
 
                     try:
                         raw_scene = json.loads(resolved_scene.read_text(encoding="utf-8"))
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:  # noqa: BLE001  # REASON: stamp-audit scene parsing
+                        _log_swallow("VSTP-019", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                         raise StampReportError(f"failed to parse scene JSON: {scene_path_display}: {exc}") from exc
                     if not isinstance(raw_scene, dict):
                         raise StampReportError(f"scene JSON root must be an object: {scene_path_display}")
 
                     try:
                         stamp = json.loads(resolved_stamp.read_text(encoding="utf-8"))
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:  # noqa: BLE001  # REASON: stamp-audit stamp parsing
+                        _log_swallow("VSTP-020", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                         raise StampReportError(f"failed to parse stamp JSON: {stamp_path_raw}: {exc}") from exc
                     if not isinstance(stamp, dict):
                         raise StampReportError(f"stamp JSON root must be an object: {stamp_path_raw}")
@@ -667,7 +1037,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 code = exc.exit_code
                 error = exc.message
                 artifact = None
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: stamp-audit step isolation
+                _log_swallow("VSTP-021", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 artifact = None
@@ -687,6 +1058,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 from engine.paths import resolve_path
                 from engine.persistence_io import write_json_atomic
                 from engine.tooling_runtime.brush_report import BrushReportError, compute_scene_brush_report
+                from engine.tilemap_brush import Anchor
 
                 config = load_config()
                 world_path = str(getattr(args, "world", "") or "").strip()
@@ -740,7 +1112,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                                     )
                 except BrushReportError:
                     raise
-                except Exception:
+                except Exception:  # REASON: brush-audit config parsing fallback
+                    _log_swallow("VSTP-022", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                     brush_cases_raw = []
 
                 brush_cases_raw.sort(
@@ -753,6 +1126,10 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         str(c.get("anchor") or ""),
                     )
                 )
+
+                def _coerce_brush_anchor(value: Any) -> Anchor:
+                    anchor_text = str(value or "tl").strip().lower()
+                    return "center" if anchor_text == "center" else "tl"
 
                 brush_out_cases: list[dict[str, Any]] = []
                 for case in brush_cases_raw:
@@ -768,14 +1145,16 @@ def run_verify_steps(state: VerifyStepContext) -> None:
 
                     try:
                         raw_scene = json.loads(resolved_scene.read_text(encoding="utf-8"))
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:  # noqa: BLE001  # REASON: brush-audit scene parsing
+                        _log_swallow("VSTP-023", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                         raise BrushReportError(f"failed to parse scene JSON: {scene_path_display}: {exc}") from exc
                     if not isinstance(raw_scene, dict):
                         raise BrushReportError(f"scene JSON root must be an object: {scene_path_display}")
 
                     try:
                         raw_brush = json.loads(resolved_brush.read_text(encoding="utf-8"))
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:  # noqa: BLE001  # REASON: brush-audit brush parsing
+                        _log_swallow("VSTP-024", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                         raise BrushReportError(f"failed to parse brush JSON: {brush_path_raw}: {exc}") from exc
                     if not isinstance(raw_brush, dict):
                         raise BrushReportError(f"brush JSON root must be an object: {brush_path_raw}")
@@ -789,7 +1168,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         origin_x=int(case["origin_x"]),
                         origin_y=int(case["origin_y"]),
                         layer_id=str(case["layer_id"]),
-                        anchor=str(case["anchor"] or "tl"),  # type: ignore[arg-type]
+                        anchor=_coerce_brush_anchor(case.get("anchor")),
                         clip=bool(case["clip"]),
                     )
                     tile_changes = list(brush_report.get("tile_changes") or [])
@@ -827,7 +1206,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 code = exc.exit_code
                 error = exc.message
                 artifact = None
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: brush-audit step isolation
+                _log_swallow("VSTP-025", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 artifact = None
@@ -886,7 +1266,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                                         "args": dict(args_payload),
                                     }
                                 )
-                except Exception:
+                except Exception:  # REASON: macro-audit config parsing fallback
+                    _log_swallow("VSTP-026", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                     macro_cases_raw = []
 
                 macro_cases_raw.sort(
@@ -908,7 +1289,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             if pid == "player" or (isinstance(tags, list) and "player" in tags):
                                 try:
                                     return float(e.get("x", 0.0)), float(e.get("y", 0.0))
-                                except Exception:
+                                except Exception:  # REASON: macro-audit player position fallback
+                                    _log_swallow("VSTP-027", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                                     return 0.0, 0.0
                     return 0.0, 0.0
 
@@ -947,7 +1329,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         raise ValueError(f"macro-audit unsupported anchor=primary for {macro_id}")
 
                     # SceneController-based preview.
-                    sc = SceneController(object())  # type: ignore[arg-type]
+                    sc = SceneController(cast(Any, object()))
                     sc.current_scene_path = scene_path_raw
                     sc._loaded_scene_source_data = scene_payload
 
@@ -1018,7 +1400,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
 
                 code = 0
                 error = ""
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: macro-audit step isolation
+                _log_swallow("VSTP-028", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 artifact = None
@@ -1092,7 +1475,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             continue
                         try:
                             out[sid.strip()] = (float(ent.get("x", 0.0)), float(ent.get("y", 0.0)))
-                        except Exception:
+                        except Exception:  # REASON: room-audit spawn position fallback
+                            _log_swallow("VSTP-029", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                             out[sid.strip()] = (0.0, 0.0)
                     return out
 
@@ -1165,7 +1549,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             raw = json.loads(fp.read_text(encoding="utf-8"))
                             if isinstance(raw, dict):
                                 from_payload = raw
-                    except Exception:
+                    except Exception:  # REASON: room-audit from_scene loading fallback
+                        _log_swallow("VSTP-030", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                         from_payload = {}
                     try:
                         tp = resolve_path(to_scene)
@@ -1173,7 +1558,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             raw = json.loads(tp.read_text(encoding="utf-8"))
                             if isinstance(raw, dict):
                                 to_payload = raw
-                    except Exception:
+                    except Exception:  # REASON: room-audit to_scene loading fallback
+                        _log_swallow("VSTP-031", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                         to_payload = {}
 
                     from_spawns = _spawn_points(from_payload)
@@ -1279,7 +1665,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
 
                 code = 0
                 error = ""
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: room-audit step isolation
+                _log_swallow("VSTP-032", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 artifact = None
@@ -1311,7 +1698,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         error = f"duplicate encounter_set_id={set_id} sources={sources_text}"
                     else:
                         error = "encounter-set-uniqueness found errors"
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: encounter-set-uniqueness step isolation
+                _log_swallow("VSTP-033", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -1342,7 +1730,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         error = f"low variety encounter_set_id={set_id} unique_prefabs={unique} required={required}"
                     else:
                         error = "encounter-set-variety found errors"
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: encounter-set-variety step isolation
+                _log_swallow("VSTP-034", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -1375,7 +1764,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             error = f"unexpected override prefab_id={prefab_id} winner={winner}"
                         else:
                             error = "prefab-lint-overrides found unexpected overrides"
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: prefab-lint-overrides step isolation
+                _log_swallow("VSTP-035", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -1397,7 +1787,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     coverage_payload = validate_encounter_coverage(difficulties=("easy", "hard"))
                 code = 0 if bool(coverage_payload.get("ok")) else 1
                 error = "" if code == 0 else "encounter-coverage found errors"
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: encounter-coverage step isolation
+                _log_swallow("VSTP-036", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -1422,7 +1813,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     matrix_payload = encounter_coverage_rows_to_payload(rows, difficulties=("easy", "hard"))
                 code = 0
                 error = ""
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: encounter-coverage-matrix step isolation
+                _log_swallow("VSTP-037", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 matrix_payload = None
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
@@ -1457,7 +1849,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     doctor_payload = doctor_assets(repo_root=repo_root, fix=False, strict=False)
                 code = 0 if bool(doctor_payload.get("ok")) else 1
                 error = "" if code == 0 else "doctor-assets found errors"
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: doctor-assets step isolation
+                _log_swallow("VSTP-038", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 doctor_payload = {
                     "ok": False,
                     "errors": [
@@ -1513,7 +1906,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     code = 0
                     error = ""
 
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: content-audit step isolation
+                _log_swallow("VSTP-039", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 content_audit_report = None
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
@@ -1577,7 +1971,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
 
                 code = 0
                 error = ""
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: encounter-audit step isolation
+                _log_swallow("VSTP-040", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 audit_payload = None
                 compact_payload = None
                 headroom_payload = None
@@ -1630,7 +2025,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     scenes_payload = _inventory_list_scenes()
                 code = 0
                 error = ""
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: list-scenes step isolation
+                _log_swallow("VSTP-041", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 scenes_payload = None
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
@@ -1665,7 +2061,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     worlds_payload = _inventory_list_worlds()
                 code = 0
                 error = ""
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: list-worlds step isolation
+                _log_swallow("VSTP-042", "mesh_cli.verify_steps.pipeline", "blanket exception fallback")
                 worlds_payload = None
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"

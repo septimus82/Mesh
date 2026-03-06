@@ -7,6 +7,18 @@ from typing import Any, Dict, List, Set
 from engine.paths import resolve_path
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 class TransitionValidator:
     """Validates that all scene transitions point to valid targets."""
 
@@ -83,6 +95,7 @@ class TransitionValidator:
             if path.exists():
                 return True
         except Exception:
+            _log_swallow("TRAN-001", "engine/validators/transition_validator.py pass-only blanket swallow")
             pass
 
         return False

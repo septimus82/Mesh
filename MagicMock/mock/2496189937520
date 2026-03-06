@@ -1,0 +1,11 @@
+{
+  "description": "A minimal empty scene.",
+  "layers": [],
+  "name": "Test Scene",
+  "settings": {
+    "ambient_audio": "forest_ambience",
+    "lighting_hint": "green_dim",
+    "region_theme": "moss"
+  },
+  "version": 1
+}

@@ -43,6 +43,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from engine.logging_tools import get_logger
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 logger = get_logger(__name__)
 
@@ -195,7 +204,8 @@ class PluginManager:
             if child.is_dir() and manifest_path.is_file():
                 try:
                     manifests.append(PluginManifest.load(manifest_path))
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                    _log_swallow("PLSY-001", "engine/plugin_system.py blanket swallow", once=True)
                     logger.warning("[PluginManager] Failed to read %s: %s", manifest_path, exc)
         return manifests
 
@@ -261,7 +271,8 @@ class PluginManager:
                 logger.warning("[PluginManager] create_plugin() in '%s' did not return a MeshPlugin", manifest.id)
                 return False
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("PLSY-002", "engine/plugin_system.py blanket swallow", once=True)
             logger.warning("[PluginManager] Failed to load plugin '%s': %s", manifest.id, exc)
             return False
 
@@ -271,7 +282,8 @@ class PluginManager:
         if self._ctx is not None:
             try:
                 instance.on_load(self._ctx)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("PLSY-003", "engine/plugin_system.py blanket swallow", once=True)
                 logger.warning("[PluginManager] on_load failed for '%s': %s", manifest.id, exc)
 
         logger.info("[PluginManager] Loaded plugin '%s' v%s", manifest.id, manifest.version)
@@ -292,7 +304,8 @@ class PluginManager:
         if self._ctx is not None:
             try:
                 lp.instance.on_enable(self._ctx)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("PLSY-004", "engine/plugin_system.py blanket swallow", once=True)
                 logger.warning("[PluginManager] on_enable failed for '%s': %s", plugin_id, exc)
         return True
 
@@ -304,7 +317,8 @@ class PluginManager:
         if self._ctx is not None:
             try:
                 lp.instance.on_disable(self._ctx)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("PLSY-005", "engine/plugin_system.py blanket swallow", once=True)
                 logger.warning("[PluginManager] on_disable failed for '%s': %s", plugin_id, exc)
         return True
 
@@ -316,7 +330,8 @@ class PluginManager:
             if lp is not None and self._ctx is not None:
                 try:
                     lp.instance.on_unload(self._ctx)
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                    _log_swallow("PLSY-006", "engine/plugin_system.py blanket swallow", once=True)
                     logger.warning("[PluginManager] on_unload failed for '%s': %s", pid, exc)
         self._plugins.clear()
 

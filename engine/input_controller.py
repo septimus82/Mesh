@@ -20,7 +20,7 @@ Default Key Bindings:
     Attack: Space / Gamepad X
     Inventory: Tab / Gamepad Y
     Pause: Escape / Gamepad Start
-    Help: F1 / Gamepad Back
+    Console: F1 (not Help; Help is H / Gamepad Back)
 
 Gamepad Support:
     - Left stick: Movement (with configurable deadzone)
@@ -77,6 +77,18 @@ _stderr_logger = get_logger(__name__)
 _LOG_ONCE: set[str] = set()
 from .input import InputManager
 from .input_bindings import ACTION_SHOW_CHARACTER, apply_config_bindings, known_actions, snapshot_bindings
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:
     from .game import GameWindow
@@ -236,6 +248,7 @@ class InputController:
     def __init__(self, window: GameWindow):
         self.window = window
         self.manager = InputManager()
+        self._apply_rumble_config_from_engine_config()
         self._load_configured_bindings()
 
         self._keys: Set[int] = set()
@@ -245,6 +258,18 @@ class InputController:
         self._first_input_toast_fired: bool = False
         self._gamepad_deadzone: float = _GAMEPAD_DEADZONE_DEFAULT
         self._gamepad_controller: object | None = None
+
+    def _apply_rumble_config_from_engine_config(self) -> None:
+        cfg = getattr(self.window, "engine_config", None)
+        input_cfg = getattr(cfg, "input", None) if cfg is not None else None
+        enabled: object = False
+        strength: object = 1.0
+        if isinstance(input_cfg, dict):
+            enabled = input_cfg.get("rumble_enabled", False)
+            strength = input_cfg.get("rumble_strength", 1.0)
+        setter = getattr(self.manager, "set_rumble_config", None)
+        if callable(setter):
+            setter(enabled=enabled, strength=strength)
 
     @property
     def mouse_x(self) -> float:
@@ -272,6 +297,7 @@ class InputController:
 
     def _poll_gamepad_state(self) -> None:
         setter = getattr(self.manager, "set_gamepad_state", None)
+        set_rumble_backend = getattr(self.manager, "set_rumble_backend", None)
         if not callable(setter):
             return
 
@@ -283,11 +309,15 @@ class InputController:
                 supported_actions=_GAMEPAD_SUPPORTED_ACTIONS,
                 source_active=False,
             )
+            if callable(set_rumble_backend):
+                set_rumble_backend(None)
             self._gamepad_controller = None
             return
 
         get_controllers = getattr(arcade_mod, "get_game_controllers", None)
         if not callable(get_controllers):
+            if callable(set_rumble_backend):
+                set_rumble_backend(None)
             return
 
         try:
@@ -302,17 +332,22 @@ class InputController:
                 supported_actions=_GAMEPAD_SUPPORTED_ACTIONS,
                 source_active=False,
             )
+            if callable(set_rumble_backend):
+                set_rumble_backend(None)
             self._gamepad_controller = None
             return
 
         controller = controllers[0]
         if controller is not self._gamepad_controller:
             self._gamepad_controller = controller
+            if callable(set_rumble_backend):
+                set_rumble_backend(controller)
             opener = getattr(controller, "open", None)
             if callable(opener):
                 try:
                     opener()
                 except Exception:  # noqa: BLE001
+                    _log_swallow("INPU-001", "engine/input_controller.py pass-only blanket swallow")
                     pass
 
         axis_x, axis_y, buttons_down, dpad_x, dpad_y = read_gamepad_state(controller)
@@ -412,6 +447,17 @@ class InputController:
             self.manager.bind("interact", optional_arcade.arcade.key.E)
         if bindings is None and not applied:
             self.manager.bind_default_actions(optional_arcade.arcade)
+        # Keep baseline movement/pause bindings reachable even with partial config.
+        if not self.manager.is_key_bound_to_action("move_up", optional_arcade.arcade.key.UP):
+            self.manager.bind("move_up", optional_arcade.arcade.key.UP)
+        if not self.manager.is_key_bound_to_action("move_down", optional_arcade.arcade.key.DOWN):
+            self.manager.bind("move_down", optional_arcade.arcade.key.DOWN)
+        if not self.manager.is_key_bound_to_action("move_left", optional_arcade.arcade.key.LEFT):
+            self.manager.bind("move_left", optional_arcade.arcade.key.LEFT)
+        if not self.manager.is_key_bound_to_action("move_right", optional_arcade.arcade.key.RIGHT):
+            self.manager.bind("move_right", optional_arcade.arcade.key.RIGHT)
+        if not self.manager.is_key_bound_to_action("pause_menu", optional_arcade.arcade.key.ESCAPE):
+            self.manager.bind("pause_menu", optional_arcade.arcade.key.ESCAPE)
         self.persist_bindings(save=False)
 
     def _log_binding_warning(self, message: str) -> None:

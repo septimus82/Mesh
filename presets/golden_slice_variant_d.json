@@ -1,0 +1,30 @@
+{
+  "description": "Speedrun mode: faster opener, earlier boss, same rewards",
+  "lighting_showcase": false,
+  "notes": "Timer starts on input",
+  "steps": [
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice_variant_d.json",
+        "--dry-run",
+        "--strict",
+        "--check-refs"
+      ],
+      "cmd": "pipeline"
+    },
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice_variant_d.json",
+        "--dry-run",
+        "--demo"
+      ],
+      "cmd": "pipeline"
+    }
+  ]
+}

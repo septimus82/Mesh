@@ -25,6 +25,7 @@ from engine.editor.hd2d_preset_preview_model import (
     extract_preset_id_from_command,
 )
 from engine.editor.editor_actions import run_editor_action
+from engine.ui_overlays.widget_overlay_helpers import resolve_preserved_selection_index
 
 
 class EditorUIFlowController:
@@ -41,6 +42,13 @@ class EditorUIFlowController:
         self.all_results: List[Any] = []
         self.counts: Dict[str, Any] = {"total": 0, "by_group": {}}
         self.asset_lookup: Dict[str, Any] = {}
+
+    def _result_identity(self, item: Any) -> tuple[str, str] | None:
+        kind = str(getattr(item, "kind", "") or "")
+        item_id = str(getattr(item, "item_id", "") or "")
+        if not kind or not item_id:
+            return None
+        return (kind, item_id)
 
     def open_palette(self, initial_query: str = "") -> None:
         """Open the command palette."""
@@ -68,9 +76,21 @@ class EditorUIFlowController:
 
     def update_query(self, text: str) -> None:
         """Update search query and refresh results."""
+        previous_items = list(self.cached_results)
+        previous_index = clamp_selection(self.selection_index, len(previous_items))
+
         self.query = text
         self.selection_index = 0
         self._refresh_results()
+        if self.cached_results:
+            self.selection_index, _preserved = resolve_preserved_selection_index(
+                previous_items,
+                self.cached_results,
+                previous_index,
+                identity_fn=self._result_identity,
+                clamp_fn=clamp_selection,
+                fallback_index=0,
+            )
         self.maybe_preview_from_selection()
 
     def move_selection(self, delta: int) -> None:

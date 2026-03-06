@@ -7,6 +7,15 @@ import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import record_swallowed
 from engine.logging_tools import get_logger
 from engine.ui import maybe_auto_open_quest_log, maybe_enqueue_demo_interior_hint, maybe_enqueue_quest_progress_toast
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 
 if TYPE_CHECKING:
@@ -100,6 +109,7 @@ def _apply_editor_sprite_ghosting(window: "GameWindow") -> tuple[list, dict]:
 
         return snapshots, sprites_by_id
     except Exception as exc:  # noqa: BLE001
+        _log_swallow("GTCK-001", "engine/game_runtime/tick.py blanket swallow", once=True)
         # Ghosting is visual polish only, but we still count swallow sites.
         record_swallowed("engine.game_runtime.tick._apply_editor_sprite_ghosting", exc)
         _ghosting_cache["previous_state"] = None
@@ -115,6 +125,7 @@ def _restore_editor_sprite_ghosting(snapshots: list, sprites_by_id: dict) -> Non
         from engine.editor.editor_sprite_ghosting import restore_ghosted_sprites
         restore_ghosted_sprites(snapshots, sprites_by_id)
     except Exception as exc:  # noqa: BLE001
+        _log_swallow("GTCK-002", "engine/game_runtime/tick.py blanket swallow", once=True)
         record_swallowed("engine.game_runtime.tick._restore_editor_sprite_ghosting", exc)
 
 
@@ -189,11 +200,16 @@ def on_draw(window: "GameWindow") -> None:
 def on_update(window: "GameWindow", delta_time: float) -> None:
     # Always update input to ensure we catch menu actions
     window.input_controller.update(delta_time)
+    watcher = getattr(window, "asset_hot_reload_watcher", None)
+    update_watcher = getattr(watcher, "update", None) if watcher is not None else None
+    if callable(update_watcher):
+        update_watcher(delta_time)
     audio = getattr(window, "audio", None)
     if audio is not None:
         try:
             audio.update(delta_time)
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("GTCK-003", "engine/game_runtime/tick.py blanket swallow", once=True)
             if not getattr(window, "_mesh_audio_update_error_logged", False):
                 logger.warning("[Mesh][Audio] WARNING: update failed: %r", exc)
                 setattr(window, "_mesh_audio_update_error_logged", True)
@@ -229,6 +245,7 @@ def on_update(window: "GameWindow", delta_time: float) -> None:
                 r, g, b = window.day_night.compute_ambient_rgb()
                 lighting.set_ambient_rgb(r, g, b)
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("GTCK-004", "engine/game_runtime/tick.py blanket swallow", once=True)
             if not getattr(window, "_mesh_day_night_error_logged", False):
                 logger.warning("[Mesh][DayNight] WARNING: update failed: %r", exc)
                 setattr(window, "_mesh_day_night_error_logged", True)
@@ -242,6 +259,7 @@ def on_update(window: "GameWindow", delta_time: float) -> None:
             try:
                 window.game_state_controller.handle_event(event)
             except Exception as exc:  # noqa: BLE001
+                _log_swallow("GTCK-005", "engine/game_runtime/tick.py blanket swallow", once=True)
                 logger.error("[Mesh][Game] ERROR handling '%s': %s", event.type, exc)
     window._debug_print_events(events)
     if events:

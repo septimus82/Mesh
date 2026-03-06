@@ -14,6 +14,18 @@ from .common import (
     load_config_json,
 )
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
@@ -519,6 +531,7 @@ class GoldenSliceVariantPickerOverlay(UIElement):
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
         except Exception:
+            _log_swallow("GLDN-001", "world JSON parse fallback", once=True)
             return None
         if not isinstance(raw, dict):
             return None
@@ -561,6 +574,7 @@ class GoldenSliceVariantPickerOverlay(UIElement):
             try:
                 cfg.world_file = str(world_path)
             except Exception:
+                _log_swallow("GOLD-001", "engine/ui_overlays/golden_slice.py pass-only blanket swallow")
                 pass
         path = resolve_path(world_path)
         if not path.exists():
@@ -572,6 +586,7 @@ class GoldenSliceVariantPickerOverlay(UIElement):
                 raw = migrate_payload("world", raw)
                 self.window.world_controller = WorldController(raw)
         except Exception:
+            _log_swallow("GLDN-002", "world controller load fallback", once=True)
             self.window.world_controller = None
 
     def _activate_selected(self) -> bool:
@@ -611,6 +626,7 @@ class GoldenSliceVariantPickerOverlay(UIElement):
             else:
                 self.window.request_scene_change(scene_path)
         except Exception:
+            _log_swallow("GLDN-003", "variant scene change fallback", once=True)
             return False
 
         hud = getattr(self.window, "player_hud", None)
@@ -790,6 +806,7 @@ class GoldenSliceDemoHUDStripOverlay(UIElement):
         try:
             self._baseline_gold = int(gs.get_counter("gold", 0))
         except Exception:
+            _log_swallow("GLDN-004", "baseline gold snapshot fallback", once=True)
             self._baseline_gold = 0
         try:
             flags = getattr(self.window.game_state, "flags", {})
@@ -798,6 +815,7 @@ class GoldenSliceDemoHUDStripOverlay(UIElement):
             else:
                 self._baseline_true_flags = set()
         except Exception:
+            _log_swallow("GLDN-005", "baseline flags snapshot fallback", once=True)
             self._baseline_true_flags = set()
 
     def update(self, dt: float) -> None:  # noqa: ARG002
@@ -829,11 +847,13 @@ class GoldenSliceDemoHUDStripOverlay(UIElement):
         try:
             current_gold = int(gs.get_counter("gold", 0))
         except Exception:
+            _log_swallow("GLDN-006", "current gold snapshot fallback", once=True)
             current_gold = 0
         try:
             flags = getattr(self.window.game_state, "flags", {})
             current_true = {str(k) for k, v in flags.items() if bool(v)} if isinstance(flags, dict) else set()
         except Exception:
+            _log_swallow("GLDN-007", "current flags snapshot fallback", once=True)
             current_true = set()
         new_flags = len(current_true.difference(self._baseline_true_flags))
         return int(current_gold - self._baseline_gold), int(new_flags)

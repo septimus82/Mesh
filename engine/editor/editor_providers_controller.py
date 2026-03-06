@@ -36,6 +36,8 @@ class EditorProvidersController:
         overscan: int = 5,
     ) -> dict[str, Any]:
         problems = getattr(self._editor, "problems", None)
+        if problems and hasattr(problems, "refresh_structured_diagnostics"):
+            problems.refresh_structured_diagnostics()
         if problems and hasattr(problems, "get_provider_payload"):
             return cast(
                 Dict[str, Any],

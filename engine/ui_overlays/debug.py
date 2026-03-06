@@ -21,6 +21,14 @@ if TYPE_CHECKING:  # pragma: no cover
     from arcade import Sprite
 
 
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _LOG_ONCE:
+        return
+    if once:
+        _LOG_ONCE.add(tag)
+    logger.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def format_encounter_debug_text(payload: dict[str, Any] | None) -> str:
     if not isinstance(payload, dict):
         payload = {}
@@ -90,7 +98,8 @@ def _encounter_report_to_debug_payload(report: Any) -> dict[str, Any] | None:
     for key in fields:
         try:
             out[key] = getattr(report, key)
-        except Exception:
+        except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
+            _log_swallow("DBGO-001", "encounter report attribute extraction fallback", once=True)
             out[key] = None
     return out
 
@@ -113,7 +122,8 @@ class EncounterDebugOverlay(UIElement):
         if callable(self.provider):
             try:
                 value = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
+                _log_swallow("DBGO-002", "encounter debug provider fallback", once=True)
                 value = None
         else:
             value = None
@@ -258,7 +268,8 @@ class SceneInspectorOverlay(UIElement):
         if callable(self.provider):
             try:
                 value = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
+                _log_swallow("DBGO-003", "scene inspector provider fallback", once=True)
                 value = None
         else:
             value = None
@@ -344,7 +355,8 @@ class SceneDirtyOverlay(UIElement):
         if callable(self.provider):
             try:
                 payload = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
+                _log_swallow("DBGO-004", "scene dirty provider fallback", once=True)
                 payload = None
         return format_scene_dirty_overlay_lines(payload if isinstance(payload, dict) else None)
 
@@ -379,8 +391,10 @@ class PhysicsBroadphaseOverlay(UIElement):
         payload: dict[str, Any] | None = None
         if callable(self.provider):
             try:
-                payload = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+                result = self.provider(self.window)
+                payload = result if isinstance(result, dict) else None
+            except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
+                _log_swallow("DBGO-005", "physics broadphase provider fallback", once=True)
                 payload = None
 
         lines = format_physics_broadphase_lines(payload if isinstance(payload, dict) else None)
@@ -454,7 +468,8 @@ class HD2DDepthDebugOverlay(UIElement):
         if callable(self.provider):
             try:
                 value = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
+                _log_swallow("DBGO-006", "hd2d depth provider fallback", once=True)
                 value = None
         else:
             value = None
@@ -624,19 +639,21 @@ class EntityInspector(UIElement):
         hp_text = ""
         behaviours_runtime = getattr(target, "mesh_behaviours_runtime", [])
         if behaviours_runtime:
+            health_cls: type[Any] | None = None
             try:
                 from ..behaviours.health import Health
+                health_cls = Health
             except ImportError:
-                Health = None  # type: ignore[assignment, misc]
+                health_cls = None
             except Exception as exc:
                 if "ui_health_import" not in _LOG_ONCE:
                     logger.warning("Failed to import Health behaviour: %s", exc, exc_info=True)
                     _LOG_ONCE.add("ui_health_import")
-                Health = None  # type: ignore[assignment, misc]
+                health_cls = None
 
-            if Health is not None:
+            if health_cls is not None:
                 for behaviour in behaviours_runtime:
-                    if isinstance(behaviour, Health):
+                    if isinstance(behaviour, health_cls):
                         hp_text = f"HP: {behaviour.hp:.1f}/{behaviour.max_hp:.1f}"
                         break
 
@@ -715,7 +732,8 @@ class AnimationStateOverlay(UIElement):
         if animator:
             enumerator = getattr(animator, "available_states", None)
             if callable(enumerator):
-                available_states = enumerator()
+                result = enumerator()
+                available_states = result if isinstance(result, list) else []
         blend_duration = float(getattr(animator, "_blend_duration", 0.0)) if animator else 0.0
         blend_elapsed = float(getattr(animator, "_blend_elapsed", 0.0)) if animator else 0.0
         blend_active = bool(getattr(animator, "_blend_from_texture", None)) if animator else False
@@ -974,7 +992,8 @@ class PaletteOverlay(UIElement):
 
                     target_layer = pick_brush_layer_id(payload, None)
                     preview_lines = render_brush_layer_ascii(payload, layer_id=target_layer, tile_filter=None)
-            except Exception:
+            except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
+                _log_swallow("DBGO-007", "palette preview render fallback", once=True)
                 preview_lines = ["(preview error)"]
             
             if preview_lines:
@@ -1019,8 +1038,10 @@ class HD2DPreviewIndicatorOverlay(UIElement):
         payload: dict[str, Any] | None = None
         if callable(self.provider):
             try:
-                payload = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+                result = self.provider(self.window)
+                payload = result if isinstance(result, dict) else None
+            except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
+                _log_swallow("DBGO-008", "hd2d preview indicator provider fallback", once=True)
                 payload = None
 
         if not isinstance(payload, dict) or not payload.get("visible"):

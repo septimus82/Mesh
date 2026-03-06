@@ -4,6 +4,7 @@ from typing import Any, Callable, Optional
 
 from pathlib import Path
 
+from engine.diagnostics import Diagnostic, get_diagnostics, sort_diagnostics
 from engine.editor.scene_lint_model import SceneLintIssue
 from engine.editor.problems_jump_model import choose_jump_target, JumpTarget
 from engine.editor.scene_lint_model import build_scene_lint_issues
@@ -26,13 +27,17 @@ SEVERITY_RANK = {
 class ProblemsController:
     """Controller for the Problems panel."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, include_structured_diagnostics: bool = False) -> None:
         self.issues: list[SceneLintIssue] = []
+        self.diagnostic_issues: list[SceneLintIssue] = []
         self.issues_rev: int = 0
         self.query: str = ""
         self.selected_index: int = 0
         self.scroll_y: int = 0
         self.preview_open: bool = False
+        self._include_structured_diagnostics = bool(include_structured_diagnostics)
+        self._last_diagnostic_signature: tuple[tuple[str, str, str, str, str, str], ...] = ()
+        self._new_error_indicator: bool = False
     
     def set_issues(self, issues: list[SceneLintIssue]) -> None:
         """Set the list of issues and sort them deterministically."""
@@ -78,6 +83,50 @@ class ProblemsController:
         self.set_issues(issues)
         return issues
 
+    def refresh_structured_diagnostics(self) -> None:
+        """Refresh editor-visible structured diagnostics from the engine sink."""
+        if not self._include_structured_diagnostics:
+            self.diagnostic_issues = []
+            return
+        ordered = tuple(sort_diagnostics(get_diagnostics()))
+        signature = tuple(
+            (
+                str(item.level.value),
+                str(item.code),
+                str(item.message),
+                str(item.source or ""),
+                str(item.location or ""),
+                str(item.hint or ""),
+            )
+            for item in ordered
+        )
+        if signature == self._last_diagnostic_signature:
+            return
+
+        prev_errors = sum(1 for issue in self.diagnostic_issues if str(issue.severity).lower() == "error")
+        self.diagnostic_issues = [self._to_problem_issue(item, idx) for idx, item in enumerate(ordered)]
+        self._last_diagnostic_signature = signature
+        next_errors = sum(1 for issue in self.diagnostic_issues if str(issue.severity).lower() == "error")
+        if next_errors > prev_errors:
+            self._new_error_indicator = True
+        self.issues_rev += 1
+        self._clamp_selection()
+
+    def mark_diagnostics_seen(self) -> None:
+        self._new_error_indicator = False
+
+    def has_new_error_indicator(self) -> bool:
+        return bool(self._new_error_indicator)
+
+    def get_severity_counts(self) -> dict[str, int]:
+        self.refresh_structured_diagnostics()
+        counts = {"error": 0, "warning": 0, "info": 0}
+        for issue in self._all_issues():
+            sev = str(getattr(issue, "severity", "") or "").strip().lower()
+            if sev in counts:
+                counts[sev] += 1
+        return counts
+
     def set_query(self, query: str) -> None:
         """Set the search query."""
         if self.query == query:
@@ -88,20 +137,29 @@ class ProblemsController:
 
     def get_filtered_issues(self) -> list[SceneLintIssue]:
         """Get issues matching the search query."""
+        all_issues = self._all_issues()
         if not self.query:
-            return self.issues
+            return all_issues
         q = self.query.lower()
         
         # Filter logic similar to scene_lint_model.filter_lint_issues
         # Matches against message, kind, issue_id, entity_id
         filtered = []
-        for issue in self.issues:
+        for issue in all_issues:
             if (q in issue.message.lower() or
                 q in issue.kind.lower() or
                 q in issue.issue_id.lower() or
-                (issue.entity_id and q in issue.entity_id.lower())):
+                (issue.entity_id and q in issue.entity_id.lower()) or
+                q in str(issue.meta.get("diagnostic_source", "")).lower() or
+                q in str(issue.meta.get("diagnostic_location", "")).lower()):
                 filtered.append(issue)
         return filtered
+
+    def _all_issues(self) -> list[SceneLintIssue]:
+        if not self._include_structured_diagnostics:
+            return list(self.issues)
+        # Keep diagnostics in their canonical deterministic order, then scene lint issues.
+        return [*self.diagnostic_issues, *self.issues]
 
     def move_selection(self, delta: int) -> None:
         """Move the selection index."""
@@ -132,6 +190,7 @@ class ProblemsController:
         
         Updates scroll_y to ensure selection is within view.
         """
+        self.refresh_structured_diagnostics()
         filtered = self.get_filtered_issues()
         total_count = len(filtered)
         
@@ -154,6 +213,7 @@ class ProblemsController:
         end_idx = min(total_count, current_scroll_idx + visible_count + overscan)
         
         visible_subset = filtered[start_idx:end_idx]
+        counts = self.get_severity_counts()
         
         return {
             "rows": visible_subset,
@@ -163,7 +223,38 @@ class ProblemsController:
             "scroll_y": self.scroll_y,
             "query": self.query,
             "preview_open": self.preview_open,
+            "severity_counts": counts,
+            "has_new_errors": bool(self._new_error_indicator),
         }
+
+    def _to_problem_issue(self, diag: Diagnostic, index: int) -> SceneLintIssue:
+        context = dict(diag.context) if isinstance(diag.context, dict) else {}
+        source = str(diag.source or context.get("source", "") or "").strip()
+        location = str(
+            diag.location
+            or context.get("location", "")
+            or context.get("pointer", "")
+            or ""
+        ).strip()
+        hint = str(diag.hint or "").strip()
+        return SceneLintIssue(
+            issue_id=f"diagnostic:{index}:{diag.code}",
+            kind=str(diag.code),
+            message=str(diag.message),
+            entity_id=None,
+            scene_id=(source or None),
+            severity=str(diag.severity).upper(),
+            risk="safe",
+            fix_kind=None,
+            fixable=False,
+            meta={
+                "diagnostic_code": str(diag.code),
+                "diagnostic_source": source,
+                "diagnostic_location": location,
+                "diagnostic_hint": hint,
+                "diagnostic_context": dict(sorted(context.items(), key=lambda item: str(item[0]))),
+            },
+        )
 
     def _clamp_selection(self) -> None:
         filtered_len = len(self.get_filtered_issues())

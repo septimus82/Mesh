@@ -9,8 +9,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import engine.optional_arcade as optional_arcade
-from engine.editor.editor_menu_hover_query import get_menu_hover_item_id
-from engine.editor.editor_modal_state_query import get_active_menu_id
 
 from ..text_draw import draw_text_cached, TextCache
 from .common import UIElement, draw_panel_bg
@@ -54,6 +52,8 @@ class MenuBarOverlay(UIElement):
             MENU_BAR_HEIGHT,
             MENU_FONT_SIZE,
         )
+        from engine.editor.editor_menu_hover_query import get_menu_hover_item_id
+        from engine.editor.editor_modal_state_query import get_active_menu_id
 
         # Get current state
         active_menu = get_active_menu_id(controller)

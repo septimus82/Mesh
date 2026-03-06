@@ -13,7 +13,7 @@ from typing import Any, Dict, TYPE_CHECKING
 from engine.logging_tools import get_logger
 
 if TYPE_CHECKING:
-    pass
+    from engine.editor.keymap_override_model import ScopedOverrides
 
 logger = get_logger(__name__)
 
@@ -23,10 +23,10 @@ class EditorKeymapController:
 
     def __init__(self, editor: Any) -> None:
         self._editor = editor
-        self._keymap_overrides: Dict[str, str] = {}
+        self._keymap_overrides: ScopedOverrides = {}
 
     @property
-    def keymap_overrides(self) -> Dict[str, str]:
+    def keymap_overrides(self) -> ScopedOverrides:
         """The current keymap overrides."""
         return self._keymap_overrides
 

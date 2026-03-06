@@ -28,7 +28,7 @@ class DropTable(Behaviour):
         "seed": ParamDef(int, default=-1, description="Optional RNG seed for deterministic tests."),
     }
 
-    def __init__(self, entity, window, **config: Any) -> None:  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         super().__init__(entity, window, **config)
         self.listen_event = str(self.config.get("listen_event", "died") or "died")
         self.match_self = bool(self.config.get("match_self", True))

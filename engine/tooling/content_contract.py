@@ -9,6 +9,17 @@ from typing import Any, Iterable
 from engine.fx_presets import FxPresetRegistry
 from engine.paths import resolve_path
 from engine.tooling_runtime.pack_manifest import load_all_manifests, resolve_pack_order
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 
 @dataclass(frozen=True)
@@ -80,6 +91,7 @@ def validate_content_contract(
         try:
             payload = json.loads(file_path.read_text(encoding="utf-8"))
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("CNCT-001", "engine/tooling/content_contract.py blanket swallow", once=True)
             errors.append(
                 ContractError(
                     file_path=_display_path(file_path, repo_root),
@@ -393,6 +405,7 @@ def _display_path(path: Path, repo_root: Path) -> str:
         rel = path.resolve().relative_to(repo_root.resolve())
         return rel.as_posix()
     except Exception:
+        _log_swallow("CNCT-002", "engine/tooling/content_contract.py blanket swallow", once=True)
         return path.as_posix()
 
 
@@ -401,6 +414,7 @@ def _infer_pack_id(path: Path, repo_root: Path) -> str | None:
         rel = path.resolve().relative_to(repo_root.resolve())
         parts = rel.parts
     except Exception:
+        _log_swallow("CNCT-003", "engine/tooling/content_contract.py blanket swallow", once=True)
         parts = path.parts
     for idx, part in enumerate(parts):
         if part.lower() == "packs" and idx + 1 < len(parts):
@@ -489,6 +503,7 @@ def _load_prefab_ids(prefabs_path: Path) -> tuple[set[str], str | None]:
     try:
         payload = json.loads(prefabs_path.read_text(encoding="utf-8"))
     except Exception as exc:  # noqa: BLE001
+        _log_swallow("CNCT-004", "engine/tooling/content_contract.py blanket swallow", once=True)
         return set(), f"failed to parse prefabs.json: {exc}"
     if not isinstance(payload, list):
         return set(), "prefabs.json must be a list"
@@ -517,6 +532,7 @@ def _find_root_pack_id(pack_order: list[Any], repo_root: Path) -> str | None:
             if root_path.resolve() == repo_resolved:
                 return _coerce_non_empty_str(pack_id)
         except Exception:
+            _log_swallow("CNCT-005", "engine/tooling/content_contract.py blanket swallow", once=True)
             continue
     return None
 

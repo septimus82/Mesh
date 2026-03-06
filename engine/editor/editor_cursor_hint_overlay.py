@@ -13,6 +13,18 @@ import engine.optional_arcade as optional_arcade
 from ..text_draw import draw_text_cached, TextCache
 from ..ui_overlays.common import UIElement
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 if TYPE_CHECKING:
     from ..game import GameWindow
 
@@ -94,6 +106,7 @@ class EditorCursorHintOverlay(UIElement):
                 box_cx, box_cy, box_width, box_height, HINT_BG_COLOR
             )
         except Exception:  # noqa: BLE001
+            _log_swallow("EDIT-001", "engine/editor/editor_cursor_hint_overlay.py pass-only blanket swallow")
             pass
 
         # Draw text
@@ -114,4 +127,5 @@ class EditorCursorHintOverlay(UIElement):
                 cache=cache,
             )
         except Exception:  # noqa: BLE001
+            _log_swallow("EDIT-002", "engine/editor/editor_cursor_hint_overlay.py pass-only blanket swallow")
             pass

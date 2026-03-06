@@ -5,6 +5,18 @@ from typing import Any
 from ..logging_tools import get_logger
 from .. import json_io
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 logger = get_logger(__name__)
 
 
@@ -61,6 +73,7 @@ def save_current_scene(controller: Any) -> None:
             if callable(enqueue):
                 enqueue(tr("UI_SCENE_SAVED"), seconds=2.0)
         except Exception:  # noqa: BLE001
+            _log_swallow("OPSX-001", "engine/editor_runtime/ops.py pass-only blanket swallow")
             pass
     except Exception as exc:  # noqa: BLE001
         logger.info("[Editor] Error saving scene: %s", exc)

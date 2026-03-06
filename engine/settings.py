@@ -9,6 +9,18 @@ import engine.optional_arcade as optional_arcade
 
 from . import json_io
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 DEFAULT_SETTINGS_PATH = Path("artifacts") / "settings.json"
 SETTINGS_PATH_ENV = "MESH_SETTINGS_PATH"
 
@@ -41,12 +53,14 @@ class SettingsV1:
                 try:
                     keybinds[name] = int(code)
                 except Exception:
+                    _log_swallow("SETT-001", "engine/settings.py blanket swallow", once=True)
                     continue
 
         def _clamp01(value: Any, default: float) -> float:
             try:
                 f = float(value)
             except Exception:
+                _log_swallow("SETT-002", "engine/settings.py blanket swallow", once=True)
                 f = float(default)
             if f < 0.0:
                 return 0.0
@@ -77,6 +91,7 @@ def load_settings(path: str | Path | None = None) -> SettingsV1:
     except FileNotFoundError:
         return SettingsV1()
     except Exception:
+        _log_swallow("SETT-003", "engine/settings.py blanket swallow", once=True)
         return SettingsV1()
     return SettingsV1.from_payload(raw if isinstance(raw, dict) else {})
 
@@ -105,10 +120,12 @@ def apply_settings(window: Any, settings: SettingsV1) -> None:
         try:
             setattr(cfg, "sfx_volume", float(settings.sfx_volume))
         except Exception:
+            _log_swallow("SETT-001", "engine/settings.py pass-only blanket swallow")
             pass
         try:
             setattr(cfg, "music_volume", float(settings.music_volume))
         except Exception:
+            _log_swallow("SETT-002", "engine/settings.py pass-only blanket swallow")
             pass
 
     input_controller = getattr(window, "input_controller", None)
@@ -132,10 +149,12 @@ def apply_settings(window: Any, settings: SettingsV1) -> None:
             try:
                 unbind(action_name, int(old_key))
             except Exception:
+                _log_swallow("SETT-004", "engine/settings.py blanket swallow", once=True)
                 continue
         try:
             bind(action_name, int(key_code))
         except Exception:
+            _log_swallow("SETT-005", "engine/settings.py blanket swallow", once=True)
             continue
 
     # Keep config bindings in sync (names), but do not auto-save config.json.
@@ -148,4 +167,5 @@ def apply_settings(window: Any, settings: SettingsV1) -> None:
         if cfg is not None:
             setattr(cfg, "input_bindings", snapshot)
     except Exception:
+        _log_swallow("SETT-006", "engine/settings.py blanket swallow", once=True)
         return

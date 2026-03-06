@@ -26,6 +26,9 @@ from engine.stamps import (
     summarize_stamp,
     validate_stamp,
 )
+from engine.logging_tools import get_logger
+
+_logger = get_logger(__name__)
 
 
 def handle(args: argparse.Namespace) -> int:
@@ -89,6 +92,7 @@ def _handle_stamp(args: argparse.Namespace) -> int:
             try:
                 stamp = load_stamp(str(full_path))
             except Exception:
+                _logger.debug("SWALLOW[STMP-001] load_stamp failed for %s", rel_path, exc_info=True)
                 continue
             stamp_summary = summarize_stamp(stamp, rel_path=rel_path)
             if not stamp_summary.id:
@@ -127,7 +131,8 @@ def _handle_stamp(args: argparse.Namespace) -> int:
         prefabs_path = resolve_path("assets/prefabs.json")
         try:
             prefabs_payload = json.loads(prefabs_path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+            _logger.debug("SWALLOW[STMP-002] prefabs.json parse error", exc_info=True)
             print(f"[Mesh][Stamp] ERROR: assets/prefabs.json :: prefabs.parse_error :: {exc}")
             return 1
 
@@ -142,7 +147,8 @@ def _handle_stamp(args: argparse.Namespace) -> int:
             full_path = resolve_path(rel_path)
             try:
                 stamp = load_stamp(str(full_path))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+                _logger.debug("SWALLOW[STMP-003] stamp parse error for %s", rel_path, exc_info=True)
                 stamp_issues.append(StampIssue(path=rel_path, code="stamp.parse_error", detail=str(exc)))
                 continue
             stamp_issues.extend(validate_stamp(stamp, rel_path=rel_path, prefab_ids=stamp_prefab_ids))
@@ -167,7 +173,8 @@ def _handle_stamp(args: argparse.Namespace) -> int:
 
         try:
             stamp = load_stamp(str(stamp_path))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+            _logger.debug("SWALLOW[STMP-004] stamp parse error for %s", stamp_path_raw, exc_info=True)
             print(f"[Mesh][Stamp] ERROR: {stamp_path_raw} :: stamp.parse_error :: {exc}")
             return 1
 
@@ -236,6 +243,7 @@ def _handle_brush(args: argparse.Namespace) -> int:
             try:
                 brush = load_brush(str(full_path))
             except Exception:
+                _logger.debug("SWALLOW[STMP-005] load_brush failed for %s", rel_path, exc_info=True)
                 continue
             brush_summary = summarize_brush(brush=brush, rel_path=rel_path)
             if not brush_summary.id:
@@ -272,7 +280,8 @@ def _handle_brush(args: argparse.Namespace) -> int:
             full_path = resolve_path(rel_path)
             try:
                 raw = json.loads(full_path.read_text(encoding="utf-8"))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+                _logger.debug("SWALLOW[STMP-006] brush parse error for %s", rel_path, exc_info=True)
                 brush_issues.append(BrushIssue(path=rel_path, code="brush.parse_error", detail=str(exc)))
                 continue
             for code in validate_brush(raw):
@@ -299,7 +308,8 @@ def _handle_brush(args: argparse.Namespace) -> int:
 
         try:
             raw = json.loads(brush_path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+            _logger.debug("SWALLOW[STMP-007] brush parse error for %s", brush_path_raw, exc_info=True)
             print(f"[Mesh][Brush] ERROR: {brush_path_raw} :: brush.parse_error :: {exc}")
             return 1
         if not isinstance(raw, dict):
@@ -315,7 +325,8 @@ def _handle_brush(args: argparse.Namespace) -> int:
         tile_filter = getattr(args, "tile", None)
         try:
             lines = render_brush_layer_ascii(raw, layer_id=layer_id, tile_filter=tile_filter)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+            _logger.debug("SWALLOW[STMP-008] brush render failed for %s", brush_path_raw, exc_info=True)
             print(f"[Mesh][Brush] ERROR: {brush_path_raw} :: brush.invalid :: cannot render: {exc}")
             return 1
 
@@ -367,6 +378,7 @@ def _handle_capture(args: argparse.Namespace) -> int:
             try:
                 stamp = load_stamp(str(resolve_path(rel_path)))
             except Exception:
+                _logger.debug("SWALLOW[STMP-009] capture stamp load failed for %s", rel_path, exc_info=True)
                 continue
             if not _is_captured(rel_path=rel_path, payload=stamp):
                 continue
@@ -380,6 +392,7 @@ def _handle_capture(args: argparse.Namespace) -> int:
             try:
                 brush = json.loads(full_path.read_text(encoding="utf-8"))
             except Exception:
+                _logger.debug("SWALLOW[STMP-010] capture brush parse failed for %s", rel_path, exc_info=True)
                 continue
             if not _is_captured(rel_path=rel_path, payload=brush):
                 continue
@@ -401,7 +414,8 @@ def _handle_capture(args: argparse.Namespace) -> int:
         prefabs_path = resolve_path("assets/prefabs.json")
         try:
             prefabs_payload = json.loads(prefabs_path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+            _logger.debug("SWALLOW[STMP-011] capture prefabs.json parse error", exc_info=True)
             print(f"[Mesh][Capture] ERROR: assets/prefabs.json :: prefabs.parse_error :: {exc}")
             return 1
         capture_prefab_ids: set[str] = {
@@ -414,7 +428,8 @@ def _handle_capture(args: argparse.Namespace) -> int:
         for rel_path in iter_stamp_paths(pack_id=pack):
             try:
                 stamp = load_stamp(str(resolve_path(rel_path)))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+                _logger.debug("SWALLOW[STMP-012] capture stamp load failed for %s", rel_path, exc_info=True)
                 continue
             if not _is_captured(rel_path=rel_path, payload=stamp):
                 continue
@@ -425,7 +440,8 @@ def _handle_capture(args: argparse.Namespace) -> int:
             full_path = resolve_path(rel_path)
             try:
                 raw = json.loads(full_path.read_text(encoding="utf-8"))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+                _logger.debug("SWALLOW[STMP-013] capture brush parse failed for %s", rel_path, exc_info=True)
                 continue
             if not _is_captured(rel_path=rel_path, payload=raw):
                 continue

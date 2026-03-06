@@ -40,7 +40,7 @@ class EditorFindActionsController:
 
     def activate_find_scene(self, scene_id: str) -> bool:
         """Activate a scene from find-everything."""
-        return self._editor._open_scene_by_id(scene_id)
+        return bool(self._editor._open_scene_by_id(scene_id))
 
     def activate_find_entity(self, entity_id: str) -> bool:
         """Activate an entity from find-everything (select and focus camera)."""

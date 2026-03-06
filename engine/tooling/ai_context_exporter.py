@@ -8,6 +8,18 @@ from engine.paths import resolve_path
 from engine.scene_loader import SceneLoader
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def export_ai_context(scene_paths: List[Path]) -> Dict[str, Any]:
     """
     Loads the specified scenes and produces a compact JSON summary suitable for AI context.
@@ -62,6 +74,7 @@ def _load_quest_definitions() -> Dict[str, str]:
                             title = qid
                         definitions[qid] = title
         except Exception:
+            _log_swallow("AICO-001", "engine/tooling/ai_context_exporter.py pass-only blanket swallow")
             pass # Ignore errors in quest loading for context export
 
     # Core quests are usually sufficient for context; pack quests can be added later if needed.

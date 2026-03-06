@@ -49,6 +49,9 @@ def register_commands(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     from .. import misc as misc_commands
     misc_commands.register(subparsers)
 
+    from .. import ship_check as ship_check_commands
+    ship_check_commands.register(subparsers)
+
     from .. import debug as debug_commands
     debug_commands.register(subparsers)
 

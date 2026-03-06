@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple
 import engine.optional_arcade as optional_arcade
 
+from engine.logging_tools import get_logger; logger = get_logger(__name__)
+
 from engine.asset_index import AssetRow
 from engine.asset_place_overlay import draw_asset_placement_ghost
 from engine.repo_root import get_repo_root
@@ -96,7 +98,6 @@ from .editor_light_occluder_ops import (
 )
 from .import_tools import repair_package_submodule_attr
 from .i18n import tr
-from .path_norm import normalize_scene_path
 from .ui_overlays.common import (
     _draw_rectangle_filled,
     draw_outline_centered,
@@ -120,7 +121,6 @@ from .editor.state import (
     ENTITY_PANEL_FOCUS_OUTLINER,
     ENTITY_PANEL_FOCUS_INSPECTOR,
     ENTITY_PANEL_FIELDS,
-    SCENE_SWITCHER_RECENT_LIMIT,
     EditorDirtyState,
     EditorPlaySession,
 )
@@ -141,6 +141,34 @@ from .editor.selection_clipboard import (
 )
 from .editor.overlays_modals import (
     bind_overlays_modals_methods as _bind_overlays_modals_methods,
+)
+
+from .editor.editor_controller_workspace_lifecycle import (
+    bind_workspace_lifecycle_methods as _bind_workspace_lifecycle_methods,
+)
+from .editor.editor_controller_ui_state import (
+    bind_ui_state_methods as _bind_ui_state_methods,
+)
+from .editor.editor_controller_scene_ops import (
+    bind_scene_ops_methods as _bind_scene_ops_methods,
+)
+from .editor.editor_controller_diagnostics_bridge import (
+    bind_diagnostics_bridge_methods as _bind_diagnostics_bridge_methods,
+)
+from .editor.editor_controller_input_routing import (
+    bind_input_routing_methods as _bind_input_routing_methods,
+)
+from .editor.editor_controller_entity_panels_bridge import (
+    bind_entity_panels_bridge_methods as _bind_entity_panels_bridge_methods,
+)
+from .editor.editor_controller_find_browser_bridge import (
+    bind_find_browser_bridge_methods as _bind_find_browser_bridge_methods,
+)
+from .editor.editor_controller_content_panels_bridge import (
+    bind_content_panels_bridge_methods as _bind_content_panels_bridge_methods,
+)
+from .editor.editor_controller_project_explorer_bridge import (
+    bind_project_explorer_bridge_methods as _bind_project_explorer_bridge_methods,
 )
 
 ZONE_BEHAVIOUR_CANONICAL = TRIGGER_ZONE_CANONICAL | HITBOX_CANONICAL
@@ -190,8 +218,7 @@ def load_prefab_palette(*args: Any, **kwargs: Any) -> list[dict[str, Any]]:
                 fn = getattr(current, "load_prefab_palette", None)
                 if callable(fn) and fn is not load_prefab_palette:
                     return fn(*args, **kwargs)
-        except Exception:
-            pass
+        except Exception: logger.debug("SWALLOW[%s] %s", "EDIT-001", "engine/editor_controller.py pass-only blanket swallow", exc_info=True); pass
     from .editor_palette import load_prefab_palette as _impl
 
     return _impl(*args, **kwargs)
@@ -206,8 +233,7 @@ def get_prefab_palette() -> list[dict[str, Any]]:
                 fn = getattr(current, "get_prefab_palette", None)
                 if callable(fn) and fn is not get_prefab_palette:
                     return fn()
-        except Exception:
-            pass
+        except Exception: logger.debug("SWALLOW[%s] %s", "EDIT-002", "engine/editor_controller.py pass-only blanket swallow", exc_info=True); pass
 
     global PREFAB_PALETTE
     if PREFAB_PALETTE is None:
@@ -249,7 +275,7 @@ class EditorModeController:
         self.project_explorer_actions = EditorProjectExplorerActionsController(self)
         self.scene_browse = EditorSceneBrowseController(self)
         self.scene_open = EditorSceneOpenController(self)
-        self.problems = ProblemsController()
+        self.problems = ProblemsController(include_structured_diagnostics=True)
         self.panels = EditorPanelsController(self)
         self.providers = EditorProvidersController(self)
         self.unsaved_confirm = EditorUnsavedChangesController(self)
@@ -518,7 +544,7 @@ class EditorModeController:
         # HD2D default preset (for auto-apply on new scenes)
         self._hd2d_default_preset_id: str | None = None
 
-        self.load_workspace()
+        self._workspace_ctl.load_on_startup()
         self.load_keymap_overrides()
 
         # Shape editing state (entity-local collision/occluder polygons)
@@ -585,39 +611,16 @@ class EditorModeController:
 
     # -- EditorUiFlowHost Protocol Implementation --
     
-    def ui_activate_command(self, cmd_id: str) -> bool:
-        return self._activate_find_command(cmd_id)
         
-    def ui_activate_asset(self, item_id: str) -> bool:
-        return self._activate_find_asset(item_id)
         
-    def ui_activate_scene(self, item_id: str) -> bool:
-        return self._activate_find_scene(item_id)
         
-    def ui_activate_entity(self, item_id: str) -> bool:
-        return self._activate_find_entity(item_id)
         
-    def ui_activate_problem(self, item_id: str) -> bool:
-        return self._activate_find_problem(item_id)
         
-    def ui_get_palette_items(self) -> List[Any]:
-        return self.search.ui_get_palette_items()
 
-    def _ui_get_problems(self, scene_data: Any, window: Any) -> List[Any]:
-        """Helper for palette items."""
-        return self.search._ui_get_problems(scene_data, window)
 
-    def ui_toast(self, msg: str) -> None:
-        self._show_toast(msg)
 
-    def ui_hd2d_preview(self, preset_id: str) -> None:
-        self.preview_hd2d_preset(preset_id)
         
-    def ui_hd2d_cancel_preview(self) -> None:
-        self._cancel_hd2d_preview()
         
-    def ui_hd2d_commit(self, preset_id: str) -> bool:
-        return self.commit_hd2d_preset(preset_id)
 
     # -- Vertical Slice Diet V2 Delegation Properties --
 
@@ -755,27 +758,13 @@ class EditorModeController:
             return self._repo_root_override
         return get_repo_root()
 
-    def load_keymap_overrides(self) -> None:
-        """Load keymap overrides from keymap.json.
 
-        DELEGATED to EditorKeymapController.
-        """
-        self.keymap.load_overrides()
 
-    def load_workspace(self) -> None:
-        self._workspace_ctl.load_workspace()
 
-    def save_workspace(self) -> None:
-        self._workspace_ctl.save_workspace()
-
-    def _autosave_workspace(self, now_ns: int | None = None) -> None:
-        self._workspace_ctl.schedule_autosave(now_ns=now_ns)
 
     def _tick_workspace_autosave(self, now_ns: int | None = None) -> None:
         self._workspace_ctl.tick_autosave(delay_ns=WORKSPACE_AUTOSAVE_DELAY_NS, now_ns=now_ns)
 
-    def _flush_workspace_autosave(self) -> None:
-        self._workspace_ctl.flush_autosave()
 
     # -------------------------------------------------------------------------
     # Ghost Originals Settings (for alt-drag duplicate visual feedback)
@@ -925,183 +914,15 @@ class EditorModeController:
     def _get_palette_thumb_texture(self, prefab: Dict[str, Any]) -> Optional[optional_arcade.arcade.Texture]:
         return self.palette.get_palette_thumb_texture(prefab)
 
-    # ------------------------------------------------------------------
-    # Dialogue / Quest editing
-    # ------------------------------------------------------------------
-    def _entity_has_dialogue(self, sprite: Optional[optional_arcade.arcade.Sprite]) -> bool:
-        return self.dialogue.entity_has_dialogue(sprite)
+    # Dialogue / Animation / Tile → editor_controller_content_panels_bridge.py
 
-    def _refresh_dialogue_cache(self) -> None:
-        self.dialogue.refresh_dialogue_cache()
-
-    def _get_entity_dialogue_config(self, sprite: optional_arcade.arcade.Sprite) -> Dict[str, Any]:
-        return self.dialogue.get_entity_dialogue_config(sprite)
-
-    def _set_entity_dialogue_config(self, sprite: optional_arcade.arcade.Sprite, dialogue_root: Dict[str, Any]) -> None:
-        self.dialogue.set_entity_dialogue_config(sprite, dialogue_root)
-
-    def _dialogue_nodes(self) -> List[Dict[str, Any]]:
-        return self.dialogue.dialogue_nodes()
-
-    def _get_selected_node(self) -> Optional[Dict[str, Any]]:
-        return self.dialogue.get_selected_node()
-
-    def _get_selected_choice(self, node: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        return self.dialogue.get_selected_choice(node)
-
-    def _next_dialogue_field(self, current: str, *, has_choice: bool) -> str:
-        return self.dialogue.next_dialogue_field(current, has_choice=has_choice)
-
-    def _prev_dialogue_field(self, current: str, *, has_choice: bool) -> str:
-        return self.dialogue.prev_dialogue_field(current, has_choice=has_choice)
-
-    def _begin_dialogue_edit(self) -> None:
-        self.dialogue.begin_dialogue_edit()
-
-    def _commit_dialogue_edit(self) -> None:
-        self.dialogue.commit_dialogue_edit()
-
-    def _apply_dialogue_edit(
-        self,
-        node: Dict[str, Any],
-        choice: Optional[Dict[str, Any]],
-        focus: str,
-        new_text: str,
-    ) -> bool:
-        return self.dialogue.apply_dialogue_edit(node, choice, focus, new_text)
-
-    def _collect_dialogue_warnings(self, dialogue_root: Dict[str, Any]) -> List[str]:
-        return self.dialogue.collect_dialogue_warnings(dialogue_root)
-
-    # ------------------------------------------------------------------
-    # Animation panel helpers
-    # ------------------------------------------------------------------
-    def _entity_has_animator(self, sprite: Optional[optional_arcade.arcade.Sprite]) -> bool:
-        return self.animation.entity_has_animator(sprite)
-
-    def _refresh_animation_cache(self) -> None:
-        self.animation.refresh_animation_cache()
-
-    def _get_animator_config(self, sprite: Optional[optional_arcade.arcade.Sprite]) -> Dict[str, Any]:
-        return self.animation.get_animator_config(sprite)
-
-    def _set_animator_config(self, sprite: optional_arcade.arcade.Sprite, animator_cfg: Dict[str, Any]) -> None:
-        self.animation.set_animator_config(sprite, animator_cfg)
-
-    def _apply_animator_runtime(self, sprite: optional_arcade.arcade.Sprite, animator_cfg: Dict[str, Any]) -> None:
-        self.animation.apply_animator_runtime(sprite, animator_cfg)
-
-    def _next_animation_field(self, current: str) -> str:
-        return self.animation.next_animation_field(current)
-
-    def _prev_animation_field(self, current: str) -> str:
-        return self.animation.prev_animation_field(current)
-
-    def _cycle_mode(self, current: str, forward: bool) -> str:
-        return self.animation.cycle_mode(current, forward)
-
-    def _commit_animation_edit(self) -> None:
-        self.animation.commit_animation_edit()
-
-    def _apply_animation_change(
-        self,
-        names: List[str],
-        animations: Dict[str, Any],
-        clip_name: str,
-        field: str,
-        new_value: Any,
-    ) -> None:
-        self.animation.apply_animation_change(names, animations, clip_name, field, new_value)
-
-    # ------------------------------------------------------------------
-    # Tile painting helpers
-    # ------------------------------------------------------------------
-    def _tilemap_available(self) -> bool:
-        return self.tile.tilemap_available()
-
-    def _set_tile_panel_active(self, value: bool) -> None:
-        self.tile.set_tile_panel_active(value)
-
-    def _refresh_tile_palette(self) -> None:
-        self.tile.refresh_tile_palette()
-
-    def _current_tile_gid(self) -> int:
-        return self.tile.current_tile_gid()
-
-    def _paint_tile_at(self, world_x: float, world_y: float, gid: int) -> None:
-        self.tile.paint_tile_at(world_x, world_y, gid)
-
-    def _current_tile_layer(self) -> str:
-        return self.tile.current_tile_layer()
-
-    # ------------------------------------------------------------------
-    # Lights tool
-    # ------------------------------------------------------------------
-    def _hit_test_light(self, world_x: float, world_y: float, pick_radius: float = 16.0) -> Optional[int]:
-        return self.lights.hit_test_light(world_x, world_y, pick_radius=pick_radius)
-
-    def _add_light(self, x: float, y: float) -> None:
-        self.lights.add_light(x, y)
-
-    def _delete_selected_light(self) -> None:
-        self.lights.delete_selected_light()
-
-    def _draw_lights_overlay(self) -> None:
-        self.lights.draw_lights_overlay()
-
-    # ------------------------------------------------------------------
-    # Scene occluder tool
-    # ------------------------------------------------------------------
-    def _update_param(self, behaviour_name: str, param_name: str, value: Any) -> None:
-        self.inspector.update_param(behaviour_name, param_name, value)
-
-    def _update_param_internal(self, behaviour_name: str, param_name: str, value: Any, entity_name: str) -> None:
-        self.inspector.update_param_internal(behaviour_name, param_name, value, entity_name)
-
-    def _remove_param_internal(self, behaviour_name: str, param_name: str, entity_name: str) -> None:
-        self.inspector.remove_param_internal(behaviour_name, param_name, entity_name)
-
-    def _apply_behaviour_config_map(self, entity: optional_arcade.arcade.Sprite, config_map: dict[str, Any]) -> None:
-        self.inspector.apply_behaviour_config_map(entity, config_map)
-
-    def _get_prefab_base_entity(self, entity_data: dict[str, Any]) -> dict[str, Any] | None:
-        return self.inspector.get_prefab_base_entity(entity_data)
-
-    def _prefab_override_info(
-        self, entity_data: dict[str, Any]
-    ) -> tuple[dict[str, Any] | None, set[str]]:
-        return self.prefab.prefab_override_info(entity_data)
-
-    def _reset_selected_prefab_override(self, selected_item: dict[str, Any]) -> bool:
-        return self.prefab.reset_selected_prefab_override(selected_item)
-
-    def _reset_all_prefab_overrides(self) -> bool:
-        return self.prefab.reset_all_prefab_overrides()
-
-    def _refresh_inspector_items(self) -> None:
-        self.inspector.refresh_inspector_items()
-
-    def _get_inspector_items(self) -> List[Dict[str, Any]]:
-        return self.inspector.get_inspector_items()
-
-    def _build_inspector_items(self) -> List[Dict[str, Any]]:
-        return self.inspector.build_inspector_items()
+    # Lights tool / Inspector / Prefab → editor_controller_entity_panels_bridge.py
 
     def save_current_scene(self) -> None:
         self._flush_workspace_autosave()
         editor_ops.save_current_scene(self)
 
-    # -------------------------------------------------------------------------
-    # Problems Panel Actions
-    # DELEGATED to EditorProblemsActionsController
-    # -------------------------------------------------------------------------
-
-    def _reveal_in_project_explorer(self, path: str) -> bool:
-        """Reveal a path in the Project Explorer.
-
-        DELEGATED to EditorProblemsActionsController.
-        """
-        return self.problems_actions._reveal_in_project_explorer(path)
+    # Problems / Project Explorer → editor_controller_project_explorer_bridge.py
 
     def place_entity_at_mouse(self, x: float, y: float) -> None:
         editor_ops.place_entity_at_mouse(self, x, y)
@@ -1209,12 +1030,6 @@ class EditorModeController:
     def draw_overlay(self) -> None:
         """Draws in screen space (UI)."""
         self.overlay.draw_overlay()
-
-    def _quest_definitions(self) -> Dict[str, Dict[str, Any]]:
-        return self.dialogue._quest_definitions()
-
-    def _related_quest_ids(self, sprite: Optional[optional_arcade.arcade.Sprite]) -> set[str]:
-        return self.dialogue._related_quest_ids(sprite)
 
     def _resolve_prefab_source_path(self, prefab_id: str) -> tuple["Path", bool]:
         return self.prefab.resolve_prefab_source_path(prefab_id)
@@ -1391,7 +1206,7 @@ class EditorModeController:
                 if isinstance(cache, dict):
                     cache.clear()
             except Exception:
-                pass
+                logger.debug("Failed to parse background planes during undo/redo", exc_info=True)
 
     def _revert_alt_drag_duplicate_cmd(self, cmd: Dict[str, Any]) -> None:
         """Revert an alt-drag duplicate command (undo)."""
@@ -1516,305 +1331,19 @@ class EditorModeController:
         """
         return self.hd2d.upgrade_scene_to_defaults()
 
-    def set_find_query(self, text: str) -> None:
-        self.search.set_find_query(text)
+    # Find Everything / Asset Browser → editor_controller_find_browser_bridge.py
 
-    def append_find_query_text(self, text: str) -> bool:
-        return self.search.append_find_query_text(text)
+    # Project Explorer / Undo History / Problems → editor_controller_project_explorer_bridge.py
 
-    def backspace_find_query(self) -> bool:
-        return self.search.backspace_find_query()
 
-    def move_find_selection(self, delta: int) -> None:
-        self.search.move_find_selection(delta)
 
-    def activate_find_selection(self) -> bool:
-        return self.search.activate_find_selection()
 
-    def _refresh_find_everything_results(self) -> None:
-        """DEPRECATED: delegated to EditorUIFlowController."""
-        self.search.refresh_find_everything_results()
 
-    def _build_find_everything_items(self) -> list[Any]:
-        """DEPRECATED: delegated to EditorUIFlowController."""
-        return self.search.build_find_everything_items()
 
-    def _get_find_everything_problems(self) -> list[Any]:
-        """DEPRECATED: delegated to EditorUIFlowController."""
-        return self.search.get_find_everything_problems()
 
-    # -------------------------------------------------------------------------
-    # Find/Activate Actions
-    # DELEGATED to EditorFindActionsController
-    # -------------------------------------------------------------------------
 
-    def _activate_find_command(self, command_id: str) -> bool:
-        """Activate a command from find-everything or command palette.
 
-        DELEGATED to EditorFindActionsController.
-        """
-        return self.find_actions.activate_find_command(command_id)
 
-    def _activate_find_scene(self, scene_id: str) -> bool:
-        """Activate a scene from find-everything.
-
-        DELEGATED to EditorFindActionsController.
-        """
-        return self.find_actions.activate_find_scene(scene_id)
-
-    def _activate_find_entity(self, entity_id: str) -> bool:
-        """Activate an entity from find-everything.
-
-        DELEGATED to EditorFindActionsController.
-        """
-        return self.find_actions.activate_find_entity(entity_id)
-
-    def _activate_find_asset(self, asset_path: str) -> bool:
-        """Activate an asset from find-everything.
-
-        DELEGATED to EditorFindActionsController.
-        """
-        return self.find_actions.activate_find_asset(asset_path)
-
-    def _spawn_find_asset(self, asset_path: str) -> bool:
-        """Spawn an asset from find-everything.
-
-        DELEGATED to EditorFindActionsController.
-        """
-        return self.find_actions.spawn_find_asset(asset_path)
-
-    def _copy_find_asset_path(self, asset_path: str) -> bool:
-        """Copy asset path to clipboard from find-everything.
-
-        DELEGATED to EditorFindActionsController.
-        """
-        return self.find_actions.copy_find_asset_path(asset_path)
-
-    def _activate_find_problem(self, issue_id: str) -> bool:
-        """Activate a problem from find-everything.
-
-        DELEGATED to EditorFindActionsController.
-        """
-        return self.find_actions.activate_find_problem(issue_id)
-
-    def refresh_asset_browser(self) -> None:
-        self.asset_browser.refresh_asset_browser()
-
-    def set_asset_browser_filter(self, text: str) -> None:
-        self.asset_browser.set_asset_browser_filter(text)
-
-    def cycle_asset_browser_kind(self) -> None:
-        self.asset_browser.cycle_asset_browser_kind()
-
-    def _filter_asset_browser(self) -> None:
-        self.asset_browser._filter_asset_browser()
-
-    def asset_browser_move_selection(self, delta: int) -> None:
-        self.asset_browser.asset_browser_move_selection(delta)
-
-    def _activate_selected_asset(self) -> None:
-        self.asset_browser._activate_selected_asset()
-
-    def place_asset_at(self, x: float, y: float) -> None:
-        self.asset_browser.place_asset_at(x, y)
-
-
-
-
-    def record_recent_scene(self, scene_path: str) -> None:
-        normalized = normalize_scene_path(scene_path)
-        if not normalized:
-            return
-        recent = [path for path in self.scene_switcher_recent if path != normalized]
-        recent.insert(0, normalized)
-        self.scene_switcher_recent = recent[:SCENE_SWITCHER_RECENT_LIMIT]
-
-    def _refresh_scene_switcher_items(self) -> None:
-        self.scene_browse.refresh_scene_switcher_items()
-
-    def _scene_switcher_all_options(self) -> list[tuple[str, str]]:
-        return self.scene_browse.scene_switcher_all_options()
-
-    def _scene_switcher_visible_options(self) -> list[tuple[str, str]]:
-        return self.scene_browse.scene_switcher_visible_options()
-
-    def _scene_switcher_clamp_index(self, count: int) -> None:
-        self.scene_browse.scene_switcher_clamp_index(count)
-
-    def _scene_switcher_lines(self) -> list[str]:
-        return self.scene_browse.scene_switcher_lines()
-
-    def _refresh_scene_browser_rows(self) -> None:
-        self.scene_browse.refresh_scene_browser_rows()
-
-    def _scene_browser_rows(self) -> list["SceneRow"]:
-        return self.scene_browse.scene_browser_rows()
-
-    def _scene_browser_clamp_index(self, count: int) -> None:
-        self.scene_browse.scene_browser_clamp_index(count)
-
-    def _scene_browser_window(self, count: int) -> tuple[int, int]:
-        return self.scene_browse.scene_browser_window(count)
-
-    def _scene_browser_layout(self, count: int) -> dict[str, float]:
-        return self.scene_browse.scene_browser_layout(count)
-
-    def _scene_browser_lines(self) -> list[str]:
-        return self.scene_browse.scene_browser_lines()
-
-    def _open_scene_by_id(self, scene_id: str) -> bool:
-        return self.scene_open.open_scene_by_id(scene_id)
-
-    def _scene_switcher_open_selected(self) -> bool:
-        return self.scene_browse.scene_switcher_open_selected()
-
-    def _scene_browser_open_selected(self) -> bool:
-        return self.scene_browse.scene_browser_open_selected()
-
-    def _scene_browser_handle_mouse_click(self, x: float, y: float, button: int) -> bool:
-        return self.scene_browse.scene_browser_handle_mouse_click(x, y, button)
-
-    # -------------------------------------------------------------------------
-    # Project Explorer Panel
-    # -------------------------------------------------------------------------
-
-    def _refresh_project_explorer_rows(self) -> None:
-        self.project_explorer_actions.refresh_rows()
-
-    def _project_explorer_display_rows(self) -> list[Any]:
-        return self.project_explorer_actions.get_display_rows()
-
-    def _project_explorer_selectable_rows(self) -> list[Any]:
-        return self.project_explorer_actions.get_selectable_rows()
-
-    def _activate_project_explorer_selected(self) -> bool:
-        return self.project_explorer_actions.activate_selected()
-
-    def _project_explorer_handle_mouse_click(self, x: float, y: float, button: int, modifiers: int) -> bool:
-        return self.project_explorer_actions.handle_mouse_click(x, y, button, modifiers)
-
-    def _activate_project_recent(self, recent: Any) -> bool:
-        return self.project_explorer_actions.activate_recent(recent)
-
-    def _push_project_recent(self, kind: str, rel_path: str, label: str) -> None:
-        self.project_explorer_actions.push_recent(kind, rel_path, label)
-
-    def _project_explorer_recent_payloads(self) -> list[dict[str, Any]]:
-        return self.project_explorer_actions.get_recent_payloads()
-
-    def _clear_project_recents(self) -> bool:
-        return self.project_explorer_actions.clear_recents()
-
-
-    def reveal_in_project_explorer(self, target_path: str) -> bool:
-        return self.project_explorer_actions.reveal_in_explorer(target_path)
-
-
-    def reveal_current_in_project_explorer(self) -> bool:
-        return self.project_explorer_actions.reveal_current_in_explorer()
-
-    def _get_current_scene_path(self) -> str | None:
-        return self.project_explorer_actions.get_current_scene_path()
-
-    def _get_selected_entity_asset_path(self) -> str | None:
-        return self.project_explorer_actions.get_selected_entity_asset_path()
-
-    def copy_project_explorer_selected_path(self) -> bool:
-        return self.project_explorer_actions.copy_selected_path()
-
-    def _try_copy_to_os_clipboard(self, text: str) -> None:
-        self.project_explorer_actions.try_copy_to_os_clipboard(text)
-
-    def safe_rename_selected_asset(self, new_name: str) -> bool:
-        return self.project_explorer_actions.safe_rename_selected_asset(new_name)
-
-    def safe_move_selected_asset(self, dest_folder_rel: str) -> bool:
-        return self.project_explorer_actions.safe_move_selected_asset(dest_folder_rel)
-
-    def safe_move_selected_assets(self, dest_folder_rel: str) -> bool:
-        return self.project_explorer_actions.safe_move_selected_assets(dest_folder_rel)
-
-    def prompt_project_explorer_move_destination(self, on_confirm) -> bool:
-        return self.project_explorer_actions.prompt_move_destination(on_confirm)
-
-    def _get_selected_project_entry_path(self) -> str | None:
-        return self.project_explorer_actions.get_selected_project_entry_path()
-
-    # -------------------------------------------------------------------------
-    # Undo History Panel
-    # -------------------------------------------------------------------------
-
-    def get_undo_history_entries(self) -> list[Any]:
-        return self.history.get_entries()
-
-    def get_filtered_undo_history_entries(self) -> list[Any]:
-        return self.history.get_filtered_entries()
-
-    def jump_undo_history_to(self, cursor_index: int) -> bool:
-        return self.history.jump_to(cursor_index)
-
-    def _history_handle_mouse_click(self, x: float, y: float, button: int) -> bool:
-        return self.history.handle_mouse_click(x, y, button)
-
-    # -------------------------------------------------------------------------
-    # Problems Panel
-    # -------------------------------------------------------------------------
-
-    def scan_scene_problems(self) -> int:
-        """Scan current scene JSON for issues."""
-        from pathlib import Path  # noqa: PLC0415
-
-        scene = getattr(getattr(self.window, "scene_controller", None), "_loaded_scene_data", None)
-
-        repo_root = self._get_repo_root()
-        if not isinstance(repo_root, Path):
-            repo_root = Path(repo_root)
-
-        resolver = getattr(self, "_prefab_resolver", None)
-        if not callable(resolver):
-            def resolver(prefab_id: str) -> bool:
-                try:
-                    from engine.prefabs import get_prefab_manager  # noqa: PLC0415
-                    manager = get_prefab_manager()
-                    return bool(manager.get_prefab(prefab_id))
-                except Exception:  # noqa: BLE001
-                    return False
-
-        issues = self.problems.scan_scene(scene, repo_root, resolver)
-
-        hud = getattr(self.window, "player_hud", None)
-        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(toaster):
-            toaster(tr("UI_PROBLEMS_SCANNED"), seconds=2.5)
-        return len(issues)
-
-    def get_filtered_problems(self) -> list[Any]:
-        return self.problems.get_filtered_issues()
-
-    def _clamp_problems_selection(self) -> None:
-        # Managed by content controller
-        pass
-
-    def apply_selected_problem_fix(self) -> bool:
-        return self._apply_selected_problem_fix(advance=False)
-
-    def apply_fix_all_safe(self) -> bool:
-        return self._apply_all_safe_problem_fixes()
-
-    def _apply_selected_problem_fix(self, *, advance: bool) -> bool:
-        return self.problems.apply_selected_fix(self, advance=advance)
-
-    def _apply_all_safe_problem_fixes(self) -> bool:
-        return self.problems.apply_all_safe_fixes(self)
-
-    def _apply_scene_fix_update(self, new_scene: dict[str, Any]) -> None:
-        self.problems._apply_scene_fix_update(self, new_scene)
-
-    def _refresh_after_scene_fix(self) -> None:
-        self.problems._refresh_after_scene_fix(self)
-
-    def _problems_handle_mouse_click(self, x: float, y: float, button: int) -> bool:
-        return self.problems.handle_mouse_click(self, x, y, button)
 
     def _refresh_hierarchy_list(self) -> None:
         self.hierarchy.refresh_hierarchy_list()
@@ -1822,63 +1351,7 @@ class EditorModeController:
     def _build_hierarchy_list(self) -> List[optional_arcade.arcade.Sprite]:
         return self.hierarchy.build_hierarchy_list()
 
-    def _entity_panels_scene_data(self) -> Dict[str, Any]:
-        return self.entity_panels_controller.entity_panels_scene_data()
-
-    def _resolve_entity_panels_id(self, entity: Dict[str, Any], fallback_index: Optional[int] = None) -> str:
-        return self.entity_panels_controller.resolve_entity_panels_id(entity, fallback_index)
-
-    def _entity_panels_selected_id_value(self) -> str | None:
-        return self.entity_panels_controller.entity_panels_selected_id_value()
-
-    def _prefab_variant_label(self, entity_data: dict[str, Any]) -> str | None:
-        return self.prefab.prefab_variant_label(entity_data)
-
-    def _prefab_variant_override_rows(self, entity_data: dict[str, Any]) -> list[DiffRow]:
-        return self.prefab.prefab_variant_override_rows(entity_data)
-
-    def _entity_panels_prefab_override_rows(self) -> list[DiffRow]:
-        return self.prefab.entity_panels_prefab_override_rows()
-
-    def _prefab_override_base_value(self, base_entity: dict[str, Any], key: str) -> tuple[bool, Any]:
-        return self.prefab.prefab_override_base_value(base_entity, key)
-
-    def _apply_prefab_override_payload(self, entity_data: dict[str, Any], updated: dict[str, Any]) -> None:
-        self.prefab.apply_prefab_override_payload(entity_data, updated)
-
-    def _apply_prefab_override_entity_value(
-        self,
-        sprite: optional_arcade.arcade.Sprite,
-        key: str,
-        value: Any,
-        *,
-        present: bool,
-    ) -> None:
-        self.prefab.apply_prefab_override_entity_value(sprite, key, value, present=present)
-
-    def _apply_prefab_override_command(self, cmd: Dict[str, Any], *, use_before: bool) -> None:
-        self.prefab.apply_prefab_override_command(cmd, use_before=use_before)
-
-    def _apply_prefab_override_bulk_command(self, cmd: Dict[str, Any], *, use_before: bool) -> None:
-        self.prefab.apply_prefab_override_bulk_command(cmd, use_before=use_before)
-
-    def _filter_entity_panels_items(self, items: list[EntitySummary]) -> list[EntitySummary]:
-        return self.entity_panels_controller.filter_entity_panels_items(items)
-
-    def _refresh_entity_panels_list(self, *, sync_selected: bool = False) -> None:
-        self.entity_panels_controller.refresh_entity_panels_list(sync_selected=sync_selected)
-
-    def _get_entity_panels_list(self) -> list[EntitySummary]:
-        return self.entity_panels_controller.get_entity_panels_list()
-
-    def _resolve_display_name(self, sprite: optional_arcade.arcade.Sprite, fallback_index: Optional[int] = None) -> str:
-        return self.entity_panels_controller.resolve_display_name(sprite, fallback_index)
-
-    def _get_sprite_index(self, sprite: optional_arcade.arcade.Sprite) -> Optional[int]:
-        return self.entity_panels_controller.get_sprite_index(sprite)
-
-    def _get_display_name_for_sprite(self, sprite: optional_arcade.arcade.Sprite) -> str:
-        return self.entity_panels_controller.get_display_name_for_sprite(sprite)
+    # Entity Panels / Inspector / Prefab → editor_controller_entity_panels_bridge.py
 
     def get_gizmo_feedback_state(self) -> "GizmoFeedbackState":
         """Get current state for gizmo overlay rendering.
@@ -1938,171 +1411,7 @@ class EditorModeController:
     def _last_mouse_y(self, value: float) -> None:
         self.cursor._last_mouse_y = value
 
-    def set_last_mouse_pos(self, x: float, y: float) -> None:
-        """Update the last known mouse position.
-
-        DELEGATED to EditorCursorController.
-
-        Args:
-            x: Mouse X in screen coordinates.
-            y: Mouse Y in screen coordinates.
-        """
-        self.cursor.update_mouse_pos(x, y)
-
-    def get_last_mouse_pos(self) -> Tuple[float, float]:
-        """Get the last known mouse position.
-
-        DELEGATED to EditorCursorController.
-
-        Returns:
-            Tuple of (x, y) in screen coordinates.
-        """
-        return self.cursor.get_last_mouse_pos()
-
-    def get_cursor_hint_text(self, window_w: int, window_h: int) -> str | None:
-        """Get cursor hint text based on current editor state.
-
-        DELEGATED to EditorCursorController.
-
-        Args:
-            window_w: Window width.
-            window_h: Window height.
-
-        Returns:
-            Hint text string or None if no hint.
-        """
-        return self.cursor.get_cursor_hint_text(window_w, window_h)
-
-    def get_cursor_hint_kind(self, window_w: int, window_h: int) -> str | None:
-        """Get cursor hint kind for cursor affordance.
-
-        DELEGATED to EditorCursorController.
-
-        Args:
-            window_w: Window width.
-            window_h: Window height.
-
-        Returns:
-            Cursor kind string or None when editor is inactive.
-        """
-        return self.cursor.get_cursor_hint_kind(window_w, window_h)
-
-    def _compute_cursor_hint(self, window_w: int, window_h: int):
-        """Compute cursor hint. DELEGATED to EditorCursorController."""
-        return self.cursor._compute_cursor_hint(window_w, window_h)
-
-    def _entity_panels_outliner_lines(self) -> list[str]:
-        return self.entity_panels_controller.entity_panels_outliner_lines()
-
-    def _entity_panels_inspector_lines(self) -> list[str]:
-        return self.entity_panels_controller.entity_panels_inspector_lines()
-
-    def _entity_panels_format_field_value(
-        self,
-        entity_data: Dict[str, Any],
-        sprite: optional_arcade.arcade.Sprite,
-        key: str,
-        kind: str,
-    ) -> str:
-        return self.entity_panels_controller.entity_panels_format_field_value(entity_data, sprite, key, kind)
-
-    def _entity_panels_numeric_value(
-        self,
-        entity_data: Dict[str, Any],
-        sprite: optional_arcade.arcade.Sprite,
-        key: str,
-    ) -> float:
-        return self.entity_panels_controller.entity_panels_numeric_value(entity_data, sprite, key)
-
-    def _entity_panels_select_current(self) -> bool:
-        return self.entity_panels_controller.entity_panels_select_current()
-
-    def _entity_panels_find_sprite(self, summary: EntitySummary) -> Optional[optional_arcade.arcade.Sprite]:
-        return self.entity_panels_controller.entity_panels_find_sprite(summary)
-
-    def _entity_panels_begin_text_edit(self, field: str, initial: str) -> None:
-        self.entity_panels_controller.entity_panels_begin_text_edit(field, initial)
-
-    def _entity_panels_cancel_text_edit(self) -> None:
-        self.entity_panels_controller.entity_panels_cancel_text_edit()
-
-    def _entity_panels_commit_text_edit(self) -> bool:
-        return self.entity_panels_controller.entity_panels_commit_text_edit()
-
-    def _entity_panels_apply_field_update(self, field: str, value: Any) -> bool:
-        return self.entity_panels_controller.entity_panels_apply_field_update(field, value)
-
-    def _entity_panels_apply_prefab_override(self, key: str, value: Any) -> bool:
-        return self.prefab.entity_panels_apply_prefab_override(key, value)
-
-    def _entity_panels_revert_prefab_override(self, row: DiffRow) -> bool:
-        return self.prefab.entity_panels_revert_prefab_override(row)
-
-    def _entity_panels_clear_prefab_overrides(self) -> bool:
-        return self.prefab.entity_panels_clear_prefab_overrides()
-
-    # --------------------------------------------------------------------------
-    # Component Inspector Input Handling
-    # --------------------------------------------------------------------------
-
-    def _get_selected_entity_json_for_inspector(self) -> dict[str, Any] | None:
-        return self.inspector.get_selected_entity_json_for_inspector()
-
-    def _inspector_begin_text_edit(self, initial: str) -> None:
-        self.inspector.inspector_begin_text_edit(initial)
-
-    def _inspector_cancel_text_edit(self) -> None:
-        self.inspector.inspector_cancel_text_edit()
-
-    def _inspector_commit_text_edit(self) -> bool:
-        return self.inspector.inspector_commit_text_edit()
-
-    def _apply_inspector_entity_update(self, new_entity_json: dict[str, Any], field_key: str) -> None:
-        self.inspector.apply_inspector_entity_update(new_entity_json, field_key)
-
-    def _get_entity_id_for_inspector(self) -> str | None:
-        return self.inspector.get_entity_id_for_inspector()
-
-    def _apply_inspector_to_sprite(self, field_key: str, value: Any) -> None:
-        self.inspector.apply_inspector_to_sprite(field_key, value)
-
-    # --------------------------------------------------------------------------
-    # Component Inspector v1 Input Handling
-    # --------------------------------------------------------------------------
-
-    def _component_inspector_commit_text_edit(
-        self, entity_json: Dict[str, Any], selection: Optional[Dict[str, Any]]
-    ) -> bool:
-        return self.inspector.component_inspector_commit_text_edit(entity_json, selection)
-
-    def _apply_component_entity_update(self, new_entity_json: Dict[str, Any]) -> None:
-        self.inspector.apply_component_entity_update(new_entity_json)
-
-    def _sync_sprite_from_component_json(self, entity_json: Dict[str, Any]) -> None:
-        """Sync runtime sprite state from component JSON."""
-        if not self.selected_entity:
-            return
-
-        sprite = self.selected_entity
-
-        # Get transform from components or legacy
-        components = entity_json.get("components", {})
-        transform = components.get("transform", {})
-
-        # Fall back to top-level if not in components
-        x = transform.get("x") if "x" in transform else entity_json.get("x")
-        y = transform.get("y") if "y" in transform else entity_json.get("y")
-        rot = transform.get("rot") if "rot" in transform else entity_json.get("rotation", 0.0)
-
-        if x is not None:
-            self.window.scene_controller._apply_entity_mutation(sprite, x=float(x))
-        if y is not None:
-            self.window.scene_controller._apply_entity_mutation(sprite, y=float(y))
-        if rot is not None:
-            sprite.angle = float(rot) % 360.0
-            entity_data = getattr(sprite, "mesh_entity_data", {})
-            if isinstance(entity_data, dict):
-                entity_data["rotation"] = float(rot) % 360.0
+    # Entity Panels tail / Inspector / Component Inspector → editor_controller_entity_panels_bridge.py
 
     def _begin_hierarchy_rename(self) -> bool:
         return self.hierarchy.begin_hierarchy_rename()
@@ -2128,3 +1437,12 @@ _bind_input_router_methods(EditorModeController)
 _bind_selection_clipboard_methods(EditorModeController)
 _bind_overlays_modals_methods(EditorModeController)
 
+_bind_workspace_lifecycle_methods(EditorModeController)
+_bind_ui_state_methods(EditorModeController)
+_bind_scene_ops_methods(EditorModeController)
+_bind_diagnostics_bridge_methods(EditorModeController)
+_bind_input_routing_methods(EditorModeController)
+_bind_entity_panels_bridge_methods(EditorModeController)
+_bind_find_browser_bridge_methods(EditorModeController)
+_bind_content_panels_bridge_methods(EditorModeController)
+_bind_project_explorer_bridge_methods(EditorModeController)

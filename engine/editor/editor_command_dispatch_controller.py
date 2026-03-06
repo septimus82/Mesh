@@ -30,7 +30,8 @@ class EditorCommandDispatchController:
         from engine.editor_light_occluder_ops import invert_occluder_command  # noqa: PLC0415
 
         ctype = cmd["type"]
-        entity_name = cmd.get("entity_name")
+        entity_name_raw = cmd.get("entity_name")
+        entity_name = entity_name_raw if isinstance(entity_name_raw, str) else ""
 
         if ctype == "MoveEntity":
             entity = self.editor._find_entity_by_name(entity_name)
@@ -125,12 +126,13 @@ class EditorCommandDispatchController:
             sc = getattr(self.editor.window, "scene_controller", None)
             scene_data = getattr(sc, "_loaded_scene_data", None) if sc else None
             if isinstance(scene_data, dict) and sc is not None:
+                cmd_obj: FixSceneIssueCommand | FixSceneIssuesCommand
                 if ctype == "FixSceneIssues":
                     cmd_obj = FixSceneIssuesCommand.from_dict(cmd)
                 else:
                     cmd_obj = FixSceneIssueCommand.from_dict(cmd)
-                inverse = invert_fix_command(scene_data, cmd_obj, scene_data)
-                new_scene = apply_fix_command(scene_data, inverse, self.editor._get_repo_root())
+                fix_inverse = invert_fix_command(scene_data, cmd_obj, scene_data)
+                new_scene = apply_fix_command(scene_data, fix_inverse, self.editor._get_repo_root())
                 sc._loaded_scene_data = new_scene
                 self.editor._refresh_after_scene_fix()
 
@@ -222,14 +224,18 @@ class EditorCommandDispatchController:
         elif ctype == "EditOccluder":
             raw_cmd = cmd.get("cmd")
             if isinstance(raw_cmd, dict):
-                scene = getattr(getattr(self.editor.window, "scene_controller", None), "_loaded_scene_data", None)
+                scene_controller = getattr(self.editor.window, "scene_controller", None)
+                scene = getattr(scene_controller, "_loaded_scene_data", None)
                 if not isinstance(scene, dict):
                     scene = {}
-                    if hasattr(self.editor.window, "scene_controller"):
-                        self.editor.window.scene_controller._loaded_scene_data = scene  # type: ignore[attr-defined]
-                inverse = invert_occluder_command(raw_cmd)
+                    if scene_controller is not None:
+                        setattr(scene_controller, "_loaded_scene_data", scene)
+                occluder_inverse = invert_occluder_command(raw_cmd)
                 from engine.editor_light_occluder_ops import apply_occluder_command  # noqa: PLC0415
-                apply_occluder_command(scene, {"kind": inverse.kind, "payload": inverse.payload})
+                apply_occluder_command(
+                    scene,
+                    {"kind": occluder_inverse.kind, "payload": occluder_inverse.payload},
+                )
                 self.editor._sync_occluders_runtime()
 
         elif ctype == "AltDragDuplicate":
@@ -246,7 +252,8 @@ class EditorCommandDispatchController:
         from engine.editor_light_occluder_ops import apply_occluder_command  # noqa: PLC0415
 
         ctype = cmd["type"]
-        entity_name = cmd.get("entity_name")
+        entity_name_raw = cmd.get("entity_name")
+        entity_name = entity_name_raw if isinstance(entity_name_raw, str) else ""
 
         if ctype == "MoveEntity":
             entity = self.editor._find_entity_by_name(entity_name)
@@ -343,6 +350,7 @@ class EditorCommandDispatchController:
             sc = getattr(self.editor.window, "scene_controller", None)
             scene_data = getattr(sc, "_loaded_scene_data", None) if sc else None
             if isinstance(scene_data, dict) and sc is not None:
+                cmd_obj: FixSceneIssueCommand | FixSceneIssuesCommand
                 if ctype == "FixSceneIssues":
                     cmd_obj = FixSceneIssuesCommand.from_dict(cmd)
                 else:
@@ -437,11 +445,12 @@ class EditorCommandDispatchController:
         elif ctype == "EditOccluder":
             raw_cmd = cmd.get("cmd")
             if isinstance(raw_cmd, dict):
-                scene = getattr(getattr(self.editor.window, "scene_controller", None), "_loaded_scene_data", None)
+                scene_controller = getattr(self.editor.window, "scene_controller", None)
+                scene = getattr(scene_controller, "_loaded_scene_data", None)
                 if not isinstance(scene, dict):
                     scene = {}
-                    if hasattr(self.editor.window, "scene_controller"):
-                        self.editor.window.scene_controller._loaded_scene_data = scene  # type: ignore[attr-defined]
+                    if scene_controller is not None:
+                        setattr(scene_controller, "_loaded_scene_data", scene)
                 apply_occluder_command(scene, raw_cmd)
                 self.editor._sync_occluders_runtime()
 

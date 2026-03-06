@@ -3,6 +3,17 @@ from __future__ import annotations
 import argparse
 import json
 from typing import Any
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
@@ -39,6 +50,7 @@ def handle(args: argparse.Namespace) -> int:
             try:
                 payload = load_macro_asset(rel_path)
             except Exception:
+                _log_swallow("MCRO-001", "mesh_cli/macro.py blanket swallow", once=True)
                 continue
             macro_summary = summarize_macro_asset(payload, rel_path=rel_path)
             if not macro_summary.id or not macro_summary.macro_id:
@@ -79,6 +91,7 @@ def handle(args: argparse.Namespace) -> int:
             try:
                 payload = json.loads(full_path.read_text(encoding="utf-8"))
             except Exception as exc:  # noqa: BLE001
+                _log_swallow("MCRO-002", "mesh_cli/macro.py blanket swallow", once=True)
                 macro_issues.append(MacroAssetIssue(path=rel_path, code="macro_asset.parse_error", detail=str(exc)))
                 continue
             macro_issues.extend(validate_macro_asset(payload, rel_path=rel_path))
@@ -86,6 +99,7 @@ def handle(args: argparse.Namespace) -> int:
                 try:
                     asset = parse_macro_asset(payload, rel_path=rel_path)
                 except Exception:
+                    _log_swallow("MCRO-003", "mesh_cli/macro.py blanket swallow", once=True)
                     asset = None
                 if asset is not None and asset.id:
                     seen.setdefault((asset.pack_id, asset.id), []).append(rel_path)
@@ -120,6 +134,7 @@ def handle(args: argparse.Namespace) -> int:
         try:
             payload = load_macro_asset(str(macro_path))
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("MCRO-004", "mesh_cli/macro.py blanket swallow", once=True)
             print(f"[Mesh][Macro] ERROR: {macro_path_raw} :: macro_asset.parse_error :: {exc}")
             return 1
 
@@ -136,6 +151,7 @@ def handle(args: argparse.Namespace) -> int:
         try:
             world_data = json.loads(resolve_path("worlds/main_world.json").read_text(encoding="utf-8"))
         except Exception:
+            _log_swallow("MCRO-005", "mesh_cli/macro.py blanket swallow", once=True)
             world_data = {}
         if isinstance(world_data, dict):
             cases = world_data.get("macro_audit_cases")
@@ -177,6 +193,7 @@ def handle(args: argparse.Namespace) -> int:
                             entity_change_count = int(len(report.get("entity_changes") or []))
                             config_change_count = int(len(report.get("config_changes") or []))
                         except Exception:
+                            _log_swallow("MCRO-006", "mesh_cli/macro.py blanket swallow", once=True)
                             entity_change_count = 0
                             config_change_count = 0
 

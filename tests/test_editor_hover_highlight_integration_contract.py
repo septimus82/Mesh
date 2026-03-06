@@ -6,9 +6,11 @@ and the overlay produces correct highlight specs.
 
 from __future__ import annotations
 
-from typing import Any, Tuple
+from typing import Any, Tuple, TYPE_CHECKING, cast
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+
+if TYPE_CHECKING:
+    from engine.editor_controller import EditorModeController
 
 import pytest
 from tests._session_stub import make_session_stub
@@ -36,7 +38,7 @@ class MockWindow:
 
     def __init__(self) -> None:
         self.scene_controller = MockSceneController()
-        self.editor_controller = None  # Set after creation
+        self.editor_controller: EditorModeController | None = None  # Set after creation
 
     def screen_to_world(self, x: float, y: float) -> Tuple[float, float]:
         """Simple 1:1 screen to world mapping for tests."""
@@ -52,6 +54,7 @@ class MockSceneController:
             {"id": "entity_2", "x": 300.0, "y": 200.0},
         ]
         self.entity_sprites = MockSpriteList()
+        self.all_sprites: list[Any] = []
 
 
 class MockSpriteList:
@@ -90,7 +93,7 @@ class MockEditorController:
         # Basic editor state
         self.selected_entity_ids = []
         self.primary_entity_id = None
-        self.selected_entity = None
+        self.selected_entity: dict[str, Any] | None = None
 
         # Text input / modal state (for blocking)
         self.palette_filter_active = False
@@ -133,20 +136,38 @@ class MockEditorController:
     # Hover state handled by EditorHoverStateController
 
 
+def _setup() -> tuple[MockWindow, MockEditorController]:
+    """Create a window + controller pair with correct cross-linking."""
+    window = MockWindow()
+    controller = MockEditorController(window)
+    window.editor_controller = cast("EditorModeController", controller)
+    return window, controller
+
+
+def _hover(
+    controller: MockEditorController,
+    x: float,
+    y: float,
+    w: int = 1280,
+    h: int = 720,
+) -> None:
+    """Run hover detection, casting mock to production type."""
+    from engine.editor_runtime.hover_detection import update_hover_state  # noqa: PLC0415
+
+    update_hover_state(cast("EditorModeController", controller), x, y, w, h)
+
+
 class TestHoverDetectionDockTab:
     """Tests for dock tab hover detection."""
 
     def test_hover_left_dock_tab_scene(self) -> None:
         """Test hovering over left dock 'Scene' tab."""
-        from engine.editor_runtime.hover_detection import update_hover_state
-        from engine.editor.editor_shell_layout import (
+        from engine.editor.editor_shell_layout import (  # noqa: PLC0415
             compute_editor_shell_layout,
             compute_dock_tab_rects,
         )
 
-        window = MockWindow()
-        controller = MockEditorController(window)
-        window.editor_controller = controller
+        window, controller = _setup()
 
         # Compute where the left dock Scene tab would be
         layout = compute_editor_shell_layout(1280, 720, 320, 320)
@@ -160,7 +181,7 @@ class TestHoverDetectionDockTab:
         y = scene_rect.center_y
 
         # Run hover detection
-        update_hover_state(controller, x, y, 1280, 720)
+        _hover(controller, x, y)
 
         # Should detect Scene tab hover
         assert get_hovered_dock_tab(controller) == ("left", "Scene")
@@ -168,15 +189,12 @@ class TestHoverDetectionDockTab:
 
     def test_hover_right_dock_tab_inspector(self) -> None:
         """Test hovering over right dock 'Inspector' tab."""
-        from engine.editor_runtime.hover_detection import update_hover_state
-        from engine.editor.editor_shell_layout import (
+        from engine.editor.editor_shell_layout import (  # noqa: PLC0415
             compute_editor_shell_layout,
             compute_dock_tab_rects,
         )
 
-        window = MockWindow()
-        controller = MockEditorController(window)
-        window.editor_controller = controller
+        window, controller = _setup()
 
         # Compute where the right dock Inspector tab would be
         layout = compute_editor_shell_layout(1280, 720, 320, 320)
@@ -190,7 +208,7 @@ class TestHoverDetectionDockTab:
         y = inspector_rect.center_y
 
         # Run hover detection
-        update_hover_state(controller, x, y, 1280, 720)
+        _hover(controller, x, y)
 
         # Should detect Inspector tab hover
         assert get_hovered_dock_tab(controller) == ("right", "Inspector")
@@ -202,12 +220,9 @@ class TestHoverDetectionSplitter:
 
     def test_hover_left_splitter(self) -> None:
         """Test hovering over left splitter."""
-        from engine.editor_runtime.hover_detection import update_hover_state
-        from engine.editor.editor_shell_layout import compute_editor_shell_layout
+        from engine.editor.editor_shell_layout import compute_editor_shell_layout  # noqa: PLC0415
 
-        window = MockWindow()
-        controller = MockEditorController(window)
-        window.editor_controller = controller
+        window, controller = _setup()
 
         # Compute where the left splitter would be
         layout = compute_editor_shell_layout(1280, 720, 320, 320)
@@ -216,7 +231,7 @@ class TestHoverDetectionSplitter:
         y = layout.left_splitter.center_y
 
         # Run hover detection
-        update_hover_state(controller, x, y, 1280, 720)
+        _hover(controller, x, y)
 
         # Should detect left splitter hover
         assert get_hovered_splitter(controller) == "left"
@@ -224,12 +239,9 @@ class TestHoverDetectionSplitter:
 
     def test_hover_right_splitter(self) -> None:
         """Test hovering over right splitter."""
-        from engine.editor_runtime.hover_detection import update_hover_state
-        from engine.editor.editor_shell_layout import compute_editor_shell_layout
+        from engine.editor.editor_shell_layout import compute_editor_shell_layout  # noqa: PLC0415
 
-        window = MockWindow()
-        controller = MockEditorController(window)
-        window.editor_controller = controller
+        window, controller = _setup()
 
         # Compute where the right splitter would be
         layout = compute_editor_shell_layout(1280, 720, 320, 320)
@@ -238,7 +250,7 @@ class TestHoverDetectionSplitter:
         y = layout.right_splitter.center_y
 
         # Run hover detection
-        update_hover_state(controller, x, y, 1280, 720)
+        _hover(controller, x, y)
 
         # Should detect right splitter hover
         assert get_hovered_splitter(controller) == "right"
@@ -250,11 +262,7 @@ class TestHoverDetectionContextMenu:
 
     def test_hover_context_menu_item(self) -> None:
         """Test hovering over context menu item when menu is open."""
-        from engine.editor_runtime.hover_detection import update_hover_state
-
-        window = MockWindow()
-        controller = MockEditorController(window)
-        window.editor_controller = controller
+        window, controller = _setup()
 
         # Open context menu at specific position
         controller._context_menu_open = True
@@ -267,7 +275,7 @@ class TestHoverDetectionContextMenu:
         y = 380.0  # Below menu_y due to item layout
 
         # Run hover detection
-        update_hover_state(controller, x, y, 1280, 720)
+        _hover(controller, x, y)
 
         # Should detect context menu item (context menu takes priority)
         # The exact item depends on layout, but context_menu_hover_id should be set
@@ -280,21 +288,18 @@ class TestHoverDetectionBlocking:
 
     def test_hover_blocked_when_palette_filter_active(self) -> None:
         """Test hover detection is blocked during palette filter input."""
-        from engine.editor_runtime.hover_detection import update_hover_state
+        from engine.editor.editor_shell_layout import compute_editor_shell_layout  # noqa: PLC0415
 
-        window = MockWindow()
-        controller = MockEditorController(window)
-        window.editor_controller = controller
+        window, controller = _setup()
 
         controller.palette_filter_active = True
 
         # Try to hover over left splitter
-        from engine.editor.editor_shell_layout import compute_editor_shell_layout
         layout = compute_editor_shell_layout(1280, 720, 320, 320)
         x = layout.left_splitter.center_x
         y = layout.left_splitter.center_y
 
-        update_hover_state(controller, x, y, 1280, 720)
+        _hover(controller, x, y)
 
         # Should be blocked - no hover state set
         assert get_hovered_splitter(controller) is None
@@ -303,42 +308,36 @@ class TestHoverDetectionBlocking:
 
     def test_hover_blocked_when_rename_active(self) -> None:
         """Test hover detection is blocked during hierarchy rename."""
-        from engine.editor_runtime.hover_detection import update_hover_state
+        from engine.editor.editor_shell_layout import compute_editor_shell_layout  # noqa: PLC0415
 
-        window = MockWindow()
-        controller = MockEditorController(window)
-        window.editor_controller = controller
+        window, controller = _setup()
 
         controller.hierarchy_rename_active = True
 
         # Try to hover over left splitter
-        from engine.editor.editor_shell_layout import compute_editor_shell_layout
         layout = compute_editor_shell_layout(1280, 720, 320, 320)
         x = layout.left_splitter.center_x
         y = layout.left_splitter.center_y
 
-        update_hover_state(controller, x, y, 1280, 720)
+        _hover(controller, x, y)
 
         # Should be blocked
         assert get_hovered_splitter(controller) is None
 
     def test_hover_blocked_when_modal_open(self) -> None:
         """Test hover detection is blocked when modal dialog is open."""
-        from engine.editor_runtime.hover_detection import update_hover_state
+        from engine.editor.editor_shell_layout import compute_editor_shell_layout  # noqa: PLC0415
 
-        window = MockWindow()
-        controller = MockEditorController(window)
-        window.editor_controller = controller
+        window, controller = _setup()
 
         controller.unsaved_confirm.is_open = True
 
         # Try to hover over left splitter
-        from engine.editor.editor_shell_layout import compute_editor_shell_layout
         layout = compute_editor_shell_layout(1280, 720, 320, 320)
         x = layout.left_splitter.center_x
         y = layout.left_splitter.center_y
 
-        update_hover_state(controller, x, y, 1280, 720)
+        _hover(controller, x, y)
 
         # Should be blocked
         assert get_hovered_splitter(controller) is None
@@ -349,12 +348,9 @@ class TestHoverDetectionEntityHover:
 
     def test_hover_entity_in_viewport(self) -> None:
         """Test hovering over an entity in the viewport."""
-        from engine.editor_runtime.hover_detection import update_hover_state
-        from engine.editor.editor_shell_layout import compute_editor_shell_layout
+        from engine.editor.editor_shell_layout import compute_editor_shell_layout  # noqa: PLC0415
 
-        window = MockWindow()
-        controller = MockEditorController(window)
-        window.editor_controller = controller
+        window, controller = _setup()
 
         # Compute layout to know viewport bounds
         layout = compute_editor_shell_layout(1280, 720, 320, 320)
@@ -371,7 +367,7 @@ class TestHoverDetectionEntityHover:
         window.scene_controller.entity_sprites._sprites = sprites
         window.scene_controller.all_sprites = sprites  # Fallback used by hover detection
 
-        update_hover_state(controller, x, y, 1280, 720)
+        _hover(controller, x, y)
 
         # Should detect entity hover
         assert get_hovered_entity_id(controller) == "test_entity"
@@ -379,11 +375,7 @@ class TestHoverDetectionEntityHover:
 
     def test_no_hover_on_selected_entity(self) -> None:
         """Test that selected entities don't get hover highlight."""
-        from engine.editor_runtime.hover_detection import update_hover_state
-
-        window = MockWindow()
-        controller = MockEditorController(window)
-        window.editor_controller = controller
+        window, controller = _setup()
 
         # Update entity to be in viewport
         window.scene_controller.entities = [
@@ -399,7 +391,7 @@ class TestHoverDetectionEntityHover:
         x = 500.0
         y = 400.0
 
-        update_hover_state(controller, x, y, 1280, 720)
+        _hover(controller, x, y)
 
         # Should NOT set hover for selected entity
         assert get_hovered_entity_id(controller) is None

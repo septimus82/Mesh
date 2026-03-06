@@ -16,6 +16,10 @@ from .tooling_runtime.state_dump import dump_state
 logger = logging.getLogger(__name__)
 _LOG_ONCE: set[str] = set()
 
+# Allow importing shared widget primitives via ``engine.ui.widgets`` while
+# keeping this legacy module path intact.
+__path__ = [str(Path(__file__).with_name("ui"))]
+
 
 
 if TYPE_CHECKING:  # pragma: no cover

@@ -68,9 +68,11 @@ if optional_arcade.arcade is not None:
         ArcadeCamera = getattr(camera_mod, "Camera2D", None) if camera_mod is not None else None
 
 if ArcadeCamera is None:  # pragma: no cover - only used when optional_arcade.arcade is unavailable
-    class ArcadeCamera:  # type: ignore[no-redef]
+    class _MissingArcadeCamera:
         def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: D401
             raise RuntimeError("Arcade Camera API not available")
+
+    ArcadeCamera = _MissingArcadeCamera
 
 @dataclass(slots=True)
 class CameraArea:

@@ -71,6 +71,7 @@ from contextlib import nullcontext
 from typing import Any, Iterable, Optional, TYPE_CHECKING
 
 import engine.optional_arcade
+from engine.logging_tools import get_logger
 
 from . import cookies as _cookies
 from . import occluder_layer_builder as _occluder_layer_builder
@@ -85,6 +86,8 @@ from . import shadow_pipeline as _shadow_pipeline
 from . import static_light_builder as _static_light_builder
 from .flicker import FlickerNoise, apply_light_flicker
 from .types import DynamicLightHandle, _FlickerLightState, _LayerContext
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     try:
@@ -111,6 +114,16 @@ _LIGHT_MODULE_CANDIDATES: tuple[str, ...] = (
     "arcade.future.light",
 )
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+
+def _log_swallow(tag: str, where: str, purpose: str, *, once: bool = False) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    logger.debug("SWALLOW[%s] %s %s", tag, where, purpose, exc_info=True)
+
 
 def _resolve_light_symbols(
     *,
@@ -128,7 +141,12 @@ def _resolve_light_symbols(
             layer = getattr(mod, "LightLayer", None)
             if light is not None and layer is not None:
                 return light, layer
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: import fallback
+            _log_swallow(
+                "LGIN-001",
+                "engine.lighting.__init__._resolve_light_symbols",
+                "import_light_module_candidate",
+            )
             continue
     return None, None
 
@@ -331,7 +349,12 @@ class LightManager:
         if alpha_override is not None:
             try:
                 alpha = int(alpha_override)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: alpha parse
+                _log_swallow(
+                    "LGIN-002",
+                    "engine.lighting.__init__.LightManager._ambient_rgba",
+                    "parse_ambient_darkness_alpha",
+                )
                 pass
         return (
             max(0, min(255, int(round(r)))),
@@ -367,16 +390,6 @@ class LightManager:
             pass
         return False
 
-    def _log_exception_once(self, key: str, exc: Exception) -> None:
-        logged = getattr(self, "_mesh_logged_exceptions", None)
-        if not isinstance(logged, set):
-            logged = set()
-            setattr(self, "_mesh_logged_exceptions", logged)
-        if key in logged:
-            return
-        logged.add(key)
-        print(f"[Mesh][Lighting] ERROR {key}: {exc}")
-
     def _log_counter_once(self, key: str, msg: str) -> None:
         """Log a message once per key, with a counter."""
         counters = getattr(self, "_mesh_logged_counters", None)
@@ -409,45 +422,93 @@ class LightManager:
         if self.shadows_mode == "hard":
             try:
                 self._end_hard_shadows_overlay()
-            except Exception as exc:  # pragma: no cover - defensive  # noqa: BLE001
-                self._log_exception_once("hard_shadows", exc)
+            except Exception as exc:  # pragma: no cover - defensive  # noqa: BLE001  # REASON: shadow overlay
+                _log_swallow(
+                    "LGIN-003",
+                    "engine.lighting.__init__.LightManager.end",
+                    "end_hard_shadows_overlay",
+                    once=True,
+                )
                 try:
                     self._draw_layer_safe()
-                except Exception as exc2:  # pragma: no cover  # noqa: BLE001
-                    self._log_exception_once("draw_layer", exc2)
+                except Exception as exc2:  # pragma: no cover  # noqa: BLE001  # REASON: layer draw
+                    _log_swallow(
+                        "LGIN-004",
+                        "engine.lighting.__init__.LightManager.end",
+                        "draw_layer_safe_after_hard_shadow_failure",
+                        once=True,
+                    )
         elif self.shadows_mode == "direct":
             try:
                 self._draw_layer_safe()
-            except Exception as exc:  # pragma: no cover - defensive  # noqa: BLE001
-                self._log_exception_once("draw_layer", exc)
+            except Exception as exc:  # pragma: no cover - defensive  # noqa: BLE001  # REASON: layer draw
+                _log_swallow(
+                    "LGIN-005",
+                    "engine.lighting.__init__.LightManager.end",
+                    "draw_layer_safe_direct_mode",
+                    once=True,
+                )
             try:
                 self._draw_direct_shadows()
-            except Exception as exc:  # pragma: no cover - defensive  # noqa: BLE001
-                self._log_exception_once("direct_shadows", exc)
+            except Exception as exc:  # pragma: no cover - defensive  # noqa: BLE001  # REASON: shadow draw
+                _log_swallow(
+                    "LGIN-006",
+                    "engine.lighting.__init__.LightManager.end",
+                    "draw_direct_shadows",
+                    once=True,
+                )
         else:
             try:
                 self._draw_layer_safe()
-            except Exception as exc:  # pragma: no cover - defensive  # noqa: BLE001
-                self._log_exception_once("draw_layer", exc)
+            except Exception as exc:  # pragma: no cover - defensive  # noqa: BLE001  # REASON: layer draw
+                _log_swallow(
+                    "LGIN-007",
+                    "engine.lighting.__init__.LightManager.end",
+                    "draw_layer_safe_default_mode",
+                    once=True,
+                )
         try:
             cam = getattr(self.window, "camera", None)
             cam_pos = getattr(cam, "position", (0.0, 0.0)) if cam is not None else (0.0, 0.0)
             offset = (float(cam_pos[0]), float(cam_pos[1]))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: camera offset
+            _log_swallow(
+                "LGIN-008",
+                "engine.lighting.__init__.LightManager.end",
+                "compute_camera_offset",
+                once=True,
+            )
             offset = (0.0, 0.0)
         try:
             self._apply_light_cookies(target_fbo=None, offset=offset)
-        except Exception:  # pragma: no cover - defensive  # noqa: BLE001
+        except Exception:  # pragma: no cover - defensive  # noqa: BLE001  # REASON: cookie apply
+            _log_swallow(
+                "LGIN-009",
+                "engine.lighting.__init__.LightManager.end",
+                "apply_light_cookies",
+                once=True,
+            )
             pass
         try:
             self._apply_light_shafts(target_fbo=None, offset=offset)
-        except Exception:  # pragma: no cover - defensive  # noqa: BLE001
+        except Exception:  # pragma: no cover - defensive  # noqa: BLE001  # REASON: shafts apply
+            _log_swallow(
+                "LGIN-010",
+                "engine.lighting.__init__.LightManager.end",
+                "apply_light_shafts",
+                once=True,
+            )
             pass
         if self.debug_geometry_enabled and bool(getattr(self.window, "show_debug", False)):
             try:
                 self._draw_debug_geometry()
-            except Exception as exc:  # pragma: no cover - defensive  # noqa: BLE001
-                self._log_exception_once("debug_geometry", exc)
+            except Exception as exc:  # pragma: no cover - defensive  # noqa: BLE001  # REASON: debug draw
+                _log_swallow(
+                    "LGIN-011",
+                    "engine.lighting.__init__.LightManager.end",
+                    "draw_debug_geometry",
+                    once=True,
+                )
 
     def _end_hard_shadows_overlay(self) -> bool:
         return _shadow_pipeline.end_hard_shadows_overlay(self)
@@ -516,7 +577,13 @@ class LightManager:
         lx, ly, radius = selected
         try:
             polys = build_shadow_polygons((float(lx), float(ly)), float(radius), rects)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: polygon build
+            _log_swallow(
+                "LGIN-012",
+                "engine.lighting.__init__.LightManager._draw_debug_geometry",
+                "build_shadow_polygons",
+                once=True,
+            )
             polys = []
         draw_shadow_polygons(self.window, polys)
 
@@ -595,11 +662,21 @@ class LightManager:
             return None
         try:
             flicker_speed = float(flicker_speed)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: speed parse
+            _log_swallow(
+                "LGIN-013",
+                "engine.lighting.__init__.LightManager.register_dynamic_light",
+                "parse_flicker_speed",
+            )
             flicker_speed = 1.0
         try:
             flicker_amount = float(flicker_amount)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: amount parse
+            _log_swallow(
+                "LGIN-014",
+                "engine.lighting.__init__.LightManager.register_dynamic_light",
+                "parse_flicker_amount",
+            )
             flicker_amount = 0.0
         seed_used = None
         if flicker_enabled:
@@ -608,7 +685,12 @@ class LightManager:
             else:
                 try:
                     seed_used = int(flicker_seed)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: seed parse
+                    _log_swallow(
+                        "LGIN-015",
+                        "engine.lighting.__init__.LightManager.register_dynamic_light",
+                        "parse_flicker_seed",
+                    )
                     seed_used = 0
         handle = DynamicLightHandle(
             owner=owner,
@@ -644,13 +726,23 @@ class LightManager:
             if radius_px is not None:
                 try:
                     radius_px = float(radius_px)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: radius parse
+                    _log_swallow(
+                        "LGIN-016",
+                        "engine.lighting.__init__.LightManager.register_dynamic_light",
+                        "parse_flicker_radius_px",
+                    )
                     radius_px = None
             intensity = handle.flicker_intensity
             if intensity is not None:
                 try:
                     intensity = float(intensity)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: intensity parse
+                    _log_swallow(
+                        "LGIN-017",
+                        "engine.lighting.__init__.LightManager.register_dynamic_light",
+                        "parse_flicker_intensity",
+                    )
                     intensity = None
             state = _FlickerLightState(
                 light=light,
@@ -735,8 +827,13 @@ class LightManager:
         if callable(setter):
             try:
                 setter(engine.optional_arcade.arcade.color.BLACK)
-            except Exception as exc:  # noqa: BLE001
-                self._log_exception_once("set_background_color", exc)
+            except Exception as exc:  # noqa: BLE001  # REASON: bgcolor set
+                _log_swallow(
+                    "LGIN-018",
+                    "engine.lighting.__init__.LightManager._create_layer",
+                    "set_background_color",
+                    once=True,
+                )
         return layer
 
     def _create_light(self, x: float, y: float, radius: float, color: Any, mode: str) -> Any:
@@ -764,8 +861,13 @@ class LightManager:
                     if named is not None:
                         color = named
             return _Light(float(x), float(y), float(radius), color, mode=str(mode))
-        except Exception as exc:  # noqa: BLE001
-            self._log_exception_once("create_light", exc)
+        except Exception as exc:  # noqa: BLE001  # REASON: light construct
+            _log_swallow(
+                "LGIN-019",
+                "engine.lighting.__init__.LightManager._create_light",
+                "construct_light",
+                once=True,
+            )
             return None
 
     def _normalize_color(self, color: Any) -> tuple[int, int, int, int]:
@@ -798,7 +900,12 @@ class LightManager:
                         max(0, min(255, b)),
                         max(0, min(255, a)),
                     )
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: color parse
+                    _log_swallow(
+                        "LGIN-020",
+                        "engine.lighting.__init__.LightManager._normalize_color",
+                        "normalize_sequence_color",
+                    )
                     pass
         return (255, 255, 255, 255)
 
@@ -815,7 +922,12 @@ class LightManager:
     def set_ambient_darkness_alpha(self, alpha: int) -> None:
         try:
             self.ambient_darkness_alpha = int(alpha)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: alpha parse
+            _log_swallow(
+                "LGIN-021",
+                "engine.lighting.__init__.LightManager.set_ambient_darkness_alpha",
+                "parse_ambient_darkness_alpha",
+            )
             self.ambient_darkness_alpha = None
 
     def _add_light(self, light: Any) -> None:
@@ -828,13 +940,24 @@ class LightManager:
                     adder(light)
                     return
                 except Exception:
+                    _log_swallow(
+                        "LGIN-022",
+                        "engine.lighting.__init__.LightManager._add_light",
+                        "invoke_single_light_adder",
+                        once=True,
+                    )
                     continue
         bulk = getattr(self._layer, "add_lights", None)
         if callable(bulk):
             try:
                 bulk([light])
-            except Exception as exc:  # noqa: BLE001
-                self._log_exception_once("add_lights", exc)
+            except Exception as exc:  # noqa: BLE001  # REASON: bulk add
+                _log_swallow(
+                    "LGIN-023",
+                    "engine.lighting.__init__.LightManager._add_light",
+                    "invoke_add_lights_bulk",
+                    once=True,
+                )
 
     def _add_occluder(self, occluder: Any) -> None:
         if not self._layer:
@@ -847,14 +970,25 @@ class LightManager:
                     adder(occluder)
                     return
                 except Exception:
+                    _log_swallow(
+                        "LGIN-024",
+                        "engine.lighting.__init__.LightManager._add_occluder",
+                        "invoke_single_occluder_adder",
+                        once=True,
+                    )
                     continue
         # Fallback: check for bulk add
         bulk = getattr(self._layer, "add_walls", None)
         if callable(bulk):
             try:
                 bulk([occluder])
-            except Exception as exc:  # noqa: BLE001
-                self._log_exception_once("add_walls", exc)
+            except Exception as exc:  # noqa: BLE001  # REASON: bulk add
+                _log_swallow(
+                    "LGIN-025",
+                    "engine.lighting.__init__.LightManager._add_occluder",
+                    "invoke_add_walls_bulk",
+                    once=True,
+                )
 
     def _add_polygon_light(self, points: list[tuple[float, float]], light_config: dict[str, Any]) -> bool:
         if not self._layer:
@@ -867,6 +1001,12 @@ class LightManager:
                     adder(points, **light_config)
                     return True
                 except Exception:
+                    _log_swallow(
+                        "LGIN-026",
+                        "engine.lighting.__init__.LightManager._add_polygon_light",
+                        "invoke_polygon_light_adder",
+                        once=True,
+                    )
                     continue
         return False
 
@@ -881,7 +1021,13 @@ class LightManager:
             return
         try:
             self._layer = self._create_layer()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: layer create
+            _log_swallow(
+                "LGIN-027",
+                "engine.lighting.__init__.LightManager._rebuild_layer",
+                "create_layer",
+                once=True,
+            )
             # Likely no active window (e.g., during headless tests); disable gracefully.
             self._layer = None
             self.enabled = False

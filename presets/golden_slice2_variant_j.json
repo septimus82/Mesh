@@ -1,0 +1,30 @@
+{
+  "description": "Hollowmere Outskirts: Branching choice (Golden Slice 2)",
+  "lighting_showcase": false,
+  "notes": "Second location (choice) - pick A or B, mutually exclusive",
+  "steps": [
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice2_variant_j.json",
+        "--dry-run",
+        "--strict",
+        "--check-refs"
+      ],
+      "cmd": "pipeline"
+    },
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice2_variant_j.json",
+        "--dry-run",
+        "--demo"
+      ],
+      "cmd": "pipeline"
+    }
+  ]
+}

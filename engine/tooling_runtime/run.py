@@ -21,6 +21,17 @@ from engine.validators.schema_validation import (
 from engine.validators.transition_validator import TransitionValidator
 from engine.validators.variant_validator import VariantValidator
 from engine.validators.theme_spawn_variant_override_validator import validate_theme_spawn_variant_override_settings
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 
 class UnifiedValidatorCore:
@@ -101,6 +112,7 @@ class UnifiedValidatorCore:
             with open(target_path, "r") as f:
                 data = json.load(f)
         except Exception as e:
+            _log_swallow("TRUN-001", "engine/tooling_runtime/run.py blanket swallow", once=True)
             self.errors.append(f"Failed to parse JSON {target_path}: {e}")
             return False
 
@@ -194,6 +206,7 @@ class UnifiedValidatorCore:
             with open(path, "r") as f:
                 data = json.load(f)
         except Exception as e:
+            _log_swallow("TRUN-002", "engine/tooling_runtime/run.py blanket swallow", once=True)
             self._add_legacy_error(f"Scene {path}: Failed to load JSON: {e}")
             return False
 
@@ -242,6 +255,7 @@ class UnifiedValidatorCore:
                     self._add_legacy_error(msg)
                     return False
             except Exception as e:
+                _log_swallow("TRUN-003", "engine/tooling_runtime/run.py blanket swallow", once=True)
                 self._add_legacy_error(f"Scene {path}: Compactness check failed: {e}")
                 return False
 
@@ -330,6 +344,7 @@ class UnifiedValidatorCore:
         try:
             scene = self.scene_loader.load_scene(str(path))
         except Exception:
+            _log_swallow("TRUN-004", "engine/tooling_runtime/run.py blanket swallow", once=True)
             return False
 
         producers = set()
@@ -400,6 +415,7 @@ class UnifiedValidatorCore:
                 themes = json.loads(themes_path.read_text(encoding="utf-8"))
                 themes_loaded = True
             except Exception as e:
+                _log_swallow("TRUN-005", "engine/tooling_runtime/run.py blanket swallow", once=True)
                 self.warnings.append(f"Failed to load themes.json: {e}")
         else:
             self.warnings.append(f"Scene {path}: Theme validation skipped (themes.json missing)")
@@ -415,6 +431,7 @@ class UnifiedValidatorCore:
                     encounter_sets[es["id"]] = es
                 sets_loaded = True
             except Exception as e:
+                _log_swallow("TRUN-006", "engine/tooling_runtime/run.py blanket swallow", once=True)
                 self.warnings.append(f"Failed to load {sets_path}: {e}")
 
         ok = True

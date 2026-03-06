@@ -8,6 +8,26 @@ from engine.editor.find_everything_model import build_find_items
 from engine.editor_commands import get_all_commands
 from engine.editor_entity_ops import list_entities
 from engine.scene_index import build_scene_rows
+from engine.ui_overlays.widget_overlay_helpers import (
+    apply_backspace,
+    apply_enter,
+    apply_mouse_press,
+    apply_mouse_scroll,
+    apply_nav_key,
+    apply_text_input,
+)
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 class EditorSearchController:
@@ -165,6 +185,13 @@ class EditorSearchController:
         if opened:
             self.clear_search_focus()
         self._editor._autosave_workspace()
+        try:
+            from engine.editor.editor_ui_state import save_editor_ui_state_for_editor  # noqa: PLC0415
+
+            save_editor_ui_state_for_editor(self._editor)
+        except Exception:  # noqa: BLE001
+            _log_swallow("EDIT-001", "engine/editor/editor_search_controller.py pass-only blanket swallow")
+            pass
         return bool(self._editor.panels.is_command_palette_open())
 
     def _resolve_active_search_panel(self) -> str | None:
@@ -321,6 +348,20 @@ class EditorSearchController:
     def close_find_everything(self) -> None:
         self._ui_flow.close_palette(cancel_preview=True)
 
+    def _get_find_everything_overlay(self) -> Any:
+        window = getattr(self._editor, "window", None)
+        if window is None:
+            return None
+        return getattr(window, "find_everything_overlay", None)
+
+    def handle_find_everything_mouse_press(self, x: float, y: float, button: int, modifiers: int = 0) -> bool:
+        overlay = self._get_find_everything_overlay()
+        return apply_mouse_press(overlay, x, y, button=button, modifiers=modifiers)
+
+    def handle_find_everything_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool:
+        overlay = self._get_find_everything_overlay()
+        return apply_mouse_scroll(overlay, scroll_y, x=x, y=y, scroll_x=scroll_x)
+
     def handle_find_everything_input(self, key: int, modifiers: int) -> bool:
         if not self._editor.active or not self._editor._find_everything_open:
             return False
@@ -329,6 +370,20 @@ class EditorSearchController:
         ):
             self.close_find_everything()
             return True
+        ctrl_n_key = getattr(optional_arcade.arcade.key, "N", None)
+        ctrl_p_key = getattr(optional_arcade.arcade.key, "P", None)
+        if modifiers & optional_arcade.arcade.key.MOD_CTRL:
+            if ctrl_n_key is not None and key == ctrl_n_key:
+                key = optional_arcade.arcade.key.DOWN
+            elif ctrl_p_key is not None and key == ctrl_p_key:
+                key = optional_arcade.arcade.key.UP
+            elif key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN):
+                overlay = self._get_find_everything_overlay()
+                activator = getattr(overlay, "activate_selected", None)
+                if callable(activator) and bool(activator()):
+                    return True
+                self.activate_find_selection()
+                return True
         if key == optional_arcade.arcade.key.ESCAPE:
             if self._editor._find_everything_query:
                 # Clear query first (delegate to update_query)
@@ -339,13 +394,29 @@ class EditorSearchController:
         if key == optional_arcade.arcade.key.BACKSPACE:
             self.backspace_find_query()
             return True
+        if key == optional_arcade.arcade.key.TAB:
+            overlay = self._get_find_everything_overlay()
+            toggle_focus = getattr(overlay, "toggle_focus", None)
+            if callable(toggle_focus):
+                toggle_focus()
+                return True
+            return True
         if key == optional_arcade.arcade.key.UP:
+            overlay = self._get_find_everything_overlay()
+            if apply_nav_key(overlay, key):
+                return True
             self.move_find_selection(-1)
             return True
         if key == optional_arcade.arcade.key.DOWN:
+            overlay = self._get_find_everything_overlay()
+            if apply_nav_key(overlay, key):
+                return True
             self.move_find_selection(1)
             return True
         if key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN):
+            overlay = self._get_find_everything_overlay()
+            if apply_enter(overlay):
+                return True
             self.activate_find_selection()
             return True
         return True
@@ -356,10 +427,16 @@ class EditorSearchController:
     def append_find_query_text(self, text: str) -> bool:
         if not text or not text.isprintable():
             return False
+        overlay = self._get_find_everything_overlay()
+        if apply_text_input(overlay, text):
+            return True
         self._ui_flow.update_query(self._ui_flow.query + text)
         return True
 
     def backspace_find_query(self) -> bool:
+        overlay = self._get_find_everything_overlay()
+        if apply_backspace(overlay):
+            return True
         if not self._ui_flow.query:
             return False
         self._ui_flow.update_query(self._ui_flow.query[:-1])

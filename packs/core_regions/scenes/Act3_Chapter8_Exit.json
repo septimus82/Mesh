@@ -1,0 +1,166 @@
+{
+  "description": "Act 3 Chapter 8 exit: checkpoint and chapter completion.",
+  "name": "Act 3 Chapter 8 - Exit",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter8_exit_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter8_exit_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch8_checkpoint",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter8CheckpointZone"
+        }
+      },
+      "id": "act3_chapter8_exit_checkpointzone_520_300_0_0",
+      "name": "Act3Chapter8CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter8CheckpointZone",
+          "set_flags": {
+            "act3_ch8_checkpoint": true
+          },
+          "require_flags": [
+            "act3_ch8_started"
+          ],
+          "forbid_flags": [
+            "act3_ch8_checkpoint"
+          ],
+          "once": true,
+          "toast": "Checkpoint reached: Act 3 Chapter 8",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter8_exit_checkpointstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch8CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch8_complete",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter8CompleteZone"
+        }
+      },
+      "id": "act3_chapter8_exit_completezone_760_300_0_0",
+      "name": "Act3Chapter8CompleteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 760,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter8CompleteZone",
+          "set_flags": {
+            "act3_chapter8_complete": true
+          },
+          "require_flags": [
+            "act3_ch8_started"
+          ],
+          "forbid_flags": [
+            "act3_chapter8_complete"
+          ],
+          "once": true,
+          "toast": "Objective complete: Act 3 Chapter 8.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter8_exit_completestatesync_m1000_m1000_0_0",
+      "name": "Act3Ch8CompleteStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter8_Normalize.json"
+        }
+      },
+      "id": "act3_chapter8_exit_returntonormalize_60_300_0_0",
+      "name": "ReturnToAct3Chapter8Normalize",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter9_Entry.json"
+        }
+      },
+      "id": "act3_chapter8_exit_toact3chapter9entry_980_300_0_0",
+      "name": "ToAct3Chapter9Entry",
+      "require_flags": [
+        "act3_chapter8_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 980,
+      "y": 300
+    }
+  ]
+}

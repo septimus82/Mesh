@@ -3,6 +3,17 @@
 from __future__ import annotations
 
 from typing import Any
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 
 def get_quest_inspector_state(window: Any) -> dict[str, Any] | None:
@@ -15,6 +26,7 @@ def get_quest_inspector_state(window: Any) -> dict[str, Any] | None:
             state = getter()
             return state if isinstance(state, dict) else None
         except Exception:
+            _log_swallow("DBPS-001", "engine/editor/debug/debug_panels_state.py blanket swallow", once=True)
             return None
     return None
 
@@ -27,6 +39,7 @@ def get_quest_diagnostics(window: Any) -> list[Any]:
             value = getter()
             return list(value) if isinstance(value, list) else []
         except Exception:
+            _log_swallow("DBPS-002", "engine/editor/debug/debug_panels_state.py blanket swallow", once=True)
             return []
     return []
 
@@ -37,10 +50,12 @@ def get_cutscene_state(window: Any) -> tuple[dict[str, Any] | None, list[dict[st
         try:
             inspector_state = runner.get_inspector_state()
         except Exception:
+            _log_swallow("DBPS-003", "engine/editor/debug/debug_panels_state.py blanket swallow", once=True)
             inspector_state = None
         try:
             runner_commands = runner.get_command_list()
         except Exception:
+            _log_swallow("DBPS-004", "engine/editor/debug/debug_panels_state.py blanket swallow", once=True)
             runner_commands = []
         return (inspector_state, runner_commands if isinstance(runner_commands, list) else [])
 
@@ -100,6 +115,7 @@ def get_cutscene_events(window: Any) -> list[Any]:
     try:
         events = list(bus.get_history(20))
     except Exception:
+        _log_swallow("DBPS-005", "engine/editor/debug/debug_panels_state.py blanket swallow", once=True)
         return []
     filtered = []
     for event in events:

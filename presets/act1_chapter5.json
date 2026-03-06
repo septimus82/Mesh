@@ -1,0 +1,16 @@
+{
+  "description": "Act 1 Chapter 5 finale stub entrypoint",
+  "steps": [
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/act1_chapter5_stub.json",
+        "--dry-run",
+        "--demo"
+      ],
+      "cmd": "pipeline"
+    }
+  ]
+}

@@ -135,7 +135,7 @@ def build_new_game_payload(
 # CLI entry-points
 # ---------------------------------------------------------------------------
 
-def register(subparsers: argparse._SubParsersAction) -> None:  # type: ignore[type-arg,unused-ignore]
+def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     """Register the ``new-game`` command."""
     parser = subparsers.add_parser(
         "new-game",

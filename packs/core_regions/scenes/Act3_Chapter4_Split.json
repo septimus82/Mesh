@@ -1,0 +1,426 @@
+{
+  "description": "Act 3 Chapter 4 split: collect token A and token B in any order, then release the lock console with recovery fail-safe.",
+  "name": "Act 3 Chapter 4 - Split",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter4_split_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter4_split_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch4_collect_token_a",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter4TokenAZone"
+        }
+      },
+      "id": "act3_chapter4_split_tokenazone_320_240_0_0",
+      "name": "Act3Chapter4TokenAZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 320,
+      "y": 240
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch4_collect_token_b",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter4TokenBZone"
+        }
+      },
+      "id": "act3_chapter4_split_tokenbzone_320_360_0_0",
+      "name": "Act3Chapter4TokenBZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 320,
+      "y": 360
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter4TokenAZone",
+          "set_flags": {
+            "act3_ch4_token_a": true
+          },
+          "forbid_flags": [
+            "act3_ch4_token_a"
+          ],
+          "once": true,
+          "toast": "Signal token acquired: A.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter4_split_tokenastatesync_m1000_m1000_0_0",
+      "name": "Act3Ch4TokenAStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter4TokenBZone",
+          "set_flags": {
+            "act3_ch4_token_b": true
+          },
+          "forbid_flags": [
+            "act3_ch4_token_b"
+          ],
+          "once": true,
+          "toast": "Signal token acquired: B.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter4_split_tokenbstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch4TokenBStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch4_lock_console",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter4LockConsoleZone"
+        }
+      },
+      "id": "act3_chapter4_split_lockconsolezone_620_300_0_0",
+      "name": "Act3Chapter4LockConsoleZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 620,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter4LockConsoleZone",
+          "set_flags": {
+            "act3_ch4_tokens_ready": true
+          },
+          "require_flags": [
+            "act3_ch4_token_a",
+            "act3_ch4_token_b"
+          ],
+          "forbid_flags": [
+            "act3_ch4_tokens_ready"
+          ],
+          "once": true,
+          "toast": "Lock released. Exit unlocked.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter4_split_lockreleasestatesync_m1000_m1000_0_0",
+      "name": "Act3Ch4LockReleaseStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter4LockConsoleZone",
+          "set_flags": {
+            "act3_ch4_recovery_open": true
+          },
+          "require_flags": [
+            "act3_ch4_token_a"
+          ],
+          "forbid_flags": [
+            "act3_ch4_token_b",
+            "act3_ch4_tokens_ready",
+            "act3_ch4_recovery_open"
+          ],
+          "once": true,
+          "toast": "Warning: incomplete token set. Recovery route opened.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter4_split_recoverywarnfromastatesync_m1000_m1000_0_0",
+      "name": "Act3Ch4RecoveryWarnFromAStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter4LockConsoleZone",
+          "set_flags": {
+            "act3_ch4_recovery_open": true
+          },
+          "require_flags": [
+            "act3_ch4_token_b"
+          ],
+          "forbid_flags": [
+            "act3_ch4_token_a",
+            "act3_ch4_tokens_ready",
+            "act3_ch4_recovery_open"
+          ],
+          "once": true,
+          "toast": "Warning: incomplete token set. Recovery route opened.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter4_split_recoverywarnfrombstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch4RecoveryWarnFromBStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch4_recovery_token_a",
+          "trigger_radius": 34.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter4RecoveryTokenAZone"
+        }
+      },
+      "id": "act3_chapter4_split_recoverytokenazone_860_340_0_0",
+      "name": "Act3Chapter4RecoveryTokenAZone",
+      "require_flags": [
+        "act3_ch4_recovery_open"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 860,
+      "y": 340
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter4RecoveryTokenAZone",
+          "set_flags": {
+            "act3_ch4_token_a": true
+          },
+          "require_flags": [
+            "act3_ch4_recovery_open",
+            "act3_ch4_token_b"
+          ],
+          "forbid_flags": [
+            "act3_ch4_token_a"
+          ],
+          "once": true,
+          "toast": "Signal token acquired: A.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter4_split_recoverytokenastatesync_m1000_m1000_0_0",
+      "name": "Act3Ch4RecoveryTokenAStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch4_recovery_token_b",
+          "trigger_radius": 34.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter4RecoveryTokenBZone"
+        }
+      },
+      "id": "act3_chapter4_split_recoverytokenbzone_860_260_0_0",
+      "name": "Act3Chapter4RecoveryTokenBZone",
+      "require_flags": [
+        "act3_ch4_recovery_open"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 860,
+      "y": 260
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter4RecoveryTokenBZone",
+          "set_flags": {
+            "act3_ch4_token_b": true
+          },
+          "require_flags": [
+            "act3_ch4_recovery_open",
+            "act3_ch4_token_a"
+          ],
+          "forbid_flags": [
+            "act3_ch4_token_b"
+          ],
+          "once": true,
+          "toast": "Signal token acquired: B.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter4_split_recoverytokenbstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch4RecoveryTokenBStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter4_Exit.json"
+        }
+      },
+      "id": "act3_chapter4_split_toexit_1040_300_0_0",
+      "name": "ToAct3Chapter4Exit",
+      "require_flags": [
+        "act3_ch4_tokens_ready"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter4_Entry.json"
+        }
+      },
+      "id": "act3_chapter4_split_returntoentry_60_300_0_0",
+      "name": "ReturnToAct3Chapter4Entry",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch4_tokens_ready": true
+          },
+          "require_flags": [
+            "act3_ch4_tokens_ready"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter4_split_tokensreadyrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch4TokensReadyRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch4_recovery_open": true
+          },
+          "require_flags": [
+            "act3_ch4_recovery_open"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter4_split_recoveryrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch4RecoveryRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

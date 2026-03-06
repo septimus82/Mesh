@@ -74,7 +74,7 @@ class LightSource(Behaviour):
         "shafts_noise_amount": ParamDef(float, default=0.15, description="Shafts noise amount (0..1)"),
     }
 
-    def __init__(self, entity: Sprite, window, **config: Any) -> None:  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         super().__init__(entity, window, **config)
         self._light_handle = None
         enabled = bool(self.config.get("enabled", True))

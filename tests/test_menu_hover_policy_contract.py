@@ -8,6 +8,7 @@ def test_menu_hover_reads_are_centralized() -> None:
     root = Path(__file__).resolve().parents[1]
     engine_root = root / "engine"
     allowlist = {
+        "engine/editor_controller_core.py",
         "engine/editor_controller.py",
         "engine/editor/editor_menu_hover_query.py",
         "engine/editor_runtime/hover_detection.py",

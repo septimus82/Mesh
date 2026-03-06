@@ -1,0 +1,94 @@
+{
+  "description": "Agent safety + determinism gates",
+  "steps": [
+    {
+      "args": [
+        "mesh_cli.py",
+        "preset",
+        "lint"
+      ],
+      "cmd": "python"
+    },
+    {
+      "args": [
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_agent_rules_doc_guard.py"
+      ],
+      "cmd": "python"
+    },
+    {
+      "args": [
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_plan_executor_write_seam_gate.py"
+      ],
+      "cmd": "python"
+    },
+    {
+      "args": [
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_mesh_assist_diff_coverage_contract.py"
+      ],
+      "cmd": "python"
+    },
+    {
+      "args": [
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_plan_action_classification_guard.py"
+      ],
+      "cmd": "python"
+    },
+    {
+      "args": [
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_plan_schema_sync_guard.py"
+      ],
+      "cmd": "python"
+    },
+    {
+      "args": [
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_plan_schema_metadata_coverage.py"
+      ],
+      "cmd": "python"
+    },
+    {
+      "args": [
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_plan_schema_ai_out_deterministic.py"
+      ],
+      "cmd": "python"
+    },
+    {
+      "args": [
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_mesh_triage_artifacts_deterministic.py"
+      ],
+      "cmd": "python"
+    },
+    {
+      "args": [
+        "-m",
+        "pytest",
+        "-q",
+        "tests/test_mesh_assist_summary_json_deterministic.py"
+      ],
+      "cmd": "python"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, cast
 
 from ..behaviours import list_behaviours
 from ..input import InputManager
@@ -302,7 +302,7 @@ def _fetch_console_help_sections() -> list[tuple[str, list[tuple[str, str]]]]:
     class DummyWindow:
         pass
 
-    controller = ConsoleController(DummyWindow()) # type: ignore
+    controller = ConsoleController(cast(Any, DummyWindow()))
     return controller.help_sections()
 
 

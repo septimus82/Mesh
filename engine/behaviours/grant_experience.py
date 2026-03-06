@@ -25,7 +25,7 @@ class GrantExperience(Behaviour):
         "target_tag": ParamDef(str, default="player", description="Player tag to reward"),
     }
 
-    def __init__(self, entity, window, **config: Any) -> None:  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         super().__init__(entity, window, **config)
         self.xp_amount = int(self.config.get("xp", 10))
         self.event_name = str(self.config.get("event", "died") or "died")

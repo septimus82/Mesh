@@ -14,6 +14,26 @@ from engine.editor.scene_opening import (
     compute_scene_window,
 )
 from engine.logging_tools import get_logger
+from engine.ui_overlays.widget_overlay_helpers import (
+    apply_backspace,
+    apply_enter,
+    apply_mouse_press,
+    apply_mouse_scroll,
+    apply_nav_key,
+    apply_text_input,
+)
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 logger = get_logger(__name__)
 
@@ -23,6 +43,12 @@ class EditorSceneBrowseController:
 
     def __init__(self, editor: Any) -> None:
         self._editor = editor
+
+    def _get_scene_browser_overlay(self) -> Any:
+        window = getattr(self._editor, "window", None)
+        if window is None:
+            return None
+        return getattr(window, "scene_browser_overlay", None)
 
     def toggle_scene_switcher(self) -> bool:
         if not self._editor.active:
@@ -39,6 +65,13 @@ class EditorSceneBrowseController:
             self._editor.scene_switcher_index = 0
             logger.info("[Editor] Scene switcher CLOSED")
         self._editor._autosave_workspace()
+        try:
+            from engine.editor.editor_ui_state import save_editor_ui_state_for_editor  # noqa: PLC0415
+
+            save_editor_ui_state_for_editor(self._editor)
+        except Exception:  # noqa: BLE001
+            _log_swallow("EDIT-001", "engine/editor/editor_scene_browse_controller.py pass-only blanket swallow")
+            pass
         return bool(self._editor.scene_switcher_active)
 
     def toggle_scene_browser(self) -> bool:
@@ -56,6 +89,13 @@ class EditorSceneBrowseController:
             self._editor.scene_browser_index = 0
             logger.info("[Editor] Scene browser CLOSED")
         self._editor._autosave_workspace()
+        try:
+            from engine.editor.editor_ui_state import save_editor_ui_state_for_editor  # noqa: PLC0415
+
+            save_editor_ui_state_for_editor(self._editor)
+        except Exception:  # noqa: BLE001
+            _log_swallow("EDIT-002", "engine/editor/editor_scene_browse_controller.py pass-only blanket swallow")
+            pass
         return bool(self._editor.scene_browser_active)
 
     def refresh_scene_switcher_items(self) -> None:
@@ -105,6 +145,25 @@ class EditorSceneBrowseController:
             self.refresh_scene_browser_rows()
         return list(self._editor._scene_browser_cached_rows)
 
+    def _set_scene_browser_query_preserve_selection(self, query: str) -> None:
+        previous_scene_id: str | None = None
+        rows_before = self.scene_browser_rows()
+        prev_idx = int(getattr(self._editor, "scene_browser_index", 0) or 0)
+        if 0 <= prev_idx < len(rows_before):
+            previous_scene_id = str(getattr(rows_before[prev_idx], "scene_id", "") or "") or None
+
+        self._editor.scene_browser_query = str(query or "")
+        self.refresh_scene_browser_rows()
+
+        if previous_scene_id:
+            rows_after = self.scene_browser_rows()
+            for idx, row in enumerate(rows_after):
+                if str(getattr(row, "scene_id", "") or "") == previous_scene_id:
+                    self._editor.scene_browser_index = idx
+                    break
+
+        self.scene_browser_clamp_index(len(self.scene_browser_rows()))
+
     def scene_browser_clamp_index(self, count: int) -> None:
         self._editor.scene_browser_index = clamp_scene_selection_index(
             self._editor.scene_browser_index, count
@@ -153,6 +212,9 @@ class EditorSceneBrowseController:
     def scene_browser_handle_mouse_click(self, x: float, y: float, button: int) -> bool:
         if not self._editor.scene_browser_active:
             return False
+        overlay = self._get_scene_browser_overlay()
+        if apply_mouse_press(overlay, x, y, button=button, modifiers=0):
+            return True
         if button != optional_arcade.arcade.MOUSE_BUTTON_LEFT:
             return True
 
@@ -170,6 +232,12 @@ class EditorSceneBrowseController:
             self._editor.scene_browser_index = hit_index
             self.scene_browser_open_selected()
         return True
+
+    def handle_scene_browser_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool:
+        if not self._editor.scene_browser_active:
+            return False
+        overlay = self._get_scene_browser_overlay()
+        return apply_mouse_scroll(overlay, scroll_y, x=x, y=y, scroll_x=scroll_x)
 
     def handle_scene_switcher_input(self, key: int, modifiers: int) -> bool:  # noqa: ARG002
         if not self._editor.scene_switcher_active:
@@ -199,23 +267,50 @@ class EditorSceneBrowseController:
         if not self._editor.scene_browser_active:
             return False
 
+        overlay = self._get_scene_browser_overlay()
+        page_up_key = getattr(optional_arcade.arcade.key, "PAGE_UP", None)
+        if page_up_key is None:
+            page_up_key = getattr(optional_arcade.arcade.key, "PAGEUP", None)
+        page_down_key = getattr(optional_arcade.arcade.key, "PAGE_DOWN", None)
+        if page_down_key is None:
+            page_down_key = getattr(optional_arcade.arcade.key, "PAGEDOWN", None)
+        ctrl_n_key = getattr(optional_arcade.arcade.key, "N", None)
+        ctrl_p_key = getattr(optional_arcade.arcade.key, "P", None)
+        if modifiers & optional_arcade.arcade.key.MOD_CTRL:
+            if ctrl_n_key is not None and key == ctrl_n_key:
+                key = optional_arcade.arcade.key.DOWN
+            elif ctrl_p_key is not None and key == ctrl_p_key:
+                key = optional_arcade.arcade.key.UP
+            elif key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN):
+                activator = getattr(overlay, "activate_selected", None)
+                if callable(activator) and bool(activator()):
+                    return True
+                return self.scene_browser_open_selected()
         if key == optional_arcade.arcade.key.ESCAPE:
             self._editor.scene_browser_active = False
             return True
+        if key == optional_arcade.arcade.key.TAB:
+            toggle_focus = getattr(overlay, "toggle_focus", None)
+            if callable(toggle_focus):
+                toggle_focus()
+                return True
+            return True
         if key == optional_arcade.arcade.key.BACKSPACE:
-            self._editor.scene_browser_query = self._editor.scene_browser_query[:-1]
-            self.refresh_scene_browser_rows()
-            self.scene_browser_clamp_index(len(self.scene_browser_rows()))
+            if apply_backspace(overlay):
+                return True
+            self._set_scene_browser_query_preserve_selection(self._editor.scene_browser_query[:-1])
             return True
-        if key == optional_arcade.arcade.key.UP:
-            self._editor.scene_browser_index = max(0, self._editor.scene_browser_index - 1)
-            return True
-        if key == optional_arcade.arcade.key.DOWN:
-            count = len(self.scene_browser_rows())
-            if count:
-                self._editor.scene_browser_index = min(count - 1, self._editor.scene_browser_index + 1)
+        if key in (
+            optional_arcade.arcade.key.UP,
+            optional_arcade.arcade.key.DOWN,
+            optional_arcade.arcade.key.HOME,
+            optional_arcade.arcade.key.END,
+        ) or (page_up_key is not None and key == page_up_key) or (page_down_key is not None and key == page_down_key):
+            apply_nav_key(overlay, key)
             return True
         if key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN):
+            if apply_enter(overlay):
+                return True
             return self.scene_browser_open_selected()
 
         return True
@@ -232,9 +327,10 @@ class EditorSceneBrowseController:
     def handle_scene_browser_text_input(self, text: str) -> bool:
         if not self._editor.scene_browser_active:
             return False
+        overlay = self._get_scene_browser_overlay()
+        if apply_text_input(overlay, text):
+            return True
         if text and text.isprintable():
-            self._editor.scene_browser_query += text
-            self.refresh_scene_browser_rows()
-            self.scene_browser_clamp_index(len(self.scene_browser_rows()))
+            self._set_scene_browser_query_preserve_selection(self._editor.scene_browser_query + text)
             return True
         return False

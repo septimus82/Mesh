@@ -4,11 +4,23 @@ Shared helpers for tile paint, entity paint, and capture mode mouse handling.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 import engine.optional_arcade as optional_arcade
 
 from engine.input_runtime.capture_mouse_router_model import MouseEvent
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def get_tilemap_context(window: Any) -> tuple[Any, Any, tuple[int, int], tuple[int, int]] | None:
@@ -87,13 +99,15 @@ def get_authoring_payloads(window: Any) -> list[dict]:
     if sc is None:
         return []
     
-    iter_payloads = getattr(sc, "_debug_iter_authoring_payloads", None)
-    if callable(iter_payloads):
+    iter_payloads: Callable[..., list[dict]] | None = getattr(sc, "_debug_iter_authoring_payloads", None)
+    if iter_payloads is not None:
         try:
-            payloads = [p for p in iter_payloads() if isinstance(p, dict)]
+            result = iter_payloads()
+            payloads = [p for p in result if isinstance(p, dict)]
             if payloads:
                 return payloads
         except Exception:  # noqa: BLE001
+            _log_swallow("CAPT-001", "engine/input_runtime/capture_mouse_router_handlers_paint_base.py pass-only blanket swallow")
             pass
     
     # Fallback to loaded scene data

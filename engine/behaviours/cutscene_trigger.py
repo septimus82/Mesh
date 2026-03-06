@@ -23,7 +23,7 @@ class CutsceneTrigger(Behaviour):
         "cutscene_id": ParamDef(str, default="", description="Cutscene id to play"),
     }
 
-    def __init__(self, entity, window, **config: Any) -> None:  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         super().__init__(entity, window, **config)
         self._event_name = str(self.config.get("listen_event", "cutscene") or "cutscene")
         self._cutscene_id = str(self.config.get("cutscene_id", "") or "")

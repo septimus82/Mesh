@@ -66,6 +66,23 @@
       "behaviour_config": {
         "SceneTransition": {
           "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter5_Gauntlet.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter5_stub_tochapter5gauntlet_680_300_0_0",
+      "name": "ToChapter5Gauntlet",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 680,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
           "target_scene": "packs/core_regions/scenes/Act1_Chapter4_Fork.json"
         }
       },

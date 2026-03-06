@@ -1,0 +1,295 @@
+{
+  "description": "Act 1 Chapter 2 camp: receive briefing and route toward the ambush.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter2_camp_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter2_camp_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "event": {
+                    "type": "act1_ch2_briefing_accept"
+                  },
+                  "id": "ch2_brief_accept",
+                  "text": "We'll clear the ambush route."
+                }
+              ],
+              "text": "Quartermaster: Scouts report raiders ahead. Take the ambush lane and secure the gate path."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter2_camp_quartermaster_280_300_0_0",
+      "mesh_name": "Ch2Quartermaster",
+      "name": "Quartermaster Tamsin",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 280,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_camp_briefing",
+          "trigger_radius": 46.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_camp_chapter2campbriefingzone_340_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_camp_chapter2campbriefingzone_340_300_0_0",
+      "name": "Chapter2CampBriefingZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 340,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter2_Ambush.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter2_camp_tochapter2ambush_720_300_0_0",
+      "name": "ToChapter2Ambush",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 720,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter2_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter2_camp_returntochapter2stub_60_300_0_0",
+      "name": "ReturnToChapter2Stub",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Understood."
+                }
+              ],
+              "text": "Camp noticeboard: Talk to the camp leader."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter2_camp_camphintboard_160_330_0_0",
+      "mesh_name": "Ch2CampHintBoard",
+      "name": "Camp Hint Board",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 160,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_camp_briefing_fallback",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_camp_ch2campbriefingfallbackzone_660_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_camp_ch2campbriefingfallbackzone_660_300_0_0",
+      "name": "Ch2CampBriefingFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 660,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Chapter2CampBriefingZone",
+          "set_flags": {
+            "act1_ch2_camp_briefed": true
+          },
+          "forbid_flags": [
+            "act1_ch2_camp_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Head to the ambush lane.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter2_camp_ch2campbriefedstatesync_m1000_m1000_0_0",
+      "name": "Ch2CampBriefedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch2CampBriefingFallbackZone",
+          "set_flags": {
+            "act1_ch2_camp_briefed": true
+          },
+          "forbid_flags": [
+            "act1_ch2_camp_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Head to the ambush lane.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter2_camp_ch2campbriefedfbstatesync_m1000_m1000_0_0",
+      "name": "Ch2CampBriefedFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_camp_reentry_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_camp_ch2campreentryprobezone_130_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_camp_ch2campreentryprobezone_130_300_0_0",
+      "name": "Ch2CampReentryProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 130,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch2CampReentryProbeZone",
+          "set_flags": {
+            "act1_ch2_camp_reentry_2": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch2_camp_reentry_1"
+          ],
+          "forbid_flags": [
+            "act1_ch2_camp_briefed",
+            "act1_ch2_camp_reentry_2"
+          ],
+          "toast": "Hint: Talk to the camp leader to receive your objective.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter2_camp_ch2campreentryreentryhintstatesync_m1000_m1000_0_0",
+      "name": "Ch2CampReentryHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch2CampReentryProbeZone",
+          "set_flags": {
+            "act1_ch2_camp_reentry_1": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act1_ch2_camp_briefed",
+            "act1_ch2_camp_reentry_1"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter2_camp_ch2campreentryreentryvisitstatesync_m1000_m1000_0_0",
+      "name": "Ch2CampReentryVisitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 1 Chapter 2 - Camp",
+  "schema_version": 1,
+  "version": 1
+}

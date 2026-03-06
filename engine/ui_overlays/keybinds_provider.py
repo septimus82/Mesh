@@ -3,16 +3,17 @@ Overlay provider for Keybinds UI.
 """
 from __future__ import annotations
 
-from typing import Any, Tuple, List, Optional
-from engine.editor.editor_keybinds_controller import EditorKeybindsController
-from engine.editor.keybinds_window_model import clamp_scroll, auto_scroll_to_selection, slice_visible_rows
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from engine.editor.editor_keybinds_controller import EditorKeybindsController
 
 # Visual constants (can be overridden by caller but defaults useful for stateless calculation)
 DEFAULT_ROW_HEIGHT = 24
 DEFAULT_VIEWPORT_HEIGHT = 400
 
 def get_keybinds_ui_data(
-    controller: EditorKeybindsController,
+    controller: Any,
     viewport_height: int = DEFAULT_VIEWPORT_HEIGHT,
     row_height: int = DEFAULT_ROW_HEIGHT,
     current_scroll_y: float = 0.0
@@ -22,6 +23,12 @@ def get_keybinds_ui_data(
     
     Performs stateless scroll calculation based on current controller selection.
     """
+    from engine.editor.keybinds_window_model import (
+        auto_scroll_to_selection,
+        clamp_scroll,
+        slice_visible_rows,
+    )
+
     state = controller.state
     # Controller properties (like visible_rows) recalculate if dirty
     rows = controller.visible_rows
@@ -125,3 +132,8 @@ def _get_hint_text(state: Any, is_web: bool) -> str:
         
     return " | ".join(hints)
 
+    from engine.editor.keybinds_window_model import (
+        auto_scroll_to_selection,
+        clamp_scroll,
+        slice_visible_rows,
+    )

@@ -1,0 +1,336 @@
+{
+  "description": "Act 3 Chapter 5 phase field: latch console toggles Phase A/B hazard layouts with fail-safe bypass.",
+  "name": "Act 3 Chapter 5 - Phase Field",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter5_phasefield_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter5_phasefield_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch5_latch_console",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter5LatchConsoleZone"
+        }
+      },
+      "id": "act3_chapter5_phasefield_latchconsolezone_360_300_0_0",
+      "name": "Act3Chapter5LatchConsoleZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 360,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch5_phase_a": true
+          },
+          "forbid_flags": [
+            "act3_ch5_phase_a",
+            "act3_ch5_phase_b"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter5_phasefield_defaultphaseastatesync_m1000_m1000_0_0",
+      "name": "Act3Ch5DefaultPhaseAStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter5LatchConsoleZone",
+          "set_flags": {
+            "act3_ch5_phase_b": true,
+            "act3_ch5_phase_a": false,
+            "act3_ch5_phase_latched": true
+          },
+          "require_flags": [
+            "act3_ch5_phase_a"
+          ],
+          "forbid_flags": [
+            "act3_ch5_phase_b"
+          ],
+          "once": false,
+          "toast": "Phase latched: B.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter5_phasefield_latchbstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch5LatchBStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter5LatchConsoleZone",
+          "set_flags": {
+            "act3_ch5_phase_a": true,
+            "act3_ch5_phase_b": false,
+            "act3_ch5_phase_latched": true
+          },
+          "require_flags": [
+            "act3_ch5_phase_b"
+          ],
+          "forbid_flags": [
+            "act3_ch5_phase_a"
+          ],
+          "once": false,
+          "toast": "Phase latched: A.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter5_phasefield_latchastatesync_m1000_m1000_0_0",
+      "name": "Act3Ch5LatchAStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "amount": 6,
+          "cooldown": 0.5,
+          "target_tag": "player"
+        }
+      },
+      "id": "act3_chapter5_phasefield_phaseahazardstrip_580_260_0_0",
+      "name": "Act3Ch5PhaseAHazardStrip",
+      "require_flags": [
+        "act3_ch5_phase_a"
+      ],
+      "forbid_flags": [
+        "act3_ch5_phase_b"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "x": 580,
+      "y": 260
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "amount": 6,
+          "cooldown": 0.5,
+          "target_tag": "player"
+        }
+      },
+      "id": "act3_chapter5_phasefield_phasebhazardstrip_580_340_0_0",
+      "name": "Act3Ch5PhaseBHazardStrip",
+      "require_flags": [
+        "act3_ch5_phase_b"
+      ],
+      "forbid_flags": [
+        "act3_ch5_phase_a"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "x": 580,
+      "y": 340
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch5_bypass_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter5BypassProbeZone"
+        }
+      },
+      "id": "act3_chapter5_phasefield_bypassprobezone_200_300_0_0",
+      "name": "Act3Chapter5BypassProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 200,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter5BypassProbeZone",
+          "set_flags": {
+            "act3_ch5_bypass_open": true
+          },
+          "forbid_flags": [
+            "act3_ch5_phase_latched",
+            "act3_ch5_bypass_open"
+          ],
+          "once": true,
+          "toast": "Warning: phase not latched. Bypass opened.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter5_phasefield_bypassstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch5BypassStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter5_Exit.json"
+        }
+      },
+      "id": "act3_chapter5_phasefield_toexit_1040_300_0_0",
+      "name": "ToAct3Chapter5Exit",
+      "require_flags": [
+        "act3_ch5_phase_latched"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter5_Exit.json"
+        }
+      },
+      "id": "act3_chapter5_phasefield_toexitbypass_1040_220_0_0",
+      "name": "ToAct3Chapter5ExitBypass",
+      "require_flags": [
+        "act3_ch5_bypass_open"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 220
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter5_Entry.json"
+        }
+      },
+      "id": "act3_chapter5_phasefield_returntoentry_60_300_0_0",
+      "name": "ReturnToAct3Chapter5Entry",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch5_phase_latched": true
+          },
+          "require_flags": [
+            "act3_ch5_phase_latched"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter5_phasefield_latchedrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch5LatchedRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch5_bypass_open": true
+          },
+          "require_flags": [
+            "act3_ch5_bypass_open"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter5_phasefield_bypassrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch5BypassRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

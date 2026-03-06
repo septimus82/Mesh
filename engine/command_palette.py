@@ -17,6 +17,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable, TypedDict
 import engine.optional_arcade as optional_arcade
+from engine.logging_tools import get_logger
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 @functools.lru_cache(maxsize=1)
@@ -29,7 +41,8 @@ def _list_prefab_ids_from_assets() -> tuple[str, ...]:
         if not Path(path).exists():
             return ()
         raw = json.loads(Path(path).read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: asset JSON loading may fail in runtime/editor contexts
+        _log_swallow("CMPA-001", "prefab id list load fallback", once=True)
         return ()
 
     ids: list[str] = []
@@ -53,7 +66,8 @@ def _list_behaviour_names() -> tuple[str, ...]:
         from engine.behaviours import BEHAVIOUR_REGISTRY  # noqa: PLC0415
 
         return tuple(sorted({str(k).strip() for k in BEHAVIOUR_REGISTRY.keys() if isinstance(k, str) and str(k).strip()}))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: optional behaviour registry may be unavailable
+        _log_swallow("CMPA-002", "behaviour registry list fallback", once=True)
         return ()
 
 
@@ -263,6 +277,26 @@ DEFAULT_COMMAND_DEFS: tuple[_CommandDef, ...] = (
         "hotkey_hint": None,
     },
     {
+        "id": "palette.clear_recent",
+        "title": "Clear Recent Commands",
+        "section": "Palette",
+        "keywords": ("palette", "recent", "clear", "history"),
+        "is_enabled": "enabled_always",
+        "prompt": None,
+        "action": "action_palette_clear_recent",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "palette.reset_ui_layout",
+        "title": "Reset UI Layout",
+        "section": "Palette",
+        "keywords": ("palette", "ui", "layout", "reset", "dock", "panel"),
+        "is_enabled": "enabled_always",
+        "prompt": None,
+        "action": "action_palette_reset_ui_layout",
+        "hotkey_hint": None,
+    },
+    {
         "id": "scene.reload",
         "title": "Reload Scene",
         "section": "Scene",
@@ -330,6 +364,146 @@ DEFAULT_COMMAND_DEFS: tuple[_CommandDef, ...] = (
         "is_enabled": "enabled_persist_armed_only",
         "prompt": {"kind": "text", "placeholder": "new scene path", "default_value_fn": "default_scene_create"},
         "action": "action_scene_create",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.add",
+        "title": "Planes: Add",
+        "section": "Planes",
+        "keywords": ("planes", "background", "add", "layer"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": None,
+        "action": "action_planes_add",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.duplicate",
+        "title": "Planes: Duplicate",
+        "section": "Planes",
+        "keywords": ("planes", "background", "duplicate", "copy"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": None,
+        "action": "action_planes_duplicate",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.remove",
+        "title": "Planes: Remove",
+        "section": "Planes",
+        "keywords": ("planes", "background", "remove", "delete"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": None,
+        "action": "action_planes_remove",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.move_up",
+        "title": "Planes: Move Up",
+        "section": "Planes",
+        "keywords": ("planes", "background", "move", "up", "layer"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": None,
+        "action": "action_planes_move_up",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.move_down",
+        "title": "Planes: Move Down",
+        "section": "Planes",
+        "keywords": ("planes", "background", "move", "down", "layer"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": None,
+        "action": "action_planes_move_down",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.move_top",
+        "title": "Planes: Move To Top",
+        "section": "Planes",
+        "keywords": ("planes", "background", "move", "top", "first", "layer"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": None,
+        "action": "action_planes_move_top",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.move_bottom",
+        "title": "Planes: Move To Bottom",
+        "section": "Planes",
+        "keywords": ("planes", "background", "move", "bottom", "last", "layer"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": None,
+        "action": "action_planes_move_bottom",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.move_to",
+        "title": "Planes: Move To...",
+        "section": "Planes",
+        "keywords": ("planes", "background", "move", "to", "index", "position", "top", "bottom", "last"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": {"kind": "text", "placeholder": "top / bottom / last / index", "default_value_fn": "default_empty"},
+        "action": "action_planes_move_to",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.toggle_repeat",
+        "title": "Planes: Toggle Repeat…",
+        "section": "Planes",
+        "keywords": ("planes", "background", "repeat", "tile", "x", "y", "both"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": {"kind": "text", "placeholder": "x / y / both", "default_value_fn": "default_empty"},
+        "action": "action_planes_toggle_repeat",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.toggle_repeat_x",
+        "title": "Planes: Toggle Repeat X",
+        "section": "Planes",
+        "keywords": ("planes", "background", "repeat", "x"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": None,
+        "action": "action_planes_toggle_repeat_x",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.toggle_repeat_y",
+        "title": "Planes: Toggle Repeat Y",
+        "section": "Planes",
+        "keywords": ("planes", "background", "repeat", "y"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": None,
+        "action": "action_planes_toggle_repeat_y",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.select",
+        "title": "Planes: Select…",
+        "section": "Planes",
+        "keywords": ("planes", "background", "select", "prev", "next", "id"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": {"kind": "text", "placeholder": "prev / next / plane_id", "default_value_fn": "default_empty"},
+        "action": "action_planes_select",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.select_prev",
+        "title": "Planes: Select Prev",
+        "section": "Planes",
+        "keywords": ("planes", "background", "select", "prev"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": None,
+        "action": "action_planes_select_prev",
+        "hotkey_hint": None,
+    },
+    {
+        "id": "planes.select_next",
+        "title": "Planes: Select Next",
+        "section": "Planes",
+        "keywords": ("planes", "background", "select", "next"),
+        "is_enabled": "enabled_has_scene",
+        "prompt": None,
+        "action": "action_planes_select_next",
         "hotkey_hint": None,
     },
     {
@@ -757,7 +931,8 @@ def _build_macro_asset_commands(reg: Any) -> list[CommandSpec]:
             parse_macro_asset,
             validate_macro_asset,
         )
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: macro asset module is optional in constrained runtimes
+        _log_swallow("CMPA-003", "macro asset module import fallback", once=True)
         return []
 
     out: list[tuple[tuple[str, str, str], CommandSpec]] = []
@@ -765,13 +940,15 @@ def _build_macro_asset_commands(reg: Any) -> list[CommandSpec]:
     for rel_path in iter_macro_paths():
         try:
             payload = load_macro_asset(rel_path)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed macro asset payload should not break command build
+            _log_swallow("CMPA-004", "macro asset payload load fallback", once=True)
             continue
         if validate_macro_asset(payload, rel_path=rel_path):
             continue
         try:
             asset = parse_macro_asset(payload, rel_path=rel_path)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed macro asset structure should be skipped
+            _log_swallow("CMPA-005", "macro asset parse fallback", once=True)
             continue
         if not asset.id or not asset.macro_id:
             continue
@@ -786,7 +963,8 @@ def _build_macro_asset_commands(reg: Any) -> list[CommandSpec]:
         def _action(w: Any, arg: str | None, *, _asset=asset, _runner=runner) -> None:
             try:
                 overrides = json.loads(str(arg or "") or "{}")
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: prompt override payload may be invalid JSON
+                _log_swallow("CMPA-006", "macro asset override parse fallback", once=True)
                 overrides = {}
             if not isinstance(overrides, dict):
                 overrides = {}

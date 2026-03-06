@@ -4,6 +4,18 @@ from engine.ui_overlays.common import draw_panel_bg, draw_outline_centered
 from engine.ui_text_cache import UiTextCache, draw_text
 from engine.text_draw import TextCache
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 class ConfirmModalOverlay:
     def __init__(self, window: optional_arcade.arcade.Window):
         self.window = window
@@ -83,6 +95,7 @@ class ConfirmModalOverlay:
                 thumb_bottom = thumb_top - thumb_h
                 optional_arcade.arcade.draw_lrtb_rectangle_filled(track_left, track_right, thumb_top, thumb_bottom, (150, 150, 160, 200))
         except Exception:
+            _log_swallow("CONF-001", "engine/ui_overlays/confirm_modal_overlay.py pass-only blanket swallow")
             pass
             
         # Prompts (Bottom)
@@ -117,4 +130,5 @@ class ConfirmModalOverlay:
                     anchor_x="right",
                 )
         except Exception:
+            _log_swallow("CONF-002", "engine/ui_overlays/confirm_modal_overlay.py pass-only blanket swallow")
             pass

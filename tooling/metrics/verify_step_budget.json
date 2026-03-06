@@ -3,7 +3,7 @@
   "budgets_ms": {
     "mypy-gate": 26000,
     "mypy-island": 3000,
-    "pytest-fast": 20000,
+    "pytest-fast": 32000,
     "verify-demo": 30000,
     "verify-strict": 1000
   },

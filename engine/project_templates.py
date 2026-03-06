@@ -10,6 +10,18 @@ from typing import Any
 from . import json_io
 from .logging_tools import get_logger
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 _LOG = get_logger("engine.project_templates")
 
 
@@ -113,6 +125,7 @@ def _apply_lighting_playground(root: Path) -> None:
             config["lighting_enabled"] = True
             _write_json(config_path, config)
         except Exception:
+            _log_swallow("PROJ-001", "engine/project_templates.py pass-only blanket swallow")
             pass
 
 

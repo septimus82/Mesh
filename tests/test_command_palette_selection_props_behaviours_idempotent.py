@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-def test_command_palette_selection_add_remove_behaviour_idempotent(capsys) -> None:
+def test_command_palette_selection_add_remove_behaviour_idempotent(capsys, builtin_behaviours_loaded) -> None:
     from engine.command_palette import build_default_commands
     from engine.entity_select_mode import EntitySelectState
     from engine.game import GameWindow
@@ -73,4 +73,3 @@ def test_command_palette_selection_add_remove_behaviour_idempotent(capsys) -> No
         assert capsys.readouterr().out.strip() == "ENTITY_PROPS noop reason=no_changes"
     finally:
         palette.enabled = original_enabled
-

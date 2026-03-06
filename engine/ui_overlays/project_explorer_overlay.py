@@ -2,23 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_rectangle_filled, _draw_lrtb_rectangle_outline
-from ..editor.editor_shell_layout import compute_editor_shell_layout
-from ..editor.editor_dock_query import get_effective_dock_widths
-from ..editor.panel_search_model import format_search_bar_text
 from .providers import project_explorer_provider
-from ..editor.project_explorer_model import (
-    PROJECT_LINE_HEIGHT,
-    compute_project_explorer_layout,
-    compute_project_window,
-    display_index_from_selectable_index,
-    format_project_action_label,
-    format_project_recent_label,
-    format_project_row_label,
-)
+from .widgets import Rect, ScrollList
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -72,6 +61,17 @@ class ProjectExplorerOverlay(UIElement):
         return (True, display_text, original_path, cursor_pos, sel_start, sel_end)
 
     def draw(self) -> None:
+        from ..editor.editor_dock_query import get_effective_dock_widths
+        from ..editor.editor_shell_layout import compute_editor_shell_layout
+        from ..editor.panel_search_model import format_search_bar_text
+        from ..editor.project_explorer_model import (
+            PROJECT_LINE_HEIGHT,
+            compute_project_explorer_layout,
+            format_project_action_label,
+            format_project_recent_label,
+            format_project_row_label,
+        )
+
         controller = getattr(self.window, "editor_controller", None)
         if controller is None or not getattr(controller, "active", False):
             return
@@ -134,27 +134,33 @@ class ProjectExplorerOverlay(UIElement):
             )
             return
 
-        # Render windowed rows
-        start_idx = data.get("start_index", 0)
-        scroll_y = data.get("scroll_y", 0)
+        # Render rows through shared ScrollList windowing mechanics.
+        start_idx = int(data.get("start_index", 0) or 0)
+        scroll_y = float(data.get("scroll_y", 0.0) or 0.0)
         selected_row_id = data.get("selected_row_id")
         selected_row_ids = set(data.get("selected_row_ids", []) or [])
         has_multi = bool(data.get("has_multi", False))
+        scroll_list = _build_project_explorer_scrolllist(
+            rows=list(rows),
+            panel_list_rect=Rect(
+                x=float(panel.list_rect.left),
+                y=float(panel.list_rect.bottom),
+                width=float(panel.list_rect.right - panel.list_rect.left),
+                height=float(panel.list_rect.top - panel.list_rect.bottom),
+            ),
+            row_height=PROJECT_LINE_HEIGHT,
+            start_index=start_idx,
+            scroll_y=scroll_y,
+            selected_row_id=selected_row_id,
+            format_project_action_label=format_project_action_label,
+            format_project_recent_label=format_project_recent_label,
+            format_project_row_label=format_project_row_label,
+        )
 
-        for idx, row in enumerate(rows):
-            real_index = start_idx + idx
-            
-            # Position Y:
-            # y = Top - (index * h) + scroll_y
-            y_pos = panel.list_rect.top - (real_index * PROJECT_LINE_HEIGHT) + scroll_y
-            row_top = y_pos
-            row_bottom = y_pos - PROJECT_LINE_HEIGHT
-            
-            # Simple culling for safety (though provider should handle it)
-            if row_bottom > panel.list_rect.top:
-                continue
-            if row_top < panel.list_rect.bottom:
-                continue
+        for row_index, _row_text, row_rect, _is_selected in scroll_list.visible_rows:
+            row = rows[row_index]
+            row_top = row_rect.top
+            row_bottom = row_rect.bottom
 
             # Check if this row is being renamed
             is_rename_row = False
@@ -298,3 +304,60 @@ class ProjectExplorerOverlay(UIElement):
             font_size=11,
             cache=self._text_cache,
         )
+
+
+def _build_project_explorer_scrolllist(
+    *,
+    rows: list[Any],
+    panel_list_rect: Rect,
+    row_height: float,
+    start_index: int,
+    scroll_y: float,
+    selected_row_id: Any,
+    format_project_action_label: Any,
+    format_project_recent_label: Any,
+    format_project_row_label: Any,
+) -> ScrollList:
+    labels: list[str] = []
+    for row in rows:
+        if getattr(row, "kind", "") == "header":
+            labels.append(str(getattr(row, "header", "") or ""))
+            continue
+        if getattr(row, "kind", "") == "action":
+            labels.append(str(format_project_action_label(row)))
+            continue
+        recent = getattr(row, "recent", None)
+        if recent is not None:
+            labels.append(str(format_project_recent_label(recent)))
+            continue
+        entry = getattr(row, "entry", None)
+        labels.append(str(format_project_row_label(entry)) if entry is not None else "")
+
+    selected_index = 0
+    if selected_row_id is not None:
+        try:
+            selected_row_id_int = int(selected_row_id)
+        except Exception:
+            selected_row_id_int = None
+        for idx, row in enumerate(rows):
+            if selected_row_id_int is not None and id(row) == selected_row_id_int:
+                selected_index = idx
+                break
+
+    row_h = max(1, int(row_height))
+    local_offset = max(0.0, (float(scroll_y) / float(row_h)) - float(start_index))
+    scroll_list = ScrollList(
+        items=labels,
+        row_height=row_h,
+        selected_index=selected_index,
+        scroll_offset=local_offset,
+    )
+    scroll_list.layout(panel_list_rect)
+    return scroll_list
+
+
+def _selected_project_row_from_scrolllist(rows: list[Any], scroll_list: ScrollList) -> Any | None:
+    idx = int(getattr(scroll_list, "selected_index", -1))
+    if idx < 0 or idx >= len(rows):
+        return None
+    return rows[idx]

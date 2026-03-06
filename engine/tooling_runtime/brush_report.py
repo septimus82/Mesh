@@ -11,6 +11,18 @@ from engine.tilemap_brush import Anchor, apply_brush, validate_brush
 from engine.tilemap_edit import TilemapDims, ensure_tiles_array, get_layer_by_id
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 class BrushReportError(Exception):
     def __init__(self, message: str, *, exit_code: int = 1) -> None:
         super().__init__(message)
@@ -94,6 +106,7 @@ def _tilemap_resolve_dims_for_edit(
             if w > 0 and h > 0:
                 return w, h
         except Exception:
+            _log_swallow("BRUS-001", "engine/tooling_runtime/brush_report.py pass-only blanket swallow")
             pass
 
     w_value = tilemap.get("width")

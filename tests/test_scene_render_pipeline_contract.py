@@ -9,6 +9,7 @@ Verifies that the pipeline:
 import pytest
 from unittest.mock import MagicMock, ANY
 
+import engine.optional_arcade as optional_arcade
 from engine.scene_render_pipeline import (
     build_render_context,
     compute_draw_plan,
@@ -27,6 +28,8 @@ from engine.parallax_model import BackgroundPlane
 # But build_render_context expects them.
 
 from dataclasses import dataclass
+
+pytestmark = [pytest.mark.fast]
 
 @dataclass
 class MockShadowSettings:
@@ -69,6 +72,25 @@ class MockRenderQueue:
         
     def is_enabled(self):
         return True
+
+
+class MockRenderOnlySprite:
+    def __init__(self):
+        self.center_x = 0
+        self.center_y = 0
+        self.width = 16
+        self.height = 16
+        self.scale = 1.0
+        self.angle = 0.0
+        self.alpha = 255
+        self.color = (255, 255, 255, 255)
+        self.texture = MagicMock()
+        self.mesh_entity_data = {"render_layer": 0, "depth_z": 0}
+        self.mesh_texture_key = ("texture", "render_only")
+        self.render_called = False
+
+    def render(self):
+        self.render_called = True
 
 def test_build_context_defaults():
     """Verify build_render_context creates a valid context with default settings."""
@@ -207,4 +229,15 @@ def test_determinism():
     assert len(plan1.sprite_ops) == len(plan2.sprite_ops)
     for op1, op2 in zip(plan1.sprite_ops, plan2.sprite_ops):
         assert op1.sprite == op2.sprite
+
+
+def test_execute_scene_plan_uses_render_when_draw_missing(monkeypatch):
+    sprite = MockRenderOnlySprite()
+    plan = DrawPlan(background_ops=[], shadow_ops=[], sprite_ops=[SpriteDrawOp(sprite=sprite)])
+
+    monkeypatch.setattr(optional_arcade, "arcade", object())
+
+    execute_scene_plan(plan, render_queue=None, use_batching=False)
+
+    assert sprite.render_called is True
 

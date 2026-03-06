@@ -21,6 +21,18 @@ from engine.input_runtime import capture_mouse_router as mouse_router
 from engine.input_runtime.capture_focus_query import get_capture_focus_snapshot
 from engine.input_runtime.capture_mouse_router_model import MouseEvent
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 if TYPE_CHECKING:
     from engine.input_controller import InputController
 
@@ -53,7 +65,8 @@ def handle_key_press(controller: "InputController", key: int, modifiers: int) ->
     window = controller.window
     try:
         setattr(window, "_debug_last_modifiers", int(modifiers))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: capture runtime fallback isolation
+        _log_swallow("CAPT-001", "engine/input_runtime/capture_runtime.py pass-only blanket swallow")
         pass
 
     # -------------------------------------------------------------------------
@@ -121,7 +134,8 @@ def handle_mouse_press(controller: "InputController", x: float, y: float, button
     window = controller.window
     try:
         setattr(window, "_debug_last_modifiers", int(modifiers))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: capture runtime fallback isolation
+        _log_swallow("CAPT-002", "engine/input_runtime/capture_runtime.py pass-only blanket swallow")
         pass
     controller._mouse_x = float(x)
     controller._mouse_y = float(y)
@@ -137,7 +151,8 @@ def handle_mouse_release(controller: "InputController", x: float, y: float, butt
     window = controller.window
     try:
         setattr(window, "_debug_last_modifiers", int(modifiers))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: capture runtime fallback isolation
+        _log_swallow("CAPT-003", "engine/input_runtime/capture_runtime.py pass-only blanket swallow")
         pass
     event = MouseEvent(kind="release", button=int(button), x=float(x), y=float(y), modifiers=int(modifiers))
     snapshot = get_capture_focus_snapshot(controller, modifiers)
@@ -146,6 +161,27 @@ def handle_mouse_release(controller: "InputController", x: float, y: float, butt
 
 def handle_mouse_scroll(controller: "InputController", x: float, y: float, scroll_x: float, scroll_y: float) -> bool:  # noqa: ARG001
     window = controller.window
+    editor = getattr(window, "editor_controller", None)
+    if editor is not None and getattr(editor, "active", False) and getattr(editor, "_find_everything_open", False):
+        search = getattr(editor, "search", None)
+        handler = getattr(search, "handle_find_everything_mouse_scroll", None)
+        if callable(handler) and handler(float(x), float(y), float(scroll_x), float(scroll_y)):
+            return True
+    if editor is not None and getattr(editor, "active", False):
+        project_actions = getattr(editor, "project_explorer_actions", None)
+        handler = getattr(project_actions, "handle_mouse_scroll", None) if project_actions is not None else None
+        if callable(handler) and handler(float(x), float(y), float(scroll_x), float(scroll_y)):
+            return True
+    if editor is not None and getattr(editor, "active", False):
+        scene_browse = getattr(editor, "scene_browse", None)
+        handler = getattr(scene_browse, "handle_scene_browser_mouse_scroll", None) if scene_browse is not None else None
+        if callable(handler) and handler(float(x), float(y), float(scroll_x), float(scroll_y)):
+            return True
+    if editor is not None and getattr(editor, "active", False):
+        asset_browser = getattr(editor, "asset_browser", None)
+        handler = getattr(asset_browser, "handle_asset_browser_mouse_scroll", None) if asset_browser is not None else None
+        if callable(handler) and handler(float(x), float(y), float(scroll_x), float(scroll_y)):
+            return True
     modifiers = int(getattr(window, "_debug_last_modifiers", 0) or 0)
     event = MouseEvent(
         kind="scroll",
@@ -175,6 +211,11 @@ def handle_text(controller: "InputController", text: str) -> None:
             if len(t) > 200:
                 t = t[-200:]
             setattr(window, attr, t)
+            if prompt_kind == "text":
+                window.command_palette_prompt_index = 0
+                from engine.command_palette_controller import handle_command_palette_prompt_text_changed  # noqa: PLC0415
+
+                handle_command_palette_prompt_text_changed(window)
             return
 
         q = str(getattr(window, "command_palette_query", "") or "")
@@ -246,9 +287,10 @@ def handle_mouse_motion(controller: "InputController", x: float, y: float, dx: f
             from engine.editor.editor_cursor_apply import apply_editor_cursor  # noqa: PLC0415
             get_kind = getattr(editor_controller, "get_cursor_hint_kind", None)
             if callable(get_kind):
-                cursor_kind = get_kind(window_w, window_h)
-                apply_editor_cursor(controller.window, cursor_kind)
-        except Exception:  # noqa: BLE001
+                cursor_kind = str(get_kind(window_w, window_h) or "")
+                apply_editor_cursor(controller.window, cursor_kind or None)
+        except Exception:  # noqa: BLE001  # REASON: capture runtime fallback isolation
+            _log_swallow("CAPT-004", "engine/input_runtime/capture_runtime.py pass-only blanket swallow")
             pass
 
 
@@ -268,7 +310,8 @@ def handle_mouse_drag(
     setattr(controller.window, "_mouse_y", float(y))
     try:
         setattr(controller.window, "_debug_last_modifiers", int(modifiers))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: capture runtime fallback isolation
+        _log_swallow("CAPT-005", "engine/input_runtime/capture_runtime.py pass-only blanket swallow")
         pass
     
     window = controller.window
@@ -322,7 +365,7 @@ def _handle_capture_drag(window: Any, capture_state: Any, x: float, y: float) ->
     tile_w, tile_h = getattr(instance, "tile_size", (0, 0))
     try:
         world_x, world_y = window.screen_to_world(float(x), float(y))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: capture runtime fallback isolation
         return
     from engine.tile_paint_mode import world_to_tile  # noqa: PLC0415
     hit = world_to_tile(
@@ -358,7 +401,7 @@ def _handle_tile_paint_drag(window: Any, tile_paint_state: Any, x: float, y: flo
         return
     try:
         world_x, world_y = window.screen_to_world(float(x), float(y))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: capture runtime fallback isolation
         return
     from engine.tile_paint_mode import world_to_tile  # noqa: PLC0415
     hit = world_to_tile(
@@ -383,7 +426,7 @@ def _handle_entity_select_drag(window: Any, state: Any, x: float, y: float) -> N
     
     try:
         world_x, world_y = window.screen_to_world(float(x), float(y))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: capture runtime fallback isolation
         return
     
     if str(getattr(state, "drag_mode", "") or "") == "marquee":
@@ -412,7 +455,10 @@ def _handle_entity_select_drag(window: Any, state: Any, x: float, y: float) -> N
         for entity_id in list(getattr(state, "selected_ids", []) or []):
             sprite = finder(entity_id) if callable(finder) else None
             if sprite is not None:
-                positions[str(entity_id)] = (float(sprite.center_x), float(sprite.center_y))
+                cx = getattr(sprite, "center_x", None)
+                cy = getattr(sprite, "center_y", None)
+                if cx is not None and cy is not None:
+                    positions[str(entity_id)] = (float(cx), float(cy))
         state.drag_start_positions = positions
 
     moved_any = False

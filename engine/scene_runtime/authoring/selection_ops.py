@@ -8,6 +8,18 @@ import engine.optional_arcade as optional_arcade
 from ..index_build import build_scene_index_from_sprites
 from .entity_ops import _debug_iter_authoring_payloads, debug_find_sprite_by_entity_id, get_authored_scene_payload
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 if TYPE_CHECKING:
     from ...scene_controller import SceneController
 
@@ -68,11 +80,13 @@ def debug_copy_entities_by_ids(
 
     try:
         primary_x = float(primary_entity.get("x", 0.0))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: selection ops fallback isolation
+        _log_swallow("SELE-002", "primary entity x parse", once=True)
         primary_x = 0.0
     try:
         primary_y = float(primary_entity.get("y", 0.0))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: selection ops fallback isolation
+        _log_swallow("SELE-003", "primary entity y parse", once=True)
         primary_y = 0.0
 
     copied_entities: list[Dict[str, Any]] = []
@@ -92,11 +106,13 @@ def debug_copy_entities_by_ids(
         copied_entities.append(clone)
         try:
             ex = float(ent.get("x", 0.0))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: selection ops fallback isolation
+            _log_swallow("SELE-004", "entity x parse", once=True)
             ex = 0.0
         try:
             ey = float(ent.get("y", 0.0))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: selection ops fallback isolation
+            _log_swallow("SELE-005", "entity y parse", once=True)
             ey = 0.0
         rel_offsets[orig_id] = {"dx": float(ex) - float(primary_x), "dy": float(ey) - float(primary_y)}
 
@@ -145,7 +161,8 @@ def debug_paste_entities_from_clipboard(
             from engine.entity_select_mode import snap_world_to_tile_center  # noqa: PLC0415
 
             snapped = snap_world_to_tile_center(controller.window, world_x=float(ax), world_y=float(ay))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: selection ops fallback isolation
+            _log_swallow("SELE-006", "snap_world_to_tile_center import/call", once=True)
             snapped = None
         if snapped is not None:
             ax, ay = float(snapped[0]), float(snapped[1])
@@ -211,7 +228,8 @@ def debug_paste_entities_from_clipboard(
             sprite = None
             try:
                 sprite = controller._create_sprite(dict(clone))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: selection ops fallback isolation
+                _log_swallow("SELE-007", "_create_sprite call", once=True)
                 sprite = None
             if sprite is not None:
                 layer_name = str(clone.get("layer") or "entities")
@@ -277,11 +295,13 @@ def debug_transform_entities_by_ids(
             continue
         try:
             x = float(ent.get("x", 0.0))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: selection ops fallback isolation
+            _log_swallow("SELE-008", "transform entity x parse", once=True)
             x = 0.0
         try:
             y = float(ent.get("y", 0.0))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: selection ops fallback isolation
+            _log_swallow("SELE-009", "transform entity y parse", once=True)
             y = 0.0
         points[entity_id] = (float(x), float(y))
 
@@ -305,11 +325,14 @@ def debug_transform_entities_by_ids(
         new_positions[entity_id] = (float(nx), float(ny))
 
     if bool(snap_to_tile):
+        snap_world_to_tile_center: Any = None
         try:
-            from engine.entity_select_mode import snap_world_to_tile_center  # noqa: PLC0415
-        except Exception:  # noqa: BLE001
-            snap_world_to_tile_center = None  # type: ignore[assignment]
-        if snap_world_to_tile_center is not None:
+            from engine.entity_select_mode import snap_world_to_tile_center as _snap_world_to_tile_center  # noqa: PLC0415
+            snap_world_to_tile_center = _snap_world_to_tile_center
+        except Exception:  # noqa: BLE001  # REASON: selection ops fallback isolation
+            _log_swallow("SELE-010", "snap_world_to_tile_center import", once=True)
+            snap_world_to_tile_center = None
+        if callable(snap_world_to_tile_center):
             for entity_id, (nx, ny) in list(new_positions.items()):
                 snapped = snap_world_to_tile_center(controller.window, world_x=float(nx), world_y=float(ny))
                 if snapped is not None:
@@ -326,7 +349,8 @@ def debug_transform_entities_by_ids(
                 from ...entity_paint_mode import apply_move_entity  # noqa: PLC0415
 
                 moved_any = apply_move_entity(payload, entity_id=entity_id, x=float(x), y=float(y)) or moved_any
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: selection ops fallback isolation
+                _log_swallow("SELE-011", "apply_move_entity call", once=True)
                 continue
         sprite = debug_find_sprite_by_entity_id(controller, entity_id)
         if sprite is not None:
@@ -338,7 +362,8 @@ def debug_transform_entities_by_ids(
                     data["x"] = float(x)
                     data["y"] = float(y)
                 moved_any = True
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: selection ops fallback isolation
+                _log_swallow("SELE-001", "engine/scene_runtime/authoring/selection_ops.py pass-only blanket swallow")
                 pass
 
     if moved_any:

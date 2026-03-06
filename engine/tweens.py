@@ -39,6 +39,18 @@ from enum import Enum
 from typing import Any, Callable, Optional
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 class Easing(Enum):
     """Built-in easing functions for tweens."""
 
@@ -376,6 +388,7 @@ class TweenManager:
                 try:
                     tween.on_complete()
                 except Exception:  # noqa: BLE001
+                    _log_swallow("TWEE-001", "engine/tweens.py pass-only blanket swallow")
                     pass
             # Start chained tween if present
             if tween._next is not None:

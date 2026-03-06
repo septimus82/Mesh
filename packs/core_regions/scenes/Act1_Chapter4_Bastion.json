@@ -1,0 +1,478 @@
+{
+  "description": "Act 1 Chapter 4 bastion: breach the lock and clear defenders before the fork.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter4_bastion_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter4_bastion_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "event": {
+                    "type": "act1_ch4_bastion_brief"
+                  },
+                  "id": "ch4_bastion_brief_accept",
+                  "text": "I'll hold the lane and clear the defenders."
+                }
+              ],
+              "text": "Scout Riven: Breach the bastion lock, then clear the guard lane before the fork."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter4_bastion_ch4scout_300_300_0_0",
+      "mesh_name": "Ch4ScoutRiven",
+      "name": "Scout Riven",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 300,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch4_bastion_start",
+          "trigger_radius": 54.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter4_bastion_ch4bastionstartzone_200_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionstartzone_200_300_0_0",
+      "name": "Ch4BastionStartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 200,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "event_id": "act1_ch4_bastion_unlock",
+          "one_shot": true
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionswitch_350_300_0_0",
+      "name": "Ch4BastionSwitch",
+      "sprite": "assets/switch_off.png",
+      "tag": "interactable",
+      "x": 350,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DoorLock": {
+          "starts_locked": true,
+          "unlock_event": "act1_ch4_bastion_unlock"
+        }
+      },
+      "behaviours": [
+        "DoorLock"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastiondoor_460_300_0_0",
+      "name": "Ch4BastionDoor",
+      "solid": true,
+      "sprite": "assets/door_locked.png",
+      "tag": "solid",
+      "x": 460,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "EnemyAI": {
+          "detect_radius": 220.0,
+          "speed": 62.0
+        },
+        "Health": {
+          "hp": 95,
+          "max_hp": 95
+        },
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 12
+            }
+          ],
+          "seed": 4401
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "act1_chapter4_bastion_ch4vanguard_640_280_0_0",
+      "mesh_name": "Act1Ch4Vanguard",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 640,
+      "y": 280
+    },
+    {
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionsupplypickup_600_320_0_0",
+      "mesh_name": "Ch4BastionSupplyPickup",
+      "name": "Ch4BastionSupplyPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 600,
+      "y": 320
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch4_bastion_clear",
+          "trigger_radius": 52.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter4_bastion_ch4bastionclearzone_780_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionclearzone_780_300_0_0",
+      "name": "Ch4BastionClearZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 780,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter4_Fork.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter4_bastion_tochapter4forkfrombastion_940_300_0_0",
+      "name": "ToChapter4ForkFromBastion",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 940,
+      "y": 300,
+      "require_flags": [
+        "act1_ch4_bastion_cleared"
+      ]
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter4_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter4_bastion_returntochapter4stub_60_300_0_0",
+      "name": "ReturnToChapter4Stub",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Understood."
+                }
+              ],
+              "text": "Bastion orders: Check in at the bastion."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionhintsign_160_330_0_0",
+      "mesh_name": "Ch4BastionHintSign",
+      "name": "Bastion Hint Sign",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 160,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch4_bastion_brief_fallback",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter4_bastion_ch4bastionbriefingfallbackzone_860_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionbriefingfallbackzone_860_300_0_0",
+      "name": "Ch4BastionBriefingFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 860,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch4_bastion_clear_fallback",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter4_bastion_ch4bastionclearfallbackzone_900_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionclearfallbackzone_900_300_0_0",
+      "name": "Ch4BastionClearFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 900,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch4BastionStartZone",
+          "set_flags": {
+            "act1_ch4_bastion_briefed": true
+          },
+          "forbid_flags": [
+            "act1_ch4_bastion_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Clear the approach.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionbriefedstatesync_m1000_m1000_0_0",
+      "name": "Ch4BastionBriefedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch4BastionBriefingFallbackZone",
+          "set_flags": {
+            "act1_ch4_bastion_briefed": true
+          },
+          "forbid_flags": [
+            "act1_ch4_bastion_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Clear the approach.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionbriefedfbstatesync_m1000_m1000_0_0",
+      "name": "Ch4BastionBriefedFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch4BastionClearZone",
+          "set_flags": {
+            "act1_ch4_bastion_cleared": true
+          },
+          "forbid_flags": [
+            "act1_ch4_bastion_cleared"
+          ],
+          "once": true,
+          "toast": "Objective complete: Bastion secured.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionclearedstatesync_m1000_m1000_0_0",
+      "name": "Ch4BastionClearedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch4BastionClearFallbackZone",
+          "set_flags": {
+            "act1_ch4_bastion_cleared": true
+          },
+          "forbid_flags": [
+            "act1_ch4_bastion_cleared"
+          ],
+          "once": true,
+          "toast": "Objective complete: Bastion secured.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionclearedfbstatesync_m1000_m1000_0_0",
+      "name": "Ch4BastionClearedFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch4_bastion_reentry_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter4_bastion_ch4bastionreentryprobezone_130_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionreentryprobezone_130_300_0_0",
+      "name": "Ch4BastionReentryProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 130,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch4BastionReentryProbeZone",
+          "set_flags": {
+            "act1_ch4_bastion_reentry_2": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch4_bastion_reentry_1"
+          ],
+          "forbid_flags": [
+            "act1_ch4_bastion_briefed",
+            "act1_ch4_bastion_reentry_2"
+          ],
+          "toast": "Hint: Check in at the bastion before pushing forward.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionreentryreentryhintstatesync_m1000_m1000_0_0",
+      "name": "Ch4BastionReentryHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch4BastionReentryProbeZone",
+          "set_flags": {
+            "act1_ch4_bastion_reentry_1": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act1_ch4_bastion_briefed",
+            "act1_ch4_bastion_reentry_1"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter4_bastion_ch4bastionreentryreentryvisitstatesync_m1000_m1000_0_0",
+      "name": "Ch4BastionReentryVisitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 1 Chapter 4 - Bastion",
+  "schema_version": 1,
+  "version": 1
+}

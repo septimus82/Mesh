@@ -18,6 +18,18 @@ from engine.ui import (
 )
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def _restore_camera(window: Any, pos: tuple[float, float], zoom: float | None) -> None:
     camera = getattr(window, "camera", None)
     if camera:
@@ -94,7 +106,8 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
         from engine.lighting.occluders import reset_entity_occluder_cache  # noqa: PLC0415
 
         reset_entity_occluder_cache()
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
+        _log_swallow("SCEN-001", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
         pass
     scene = controller.window.scene_loader.load_scene(scene_path)
     controller.current_scene_path = scene_path
@@ -110,7 +123,8 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
         recorder = getattr(controller.window, "record_recent_scene", None)
         if callable(recorder):
             recorder(scene_path)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
+        _log_swallow("SCEN-002", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
         pass
 
     controller._apply_theme_runtime(scene)
@@ -154,7 +168,8 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
         if ambient_tint is not None:
             try:
                 lighting.set_ambient_tint(ambient_tint)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
+                _log_swallow("SCEN-003", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
                 pass
 
         occluders_cfg = scene.get("occluders")
@@ -165,7 +180,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
             )
 
             entity_occluders = build_entity_occluders_from_scene_payload(scene)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
             entity_occluders = []
 
         if "occluders" in scene and isinstance(occluders_cfg, list):
@@ -180,7 +195,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
                 if entity_occluders:
                     auto_occluders.extend(entity_occluders)
                 lighting.configure_scene_occluders(auto_occluders)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
                 lighting.configure_scene_occluders(None)
 
         try:
@@ -192,7 +207,8 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
                     setter(str(mode))
                 else:
                     lighting.shadows_mode = str(mode or "none").strip().lower()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
+            _log_swallow("SCEN-004", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
             pass
 
     # Handle music
@@ -272,7 +288,8 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     if callable(auto_apply_hd2d):
         try:
             auto_apply_hd2d()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
+            _log_swallow("SCEN-005", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
             pass
     controller._rebuild_ui_for_scene()
     maybe_enqueue_controls_hint_toast(controller.window, scene_id=controller.current_scene_path, seconds=4.0)
@@ -283,7 +300,8 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
         from engine.savegame import _apply_pending_savegame_player_pos  # noqa: PLC0415
 
         _apply_pending_savegame_player_pos(controller.window)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
+        _log_swallow("SCEN-006", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
         pass
     controller.window.clear_input_locks()
     return cast(dict[str, Any], scene)

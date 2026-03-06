@@ -38,7 +38,7 @@ include = ["engine*", "mesh_cli*"]
 [tool.ruff]
 line-length = 120
 select = ["E", "F", "I", "W"]
-ignore = ["E501", "E701", "E741", "F841"]
+ignore = ["E501", "E701", "E741"]
 exclude = [
     "tests",
     "build",

@@ -13,6 +13,18 @@ from ..encounter_sets import get_theme_manager
 from ..scene_loader import SceneLoader
 from ..scene_serializer import compact_scene_payload
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 # Template definitions for new scenes
 TEMPLATES: Dict[str, Dict[str, Any]] = {
     "empty": {
@@ -386,6 +398,7 @@ def generate_scene_data(path: str, template_name: str = "empty", extra_args: Dic
                         if "ambient_audio_key" in theme_data:
                             base_scene["settings"]["ambient_audio"] = theme_data["ambient_audio_key"]
             except Exception as e:
+                _log_swallow("SCAF-002", f"Failed to apply theme '{theme_id}': {e}")
                 print(f"[Mesh][Scaffold] Warning: Failed to apply theme '{theme_id}': {e}")
 
     # Handle Boss Injection
@@ -409,7 +422,9 @@ def generate_scene_data(path: str, template_name: str = "empty", extra_args: Dic
                     if "default_drop_table_id" in theme_data:
                         # In a real system, we'd look up the table. Here we just tag it.
                         boss_drops.append({"table_id": theme_data["default_drop_table_id"], "chance": 1.0})
-             except Exception: pass
+             except Exception:
+                _log_swallow("SCAF-001", "engine/tooling/scaffold.py pass-only blanket swallow")
+                pass
 
         # Add Boss
         base_scene["entities"].append({
@@ -476,6 +491,7 @@ def create_scene(path: str, template_name: str = "empty", extra_args: Dict[str, 
         print(f"[Mesh][Scaffold] Created new scene at '{path}' using template '{template_name}'")
         return True
     except OSError as exc:
+        _log_swallow("SCAF-003", f"Failed to write scene file: {exc}")
         print(f"[Mesh][Scaffold] ERROR: Failed to write scene file: {exc}")
         return False
 
@@ -555,6 +571,7 @@ class {class_name}(Behaviour):
         print(f"[Mesh][Scaffold] Created new behaviour '{class_name}' at '{target_path}'")
         return True
     except OSError as exc:
+        _log_swallow("SCAF-004", f"Failed to write behaviour file: {exc}")
         print(f"[Mesh][Scaffold] ERROR: Failed to write behaviour file: {exc}")
         return False
 
@@ -574,6 +591,7 @@ def create_quest(name: str, target_file: str = "assets/data/quests.json") -> boo
                     print(f"[Mesh][Scaffold] ERROR: '{target_file}' is not a list of quests.")
                     return False
         except Exception as e:
+            _log_swallow("SCAF-005", f"Failed to read '{target_file}': {e}")
             print(f"[Mesh][Scaffold] ERROR: Failed to read '{target_file}': {e}")
             return False
 
@@ -600,6 +618,7 @@ def create_quest(name: str, target_file: str = "assets/data/quests.json") -> boo
         print(f"[Mesh][Scaffold] Added quest '{quest_id}' to '{target_file}'")
         return True
     except Exception as e:
+        _log_swallow("SCAF-006", f"Failed to write '{target_file}': {e}")
         print(f"[Mesh][Scaffold] ERROR: Failed to write '{target_file}': {e}")
         return False
 
@@ -684,6 +703,7 @@ def create_npc(role: str, target_scene: str | None = None, x: int = 0, y: int = 
             return True
 
         except Exception as e:
+            _log_swallow("SCAF-007", f"ERROR updating scene: {e}")
             print(f"[Mesh][Scaffold] ERROR updating scene: {e}")
             return False
     else:
@@ -765,6 +785,7 @@ def extract_prefab(prefab_id: str, scene_path: str, entity_name: str, remove_sou
         return True
 
     except Exception as e:
+        _log_swallow("SCAF-008", f"ERROR extracting prefab: {e}")
         print(f"[Mesh][Scaffold] ERROR extracting prefab: {e}")
         return False
 
@@ -809,6 +830,7 @@ def place_prefab(
         with prefabs_path.open("r", encoding="utf-8") as f:
             prefabs = json.load(f)
     except Exception as e:
+        _log_swallow("SCAF-009", f"ERROR loading prefabs: {e}")
         print(f"[Mesh][Scaffold] ERROR loading prefabs: {e}")
         return False
 
@@ -865,5 +887,6 @@ def place_prefab(
         return True
 
     except Exception as e:
+        _log_swallow("SCAF-010", f"ERROR placing prefab: {e}")
         print(f"[Mesh][Scaffold] ERROR placing prefab: {e}")
         return False

@@ -16,6 +16,17 @@ from engine.save_runtime.restore_policy import (
 )
 from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from engine.save_runtime.schema import SaveValidationError, migrate_save, validate_save
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 
 _LAST_LOAD_ATTEMPT: dict[str, Any] = {
@@ -163,7 +174,7 @@ def write_json_pretty_atomic(path: Path, payload: Any) -> None:
             durable=True,
         )
         _update_last_attempt(slot="save", kind="write_json", path=path, ok=True, aggregator=aggregator)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
         aggregator.add_exception(
             "save.write.failed",
             exc,
@@ -174,7 +185,8 @@ def write_json_pretty_atomic(path: Path, payload: Any) -> None:
         _update_last_attempt(slot="save", kind="write_json", path=path, ok=False, aggregator=aggregator)
         try:
             write_diagnostics_sidecars(path, aggregator)
-        except Exception as sidecar_exc:  # noqa: BLE001
+        except Exception as sidecar_exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("SRIO-001", "engine/save_runtime/io.py blanket swallow", once=True)
             _record_sidecar_write_failure(
                 aggregator=aggregator,
                 path=path,
@@ -251,7 +263,8 @@ def load_and_validate_payload(
 
     try:
         raw_payload = _read_payload(path_or_text)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+        _log_swallow("SRIO-002", "engine/save_runtime/io.py blanket swallow", once=True)
         diagnostics.append(
             _diagnostic(
                 level=DiagnosticLevel.ERROR,
@@ -351,7 +364,8 @@ def load_and_validate_payload(
             if aggregator is not None:
                 aggregator.add(ordered)
             return False, None, ordered
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("SRIO-003", "engine/save_runtime/io.py blanket swallow", once=True)
             diagnostics.append(
                 _diagnostic(
                     level=DiagnosticLevel.ERROR,
@@ -430,7 +444,8 @@ def load_snapshot_payload(
     if diagnostics:
         try:
             write_diagnostics_sidecars(path, aggregator)
-        except Exception as sidecar_exc:  # noqa: BLE001
+        except Exception as sidecar_exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("SRIO-004", "engine/save_runtime/io.py blanket swallow", once=True)
             _record_sidecar_write_failure(
                 aggregator=aggregator,
                 path=path,
@@ -462,7 +477,8 @@ def load_slot_payload(
         return True, payload
     try:
         write_diagnostics_sidecars(path, aggregator)
-    except Exception as sidecar_exc:  # noqa: BLE001
+    except Exception as sidecar_exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+        _log_swallow("SRIO-005", "engine/save_runtime/io.py blanket swallow", once=True)
         _record_sidecar_write_failure(
             aggregator=aggregator,
             path=path,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ..player_actions import (
     PlayerActionState,
@@ -15,6 +15,18 @@ from ..animation_state import request_animation_state
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 import engine.optional_arcade as optional_arcade
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     import optional_arcade.arcade
@@ -41,7 +53,7 @@ class PlayerController(Behaviour):
         "speed": ParamDef(float, default=150.0, description="Movement speed in units per second"),
     }
 
-    def __init__(self, entity: "optional_arcade.arcade.Sprite", window, **config):  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         super().__init__(entity, window, **config)
         self.speed = float(self.config.get("speed", 150.0))
         self._action_state = PlayerActionState()
@@ -241,6 +253,7 @@ class PlayerController(Behaviour):
             try:
                 return bool(checker())
             except Exception:  # pragma: no cover - defensive
+                _log_swallow("PLAY-001", "engine/behaviours/player_controller.py pass-only blanket swallow")
                 pass
         locker = getattr(window, "is_input_locked", None)
         if callable(locker):
@@ -248,5 +261,6 @@ class PlayerController(Behaviour):
                 if bool(locker()):
                     return True
             except Exception:  # pragma: no cover - defensive
+                _log_swallow("PLAY-002", "engine/behaviours/player_controller.py pass-only blanket swallow")
                 pass
         return self._dialogue_blocks_input()

@@ -10,6 +10,7 @@ from engine.logging_tools import get_logger
 from .common import UIElement, _draw_rectangle_filled
 from ..text_draw import TextCache, draw_text_cached
 from ._settings_data import SETTINGS_ROWS
+from .widgets import Button, DrawInstruction, Label, Padding, Panel, Rect, VStack
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -32,6 +33,7 @@ class PauseMenu(UIElement):
         self.selected_save_index = 0
         self._settings_index = 0
         self._text_cache = TextCache()
+        self._main_menu_buttons: list[Button] = []
 
         self._title = optional_arcade.arcade.Text(
             text="PAUSED",
@@ -132,24 +134,91 @@ class PauseMenu(UIElement):
             self._draw_settings_menu()
 
     def _draw_main_menu(self) -> None:
-        self._title.text = "PAUSED"
-        self._title.x = self.window.width / 2
-        self._title.y = self.window.height / 2 + 100
-        self._title.draw()
-
-        start_y = self.window.height / 2 + 20
-        for i, option in enumerate(self.options):
-            color = optional_arcade.arcade.color.YELLOW if i == self.selected_index else optional_arcade.arcade.color.GRAY
-            draw_text_cached(
-                option,
-                self.window.width / 2,
-                start_y - i * 40,
-                color=color,
-                font_size=20,
-                anchor_x="center",
-                anchor_y="center",
-                cache=self._text_cache,
+        panel_width = min(560.0, max(340.0, self.window.width * 0.48))
+        panel_height = min(420.0, max(280.0, self.window.height * 0.56))
+        panel_bounds = Rect(
+            x=(self.window.width - panel_width) / 2.0,
+            y=(self.window.height - panel_height) / 2.0,
+            width=panel_width,
+            height=panel_height,
+        )
+        title = Label(
+            text="PAUSED",
+            font_size=30,
+            color_token="white",
+            height=48.0,
+        )
+        buttons: list[Button] = []
+        for index, option in enumerate(self.options):
+            buttons.append(
+                Button(
+                    text=option,
+                    action_id=f"pause.main.{index}",
+                    font_size=20,
+                    height=36.0,
+                    text_color_token="yellow" if index == self.selected_index else "gray",
+                )
             )
+        stack = VStack(children=[title, *buttons], spacing=8.0, align="center")
+        layout = Panel(
+            children=[stack],
+            padding=Padding.uniform(16.0),
+            bg_style_token="pause_panel",
+        ).layout(panel_bounds)
+        self._main_menu_buttons = buttons
+        self._draw_widget_instructions(layout.instructions)
+
+    def _resolve_widget_color(self, token: str) -> tuple[int, int, int] | tuple[int, int, int, int]:
+        normalized = str(token or "").strip().lower()
+        if normalized == "yellow":
+            return (255, 255, 0)
+        if normalized == "gray":
+            return (128, 128, 128)
+        if normalized == "light_gray":
+            return (211, 211, 211)
+        if normalized == "black":
+            return (0, 0, 0)
+        return (255, 255, 255)
+
+    def _draw_widget_instructions(self, instructions: list[DrawInstruction]) -> None:
+        for instruction in instructions:
+            kind = str(getattr(instruction, "kind", "") or "")
+            payload = instruction.payload if isinstance(instruction.payload, dict) else {}
+            if kind == "panel_bg":
+                rect = payload.get("rect")
+                if isinstance(rect, Rect):
+                    _draw_rectangle_filled(
+                        center_x=rect.center_x,
+                        center_y=rect.center_y,
+                        width=rect.width,
+                        height=rect.height,
+                        color=(0, 0, 0, 120),
+                    )
+                continue
+            if kind == "button_bg":
+                rect = payload.get("rect")
+                style_token = str(payload.get("style_token", "") or "").strip().lower()
+                if isinstance(rect, Rect):
+                    color = (255, 255, 255, 30) if style_token == "selected" else (0, 0, 0, 0)
+                    _draw_rectangle_filled(
+                        center_x=rect.center_x,
+                        center_y=rect.center_y,
+                        width=rect.width,
+                        height=rect.height,
+                        color=color,
+                    )
+                continue
+            if kind in ("text", "button_text"):
+                draw_text_cached(
+                    str(payload.get("text", "") or ""),
+                    float(payload.get("x", 0.0) or 0.0),
+                    float(payload.get("y", 0.0) or 0.0),
+                    color=self._resolve_widget_color(str(payload.get("color_token", "white") or "white")),
+                    font_size=int(payload.get("font_size", 20) or 20),
+                    anchor_x=str(payload.get("anchor_x", "center") or "center"),
+                    anchor_y=str(payload.get("anchor_y", "center") or "center"),
+                    cache=self._text_cache,
+                )
 
     def _draw_save_menu(self) -> None:
         self._title.text = "SAVE GAME"
@@ -461,3 +530,16 @@ class PauseMenu(UIElement):
                 return self._handle_action("back")
 
         return True  # Block other input while paused
+
+    def on_mouse_press(self, x: float, y: float, button: int, modifiers: int = 0) -> bool:  # noqa: ARG002
+        if not self.visible:
+            return False
+        if self.state != "main":
+            return True
+        if not self._main_menu_buttons:
+            self._draw_main_menu()
+        for index, item in enumerate(self._main_menu_buttons):
+            if item.hit_test(float(x), float(y)):
+                self.selected_index = index
+                return self._handle_action("confirm")
+        return True

@@ -5,6 +5,8 @@ identical behavior to the original implementation.
 """
 from __future__ import annotations
 
+import pytest
+
 
 class TestCommandPaletteRegistryContract:
     """Contract tests ensuring the registry-based implementation is correct."""
@@ -77,6 +79,8 @@ class TestCommandPaletteRegistryContract:
             "mode.palette.toggle",
             "mode.capture.toggle",
             "view.ghost_originals.toggle",
+            "palette.clear_recent",
+            "palette.reset_ui_layout",
             "scene.reload",
             "scene.goto",
             "scene.recent",
@@ -84,6 +88,20 @@ class TestCommandPaletteRegistryContract:
             "scene.persist",
             "scene.save_as",
             "scene.create",
+            "planes.add",
+            "planes.duplicate",
+            "planes.remove",
+            "planes.move_up",
+            "planes.move_down",
+            "planes.move_top",
+            "planes.move_bottom",
+            "planes.move_to",
+            "planes.toggle_repeat",
+            "planes.toggle_repeat_x",
+            "planes.toggle_repeat_y",
+            "planes.select",
+            "planes.select_prev",
+            "planes.select_next",
             "selection.set_prefab_id",
             "selection.add_behaviour",
             "selection.remove_behaviour",
@@ -141,6 +159,98 @@ class TestCommandPaletteRegistryContract:
             assert isinstance(cmd.keywords, tuple), f"Command {cmd.id} keywords is not a tuple"
             for kw in cmd.keywords:
                 assert isinstance(kw, str), f"Command {cmd.id} keyword {kw!r} is not a string"
+
+    @pytest.mark.fast
+    def test_action_handler_symbols_exported_for_monkeypatch(self) -> None:
+        """Registry must keep stable action handler symbols for monkeypatch targets."""
+        import engine.command_palette_registry as registry
+
+        expected_handlers = [
+            "action_toggle_tile_paint",
+            "action_toggle_entity_paint",
+            "action_toggle_palette_mode",
+            "action_toggle_capture",
+            "action_toggle_ghost_originals",
+            "action_palette_clear_recent",
+            "action_palette_reset_ui_layout",
+            "action_scene_reload",
+            "action_scene_toggle_persist_armed",
+            "action_scene_persist",
+            "action_scene_save_as",
+            "action_scene_create",
+            "action_go_to_scene",
+            "action_recent_scene",
+            "action_planes_add",
+            "action_planes_duplicate",
+            "action_planes_remove",
+            "action_planes_move_up",
+            "action_planes_move_down",
+            "action_planes_move_top",
+            "action_planes_move_bottom",
+            "action_planes_move_to",
+            "action_planes_toggle_repeat",
+            "action_planes_toggle_repeat_x",
+            "action_planes_toggle_repeat_y",
+            "action_planes_select",
+            "action_planes_select_prev",
+            "action_planes_select_next",
+            "action_props_set_prefab_id",
+            "action_props_add_behaviour",
+            "action_props_remove_behaviour",
+            "action_props_set_name",
+            "action_props_add_tag",
+            "action_props_remove_tag",
+            "action_props_toggle_tag",
+            "action_batch_rename",
+            "action_set_names",
+            "action_align_selection",
+            "action_distribute_selection",
+            "action_snap_to_grid",
+            "action_nudge_selection",
+            "action_rotate_selection",
+            "action_mirror_selection",
+            "action_group_selection",
+            "action_ungroup_selection",
+            "action_duplicate_to_grid",
+            "action_duplicate_along_path",
+            "action_scatter_selection",
+            "action_config_tz_set_zone_id",
+            "action_config_tz_set_radius",
+            "action_config_sgs_set_toast",
+            "action_config_sgs_add_require_flag",
+            "action_config_sgs_add_forbid_flag",
+            "action_config_sgs_set_flag_true",
+            "action_config_st_set_target_scene",
+            "action_config_st_set_spawn_id",
+            "action_macro_objective_zone",
+            "action_macro_door_transition",
+            "action_macro_dialogue_choice_flag",
+        ]
+
+        for name in expected_handlers:
+            fn = getattr(registry, name, None)
+            assert callable(fn), f"Missing/uncallable handler symbol: {name}"
+
+    @pytest.mark.fast
+    def test_known_command_ids_present_and_count_stable(self) -> None:
+        """Command IDs and overall default command count remain stable."""
+        from engine.command_palette import build_default_commands
+
+        ids = [c.id for c in build_default_commands(object())]
+        known_ids = {
+            "mode.tile_paint.toggle",
+            "palette.clear_recent",
+            "palette.reset_ui_layout",
+            "scene.reload",
+            "planes.add",
+            "selection.add_behaviour",
+            "selection.scatter",
+            "macro.objective_zone",
+            "macro.door_transition",
+            "macro.dialogue_choice_flag",
+        }
+        assert known_ids.issubset(set(ids))
+        assert len(ids) == 65
 
 
 class TestFilterCommands:

@@ -16,6 +16,15 @@ from engine.editor_prefab_variant_ops import (
 )
 from engine.logging_tools import get_logger
 from engine.prefab_overrides import compute_prefab_overrides
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 logger = get_logger(__name__)
 
@@ -235,19 +244,22 @@ class EditorPrefabController:
         if lower_key == "x":
             try:
                 self._editor.window.scene_controller._apply_entity_mutation(sprite, x=float(value))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+                _log_swallow("EPFB-001", "engine/editor/editor_prefab_controller.py blanket swallow", once=True)
                 return
             return
         if lower_key == "y":
             try:
                 self._editor.window.scene_controller._apply_entity_mutation(sprite, y=float(value))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+                _log_swallow("EPFB-002", "engine/editor/editor_prefab_controller.py blanket swallow", once=True)
                 return
             return
         if lower_key == "scale":
             try:
                 self._editor.window.scene_controller._apply_entity_mutation(sprite, scale=float(value))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+                _log_swallow("EPFB-003", "engine/editor/editor_prefab_controller.py blanket swallow", once=True)
                 return
             return
         if lower_key == "tag":
@@ -256,7 +268,8 @@ class EditorPrefabController:
         if lower_key in {"rotation", "rotation_deg"}:
             try:
                 rotation = float(value) % 360.0
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+                _log_swallow("EPFB-004", "engine/editor/editor_prefab_controller.py blanket swallow", once=True)
                 return
             entity_data["rotation"] = rotation
             sprite.angle = rotation
@@ -497,7 +510,8 @@ class EditorPrefabController:
         try:
             raw = path.read_text(encoding="utf-8") if path.exists() else "[]"
             data = copy.deepcopy(json.loads(raw))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("EPFB-005", "engine/editor/editor_prefab_controller.py blanket swallow", once=True)
             self._editor.set_status(f"Promote shapes: failed to read {path}: {exc}")
             return None
         if not isinstance(data, list):
@@ -613,6 +627,7 @@ class EditorPrefabController:
 
             prefab = get_prefab_manager().get_prefab(prefab_id)
         except Exception:
+            _log_swallow("EPFB-006", "engine/editor/editor_prefab_controller.py blanket swallow", once=True)
             prefab = None
 
         if not isinstance(prefab, dict) or not prefab:

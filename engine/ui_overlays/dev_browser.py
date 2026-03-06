@@ -15,6 +15,18 @@ from .common import (
     load_config_json,
 )
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
@@ -677,6 +689,7 @@ class DevBrowserOverlay(UIElement):
             try:
                 cfg.world_file = str(world_path)
             except Exception:
+                _log_swallow("DEVB-001", "engine/ui_overlays/dev_browser.py pass-only blanket swallow")
                 pass
 
         path = resolve_path(world_path)

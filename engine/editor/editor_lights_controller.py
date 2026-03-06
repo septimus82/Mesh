@@ -34,6 +34,18 @@ from engine.editor_runtime import ops as editor_ops
 from engine.i18n import tr
 from engine.logging_tools import get_logger
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 logger = get_logger(__name__)
 
 
@@ -65,7 +77,8 @@ class EditorLightsController:
             lights = copy.deepcopy(self.get_scene_lights())
             try:
                 lighting.configure_scene_lights(lights)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: editor editor lights controller fallback isolation
+                _log_swallow("ELGT-001", "engine/editor/editor_lights_controller.py blanket swallow", once=True)
                 if not getattr(self._editor, "_mesh_lighting_sync_error_logged", False):
                     logger.error("[Mesh][Editor] ERROR syncing lighting runtime: %s", exc)
                     setattr(self._editor, "_mesh_lighting_sync_error_logged", True)
@@ -84,14 +97,16 @@ class EditorLightsController:
         if ambient_tint is not None:
             try:
                 lighting.set_ambient_tint(ambient_tint)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: editor editor lights controller fallback isolation
+                _log_swallow("EDIT-001", "engine/editor/editor_lights_controller.py pass-only blanket swallow")
                 pass
         if "ambient_darkness_alpha" in settings:
             value = settings.get("ambient_darkness_alpha")
             if value is not None:
                 try:
                     lighting.set_ambient_darkness_alpha(int(value))
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: editor editor lights controller fallback isolation
+                    _log_swallow("EDIT-002", "engine/editor/editor_lights_controller.py pass-only blanket swallow")
                     pass
 
     def apply_lighting_preset(self, preset_id: str) -> bool:
@@ -172,13 +187,15 @@ class EditorLightsController:
             from engine.lighting.occluders import build_entity_occluders_from_scene_payload  # noqa: PLC0415
             scene = getattr(getattr(self._editor.window, "scene_controller", None), "_loaded_scene_data", None)
             entity_occluders = build_entity_occluders_from_scene_payload(scene) if isinstance(scene, dict) else []
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor editor lights controller fallback isolation
+            _log_swallow("ELGT-002", "engine/editor/editor_lights_controller.py blanket swallow", once=True)
             entity_occluders = []
         if entity_occluders:
             occluders.extend(entity_occluders)
         try:
             lighting.configure_scene_occluders(occluders)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: editor editor lights controller fallback isolation
+            _log_swallow("ELGT-003", "engine/editor/editor_lights_controller.py blanket swallow", once=True)
             if not getattr(self._editor, "_mesh_occluder_sync_error_logged", False):
                 logger.error("[Mesh][Editor] ERROR syncing occluders runtime: %s", exc)
                 setattr(self._editor, "_mesh_occluder_sync_error_logged", True)
@@ -225,7 +242,8 @@ class EditorLightsController:
             current = light.get(key_name, default)
             try:
                 current_val = float(current)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: editor editor lights controller fallback isolation
+                _log_swallow("ELGT-004", "engine/editor/editor_lights_controller.py blanket swallow", once=True)
                 current_val = default
             new_value = current_val + prop_delta
             if "min" in prop:
@@ -457,7 +475,8 @@ class EditorLightsController:
                 try:
                     px = float(entry[0])
                     py = float(entry[1])
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: editor editor lights controller fallback isolation
+                    _log_swallow("ELGT-005", "engine/editor/editor_lights_controller.py blanket swallow", once=True)
                     continue
                 dx = float(world_x) - px
                 dy = float(world_y) - py
@@ -541,7 +560,8 @@ class EditorLightsController:
         if isinstance(entry, (list, tuple)) and len(entry) == 2:
             try:
                 return (float(entry[0]), float(entry[1]))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: editor editor lights controller fallback isolation
+                _log_swallow("ELGT-006", "engine/editor/editor_lights_controller.py blanket swallow", once=True)
                 return None
         return None
 

@@ -1,0 +1,27 @@
+{
+  "description": "Validate AI planning schemas and examples",
+  "steps": [
+    {
+      "args": [
+        "schema",
+        "--ai-out",
+        "docs/generated/plan_ai_schema.json"
+      ],
+      "cmd": "plan"
+    },
+    {
+      "args": [
+        "lint-ai",
+        "docs/examples/ai_plan_example.json"
+      ],
+      "cmd": "plan"
+    },
+    {
+      "args": [
+        "test-ai",
+        "docs/examples/ai_plan_example.json"
+      ],
+      "cmd": "plan"
+    }
+  ]
+}

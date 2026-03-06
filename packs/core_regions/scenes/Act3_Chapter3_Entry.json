@@ -1,0 +1,166 @@
+{
+  "description": "Act 3 Chapter 3 entry: conduit ward setup and commit-terminal objective handoff.",
+  "name": "Act 3 Chapter 3 - Entry",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter3_entry_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter3_entry_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Proceed to commit."
+                }
+              ],
+              "text": "Conduit marshal: commit your doctrine at the terminal before crossing."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act3_chapter3_entry_briefingnpc_320_300_0_0",
+      "mesh_name": "Act3Ch3BriefingNpc",
+      "name": "Act3Ch3BriefingNpc",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 320,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch3_entry_briefing",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter3EntryBriefingZone"
+        }
+      },
+      "id": "act3_chapter3_entry_briefingzone_280_300_0_0",
+      "name": "Act3Chapter3EntryBriefingZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 280,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter3EntryBriefingZone",
+          "set_flags": {
+            "act3_ch3_started": true
+          },
+          "forbid_flags": [
+            "act3_ch3_started"
+          ],
+          "once": true,
+          "toast": "Objective updated: Reach the commit terminal.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter3_entry_startedstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch3StartedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter3_Commit.json"
+        }
+      },
+      "id": "act3_chapter3_entry_tocommit_940_300_0_0",
+      "name": "ToAct3Chapter3Commit",
+      "require_flags": [
+        "act3_ch3_started"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 940,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter2_Exit.json"
+        }
+      },
+      "id": "act3_chapter3_entry_returntoact3chapter2exit_60_300_0_0",
+      "name": "ReturnToAct3Chapter2Exit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch3_started": true
+          },
+          "require_flags": [
+            "act3_ch3_started"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter3_entry_startedrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch3StartedRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

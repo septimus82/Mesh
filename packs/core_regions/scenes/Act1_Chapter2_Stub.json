@@ -66,6 +66,23 @@
       "behaviour_config": {
         "SceneTransition": {
           "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter2_Camp.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter2_stub_tochapter2camp_560_360_0_0",
+      "name": "ToChapter2Camp",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 560,
+      "y": 360
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
           "target_scene": "packs/core_regions/scenes/Act1_Chapter2_RuinedGate.json"
         }
       },

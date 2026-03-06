@@ -3,7 +3,7 @@
 import ast
 from pathlib import Path
 
-MAX_SCENE_CONTROLLER_LINES = 2453
+MAX_SCENE_CONTROLLER_LINES = 2425
 MAX_METHOD_LINES = {
     "load_scene": 20,
     "reload_scene": 20,
@@ -23,8 +23,7 @@ def _get_scene_controller_class(source: str) -> ast.ClassDef:
 
 
 def test_scene_controller_line_count_ratcheted() -> None:
-    path = Path("engine/scene_controller.py")
-    source = path.read_text(encoding="utf-8")
+    source = SCENE_CONTROLLER_IMPL_PATH.read_text(encoding="utf-8")
     line_count = len(source.splitlines())
     assert line_count <= MAX_SCENE_CONTROLLER_LINES, (
         f"scene_controller.py grew: {line_count} lines (max {MAX_SCENE_CONTROLLER_LINES})"
@@ -32,8 +31,7 @@ def test_scene_controller_line_count_ratcheted() -> None:
 
 
 def test_scene_controller_lifecycle_methods_not_megafunctions() -> None:
-    path = Path("engine/scene_controller.py")
-    source = path.read_text(encoding="utf-8")
+    source = SCENE_CONTROLLER_IMPL_PATH.read_text(encoding="utf-8")
     cls = _get_scene_controller_class(source)
     for fn in cls.body:
         if isinstance(fn, ast.FunctionDef) and fn.name in MAX_METHOD_LINES:
@@ -47,22 +45,20 @@ def test_scene_controller_lifecycle_methods_not_megafunctions() -> None:
 
 
 def test_scene_controller_nav_helpers_not_reintroduced() -> None:
-    path = Path("engine/scene_controller.py")
-    source = path.read_text(encoding="utf-8")
+    source = SCENE_CONTROLLER_IMPL_PATH.read_text(encoding="utf-8")
     assert "NavGridCache" not in source
     assert "build_nav_grid_from_tilemap_instance" not in source
 
 
 def test_scene_controller_update_is_delegated() -> None:
-    path = Path("engine/scene_controller.py")
-    source = path.read_text(encoding="utf-8")
+    source = SCENE_CONTROLLER_IMPL_PATH.read_text(encoding="utf-8")
     assert "handle_pending_scene" not in source
 
 
 def test_scene_controller_entity_store_delegation_present() -> None:
-    path = Path("engine/scene_controller.py")
-    source = path.read_text(encoding="utf-8")
+    source = SCENE_CONTROLLER_IMPL_PATH.read_text(encoding="utf-8")
     assert "SceneEntityStoreController" in source
     # Check that scene_controller doesn't have its own _pending_ops attribute
     # but can call apply_pending_ops on the entities store
     assert "self._pending_ops" not in source
+SCENE_CONTROLLER_IMPL_PATH = Path("engine/scene_controller_core.py")

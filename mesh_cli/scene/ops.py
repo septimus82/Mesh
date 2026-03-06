@@ -12,9 +12,20 @@ from engine.scene_serializer import compact_scene_payload
 from engine.tooling.content_inventory import list_scenes
 from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 from engine.logging_tools import suppress_stdout
+from engine.logging_tools import get_logger
 from engine.repo_root import get_repo_root
 
 from mesh_cli.scene.common import _single_line_error
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def _emit_inventory(payload: dict, out_path: str | None) -> int:
@@ -49,6 +60,7 @@ def _handle_new_scene(args: argparse.Namespace) -> int:
         project_index.main([])
         return 0
     except Exception as e:
+        _log_swallow("SOPS-001", "new scene scaffold failure", once=True)
         print(f"[Mesh][CLI] Error creating scene: {e}")
         return 1
 
@@ -106,6 +118,7 @@ def _handle_edit_scene(args: argparse.Namespace) -> int:
         print(f"Successfully updated {args.path}")
         return 0
     except Exception as e:
+        _log_swallow("SOPS-002", "edit scene plan execution failure", once=True)
         print(f"Error executing plan: {e}")
         return 1
 
@@ -126,6 +139,7 @@ def _handle_tidy_scene(args: argparse.Namespace) -> int:
         print(f"[Mesh][CLI] Tidied scene '{path}'")
         return 0
     except Exception as e:
+        _log_swallow("SOPS-003", "tidy scene failure", once=True)
         print(f"[Mesh][CLI] Error tidying scene: {e}")
         return 1
 
@@ -136,6 +150,7 @@ def _handle_list_scenes(args: argparse.Namespace) -> int:
             repo_root = get_repo_root(start=Path.cwd(), strict=True)
             payload = list_scenes(repo_root=repo_root)
     except Exception as exc:  # noqa: BLE001
+        _log_swallow("SOPS-004", "list scenes inventory fallback", once=True)
         payload = {"ok": False, "error": _single_line_error(f"{type(exc).__name__}: {exc}")}
     out_path = str(getattr(args, "out", "") or "").strip() or None
     return _emit_inventory(payload, out_path)
@@ -192,6 +207,7 @@ def _handle_scene_create(args: argparse.Namespace) -> int:
         try:
             data = json.loads(resolved.read_text(encoding="utf-8"))
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("SOPS-005", "scene create JSON parse failure", once=True)
             print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
             return 1
         if not isinstance(data, dict):
@@ -318,6 +334,7 @@ def _handle_scene_create(args: argparse.Namespace) -> int:
                 z = int(z_s)
                 parallax = float(parallax_s)
             except Exception:
+                _log_swallow("SOPS-006", "background spec parse fallback", once=True)
                 print(f"[Mesh][CLI] Error: invalid --bg spec: {spec!r}")
                 return 2
 
@@ -357,6 +374,7 @@ def _handle_scene_create(args: argparse.Namespace) -> int:
             x = float(x_s)
             y = float(y_s)
         except Exception:
+            _log_swallow("SOPS-007", "spawn spec parse fallback", once=True)
             print(f"[Mesh][CLI] Error: invalid --spawn spec: {spec!r} (expected numeric x/y)")
             return 2
 

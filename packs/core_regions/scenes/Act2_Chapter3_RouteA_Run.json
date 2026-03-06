@@ -1,0 +1,422 @@
+{
+  "description": "Act 2 Chapter 3 route A: suppression mastery run with midpoint retry and alcove.",
+  "name": "Act 2 Chapter 3 - Route A Run",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter3_routea_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter3_routea_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_routea_switch_trigger",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_routea_suppressionstartzone_200_300_0_0"
+        }
+      },
+      "id": "act2_chapter3_routea_suppressionstartzone_200_300_0_0",
+      "name": "Act2Chapter3RouteASuppressionStartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 200,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3RouteASuppressionStartZone",
+          "set_flags": {
+            "act2_ch3_route_a_suppressed": true,
+            "act2_ch3_route_a_suppressed_until": true
+          },
+          "once": false,
+          "toast": "Hazard suppression active.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_routea_suppressionstartstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteASuppressionStartStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 7.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act2_chapter3_routea_hazarddamagea_320_300_0_0",
+      "name": "Act2Ch3RouteAHazardDamageA",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch3_route_a_suppressed"
+      ],
+      "x": 320,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 7.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act2_chapter3_routea_hazarddamageb_420_300_0_0",
+      "name": "Act2Ch3RouteAHazardDamageB",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch3_route_a_suppressed"
+      ],
+      "x": 420,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter3_routea_safealcovewall_520_300_0_0",
+      "name": "Act2Ch3RouteASafeAlcoveWall",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "tag": "solid",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "id": "act2_chapter3_routea_safealcovepickup_560_240_0_0",
+      "mesh_name": "Act2Ch3RouteASafeAlcovePickup",
+      "name": "Act2Ch3RouteASafeAlcovePickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 560,
+      "y": 240
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_routea_suppression_expire",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_routea_suppressionexpirezone_500_300_0_0"
+        }
+      },
+      "id": "act2_chapter3_routea_suppressionexpirezone_500_300_0_0",
+      "name": "Act2Chapter3RouteASuppressionExpireZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 500,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3RouteASuppressionExpireZone",
+          "set_flags": {
+            "act2_ch3_route_a_suppressed": false,
+            "act2_ch3_route_a_suppressed_until": false
+          },
+          "require_flags": [
+            "act2_ch3_route_a_suppressed"
+          ],
+          "once": false,
+          "toast": "Suppression faded. Use the midpoint switch.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_routea_suppressionexpirestatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteASuppressionExpireStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_routea_midpoint_switch",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_routea_midpointswitchzone_620_260_0_0"
+        }
+      },
+      "id": "act2_chapter3_routea_midpointswitchzone_620_260_0_0",
+      "name": "Act2Chapter3RouteAMidpointSwitchZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 620,
+      "y": 260
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3RouteAMidpointSwitchZone",
+          "set_flags": {
+            "act2_ch3_route_a_suppressed": true,
+            "act2_ch3_route_a_suppressed_until": true
+          },
+          "once": false,
+          "toast": "Hazard suppression refreshed.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_routea_midpointswitchstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteAMidpointSwitchStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 7.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act2_chapter3_routea_hazarddamagec_740_300_0_0",
+      "name": "Act2Ch3RouteAHazardDamageC",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch3_route_a_suppressed"
+      ],
+      "x": 740,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 7.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act2_chapter3_routea_hazarddamaged_840_300_0_0",
+      "name": "Act2Ch3RouteAHazardDamageD",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch3_route_a_suppressed"
+      ],
+      "x": 840,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_routea_clear",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_routea_clearzone_980_300_0_0"
+        }
+      },
+      "id": "act2_chapter3_routea_clearzone_980_300_0_0",
+      "name": "Act2Chapter3RouteAClearZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 980,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3RouteAClearZone",
+          "set_flags": {
+            "act2_ch3_route_a_clear": true
+          },
+          "clear_flags": [
+            "act2_ch3_route_a_suppressed",
+            "act2_ch3_route_a_suppressed_until"
+          ],
+          "forbid_flags": [
+            "act2_ch3_route_a_clear"
+          ],
+          "once": true,
+          "toast": "Objective complete: Route A cleared.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_routea_clearstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteAClearStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3RouteAClearZone",
+          "set_flags": {
+            "act2_ch3_reward_shard_a": true
+          },
+          "forbid_flags": [
+            "act2_ch3_reward_shard_a"
+          ],
+          "once": true,
+          "toast": "Reward acquired: Shard A",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_routea_rewardshardstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteARewardShardStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter3_Rejoin.json"
+        }
+      },
+      "id": "act2_chapter3_routea_torejoin_1100_300_0_0",
+      "name": "ToAct2Chapter3RejoinFromA",
+      "require_flags": [
+        "act2_ch3_route_a_clear"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter3_Fork.json"
+        }
+      },
+      "id": "act2_chapter3_routea_returntofork_60_300_0_0",
+      "name": "ReturnToAct2Chapter3ForkFromA",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch3_route_a_clear": true
+          },
+          "require_flags": [
+            "act2_ch3_route_a_clear"
+          ],
+          "once": false
+        }
+      },
+      "id": "act2_chapter3_routea_clearrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteAClearRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

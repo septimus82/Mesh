@@ -45,7 +45,7 @@ class ToggleSwitch(Behaviour):
         "initial_state": ParamDef(bool, default=False, description="Starting ON/OFF state"),
     }
 
-    def __init__(self, entity: Sprite, window, **config) -> None:  # type: ignore[override]
+    def __init__(self, entity: Sprite, window, **config) -> None:
         merged: Dict[str, Any] = dict(getattr(entity, "mesh_entity_data", {}) or {})
         if config:
             merged.update(config)

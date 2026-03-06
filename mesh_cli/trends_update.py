@@ -60,6 +60,14 @@ def _as_int_or_unknown(value: object) -> int | str:
     return "?"
 
 
+def _as_float_or_unknown(value: object) -> float | str:
+    if isinstance(value, bool):
+        return "?"
+    if isinstance(value, (int, float)):
+        return float(value)
+    return "?"
+
+
 def _as_str_or_unknown(value: object) -> str:
     if isinstance(value, str) and value.strip():
         return value.strip()
@@ -214,8 +222,61 @@ def _extract_verify_total_ms(artifacts_dir: Path, verify_report: dict[str, Any] 
     return "?"
 
 
+def _extract_overlay_metric(metric: object) -> dict[str, int | float | str]:
+    if not isinstance(metric, dict):
+        return {"count": "?", "total_ms": "?", "max_ms": "?", "avg_ms": "?"}
+    count = _as_int_or_unknown(metric.get("count"))
+    total_ms = _as_float_or_unknown(metric.get("total_ms"))
+    max_ms = _as_float_or_unknown(metric.get("max_ms"))
+    avg_ms: float | str = "?"
+    if isinstance(count, int) and count >= 0 and isinstance(total_ms, float):
+        avg_ms = 0.0 if count == 0 else round(total_ms / float(count), 3)
+    total_ms_out: float | str = round(total_ms, 3) if isinstance(total_ms, float) else total_ms
+    max_ms_out: float | str = round(max_ms, 3) if isinstance(max_ms, float) else max_ms
+    return {
+        "count": count,
+        "total_ms": total_ms_out,
+        "max_ms": max_ms_out,
+        "avg_ms": avg_ms,
+    }
+
+
+def _extract_overlay_perf(artifacts_dir: Path) -> dict[str, dict[str, int | float | str]] | None:
+    payload = _safe_read_json(artifacts_dir / "overlay_perf.json")
+    if not isinstance(payload, dict):
+        return None
+    metrics = payload.get("metrics")
+    if not isinstance(metrics, dict):
+        return None
+    return {
+        "providers_total": _extract_overlay_metric(metrics.get("providers_total")),
+        "command_palette_provider": _extract_overlay_metric(metrics.get("command_palette_provider")),
+    }
+
+
+def _extract_pytest_fast_budget_metrics(artifacts_dir: Path) -> tuple[int | None, int | None]:
+    payload = _safe_read_json(artifacts_dir / "verify_step_budget_check.json")
+    if not isinstance(payload, dict):
+        return None, None
+    checked_steps = payload.get("checked_steps")
+    if not isinstance(checked_steps, list):
+        return None, None
+    for row in checked_steps:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("name", "")).strip() != "pytest-fast":
+            continue
+        current_raw = row.get("current_ms")
+        threshold_raw = row.get("threshold_ms")
+        current_ms = int(current_raw) if isinstance(current_raw, (int, float)) else None
+        threshold_ms = int(threshold_raw) if isinstance(threshold_raw, (int, float)) else None
+        return current_ms, threshold_ms
+    return None, None
+
+
 def _build_entry(repo_root: Path, artifacts_dir: Path) -> dict[str, Any]:
     verify_report = _load_verify_report(artifacts_dir)
+    pytest_fast_ms, pytest_fast_threshold_ms = _extract_pytest_fast_budget_metrics(artifacts_dir)
     return {
         "timestamp_utc": _utc_now_iso(),
         "package_version": _read_package_version(repo_root),
@@ -226,6 +287,9 @@ def _build_entry(repo_root: Path, artifacts_dir: Path) -> dict[str, Any]:
         "exception_budget_ok": _extract_exception_budget_ok(artifacts_dir, verify_report),
         "swallowed_total": _extract_swallowed_total(artifacts_dir, verify_report),
         "shadow_backend_selected": _extract_shadow_backend_selected(artifacts_dir, verify_report),
+        "pytest_fast_ms": pytest_fast_ms,
+        "pytest_fast_threshold_ms": pytest_fast_threshold_ms,
+        "overlay_perf": _extract_overlay_perf(artifacts_dir),
     }
 
 

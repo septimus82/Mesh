@@ -1,0 +1,279 @@
+{
+  "description": "Act 2 Chapter 3 route B: safer traversal route with optional lore pickup.",
+  "name": "Act 2 Chapter 3 - Route B Safe",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter3_routeb_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter3_routeb_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "I will take the safe lane."
+                }
+              ],
+              "text": "Safe route marker: move through cover and keep steady pace."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act2_chapter3_routeb_safemarkersign_260_300_0_0",
+      "mesh_name": "Act2Ch3RouteBSafeMarkerSign",
+      "name": "Act2Ch3RouteBSafeMarkerSign",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 260,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 3.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act2_chapter3_routeb_lighthazard_380_320_0_0",
+      "name": "Act2Ch3RouteBLightHazard",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "x": 380,
+      "y": 320
+    },
+    {
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "id": "act2_chapter3_routeb_safepathpickup_460_260_0_0",
+      "mesh_name": "Act2Ch3RouteBSafePathPickup",
+      "name": "Act2Ch3RouteBSafePathPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 460,
+      "y": 260
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_routeb_lore_zone",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_routeb_lorepickupzone_600_260_0_0"
+        }
+      },
+      "id": "act2_chapter3_routeb_lorepickupzone_600_260_0_0",
+      "name": "Act2Chapter3RouteBLorePickupZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 600,
+      "y": 260
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3RouteBLorePickupZone",
+          "set_flags": {
+            "act2_ch3_lore_found": true
+          },
+          "forbid_flags": [
+            "act2_ch3_lore_found"
+          ],
+          "once": true,
+          "toast": "Lore recovered: Route B field notes.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_routeb_lorestatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteBLoreStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_routeb_clear",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_routeb_clearzone_900_300_0_0"
+        }
+      },
+      "id": "act2_chapter3_routeb_clearzone_900_300_0_0",
+      "name": "Act2Chapter3RouteBClearZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 900,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3RouteBClearZone",
+          "set_flags": {
+            "act2_ch3_route_b_clear": true
+          },
+          "forbid_flags": [
+            "act2_ch3_route_b_clear"
+          ],
+          "once": true,
+          "toast": "Objective complete: Route B cleared.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_routeb_clearstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteBClearStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3RouteBClearZone",
+          "set_flags": {
+            "act2_ch3_reward_shard_b": true
+          },
+          "forbid_flags": [
+            "act2_ch3_reward_shard_b"
+          ],
+          "once": true,
+          "toast": "Reward acquired: Shard B",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_routeb_rewardstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteBRewardStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter3_Rejoin.json"
+        }
+      },
+      "id": "act2_chapter3_routeb_torejoin_1040_300_0_0",
+      "name": "ToAct2Chapter3RejoinFromB",
+      "require_flags": [
+        "act2_ch3_route_b_clear"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter3_Fork.json"
+        }
+      },
+      "id": "act2_chapter3_routeb_returntofork_60_300_0_0",
+      "name": "ReturnToAct2Chapter3ForkFromB",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch3_route_b_clear": true
+          },
+          "require_flags": [
+            "act2_ch3_route_b_clear"
+          ],
+          "once": false
+        }
+      },
+      "id": "act2_chapter3_routeb_clearrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteBClearRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

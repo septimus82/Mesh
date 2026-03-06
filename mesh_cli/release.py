@@ -29,6 +29,18 @@ from mesh_cli.version_bump import BumpKind, bump_semver, bump_version_file
 from mesh_cli.version_info import get_tool_version
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def register(subparsers: argparse._SubParsersAction) -> None:
     release_parser = subparsers.add_parser(
         "release",
@@ -246,6 +258,7 @@ def _git_run(args: list[str]) -> subprocess.CompletedProcess[str] | None:
             timeout=8,
         )
     except (FileNotFoundError, OSError, subprocess.SubprocessError):
+        _log_swallow("RELS-001", "git unavailable")
         return None
 
 
@@ -699,6 +712,7 @@ def _handle_rc(args: argparse.Namespace) -> int:
             try:
                 zip_path.unlink()
             except OSError:
+                _log_swallow("RELS-002", "cleanup failed zip")
                 pass
         return _fail_with_step(
             _rc_step("build-release-bundle", ok=False, reason=f"{type(exc).__name__}: {exc}")
@@ -718,6 +732,7 @@ def _handle_rc(args: argparse.Namespace) -> int:
             try:
                 zip_path.unlink()
             except OSError:
+                _log_swallow("RELS-003", "cleanup unverified zip")
                 pass
         return _fail_with_step(
             _rc_step(
@@ -1003,6 +1018,7 @@ def _handle_promote(args: argparse.Namespace) -> int:
             try:
                 shutil.rmtree(work_dir)
             except OSError:
+                _log_swallow("RELS-004", "cleanup work dir")
                 pass
         return exit_code
 
@@ -1013,6 +1029,7 @@ def _handle_promote(args: argparse.Namespace) -> int:
             try:
                 out_zip_path.unlink()
             except OSError:
+                _log_swallow("RELS-005", "cleanup partial output")
                 pass
         return _emit_and_return(1)
 
@@ -1045,6 +1062,7 @@ def _handle_promote(args: argparse.Namespace) -> int:
     try:
         rc_manifest = _read_manifest_from_zip(rc_zip_path)
     except Exception:
+        _log_swallow("RELS-006", "RC manifest read")
         rc_manifest = {}
 
     # 2) Determine target version
@@ -1254,6 +1272,7 @@ def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
             return None
         data = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
+        _log_swallow("RELS-007", "manifest JSON load")
         return None
     if not isinstance(data, dict):
         return None
@@ -1364,6 +1383,7 @@ def _handle_ship(args: argparse.Namespace) -> int:
         try:
             current = version_file_path.read_bytes()
         except OSError:
+            _log_swallow("RELS-008", "version snapshot read")
             return
         if current == version_snapshot:
             return
@@ -1389,6 +1409,7 @@ def _handle_ship(args: argparse.Namespace) -> int:
             try:
                 final_zip.unlink()
             except OSError:
+                _log_swallow("RELS-009", "cleanup failed final")
                 pass
         _rollback_if_needed()
         return _emit_and_return(1)
@@ -1422,6 +1443,7 @@ def _handle_ship(args: argparse.Namespace) -> int:
             try:
                 stale.unlink()
             except OSError:
+                _log_swallow("RELS-010", "cleanup stale files")
                 pass
 
     # Preflight content integrity to guard release artifacts from orphaned content refs.
@@ -1878,6 +1900,7 @@ def _run_debug_bundle(repo_root: Path, out_path: Path, *, deterministic: bool = 
         try:
             window.close()
         except Exception:
+            _log_swallow("RELE-001", "mesh_cli/release.py pass-only blanket swallow")
             pass
 
 

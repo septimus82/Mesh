@@ -7,6 +7,18 @@ from .config import EngineConfig, load_config
 from .content_index import ContentIndex
 from .repo_root import find_repo_root
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 _CACHED_CONFIG: Optional[EngineConfig] = None
 _CONTENT_ROOTS: Optional[List[Path]] = None
 _CONTENT_ROOTS_SIG: Optional[tuple[str, str]] = None
@@ -33,6 +45,7 @@ def get_config() -> EngineConfig:
                 if cached_path == desired_cfg_path:
                     return _CACHED_CONFIG
             except Exception:
+                _log_swallow("PATH-001", "engine/paths.py pass-only blanket swallow")
                 pass
 
     _CACHED_CONFIG = load_config(None)
@@ -155,10 +168,12 @@ def resolve_path(path_str: str) -> Path:
     try:
         installed_roots.append(Path(sys.prefix))
     except Exception:
+        _log_swallow("PATH-002", "engine/paths.py pass-only blanket swallow")
         pass
     try:
         installed_roots.append(Path(__file__).resolve().parent.parent)
     except Exception:
+        _log_swallow("PATH-003", "engine/paths.py pass-only blanket swallow")
         pass
 
     seen: set[str] = set()

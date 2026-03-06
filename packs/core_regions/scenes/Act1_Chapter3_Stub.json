@@ -104,6 +104,23 @@
       "behaviour_config": {
         "SceneTransition": {
           "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter3_Archive.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter3_stub_tochapter3archive_700_260_0_0",
+      "name": "ToChapter3Archive",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 700,
+      "y": 260
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
           "target_scene": "packs/core_regions/scenes/Act1_Chapter4_Stub.json"
         }
       },
@@ -115,7 +132,10 @@
       "sprite": "assets/placeholder.png",
       "tag": "door",
       "x": 840,
-      "y": 300
+      "y": 300,
+      "require_flags": [
+        "act1_ch3_courtyard_cleared"
+      ]
     },
     {
       "behaviour_config": {

@@ -6,14 +6,6 @@ from typing import TYPE_CHECKING, Any
 
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_rectangle_filled, _draw_lrtb_rectangle_outline
-from ..editor.editor_shell_layout import compute_editor_shell_layout
-from ..editor.editor_dock_query import get_effective_dock_widths
-from ..editor.debug_panels_model import (
-    DebugPanelLine,
-    DEBUG_PANEL_LINE_HEIGHT,
-    DEBUG_PANEL_PADDING,
-    compute_debug_panel_content_bounds,
-)
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -33,6 +25,14 @@ class DebugPanelsOverlay(UIElement):
         self._text_cache = TextCache(max_size=256)
 
     def draw(self) -> None:
+        from ..editor.debug_panels_model import (
+            DEBUG_PANEL_LINE_HEIGHT,
+            DEBUG_PANEL_PADDING,
+            compute_debug_panel_content_bounds,
+        )
+        from ..editor.editor_dock_query import get_effective_dock_widths
+        from ..editor.editor_shell_layout import compute_editor_shell_layout
+
         controller = getattr(self.window, "editor_controller", None)
         if controller is None or not getattr(controller, "active", False):
             return
@@ -96,7 +96,7 @@ class DebugPanelsOverlay(UIElement):
                 break
 
 
-def _line_color(line: DebugPanelLine) -> Any:
+def _line_color(line: Any) -> Any:
     if line.kind == "header":
         return DEBUG_HEADER_COLOR
     if line.kind == "dim":

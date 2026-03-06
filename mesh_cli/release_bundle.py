@@ -1,4 +1,4 @@
-﻿"""
+"""
 CLI command: ``mesh_cli release bundle``
 
 Packages all release artifacts into a single reproducible ZIP:
@@ -49,6 +49,18 @@ from mesh_cli.release_notes import (
     release_notes_to_dict,
 )
 from mesh_cli.version_info import get_tool_version
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 # Fixed timestamp for deterministic ZIPs: 1980-01-01 00:00:00
 _ZIP_FIXED_DATE = (1980, 1, 1, 0, 0, 0)
@@ -170,6 +182,7 @@ class PackageManifest:
                 lines.append("")
                 lines.append(_fmt(Provenance(**self.provenance)))
             except Exception:
+                _log_swallow("RELE-001", "mesh_cli/release_bundle.py pass-only blanket swallow")
                 pass
         lines.append(f"Files: {self.file_count}  ({self.total_size:,} bytes)")
         lines.append("")
@@ -208,6 +221,7 @@ def _git_hash() -> str | None:
         if result.returncode == 0:
             return result.stdout.strip()
     except Exception:
+        _log_swallow("RELE-002", "mesh_cli/release_bundle.py pass-only blanket swallow")
         pass
     return None
 
@@ -882,6 +896,7 @@ def _handle_bundle(args: argparse.Namespace) -> int:
             try:
                 shutil.rmtree(work_dir)
             except Exception:
+                _log_swallow("RELE-003", "mesh_cli/release_bundle.py pass-only blanket swallow")
                 pass
 
 

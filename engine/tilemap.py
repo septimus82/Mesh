@@ -6,12 +6,23 @@ import json
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any, Sequence, cast
 import engine.optional_arcade as optional_arcade
 from PIL import Image
 
 from .assets import AssetManager
 from .paths import resolve_path
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 FLIP_HORIZONTAL = 0x80000000
 FLIP_VERTICAL = 0x40000000
@@ -116,6 +127,7 @@ class TilemapManager:
         try:
             payload: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("TMAP-001", "engine/tilemap.py blanket swallow", once=True)
             print(f"[Mesh][Tilemap] ERROR: Could not parse '{map_path}': {exc}")
             return None
 
@@ -209,8 +221,9 @@ class TilemapManager:
 
             if config.collision:
                 for sprite in sprites:
-                    sprite.mesh_is_solid = True  # type: ignore[attr-defined]
-                    sprite.mesh_tag = config.collision_tag or "terrain"  # type: ignore[attr-defined]
+                    sprite_any = cast(Any, sprite)
+                    sprite_any.mesh_is_solid = True
+                    sprite_any.mesh_tag = config.collision_tag or "terrain"
                 instance.collision_sprites.extend(sprite for sprite in sprites)
 
         instance.draw_layers = sort_tilemap_draw_layers(instance.draw_layers)
@@ -280,12 +293,14 @@ class TilemapManager:
                 tree = ET.parse(path)
                 root = tree.getroot()
             except Exception as exc:  # noqa: BLE001
+                _log_swallow("TMAP-002", "engine/tilemap.py blanket swallow", once=True)
                 print(f"[Mesh][Tilemap] WARNING: Failed to parse TSX '{path}': {exc}")
                 return None
             return self._tileset_from_tsx(root, path)
         try:
             return json.loads(path.read_text(encoding="utf-8"))
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("TMAP-003", "engine/tilemap.py blanket swallow", once=True)
             print(f"[Mesh][Tilemap] WARNING: Failed to parse tileset '{path}': {exc}")
             return None
 
@@ -487,6 +502,7 @@ class TilemapManager:
             )
             texture = optional_arcade.arcade.Texture(cropped)
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("TMAP-004", "engine/tilemap.py blanket swallow", once=True)
             print(f"[Mesh][Tilemap] WARNING: Failed to crop tile {local_id} from '{tileset.image_path}': {exc}")
             return None
         self._tile_texture_cache[key] = texture
@@ -501,6 +517,7 @@ class TilemapManager:
             with Image.open(resolved) as img:
                 loaded = img.convert("RGBA")
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("TMAP-005", "engine/tilemap.py blanket swallow", once=True)
             print(f"[Mesh][Tilemap] WARNING: Failed to load tileset image '{image_path}': {exc}")
             return None
         self._tileset_images[image_path] = loaded
@@ -528,10 +545,11 @@ class TilemapManager:
     def _apply_tile_metadata(self, sprite: optional_arcade.arcade.Sprite, properties: dict[str, Any]) -> None:
         if not properties:
             return
-        sprite.mesh_tile_properties = dict(properties)  # type: ignore[attr-defined]
+        sprite_any = cast(Any, sprite)
+        sprite_any.mesh_tile_properties = dict(properties)
         tile_tag = properties.get("tile_tag") or properties.get("tag")
         if isinstance(tile_tag, str) and tile_tag.strip():
-            sprite.mesh_tag = tile_tag.strip()  # type: ignore[attr-defined]
+            sprite_any.mesh_tag = tile_tag.strip()
 
     def _properties_to_dict(self, raw_properties: Any) -> dict[str, Any]:
         if isinstance(raw_properties, dict):

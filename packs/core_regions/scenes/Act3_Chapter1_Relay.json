@@ -1,0 +1,187 @@
+{
+  "description": "Act 3 Chapter 1 relay: reward handoff, checkpoint, and chapter completion.",
+  "name": "Act 3 Chapter 1 - Relay",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter1_relay_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter1_relay_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "id": "act3_chapter1_relay_rewardpickup_420_300_0_0",
+      "mesh_name": "Act3Ch1RelayRewardPickup",
+      "name": "Act3Ch1RelayRewardPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 420,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch1_checkpoint",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter1CheckpointZone"
+        }
+      },
+      "id": "act3_chapter1_relay_checkpointzone_520_300_0_0",
+      "name": "Act3Chapter1CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter1CheckpointZone",
+          "set_flags": {
+            "act3_ch1_checkpoint": true
+          },
+          "require_flags": [
+            "act3_ch1_started"
+          ],
+          "forbid_flags": [
+            "act3_ch1_checkpoint"
+          ],
+          "once": true,
+          "toast": "Checkpoint reached: Act 3 Chapter 1",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter1_relay_checkpointstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch1CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch1_complete",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter1CompleteZone"
+        }
+      },
+      "id": "act3_chapter1_relay_completezone_760_300_0_0",
+      "name": "Act3Chapter1CompleteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 760,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter1CompleteZone",
+          "set_flags": {
+            "act3_chapter1_complete": true
+          },
+          "require_flags": [
+            "act3_ch1_started"
+          ],
+          "forbid_flags": [
+            "act3_chapter1_complete"
+          ],
+          "once": true,
+          "toast": "Objective complete: Act 3 Chapter 1.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter1_relay_completestatesync_m1000_m1000_0_0",
+      "name": "Act3Ch1CompleteStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter1_FieldGate.json"
+        }
+      },
+      "id": "act3_chapter1_relay_returntofieldgate_60_300_0_0",
+      "name": "ReturnToAct3Chapter1FieldGate",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter2_Entry.json"
+        }
+      },
+      "id": "act3_chapter1_relay_toact3chapter2entry_980_300_0_0",
+      "name": "ToAct3Chapter2Entry",
+      "require_flags": [
+        "act3_chapter1_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 980,
+      "y": 300
+    }
+  ]
+}

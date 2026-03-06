@@ -6,6 +6,18 @@ from engine.input_runtime.capture_mouse_router_model import MouseEvent
 from engine.input_runtime import capture_mouse_router_handlers_ui as ui_handlers
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def dispatch_global_mouse(controller: Any, event: MouseEvent, action_id: str) -> bool:
     if action_id != "mouse.global":
         return False
@@ -61,6 +73,7 @@ def _maybe_handle_debug_entity_select_press(window: Any, event: MouseEvent) -> b
             hover = payload.get("hover", {}) if isinstance(payload, dict) else {}
             clicked_entity_id = hover.get("id") if isinstance(hover, dict) else None
         except Exception:  # noqa: BLE001
+            _log_swallow("CAPT-001", "engine/input_runtime/capture_mouse_router_handlers_global.py pass-only blanket swallow")
             pass
     
     if clicked_entity_id:
@@ -157,6 +170,7 @@ def _maybe_handle_debug_entity_select_release(window: Any, event: MouseEvent) ->
                     if not multi:
                         set_selection(window, state, [])
             except Exception:  # noqa: BLE001
+                _log_swallow("CAPT-002", "engine/input_runtime/capture_mouse_router_handlers_global.py pass-only blanket swallow")
                 pass
     else:
         # Marquee selection: use rect to find entities

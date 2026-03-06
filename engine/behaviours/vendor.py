@@ -9,6 +9,18 @@ from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 @register_behaviour(
     "Vendor",
     description="Handles shop stock and opens the shop UI on events.",
@@ -60,6 +72,7 @@ class Vendor(Behaviour):
             try:
                 self._bus.subscribe(self.listen_event, self._on_event)
             except Exception:
+                _log_swallow("VEND-001", "engine/behaviours/vendor.py pass-only blanket swallow")
                 pass
 
     def _normalize_entry(self, entry: Any) -> dict[str, Any]:

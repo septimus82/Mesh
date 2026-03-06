@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Protocol
 
 from .migrations import migrate_payload
 
-if TYPE_CHECKING:
-    from .game_state_controller import GameStateController
+
+class _QuestGameState(Protocol):
+    def get_flag(self, name: Any, default: bool = False) -> bool: ...
+
+    def get_counter(self, name: Any, default: int = 0) -> int | float: ...
 
 
 @dataclass
@@ -131,7 +134,7 @@ class QuestManager:
     # ------------------------------------------------------------------ #
     # Requirements / auto-complete                                       #
     # ------------------------------------------------------------------ #
-    def _requirements_met(self, quest: Quest, game_state: "GameStateController") -> bool:  # type: ignore[name-defined]
+    def _requirements_met(self, quest: Quest, game_state: _QuestGameState) -> bool:
         req = quest.requirements or {}
         flags = req.get("flags", []) or []
         counters = req.get("counters", {}) or {}
@@ -150,7 +153,7 @@ class QuestManager:
 
         return True
 
-    def update_quest_states(self, game_state: "GameStateController") -> None:  # type: ignore[name-defined]
+    def update_quest_states(self, game_state: _QuestGameState) -> None:
         for quest in self._quests.values():
             if quest.state == "active" and self._requirements_met(quest, game_state):
                 quest.state = "completed"
@@ -174,7 +177,7 @@ class QuestManager:
             )
         return entries
 
-    def handle_event(self, event: Any, game_state: "GameStateController") -> None:
+    def handle_event(self, event: Any, game_state: _QuestGameState) -> None:
         """Handle a gameplay event to update quest states."""
         # Normalize event to dict-like access if possible, or just use attributes
         # We only care about checking requirements after significant events

@@ -9,7 +9,12 @@ These tests prevent architectural regression by enforcing:
 from __future__ import annotations
 
 import ast
+import json
+import os
 import re
+import subprocess
+import sys
+from functools import lru_cache
 from pathlib import Path
 
 import pytest
@@ -71,6 +76,22 @@ def _count_non_empty_lines(path: Path) -> int:
 def _get_input_runtime_path() -> Path:
     """Get the path to the input_runtime module."""
     return Path(__file__).parent.parent / "engine" / "input_runtime"
+
+
+@lru_cache(maxsize=1)
+def _engine_python_files() -> tuple[Path, ...]:
+    engine_root = _get_input_runtime_path().parent
+    files: list[Path] = []
+    for root, _dirs, names in os.walk(engine_root):
+        for filename in names:
+            if filename.endswith(".py"):
+                files.append(Path(root) / filename)
+    return tuple(sorted(files, key=lambda p: p.as_posix()))
+
+
+@lru_cache(maxsize=None)
+def _read_utf8(path: str) -> str:
+    return Path(path).read_text(encoding="utf-8")
 
 
 @pytest.mark.fast
@@ -326,33 +347,27 @@ def test_deprecated_modules_not_imported_in_production_code() -> None:
     - In test files (test_*.py)
     - In the shim modules themselves
     """
-    import os
-    
     engine_root = _get_input_runtime_path().parent
     violations: list[str] = []
-    
-    for root, _dirs, files in os.walk(engine_root):
-        for filename in files:
-            if not filename.endswith(".py"):
-                continue
-            # Skip test files
-            if filename.startswith("test_"):
-                continue
-            # Skip the shim modules themselves
-            if filename in ("capture_mouse_router_handlers_paint.py", "capture_mouse_router_handlers_select.py"):
-                continue
-                
-            filepath = Path(root) / filename
-            try:
-                content = filepath.read_text(encoding="utf-8")
-            except Exception:
-                continue
-                
-            for deprecated in DEPRECATED_MODULES:
-                # Check for import statements
-                if f"import {deprecated}" in content or f"from engine.input_runtime import {deprecated}" in content:
-                    rel_path = filepath.relative_to(engine_root.parent)
-                    violations.append(f"{rel_path}: imports deprecated module '{deprecated}'")
+
+    for filepath in _engine_python_files():
+        filename = filepath.name
+        # Skip test files
+        if filename.startswith("test_"):
+            continue
+        # Skip the shim modules themselves
+        if filename in ("capture_mouse_router_handlers_paint.py", "capture_mouse_router_handlers_select.py"):
+            continue
+        try:
+            content = _read_utf8(filepath.as_posix())
+        except Exception:
+            continue
+
+        for deprecated in DEPRECATED_MODULES:
+            # Check for import statements
+            if f"import {deprecated}" in content or f"from engine.input_runtime import {deprecated}" in content:
+                rel_path = filepath.relative_to(engine_root.parent)
+                violations.append(f"{rel_path}: imports deprecated module '{deprecated}'")
     
     if violations:
         pytest.fail(
@@ -396,48 +411,29 @@ def test_deprecated_shim_emits_deprecation_warning() -> None:
     This test imports the shim in a subprocess to ensure the warning is emitted
     even with strict warning filters. The warning cannot be suppressed.
     """
-    import subprocess
-    import sys
-    
-    # Test paint shim
     code = (
-        "import warnings; "
-        "warnings.filterwarnings('error', category=DeprecationWarning); "
-        "from engine.input_runtime import capture_mouse_router_handlers_paint"
+        "import json, warnings\n"
+        "with warnings.catch_warnings(record=True) as caught:\n"
+        "    warnings.simplefilter('always', DeprecationWarning)\n"
+        "    from engine.input_runtime import capture_mouse_router_handlers_paint  # noqa: F401\n"
+        "    from engine.input_runtime import capture_mouse_router_handlers_select  # noqa: F401\n"
+        "dep = [w for w in caught if issubclass(w.category, DeprecationWarning)]\n"
+        "print(json.dumps({'dep_count': len(dep), 'messages': [str(w.message) for w in dep]}, sort_keys=True))\n"
+        "raise SystemExit(0 if len(dep) >= 2 else 1)\n"
     )
     result = subprocess.run(
         [sys.executable, "-c", code],
         capture_output=True,
         text=True,
     )
-    assert result.returncode != 0, (
-        "capture_mouse_router_handlers_paint did NOT emit DeprecationWarning.\n"
+    assert result.returncode == 0, (
+        "Expected both deprecated shim imports to emit DeprecationWarning.\n"
         f"stdout: {result.stdout}\n"
-        f"stderr: {result.stderr}"
+        f"stderr: {result.stderr}\n"
     )
-    assert "DeprecationWarning" in result.stderr, (
-        f"Expected DeprecationWarning in stderr, got:\n{result.stderr}"
-    )
-    
-    # Test select shim
-    code = (
-        "import warnings; "
-        "warnings.filterwarnings('error', category=DeprecationWarning); "
-        "from engine.input_runtime import capture_mouse_router_handlers_select"
-    )
-    result = subprocess.run(
-        [sys.executable, "-c", code],
-        capture_output=True,
-        text=True,
-    )
-    assert result.returncode != 0, (
-        "capture_mouse_router_handlers_select did NOT emit DeprecationWarning.\n"
-        f"stdout: {result.stdout}\n"
-        f"stderr: {result.stderr}"
-    )
-    assert "DeprecationWarning" in result.stderr, (
-        f"Expected DeprecationWarning in stderr, got:\n{result.stderr}"
-    )
+    payload = json.loads(result.stdout.strip() or "{}")
+    dep_count = int(payload.get("dep_count", 0)) if isinstance(payload, dict) else 0
+    assert dep_count >= 2, f"expected >=2 deprecation warnings, got {dep_count}: {result.stdout}"
 
 
 @pytest.mark.fast
@@ -575,42 +571,37 @@ def test_per_scope_handlers_only_imported_by_router() -> None:
     - capture_mouse_router_handlers_select.py (deprecated shim)
     - test_*.py files (tests are always allowed)
     """
-    import os
-    
     engine_root = _get_input_runtime_path().parent
     violations: list[str] = []
-    
-    for root, _dirs, files in os.walk(engine_root):
-        for filename in files:
-            if not filename.endswith(".py"):
-                continue
-            # Tests are always allowed
-            if filename.startswith("test_"):
-                continue
-            # Allowed importers
-            if filename in ALLOWED_HANDLER_IMPORTERS:
-                continue
-                
-            filepath = Path(root) / filename
-            try:
-                content = filepath.read_text(encoding="utf-8")
-            except Exception:
-                continue
-            
-            # Check each line for imports
-            for lineno, line in enumerate(content.splitlines(), 1):
-                for handler_module in PER_SCOPE_HANDLER_MODULES:
-                    # Match import patterns
-                    if (f"import {handler_module}" in line or 
-                        f"from engine.input_runtime import {handler_module}" in line or
-                        f"from engine.input_runtime.{handler_module}" in line):
-                        rel_path = filepath.relative_to(engine_root.parent)
-                        violations.append(
-                            f"  {rel_path}:\n"
-                            f"    line {lineno}: {line.strip()[:70]}\n"
-                            f"    imports:  {handler_module}\n"
-                            f"    allowed:  Only {', '.join(ALLOWED_HANDLER_IMPORTERS)}"
-                        )
+
+    for filepath in _engine_python_files():
+        filename = filepath.name
+        # Tests are always allowed
+        if filename.startswith("test_"):
+            continue
+        # Allowed importers
+        if filename in ALLOWED_HANDLER_IMPORTERS:
+            continue
+
+        try:
+            content = _read_utf8(filepath.as_posix())
+        except Exception:
+            continue
+
+        # Check each line for imports
+        for lineno, line in enumerate(content.splitlines(), 1):
+            for handler_module in PER_SCOPE_HANDLER_MODULES:
+                # Match import patterns
+                if (f"import {handler_module}" in line or
+                    f"from engine.input_runtime import {handler_module}" in line or
+                    f"from engine.input_runtime.{handler_module}" in line):
+                    rel_path = filepath.relative_to(engine_root.parent)
+                    violations.append(
+                        f"  {rel_path}:\n"
+                        f"    line {lineno}: {line.strip()[:70]}\n"
+                        f"    imports:  {handler_module}\n"
+                        f"    allowed:  Only {', '.join(ALLOWED_HANDLER_IMPORTERS)}"
+                    )
     
     if violations:
         pytest.fail(

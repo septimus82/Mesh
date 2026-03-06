@@ -1,0 +1,14 @@
+{
+  "description": "Agent dry-run summary (no writes) for Golden Slice",
+  "steps": [
+    {
+      "args": [
+        "--world",
+        "worlds/main_world.json",
+        "--dry-run",
+        "--summary-json"
+      ],
+      "cmd": "assist"
+    }
+  ]
+}

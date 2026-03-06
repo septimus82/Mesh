@@ -47,13 +47,33 @@ def format_command_palette_overlay_lines(payload: dict[str, Any] | None) -> list
     prompt_query = str(payload.get("prompt_query") or "")
     prompt_placeholder = str(payload.get("prompt_placeholder") or "")
     prompt_title = str(payload.get("prompt_title") or "")
+    prompt_preview = str(payload.get("prompt_preview") or "").strip()
+    prompt_error = str(payload.get("prompt_error") or "").strip()
+    prompt_rows_value = payload.get("prompt_rows")
+    prompt_rows = prompt_rows_value if isinstance(prompt_rows_value, list) else []
+    selected_p = payload.get("prompt_selected_row")
+    selected_prompt_row = int(selected_p) if isinstance(selected_p, int) else 0
 
     rows_value = payload.get("rows")
     rows = rows_value if isinstance(rows_value, list) else []
     selected = payload.get("selected_row")
     selected_row = int(selected) if isinstance(selected, int) else 0
+    help_enabled = bool(payload.get("help_enabled", False))
+    help_rows_value = payload.get("help_rows")
+    help_rows = help_rows_value if isinstance(help_rows_value, list) else []
 
     lines: list[str] = [header]
+
+    if help_enabled:
+        lines.append("HELP VIEW (F1 to close)")
+        if not help_rows:
+            lines.append("(no help available)")
+            return lines
+        for row in help_rows:
+            text = str(row or "").strip()
+            if text:
+                lines.append(text)
+        return lines
 
     if prompt_active:
         lines.append(f"PROMPT: {prompt_title or '-'}")
@@ -80,6 +100,18 @@ def format_command_palette_overlay_lines(payload: dict[str, Any] | None) -> list
             if prompt_placeholder:
                 lines.append(f"placeholder: {prompt_placeholder}")
             lines.append("hint: Enter=run Esc=cancel")
+            if prompt_error:
+                lines.append(f"arg error: {prompt_error}")
+            elif prompt_preview:
+                lines.append(f"arg preview: {prompt_preview}")
+            if prompt_rows:
+                lines.append("Suggestions:")
+                for i, row in enumerate(prompt_rows):
+                    if not isinstance(row, dict):
+                        continue
+                    label = str(row.get("label") or row.get("value") or "").strip() or "-"
+                    prefix = ">" if i == selected_prompt_row else " "
+                    lines.append(f"{prefix} {label}")
         return lines
 
     preview_line = str(payload.get("preview_line") or "").strip()

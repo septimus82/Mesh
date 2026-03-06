@@ -17,6 +17,8 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from engine.game import GameWindow
 
 PERF_RUN_SCHEMA_VERSION = 1
+PERF_SCENE_CAPTURE_SCHEMA_VERSION = 1
+PERF_COMPARE_SCHEMA_VERSION = 1
 
 
 def _get_engine_git_sha() -> str | None:
@@ -41,7 +43,62 @@ def _get_engine_git_sha() -> str | None:
 
 
 def handle_perf_run(args: argparse.Namespace) -> int:
-    replay_path = Path(args.replay)
+    scenes_path = str(getattr(args, "scenes", "") or "").strip()
+    if scenes_path:
+        from engine.persistence_io import write_json_atomic
+        from engine.tooling.perf_baselines import compare_perf_run_to_baseline
+        from engine.tooling.perf_baselines import load_perf_baseline
+        from engine.tooling.perf_baselines import run_perf_scene_capture
+
+        scene_set_path = Path(scenes_path)
+        if not scene_set_path.exists():
+            print(f"Scene set not found: {scene_set_path}")
+            return 1
+        ticks = int(max(1, int(getattr(args, "ticks", 120))))
+        run_payload = run_perf_scene_capture(scene_set_path=scene_set_path, ticks=ticks)
+        run_payload["schema_version"] = PERF_SCENE_CAPTURE_SCHEMA_VERSION
+        if args.out:
+            write_json_atomic(Path(args.out), run_payload, indent=2, sort_keys=True, trailing_newline=True)
+
+        baseline_path_raw = str(getattr(args, "perf_baseline", "") or "").strip()
+        if not baseline_path_raw:
+            return 0
+
+        baseline_path = Path(baseline_path_raw)
+        if not baseline_path.exists():
+            print(f"Perf baseline not found: {baseline_path}")
+            return 1
+
+        baseline_payload = load_perf_baseline(baseline_path)
+        compare_payload = compare_perf_run_to_baseline(
+            run_payload=run_payload,
+            baseline_payload=baseline_payload,
+        )
+        compare_payload["schema_version"] = PERF_COMPARE_SCHEMA_VERSION
+        compare_out_raw = str(getattr(args, "compare_out", "") or "").strip()
+        if compare_out_raw:
+            write_json_atomic(Path(compare_out_raw), compare_payload, indent=2, sort_keys=True, trailing_newline=True)
+
+        regressions = compare_payload.get("regressions", [])
+        if isinstance(regressions, list) and regressions:
+            print(f"[Mesh][Perf] Regressions detected: {len(regressions)}")
+            for row in regressions[:10]:
+                if not isinstance(row, dict):
+                    continue
+                print(
+                    "[Mesh][Perf] "
+                    f"{row.get('scene_id')} {row.get('metric')}: "
+                    f"{row.get('baseline')} -> {row.get('current')} "
+                    f"(allowed +{row.get('increase_allowed')})"
+                )
+            return 2
+        return 0
+
+    replay_raw = str(getattr(args, "replay", "") or "").strip()
+    if not replay_raw:
+        print("Missing required input: provide --replay or --scenes")
+        return 2
+    replay_path = Path(replay_raw)
     if not replay_path.exists():
         print(f"Replay not found: {replay_path}")
         return 1
@@ -216,13 +273,68 @@ def handle_perf_run(args: argparse.Namespace) -> int:
 
 def add_perf_run_command(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser("perf-run", help="Run a replay script and measure performance")
-    parser.add_argument("--replay", required=True, help="Path to replay JSON script")
+    parser.add_argument("--replay", help="Path to replay JSON script")
+    parser.add_argument(
+        "--scenes",
+        help="Path to deterministic perf scene set JSON (scene-counter mode)",
+    )
+    parser.add_argument(
+        "--ticks",
+        type=int,
+        default=120,
+        help="Tick multiplier for deterministic scene-counter metrics (default: 120)",
+    )
     parser.add_argument("--frames", type=int, default=300, help="Number of frames to measure")
     parser.add_argument("--warmup", type=int, default=60, help="Number of warmup frames to ignore")
     parser.add_argument("--out", help="Path to write JSON performance report")
     parser.add_argument("--headless", action="store_true", help="Run in headless mode (if supported)")
+    parser.add_argument(
+        "--perf-baseline",
+        help="Optional baseline JSON for deterministic scene-counter comparison",
+    )
+    parser.add_argument(
+        "--compare-out",
+        help="Optional path to write deterministic perf compare JSON report",
+    )
     parser.add_argument("--fail-p95-frame-ms", type=float, help="Fail if p95 frame time exceeds threshold (ms)")
     parser.add_argument("--fail-p95-update-ms", type=float, help="Fail if p95 update time exceeds threshold (ms)")
     parser.add_argument("--fail-p95-draw-ms", type=float, help="Fail if p95 draw time exceeds threshold (ms)")
     parser.add_argument("--fail-max-frame-ms", type=float, help="Fail if max frame time exceeds threshold (ms)")
     parser.set_defaults(func=handle_perf_run)
+
+    compare_parser = subparsers.add_parser(
+        "perf-compare",
+        help="Compare deterministic perf scene-counter run against baseline JSON",
+    )
+    compare_parser.add_argument("--run", required=True, help="Perf run JSON from perf-run --scenes")
+    compare_parser.add_argument("--baseline", required=True, help="Perf baseline JSON")
+    compare_parser.add_argument("--out", required=True, help="Path to write compare JSON")
+    compare_parser.set_defaults(func=handle_perf_compare)
+
+
+def handle_perf_compare(args: argparse.Namespace) -> int:
+    from engine.persistence_io import write_json_atomic
+    from engine.tooling.perf_baselines import compare_perf_run_to_baseline
+    from engine.tooling.perf_baselines import load_perf_baseline
+
+    run_path = Path(str(getattr(args, "run", "") or "").strip())
+    baseline_path = Path(str(getattr(args, "baseline", "") or "").strip())
+    out_path = Path(str(getattr(args, "out", "") or "").strip())
+    if not run_path.exists():
+        print(f"Perf run artifact not found: {run_path}")
+        return 1
+    if not baseline_path.exists():
+        print(f"Perf baseline artifact not found: {baseline_path}")
+        return 1
+    run_payload = json.loads(run_path.read_text(encoding="utf-8"))
+    if not isinstance(run_payload, dict):
+        print(f"Perf run artifact invalid (expected object): {run_path}")
+        return 1
+    baseline_payload = load_perf_baseline(baseline_path)
+    compare_payload = compare_perf_run_to_baseline(
+        run_payload=run_payload,
+        baseline_payload=baseline_payload,
+    )
+    compare_payload["schema_version"] = PERF_COMPARE_SCHEMA_VERSION
+    write_json_atomic(out_path, compare_payload, indent=2, sort_keys=True, trailing_newline=True)
+    return 0 if bool(compare_payload.get("ok")) else 2

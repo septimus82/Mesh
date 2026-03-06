@@ -11,7 +11,7 @@ This module provides deterministic, side-effect-free functions for:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple, cast
 
 
 # -----------------------------------------------------------------------------
@@ -98,13 +98,15 @@ class ComponentRow:
         key: str, label: str, value: Any, field_kind: str, editable: bool = True
     ) -> "ComponentRow":
         """Create a field row."""
+        allowed_field_kinds = {"header", "float", "int", "string", "bool"}
+        normalized_field_kind = field_kind if field_kind in allowed_field_kinds else "string"
         return ComponentRow(
             kind="field",
             key=key,
             label=label,
             value=value,
             editable=editable,
-            field_kind=field_kind,  # type: ignore[arg-type]
+            field_kind=cast(Literal["header", "float", "int", "string", "bool"], normalized_field_kind),
         )
 
 

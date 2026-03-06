@@ -7,6 +7,18 @@ from engine.content_packs import discover_packs
 from engine.paths import get_content_roots, resolve_path
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 class VariantValidator:
     """Validates variant patches and their usage."""
 
@@ -119,4 +131,5 @@ class VariantValidator:
                 if vid and vid not in valid_ids:
                     self.errors.append(f"Encounter Set '{es.get('id')}' references unknown variant '{vid}'")
         except Exception:
+            _log_swallow("VARI-001", "engine/validators/variant_validator.py pass-only blanket swallow")
             pass

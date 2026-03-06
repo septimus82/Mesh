@@ -10,9 +10,24 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set
 
 from .behaviours.registry import get_behaviour_info, get_behaviour_param_defs
+from .diagnostics import add_exception as diag_add_exception
+from .diagnostics import error as diag_error
+from .diagnostics import warn as diag_warn
 from .migrations import migrate_payload
 from .paths import resolve_path
 from .prefabs import get_prefab_manager
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 DEFAULT_LAYERS = [
     {"name": "background"},
@@ -129,6 +144,12 @@ class SceneLoader:
         full_path = resolve_path(scene_path)
         if not full_path.exists():
             print(f"[Mesh][SceneLoader] WARNING: Missing scene file '{scene_path}'")
+            diag_warn(
+                "scene_loader.scene_missing",
+                f"Missing scene file '{scene_path}'",
+                "engine.scene_loader",
+                location=str(scene_path),
+            )
             return self._default_scene()
 
         try:
@@ -136,9 +157,21 @@ class SceneLoader:
                 raw_scene: Dict[str, Any] = json.load(handle)
         except json.JSONDecodeError as exc:
             print(f"[Mesh][SceneLoader] ERROR: JSON parse failure in '{scene_path}': {exc}")
+            diag_add_exception(
+                "scene_loader.scene_json_parse_failed",
+                exc,
+                "engine.scene_loader",
+                location=str(scene_path),
+            )
             return self._default_scene()
         except OSError as exc:
             print(f"[Mesh][SceneLoader] ERROR: Could not read '{scene_path}': {exc}")
+            diag_add_exception(
+                "scene_loader.scene_read_failed",
+                exc,
+                "engine.scene_loader",
+                location=str(scene_path),
+            )
             return self._default_scene()
 
         scene = self.apply_scene_defaults(raw_scene)
@@ -149,6 +182,12 @@ class SceneLoader:
             print(
                 f"[Mesh][SceneLoader] ERROR: Scene '{scene.get('name', '<unnamed>')}' failed validation; "
                 "loading empty fallback",
+            )
+            diag_error(
+                "scene_loader.scene_validation_failed",
+                f"Scene '{scene.get('name', '<unnamed>')}' failed validation; loading empty fallback",
+                "engine.scene_loader",
+                location=str(scene_path),
             )
             return self._default_scene()
 
@@ -501,6 +540,7 @@ class SceneLoader:
             try:
                 entity = get_prefab_manager().resolve(entity)
             except Exception:  # noqa: BLE001
+                _log_swallow("SCEN-001", "engine/scene_loader.py pass-only blanket swallow")
                 pass
         for key, value in DEFAULT_ENTITY.items():
             entity.setdefault(key, copy.deepcopy(value) if isinstance(value, list) else value)

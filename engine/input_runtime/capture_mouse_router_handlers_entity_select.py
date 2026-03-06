@@ -12,6 +12,18 @@ from engine.input_runtime.capture_mouse_router_handlers_modal_base import (
 )
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def dispatch_entity_select_mouse(controller: Any, event: MouseEvent, action_id: str) -> bool:
     """Dispatch mouse event for entity_select scope."""
     window = controller.window
@@ -58,6 +70,7 @@ def _handle_entity_select_mouse_press(window: Any, event: MouseEvent) -> bool:
             hover = payload.get("hover", {}) if isinstance(payload, dict) else {}
             clicked_entity_id = hover.get("id") if isinstance(hover, dict) else None
         except Exception:  # noqa: BLE001
+            _log_swallow("CAPT-001", "engine/input_runtime/capture_mouse_router_handlers_entity_select.py pass-only blanket swallow")
             pass
 
     if clicked_entity_id:

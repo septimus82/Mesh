@@ -10,6 +10,18 @@ from typing import Any, Optional, Tuple, TYPE_CHECKING
 
 from engine.logging_tools import get_logger
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 if TYPE_CHECKING:
     pass
 
@@ -65,7 +77,8 @@ class EditorPlayController:
         editor.active = False
         try:
             editor.window.paused = False
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("EDIT-001", "engine/editor/editor_play_controller.py pass-only blanket swallow")
             pass
         self._spawn_player()
 
@@ -77,7 +90,8 @@ class EditorPlayController:
         editor.active = True
         try:
             editor.window.paused = True
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("EDIT-002", "engine/editor/editor_play_controller.py pass-only blanket swallow")
             pass
 
         scene_controller = getattr(editor.window, "scene_controller", None)
@@ -109,7 +123,8 @@ class EditorPlayController:
                 pos = getter()
                 if isinstance(pos, (tuple, list)) and len(pos) == 2:
                     return (float(pos[0]), float(pos[1]))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+                _log_swallow("EDIT-003", "engine/editor/editor_play_controller.py pass-only blanket swallow")
                 pass
         camera = getattr(editor.window, "camera", None)
         if camera is None:
@@ -137,7 +152,8 @@ class EditorPlayController:
             return
         try:
             setattr(camera, "position", pos)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("EDIT-004", "engine/editor/editor_play_controller.py pass-only blanket swallow")
             pass
 
     def _spawn_player(self) -> None:
@@ -160,7 +176,7 @@ class EditorPlayController:
         try:
             player.center_x = float(cam_x)
             player.center_y = float(cam_y)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
             return
         entity_data = getattr(player, "mesh_entity_data", None)
         if isinstance(entity_data, dict):

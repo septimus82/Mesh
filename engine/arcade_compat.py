@@ -3,6 +3,18 @@ from __future__ import annotations
 from typing import Any
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def capture_active_framebuffer(ctx: Any) -> Any | None:
     return getattr(ctx, "active_framebuffer", None)
 
@@ -50,7 +62,8 @@ def close_framebuffer_activation(activation_cm: Any | None) -> None:
     if callable(exit_):
         try:
             exit_(None, None, None)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("ARCA-001", "engine/arcade_compat.py pass-only blanket swallow")
             pass
 
 
@@ -71,9 +84,11 @@ def clear_framebuffer(
             try:
                 clear_fn()
                 return True
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("ARCA-002", "engine/arcade_compat.py pass-only blanket swallow")
                 pass
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("ARCA-003", "engine/arcade_compat.py pass-only blanket swallow")
             pass
 
     ctx_clear = getattr(ctx, "clear", None)
@@ -81,7 +96,7 @@ def clear_framebuffer(
         try:
             ctx_clear(float(red), float(green), float(blue), float(alpha))
             return True
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
             return False
     return False
 
@@ -93,7 +108,8 @@ def restore_framebuffer(ctx: Any, previous_fbo: Any | None) -> None:
         if callable(screen_use):
             screen_use()
             return
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+        _log_swallow("ARCA-004", "engine/arcade_compat.py pass-only blanket swallow")
         pass
 
     if previous_fbo is None:
@@ -102,6 +118,7 @@ def restore_framebuffer(ctx: Any, previous_fbo: Any | None) -> None:
     if callable(prev_use):
         try:
             prev_use()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("ARCA-005", "engine/arcade_compat.py pass-only blanket swallow")
             pass
 

@@ -1,12 +1,13 @@
 """Controller for safe file operations (rename, move, etc)."""
 from __future__ import annotations
 
+from engine.logging_tools import get_logger
 import hashlib
-import os
 import json
-import sys
-import shutil
+import os
 import posixpath
+import shutil
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from pathlib import PurePosixPath
@@ -46,6 +47,18 @@ from engine.editor.project_explorer_power_tools_model import (
     compute_common_parent,
     format_paths_for_clipboard,
 )
+
+logger = get_logger(__name__)
+
+
+def _log_swallow(tag: str, where: str, purpose: str) -> None:
+    logger.debug(
+        "SWALLOWED_EXCEPTION SWALLOW[%s] %s %s",
+        tag,
+        where,
+        purpose,
+        exc_info=True,
+    )
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController
@@ -148,9 +161,11 @@ class EditorFileOpsController:
                 try:
                     os.replace(src, dst)
                 except Exception:
+                    _log_swallow("EFOC-001", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                     shutil.move(str(src), str(dst))
                 staged.append((src_str, dst_str))
             except Exception:
+                _log_swallow("EFOC-002", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                 # Roll back any staged moves before bubbling up
                 self._restore_deletes_from_trash(staged)
                 raise
@@ -167,8 +182,10 @@ class EditorFileOpsController:
                 try:
                     os.replace(dst, src)
                 except Exception:
+                    _log_swallow("EFOC-003", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                     shutil.move(str(dst), str(src))
             except Exception as e:
+                _log_swallow("EFOC-004", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                 print(f"CRITICAL: Failed to restore {dst} -> {src}: {e}")
 
     def purge_trash(self, op_id: str) -> None:
@@ -213,6 +230,7 @@ class EditorFileOpsController:
                 if abs_path.exists():
                     original_json_contents[path_rel] = abs_path.read_text(encoding="utf-8")
         except Exception as e:
+            _log_swallow("EFOC-005", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
             self._show_error_modal("Refactor Preparation Failed", f"Could not read original files: {e}")
             self._pending_refactor_plan = None
             return
@@ -225,10 +243,12 @@ class EditorFileOpsController:
             try:
                 staged_trash_moves = self._stage_deletes_to_trash(plan, repo_root)
             except Exception as e:
+                _log_swallow("EFOC-006", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                 # Best-effort restore any staged moves
                 try:
                     self._restore_deletes_from_trash(staged_trash_moves)
                 except Exception:
+                    _log_swallow("EFOC-007", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                     pass
                 self._show_error_modal("Refactor Staging Failed", f"Could not stage deletes: {e}")
                 self._pending_refactor_plan = None
@@ -259,12 +279,14 @@ class EditorFileOpsController:
                 written_jsons.append(path_rel)
                 
         except Exception as e:
+            _log_swallow("EFOC-008", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
             print(f"[Refactor] JSON Write Error: {e}. Rolling back...")
             # Restore staged deletes if any
             if staged_trash_moves:
                 try:
                     self._restore_deletes_from_trash(staged_trash_moves)
                 except Exception:
+                    _log_swallow("EFOC-009", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                     print("CRITICAL: Failed to restore staged deletes.")
             self._restore_jsons(written_jsons, original_json_contents, repo_root)
             self._show_error_modal(f"Refactor Aborted", f"Reference update failed: {e}\nFiles restored.")
@@ -287,6 +309,7 @@ class EditorFileOpsController:
                 completed_fs_steps.append(step)
                 
             except Exception as e:
+                _log_swallow("EFOC-010", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                 fs_error = e
                 break
         
@@ -299,6 +322,7 @@ class EditorFileOpsController:
                 try:
                     self._restore_deletes_from_trash(staged_trash_moves)
                 except Exception:
+                    _log_swallow("EFOC-011", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                     print("CRITICAL: Failed to restore staged deletes.")
             # Rollback JSONs
             self._restore_jsons(written_jsons, original_json_contents, repo_root)
@@ -356,6 +380,7 @@ class EditorFileOpsController:
                                 for extra in restored_paths[1:]:
                                     project._toggle_selection_by_path(extra)
                 except Exception:
+                    _log_swallow("EFOC-012", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                     pass
         self._toast(f"Refactor '{plan.op_kind}' complete.")
         self._pending_refactor_plan = None
@@ -367,6 +392,7 @@ class EditorFileOpsController:
                 try:
                     write_atomic_utf8(repo_root / path_rel, originals[path_rel])
                 except Exception:
+                    _log_swallow("EFOC-013", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                     print(f"CRITICAL: Failed to restore {path_rel}")
 
     def _rollback_fs(self, steps: List[FsStep], repo_root: Path) -> None:
@@ -380,6 +406,7 @@ class EditorFileOpsController:
                     if dst.exists():
                         os.replace(dst, src)
             except Exception as e:
+                _log_swallow("EFOC-014", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                 print(f"Rollback failed for {step}: {e}")
 
     def _show_error_modal(self, title: str, message: str) -> None:
@@ -473,6 +500,7 @@ class EditorFileOpsController:
             os.replace(old_abs, new_abs)
             return True
         except Exception as e:
+            _log_swallow("EFOC-015", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
             # Fallback for cross-device etc? 
             # os.replace handles same-filesystem.
             # shutil.move is safer generally but os.replace is atomic on POSIX/Windows recent.
@@ -481,6 +509,7 @@ class EditorFileOpsController:
                 shutil.move(str(old_abs), str(new_abs))
                 return True
             except Exception:
+                _log_swallow("EFOC-016", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                 return False
 
 
@@ -708,6 +737,7 @@ class EditorFileOpsController:
                     if abs_path.exists() and abs_path.is_file():
                         abs_path.unlink()
                 except Exception:
+                    _log_swallow("EFOC-017", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                     pass
 
         self._refresh_project_tree()
@@ -939,17 +969,20 @@ class EditorFileOpsController:
                     os.replace(temp_abs, new_abs)
                     return True
                 except Exception:
+                    _log_swallow("EFOC-018", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                     # Best-effort rollback
                     try:
                         if temp_abs.exists() and not old_abs.exists():
                             os.replace(temp_abs, old_abs)
                     except Exception:
+                        _log_swallow("EFOC-019", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                         pass
                     return False
 
             os.replace(old_abs, new_abs)
             return True
         except Exception:
+            _log_swallow("EFOC-020", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
             return False
 
     def _try_copy_to_os_clipboard(self, text: str) -> None:
@@ -960,6 +993,7 @@ class EditorFileOpsController:
             if callable(copy_fn):
                 copy_fn(text)
         except Exception:
+            _log_swallow("EFOC-021", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
             pass
 
     def request_safe_rename_refactor(self, new_name: str) -> bool:
@@ -1059,6 +1093,7 @@ class EditorFileOpsController:
                     if repo_root_path and candidate_path.is_absolute():
                         candidate = candidate_path.relative_to(repo_root_path).as_posix()
                 except Exception:
+                    _log_swallow("EFOC-022", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                     pass
                 paths = [str(candidate).replace("\\", "/")]
         if not paths:
@@ -1225,6 +1260,7 @@ class EditorFileOpsController:
                     modifications[c_rel] = file_replacements
                     all_refs.extend(file_replacements)
             except Exception:
+                _log_swallow("EFOC-023", "engine.editor.asset_ops.editor_file_ops_controller", "blanket exception fallback")
                 continue
         return modifications, all_refs
 

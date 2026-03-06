@@ -23,6 +23,7 @@ from dataclasses import replace as dataclass_replace
 
 from engine.editor.editor_workspace_model import WorkspaceSnapshot
 from engine.editor.editor_modal_state_query import is_scene_browser_active
+from engine.editor.safe_mode import is_safe_mode_enabled
 from engine.editor.workspace_autosave_model import (
     AutosaveState,
     mark_flushed,
@@ -34,6 +35,18 @@ from engine.projects import add_recent_project, get_recent_projects, remove_rece
 from engine.runtime_settings import ensure_runtime_settings
 from engine.runtime_settings_storage import load_runtime_settings, resolve_runtime_settings_path, save_runtime_settings
 from engine.workspace_settings import WorkspaceSettings, load_workspace, save_workspace
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController
@@ -48,6 +61,11 @@ class EditorWorkspaceController:
 
     def __init__(self, controller: EditorModeController) -> None:
         self._editor = controller
+        try:
+            setattr(self._editor.window, "_on_recent_scene_recorded", self._on_recent_scene_recorded)
+        except Exception:
+            _log_swallow("EDIT-001", "engine/editor/editor_workspace_controller.py pass-only blanket swallow")
+            pass
         self.workspace_data: WorkspaceSettings = WorkspaceSettings()
         self.recent_projects: list[str] = []
         self.recent_scenes: list[str] = []
@@ -55,6 +73,12 @@ class EditorWorkspaceController:
 
     def load_on_startup(self) -> None:
         self.load_workspace()
+        if self._is_web_runtime() or self._should_skip_load_for_tests():
+            return
+        self._load_editor_ui_state()
+        if is_safe_mode_enabled():
+            return
+        self._load_editor_session_state()
 
     def load_workspace_settings(self) -> None:
         """Compatibility shim for legacy call sites."""
@@ -177,7 +201,8 @@ class EditorWorkspaceController:
             settings = load_workspace(repo_root)
             updated = dataclass_replace(settings, hd2d_batch_radius_px=radius)
             save_workspace(repo_root, updated)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("EDIT-002", "engine/editor/editor_workspace_controller.py pass-only blanket swallow")
             pass
 
     def _apply_workspace_settings(self, settings: WorkspaceSettings) -> None:
@@ -244,7 +269,8 @@ class EditorWorkspaceController:
                                 settings.last_camera_center[0],
                                 settings.last_camera_center[1],
                             )
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:  # noqa: BLE001  # REASON: editor fallback isolation
+                        _log_swallow("EWSP-001", "engine/editor/editor_workspace_controller.py blanket swallow", once=True)
                         logger.warning(
                             "Failed to restore workspace scene %s: %s",
                             settings.last_scene_id,
@@ -347,5 +373,69 @@ class EditorWorkspaceController:
             return False
         try:
             return bool(fn(self._editor))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("EWSP-002", "engine/editor/editor_workspace_controller.py blanket swallow", once=True)
             return False
+
+    def _load_editor_ui_state(self) -> None:
+        try:
+            from engine.editor.editor_ui_state import (  # noqa: PLC0415
+                apply_editor_ui_state,
+                load_editor_ui_state,
+                resolve_editor_ui_state_path,
+            )
+
+            repo_root = self._get_repo_root()
+            state_path = resolve_editor_ui_state_path(repo_root=repo_root)
+            if not state_path.exists():
+                return
+            state = load_editor_ui_state(path=state_path)
+            apply_editor_ui_state(self._editor, state)
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("EWSP-003", "engine/editor/editor_workspace_controller.py blanket swallow", once=True)
+            return
+
+    def _load_editor_session_state(self) -> None:
+        try:
+            from engine.editor.editor_session_state import (  # noqa: PLC0415
+                apply_camera_state_for_editor,
+                get_camera_for_scene,
+                load_editor_session_state,
+                resolve_editor_session_state_path,
+            )
+
+            repo_root = self._get_repo_root()
+            state_path = resolve_editor_session_state_path(repo_root=repo_root)
+            if not state_path.exists():
+                return
+            state = load_editor_session_state(path=state_path)
+            scene_path = str(state.last_scene_path or "").strip()
+            if not scene_path:
+                return
+            target = Path(scene_path)
+            if not target.is_absolute():
+                target = repo_root / target
+            if not target.exists():
+                return
+            scene_controller = getattr(self._editor.window, "scene_controller", None)
+            current_scene = str(getattr(scene_controller, "current_scene_path", "") or "").strip()
+            if current_scene == scene_path:
+                return
+            load_fn = getattr(self._editor.window, "load_scene", None)
+            if callable(load_fn):
+                load_fn(scene_path)
+                camera_state = get_camera_for_scene(state, scene_path)
+                if camera_state is not None:
+                    apply_camera_state_for_editor(self._editor, camera_state)
+        except Exception:  # noqa: BLE001  # REASON: editor fallback isolation
+            _log_swallow("EWSP-004", "engine/editor/editor_workspace_controller.py blanket swallow", once=True)
+            return
+
+    def _on_recent_scene_recorded(self, scene_path: str) -> None:
+        try:
+            from engine.editor.editor_session_state import save_editor_session_state_for_editor  # noqa: PLC0415
+
+            save_editor_session_state_for_editor(self._editor, scene_path)
+        except Exception:
+            _log_swallow("EWSP-005", "engine/editor/editor_workspace_controller.py blanket swallow", once=True)
+            return

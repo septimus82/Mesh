@@ -70,7 +70,7 @@ class PersistenceService:
     def load_scene(self, window: Any, scene_path: str) -> dict[str, Any]:
         try:
             return self.scene_flow.load_scene(window, str(scene_path))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: persistence service fallback isolation
             self._handle_runtime_error(op="load_scene", exc=exc, context={"scene_path": scene_path})
             if self.strict:
                 raise
@@ -79,7 +79,7 @@ class PersistenceService:
     def request_scene_reload(self, window: Any, *, clear_assets: bool = False) -> None:
         try:
             self.scene_flow.request_scene_reload(window, clear_assets=bool(clear_assets))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: persistence service fallback isolation
             self._handle_runtime_error(op="request_scene_reload", exc=exc, context={})
             if self.strict:
                 raise
@@ -87,7 +87,7 @@ class PersistenceService:
     def request_reload_current_scene(self, window: Any, *, clear_assets: bool = False) -> None:
         try:
             self.scene_flow.request_reload_current_scene(window, clear_assets=bool(clear_assets))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: persistence service fallback isolation
             self._handle_runtime_error(op="request_reload_current_scene", exc=exc, context={})
             if self.strict:
                 raise
@@ -95,7 +95,7 @@ class PersistenceService:
     def request_scene_change(self, window: Any, scene_path: str) -> None:
         try:
             self.scene_flow.request_scene_change(window, str(scene_path))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: persistence service fallback isolation
             self._handle_runtime_error(op="request_scene_change", exc=exc, context={"scene_path": scene_path})
             if self.strict:
                 raise
@@ -103,7 +103,7 @@ class PersistenceService:
     def queue_scene_change(self, window: Any, scene_path: str, *, spawn_id: str | None = None) -> None:
         try:
             self.scene_flow.queue_scene_change(window, str(scene_path), spawn_id=spawn_id)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: persistence service fallback isolation
             self._handle_runtime_error(
                 op="queue_scene_change",
                 exc=exc,
@@ -151,7 +151,7 @@ class PersistenceService:
     def reload_scene_from_disk(self, window: Any) -> bool:
         try:
             return bool(self.scene_ops.reload_scene_from_disk(window))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: persistence service fallback isolation
             self._handle_runtime_error(op="reload_scene_from_disk", exc=exc, context={})
             if self.strict:
                 raise
@@ -160,7 +160,7 @@ class PersistenceService:
     def persist_scene_to_disk(self, window: Any) -> Any:
         try:
             return self.scene_ops.persist_scene_to_disk(window)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: persistence service fallback isolation
             self._handle_runtime_error(op="persist_scene_to_disk", exc=exc, context={})
             if self.strict:
                 raise
@@ -169,7 +169,7 @@ class PersistenceService:
     def save_scene_as(self, window: Any, new_scene_path: str) -> Any:
         try:
             return self.scene_ops.save_scene_as(window, str(new_scene_path))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: persistence service fallback isolation
             self._handle_runtime_error(op="save_scene_as", exc=exc, context={"scene_path": new_scene_path})
             if self.strict:
                 raise
@@ -178,7 +178,7 @@ class PersistenceService:
     def reload_scene(self, window: Any, new_path: str | None = None) -> bool:
         try:
             return bool(self.scene_flow.reload_scene(window, new_path))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: persistence service fallback isolation
             self._handle_runtime_error(
                 op="reload_scene",
                 exc=exc,

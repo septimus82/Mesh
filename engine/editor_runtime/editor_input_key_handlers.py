@@ -43,6 +43,12 @@ def handle_pre_routed_keys(controller: EditorController, key: int, modifiers: in
         if search is not None and search.focus_search_for_active_panel():
             return True
 
+    if getattr(controller, "_find_everything_open", False) and key == optional_arcade.arcade.key.TAB:
+        handler = getattr(controller, "_handle_find_everything_input", None)
+        if callable(handler) and handler(key, modifiers):
+            return True
+        return True
+
     search = getattr(controller, "search", None)
     if search is not None and search.is_search_focused():
         if key == optional_arcade.arcade.key.ESCAPE:

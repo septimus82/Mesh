@@ -12,6 +12,17 @@ from engine.paths import get_content_roots, resolve_path
 
 log = logging.getLogger(__name__)
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 class PrefabManager:
     """Manages loading and resolution of prefabs."""
@@ -40,7 +51,8 @@ class PrefabManager:
             return
         try:
             current = tuple(str(p) for p in get_content_roots())
-        except Exception:
+        except Exception:  # noqa: BLE001  # REASON: prefabs fallback isolation
+            _log_swallow("PREF-001", "get_content_roots call", once=True)
             return
         if current != self._loaded_roots:
             self.load(force=True)
@@ -79,16 +91,19 @@ class PrefabManager:
         def _format_source(path: "Path") -> str:
             try:
                 resolved = path.resolve()
-            except Exception:
+            except Exception:  # noqa: BLE001  # REASON: prefabs fallback isolation
+                _log_swallow("PREF-002", "path resolve", once=True)
                 resolved = path
             for root in roots:
                 try:
                     root_resolved = root.resolve()
-                except Exception:
+                except Exception:  # noqa: BLE001  # REASON: prefabs fallback isolation
+                    _log_swallow("PREF-003", "root resolve", once=True)
                     root_resolved = root
                 try:
                     rel = resolved.relative_to(root_resolved)
-                except Exception:
+                except Exception:  # noqa: BLE001  # REASON: prefabs fallback isolation
+                    _log_swallow("PREF-004", "relative_to calc", once=True)
                     continue
                 return rel.as_posix()
             return path.as_posix()
@@ -112,7 +127,8 @@ class PrefabManager:
                             _record_source(prefab_id, source_label)
                 else:
                     print(f"[Mesh][Prefabs] WARNING: {base_path} must contain a list")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001  # REASON: prefabs fallback isolation
+                _log_swallow("PREF-005", "base prefabs load", once=True)
                 print(f"[Mesh][Prefabs] Failed to load prefabs: {e}")
 
         pack_sources = sources[1:] if len(sources) > 1 else []
@@ -142,7 +158,8 @@ class PrefabManager:
                         source_map[prefab_id] = source_label
                         _record_source(prefab_id, source_label)
                 print(f"[Mesh][Prefabs] Loaded {len(pack_data)} prefabs from {pack_path}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001  # REASON: prefabs fallback isolation
+                _log_swallow("PREF-006", "pack prefabs load", once=True)
                 print(f"[Mesh][Prefabs] Failed to load prefabs from {pack_path}: {e}")
 
         sorted_ids = sorted(merged)
@@ -167,7 +184,8 @@ class PrefabManager:
                     for v in v_data:
                         self._variants[v["id"]] = v
                     print(f"[Mesh][Prefabs] Loaded {len(v_data)} variants from pack '{pack.id}'")
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001  # REASON: prefabs fallback isolation
+                    _log_swallow("PREF-007", "variants load", once=True)
                     print(f"[Mesh][Prefabs] Failed to load variants from '{pack.id}': {e}")
 
         self._loaded = True
@@ -213,7 +231,8 @@ class PrefabManager:
         except RecursionError:
             print(f"[Mesh][Prefabs] ERROR: Cycle detected in prefab '{prefab_id}'")
             return None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # REASON: prefabs fallback isolation
+            _log_swallow("PREF-008", "prefab resolution", once=True)
             print(f"[Mesh][Prefabs] ERROR resolving prefab '{prefab_id}': {e}")
             return None
 

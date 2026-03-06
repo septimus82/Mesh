@@ -5,10 +5,23 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 from engine.tooling import triage_command, plan_apply, plan_cli
 from engine.tooling.plan_executor import PlanExecutor
 from engine.tooling.plan_types import Action
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 DIFF_SUPPORTED_ACTIONS = {
@@ -121,6 +134,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
     try:
         plan_data = json.loads(plan_path.read_text(encoding="utf-8"))
     except Exception as e:
+        _log_swallow("ASCM-001", "engine/tooling/assist_command.py blanket swallow", once=True)
         if not summary_json:
             print(f"[ASSIST] Failed to read plan: {e}")
         return 1
@@ -154,6 +168,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
         try:
             obj, _end = decoder.raw_decode(text[start:])
         except Exception:  # noqa: BLE001
+            _log_swallow("ASCM-002", "engine/tooling/assist_command.py blanket swallow", once=True)
             return None
         return obj if isinstance(obj, dict) else None
 
@@ -195,7 +210,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
         def _noop_backup_file(p: Path) -> None:  # noqa: ARG001
             return None
 
-        executor.backup_mgr.backup_file = _noop_backup_file  # type: ignore[method-assign,assignment]  # intentional monkeypatch for dry-run
+        cast(Any, executor.backup_mgr).backup_file = _noop_backup_file  # intentional monkeypatch for dry-run
         
         try:
             plan_data_for_exec = dict(plan_data)
@@ -230,6 +245,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
                 print(f"[ASSIST] Touches: {', '.join(touches)}")
 
         except Exception as e:
+            _log_swallow("ASCM-003", "engine/tooling/assist_command.py blanket swallow", once=True)
             if not summary_json and not diff_guard_mode:
                 print(f"[ASSIST] Warning: Failed to simulate plan execution: {e}")
                 # Fallback to just listing touches if execution fails
@@ -250,6 +266,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
                     else:
                         skipped_identical += 1
                 except Exception:
+                    _log_swallow("ASCM-004", "engine/tooling/assist_command.py blanket swallow", once=True)
                     # If read fails, assume changed
                     changes.append((path_str, "~changed"))
         
@@ -333,6 +350,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
         if "action_hints_mismatch" in warning_ids:
             return _refuse(reason="action_hints_mismatch", extra={"warnings": warning_items})
     except Exception:
+        _log_swallow("ASSI-001", "engine/tooling/assist_command.py pass-only blanket swallow")
         pass # If we can't parse, assume no warnings or let apply fail if it's bad
 
     if defer_trige_output:
@@ -482,7 +500,7 @@ def _print_diff(actions: list[dict], max_diff_lines: int = 200) -> None:
             def _noop_backup_file(p: Path) -> None:  # noqa: ARG001
                 return None
 
-            executor.backup_mgr.backup_file = _noop_backup_file  # type: ignore[method-assign,assignment]  # intentional monkeypatch for preview
+            cast(Any, executor.backup_mgr).backup_file = _noop_backup_file  # intentional monkeypatch for preview
             
             try:
                 # Run action
@@ -528,6 +546,7 @@ def _print_diff(actions: list[dict], max_diff_lines: int = 200) -> None:
                         print("".join(diff), end="")
                     
             except Exception as e:
+                _log_swallow("ASCM-005", "engine/tooling/assist_command.py blanket swallow", once=True)
                 print(f"[ASSIST] Diff: (error) {action_type} {target}: {e}")
 
         elif action_type in DIFF_SKIPPED_ACTIONS:

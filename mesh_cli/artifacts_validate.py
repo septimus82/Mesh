@@ -58,7 +58,8 @@ def _normalize_written_path(value: str) -> str:
 def _strip_artifacts_dir_name_prefix(path_value: str, artifacts_dir_name: str) -> str:
     """Strip a leading ``<artifacts_dir_name>/`` path prefix when present."""
     normalized = path_value.replace("\\", "/").lstrip("/")
-    prefix = f"{artifacts_dir_name.strip().replace('\\', '/').strip('/')}/"
+    normalized_dir_name = artifacts_dir_name.strip().replace("\\", "/").strip("/")
+    prefix = f"{normalized_dir_name}/"
     if prefix and normalized.startswith(prefix):
         return normalized[len(prefix) :]
     return normalized

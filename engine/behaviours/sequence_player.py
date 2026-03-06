@@ -13,6 +13,18 @@ from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 @register_behaviour(
     "SequencePlayer",
     description="Runs declarative cutscene steps such as waits, movement, dialogue, and events.",
@@ -97,7 +109,7 @@ class SequencePlayer(Behaviour):
         "move_tolerance": ParamDef(float, default=2.0, description="Distance threshold treated as reaching the target"),
     }
 
-    def __init__(self, entity: Sprite, window, **config) -> None:  # type: ignore[override]
+    def __init__(self, entity: Sprite, window, **config) -> None:
         merged = dict(getattr(entity, "mesh_entity_data", {}) or {})
         if config:
             merged.update(config)
@@ -485,6 +497,7 @@ class SequencePlayer(Behaviour):
             try:
                 unlocker(owner=self._lock_owner)
             except Exception:  # pragma: no cover - defensive
+                _log_swallow("SEQU-001", "engine/behaviours/sequence_player.py pass-only blanket swallow")
                 pass
         self._lock_applied = False
 

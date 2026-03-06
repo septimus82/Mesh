@@ -84,6 +84,7 @@ class TestQuestRunnerTriggerVolumeIntegration:
         
         # Verify initial state
         state = runner.get_quest_state("exploration_quest")
+        assert state is not None
         assert state.status == "active"
         assert state.current_stage == "visit_landmark_1"
         
@@ -105,6 +106,7 @@ class TestQuestRunnerTriggerVolumeIntegration:
         
         # Should have completed stage 1 and started stage 2
         state = runner.get_quest_state("exploration_quest")
+        assert state is not None
         assert state.current_stage == "visit_landmark_2"
         assert "visit_landmark_1" in state.completed_stages
         
@@ -131,6 +133,7 @@ class TestQuestRunnerTriggerVolumeIntegration:
         
         # Quest should be completed
         state = runner.get_quest_state("exploration_quest")
+        assert state is not None
         assert state.status == "completed"
         
         # Should have quest_completed event
@@ -266,6 +269,7 @@ class TestQuestRunnerQuestHookIntegration:
         
         # Quest should have advanced
         state = runner.get_quest_state("exploration_quest")
+        assert state is not None
         assert state.current_stage == "visit_landmark_2"
         
         # Feed emitted events to QuestHook
@@ -303,6 +307,7 @@ class TestQuestRunnerSaveRestoreIntegration:
         
         # Verify state restored correctly
         state = runner2.get_quest_state("exploration_quest")
+        assert state is not None
         assert state.status == "active"
         assert state.current_stage == "visit_landmark_2"
         assert "visit_landmark_1" in state.completed_stages
@@ -313,6 +318,7 @@ class TestQuestRunnerSaveRestoreIntegration:
         
         # Should complete the quest
         state = runner2.get_quest_state("exploration_quest")
+        assert state is not None
         assert state.status == "completed"
         
         # Should have completion event

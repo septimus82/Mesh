@@ -1,0 +1,195 @@
+{
+  "description": "Act 2 Chapter 1 safe room: checkpoint and chapter completion handoff.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter1_saferoom_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter1_saferoom_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Log Chapter 1 complete."
+                }
+              ],
+              "text": "Safe room medic: You made it through the hazard lane. Mark this room as secured."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act2_chapter1_saferoom_saferoommedic_280_300_0_0",
+      "mesh_name": "Act2Ch1SafeRoomMedic",
+      "name": "Safe Room Medic",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 280,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch1_complete",
+          "trigger_radius": 46.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter1_saferoom_act2chapter1completezone_500_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter1_saferoom_act2chapter1completezone_500_300_0_0",
+      "name": "Act2Chapter1CompleteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 500,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1CompleteZone",
+          "set_flags": {
+            "act2_chapter1_complete": true
+          },
+          "require_flags": [
+            "act2_ch1_hazard_cleared"
+          ],
+          "forbid_flags": [
+            "act2_chapter1_complete"
+          ],
+          "once": true,
+          "toast": "Objective complete: Act 2 Chapter 1.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_saferoom_act2ch1completestatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1CompleteStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch1_checkpoint_reached",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter1_saferoom_act2chapter1checkpointzone_620_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter1_saferoom_act2chapter1checkpointzone_620_300_0_0",
+      "name": "Act2Chapter1CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 620,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1CheckpointZone",
+          "set_flags": {
+            "act2_ch1_checkpoint": true
+          },
+          "require_flags": [
+            "act2_ch1_hazard_cleared"
+          ],
+          "forbid_flags": [
+            "act2_ch1_checkpoint"
+          ],
+          "once": true,
+          "toast": "Checkpoint reached: Act 2 Chapter 1",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_saferoom_act2ch1checkpointstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter1_HazardHall.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter1_saferoom_returntoact2chapter1hazardhall_60_300_0_0",
+      "name": "ReturnToAct2Chapter1HazardHall",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter2_SwitchRoom.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter1_saferoom_toact2chapter2switchroom_860_300_0_0",
+      "name": "ToAct2Chapter2SwitchRoom",
+      "require_flags": [
+        "act2_chapter1_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 860,
+      "y": 300
+    }
+  ],
+  "name": "Act 2 Chapter 1 - Safe Room",
+  "schema_version": 1,
+  "version": 1
+}

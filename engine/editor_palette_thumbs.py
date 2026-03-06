@@ -10,6 +10,18 @@ from .logging_tools import get_logger
 from .paths import resolve_path
 from .repo_root import get_repo_root
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 _LOG = get_logger("engine.editor_palette.thumbs")
 
 DEFAULT_THUMB_SIZE = 64
@@ -31,6 +43,7 @@ def _normalize_repo_relative(path: Path, *, repo_root: Path) -> str:
     try:
         return path.resolve().relative_to(repo_root.resolve()).as_posix()
     except Exception:
+        _log_swallow("EDPT-003", f"path={path}")
         return path.as_posix()
 
 
@@ -38,6 +51,7 @@ def _build_cache_key(resolved: Path, *, repo_root: Path, thumb_size: int) -> str
     try:
         stat = resolved.stat()
     except Exception:
+        _log_swallow("EDPT-004", f"resolved={resolved}")
         return None
     rel = _normalize_repo_relative(resolved, repo_root=repo_root)
     return f"{rel}|{stat.st_mtime_ns}|{stat.st_size}|{thumb_size}"
@@ -60,6 +74,7 @@ def _compute_thumb_path(
     try:
         resolved = resolve_path(sprite_path)
     except Exception:
+        _log_swallow("EDPT-005", f"sprite_path={sprite_path}")
         return None
     if not resolved.exists() or not resolved.is_file():
         return None
@@ -107,8 +122,9 @@ def _create_thumb_sync(
         return thumb_path
 
     try:
-        from PIL import Image  # type: ignore[import-not-found]
+        from PIL import Image
     except Exception:
+        _log_swallow("EDPT-006", "PIL import failed")
         return None
 
     try:
@@ -126,6 +142,7 @@ def _create_thumb_sync(
         os.replace(tmp_path, thumb_path)
         return thumb_path
     except Exception as exc:  # noqa: BLE001
+        _log_swallow("EDPT-007", f"resolved={resolved.as_posix()} exc={exc}")
         _LOG.warning("[Editor][Palette] Failed to create thumbnail for %s: %s", resolved.as_posix(), exc)
         return None
 
@@ -147,6 +164,7 @@ def tick_thumb_generation(max_per_frame: int = 2) -> int:
             try:
                 resolved = Path(canonical)
             except Exception:
+                _log_swallow("EDPT-008", f"canonical={canonical}")
                 continue
             if not resolved.exists() or not resolved.is_file():
                 continue
@@ -160,6 +178,7 @@ def tick_thumb_generation(max_per_frame: int = 2) -> int:
         try:
             cap = int(str(cap_raw).strip())
         except Exception:
+            _log_swallow("EDPT-009", f"cap_raw={cap_raw}")
             cap = 0
         if cap > 0:
             try:
@@ -174,8 +193,10 @@ def tick_thumb_generation(max_per_frame: int = 2) -> int:
                             try:
                                 p.unlink(missing_ok=True)
                             except Exception:
+                                _log_swallow("EDPT-001", f"unlink p={p}")
                                 pass
             except Exception:
+                _log_swallow("EDPT-002", "thumb cache cap cleanup")
                 pass
 
     return processed

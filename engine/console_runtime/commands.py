@@ -4,6 +4,7 @@ import json
 import os
 from typing import Any, Callable
 
+from engine.logging_tools import get_logger
 from engine.console_runtime.models import ParsedCommand
 from engine.console_runtime.parse import parse_command_line
 from engine.console_runtime import handlers
@@ -17,6 +18,16 @@ from engine.console_runtime import handlers_scene
 
 
 Handler = Callable[[Any, list[str]], bool]
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def _dispatch_table() -> dict[str, Handler]:
@@ -228,7 +239,8 @@ def _dispatch_table() -> dict[str, Handler]:
         if callable(setter):
             try:
                 mode = setter(mode)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: invalid mode setter input must not abort console command
+                _log_swallow("CRCM-001", "shadows_mode setter fallback", once=True)
                 c.log(f"Invalid shadows_mode: {mode}. Allowed: none, hard, direct")
                 return True
         else:
@@ -254,7 +266,8 @@ def _dispatch_table() -> dict[str, Handler]:
                 tilemap_cfg = scene_data.get("tilemap")
                 if isinstance(tilemap_cfg, dict):
                     collision_layer_id = tilemap_cfg.get("collision_layer_id")
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: lighting stats metadata extraction is best-effort
+            _log_swallow("CRCM-002", "lighting stats scene metadata fallback", once=True)
             collision_layer_id = None
         getter = getattr(lighting, "get_lighting_stats", None)
         stats = getter() if callable(getter) else {}
@@ -350,7 +363,8 @@ def _dispatch_table() -> dict[str, Handler]:
                 get_effective_hover_payload,
                 get_scene_inspector_payload,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: authoring snippets are optional in runtime builds
+            _log_swallow("CRCM-003", "hover prefab helper import fallback", once=True)
             return None
 
         payload = get_scene_inspector_payload(window)
@@ -358,7 +372,8 @@ def _dispatch_table() -> dict[str, Handler]:
             return None
         try:
             payload = get_effective_hover_payload(window, payload) or payload
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: hover payload normalization is best-effort
+            _log_swallow("CRCM-004", "hover payload normalization fallback", once=True)
             payload = payload
         hover = payload.get("hover")
         if not isinstance(hover, dict):
@@ -395,7 +410,8 @@ def _dispatch_table() -> dict[str, Handler]:
             manager.load()
             sources = manager.prefab_sources
             source = sources.get(prefab_id) if isinstance(sources, dict) else None
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: prefab source lookup should degrade gracefully
+            _log_swallow("CRCM-005", "prefab source lookup fallback", once=True)
             source = None
         if not isinstance(source, str) or not source.strip():
             source = None
@@ -439,7 +455,8 @@ def _dispatch_table() -> dict[str, Handler]:
             manager.load()
             chains = manager.prefab_source_chain
             raw_chain = chains.get(prefab_id) if isinstance(chains, dict) else None
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: prefab source-chain lookup should degrade gracefully
+            _log_swallow("CRCM-006", "prefab source chain lookup fallback", once=True)
             raw_chain = None
 
         chain: list[str] = []

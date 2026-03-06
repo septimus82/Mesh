@@ -1,0 +1,183 @@
+{
+  "description": "Act 3 Chapter 7 threshold: warning and irreversible crossing with one-way return gating.",
+  "name": "Act 3 Chapter 7 - Threshold",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter7_threshold_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter7_threshold_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch7_threshold_warning",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter7ThresholdWarningZone"
+        }
+      },
+      "id": "act3_chapter7_threshold_warningzone_360_300_0_0",
+      "name": "Act3Chapter7ThresholdWarningZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 360,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter7ThresholdWarningZone",
+          "set_flags": {
+            "act3_ch7_threshold_warned": true
+          },
+          "forbid_flags": [
+            "act3_ch7_threshold_warned"
+          ],
+          "once": true,
+          "toast": "Warning: crossing the threshold is irreversible.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter7_threshold_warningstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch7ThresholdWarningStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch7_cross_threshold",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter7ThresholdCrossZone"
+        }
+      },
+      "id": "act3_chapter7_threshold_crosszone_620_300_0_0",
+      "name": "Act3Chapter7ThresholdCrossZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 620,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter7ThresholdCrossZone",
+          "set_flags": {
+            "act3_ch7_threshold_crossed": true
+          },
+          "forbid_flags": [
+            "act3_ch7_threshold_crossed"
+          ],
+          "once": true,
+          "toast": "Threshold crossed.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter7_threshold_crossstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch7ThresholdCrossStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter7_Exit.json"
+        }
+      },
+      "id": "act3_chapter7_threshold_toexit_1040_300_0_0",
+      "name": "ToAct3Chapter7Exit",
+      "require_flags": [
+        "act3_ch7_threshold_crossed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter7_Entry.json"
+        }
+      },
+      "id": "act3_chapter7_threshold_returntoentry_60_300_0_0",
+      "name": "ReturnToAct3Chapter7Entry",
+      "forbid_flags": [
+        "act3_ch7_threshold_crossed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter6_Exit.json"
+        }
+      },
+      "id": "act3_chapter7_threshold_returntoact3chapter6exit_60_220_0_0",
+      "name": "ReturnToAct3Chapter6Exit",
+      "forbid_flags": [
+        "act3_ch7_threshold_crossed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 220
+    }
+  ]
+}

@@ -13,6 +13,17 @@ from mesh_cli.scene.common import (
     _format_placeholder_id_number,
     _dict_diffs,
 )
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 
 def _default_spawn_entity_id(scene_path: str, spawn_id: str, x: float, y: float) -> str:
@@ -55,7 +66,8 @@ def _handle_scene_add_placeholder(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("SENT-001", "mesh_cli/scene/entities.py blanket swallow", once=True)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 
@@ -141,7 +153,8 @@ def _handle_scene_add_entity(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("SENT-002", "mesh_cli/scene/entities.py blanket swallow", once=True)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 
@@ -153,7 +166,8 @@ def _handle_scene_add_entity(args: argparse.Namespace) -> int:
     prefabs_path = resolve_path("assets/prefabs.json")
     try:
         prefabs_payload = json.loads(prefabs_path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("SENT-003", "mesh_cli/scene/entities.py blanket swallow", once=True)
         print(f"[Mesh][CLI] Error: failed to read prefabs: {prefabs_path}: {exc}")
         return 1
     if not isinstance(prefabs_payload, list) or not any(
@@ -214,7 +228,8 @@ def _handle_scene_add_entity(args: argparse.Namespace) -> int:
                 return 2
             try:
                 parsed = json.loads(raw_json)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+                _log_swallow("SENT-004", "mesh_cli/scene/entities.py blanket swallow", once=True)
                 print(f"[Mesh][CLI] Error: invalid JSON for --behaviour-json '{name}': {exc}")
                 return 2
             if not isinstance(parsed, dict):
@@ -360,7 +375,8 @@ def _handle_scene_add_triggerzone_objective(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("SENT-005", "mesh_cli/scene/entities.py blanket swallow", once=True)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 
@@ -533,7 +549,8 @@ def _handle_scene_add_dialogue_choice_flag(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        _log_swallow("SENT-006", "mesh_cli/scene/entities.py blanket swallow", once=True)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 

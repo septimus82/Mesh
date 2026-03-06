@@ -22,6 +22,18 @@ from engine.editor.prefab_palette_panel import (
 from engine.editor.state import ENTITY_PANEL_FIELDS, ENTITY_PANEL_FOCUS_INSPECTOR, ENTITY_PANEL_FOCUS_OUTLINER
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 class EditorEntityPanelsController:
     """Encapsulates entity panels (outliner/inspector) behavior."""
 
@@ -276,6 +288,7 @@ class EditorEntityPanelsController:
                     if idx < len(all_sprites):
                         return all_sprites[idx]
                 except Exception:  # noqa: BLE001
+                    _log_swallow("EDIT-001", "engine/editor/editor_entity_panels_controller.py pass-only blanket swallow")
                     pass
             scene = self.entity_panels_scene_data()
             entities = scene.get("entities")

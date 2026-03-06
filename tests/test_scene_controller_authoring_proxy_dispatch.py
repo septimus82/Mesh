@@ -75,6 +75,20 @@ _PROXY_PAIRS: list[tuple[str, str]] = [
     ("debug_preview_macro_dialogue_choice_flag", "debug_preview_macro_dialogue_choice_flag"),
 ]
 
+_SELECTION_PROXY_METHODS: tuple[str, ...] = (
+    "debug_align_selection",
+    "debug_distribute_selection",
+    "debug_snap_to_grid",
+    "debug_nudge_selection",
+    "debug_rotate_selection",
+    "debug_mirror_selection",
+    "debug_group_selection",
+    "debug_ungroup_selection",
+    "debug_duplicate_to_grid",
+    "debug_duplicate_along_path",
+    "debug_scatter_selection",
+)
+
 
 # ---------------------------------------------------------------------------
 # Minimal stub so SceneController.__init__ doesn't blow up.
@@ -248,3 +262,12 @@ def test_proxy_pairs_exhaustive() -> None:
     listed = {fn_name for _, fn_name in _PROXY_PAIRS}
     missing = found - listed
     assert not missing, f"_PROXY_PAIRS missing fn_names: {sorted(missing)}"
+
+
+def test_selection_proxy_symbols_exist_and_callable() -> None:
+    import engine.scene_controller as scene_controller_mod
+
+    cls = scene_controller_mod.SceneController
+    for name in _SELECTION_PROXY_METHODS:
+        method = getattr(cls, name, None)
+        assert callable(method), f"SceneController.{name} missing or not callable"

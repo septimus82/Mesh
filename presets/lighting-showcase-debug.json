@@ -1,0 +1,18 @@
+{
+  "description": "Lighting showcase with debug geometry overlay",
+  "env": {
+    "MESH_LIGHTING_DEBUG_GEOMETRY": "1",
+    "MESH_SHADOWCAST_DEBUG": "1",
+    "MESH_SHADOWCAST_MASK": "1"
+  },
+  "notes": "Shadow mask + debug rays + occluder outlines",
+  "steps": [
+    {
+      "args": [
+        "--scene",
+        "scenes/lighting_showcase.json"
+      ],
+      "cmd": "demo"
+    }
+  ]
+}

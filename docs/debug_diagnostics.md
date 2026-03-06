@@ -131,6 +131,8 @@ Only run it after intentionally adding tests without a tier marker.
 1. Press **F3** in-game, or set `"debug_on_start": true` in `config.json`.
 2. The debug overlay appears with engine state, tool mode, and diagnostics
    panels.
+3. Optional dev-only asset watcher: set `MESH_HOT_RELOAD=1` to enable
+   debounced asset cache reloads on file changes (`assets/` + `packs/`).
 
 ### Diagnostics sections
 

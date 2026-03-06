@@ -82,7 +82,7 @@ class SceneTransition(Behaviour):
         "once": ParamDef(bool, default=False, description="Prevent the transition from firing more than once"),
     }
 
-    def __init__(self, entity: Sprite, window, **config) -> None:  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         merged = self._merge_entity_data(entity, config)
         super().__init__(entity, window, **merged)
         self.entity_name = getattr(entity, "mesh_name", "<unnamed>")
@@ -153,7 +153,7 @@ class SceneTransition(Behaviour):
         if hit_list:
             self._trigger_transition(reason="collision", actor=hit_list[0])
 
-    def on_interact(self, window, actor: Sprite) -> None:  # noqa: D401 type: ignore[override]
+    def on_interact(self, window: Any, actor: Any) -> None:  # noqa: D401
         if not self.allow_interact:
             return
         self._trigger_transition(reason="interact", actor=actor)

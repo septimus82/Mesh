@@ -1,0 +1,24 @@
+{
+  "description": "Compare encounter report against baseline",
+  "steps": [
+    {
+      "args": [
+        "encounter-ci"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "diff",
+        ".mesh/reports/encounter_report_baseline.json",
+        ".mesh/reports/encounter_report.json",
+        "--max-elite-delta",
+        "0",
+        "--max-spawn-delta",
+        "2",
+        "--fail-on-overrun"
+      ],
+      "cmd": "encounter-report"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "scenes": [
+    {
+      "id": "act2_ch1_hazard_hall",
+      "path": "packs/core_regions/scenes/Act2_Chapter1_HazardHall.json"
+    },
+    {
+      "id": "act3_ch5_phase_field",
+      "path": "packs/core_regions/scenes/Act3_Chapter5_PhaseField.json"
+    },
+    {
+      "id": "act4_ch1_entry",
+      "path": "packs/core_regions/scenes/Act4_Chapter1_Entry.json"
+    },
+    {
+      "id": "upper_hall_heaviest_practical",
+      "path": "scenes/upper_hall.json"
+    }
+  ]
+}

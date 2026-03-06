@@ -30,6 +30,8 @@ def dispatch_global_action(
         return _handle_interact_action(controller, snapshot, key=key, modifiers=modifiers)
     if action_id == "capture.perf.toggle":
         return _handle_perf_toggle(window)
+    if action_id == "capture.profiler.toggle":
+        return _handle_profiler_toggle(window)
     if action_id == "capture.debug.toggle":
         return _handle_debug_toggle(window, controller)
     if action_id == "capture.debug.undo":
@@ -66,6 +68,12 @@ def dispatch_global_action(
         return _handle_toggle_selection_lock(window)
     if action_id == "capture.settings.toggle":
         return _handle_settings_toggle(window)
+    if action_id == "capture.action.save_game":
+        return _handle_dispatch_action(window, "save_game")
+    if action_id == "capture.action.quick_load":
+        return _handle_dispatch_action(window, "quick_load")
+    if action_id == "capture.action.quickload_last_save":
+        return _handle_dispatch_action(window, "quickload_last_save")
     return False
 
 
@@ -134,9 +142,20 @@ def _handle_interact_action(
 
 def _handle_perf_toggle(window: Any) -> bool:
     perf = getattr(window, "perf_overlay", None)
-    if perf:
-        perf.toggle()
-    return True
+    toggle = getattr(perf, "toggle", None) if perf is not None else None
+    if callable(toggle):
+        toggle()
+        return True
+    return False
+
+
+def _handle_profiler_toggle(window: Any) -> bool:
+    profiler = getattr(window, "profiler_overlay", None)
+    toggle = getattr(profiler, "toggle", None) if profiler is not None else None
+    if callable(toggle):
+        toggle()
+        return True
+    return False
 
 
 def _handle_debug_toggle(window: Any, controller: Any) -> bool:
@@ -149,14 +168,16 @@ def _handle_debug_undo(window: Any) -> bool:
     undoer = getattr(window, "undo", None)
     if callable(undoer):
         undoer()
-    return True
+        return True
+    return False
 
 
 def _handle_debug_redo(window: Any) -> bool:
     redoer = getattr(window, "redo", None)
     if callable(redoer):
         redoer()
-    return True
+        return True
+    return False
 
 
 def _handle_palette_toggle(window: Any) -> bool:
@@ -208,8 +229,12 @@ def _handle_scene_save_as(window: Any) -> bool:
 
 
 def _handle_editor_toggle(window: Any) -> bool:
-    window.editor_controller.toggle()
-    return True
+    editor = getattr(window, "editor_controller", None)
+    toggle = getattr(editor, "toggle", None) if editor is not None else None
+    if callable(toggle):
+        toggle()
+        return True
+    return False
 
 
 def _handle_savegame_save(window: Any) -> bool:
@@ -284,7 +309,8 @@ def _handle_encounter_debug_toggle(window: Any) -> bool:
     toggle = getattr(overlay, "toggle", None)
     if callable(toggle):
         toggle()
-    return True
+        return True
+    return False
 
 
 def _handle_scene_inspector_toggle(window: Any) -> bool:
@@ -292,7 +318,8 @@ def _handle_scene_inspector_toggle(window: Any) -> bool:
     toggle = getattr(overlay, "toggle", None)
     if callable(toggle):
         toggle()
-    return True
+        return True
+    return False
 
 
 def _handle_copy_coords_or_pause(window: Any) -> bool:
@@ -359,6 +386,14 @@ def _handle_settings_toggle(window: Any) -> bool:
         toggle()
         return True
     return False
+
+
+def _handle_dispatch_action(window: Any, action_name: str) -> bool:
+    try:
+        from engine.actions import dispatch_action as _dispatch_action  # noqa: PLC0415
+    except Exception:
+        return False
+    return bool(_dispatch_action(window, str(action_name)))
 
 
 __all__ = ["dispatch_global_action", "is_interact_key"]

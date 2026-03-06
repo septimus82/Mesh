@@ -20,20 +20,6 @@ import engine.optional_arcade as optional_arcade
 
 from ..text_draw import draw_text_cached, TextCache
 from .common import UIElement, draw_panel_bg
-from ..editor.editor_shell_layout import (
-    compute_editor_shell_layout,
-    EditorShellLayout,
-    TAB_HEADER_HEIGHT,
-)
-from ..editor.editor_dock_query import get_raw_dock_widths
-from ..editor.inspector_components_model import (
-    ComponentSection,
-    ComponentRow,
-    InspectorCursor,
-    build_inspector_sections,
-    format_field_value,
-)
-
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
@@ -65,7 +51,7 @@ class ComponentInspectorOverlay(UIElement):
     def __init__(self, window: "GameWindow") -> None:
         super().__init__(window)
         self._text_cache = TextCache(max_size=256)
-        self._cached_layout: EditorShellLayout | None = None
+        self._cached_layout: Any = None
         self._cached_size: tuple[int, int] = (0, 0)
         self._cached_dock_widths: tuple[int, int] = (320, 320)
 
@@ -79,10 +65,14 @@ class ComponentInspectorOverlay(UIElement):
         controller = getattr(self.window, "editor_controller", None)
         if controller is None:
             return (320, 320)
+        from ..editor.editor_dock_query import get_raw_dock_widths
+
         return get_raw_dock_widths(controller)
 
-    def _get_layout(self) -> EditorShellLayout:
+    def _get_layout(self) -> Any:
         """Get or compute the current layout."""
+        from ..editor.editor_shell_layout import compute_editor_shell_layout
+
         size = (self.window.width, self.window.height)
         dock_widths = self._get_dock_widths()
         if (
@@ -120,6 +110,11 @@ class ComponentInspectorOverlay(UIElement):
             controller, "_inspector_sections_expanded", {}
         )
         cursor_tuple = getattr(controller, "_inspector_cursor", ("transform", 0))
+        from ..editor.inspector_components_model import (
+            InspectorCursor,
+            build_inspector_sections,
+        )
+
         cursor = InspectorCursor(section_id=cursor_tuple[0], row_index=cursor_tuple[1])
         text_edit_active: bool = getattr(controller, "_inspector_text_edit_active", False)
         text_buffer: str = getattr(controller, "_inspector_text_buffer", "")
@@ -163,6 +158,8 @@ class ComponentInspectorOverlay(UIElement):
 
     def _draw_no_selection(self) -> None:
         """Draw placeholder when no entity is selected."""
+        from ..editor.editor_shell_layout import TAB_HEADER_HEIGHT
+
         layout = self._get_layout()
         dock = layout.right_dock
         content_top = dock.top - TAB_HEADER_HEIGHT - PADDING
@@ -178,13 +175,15 @@ class ComponentInspectorOverlay(UIElement):
 
     def _draw_sections(
         self,
-        layout: EditorShellLayout,
-        sections: List[ComponentSection],
-        cursor: InspectorCursor,
+        layout: Any,
+        sections: List[Any],
+        cursor: Any,
         text_edit_active: bool,
         text_buffer: str,
     ) -> None:
         """Draw all inspector sections."""
+        from ..editor.editor_shell_layout import TAB_HEADER_HEIGHT
+
         dock = layout.right_dock
         content_top = dock.top - TAB_HEADER_HEIGHT - PADDING
         content_left = dock.left + PADDING
@@ -209,11 +208,11 @@ class ComponentInspectorOverlay(UIElement):
 
     def _draw_section(
         self,
-        section: ComponentSection,
+        section: Any,
         left: float,
         top: float,
         width: float,
-        cursor: InspectorCursor,
+        cursor: Any,
         text_edit_active: bool,
         text_buffer: str,
     ) -> float:
@@ -243,7 +242,7 @@ class ComponentInspectorOverlay(UIElement):
 
     def _draw_header_row(
         self,
-        section: ComponentSection,
+        section: Any,
         left: float,
         top: float,
         width: float,
@@ -289,7 +288,7 @@ class ComponentInspectorOverlay(UIElement):
 
     def _draw_field_row(
         self,
-        row: ComponentRow,
+        row: Any,
         left: float,
         top: float,
         width: float,
@@ -298,6 +297,8 @@ class ComponentInspectorOverlay(UIElement):
         text_buffer: str,
     ) -> float:
         """Draw a field row. Returns Y position after drawing."""
+        from ..editor.inspector_components_model import format_field_value
+
         row_bottom = top - LINE_HEIGHT
         field_left = left + FIELD_INDENT
         field_width = width - FIELD_INDENT

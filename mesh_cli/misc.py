@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -11,6 +13,18 @@ from engine.persistence_io import write_json_atomic, dumps_json_deterministic
 from engine.logging_tools import suppress_stdout
 from engine.tooling import wizard_command, state_dump
 from mesh_cli import scene as scene_commands
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 def handle(args: argparse.Namespace) -> int:
     if args.command == "play":
@@ -28,12 +42,101 @@ def handle(args: argparse.Namespace) -> int:
         return _handle_docs(args)
     if args.command == "dump-state":
         return _handle_dump_state(args)
+    if args.command == "build-web":
+        return _handle_build_web(args)
+    if args.command == "web-smoke":
+        return _handle_web_smoke(args)
+    if args.command == "package-player":
+        return _handle_package_player(args)
     return 1
 
 def register(subparsers: argparse._SubParsersAction) -> None:
     # Play
     play_parser = subparsers.add_parser("play", help="Launch the game")
     play_parser.add_argument("scene_path", nargs="?", help="Optional start scene")
+
+    # Runtime-only play smoke
+    play_runtime_parser = subparsers.add_parser(
+        "play-runtime",
+        help="Launch runtime-only scene bootstrap (no editor wiring)",
+    )
+    play_runtime_parser.add_argument("scene_path", nargs="?", help="Optional start scene")
+    play_runtime_parser.add_argument(
+        "--headless-smoke",
+        action="store_true",
+        help="Run deterministic runtime smoke mode and exit",
+    )
+    play_runtime_parser.add_argument("--smoke-scene", help="Optional scene path override for --headless-smoke")
+    play_runtime_parser.add_argument("--smoke-ticks", type=int, default=3, help="Tick count for smoke mode")
+    play_runtime_parser.add_argument("--smoke-artifact", help="Optional JSON artifact path for smoke mode")
+    play_runtime_parser.add_argument(
+        "--diagnostics-artifact",
+        help="Optional JSON artifact path for deterministic diagnostics snapshot on exit",
+    )
+    play_runtime_parser.add_argument(
+        "--print-diagnostics-on-exit",
+        action="store_true",
+        help="Print a deterministic diagnostics summary at shutdown",
+    )
+    play_runtime_parser.set_defaults(func=_handle_play_runtime)
+
+    build_web_parser = subparsers.add_parser("build-web", help="Build web target via pygbag")
+    build_web_parser.add_argument("--entrypoint", default="web_main.py", help="Web entry point script")
+    build_web_parser.add_argument(
+        "--out",
+        help="Optional output directory to copy web build artifacts into (e.g., artifacts/web_build)",
+    )
+    build_web_parser.add_argument(
+        "--extra-arg",
+        action="append",
+        default=[],
+        help="Extra argument passed through to tooling.build_web (repeatable)",
+    )
+    build_web_parser.add_argument(
+        "--disable-sound-format-error",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Pass pygbag --disable-sound-format-error (default: enabled)",
+    )
+    build_web_parser.set_defaults(func=_handle_build_web)
+
+    web_smoke_parser = subparsers.add_parser(
+        "web-smoke",
+        help="Validate built web output structure and emit deterministic smoke artifact",
+    )
+    web_smoke_parser.add_argument(
+        "--build-dir",
+        help="Optional web build directory override (defaults to pygbag.toml output or build/web)",
+    )
+    web_smoke_parser.add_argument(
+        "--artifact",
+        help="Optional JSON artifact path (e.g., artifacts/web_smoke.json)",
+    )
+    web_smoke_parser.set_defaults(func=_handle_web_smoke)
+
+    package_player_parser = subparsers.add_parser(
+        "package-player",
+        help="Build a deterministic player-only runtime package (no editor modules)",
+    )
+    package_player_parser.add_argument(
+        "--out",
+        required=True,
+        help="Output package directory (e.g., artifacts/player_pkg)",
+    )
+    package_player_parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Run runtime smoke against the packaged bundle",
+    )
+    package_player_parser.add_argument(
+        "--manifest",
+        help="Optional manifest path override (default: <out>/manifest.json)",
+    )
+    package_player_parser.add_argument(
+        "--diagnostics-artifact",
+        help="Optional diagnostics artifact path for packaged runtime smoke (requires --smoke)",
+    )
+    package_player_parser.set_defaults(func=_handle_package_player)
 
     # Demo
     demo_parser = subparsers.add_parser("demo", help="Demo helpers")
@@ -111,6 +214,81 @@ def _handle_play(args: argparse.Namespace) -> int:
 
     window.run()
     return 0
+
+
+def _handle_play_runtime(args: argparse.Namespace) -> int:
+    """Run the runtime-only bootstrap path without importing editor modules."""
+    from engine.runtime_only import run_runtime_scene
+
+    return int(
+        run_runtime_scene(
+            scene_path=getattr(args, "scene_path", None),
+            headless_smoke=bool(getattr(args, "headless_smoke", False)),
+            smoke_scene=getattr(args, "smoke_scene", None),
+            smoke_ticks=int(getattr(args, "smoke_ticks", 3)),
+            smoke_artifact=getattr(args, "smoke_artifact", None),
+            diagnostics_artifact=getattr(args, "diagnostics_artifact", None),
+            print_diagnostics_on_exit=bool(getattr(args, "print_diagnostics_on_exit", False)),
+        )
+    )
+
+
+def _handle_build_web(args: argparse.Namespace) -> int:
+    entrypoint = str(getattr(args, "entrypoint", "web_main.py") or "web_main.py").strip() or "web_main.py"
+    passthrough = [str(item) for item in (getattr(args, "extra_arg", None) or []) if str(item).strip()]
+    disable_sound_format_error = bool(getattr(args, "disable_sound_format_error", True))
+    cmd = [sys.executable, "-m", "tooling.build_web", entrypoint]
+    cmd.append("--disable-sound-format-error" if disable_sound_format_error else "--no-disable-sound-format-error")
+    for arg in passthrough:
+        cmd.extend(["--extra-arg", arg])
+    result = subprocess.run(cmd)
+    if int(result.returncode) != 0:
+        return int(result.returncode)
+
+    out_dir = str(getattr(args, "out", "") or "").strip()
+    if not out_dir:
+        return 0
+
+    from .web_smoke import resolve_web_build_dir
+
+    source_dir = resolve_web_build_dir(Path.cwd())
+    if not source_dir.exists():
+        print(f"[Mesh][Web] Error: expected build output not found at {source_dir.as_posix()}")
+        return 1
+
+    target_dir = Path(out_dir)
+    if not target_dir.is_absolute():
+        target_dir = Path.cwd() / target_dir
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copytree(source_dir, target_dir)
+    return 0
+
+
+def _handle_web_smoke(args: argparse.Namespace) -> int:
+    from .web_smoke import run_web_smoke
+
+    return int(
+        run_web_smoke(
+            build_dir=getattr(args, "build_dir", None),
+            artifact_path=getattr(args, "artifact", None),
+        )
+    )
+
+
+def _handle_package_player(args: argparse.Namespace) -> int:
+    from .player_package import package_player_bundle
+
+    return int(
+        package_player_bundle(
+            out_dir=str(getattr(args, "out", "") or "").strip(),
+            manifest_path=getattr(args, "manifest", None),
+            smoke=bool(getattr(args, "smoke", False)),
+            smoke_diagnostics_artifact=getattr(args, "diagnostics_artifact", None),
+        )
+    )
+
 
 def _handle_demo(args: argparse.Namespace) -> int:
     """Launch the Mesh Showcase demo."""
@@ -289,4 +467,5 @@ def _handle_dump_state(args: argparse.Namespace) -> int:
         try:
             window.close()
         except Exception:
+            _log_swallow("MISC-001", "mesh_cli/misc.py pass-only blanket swallow")
             pass

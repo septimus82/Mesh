@@ -14,6 +14,18 @@ from engine.editor.editor_focus_model import (
     is_text_input_active_for_controller,
 )
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController as EditorController
 
@@ -64,6 +76,7 @@ def handle_editor_action_shortcut(controller: "EditorController", key: int, modi
         try:
             window.editor_controller = controller
         except Exception:
+            _log_swallow("EDIT-001", "engine/editor_runtime/editor_input_shortcut_handlers.py pass-only blanket swallow")
             pass
 
     actions = get_editor_actions(controller, window)

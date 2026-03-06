@@ -1,0 +1,18 @@
+{
+  "description": "Act 1 medium demo: prologue \u2192 chapter 1 \u2192 chapter 2",
+  "notes": "Compatibility preset; act1_full_demo is the canonical chain.",
+  "steps": [
+    {
+      "args": [
+        "act1_demo"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "act1_chapter2"
+      ],
+      "cmd": "run-preset"
+    }
+  ]
+}

@@ -6,16 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from ..text_draw import draw_text_cached, TextCache
 from .common import UIElement, _draw_rectangle_filled, _draw_lrtb_rectangle_outline
-from ..editor.editor_shell_layout import compute_editor_shell_layout
-from ..editor.editor_dock_query import get_effective_dock_widths
-from ..editor.panel_search_model import format_search_bar_text
-from ..editor.scene_lint_model import (
-    PROBLEMS_LINE_HEIGHT,
-    PROBLEMS_PADDING,
-    compute_problems_panel_layout,
-    compute_problems_window,
-    format_issue_risk_tag,
-)
+from .widgets import Rect, ScrollList
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -35,6 +26,14 @@ class ProblemsPanelOverlay(UIElement):
         self._text_cache = TextCache(max_size=256)
 
     def draw(self) -> None:
+        from ..editor.editor_dock_query import get_effective_dock_widths
+        from ..editor.editor_shell_layout import compute_editor_shell_layout
+        from ..editor.panel_search_model import format_search_bar_text
+        from ..editor.scene_lint_model import (
+            PROBLEMS_LINE_HEIGHT,
+            compute_problems_panel_layout,
+        )
+
         controller = getattr(self.window, "editor_controller", None)
         if controller is None or not getattr(controller, "active", False):
             return
@@ -64,9 +63,14 @@ class ProblemsPanelOverlay(UIElement):
         start_idx = data.get("start_index", 0)
         total_count = data.get("total_count", 0)
         selected_index = data.get("selected_index", 0)
-        scroll_y = data.get("scroll_y", 0)
+        _scroll_y = data.get("scroll_y", 0)
         query = data.get("query", "")
         preview_open = data.get("preview_open", False)
+        severity_counts = data.get("severity_counts", {}) if isinstance(data.get("severity_counts"), dict) else {}
+        error_count = int(severity_counts.get("error", 0) or 0)
+        warning_count = int(severity_counts.get("warning", 0) or 0)
+        info_count = int(severity_counts.get("info", 0) or 0)
+        has_new_errors = bool(data.get("has_new_errors", False))
 
         search = getattr(controller, "search", None)
         search_focused = bool(search is not None and search.is_panel_search_focused("problems"))
@@ -95,6 +99,19 @@ class ProblemsPanelOverlay(UIElement):
             panel.header_rect.center_y,
             color=PROBLEMS_HEADER_COLOR,
             font_size=11,
+            anchor_y="center",
+            cache=self._text_cache,
+        )
+        counts_text = f"E:{error_count} W:{warning_count} I:{info_count}"
+        if has_new_errors and error_count > 0:
+            counts_text = f"{counts_text} *new*"
+        draw_text_cached(
+            counts_text,
+            panel.header_rect.right - 4,
+            panel.header_rect.center_y,
+            color=PROBLEMS_DIM_COLOR,
+            font_size=10,
+            anchor_x="right",
             anchor_y="center",
             cache=self._text_cache,
         )
@@ -140,32 +157,33 @@ class ProblemsPanelOverlay(UIElement):
                 cache=self._text_cache,
             )
         else:
+            scroll_list = _build_problems_rows_scrolllist(
+                rows=rows,
+                panel_list_rect=Rect(
+                    x=float(panel.list_rect.left),
+                    y=float(panel.list_rect.bottom),
+                    width=float(panel.list_rect.right - panel.list_rect.left),
+                    height=float(panel.list_rect.top - panel.list_rect.bottom),
+                ),
+                row_height=PROBLEMS_LINE_HEIGHT,
+            )
             left_pad = 6
             right_pad = 6
             right_gutter = 120
             approx_char_w = max(1.0, 11 * 0.6)
-            for i, issue in enumerate(rows):
-                idx = start_idx + i
-                
-                y_pos = panel.list_rect.top - (idx * PROBLEMS_LINE_HEIGHT) + scroll_y
-                row_top = y_pos
-                row_bottom = y_pos - PROBLEMS_LINE_HEIGHT
-                
-                if row_bottom > panel.list_rect.top:
-                    continue
-                if row_top < panel.list_rect.bottom:
-                    continue
+            for row_index, label, row_rect, _is_selected in scroll_list.visible_rows:
+                issue = rows[row_index]
+                idx = start_idx + int(row_index)
 
-                if idx == selected_index:
+                if idx == int(selected_index):
                     _draw_rectangle_filled(
                         panel.list_rect.left,
                         panel.list_rect.right,
-                        row_bottom,
-                        row_top,
+                        row_rect.bottom,
+                        row_rect.top,
                         PROBLEMS_SELECTED_BG,
                     )
 
-                label = format_problem_row_label(issue)
                 max_label_w = max(0.0, (panel.list_rect.right - right_gutter) - (panel.list_rect.left + left_pad))
                 max_label_chars = int(max_label_w / approx_char_w) if max_label_w > 0 else 0
                 if max_label_chars > 0 and len(label) > max_label_chars:
@@ -176,7 +194,7 @@ class ProblemsPanelOverlay(UIElement):
                 draw_text_cached(
                     label,
                     panel.list_rect.left + left_pad,
-                    row_bottom + 2,
+                    row_rect.bottom + 2,
                     color=PROBLEMS_TEXT_COLOR if issue.fixable else PROBLEMS_DIM_COLOR,
                     font_size=11,
                     cache=self._text_cache,
@@ -184,14 +202,16 @@ class ProblemsPanelOverlay(UIElement):
                 # Right-side metadata (severity / location)
                 severity = str(getattr(issue, "severity", "") or "")
                 entity_id = str(getattr(issue, "entity_id", "") or "")
+                if not entity_id:
+                    entity_id = str(getattr(issue, "scene_id", "") or "")
                 meta = severity
                 if entity_id:
-                    meta = f"{severity} · {entity_id}" if severity else entity_id
+                    meta = f"{severity} | {entity_id}" if severity else entity_id
                 if meta:
                     draw_text_cached(
                         meta,
                         panel.list_rect.right - right_pad,
-                        row_bottom + 2,
+                        row_rect.bottom + 2,
                         color=PROBLEMS_DIM_COLOR,
                         font_size=10,
                         anchor_x="right",
@@ -286,10 +306,34 @@ def _format_fix_desc(issue: Any) -> str:
 
 
 def format_problem_row_label(issue: Any) -> str:
-    tag = format_issue_risk_tag(issue)
-    kind = getattr(issue, "kind", "")
+    from ..editor.scene_lint_model import format_issue_risk_tag
+
+    diag_code = str(getattr(issue, "meta", {}).get("diagnostic_code", "") or "")
+    severity = str(getattr(issue, "severity", "") or "").strip().upper()
+    if diag_code:
+        tag = f"[{severity or 'INFO'}]"
+        kind = diag_code
+    else:
+        tag = format_issue_risk_tag(issue)
+        kind = getattr(issue, "kind", "")
     message = getattr(issue, "message", "")
     return f"{tag} {kind}: {message}"
+
+
+def _build_problems_rows_scrolllist(
+    rows: list[Any],
+    panel_list_rect: Rect,
+    row_height: float,
+) -> ScrollList:
+    labels = [format_problem_row_label(issue) for issue in rows]
+    scroll = ScrollList(
+        items=labels,
+        row_height=max(1, int(row_height)),
+        selected_index=0,
+        scroll_offset=0.0,
+    )
+    scroll.layout(panel_list_rect)
+    return scroll
 
 
 def build_problems_preview_lines(issue: Any, preview_open: bool) -> list[str]:
@@ -303,6 +347,29 @@ def build_problems_preview_lines(issue: Any, preview_open: bool) -> list[str]:
             "Enter Preview | Ctrl+Enter Apply | Shift+Enter Apply+Next | Esc Back",
             "A Preview | X Apply | B Back",
         ]
+    if _is_structured_diagnostic_issue(issue):
+        meta = getattr(issue, "meta", {}) if isinstance(getattr(issue, "meta", {}), dict) else {}
+        source = str(meta.get("diagnostic_source", "") or "")
+        location = str(meta.get("diagnostic_location", "") or "")
+        hint = str(meta.get("diagnostic_hint", "") or "")
+        code = str(meta.get("diagnostic_code", "") or getattr(issue, "kind", ""))
+        details = [
+            f"Code: {code}",
+            f"Message: {getattr(issue, 'message', '')}",
+        ]
+        if source:
+            details.append(f"Source: {source}")
+        if location:
+            details.append(f"Location: {location}")
+        if hint:
+            details.append(f"Hint: {hint}")
+        details.extend(
+            [
+                "Fix: None (read-only diagnostic)",
+                "Keys: Enter/Ctrl+Enter jump when location is supported | Esc Back",
+            ]
+        )
+        return details
     fix_desc = _format_fix_desc(issue)
     risk_line = _format_risk_line(issue)
     manual_suffix = " (manual)" if _is_risky(issue) else ""
@@ -325,3 +392,10 @@ def _format_risk_line(issue: Any) -> str:
 def _is_risky(issue: Any) -> bool:
     risk = str(getattr(issue, "risk", "safe") or "safe").strip().lower()
     return risk == "risky"
+
+
+def _is_structured_diagnostic_issue(issue: Any) -> bool:
+    meta = getattr(issue, "meta", None)
+    if not isinstance(meta, dict):
+        return False
+    return bool(str(meta.get("diagnostic_code", "") or "").strip())

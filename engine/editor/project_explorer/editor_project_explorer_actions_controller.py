@@ -8,6 +8,18 @@ from engine.editor.editor_dock_query import get_dock_snapshot, get_effective_doc
 from engine.i18n import tr
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 class EditorProjectExplorerActionsController:
     """Coordinates Project Explorer actions and input handling.
 
@@ -135,11 +147,12 @@ class EditorProjectExplorerActionsController:
         )
         from .project_explorer_model import (  # noqa: PLC0415
             PROJECT_LINE_HEIGHT,
-            compute_project_explorer_hit_index,
             compute_project_explorer_layout,
-            compute_project_window,
-            display_index_from_selectable_index,
-            selectable_index_from_display_index,
+        )
+        from engine.ui.widgets import Rect  # noqa: PLC0415
+        from engine.ui_overlays.project_explorer_overlay import (  # noqa: PLC0415
+            _build_project_explorer_scrolllist,
+            _selected_project_row_from_scrolllist,
         )
 
         window_w = int(getattr(self._editor.window, "width", 1280) or 1280)
@@ -162,44 +175,128 @@ class EditorProjectExplorerActionsController:
         if button not in (optional_arcade.arcade.MOUSE_BUTTON_LEFT, optional_arcade.arcade.MOUSE_BUTTON_RIGHT):
             return True
 
-        display_rows = self.get_display_rows()
         selectable_rows = self.get_selectable_rows()
-        if not display_rows:
+        if not selectable_rows:
             return True
 
-        visible_capacity = int(panel.list_rect.height / PROJECT_LINE_HEIGHT)
-
-        display_selected = display_index_from_selectable_index(
-            display_rows,
-            self._editor.project_explorer.selected_index,
+        payload = self._editor.project_explorer.get_provider_payload(
+            viewport_height=int(panel.list_rect.height),
+            row_height=PROJECT_LINE_HEIGHT,
+            overscan=5,
         )
-        display_index = display_selected if display_selected is not None else 0
-        start_idx, visible = compute_project_window(
-            display_index,
-            len(display_rows),
-            visible_capacity,
+        rows = list(payload.get("rows", []) or [])
+        if not rows:
+            return True
+        start_idx = int(payload.get("start_index", 0) or 0)
+        scroll_y = float(payload.get("scroll_y", 0.0) or 0.0)
+        selected_row_id = payload.get("selected_row_id")
+        from .project_explorer_model import (  # noqa: PLC0415
+            format_project_action_label,
+            format_project_recent_label,
+            format_project_row_label,
         )
-        hit_index = compute_project_explorer_hit_index(
-            y,
-            panel.list_rect,
-            start_idx,
-            visible,
+        scroll_list = _build_project_explorer_scrolllist(
+            rows=rows,
+            panel_list_rect=Rect(
+                x=float(panel.list_rect.left),
+                y=float(panel.list_rect.bottom),
+                width=float(panel.list_rect.right - panel.list_rect.left),
+                height=float(panel.list_rect.top - panel.list_rect.bottom),
+            ),
+            row_height=PROJECT_LINE_HEIGHT,
+            start_index=start_idx,
+            scroll_y=scroll_y,
+            selected_row_id=selected_row_id,
+            format_project_action_label=format_project_action_label,
+            format_project_recent_label=format_project_recent_label,
+            format_project_row_label=format_project_row_label,
         )
-        if hit_index is not None:
-            selectable_index = selectable_index_from_display_index(display_rows, hit_index)
-            if selectable_index is None:
-                return True
-            if selectable_index < len(selectable_rows):
-                if button == optional_arcade.arcade.MOUSE_BUTTON_LEFT:
-                    ctrl = bool(modifiers & optional_arcade.arcade.key.MOD_CTRL)
-                    shift = bool(modifiers & optional_arcade.arcade.key.MOD_SHIFT)
-                    self._editor.project_explorer.handle_click(selectable_index, ctrl=ctrl, shift=shift)
-                elif button == optional_arcade.arcade.MOUSE_BUTTON_RIGHT:
-                    # Select immediately on right click (simplification)
-                    self._editor.project_explorer.handle_click(selectable_index, ctrl=False, shift=False)
-                    self.open_context_menu(int(x), int(y))
+        if not scroll_list.on_mouse_press(float(x), float(y)):
             return True
 
+        selected_row = _selected_project_row_from_scrolllist(rows, scroll_list)
+        if selected_row is None:
+            return True
+        try:
+            selectable_index = selectable_rows.index(selected_row)
+        except ValueError:
+            return True
+
+        if button == optional_arcade.arcade.MOUSE_BUTTON_LEFT:
+            ctrl = bool(modifiers & optional_arcade.arcade.key.MOD_CTRL)
+            shift = bool(modifiers & optional_arcade.arcade.key.MOD_SHIFT)
+            self._editor.project_explorer.handle_click(selectable_index, ctrl=ctrl, shift=shift)
+        elif button == optional_arcade.arcade.MOUSE_BUTTON_RIGHT:
+            # Select immediately on right click (simplification)
+            self._editor.project_explorer.handle_click(selectable_index, ctrl=False, shift=False)
+            self.open_context_menu(int(x), int(y))
+        return True
+
+        return True
+
+    def handle_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool:  # noqa: ARG002
+        snapshot = get_dock_snapshot(self._editor)
+        if not self._editor.active or snapshot is None or snapshot.left_tab != "Project":
+            return False
+
+        from engine.editor.editor_shell_layout import (  # noqa: PLC0415
+            compute_editor_shell_layout,
+        )
+        from .project_explorer_model import (  # noqa: PLC0415
+            PROJECT_LINE_HEIGHT,
+            compute_project_explorer_layout,
+            format_project_action_label,
+            format_project_recent_label,
+            format_project_row_label,
+        )
+        from engine.ui.widgets import Rect  # noqa: PLC0415
+        from engine.ui_overlays.project_explorer_overlay import (  # noqa: PLC0415
+            _build_project_explorer_scrolllist,
+        )
+
+        window_w = int(getattr(self._editor.window, "width", 1280) or 1280)
+        window_h = int(getattr(self._editor.window, "height", 720) or 720)
+        left_w, right_w = get_effective_dock_widths(self._editor, window_w)
+        layout = compute_editor_shell_layout(window_w, window_h, left_w, right_w)
+        dock = layout.left_dock
+        if not dock.contains_point(x, y):
+            return False
+        panel = compute_project_explorer_layout(dock)
+        if not panel.list_rect.contains_point(x, y):
+            return False
+
+        payload = self._editor.project_explorer.get_provider_payload(
+            viewport_height=int(panel.list_rect.height),
+            row_height=PROJECT_LINE_HEIGHT,
+            overscan=5,
+        )
+        rows = list(payload.get("rows", []) or [])
+        if not rows:
+            return True
+        start_idx = int(payload.get("start_index", 0) or 0)
+        selected_row_id = payload.get("selected_row_id")
+        current_scroll_y = float(payload.get("scroll_y", 0.0) or 0.0)
+        scroll_list = _build_project_explorer_scrolllist(
+            rows=rows,
+            panel_list_rect=Rect(
+                x=float(panel.list_rect.left),
+                y=float(panel.list_rect.bottom),
+                width=float(panel.list_rect.right - panel.list_rect.left),
+                height=float(panel.list_rect.top - panel.list_rect.bottom),
+            ),
+            row_height=PROJECT_LINE_HEIGHT,
+            start_index=start_idx,
+            scroll_y=current_scroll_y,
+            selected_row_id=selected_row_id,
+            format_project_action_label=format_project_action_label,
+            format_project_recent_label=format_project_recent_label,
+            format_project_row_label=format_project_row_label,
+        )
+        changed = scroll_list.on_mouse_wheel(float(scroll_y))
+        if not changed:
+            return True
+        new_scroll_idx = start_idx + int(scroll_list.scroll_offset)
+        self._editor.project_explorer.scroll_y = int(new_scroll_idx * PROJECT_LINE_HEIGHT)
         return True
 
     def open_context_menu(self, x: int, y: int) -> None:
@@ -385,6 +482,7 @@ class EditorProjectExplorerActionsController:
             if callable(copy_fn):
                 copy_fn(text)
         except Exception:  # noqa: BLE001
+            _log_swallow("EDIT-001", "engine/editor/project_explorer/editor_project_explorer_actions_controller.py pass-only blanket swallow")
             # Clipboard not available (headless, web, missing deps) - silent no-op
             pass
 

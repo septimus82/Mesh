@@ -9,6 +9,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, TYPE_CHECKING
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 if TYPE_CHECKING:
     from .lighting_config import LightConfig
@@ -60,6 +71,7 @@ def prepare_light_layer(
             layer.ambient_color = ambient_color
         return True
     except Exception:  # noqa: BLE001
+        _log_swallow("LGRT-001", "engine/lighting/lighting_render.py blanket swallow", once=True)
         return False
 
 
@@ -83,6 +95,7 @@ def draw_layer_safe(layer: Any) -> bool:
             return True
         return False
     except Exception:  # noqa: BLE001
+        _log_swallow("LGRT-002", "engine/lighting/lighting_render.py blanket swallow", once=True)
         return False
 
 
@@ -112,6 +125,7 @@ def clear_layer(layer: Any) -> bool:
             return True
         return False
     except Exception:  # noqa: BLE001
+        _log_swallow("LGRT-003", "engine/lighting/lighting_render.py blanket swallow", once=True)
         return False
 
 
@@ -134,6 +148,7 @@ def add_light_to_layer(layer: Any, light: Any) -> bool:
             return True
         return False
     except Exception:  # noqa: BLE001
+        _log_swallow("LGRT-004", "engine/lighting/lighting_render.py blanket swallow", once=True)
         return False
 
 
@@ -156,6 +171,7 @@ def remove_light_from_layer(layer: Any, light: Any) -> bool:
             return True
         return False
     except Exception:  # noqa: BLE001
+        _log_swallow("LGRT-005", "engine/lighting/lighting_render.py blanket swallow", once=True)
         return False
 
 

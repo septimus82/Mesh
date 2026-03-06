@@ -40,11 +40,16 @@ class EditorStatusBarOverlay(UIElement):
 
         # Build right text: hint label with cursor hint appended if present
         hint_label: str = status.get("hint_label", "") or ""
+        problems_indicator: str = status.get("problems_indicator", "") or ""
         cursor_hint: str | None = status.get("cursor_hint")
+        right_parts: list[str] = []
+        if hint_label:
+            right_parts.append(hint_label)
+        if problems_indicator:
+            right_parts.append(problems_indicator)
         if cursor_hint:
-            right_text: str = f"{hint_label} | {cursor_hint}" if hint_label else cursor_hint
-        else:
-            right_text = hint_label
+            right_parts.append(cursor_hint)
+        right_text = " | ".join(right_parts)
 
         y = bar_height / 2.0
         cache = getattr(self.window, "text_cache", None) or self._text_cache

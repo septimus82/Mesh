@@ -545,6 +545,24 @@ def build_route_table() -> tuple[RouteSpec, ...]:
         ),
         RouteSpec(
             scope=SCOPE_COMMAND_PALETTE,
+            combo=KeyCombo(key=key.UP, mods=key.MOD_CTRL),
+            action_id="capture.command_palette.history_prev",
+            when=_when_ctrl,
+        ),
+        RouteSpec(
+            scope=SCOPE_COMMAND_PALETTE,
+            combo=KeyCombo(key=key.DOWN, mods=key.MOD_CTRL),
+            action_id="capture.command_palette.history_next",
+            when=_when_ctrl,
+        ),
+        RouteSpec(
+            scope=SCOPE_COMMAND_PALETTE,
+            combo=KeyCombo(key=key.F1, mods=0),
+            action_id="capture.command_palette.help_toggle",
+            when=_when_not_ctrl,
+        ),
+        RouteSpec(
+            scope=SCOPE_COMMAND_PALETTE,
             combo=KeyCombo(key=key.ENTER, mods=0),
             action_id="capture.command_palette.activate",
             when=_when_always,
@@ -1301,6 +1319,13 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             action_id="capture.savegame.load_or_play",
             when=_when_always,
         ),
+        # Shift+F6 - Profiler overlay
+        RouteSpec(
+            scope=SCOPE_GLOBAL,
+            combo=KeyCombo(key=key.F6, mods=key.MOD_SHIFT),
+            action_id="capture.profiler.toggle",
+            when=_when_debug,
+        ),
         # F7 - Stop playing / AI debug toggle
         RouteSpec(
             scope=SCOPE_GLOBAL,
@@ -1308,14 +1333,14 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             action_id="capture.debug.ai_toggle_or_stop",
             when=_when_always,
         ),
-        # F8 - Encounter debug overlay
+        # F8 - Encounter debug overlay toggle (falls through if overlay unavailable)
         RouteSpec(
             scope=SCOPE_GLOBAL,
             combo=KeyCombo(key=key.F8, mods=0),
             action_id="capture.overlay.encounter_debug.toggle",
             when=_when_always,
         ),
-        # F9 - Copy coords / pause
+        # F9 - Copy coords (debug/inspector) or pause (normal path)
         RouteSpec(
             scope=SCOPE_GLOBAL,
             combo=KeyCombo(key=key.F9, mods=0),
@@ -1334,11 +1359,30 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             action_id="capture.debug.copy_hover_coords",
             when=_when_ctrl,
         ),
-        # F10 - Scene inspector
+        # F10 - Scene inspector overlay toggle (falls through if overlay unavailable)
         RouteSpec(
             scope=SCOPE_GLOBAL,
             combo=KeyCombo(key=key.F10, mods=0),
             action_id="capture.overlay.scene_inspector.toggle",
+            when=_when_always,
+        ),
+        # Gameplay save/load actions that remain reachable even with routed F8/F9/F10 debug keys.
+        RouteSpec(
+            scope=SCOPE_GLOBAL,
+            combo=KeyCombo(key=key.F5, mods=key.MOD_CTRL),
+            action_id="capture.action.save_game",
+            when=_when_always,
+        ),
+        RouteSpec(
+            scope=SCOPE_GLOBAL,
+            combo=KeyCombo(key=key.F6, mods=key.MOD_CTRL),
+            action_id="capture.action.quick_load",
+            when=_when_always,
+        ),
+        RouteSpec(
+            scope=SCOPE_GLOBAL,
+            combo=KeyCombo(key=key.F7, mods=key.MOD_CTRL),
+            action_id="capture.action.quickload_last_save",
             when=_when_always,
         ),
         # F12 - Toggle selection lock

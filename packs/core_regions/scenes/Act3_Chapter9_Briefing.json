@@ -1,0 +1,298 @@
+{
+  "description": "Act 3 Chapter 9 briefing: narrative handoff beats and commitment to next arc objective.",
+  "name": "Act 3 Chapter 9 - Briefing",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter9_briefing_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter9_briefing_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch9_beat_arrival",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter9BeatArrivalZone"
+        }
+      },
+      "id": "act3_chapter9_briefing_beatarrivalzone_280_300_0_0",
+      "name": "Act3Chapter9BeatArrivalZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 280,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter9BeatArrivalZone",
+          "set_flags": {
+            "act3_ch9_beat_arrival_seen": true
+          },
+          "forbid_flags": [
+            "act3_ch9_beat_arrival_seen"
+          ],
+          "once": true,
+          "toast": "The relay is quiet. Too quiet.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter9_briefing_beatarrivalstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch9BeatArrivalStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch9_beat_handoff",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter9BeatHandoffZone"
+        }
+      },
+      "id": "act3_chapter9_briefing_beathandoffzone_460_300_0_0",
+      "name": "Act3Chapter9BeatHandoffZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 460,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter9BeatHandoffZone",
+          "set_flags": {
+            "act3_ch9_beat_handoff_seen": true
+          },
+          "forbid_flags": [
+            "act3_ch9_beat_handoff_seen"
+          ],
+          "once": true,
+          "toast": "A sealed directive routes you deeper into the grid.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter9_briefing_beathandoffstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch9BeatHandoffStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch9_beat_goal",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter9BeatGoalZone"
+        }
+      },
+      "id": "act3_chapter9_briefing_beatgoalzone_640_300_0_0",
+      "name": "Act3Chapter9BeatGoalZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 640,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter9BeatGoalZone",
+          "set_flags": {
+            "act3_ch9_beat_goal_seen": true
+          },
+          "forbid_flags": [
+            "act3_ch9_beat_goal_seen"
+          ],
+          "once": true,
+          "toast": "Objective: reach the next sector uplink.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter9_briefing_beatgoalstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch9BeatGoalStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch9_commit_handoff",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter9CommitZone"
+        }
+      },
+      "id": "act3_chapter9_briefing_commitzone_820_300_0_0",
+      "name": "Act3Chapter9CommitZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 820,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter9CommitZone",
+          "set_flags": {
+            "act3_mid_arc_complete": true
+          },
+          "forbid_flags": [
+            "act3_mid_arc_complete"
+          ],
+          "once": true,
+          "toast": "Handoff accepted.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter9_briefing_commitstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch9CommitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch9_backup_commit",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter9BackupCommitZone"
+        }
+      },
+      "id": "act3_chapter9_briefing_backupcommitzone_940_300_0_0",
+      "name": "Act3Chapter9BackupCommitZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 940,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter9BackupCommitZone",
+          "set_flags": {
+            "act3_mid_arc_complete": true
+          },
+          "forbid_flags": [
+            "act3_mid_arc_complete"
+          ],
+          "once": true,
+          "toast": "Handoff accepted.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter9_briefing_backupcommitstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch9BackupCommitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter9_Exit.json"
+        }
+      },
+      "id": "act3_chapter9_briefing_toexit_1040_300_0_0",
+      "name": "ToAct3Chapter9Exit",
+      "require_flags": [
+        "act3_mid_arc_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter9_Entry.json"
+        }
+      },
+      "id": "act3_chapter9_briefing_returntoentry_60_300_0_0",
+      "name": "ReturnToAct3Chapter9Entry",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ]
+}

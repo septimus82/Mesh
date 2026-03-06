@@ -1,0 +1,193 @@
+{
+  "description": "Act 3 Chapter 8 normalize: repair or verify threshold state, then continue.",
+  "name": "Act 3 Chapter 8 - Normalize",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter8_normalize_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter8_normalize_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch8_normalizer",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter8NormalizerZone"
+        }
+      },
+      "id": "act3_chapter8_normalize_normalizerzone_420_300_0_0",
+      "name": "Act3Chapter8NormalizerZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 420,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter8NormalizerZone",
+          "set_flags": {
+            "act3_ch7_threshold_crossed": true,
+            "act3_ch8_state_normalized": true
+          },
+          "forbid_flags": [
+            "act3_ch7_threshold_crossed",
+            "act3_ch8_state_normalized"
+          ],
+          "once": true,
+          "toast": "State stabilized.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter8_normalize_repairstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch8RepairStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter8NormalizerZone",
+          "set_flags": {
+            "act3_ch8_state_normalized": true
+          },
+          "require_flags": [
+            "act3_ch7_threshold_crossed"
+          ],
+          "forbid_flags": [
+            "act3_ch8_state_normalized"
+          ],
+          "once": true,
+          "toast": "State stabilized.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter8_normalize_verifystatesync_m1000_m1000_0_0",
+      "name": "Act3Ch8VerifyStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch8_backup_normalizer",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter8BackupNormalizerZone"
+        }
+      },
+      "id": "act3_chapter8_normalize_backupnormalizerzone_860_300_0_0",
+      "name": "Act3Chapter8BackupNormalizerZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 860,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter8BackupNormalizerZone",
+          "set_flags": {
+            "act3_ch7_threshold_crossed": true,
+            "act3_ch8_state_normalized": true
+          },
+          "forbid_flags": [
+            "act3_ch8_state_normalized"
+          ],
+          "once": true,
+          "toast": "State stabilized.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter8_normalize_backupstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch8BackupStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter8_Exit.json"
+        }
+      },
+      "id": "act3_chapter8_normalize_toexit_1040_300_0_0",
+      "name": "ToAct3Chapter8Exit",
+      "require_flags": [
+        "act3_ch8_state_normalized"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter8_Entry.json"
+        }
+      },
+      "id": "act3_chapter8_normalize_returntoentry_60_300_0_0",
+      "name": "ReturnToAct3Chapter8Entry",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ]
+}

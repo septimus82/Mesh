@@ -2,7 +2,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from engine.paths import resolve_path
 from engine.persistence_io import write_json_atomic
@@ -11,6 +11,18 @@ from engine.scene_serializer import compact_scene_payload
 from engine.path_norm import normalize_scene_path
 from engine.tilemap_brush import apply_brush, validate_brush
 from engine.tilemap_flood_fill import FloodFillMaxTilesExceeded, apply_flood_fill, flood_fill_indices
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 class BrushLoader:
@@ -81,6 +93,7 @@ def _tilemap_validate_scene_payload(
                     width = width_val
                     height = height_val
             except Exception:
+                _log_swallow("TILE-001", "mesh_cli/scene/tilemap.py pass-only blanket swallow")
                 pass
 
     if width is None or height is None or width <= 0 or height <= 0:
@@ -210,7 +223,8 @@ def _handle_scene_tilemap_add_layer(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli tilemap fallback isolation
+        _log_swallow("TILE-003", f"add_layer: parse scene JSON failed: {scene_path}", once=False)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 
@@ -302,7 +316,8 @@ def _handle_scene_tilemap_remove_layer(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli tilemap fallback isolation
+        _log_swallow("TILE-004", f"remove_layer: parse scene JSON failed: {scene_path}", once=False)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 
@@ -369,7 +384,8 @@ def _handle_scene_tilemap_init(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli tilemap fallback isolation
+        _log_swallow("TILE-005", f"init: parse scene JSON failed: {scene_path}", once=False)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 
@@ -479,7 +495,8 @@ def _handle_scene_tilemap_resize(args: argparse.Namespace) -> int:
 
     new_w = int(args.width)
     new_h = int(args.height)
-    anchor = getattr(args, "anchor", "tl")
+    anchor_raw = str(getattr(args, "anchor", "tl") or "tl").strip().lower()
+    anchor: Literal["tl", "center"] = "center" if anchor_raw == "center" else "tl"
     fill_tile = int(getattr(args, "fill_tile", 0))
     only_layers = set(getattr(args, "only_layer", []) or [])
 
@@ -494,7 +511,8 @@ def _handle_scene_tilemap_resize(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli tilemap fallback isolation
+        _log_swallow("TILE-006", f"resize: parse scene JSON failed: {scene_path}", once=False)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 
@@ -595,7 +613,8 @@ def _handle_scene_tilemap_flood_fill(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli tilemap fallback isolation
+        _log_swallow("TILE-007", f"flood_fill: parse scene JSON failed: {scene_path}", once=False)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 
@@ -682,7 +701,8 @@ def _handle_scene_tilemap_fill_rect(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli tilemap fallback isolation
+        _log_swallow("TILE-008", f"fill_rect: parse scene JSON failed: {scene_path}", once=False)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 
@@ -752,7 +772,8 @@ def _handle_scene_tilemap_paint(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli tilemap fallback isolation
+        _log_swallow("TILE-009", f"paint: parse scene JSON failed: {scene_path}", once=False)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 
@@ -802,7 +823,8 @@ def _handle_scene_tilemap_brush(args: argparse.Namespace) -> int:
     brush_path = str(getattr(args, "brush", "") or "").strip()
     x = int(args.x)
     y = int(args.y)
-    anchor = getattr(args, "anchor", "tl")
+    anchor_raw = str(getattr(args, "anchor", "tl") or "tl").strip().lower()
+    anchor: Literal["tl", "center"] = "center" if anchor_raw == "center" else "tl"
     clip = bool(getattr(args, "clip", False))
 
     resolved = resolve_path(scene_path)
@@ -812,7 +834,8 @@ def _handle_scene_tilemap_brush(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: cli tilemap fallback isolation
+        _log_swallow("TILE-010", f"brush: parse scene JSON failed: {scene_path}", once=False)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
 
@@ -839,6 +862,7 @@ def _handle_scene_tilemap_brush(args: argparse.Namespace) -> int:
     try:
         brush = brush_loader.load_brush(brush_path)
     except Exception as e:
+        _log_swallow("TILE-011", f"brush load failed: {brush_path}", once=False)
         print(f"[Mesh][CLI] Error loading brush: {e}")
         return 1
 
@@ -935,6 +959,7 @@ def _tilemap_resolve_dims_for_edit(
             if w > 0 and h > 0:
                 return w, h
         except Exception:
+            _log_swallow("TILE-002", "mesh_cli/scene/tilemap.py pass-only blanket swallow")
             pass
 
     w_value = tilemap.get("width")
@@ -947,6 +972,7 @@ def _tilemap_resolve_dims_for_edit(
         w = int(w_value)
         h = int(h_value)
     except Exception:
+        _log_swallow("TILE-012", f"cannot determine tilemap dims for {scene_path_display}", once=False)
         print(f"[Mesh][CLI] Error: cannot determine tilemap dimensions for {scene_path_display}")
         print("[Mesh][CLI] Provide a valid tilemap.path (with width/height) or scene.tilemap.width/height.")
         return None
@@ -988,11 +1014,13 @@ def _tilemap_try_resolve_tile_size_for_stamp(
     try:
         tiled = json.loads(chosen_map_path.read_text(encoding="utf-8"))
     except Exception:
+        _log_swallow("TILE-013", f"tile size: failed to parse map: {chosen_map_path}")
         return None
     try:
         tw = int(tiled.get("tilewidth", 0))
         th = int(tiled.get("tileheight", 0))
     except Exception:
+        _log_swallow("TILE-014", f"tile size: int conversion failed for map: {chosen_map_path}")
         return None
     if tw > 0 and th > 0:
         return tw, th

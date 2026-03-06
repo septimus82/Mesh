@@ -4,10 +4,22 @@ from dataclasses import dataclass
 from typing import Any
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def _clamp01(value: Any, default: float) -> float:
     try:
         f = float(value)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
         f = float(default)
     if f < 0.0:
         return 0.0
@@ -20,7 +32,7 @@ def _clamp_text_scale(value: Any, default: float = 1.0) -> float:
     """Clamp text_scale to [0.5, 3.0]."""
     try:
         f = float(value)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
         f = float(default)
     return max(0.5, min(3.0, f))
 
@@ -95,26 +107,31 @@ class RuntimeSettings:
         if cfg is not None:
             try:
                 cfg.music_volume = float(self.music_volume)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("RUNT-001", "engine/runtime_settings.py pass-only blanket swallow")
                 pass
             try:
                 cfg.sfx_volume = float(self.sfx_volume)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("RUNT-002", "engine/runtime_settings.py pass-only blanket swallow")
                 pass
             try:
                 cfg.fog_enabled = bool(self.fog_enabled)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("RUNT-003", "engine/runtime_settings.py pass-only blanket swallow")
                 pass
             try:
                 cfg.soft_shadows_enabled = bool(self.soft_shadows_enabled)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("RUNT-004", "engine/runtime_settings.py pass-only blanket swallow")
                 pass
 
         # Push text scale to the text drawing module
         try:
             from engine.text_draw import set_text_scale
             set_text_scale(self.text_scale)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("RUNT-005", "engine/runtime_settings.py pass-only blanket swallow")
             pass
 
 

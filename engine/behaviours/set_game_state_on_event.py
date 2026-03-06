@@ -108,7 +108,7 @@ class SetGameStateOnEvent(Behaviour):
         "toast_seconds": ParamDef(float, default=0.0, description="Optional toast duration in seconds"),
     }
 
-    def __init__(self, entity: Sprite, window, **config) -> None:  # type: ignore[override]
+    def __init__(self, entity: Sprite, window, **config) -> None:
         merged = self._merge_entity_data(entity, config)
         super().__init__(entity, window, **merged)
         self.event_type = str(merged.get("event_type", "")).strip()

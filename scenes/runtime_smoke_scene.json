@@ -1,0 +1,20 @@
+{
+  "entities": [],
+  "layers": [
+    {
+      "name": "background"
+    },
+    {
+      "name": "entities"
+    },
+    {
+      "name": "foreground"
+    }
+  ],
+  "name": "Runtime Smoke Scene",
+  "settings": {
+    "background_color": "dark_blue_gray",
+    "music": null,
+    "music_volume": 1.0
+  }
+}

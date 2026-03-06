@@ -1,0 +1,298 @@
+{
+  "description": "Act 3 Chapter 3 commit checkpoint: choose Route A, Route B, or neutral fail-safe commitment.",
+  "name": "Act 3 Chapter 3 - Commit",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter3_commit_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter3_commit_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch3_commit_a",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter3CommitAZone"
+        }
+      },
+      "id": "act3_chapter3_commit_commitazone_360_300_0_0",
+      "name": "Act3Chapter3CommitAZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 360,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch3_commit_b",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter3CommitBZone"
+        }
+      },
+      "id": "act3_chapter3_commit_commitbzone_560_300_0_0",
+      "name": "Act3Chapter3CommitBZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 560,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter3CommitAZone",
+          "set_flags": {
+            "act3_ch3_affinity_a": true,
+            "act3_ch3_affinity_b": false,
+            "act3_ch3_affinity_neutral": false,
+            "act3_ch3_committed": true
+          },
+          "require_flags": [
+            "act3_ch2_route_a"
+          ],
+          "forbid_flags": [
+            "act3_ch3_committed"
+          ],
+          "once": true,
+          "toast": "Committed: Route A.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter3_commit_commitastatesync_m1000_m1000_0_0",
+      "name": "Act3Ch3CommitAStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter3CommitBZone",
+          "set_flags": {
+            "act3_ch3_affinity_b": true,
+            "act3_ch3_affinity_a": false,
+            "act3_ch3_affinity_neutral": false,
+            "act3_ch3_committed": true
+          },
+          "require_flags": [
+            "act3_ch2_route_b"
+          ],
+          "forbid_flags": [
+            "act3_ch3_committed"
+          ],
+          "once": true,
+          "toast": "Committed: Route B.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter3_commit_commitbstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch3CommitBStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch3_neutral_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter3NeutralProbeZone"
+        }
+      },
+      "id": "act3_chapter3_commit_neutralprobezone_200_300_0_0",
+      "name": "Act3Chapter3NeutralProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 200,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter3NeutralProbeZone",
+          "set_flags": {
+            "act3_ch3_neutral_warning_seen": true
+          },
+          "forbid_flags": [
+            "act3_ch2_route_a",
+            "act3_ch2_route_b",
+            "act3_ch3_committed",
+            "act3_ch3_neutral_warning_seen"
+          ],
+          "once": true,
+          "toast": "Warning: route history missing. Neutral commitment available.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter3_commit_neutralwarningstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch3NeutralWarningStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch3_commit_neutral",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter3NeutralCommitZone"
+        }
+      },
+      "id": "act3_chapter3_commit_neutralcommitzone_260_300_0_0",
+      "name": "Act3Chapter3NeutralCommitZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 260,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter3NeutralCommitZone",
+          "set_flags": {
+            "act3_ch3_affinity_neutral": true,
+            "act3_ch3_affinity_a": false,
+            "act3_ch3_affinity_b": false,
+            "act3_ch3_committed": true
+          },
+          "require_flags": [
+            "act3_ch3_neutral_warning_seen"
+          ],
+          "forbid_flags": [
+            "act3_ch2_route_a",
+            "act3_ch2_route_b",
+            "act3_ch3_committed"
+          ],
+          "once": true,
+          "toast": "Committed: Neutral.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter3_commit_neutralcommitstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch3NeutralCommitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter3_Outcome.json"
+        }
+      },
+      "id": "act3_chapter3_commit_tooutcome_980_300_0_0",
+      "name": "ToAct3Chapter3Outcome",
+      "require_flags": [
+        "act3_ch3_committed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 980,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter3_Entry.json"
+        }
+      },
+      "id": "act3_chapter3_commit_returntoentry_60_300_0_0",
+      "name": "ReturnToAct3Chapter3Entry",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch3_committed": true
+          },
+          "require_flags": [
+            "act3_ch3_committed"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter3_commit_committedrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch3CommittedRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

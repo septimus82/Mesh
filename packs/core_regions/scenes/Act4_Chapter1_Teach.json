@@ -1,0 +1,162 @@
+{
+  "description": "Act 4 Chapter 1 teach: induction terminal authorization with backup fail-safe.",
+  "name": "Act 4 Chapter 1 - Teach",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act4_chapter1_teach_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act4_chapter1_teach_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act4_ch1_induction_terminal",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "Act4Chapter1InductionTerminalZone"
+        }
+      },
+      "id": "act4_chapter1_teach_inductionterminalzone_420_300_0_0",
+      "name": "Act4Chapter1InductionTerminalZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 420,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act4Chapter1InductionTerminalZone",
+          "set_flags": {
+            "act4_ch1_authorized": true,
+            "act4_ch1_taught": true
+          },
+          "forbid_flags": [
+            "act4_ch1_authorized"
+          ],
+          "once": true,
+          "toast": "Authorization granted.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act4_chapter1_teach_authorizestatesync_m1000_m1000_0_0",
+      "name": "Act4Ch1AuthorizeStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act4_ch1_backup_authorization",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "Act4Chapter1BackupAuthorizationZone"
+        }
+      },
+      "id": "act4_chapter1_teach_backupauthorizationzone_860_300_0_0",
+      "name": "Act4Chapter1BackupAuthorizationZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 860,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act4Chapter1BackupAuthorizationZone",
+          "set_flags": {
+            "act4_ch1_authorized": true,
+            "act4_ch1_taught": true
+          },
+          "forbid_flags": [
+            "act4_ch1_authorized"
+          ],
+          "once": true,
+          "toast": "Authorization granted.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act4_chapter1_teach_backupauthorizestatesync_m1000_m1000_0_0",
+      "name": "Act4Ch1BackupAuthorizeStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act4_Chapter1_Exit.json"
+        }
+      },
+      "id": "act4_chapter1_teach_toact4chapter1exit_1040_300_0_0",
+      "name": "ToAct4Chapter1Exit",
+      "require_flags": [
+        "act4_ch1_authorized"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1040,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act4_Chapter1_Entry.json"
+        }
+      },
+      "id": "act4_chapter1_teach_returntoact4chapter1entry_60_300_0_0",
+      "name": "ReturnToAct4Chapter1Entry",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ]
+}

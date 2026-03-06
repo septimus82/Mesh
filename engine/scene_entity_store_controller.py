@@ -5,6 +5,18 @@ from typing import Any
 from engine.scene_entity_ops_model import EntityOp, build_drain_plan, stable_entity_order
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 class SceneEntityStoreController:
     def __init__(self, controller: Any | None = None) -> None:
         self._controller: Any | None = controller
@@ -206,10 +218,12 @@ class SceneEntityStoreController:
                         if hasattr(layer, "remove"):
                             layer.remove(sprite)
                     except Exception:
+                        _log_swallow("SCEN-001", "engine/scene_entity_store_controller.py pass-only blanket swallow")
                         pass
                 try:
                     controller.solid_sprites.remove(sprite)
                 except Exception:
+                    _log_swallow("SCEN-002", "engine/scene_entity_store_controller.py pass-only blanket swallow")
                     pass
                 continue
             if op.kind == "mutate" and isinstance(payload, dict):

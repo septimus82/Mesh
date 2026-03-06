@@ -7,6 +7,17 @@ from typing import Any, Dict, Iterable, List
 
 from engine.path_norm import normalize_scene_path
 from engine.paths import resolve_path
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 
 def _non_empty_str(value: object | None) -> str | None:
@@ -153,6 +164,7 @@ def _scene_display_name(scene_path: Path) -> str:
     try:
         raw = json.loads(scene_path.read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001
+        _log_swallow("SCIX-001", "engine/scene_index.py blanket swallow", once=True)
         raw = None
     if isinstance(raw, dict):
         name = raw.get("name")
@@ -167,6 +179,7 @@ def list_pack_scene_listings(packs_root: str | Path | None = None) -> list[Scene
         if not root.exists():
             return []
     except Exception:  # noqa: BLE001
+        _log_swallow("SCIX-002", "engine/scene_index.py blanket swallow", once=True)
         return []
 
     base_root = root.parent
@@ -183,6 +196,7 @@ def list_pack_scene_listings(packs_root: str | Path | None = None) -> list[Scene
         try:
             rel = path.relative_to(base_root)
         except Exception:
+            _log_swallow("SCIX-003", "engine/scene_index.py blanket swallow", once=True)
             rel = path
         return normalize_scene_path(str(rel))
 
@@ -267,6 +281,7 @@ def iter_known_scene_paths() -> list[str]:
     try:
         raw = json.loads(world_path.read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001
+        _log_swallow("SCIX-004", "engine/scene_index.py blanket swallow", once=True)
         return []
     if not isinstance(raw, dict):
         return []
@@ -299,4 +314,5 @@ def validate_scene_path_exists(path: str) -> bool:
     try:
         return Path(resolved).exists()
     except Exception:  # noqa: BLE001
+        _log_swallow("SCIX-005", "engine/scene_index.py blanket swallow", once=True)
         return False

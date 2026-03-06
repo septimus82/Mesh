@@ -1,0 +1,30 @@
+{
+  "description": "Hollowmere Outskirts: branching_choice (scaffolded)",
+  "lighting_showcase": false,
+  "notes": "Scaffolded golden_slice2 variant M2",
+  "steps": [
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice2_variant_m.json",
+        "--dry-run",
+        "--strict",
+        "--check-refs"
+      ],
+      "cmd": "pipeline"
+    },
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice2_variant_m.json",
+        "--dry-run",
+        "--demo"
+      ],
+      "cmd": "pipeline"
+    }
+  ]
+}

@@ -1623,6 +1623,86 @@
     },
     {
       "blocks_flags": [
+        "act1_ch2_camp_briefed"
+      ],
+      "complete_toast": "Act 1: Camp briefing logged.",
+      "description": "Talk to the camp leader.",
+      "id": "quest_act1_ch2_camp_briefing",
+      "requires_flags": [
+        "act1_chapter2_started"
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 6
+        },
+        "set_flags": {
+          "act1_ch2_camp_briefed": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Chapter2CampBriefingZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "accept_camp_briefing",
+          "start_on_event": {
+            "payload": {
+              "zone": "Chapter2CampBriefingZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Check in at camp and accept the ambush assignment.",
+          "title": "Take the Briefing"
+        }
+      ],
+      "start_toast": "Act 1: Report to camp for your next objective.",
+      "title": "Act 1: Camp Briefing"
+    },
+    {
+      "blocks_flags": [
+        "act1_ch2_ambush_cleared"
+      ],
+      "complete_toast": "Act 1: Ambush lane secured.",
+      "description": "Survive the ambush. Clear the attackers.",
+      "id": "quest_act1_ch2_ambush_clear",
+      "requires_flags": [
+        "act1_ch2_camp_briefed"
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 12
+        },
+        "set_flags": {
+          "act1_ch2_ambush_cleared": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch2AmbushClearZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "clear_ambush_lane",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch2AmbushStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Push through the ambush lane and secure the far marker.",
+          "title": "Secure the Ambush Lane"
+        }
+      ],
+      "start_toast": "Act 1: Clear the ambush route to continue.",
+      "title": "Act 1: Ambush Route"
+    },
+    {
+      "blocks_flags": [
         "act1_ch2_ruin_unlocked"
       ],
       "complete_toast": "Act 1: The ruined gate unlocks.",
@@ -1897,6 +1977,86 @@
     },
     {
       "blocks_flags": [
+        "act1_ch3_archive_briefed"
+      ],
+      "complete_toast": "Act 1: Archive briefing complete.",
+      "description": "Search the archive for the marked note.",
+      "id": "quest_act1_ch3_archive_briefing",
+      "requires_flags": [
+        "act1_chapter3_started"
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 6
+        },
+        "set_flags": {
+          "act1_ch3_archive_briefed": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Chapter3ArchiveNoteZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "record_archive_orders",
+          "start_on_event": {
+            "payload": {
+              "zone": "Chapter3ArchiveNoteZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Accept the archivist's orders and mark the route note zone.",
+          "title": "Record the Orders"
+        }
+      ],
+      "start_toast": "Act 1: Speak with the archivist in the archive hall.",
+      "title": "Act 1: Archive Briefing"
+    },
+    {
+      "blocks_flags": [
+        "act1_ch3_courtyard_cleared"
+      ],
+      "complete_toast": "Act 1: Courtyard defenders routed.",
+      "description": "Secure the courtyard.",
+      "id": "quest_act1_ch3_courtyard_clear",
+      "requires_flags": [
+        "act1_ch3_archive_briefed"
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 14
+        },
+        "set_flags": {
+          "act1_ch3_courtyard_cleared": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch3CourtyardClearZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "clear_courtyard",
+          "start_on_event": {
+            "payload": {
+              "zone": "Chapter3ArchiveNoteZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Flip the archive switch, then clear the courtyard marker.",
+          "title": "Clear the Courtyard"
+        }
+      ],
+      "start_toast": "Act 1: Open the archive seal and secure the courtyard.",
+      "title": "Act 1: Courtyard Push"
+    },
+    {
+      "blocks_flags": [
         "act1_ch3_note_found",
         "act1_chapter3_complete"
       ],
@@ -2015,6 +2175,86 @@
       ],
       "start_toast": "Act 1: Chapter 4 begins.",
       "title": "Act 1: Chapter 4"
+    },
+    {
+      "blocks_flags": [
+        "act1_ch4_bastion_briefed"
+      ],
+      "complete_toast": "Act 1: Bastion orders confirmed.",
+      "description": "Check in at the bastion.",
+      "id": "quest_act1_ch4_bastion_briefing",
+      "requires_flags": [
+        "act1_chapter4_started"
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 6
+        },
+        "set_flags": {
+          "act1_ch4_bastion_briefed": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch4BastionStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "accept_bastion_brief",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch4BastionStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Check in with the scout and confirm the bastion objective.",
+          "title": "Take Bastion Orders"
+        }
+      ],
+      "start_toast": "Act 1: Meet the scout at the bastion lane.",
+      "title": "Act 1: Bastion Briefing"
+    },
+    {
+      "blocks_flags": [
+        "act1_ch4_bastion_cleared"
+      ],
+      "complete_toast": "Act 1: Bastion lane secured.",
+      "description": "Clear the bastion approach.",
+      "id": "quest_act1_ch4_bastion_clear",
+      "requires_flags": [
+        "act1_ch4_bastion_briefed"
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 14
+        },
+        "set_flags": {
+          "act1_ch4_bastion_cleared": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch4BastionClearZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "clear_bastion_lane",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch4BastionStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Unlock the bastion gate, then reach the clear marker.",
+          "title": "Clear Bastion Lane"
+        }
+      ],
+      "start_toast": "Act 1: Open the bastion gate and clear the lane.",
+      "title": "Act 1: Bastion Push"
     },
     {
       "blocks_flags": [
@@ -2215,6 +2455,329 @@
       ],
       "start_toast": "Act 1: Finale begins.",
       "title": "Act 1: Finale"
+    },
+    {
+      "blocks_flags": [
+        "act1_ch5_ready_for_summit"
+      ],
+      "complete_toast": "Act 1: Summit approach secured.",
+      "description": "Push through the gauntlet.",
+      "id": "quest_act1_ch5_gauntlet_clear",
+      "requires_flags": [
+        "act1_chapter5_started"
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 18
+        },
+        "set_flags": {
+          "act1_ch5_ready_for_summit": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Ch5GauntletClearZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "clear_gauntlet",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch5GauntletStartZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Advance through the gauntlet and clear the route marker.",
+          "title": "Clear the Gauntlet"
+        }
+      ],
+      "start_toast": "Act 1: Break through the gauntlet to reach the summit.",
+      "title": "Act 1: Summit Approach"
+    },
+    {
+      "blocks_flags": [
+        "act1_chapter5_complete"
+      ],
+      "complete_toast": "Act 1: Chapter 5 complete.",
+      "description": "Reach the summit seal.",
+      "id": "quest_act1_ch5_summit_complete",
+      "requires_flags": [
+        "act1_ch5_ready_for_summit"
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 25
+        },
+        "set_flags": {
+          "act1_chapter5_complete": true,
+          "act1_ch5_reward_cache_key": true
+        }
+      },
+      "stages": [
+        {
+          "complete_on": {
+            "payload": {
+              "zone": "Chapter5SummitSealZone"
+            },
+            "type": "entered_zone"
+          },
+          "id": "seal_chapter5",
+          "start_on_event": {
+            "payload": {
+              "zone": "Ch5GauntletClearZone"
+            },
+            "type": "entered_zone"
+          },
+          "text": "Accept the summit objective, then report route clear to the Warden Spirit.",
+          "title": "Seal the Summit"
+        }
+      ],
+      "start_toast": "Act 1: Report to the summit to finish the chapter.",
+      "title": "Act 1: Summit Report"
+    },
+    {
+      "id": "quest_act1_ch6_approach_briefing",
+      "title": "Act 1: Chapter 6 Briefing",
+      "description": "Check in at the approach watch post.",
+      "requires_flags": [
+        "act1_chapter5_complete"
+      ],
+      "blocks_flags": [
+        "act1_ch6_briefed"
+      ],
+      "start_toast": "Act 1: Report to the approach watch post.",
+      "complete_toast": "Act 1: Warden approach briefing complete.",
+      "stages": [
+        {
+          "id": "accept_ch6_briefing",
+          "title": "Take the Approach Briefing",
+          "text": "Check in and prepare for the Warden encounter.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Chapter6ApproachBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Chapter6ApproachBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 10
+        },
+        "set_flags": {
+          "act1_ch6_briefed": true
+        }
+      }
+    },
+    {
+      "id": "quest_act1_ch6_warden_defeated",
+      "title": "Act 1: Defeat the Warden",
+      "description": "Defeat the Warden and secure the key fragment.",
+      "requires_flags": [
+        "act1_ch6_briefed"
+      ],
+      "blocks_flags": [
+        "act1_ch6_warden_defeated"
+      ],
+      "start_toast": "Act 1: Enter the arena and engage the Warden.",
+      "complete_toast": "Act 1: Warden defeated. Fragment secured.",
+      "stages": [
+        {
+          "id": "defeat_warden",
+          "title": "Break the Warden Line",
+          "text": "Use spacing through the warning ring, then claim the fragment.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Ch6WardenAggroZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Ch6WardenDefeatZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 20
+        },
+        "set_flags": {
+          "act1_ch6_warden_defeated": true,
+          "act1_ch6_key_fragment": true
+        }
+      }
+    },
+    {
+      "id": "quest_act1_ch7_after_resolve",
+      "title": "Act 1: Aftermath",
+      "description": "Resolve the aftermath and close Act 1.",
+      "requires_flags": [
+        "act1_ch6_warden_defeated"
+      ],
+      "blocks_flags": [
+        "act1_chapter7_complete"
+      ],
+      "start_toast": "Act 1: Reach the aftermath and report in.",
+      "complete_toast": "Act 1: Chapter 7 complete.",
+      "stages": [
+        {
+          "id": "resolve_aftermath",
+          "title": "Seal the Arc",
+          "text": "Report to the echo and mark the resolution point.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Chapter7AftermathResolveZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Chapter7AftermathResolveZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 30
+        },
+        "set_flags": {
+          "act1_chapter7_complete": true,
+          "act1_act1_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch1_briefing",
+      "title": "Act 2: Threshold Briefing",
+      "description": "Receive the threshold briefing.",
+      "requires_flags": [
+        "act1_act1_complete"
+      ],
+      "blocks_flags": [
+        "act2_ch1_briefed"
+      ],
+      "start_toast": "Act 2: Report at the threshold outpost.",
+      "complete_toast": "Act 2: Briefing complete. Enter the hazard hall.",
+      "stages": [
+        {
+          "id": "accept_threshold_briefing",
+          "title": "Get the Briefing",
+          "text": "Talk to the pathwarden and take the hazard route objective.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter1BriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter1BriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 10
+        },
+        "set_flags": {
+          "act2_ch1_briefed": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch1_hazard_clear",
+      "title": "Act 2: Hazard Hall",
+      "description": "Cross the hazard hall and avoid the red zone.",
+      "requires_flags": [
+        "act2_ch1_briefed"
+      ],
+      "blocks_flags": [
+        "act2_ch1_hazard_cleared"
+      ],
+      "start_toast": "Act 2: Watch the red strip and take the bypass lane.",
+      "complete_toast": "Act 2: Hazard hall secured.",
+      "stages": [
+        {
+          "id": "cross_hazard_hall",
+          "title": "Cross the Hazard Hall",
+          "text": "Trigger the hazard warning, route around the red strip, and reach the clear marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter1HazardWarnZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter1HazardClearZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 14
+        },
+        "set_flags": {
+          "act2_ch1_hazard_cleared": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch1_complete",
+      "title": "Act 2: Chapter 1 Complete",
+      "description": "Secure the safe room and mark Chapter 1 complete.",
+      "requires_flags": [
+        "act2_ch1_hazard_cleared"
+      ],
+      "blocks_flags": [
+        "act2_chapter1_complete"
+      ],
+      "start_toast": "Act 2: Reach the safe room and lock in progress.",
+      "complete_toast": "Act 2: Chapter 1 complete.",
+      "stages": [
+        {
+          "id": "secure_safe_room",
+          "title": "Secure the Safe Room",
+          "text": "Enter the safe room marker and complete the chapter handoff.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter1CompleteZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter1CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 18
+        },
+        "set_flags": {
+          "act2_chapter1_complete": true
+        }
+      }
     },
     {
       "description": "Solve the rune sequence to unlock the exit.",
@@ -2807,6 +3370,1885 @@
       ],
       "title": "Mini Campaign 05: Episodes 01-06 Hybrid Chain",
       "type": "main"
+    },
+    {
+      "id": "quest_act2_ch2_switch_learned",
+      "title": "Act 2: Hazard Switch",
+      "description": "Pull the hazard control switch.",
+      "requires_flags": [
+        "act2_chapter1_complete"
+      ],
+      "blocks_flags": [
+        "act2_ch2_switch_pulled"
+      ],
+      "start_toast": "Act 2: Learn the hazard switch.",
+      "complete_toast": "Act 2: Hazard switch engaged.",
+      "stages": [
+        {
+          "id": "pull_hazard_switch",
+          "title": "Pull the Hazard Control Switch",
+          "text": "Pull the hazard control switch in the switch room.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter2SwitchRoomBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "act2_ch2_switch_pull"
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 16
+        },
+        "set_flags": {
+          "act2_ch2_switch_pulled": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch2_hazard_run_clear",
+      "title": "Act 2: Hazard Run",
+      "description": "Cross the hazard run while suppression is active.",
+      "requires_flags": [
+        "act2_ch2_switch_pulled"
+      ],
+      "blocks_flags": [
+        "act2_ch2_run_clear"
+      ],
+      "start_toast": "Act 2: Cross the hazard run before suppression fades.",
+      "complete_toast": "Act 2: Hazard run cleared.",
+      "stages": [
+        {
+          "id": "cross_hazard_run",
+          "title": "Cross the Hazard Run",
+          "text": "Use suppression windows and reach the run clear marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter2HazardRunStartZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter2RunClearZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 18
+        },
+        "set_flags": {
+          "act2_ch2_run_clear": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch2_complete",
+      "title": "Act 2: Chapter 2 Complete",
+      "description": "Secure the sanctum and continue.",
+      "requires_flags": [
+        "act2_ch2_run_clear"
+      ],
+      "blocks_flags": [
+        "act2_chapter2_complete"
+      ],
+      "start_toast": "Act 2: Secure the sanctum.",
+      "complete_toast": "Act 2: Chapter 2 complete.",
+      "stages": [
+        {
+          "id": "secure_sanctum",
+          "title": "Secure the Sanctum",
+          "text": "Enter the sanctum marker to complete Chapter 2.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter2SanctumCompleteZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter2SanctumCompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 22
+        },
+        "set_flags": {
+          "act2_chapter2_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch3_choose_route",
+      "title": "Act 2: Choose a Route",
+      "description": "Choose a route to reach the rejoin point.",
+      "requires_flags": [
+        "act2_chapter2_complete"
+      ],
+      "blocks_flags": [
+        "act2_ch3_route_chosen"
+      ],
+      "start_toast": "Act 2: Choose your route.",
+      "complete_toast": "Act 2: Route committed.",
+      "stages": [
+        {
+          "id": "choose_route",
+          "title": "Choose Route A or B",
+          "text": "Choose Route A (fast/dangerous) or Route B (slow/safe).",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter3RouteCommitZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter3RouteCommitZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 18
+        },
+        "set_flags": {
+          "act2_ch3_route_chosen": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch3_route_a_clear",
+      "title": "Act 2: Route A Mastery",
+      "description": "Complete Route A: suppression run.",
+      "requires_flags": [
+        "act2_ch3_route_chosen"
+      ],
+      "blocks_flags": [
+        "act2_ch3_route_a_clear"
+      ],
+      "start_toast": "Act 2: Clear Route A suppression run.",
+      "complete_toast": "Act 2: Route A complete.",
+      "stages": [
+        {
+          "id": "route_a_clear",
+          "title": "Complete Route A",
+          "text": "Maintain suppression windows and clear Route A.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter3RouteASuppressionStartZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter3RouteAClearZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 20
+        },
+        "set_flags": {
+          "act2_ch3_route_a_clear": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch3_route_b_clear",
+      "title": "Act 2: Route B Clearance",
+      "description": "Complete Route B: safe passage.",
+      "requires_flags": [
+        "act2_ch3_route_chosen"
+      ],
+      "blocks_flags": [
+        "act2_ch3_route_b_clear"
+      ],
+      "start_toast": "Act 2: Clear Route B safe passage.",
+      "complete_toast": "Act 2: Route B complete.",
+      "stages": [
+        {
+          "id": "route_b_clear",
+          "title": "Complete Route B",
+          "text": "Traverse the safe lane and reach the rejoin marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter3RouteBLorePickupZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter3RouteBClearZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 20
+        },
+        "set_flags": {
+          "act2_ch3_route_b_clear": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch3_complete",
+      "title": "Act 2: Chapter 3 Complete",
+      "description": "Rejoin and continue.",
+      "requires_flags": [
+        "act2_ch3_route_chosen"
+      ],
+      "blocks_flags": [
+        "act2_chapter3_complete"
+      ],
+      "start_toast": "Act 2: Rejoin and secure progress.",
+      "complete_toast": "Act 2: Chapter 3 complete.",
+      "stages": [
+        {
+          "id": "complete_rejoin",
+          "title": "Complete at Rejoin",
+          "text": "Reach the rejoin completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter3CompleteZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter3CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 24
+        },
+        "set_flags": {
+          "act2_chapter3_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch4_enter_hub",
+      "title": "Act 2: Chapter 4 Entry",
+      "description": "Use your shard to proceed.",
+      "requires_flags": [
+        "act2_chapter3_complete"
+      ],
+      "blocks_flags": [
+        "act2_ch4_started"
+      ],
+      "start_toast": "Act 2: Enter the consequence hub.",
+      "complete_toast": "Act 2: Hub entered.",
+      "stages": [
+        {
+          "id": "enter_hub",
+          "title": "Enter the Hub",
+          "text": "Step into the hub and use your shard path.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter4HubEntryZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter4HubEntryZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 20
+        },
+        "set_flags": {
+          "act2_ch4_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch4_path_clear",
+      "title": "Act 2: Chapter 4 Path Clear",
+      "description": "Clear your path and reach the final chamber.",
+      "requires_flags": [
+        "act2_ch4_started"
+      ],
+      "blocks_flags": [
+        "act2_ch4_path_clear"
+      ],
+      "start_toast": "Act 2: Clear your selected path.",
+      "complete_toast": "Act 2: Path clear secured.",
+      "stages": [
+        {
+          "id": "clear_path",
+          "title": "Clear Path A or B",
+          "text": "Reach the chapter path clear marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter4PathClearZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter4PathClearZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 22
+        },
+        "set_flags": {
+          "act2_ch4_path_clear": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch4_complete",
+      "title": "Act 2: Chapter 4 Complete",
+      "description": "Secure the final chamber.",
+      "requires_flags": [
+        "act2_ch4_path_clear"
+      ],
+      "blocks_flags": [
+        "act2_chapter4_complete"
+      ],
+      "start_toast": "Act 2: Secure the final chamber.",
+      "complete_toast": "Act 2: Chapter 4 complete.",
+      "stages": [
+        {
+          "id": "complete_final",
+          "title": "Complete Final Chamber",
+          "text": "Trigger the final chamber completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter4CompleteZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter4CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 24
+        },
+        "set_flags": {
+          "act2_chapter4_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch5_ante_briefing",
+      "title": "Act 2: Chapter 5 Briefing",
+      "description": "Enter the antechamber and prepare.",
+      "requires_flags": [
+        "act2_chapter4_complete"
+      ],
+      "blocks_flags": [
+        "act2_ch5_briefed"
+      ],
+      "start_toast": "Act 2: Enter the antechamber.",
+      "complete_toast": "Act 2: Briefing complete.",
+      "stages": [
+        {
+          "id": "ante_briefing",
+          "title": "Prepare in the Antechamber",
+          "text": "Reach the Chapter 5 briefing marker in the antechamber.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter5AnteBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter5AnteBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 22
+        },
+        "set_flags": {
+          "act2_ch5_briefed": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch5_overseer_defeated",
+      "title": "Act 2: Overseer Defeated",
+      "description": "Defeat the Overseer.",
+      "requires_flags": [
+        "act2_ch5_briefed"
+      ],
+      "blocks_flags": [
+        "act2_ch5_boss_defeated"
+      ],
+      "start_toast": "Act 2: Defeat the Overseer.",
+      "complete_toast": "Act 2: Overseer defeated.",
+      "stages": [
+        {
+          "id": "defeat_overseer",
+          "title": "Defeat the Overseer",
+          "text": "Defeat the Overseer in the arena and trigger the defeat marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter5BossAggroZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter5BossDefeatZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 28
+        },
+        "set_flags": {
+          "act2_ch5_boss_defeated": true
+        }
+      }
+    },
+    {
+      "id": "quest_act2_ch5_complete",
+      "title": "Act 2: Chapter 5 Complete",
+      "description": "Resolve the epilogue and close Act 2.",
+      "requires_flags": [
+        "act2_ch5_boss_defeated"
+      ],
+      "blocks_flags": [
+        "act2_chapter5_complete"
+      ],
+      "start_toast": "Act 2: Resolve the epilogue.",
+      "complete_toast": "Act 2: Chapter 5 complete.",
+      "stages": [
+        {
+          "id": "resolve_epilogue",
+          "title": "Resolve the Epilogue",
+          "text": "Reach the Chapter 5 epilogue completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter5EpilogueCheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act2Chapter5CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 32
+        },
+        "set_flags": {
+          "act2_chapter5_complete": true,
+          "act2_act_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch1_entry",
+      "title": "Act 3: Chapter 1 Entry",
+      "description": "Enter the next region and locate the field gate.",
+      "requires_flags": [
+        "act2_act_complete"
+      ],
+      "blocks_flags": [
+        "act3_ch1_started"
+      ],
+      "start_toast": "Act 3: Advance to the field gate.",
+      "complete_toast": "Act 3: Entry secured.",
+      "stages": [
+        {
+          "id": "act3_entry_briefing",
+          "title": "Reach the Field Gate",
+          "text": "Cross into the next region and trigger the entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter1EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter1EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 24
+        },
+        "set_flags": {
+          "act3_ch1_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch1_field_disabled",
+      "title": "Act 3: Disable the Field",
+      "description": "Use your shard to disable the field.",
+      "requires_flags": [
+        "act3_ch1_started"
+      ],
+      "blocks_flags": [
+        "act3_ch1_field_disabled"
+      ],
+      "start_toast": "Act 3: Use a shard console to disable the field.",
+      "complete_toast": "Act 3: Field disabled.",
+      "stages": [
+        {
+          "id": "disable_field",
+          "title": "Disable the Hazard Field",
+          "text": "Activate the shard console at the field gate.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter1ShardConsoleZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter1ShardConsoleZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 26
+        },
+        "set_flags": {
+          "act3_ch1_field_disabled": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch1_complete",
+      "title": "Act 3: Chapter 1 Complete",
+      "description": "Reach the relay and continue.",
+      "requires_flags": [
+        "act3_ch1_started"
+      ],
+      "blocks_flags": [
+        "act3_chapter1_complete"
+      ],
+      "start_toast": "Act 3: Reach the relay.",
+      "complete_toast": "Act 3: Chapter 1 complete.",
+      "stages": [
+        {
+          "id": "reach_relay",
+          "title": "Reach the Relay",
+          "text": "Cross the field gate and trigger the relay completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter1CheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter1CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 30
+        },
+        "set_flags": {
+          "act3_chapter1_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch2_entry",
+      "title": "Act 3: Chapter 2 Entry",
+      "description": "Enter the relay district and locate the routing hub.",
+      "requires_flags": [
+        "act3_chapter1_complete"
+      ],
+      "blocks_flags": [
+        "act3_ch2_started"
+      ],
+      "start_toast": "Act 3: Enter the relay district.",
+      "complete_toast": "Act 3: Routing hub located.",
+      "stages": [
+        {
+          "id": "act3_ch2_entry_briefing",
+          "title": "Locate the Routing Hub",
+          "text": "Reach the Chapter 2 entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter2EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter2EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 26
+        },
+        "set_flags": {
+          "act3_ch2_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch2_route_power",
+      "title": "Act 3: Route Power",
+      "description": "Route power to unlock the exit path.",
+      "requires_flags": [
+        "act3_ch2_started"
+      ],
+      "blocks_flags": [
+        "act3_ch2_power_routed"
+      ],
+      "start_toast": "Act 3: Route power at the hub.",
+      "complete_toast": "Act 3: Power routed.",
+      "stages": [
+        {
+          "id": "act3_ch2_route_power",
+          "title": "Route District Power",
+          "text": "Engage Route A or B and reach the power junction.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter2RouteAConsoleZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter2PowerJunctionZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 28
+        },
+        "set_flags": {
+          "act3_ch2_power_routed": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch2_complete",
+      "title": "Act 3: Chapter 2 Complete",
+      "description": "Leave the district and continue.",
+      "requires_flags": [
+        "act3_ch2_started"
+      ],
+      "blocks_flags": [
+        "act3_chapter2_complete"
+      ],
+      "start_toast": "Act 3: Leave the district.",
+      "complete_toast": "Act 3: Chapter 2 complete.",
+      "stages": [
+        {
+          "id": "act3_ch2_leave_district",
+          "title": "Leave the District",
+          "text": "Reach the Chapter 2 exit completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter2CheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter2CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 32
+        },
+        "set_flags": {
+          "act3_chapter2_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch3_entry",
+      "title": "Act 3: Chapter 3 Entry",
+      "description": "Enter the conduit ward and reach the commit terminal.",
+      "requires_flags": [
+        "act3_chapter2_complete"
+      ],
+      "blocks_flags": [
+        "act3_ch3_started"
+      ],
+      "start_toast": "Act 3: Enter the conduit ward.",
+      "complete_toast": "Act 3: Commit terminal reached.",
+      "stages": [
+        {
+          "id": "act3_ch3_entry_briefing",
+          "title": "Reach the Commit Terminal",
+          "text": "Reach the Chapter 3 entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter3EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter3EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 28
+        },
+        "set_flags": {
+          "act3_ch3_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch3_commit",
+      "title": "Act 3: Chapter 3 Commit",
+      "description": "Commit to a routing doctrine.",
+      "requires_flags": [
+        "act3_ch3_started"
+      ],
+      "blocks_flags": [
+        "act3_ch3_committed"
+      ],
+      "start_toast": "Act 3: Commit to a routing doctrine.",
+      "complete_toast": "Act 3: Doctrine committed.",
+      "stages": [
+        {
+          "id": "act3_ch3_commit_doctrine",
+          "title": "Commit to a Doctrine",
+          "text": "Commit Route A, Route B, or Neutral at the terminal.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter3CommitAZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter3CommitAZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 30
+        },
+        "set_flags": {
+          "act3_ch3_committed": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch3_complete",
+      "title": "Act 3: Chapter 3 Complete",
+      "description": "Cross the ward and continue.",
+      "requires_flags": [
+        "act3_ch3_committed"
+      ],
+      "blocks_flags": [
+        "act3_chapter3_complete"
+      ],
+      "start_toast": "Act 3: Cross the ward.",
+      "complete_toast": "Act 3: Chapter 3 complete.",
+      "stages": [
+        {
+          "id": "act3_ch3_cross_ward",
+          "title": "Cross the Ward",
+          "text": "Reach the Chapter 3 completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter3CheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter3CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 34
+        },
+        "set_flags": {
+          "act3_chapter3_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch4_entry",
+      "title": "Act 3: Chapter 4 Entry",
+      "description": "Enter the signal yard and locate both tokens.",
+      "requires_flags": [
+        "act3_chapter3_complete"
+      ],
+      "blocks_flags": [
+        "act3_ch4_started"
+      ],
+      "start_toast": "Act 3: Enter the signal yard.",
+      "complete_toast": "Act 3: Token yard entered.",
+      "stages": [
+        {
+          "id": "act3_ch4_entry_briefing",
+          "title": "Locate Both Tokens",
+          "text": "Reach the Chapter 4 entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter4EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter4EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 30
+        },
+        "set_flags": {
+          "act3_ch4_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch4_tokens",
+      "title": "Act 3: Chapter 4 Tokens",
+      "description": "Acquire both signal tokens to unlock the exit.",
+      "requires_flags": [
+        "act3_ch4_started"
+      ],
+      "blocks_flags": [
+        "act3_ch4_tokens_ready"
+      ],
+      "start_toast": "Act 3: Gather both signal tokens.",
+      "complete_toast": "Act 3: Exit lock released.",
+      "stages": [
+        {
+          "id": "act3_ch4_tokens_unlock",
+          "title": "Release the Exit Lock",
+          "text": "Collect both tokens and trigger the lock console.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter4TokenAZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter4LockConsoleZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 34
+        },
+        "set_flags": {
+          "act3_ch4_tokens_ready": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch4_complete",
+      "title": "Act 3: Chapter 4 Complete",
+      "description": "Leave the yard and continue.",
+      "requires_flags": [
+        "act3_ch4_tokens_ready"
+      ],
+      "blocks_flags": [
+        "act3_chapter4_complete"
+      ],
+      "start_toast": "Act 3: Leave the signal yard.",
+      "complete_toast": "Act 3: Chapter 4 complete.",
+      "stages": [
+        {
+          "id": "act3_ch4_leave_yard",
+          "title": "Leave the Yard",
+          "text": "Reach the Chapter 4 completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter4CheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter4CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 36
+        },
+        "set_flags": {
+          "act3_chapter4_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch5_entry",
+      "title": "Act 3: Chapter 5 Entry",
+      "description": "Enter the phase field and locate the latch console.",
+      "requires_flags": [
+        "act3_chapter4_complete"
+      ],
+      "blocks_flags": [
+        "act3_ch5_started"
+      ],
+      "start_toast": "Act 3: Enter the phase field.",
+      "complete_toast": "Act 3: Latch console located.",
+      "stages": [
+        {
+          "id": "act3_ch5_entry_briefing",
+          "title": "Locate the Latch Console",
+          "text": "Reach the Chapter 5 entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter5EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter5EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 32
+        },
+        "set_flags": {
+          "act3_ch5_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch5_phase_latched",
+      "title": "Act 3: Chapter 5 Phase Latch",
+      "description": "Latch a stable phase to cross the field.",
+      "requires_flags": [
+        "act3_ch5_started"
+      ],
+      "blocks_flags": [
+        "act3_ch5_phase_latched"
+      ],
+      "start_toast": "Act 3: Latch a stable phase.",
+      "complete_toast": "Act 3: Phase latched.",
+      "stages": [
+        {
+          "id": "act3_ch5_latch_phase",
+          "title": "Latch the Field Phase",
+          "text": "Use the latch console to lock a traversal phase.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter5LatchConsoleZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter5LatchConsoleZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 34
+        },
+        "set_flags": {
+          "act3_ch5_phase_latched": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch5_complete",
+      "title": "Act 3: Chapter 5 Complete",
+      "description": "Reach the far gate and continue.",
+      "requires_flags": [
+        "act3_ch5_started"
+      ],
+      "blocks_flags": [
+        "act3_chapter5_complete"
+      ],
+      "start_toast": "Act 3: Reach the far gate.",
+      "complete_toast": "Act 3: Chapter 5 complete.",
+      "stages": [
+        {
+          "id": "act3_ch5_reach_far_gate",
+          "title": "Reach the Far Gate",
+          "text": "Reach the Chapter 5 completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter5CheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter5CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 38
+        },
+        "set_flags": {
+          "act3_chapter5_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch6_entry",
+      "title": "Act 3: Chapter 6 Entry",
+      "description": "Enter the conduit spur and find a way through.",
+      "requires_flags": [
+        "act3_chapter5_complete"
+      ],
+      "blocks_flags": [
+        "act3_ch6_started"
+      ],
+      "start_toast": "Act 3: Enter the conduit spur.",
+      "complete_toast": "Act 3: Spur traversal started.",
+      "stages": [
+        {
+          "id": "act3_ch6_entry_briefing",
+          "title": "Find a Way Through",
+          "text": "Reach the Chapter 6 entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter6EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter6EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 34
+        },
+        "set_flags": {
+          "act3_ch6_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch6_shortcut",
+      "title": "Act 3: Chapter 6 Shortcut",
+      "description": "Use your doctrine to open a shortcut.",
+      "requires_flags": [
+        "act3_ch6_started"
+      ],
+      "blocks_flags": [
+        "act3_ch6_shortcut_used"
+      ],
+      "start_toast": "Act 3: Doctrine shortcuts available.",
+      "complete_toast": "Act 3: Shortcut used.",
+      "stages": [
+        {
+          "id": "act3_ch6_use_shortcut",
+          "title": "Use a Doctrine Shortcut",
+          "text": "Trigger either doctrine shortcut zone.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter6ShortcutAZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter6ShortcutAZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 36
+        },
+        "set_flags": {
+          "act3_ch6_shortcut_used": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch6_complete",
+      "title": "Act 3: Chapter 6 Complete",
+      "description": "Reach the spur exit and continue.",
+      "requires_flags": [
+        "act3_ch6_started"
+      ],
+      "blocks_flags": [
+        "act3_chapter6_complete"
+      ],
+      "start_toast": "Act 3: Reach the spur exit.",
+      "complete_toast": "Act 3: Chapter 6 complete.",
+      "stages": [
+        {
+          "id": "act3_ch6_reach_exit",
+          "title": "Reach the Spur Exit",
+          "text": "Reach the Chapter 6 completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter6CheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter6CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 40
+        },
+        "set_flags": {
+          "act3_chapter6_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch7_entry",
+      "title": "Act 3: Chapter 7 Entry",
+      "description": "Enter the transfer corridor and locate the threshold.",
+      "requires_flags": [
+        "act3_chapter6_complete"
+      ],
+      "blocks_flags": [
+        "act3_ch7_started"
+      ],
+      "start_toast": "Act 3: Enter the transfer corridor.",
+      "complete_toast": "Act 3: Threshold located.",
+      "stages": [
+        {
+          "id": "act3_ch7_entry_briefing",
+          "title": "Locate the Threshold",
+          "text": "Reach the Chapter 7 entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter7EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter7EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 36
+        },
+        "set_flags": {
+          "act3_ch7_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch7_cross_threshold",
+      "title": "Act 3: Chapter 7 Threshold",
+      "description": "Cross the threshold and commit to the next sector.",
+      "requires_flags": [
+        "act3_ch7_started"
+      ],
+      "blocks_flags": [
+        "act3_ch7_threshold_crossed"
+      ],
+      "start_toast": "Act 3: Cross the threshold.",
+      "complete_toast": "Act 3: Threshold crossed.",
+      "stages": [
+        {
+          "id": "act3_ch7_cross_threshold",
+          "title": "Cross the Threshold",
+          "text": "Pass through the threshold crossing zone.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter7ThresholdWarningZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter7ThresholdCrossZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 38
+        },
+        "set_flags": {
+          "act3_ch7_threshold_crossed": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch7_complete",
+      "title": "Act 3: Chapter 7 Complete",
+      "description": "Reach the exit and continue.",
+      "requires_flags": [
+        "act3_ch7_started"
+      ],
+      "blocks_flags": [
+        "act3_chapter7_complete"
+      ],
+      "start_toast": "Act 3: Reach the chapter exit.",
+      "complete_toast": "Act 3: Chapter 7 complete.",
+      "stages": [
+        {
+          "id": "act3_ch7_reach_exit",
+          "title": "Reach the Exit",
+          "text": "Reach the Chapter 7 completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter7CheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter7CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 42
+        },
+        "set_flags": {
+          "act3_chapter7_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch8_entry",
+      "title": "Act 3: Chapter 8 Entry",
+      "description": "Enter the stabilizer corridor and proceed to normalization.",
+      "requires_flags": [
+        "act3_chapter7_complete"
+      ],
+      "blocks_flags": [
+        "act3_ch8_started"
+      ],
+      "start_toast": "Act 3: Enter the stabilizer corridor.",
+      "complete_toast": "Act 3: Normalization path located.",
+      "stages": [
+        {
+          "id": "act3_ch8_entry_briefing",
+          "title": "Proceed to Normalization",
+          "text": "Reach the Chapter 8 entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter8EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter8EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 38
+        },
+        "set_flags": {
+          "act3_ch8_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch8_normalized",
+      "title": "Act 3: Chapter 8 Normalize",
+      "description": "Stabilize your state and continue.",
+      "requires_flags": [
+        "act3_ch8_started"
+      ],
+      "blocks_flags": [
+        "act3_ch8_state_normalized"
+      ],
+      "start_toast": "Act 3: Stabilize state.",
+      "complete_toast": "Act 3: State stabilized.",
+      "stages": [
+        {
+          "id": "act3_ch8_normalize_state",
+          "title": "Normalize State",
+          "text": "Enter the normalizer zone.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter8NormalizerZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter8NormalizerZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 40
+        },
+        "set_flags": {
+          "act3_ch8_state_normalized": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch8_complete",
+      "title": "Act 3: Chapter 8 Complete",
+      "description": "Reach the exit and continue.",
+      "requires_flags": [
+        "act3_ch8_started"
+      ],
+      "blocks_flags": [
+        "act3_chapter8_complete"
+      ],
+      "start_toast": "Act 3: Reach the chapter exit.",
+      "complete_toast": "Act 3: Chapter 8 complete.",
+      "stages": [
+        {
+          "id": "act3_ch8_reach_exit",
+          "title": "Reach the Exit",
+          "text": "Reach the Chapter 8 completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter8CheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter8CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 44
+        },
+        "set_flags": {
+          "act3_chapter8_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch9_entry",
+      "title": "Act 3: Chapter 9 Entry",
+      "description": "Enter the relay annex and reach the briefing.",
+      "requires_flags": [
+        "act3_chapter8_complete"
+      ],
+      "blocks_flags": [
+        "act3_ch9_started"
+      ],
+      "start_toast": "Act 3: Enter the relay annex.",
+      "complete_toast": "Act 3: Briefing reached.",
+      "stages": [
+        {
+          "id": "act3_ch9_entry_briefing",
+          "title": "Reach the Briefing",
+          "text": "Reach the Chapter 9 entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter9EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter9EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 40
+        },
+        "set_flags": {
+          "act3_ch9_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch9_handoff",
+      "title": "Act 3: Chapter 9 Handoff",
+      "description": "Receive the handoff and commit to the next objective.",
+      "requires_flags": [
+        "act3_ch9_started"
+      ],
+      "blocks_flags": [
+        "act3_mid_arc_complete"
+      ],
+      "start_toast": "Act 3: Receive handoff.",
+      "complete_toast": "Act 3: Handoff accepted.",
+      "stages": [
+        {
+          "id": "act3_ch9_accept_handoff",
+          "title": "Accept the Handoff",
+          "text": "Commit at the briefing handoff zone.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter9CommitZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter9CommitZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 42
+        },
+        "set_flags": {
+          "act3_mid_arc_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch9_complete",
+      "title": "Act 3: Chapter 9 Complete",
+      "description": "Leave the annex and continue.",
+      "requires_flags": [
+        "act3_ch9_started"
+      ],
+      "blocks_flags": [
+        "act3_chapter9_complete"
+      ],
+      "start_toast": "Act 3: Leave the annex.",
+      "complete_toast": "Act 3: Chapter 9 complete.",
+      "stages": [
+        {
+          "id": "act3_ch9_leave_annex",
+          "title": "Leave the Annex",
+          "text": "Reach the Chapter 9 completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter9CheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter9CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 46
+        },
+        "set_flags": {
+          "act3_chapter9_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch10_entry",
+      "title": "Act 3: Chapter 10 Entry",
+      "description": "Enter the uplink approach and reach the finalize node.",
+      "requires_flags": [
+        "act3_chapter9_complete"
+      ],
+      "blocks_flags": [
+        "act3_ch10_started"
+      ],
+      "start_toast": "Act 3: Enter the uplink approach.",
+      "complete_toast": "Act 3: Finalize node reached.",
+      "stages": [
+        {
+          "id": "act3_ch10_entry_briefing",
+          "title": "Reach the Finalize Node",
+          "text": "Reach the Chapter 10 entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter10EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter10EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 42
+        },
+        "set_flags": {
+          "act3_ch10_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch10_finalize",
+      "title": "Act 3: Chapter 10 Finalize",
+      "description": "Finalize the uplink handoff.",
+      "requires_flags": [
+        "act3_ch10_started"
+      ],
+      "blocks_flags": [
+        "act3_act_complete"
+      ],
+      "start_toast": "Act 3: Finalize the uplink handoff.",
+      "complete_toast": "Act 3: Handoff finalized.",
+      "stages": [
+        {
+          "id": "act3_ch10_finalize_uplink",
+          "title": "Finalize Uplink",
+          "text": "Commit at the Chapter 10 finalize zone.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter10FinalizeZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter10FinalizeZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 44
+        },
+        "set_flags": {
+          "act3_act_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act3_ch10_complete",
+      "title": "Act 3: Chapter 10 Complete",
+      "description": "Leave the sector and continue.",
+      "requires_flags": [
+        "act3_act_complete"
+      ],
+      "blocks_flags": [
+        "act3_chapter10_complete"
+      ],
+      "start_toast": "Act 3: Leave the sector.",
+      "complete_toast": "Act 3: Chapter 10 complete.",
+      "stages": [
+        {
+          "id": "act3_ch10_leave_sector",
+          "title": "Leave the Sector",
+          "text": "Reach the Chapter 10 completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter10CheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act3Chapter10CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 48
+        },
+        "set_flags": {
+          "act3_chapter10_complete": true
+        }
+      }
+    },
+    {
+      "id": "quest_act4_ch1_entry_stub",
+      "title": "Act 4: Chapter 1 Entry Stub",
+      "description": "Enter the next sector.",
+      "requires_flags": [
+        "act3_act_complete"
+      ],
+      "blocks_flags": [
+        "act4_ch1_started"
+      ],
+      "start_toast": "Act 4: Enter the next sector.",
+      "complete_toast": "Act 4: Sector entry confirmed.",
+      "stages": [
+        {
+          "id": "act4_ch1_entry_stub_briefing",
+          "title": "Enter the Next Sector",
+          "text": "Reach the Act 4 entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act4Chapter1EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act4Chapter1EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 50
+        },
+        "set_flags": {
+          "act4_ch1_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act4_ch1_entry",
+      "title": "Act 4: Chapter 1 Entry",
+      "description": "Enter the new sector and reach the induction site.",
+      "requires_flags": [
+        "act3_act_complete"
+      ],
+      "blocks_flags": [
+        "act4_ch1_started"
+      ],
+      "start_toast": "Act 4: Reach the induction site.",
+      "complete_toast": "Act 4: Induction site reached.",
+      "stages": [
+        {
+          "id": "act4_ch1_entry_briefing",
+          "title": "Reach the Induction Site",
+          "text": "Reach the Chapter 1 entry briefing marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act4Chapter1EntryBriefingZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act4Chapter1EntryBriefingZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 52
+        },
+        "set_flags": {
+          "act4_ch1_started": true
+        }
+      }
+    },
+    {
+      "id": "quest_act4_ch1_taught",
+      "title": "Act 4: Chapter 1 Induction",
+      "description": "Complete the induction procedure.",
+      "requires_flags": [
+        "act4_ch1_started"
+      ],
+      "blocks_flags": [
+        "act4_ch1_taught"
+      ],
+      "start_toast": "Act 4: Complete induction.",
+      "complete_toast": "Act 4: Induction procedure complete.",
+      "stages": [
+        {
+          "id": "act4_ch1_induction_terminal",
+          "title": "Authorize at the Terminal",
+          "text": "Use the induction terminal to receive authorization.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act4Chapter1InductionTerminalZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act4Chapter1InductionTerminalZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 54
+        },
+        "set_flags": {
+          "act4_ch1_authorized": true,
+          "act4_ch1_taught": true
+        }
+      }
+    },
+    {
+      "id": "quest_act4_ch1_complete",
+      "title": "Act 4: Chapter 1 Complete",
+      "description": "Reach the sector exit and continue.",
+      "requires_flags": [
+        "act4_ch1_authorized"
+      ],
+      "blocks_flags": [
+        "act4_chapter1_complete"
+      ],
+      "start_toast": "Act 4: Reach the sector exit.",
+      "complete_toast": "Act 4: Chapter 1 complete.",
+      "stages": [
+        {
+          "id": "act4_ch1_reach_exit",
+          "title": "Reach the Exit",
+          "text": "Reach the Chapter 1 completion marker.",
+          "start_on_event": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act4Chapter1CheckpointZone"
+            }
+          },
+          "complete_on": {
+            "type": "entered_zone",
+            "payload": {
+              "zone": "Act4Chapter1CompleteZone"
+            }
+          }
+        }
+      ],
+      "reward": {
+        "inc_counters": {
+          "gold": 56
+        },
+        "set_flags": {
+          "act4_chapter1_complete": true
+        }
+      }
     }
   ]
 }

@@ -22,6 +22,18 @@ from .shadow_backend import (
     decision_to_diagnostics,
 )
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 Point = tuple[float, float]
 Polygon = list[Point]
 
@@ -306,7 +318,7 @@ def render_shadow_mask(
     window = getattr(optional_arcade.arcade, "get_window", None)
     try:
         win = window() if callable(window) else None
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: lighting fallback isolation
         win = None
 
     # Prefer the explicitly passed renderer ctx (e.g. LightManager passes the window),
@@ -349,7 +361,8 @@ def render_shadow_mask(
             if not decision.ok:
                 try:
                     setattr(renderer, "_mesh_shadow_mask_backend", "none")
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: lighting fallback isolation
+                    _log_swallow("SHAD-001", "engine/lighting/shadows.py pass-only blanket swallow")
                     pass
                 return None
 
@@ -366,7 +379,7 @@ def render_shadow_mask(
                         if len(pts) < 3:
                             continue
                         draw_filled(pts, (0, 0, 0, alpha_int))
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: lighting fallback isolation
                     # Keep the cleared white mask so composite can run (lit everywhere),
                     # but expose the failure when tracing is enabled.
                     record_swallowed("engine.lighting.shadows.render_shadow_mask.draw_polygons", exc)
@@ -379,10 +392,11 @@ def render_shadow_mask(
 
             try:
                 setattr(renderer, "_mesh_shadow_mask_backend", backend)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: lighting fallback isolation
+                _log_swallow("SHAD-002", "engine/lighting/shadows.py pass-only blanket swallow")
                 pass
             return texture
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: lighting fallback isolation
             record_swallowed("engine.lighting.shadows.render_shadow_mask.fbo_path", exc)
             mask_error = repr(exc)
             if os.environ.get("MESH_SHADOWS_TRACE") == "1" and "render_shadow_mask_trace" not in _LOG_ONCE:
@@ -390,14 +404,16 @@ def render_shadow_mask(
                 _LOG_ONCE.add("render_shadow_mask_trace")
             try:
                 setattr(renderer, "_mesh_shadow_mask_backend", backend)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: lighting fallback isolation
+                _log_swallow("SHAD-003", "engine/lighting/shadows.py pass-only blanket swallow")
                 pass
             return None
         finally:
             if mask_error is not None:
                 try:
                     setattr(renderer, "_mesh_shadow_mask_error", mask_error)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: lighting fallback isolation
+                    _log_swallow("SHAD-004", "engine/lighting/shadows.py pass-only blanket swallow")
                     pass
             # Ensure activate() context managers are closed.
             close_framebuffer_activation(activate_cm)

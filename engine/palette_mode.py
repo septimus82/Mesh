@@ -11,6 +11,17 @@ from engine.tooling_runtime.stamp_report import compute_scene_stamp_report
 from engine.tooling_runtime.brush_report import compute_scene_brush_report
 from engine.tilemap_edit import TilemapDims, ensure_tiles_array, set_tile, get_layer_by_id
 from engine.paths import resolve_path
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +176,7 @@ def apply_at(scene_payload: dict, tx: int, ty: int, layer_id: str = "ground") ->
         with open(resolve_path(item.path), "r", encoding="utf-8") as f:
             item_payload = json.load(f)
     except Exception as e:
+        _log_swallow("PLMD-001", "engine/palette_mode.py blanket swallow", once=True)
         logger.error(f"Failed to load palette item {item.path}: {e}")
         return False
 
@@ -185,6 +197,7 @@ def apply_last_saved_at(scene_payload: dict, tx: int, ty: int, layer_id: str = "
         with open(resolve_path(path), "r", encoding="utf-8") as f:
             payload = json.load(f)
     except Exception as e:  # noqa: BLE001
+        _log_swallow("PLMD-002", "engine/palette_mode.py blanket swallow", once=True)
         logger.error(f"Failed to load last_saved item {path}: {e}")
         return False
 
@@ -207,6 +220,7 @@ def _apply_stamp(scene_payload: dict, stamp_payload: dict, tx: int, ty: int) -> 
             ignore_prefab_mismatch=True
         )
     except Exception as e:
+        _log_swallow("PLMD-003", "engine/palette_mode.py blanket swallow", once=True)
         logger.error(f"Stamp report failed: {e}")
         return False
 
@@ -231,6 +245,7 @@ def _apply_stamp(scene_payload: dict, stamp_payload: dict, tx: int, ty: int) -> 
             tiles = ensure_tiles_array(layer, dims=dims)
             set_tile(tiles, dims=dims, x=x, y=y, tile=after)
         except Exception as e:
+            _log_swallow("PLMD-004", "engine/palette_mode.py blanket swallow", once=True)
             logger.error(f"Failed to apply tile change: {e}")
 
     # Apply entity changes
@@ -271,6 +286,7 @@ def _apply_brush(scene_payload: dict, brush_payload: dict, tx: int, ty: int, lay
             clip=True # Default clip? User said "applies brush at cursor tx,ty onto current tile layer"
         )
     except Exception as e:
+        _log_swallow("PLMD-005", "engine/palette_mode.py blanket swallow", once=True)
         logger.error(f"Brush report failed: {e}")
         return False
 
@@ -292,6 +308,7 @@ def _apply_brush(scene_payload: dict, brush_payload: dict, tx: int, ty: int, lay
             tiles = ensure_tiles_array(layer, dims=dims)
             set_tile(tiles, dims=dims, x=x, y=y, tile=after)
         except Exception as e:
+            _log_swallow("PLMD-006", "engine/palette_mode.py blanket swallow", once=True)
             logger.error(f"Failed to apply tile change: {e}")
 
     return changed_any

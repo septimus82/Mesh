@@ -9,6 +9,18 @@ import engine.optional_arcade as optional_arcade
 from engine.behaviours import get_behaviour_param_defs
 from engine.logging_tools import get_logger
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 logger = get_logger(__name__)
 
 
@@ -874,6 +886,7 @@ class EditorInspectorController:
                     try:
                         setattr(behaviour, param_name, None)
                     except Exception:
+                        _log_swallow("EDIT-001", "engine/editor/editor_inspector_controller.py pass-only blanket swallow")
                         pass
                 if hasattr(behaviour, "on_config_updated") and callable(behaviour.on_config_updated):
                     try:
@@ -913,6 +926,7 @@ class EditorInspectorController:
                         try:
                             setattr(behaviour, key, value)
                         except Exception:
+                            _log_swallow("EDIT-002", "engine/editor/editor_inspector_controller.py pass-only blanket swallow")
                             pass
                 if hasattr(behaviour, "on_config_updated") and callable(behaviour.on_config_updated):
                     for key, value in params.items():

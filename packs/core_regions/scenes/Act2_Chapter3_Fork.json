@@ -1,0 +1,435 @@
+{
+  "description": "Act 2 Chapter 3 fork: choose fast-dangerous route A or slow-safe route B.",
+  "name": "Act 2 Chapter 3 - Fork",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter3_fork_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter3_fork_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "I can pick either route."
+                }
+              ],
+              "text": "Fork guide: Route A is fast but dangerous. Route B is slower but safer."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act2_chapter3_fork_routeguide_260_300_0_0",
+      "mesh_name": "Act2Ch3RouteGuide",
+      "name": "Act2Ch3RouteGuide",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 260,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Fast route selected."
+                }
+              ],
+              "text": "Route A: fast / dangerous."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act2_chapter3_fork_routeasign_360_250_0_0",
+      "mesh_name": "Act2Ch3RouteASign",
+      "name": "Act2Ch3RouteASign",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 360,
+      "y": 250
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Safe route selected."
+                }
+              ],
+              "text": "Route B: slow / safe."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act2_chapter3_fork_routebsign_360_350_0_0",
+      "mesh_name": "Act2Ch3RouteBSign",
+      "name": "Act2Ch3RouteBSign",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 360,
+      "y": 350
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_route_a_select",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_fork_routeaselectzone_440_250_0_0"
+        }
+      },
+      "id": "act2_chapter3_fork_routeaselectzone_440_250_0_0",
+      "name": "Act2Chapter3RouteASelectZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 440,
+      "y": 250
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_route_b_select",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_fork_routebselectzone_440_350_0_0"
+        }
+      },
+      "id": "act2_chapter3_fork_routebselectzone_440_350_0_0",
+      "name": "Act2Chapter3RouteBSelectZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 440,
+      "y": 350
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3RouteASelectZone",
+          "set_flags": {
+            "act2_ch3_route_a_selected": true,
+            "act2_ch3_route_chosen": true
+          },
+          "forbid_flags": [
+            "act2_ch3_route_a_selected"
+          ],
+          "once": true,
+          "toast": "Route selected: A (fast / dangerous).",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_fork_routeaselectstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteASelectStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3RouteBSelectZone",
+          "set_flags": {
+            "act2_ch3_route_b_selected": true,
+            "act2_ch3_route_chosen": true
+          },
+          "forbid_flags": [
+            "act2_ch3_route_b_selected"
+          ],
+          "once": true,
+          "toast": "Route selected: B (slow / safe).",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_fork_routebselectstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteBSelectStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter3_RouteA_Run.json"
+        }
+      },
+      "id": "act2_chapter3_fork_toroutea_600_250_0_0",
+      "name": "ToAct2Chapter3RouteA",
+      "require_flags": [
+        "act2_ch3_route_a_selected"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 600,
+      "y": 250
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter3_RouteB_Safe.json"
+        }
+      },
+      "id": "act2_chapter3_fork_torouteb_600_350_0_0",
+      "name": "ToAct2Chapter3RouteB",
+      "require_flags": [
+        "act2_ch3_route_b_selected"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 600,
+      "y": 350
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter2_Sanctum.json"
+        }
+      },
+      "id": "act2_chapter3_fork_returntoact2chapter2sanctum_60_300_0_0",
+      "name": "ReturnToAct2Chapter2Sanctum",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_fork_reentry_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_fork_reentryprobezone_130_300_0_0"
+        }
+      },
+      "id": "act2_chapter3_fork_reentryprobezone_130_300_0_0",
+      "name": "Act2Chapter3ForkReentryProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 130,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3ForkReentryProbeZone",
+          "set_flags": {
+            "act2_ch3_fork_reentry_1": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act2_ch3_route_chosen",
+            "act2_ch3_fork_reentry_1"
+          ]
+        }
+      },
+      "id": "act2_chapter3_fork_reentryvisitstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3ForkReentryVisitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3ForkReentryProbeZone",
+          "set_flags": {
+            "act2_ch3_fork_reentry_2": true
+          },
+          "require_flags": [
+            "act2_ch3_fork_reentry_1"
+          ],
+          "forbid_flags": [
+            "act2_ch3_route_chosen",
+            "act2_ch3_fork_reentry_2"
+          ],
+          "once": true,
+          "toast": "Hint: pick Route A for speed or Route B for safety.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_fork_reentryhintstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3ForkReentryHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch3_route_chosen": true
+          },
+          "require_flags": [
+            "act2_ch3_route_a_selected"
+          ],
+          "once": false
+        }
+      },
+      "id": "act2_chapter3_fork_routeselectedrechecka_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteSelectedRecheckA",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch3_route_chosen": true
+          },
+          "require_flags": [
+            "act2_ch3_route_b_selected"
+          ],
+          "once": false
+        }
+      },
+      "id": "act2_chapter3_fork_routeselectedrecheckb_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteSelectedRecheckB",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_route_commit",
+          "trigger_radius": 180.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_fork_routecommitzone_500_300_0_0"
+        }
+      },
+      "id": "act2_chapter3_fork_routecommitzone_500_300_0_0",
+      "name": "Act2Chapter3RouteCommitZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 500,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3RouteCommitZone",
+          "set_flags": {
+            "act2_ch3_route_chosen": true
+          },
+          "forbid_flags": [
+            "act2_ch3_route_chosen"
+          ],
+          "once": true
+        }
+      },
+      "id": "act2_chapter3_fork_routecommitstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3RouteCommitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

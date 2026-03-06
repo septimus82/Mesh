@@ -1,0 +1,12 @@
+{
+  "description": "Act 1 index (picker entry)",
+  "notes": "Stable entrypoint for the Variant Picker; chains to act1_full_demo.",
+  "steps": [
+    {
+      "args": [
+        "act1_full_demo"
+      ],
+      "cmd": "run-preset"
+    }
+  ]
+}

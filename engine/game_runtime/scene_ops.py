@@ -1,5 +1,17 @@
 from typing import Any
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 def mark_scene_dirty(window: Any, reason: str) -> None:
     reason_text = str(reason or "").strip()
     window.scene_dirty = True
@@ -19,11 +31,19 @@ def record_recent_scene(window: Any, scene_path: str) -> None:
         while p in recent:
             recent.remove(p)
     except Exception:  # noqa: BLE001
+        _log_swallow("SCEN-001", "engine/game_runtime/scene_ops.py pass-only blanket swallow")
         pass
     recent.insert(0, p)
     if len(recent) > 20:
         del recent[20:]
     window.recent_scenes = recent
+    try:
+        on_recent = getattr(window, "_on_recent_scene_recorded", None)
+        if callable(on_recent):
+            on_recent(p)
+    except Exception:  # noqa: BLE001
+        _log_swallow("SCEN-002", "engine/game_runtime/scene_ops.py pass-only blanket swallow")
+        pass
 
 def get_recent_scenes(window: Any) -> list[str]:
     recent = getattr(window, "recent_scenes", None)

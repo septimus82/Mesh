@@ -10,6 +10,22 @@
         "start"
       ]
     },
+    "act1_chapter3_archive": {
+      "path": "packs/core_regions/scenes/Act1_Chapter3_Archive.json",
+      "label": "Act 1 Chapter 3 Archive",
+      "tags": [
+        "dialogue",
+        "puzzle"
+      ]
+    },
+    "act1_chapter3_courtyard": {
+      "path": "packs/core_regions/scenes/Act1_Chapter3_Courtyard.json",
+      "label": "Act 1 Chapter 3 Courtyard",
+      "tags": [
+        "combat",
+        "checkpoint"
+      ]
+    },
     "act1_chapter2_ruined_gate": {
       "path": "packs/core_regions/scenes/Act1_Chapter2_RuinedGate.json",
       "label": "Act 1 Chapter 2 Ruined Gate",
@@ -31,6 +47,31 @@
       "from": "act1_chapter3_stub",
       "to": "act1_chapter2_ruined_gate",
       "via": "ReturnDoor"
+    },
+    {
+      "from": "act1_chapter3_stub",
+      "to": "act1_chapter3_archive",
+      "via": "ToChapter3Archive"
+    },
+    {
+      "from": "act1_chapter3_archive",
+      "to": "act1_chapter3_stub",
+      "via": "ReturnToChapter3Stub"
+    },
+    {
+      "from": "act1_chapter3_archive",
+      "to": "act1_chapter3_courtyard",
+      "via": "ToChapter3Courtyard"
+    },
+    {
+      "from": "act1_chapter3_courtyard",
+      "to": "act1_chapter3_archive",
+      "via": "ReturnToChapter3Archive"
+    },
+    {
+      "from": "act1_chapter3_courtyard",
+      "to": "act1_chapter4_stub",
+      "via": "ToChapter4FromCourtyard"
     },
     {
       "from": "act1_chapter3_stub",

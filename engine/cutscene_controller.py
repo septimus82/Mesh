@@ -8,6 +8,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .logging_tools import get_logger
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 logger = get_logger(__name__)
 
@@ -54,7 +65,8 @@ class CutsceneController:
             return
         try:
             raw = json.loads(p.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("CUTS-001", "engine/cutscene_controller.py blanket swallow", once=True)
             print(f"[Mesh][Cutscene] Failed to load '{path}': {exc}")
             return
         if isinstance(raw, dict):
@@ -224,7 +236,8 @@ class CutsceneController:
         if bus is not None and event_type:
             try:
                 bus.emit(event_type, **{k: v for k, v in data.items() if k not in {"type", "event", "name"}})
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("CUTS-002", "engine/cutscene_controller.py blanket swallow", once=True)
                 logger.error("[Mesh][Cutscene] emit_event failed: %s", exc)
         return True
 
@@ -240,7 +253,8 @@ class CutsceneController:
         if ui is not None and entries:
             try:
                 ui.show_dialogue(entries, owner=owner)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("CUTS-003", "engine/cutscene_controller.py blanket swallow", once=True)
                 print(f"[Mesh][Cutscene] start_dialogue failed: {exc}")
         return True
 
@@ -261,13 +275,15 @@ class CutsceneController:
             try:
                 mover((x, y))
                 return
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("CUTS-004", "engine/cutscene_controller.py blanket swallow", once=True)
                 if not getattr(self, "_mesh_camera_move_error_logged", False):
                     print(f"[Mesh][Cutscene] ERROR moving camera: {exc}")
                     setattr(self, "_mesh_camera_move_error_logged", True)
         try:
             camera.position = (x, y)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("CUTS-005", "engine/cutscene_controller.py blanket swallow", once=True)
             if not getattr(self, "_mesh_camera_position_error_logged", False):
                 print(f"[Mesh][Cutscene] ERROR setting camera position: {exc}")
                 setattr(self, "_mesh_camera_position_error_logged", True)

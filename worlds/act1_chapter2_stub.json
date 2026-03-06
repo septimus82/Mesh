@@ -10,6 +10,22 @@
         "start"
       ]
     },
+    "act1_chapter2_camp": {
+      "path": "packs/core_regions/scenes/Act1_Chapter2_Camp.json",
+      "label": "Act 1 Chapter 2 Camp",
+      "tags": [
+        "dialogue",
+        "checkpoint"
+      ]
+    },
+    "act1_chapter2_ambush": {
+      "path": "packs/core_regions/scenes/Act1_Chapter2_Ambush.json",
+      "label": "Act 1 Chapter 2 Ambush",
+      "tags": [
+        "combat",
+        "gated"
+      ]
+    },
     "act1_chapter2_ruined_gate": {
       "path": "packs/core_regions/scenes/Act1_Chapter2_RuinedGate.json",
       "label": "Act 1 Chapter 2 Ruined Gate",
@@ -29,8 +45,33 @@
   "links": [
     {
       "from": "act1_chapter2_stub",
+      "to": "act1_chapter2_camp",
+      "via": "ToChapter2Camp"
+    },
+    {
+      "from": "act1_chapter2_camp",
+      "to": "act1_chapter2_stub",
+      "via": "ReturnToChapter2Stub"
+    },
+    {
+      "from": "act1_chapter2_camp",
+      "to": "act1_chapter2_ambush",
+      "via": "ToChapter2Ambush"
+    },
+    {
+      "from": "act1_chapter2_ambush",
+      "to": "act1_chapter2_camp",
+      "via": "ReturnToChapter2Camp"
+    },
+    {
+      "from": "act1_chapter2_stub",
       "to": "act1_chapter2_ruined_gate",
       "via": "ToRuinedGate"
+    },
+    {
+      "from": "act1_chapter2_ambush",
+      "to": "act1_chapter2_ruined_gate",
+      "via": "ToRuinedGateFromAmbush"
     },
     {
       "from": "act1_chapter2_ruined_gate",

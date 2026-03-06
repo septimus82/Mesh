@@ -1,7 +1,7 @@
 """Mouse handling for tile_paint scope."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable, cast
 
 import engine.optional_arcade as optional_arcade
 
@@ -77,10 +77,10 @@ def _handle_tile_paint_mouse_press(window: Any, event: MouseEvent) -> bool:
     )
     if tool == "pick":
         payloads: list[dict] = []
-        iter_payloads = getattr(sc, "_debug_iter_authoring_payloads", None) if sc is not None else None
-        if callable(iter_payloads):
+        _iter_fn = getattr(sc, "_debug_iter_authoring_payloads", None) if sc is not None else None
+        if _iter_fn is not None:
             try:
-                payloads = [p for p in iter_payloads() if isinstance(p, dict)]
+                payloads = [p for p in cast(Callable[..., list[dict]], _iter_fn)() if isinstance(p, dict)]
             except Exception:  # noqa: BLE001
                 payloads = []
         if not payloads and sc is not None and isinstance(getattr(sc, "_loaded_scene_data", None), dict):
@@ -145,10 +145,10 @@ def _handle_tile_paint_mouse_release(window: Any, event: MouseEvent) -> bool:
     sc = getattr(window, "scene_controller", None)
     instance = getattr(sc, "tilemap_instance", None) if sc is not None else None
     payloads: list[dict] = []
-    iter_payloads = getattr(sc, "_debug_iter_authoring_payloads", None) if sc is not None else None
-    if callable(iter_payloads):
+    _iter_fn2 = getattr(sc, "_debug_iter_authoring_payloads", None) if sc is not None else None
+    if _iter_fn2 is not None:
         try:
-            payloads = [p for p in iter_payloads() if isinstance(p, dict)]
+            payloads = [p for p in cast(Callable[..., list[dict]], _iter_fn2)() if isinstance(p, dict)]
         except Exception:  # noqa: BLE001
             payloads = []
     if not payloads and sc is not None and isinstance(getattr(sc, "_loaded_scene_data", None), dict):

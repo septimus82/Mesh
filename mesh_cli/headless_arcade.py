@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 import types
+from typing import Any, cast
 
 
 def install_arcade_stub_if_missing() -> None:
@@ -47,7 +48,8 @@ def install_arcade_stub_if_missing() -> None:
     def symbol_string(code: int) -> str:
         return f"KEY_{int(code)}"
 
-    key_mod.symbol_string = symbol_string  # type: ignore[attr-defined]
+    key_any = cast(Any, key_mod)
+    key_any.symbol_string = symbol_string
 
     color_mod = types.SimpleNamespace(
         BLACK=(0, 0, 0),
@@ -60,14 +62,15 @@ def install_arcade_stub_if_missing() -> None:
     def get_window() -> None:
         return None
 
-    arcade_stub.Sprite = Sprite  # type: ignore[attr-defined]
-    arcade_stub.SpriteList = SpriteList  # type: ignore[attr-defined]
-    arcade_stub.Texture = Texture  # type: ignore[attr-defined]
-    arcade_stub.Text = Text  # type: ignore[attr-defined]
-    arcade_stub.key = key_mod  # type: ignore[attr-defined]
-    arcade_stub.color = color_mod  # type: ignore[attr-defined]
-    arcade_stub.get_window = get_window  # type: ignore[attr-defined]
-    arcade_stub.__mesh_headless_stub__ = True  # type: ignore[attr-defined]
+    arcade_any = cast(Any, arcade_stub)
+    arcade_any.Sprite = Sprite
+    arcade_any.SpriteList = SpriteList
+    arcade_any.Texture = Texture
+    arcade_any.Text = Text
+    arcade_any.key = key_mod
+    arcade_any.color = color_mod
+    arcade_any.get_window = get_window
+    arcade_any.__mesh_headless_stub__ = True
 
     sys.modules["arcade"] = arcade_stub
     sys.modules["arcade.key"] = key_mod

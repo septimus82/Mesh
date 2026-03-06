@@ -1,0 +1,16 @@
+{
+  "description": "Comprehensive lighting demo: static lights, dynamic lights, flicker, shafts, shadows, occluders",
+  "env": {
+    "MESH_SHADOWCAST_MASK": "1"
+  },
+  "notes": "All lighting features enabled with shadow mask",
+  "steps": [
+    {
+      "args": [
+        "--scene",
+        "scenes/lighting_showcase.json"
+      ],
+      "cmd": "demo"
+    }
+  ]
+}

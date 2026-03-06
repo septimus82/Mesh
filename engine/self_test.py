@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Iterable, cast
 import engine.optional_arcade as optional_arcade
 
 from .behaviours.registry import BEHAVIOUR_REGISTRY
@@ -175,7 +175,7 @@ class SelfTestManager:
             test_name = f"behaviour:{name}"
             try:
                 entity = _DummyEntity()
-                behaviour = cls(entity=entity, window=self.window, **{})  # type: ignore[arg-type]
+                behaviour = cast(Any, cls)(entity=entity, window=self.window, **{})
                 if hasattr(behaviour, "on_init"):
                     behaviour.on_init()
                 if hasattr(behaviour, "update"):

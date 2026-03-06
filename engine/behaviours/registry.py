@@ -6,9 +6,11 @@ import importlib
 import pkgutil
 import sys
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Iterable, List, Optional, Type
+from typing import Any, Callable, Dict, Iterable, List, Optional, Type, TypeVar
 
 from .base import Behaviour, ParamDef
+
+_B = TypeVar("_B", bound=Behaviour)
 
 _MISSING = object()
 _ALLOWED_TYPES = {"float", "int", "bool", "string", "array", "object"}
@@ -157,10 +159,10 @@ def register_behaviour(
     *,
     description: str,
     config_fields: Iterable[Any] | None = None,
-) -> Callable[[Type[Behaviour]], Type[Behaviour]]:
+) -> Callable[[Type[_B]], Type[_B]]:
     """Decorator that registers a behaviour class along with metadata."""
 
-    def decorator(cls: Type[Behaviour]) -> Type[Behaviour]:
+    def decorator(cls: Type[_B]) -> Type[_B]:
         canonical = name.strip()
         BEHAVIOUR_REGISTRY[canonical] = cls
         _NAME_ALIASES[canonical.lower()] = canonical
@@ -189,7 +191,7 @@ def register_behaviour(
     return decorator
 
 
-def register(name: str) -> Callable[[Type[Behaviour]], Type[Behaviour]]:
+def register(name: str) -> Callable[[Type[_B]], Type[_B]]:
     """Legacy decorator retained for backwards compatibility."""
 
     return register_behaviour(name, description=f"{name} behaviour")

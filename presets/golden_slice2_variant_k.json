@@ -1,0 +1,30 @@
+{
+  "description": "Hollowmere Outskirts: Puzzle-lite switch gate (Golden Slice 2)",
+  "lighting_showcase": false,
+  "notes": "Second location (puzzle-lite) - unlock then reach goal",
+  "steps": [
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice2_variant_k.json",
+        "--dry-run",
+        "--strict",
+        "--check-refs"
+      ],
+      "cmd": "pipeline"
+    },
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice2_variant_k.json",
+        "--dry-run",
+        "--demo"
+      ],
+      "cmd": "pipeline"
+    }
+  ]
+}

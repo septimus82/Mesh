@@ -9,6 +9,17 @@ from typing import Any
 
 from engine.persistence_io import write_json_atomic
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 _SUPPORTED_IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp"}
 
 _TINY_PNG_BASE64 = (
@@ -71,7 +82,8 @@ def fix_missing_assets_from_audit(
     if placeholder_path.exists():
         try:
             placeholder_bytes = placeholder_path.read_bytes()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: assets fix fallback isolation
+            _log_swallow("AFIX-002", "placeholder read", once=True)
             report["failures"].append(
                 {
                     "path": _rel_path(placeholder_path, repo_root),
@@ -107,7 +119,8 @@ def fix_missing_assets_from_audit(
             target_path.parent.mkdir(parents=True, exist_ok=True)
             target_path.write_bytes(placeholder_bytes)
             created.append(rel_target)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: assets fix fallback isolation
+            _log_swallow("AFIX-004", "placeholder write", once=True)
             report["failures"].append(
                 {
                     "path": rel_target,
@@ -126,7 +139,8 @@ def fix_missing_assets_from_audit(
 def _load_json(path: Path, report: dict[str, Any]) -> dict[str, Any] | None:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: assets fix fallback isolation
+        _log_swallow("AFIX-005", "audit JSON load", once=True)
         report["failures"].append({"path": path.as_posix(), "error": f"audit_read_failed: {exc}"})
         return None
     if not isinstance(payload, dict):
@@ -174,7 +188,8 @@ def _normalize_repo_relative_path(path_text: str, repo_root: Path) -> str | None
         try:
             rel = raw.resolve().relative_to(repo_root.resolve())
             return rel.as_posix()
-        except Exception:
+        except Exception:  # noqa: BLE001  # REASON: assets fix fallback isolation
+            _log_swallow("AFIX-001", "path relative_to", once=True)
             return None
     cleaned = path_text.replace("\\", "/").lstrip("/")
     return cleaned
@@ -198,7 +213,8 @@ def _rewrite_missing_refs(
     for path, items in sorted(grouped.items(), key=lambda kv: kv[0].as_posix()):
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: assets fix fallback isolation
+            _log_swallow("AFIX-005", "rewrite read", once=True)
             report["failures"].append({"path": _rel_path(path, repo_root), "error": f"read_failed: {exc}"})
             continue
         changed = False
@@ -216,7 +232,8 @@ def _rewrite_missing_refs(
             try:
                 write_json_atomic(path, payload, indent=2, sort_keys=True, trailing_newline=True)
                 rewritten.append(_rel_path(path, repo_root))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: assets fix fallback isolation
+                _log_swallow("AFIX-006", "rewrite write", once=True)
                 report["failures"].append({"path": _rel_path(path, repo_root), "error": f"write_failed: {exc}"})
     report["rewritten_files"] = sorted(set(rewritten))
 
@@ -258,7 +275,8 @@ def _unescape_pointer(part: str) -> str:
 def _rel_path(path: Path, repo_root: Path) -> str:
     try:
         return path.resolve().relative_to(repo_root.resolve()).as_posix()
-    except Exception:
+    except Exception:  # noqa: BLE001  # REASON: assets fix fallback isolation
+        _log_swallow("AFIX-007", "rel_path calc", once=True)
         return path.as_posix()
 
 
@@ -268,5 +286,6 @@ def _write_report(out_path: Path | None, report: dict[str, Any]) -> None:
     out_path = out_path.resolve() if out_path.is_absolute() else out_path
     try:
         write_json_atomic(out_path, report, indent=2, sort_keys=True, trailing_newline=True)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: assets fix fallback isolation
+        _log_swallow("AFIX-008", "report write", once=True)
         report.setdefault("failures", []).append({"path": out_path.as_posix(), "error": f"report_write_failed: {exc}"})

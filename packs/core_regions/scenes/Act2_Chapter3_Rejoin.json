@@ -1,0 +1,262 @@
+{
+  "description": "Act 2 Chapter 3 rejoin: route convergence, checkpoint, and chapter completion.",
+  "name": "Act 2 Chapter 3 - Rejoin",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter3_rejoin_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter3_rejoin_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Proceed."
+                }
+              ],
+              "text": "Rejoin marshal: either route qualifies. Regroup here and continue."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act2_chapter3_rejoin_marshal_260_300_0_0",
+      "mesh_name": "Act2Ch3RejoinMarshal",
+      "name": "Act2Ch3RejoinMarshal",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 260,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch3_rejoin_ready": true
+          },
+          "require_flags": [
+            "act2_ch3_route_a_clear"
+          ],
+          "once": false
+        }
+      },
+      "id": "act2_chapter3_rejoin_readyfroma_m1000_m1000_0_0",
+      "name": "Act2Ch3RejoinReadyFromA",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch3_rejoin_ready": true
+          },
+          "require_flags": [
+            "act2_ch3_route_b_clear"
+          ],
+          "once": false
+        }
+      },
+      "id": "act2_chapter3_rejoin_readyfromb_m1000_m1000_0_0",
+      "name": "Act2Ch3RejoinReadyFromB",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_checkpoint",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_rejoin_checkpointzone_520_300_0_0"
+        }
+      },
+      "id": "act2_chapter3_rejoin_checkpointzone_520_300_0_0",
+      "name": "Act2Chapter3CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3CheckpointZone",
+          "set_flags": {
+            "act2_ch3_checkpoint": true
+          },
+          "require_flags": [
+            "act2_ch3_rejoin_ready"
+          ],
+          "forbid_flags": [
+            "act2_ch3_checkpoint"
+          ],
+          "once": true,
+          "toast": "Checkpoint reached: Act 2 Chapter 3",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_rejoin_checkpointstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch3_complete",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter3_rejoin_completezone_700_300_0_0"
+        }
+      },
+      "id": "act2_chapter3_rejoin_completezone_700_300_0_0",
+      "name": "Act2Chapter3CompleteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter3CompleteZone",
+          "set_flags": {
+            "act2_chapter3_complete": true
+          },
+          "require_flags": [
+            "act2_ch3_rejoin_ready"
+          ],
+          "forbid_flags": [
+            "act2_chapter3_complete"
+          ],
+          "once": true,
+          "toast": "Objective complete: Act 2 Chapter 3.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter3_rejoin_completestatesync_m1000_m1000_0_0",
+      "name": "Act2Ch3CompleteStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "id": "act2_chapter3_rejoin_rewardpickup_820_280_0_0",
+      "mesh_name": "Act2Ch3RejoinRewardPickup",
+      "name": "Act2Ch3RejoinRewardPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 820,
+      "y": 280
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter3_Fork.json"
+        }
+      },
+      "id": "act2_chapter3_rejoin_returntofork_60_300_0_0",
+      "name": "ReturnToAct2Chapter3Fork",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter4_Hub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter3_rejoin_toact2chapter4hub_980_300_0_0",
+      "name": "ToAct2Chapter4Hub",
+      "require_flags": [
+        "act2_chapter3_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 980,
+      "y": 300
+    }
+  ]
+}

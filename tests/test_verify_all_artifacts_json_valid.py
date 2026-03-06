@@ -163,6 +163,85 @@ def test_verify_all_artifacts_are_valid_json_objects_and_have_required_keys(monk
             assert key in baseline_diff_data, f"baseline_diff.json: missing key {key!r}"
         assert baseline_diff_data["schema_version"] == 1
 
+    # overlay_perf.json is optional (written when --ci-bundle is enabled);
+    # when present, validate schema.
+    overlay_perf_path = artifacts_dir / "overlay_perf.json"
+    if overlay_perf_path.exists():
+        overlay_perf_data = json.loads(overlay_perf_path.read_text(encoding="utf-8"))
+        assert isinstance(overlay_perf_data, dict), "overlay_perf.json: expected dict"
+        for key in ["schema_version", "metrics"]:
+            assert key in overlay_perf_data, f"overlay_perf.json: missing key {key!r}"
+        assert overlay_perf_data["schema_version"] == 1
+        metrics = overlay_perf_data["metrics"]
+        assert isinstance(metrics, dict), "overlay_perf.json: metrics must be an object"
+        for required in ["providers_total", "command_palette_provider"]:
+            assert required in metrics, f"overlay_perf.json: missing metric {required!r}"
+
+    perf_run_path = artifacts_dir / "perf_run.json"
+    if perf_run_path.exists():
+        perf_run_data = json.loads(perf_run_path.read_text(encoding="utf-8"))
+        assert isinstance(perf_run_data, dict), "perf_run.json: expected dict"
+        for key in ["schema_version", "mode", "ticks", "scenes", "totals"]:
+            assert key in perf_run_data, f"perf_run.json: missing key {key!r}"
+        assert perf_run_data["schema_version"] == 1
+
+    perf_compare_path = artifacts_dir / "perf_compare.json"
+    if perf_compare_path.exists():
+        perf_compare_data = json.loads(perf_compare_path.read_text(encoding="utf-8"))
+        assert isinstance(perf_compare_data, dict), "perf_compare.json: expected dict"
+        for key in ["schema_version", "ok", "regressions", "diagnostics", "scene_count"]:
+            assert key in perf_compare_data, f"perf_compare.json: missing key {key!r}"
+        assert perf_compare_data["schema_version"] == 1
+
+    # mypy_budget_diagnostic artifacts are optional (written when step budget
+    # guard fails specifically due to mypy-gate slowness); when present,
+    # validate minimal schema/text.
+    mypy_diag_json_path = artifacts_dir / "mypy_budget_diagnostic.json"
+    if mypy_diag_json_path.exists():
+        mypy_diag_data = json.loads(mypy_diag_json_path.read_text(encoding="utf-8"))
+        assert isinstance(mypy_diag_data, dict), "mypy_budget_diagnostic.json: expected dict"
+        for key in [
+            "schema_version",
+            "step",
+            "command_argv",
+            "command_line",
+            "wall_time_seconds",
+            "files_checked",
+            "summary",
+            "cache",
+            "python_version",
+            "budget_row",
+        ]:
+            assert key in mypy_diag_data, f"mypy_budget_diagnostic.json: missing key {key!r}"
+        assert mypy_diag_data["schema_version"] == 1
+        mypy_diag_txt_path = artifacts_dir / "mypy_budget_diagnostic.txt"
+        assert mypy_diag_txt_path.exists(), "mypy_budget_diagnostic.txt missing when json exists"
+
+    # pytest_fast_budget_diagnostic artifacts are optional (written when step
+    # budget guard fails specifically due to pytest-fast slowness); when
+    # present, validate minimal schema/text.
+    pytest_fast_diag_json_path = artifacts_dir / "pytest_fast_budget_diagnostic.json"
+    if pytest_fast_diag_json_path.exists():
+        pytest_fast_diag_data = json.loads(pytest_fast_diag_json_path.read_text(encoding="utf-8"))
+        assert isinstance(pytest_fast_diag_data, dict), "pytest_fast_budget_diagnostic.json: expected dict"
+        for key in [
+            "schema_version",
+            "step",
+            "command_argv",
+            "command_line",
+            "wall_time_seconds",
+            "threshold_ms",
+            "current_ms",
+            "python_version",
+            "diagnostic_command_argv",
+            "diagnostic_command_line",
+            "diagnostic_returncode",
+        ]:
+            assert key in pytest_fast_diag_data, f"pytest_fast_budget_diagnostic.json: missing key {key!r}"
+        assert pytest_fast_diag_data["schema_version"] == 1
+        pytest_fast_diag_txt_path = artifacts_dir / "pytest_fast_budget_diagnostic.txt"
+        assert pytest_fast_diag_txt_path.exists(), "pytest_fast_budget_diagnostic.txt missing when json exists"
+
     # index.json is only written with --artifact-index flag;
     # when present, validate its schema.
     index_path = artifacts_dir / "index.json"

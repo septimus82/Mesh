@@ -1,0 +1,216 @@
+{
+  "description": "Act 2 Chapter 2 sanctum: checkpoint, reward, and chapter completion handoff.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter2_sanctum_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter2_sanctum_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Secure the sanctum."
+                }
+              ],
+              "text": "Sanctum keeper: You made it through the suppression run. Lock this wing and press onward."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act2_chapter2_sanctum_sanctumkeeper_280_300_0_0",
+      "mesh_name": "Act2Ch2SanctumKeeper",
+      "name": "Act2Ch2SanctumKeeper",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 280,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch2_complete",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter2_sanctum_act2chapter2sanctumcompletezone_520_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter2_sanctum_act2chapter2sanctumcompletezone_520_300_0_0",
+      "name": "Act2Chapter2SanctumCompleteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter2SanctumCompleteZone",
+          "set_flags": {
+            "act2_chapter2_complete": true
+          },
+          "require_flags": [
+            "act2_ch2_run_clear"
+          ],
+          "forbid_flags": [
+            "act2_chapter2_complete"
+          ],
+          "once": true,
+          "toast": "Objective complete: Act 2 Chapter 2.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_sanctum_act2ch2completestatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2CompleteStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch2_checkpoint_reached",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter2_sanctum_act2chapter2checkpointzone_660_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter2_sanctum_act2chapter2checkpointzone_660_300_0_0",
+      "name": "Act2Chapter2CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 660,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter2CheckpointZone",
+          "set_flags": {
+            "act2_ch2_checkpoint": true
+          },
+          "require_flags": [
+            "act2_ch2_run_clear"
+          ],
+          "forbid_flags": [
+            "act2_ch2_checkpoint"
+          ],
+          "once": true,
+          "toast": "Checkpoint reached: Act 2 Chapter 2",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter2_sanctum_act2ch2checkpointstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch2CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "id": "act2_chapter2_sanctum_act2ch2sanctumpickup_760_280_0_0",
+      "mesh_name": "Act2Ch2SanctumPickup",
+      "name": "Act2Ch2SanctumPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 760,
+      "y": 280
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter2_HazardRun.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter2_sanctum_returntoact2chapter2hazardrun_60_300_0_0",
+      "name": "ReturnToAct2Chapter2HazardRun",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter3_Fork.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter2_sanctum_toact2chapter3fork_940_300_0_0",
+      "name": "ToAct2Chapter3Fork",
+      "require_flags": [
+        "act2_chapter2_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 940,
+      "y": 300
+    }
+  ],
+  "name": "Act 2 Chapter 2 - Sanctum",
+  "schema_version": 1,
+  "version": 1
+}

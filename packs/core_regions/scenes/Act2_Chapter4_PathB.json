@@ -1,0 +1,146 @@
+{
+  "description": "Act 2 Chapter 4 Path B: safer traversal with a small combat lane.",
+  "name": "Act 2 Chapter 4 - Path B",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter4_pathb_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter4_pathb_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "behaviour_config": {
+        "Health": {
+          "hp": 72,
+          "max_hp": 72
+        },
+        "EnemyAI": {
+          "detect_radius": 160.0,
+          "speed": 54.0
+        },
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 9
+            }
+          ],
+          "seed": 7401
+        }
+      },
+      "id": "act2_chapter4_pathb_sentry_420_300_0_0",
+      "mesh_name": "Act2Ch4PathBSentry",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 420,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch4_pathb_clear",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter4_pathb_pathclearzone_860_300_0_0"
+        }
+      },
+      "id": "act2_chapter4_pathb_pathclearzone_860_300_0_0",
+      "name": "Act2Chapter4PathClearZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 860,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter4PathClearZone",
+          "set_flags": {
+            "act2_ch4_path_clear": true
+          },
+          "forbid_flags": [
+            "act2_ch4_path_clear"
+          ],
+          "once": true,
+          "toast": "Objective complete: Path cleared.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter4_pathb_pathclearstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch4PathBClearStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter4_Final.json"
+        }
+      },
+      "id": "act2_chapter4_pathb_toch4final_980_300_0_0",
+      "name": "ToAct2Chapter4FinalFromB",
+      "require_flags": [
+        "act2_ch4_path_clear"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 980,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter4_Hub.json"
+        }
+      },
+      "id": "act2_chapter4_pathb_returntohub_60_300_0_0",
+      "name": "ReturnToAct2Chapter4HubFromB",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ]
+}

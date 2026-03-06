@@ -7,10 +7,33 @@ from typing import TYPE_CHECKING
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 if TYPE_CHECKING:
     from arcade import Sprite
 
     from engine.game import GameWindow
+
+
+def _try_rumble(window: object, intensity: float, duration_s: float) -> None:
+    input_controller = getattr(window, "input_controller", None)
+    manager = getattr(input_controller, "manager", None) if input_controller is not None else None
+    rumble = getattr(manager, "rumble", None) if manager is not None else None
+    if callable(rumble):
+        try:
+            rumble(float(intensity), float(duration_s), 0)
+        except Exception:
+            return
 
 
 @register_behaviour(
@@ -120,7 +143,14 @@ class Combat(Behaviour):
         # Play sound
         if hasattr(self.window, "audio"):
             sound_path = self.config.get("attack_sound", "assets/sounds/attack.wav")
-            self.window.audio.play_sound(sound_path, volume=0.5)
+            self.window.audio.play_world_sfx(
+                sound_path,
+                world_pos=(float(self.entity.center_x), float(self.entity.center_y)),
+                window=self.window,
+                base_volume=0.5,
+                profile="attack",
+            )
+        _try_rumble(self.window, 0.2, 0.03)
 
         return True
 
@@ -148,6 +178,7 @@ class Combat(Behaviour):
                             bonus = float(effects.get("damage", effects.get("attack", 0)) or 0)
                             current_damage += bonus
                     except Exception:
+                        _log_swallow("COMB-001", "engine/behaviours/combat.py pass-only blanket swallow")
                         pass
 
         # Calculate position based on facing direction

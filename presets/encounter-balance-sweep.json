@@ -1,0 +1,19 @@
+{
+  "description": "Full encounter balance analysis",
+  "steps": [
+    {
+      "args": [
+        "worlds/main_world.json",
+        "--only-dungeons",
+        "--themes",
+        "moss,magma,void",
+        "--difficulty",
+        "easy,normal,hard",
+        "--out",
+        ".mesh/reports/encounter_report_full.json",
+        "--json"
+      ],
+      "cmd": "encounter-report"
+    }
+  ]
+}

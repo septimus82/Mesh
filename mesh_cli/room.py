@@ -5,6 +5,17 @@ import json
 from pathlib import Path
 from typing import Any
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     # Room scaffolding
@@ -60,6 +71,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
             x = int(a)
             y = int(b)
         except Exception:
+            _log_swallow("ROOM-002", "grid/tile pair parse fallback", once=True)
             print(f"[Mesh][CLI] Error: invalid {label}: {spec!r} (expected ints)")
             return None
         if x <= 0 or y <= 0:
@@ -80,6 +92,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
         try:
             return int(a.strip()), int(b.strip())
         except Exception:
+            _log_swallow("ROOM-003", "stamp origin parse fallback", once=True)
             print(f"[Mesh][CLI] Error: invalid --stamp-origin: {spec!r} (expected ints)")
             return None
 
@@ -140,6 +153,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
     try:
         world_payload = json.loads(resolved_world.read_text(encoding="utf-8"))
     except Exception as exc:  # noqa: BLE001
+        _log_swallow("ROOM-004", "world JSON parse failure", once=True)
         print(f"[Mesh][CLI] Error: failed to parse world JSON: {normalize_scene_path(world_path)}: {exc}")
         return 1
     if not isinstance(world_payload, dict):
@@ -189,6 +203,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
             try:
                 out[sid.strip()] = (float(ent.get("x", 0.0)), float(ent.get("y", 0.0)))
             except Exception:
+                _log_swallow("ROOM-001", "spawn coord parse", once=True)
                 out[sid.strip()] = (0.0, 0.0)
         return out
 
@@ -200,6 +215,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
         try:
             payload = json.loads(resolved.read_text(encoding="utf-8"))
         except Exception as exc:  # noqa: BLE001
+            _log_swallow("ROOM-005", "scene JSON parse failure", once=True)
             print(f"[Mesh][CLI] Error: failed to parse scene JSON: {normalize_scene_path(scene_path)}: {exc}")
             return None
         if not isinstance(payload, dict):
@@ -233,6 +249,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
             return 1
         macro_asset = parse_macro_asset(macro_payload, rel_path=normalize_scene_path(door_macro))
     except Exception as exc:  # noqa: BLE001
+        _log_swallow("ROOM-006", "door macro load failure", once=True)
         print(f"[Mesh][CLI] Error: failed to load macro asset: {normalize_scene_path(door_macro)}: {exc}")
         return 1
 
@@ -260,6 +277,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
     try:
         user_kv = _parse_kv(raw_user_args)
     except Exception as exc:
+        _log_swallow("ROOM-007", "macro arg parse failure", once=True)
         print(f"[Mesh][CLI] Error: {exc}")
         return 2
 
@@ -296,7 +314,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
             bg=[],
             spawn=[f"{to_spawn_id}:{to_spawn_x:g}:{to_spawn_y:g}"],
         )
-        rc = scene_commands._handle_scene_create(create_ns)
+        rc: int = scene_commands._handle_scene_create(create_ns)
         if rc != 0:
             return rc
         _note_changes()
@@ -402,6 +420,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
             cursor_world_pos=(float(from_x), float(from_y)),
         )
     except Exception as exc:  # noqa: BLE001
+        _log_swallow("ROOM-008", "scene macro apply failure", once=True)
         print(f"[Mesh][CLI] Error: macro-apply failed: {type(exc).__name__}: {exc}")
         return 1
 

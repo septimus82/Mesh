@@ -20,10 +20,26 @@ def test_act1_chapter5_stub_world_and_scene_validate_strict() -> None:
     scenes = world.get("scenes")
     assert isinstance(scenes, dict)
     assert world.get("start_scene") == "act1_chapter5_stub"
-    assert set(scenes.keys()) == {"act1_chapter5_stub", "act1_chapter4_fork"}
+    assert set(scenes.keys()) == {
+        "act1_chapter5_stub",
+        "act1_chapter5_gauntlet",
+        "act1_chapter5_summit",
+        "act1_chapter6_approach",
+        "act1_chapter6_warden",
+        "act1_chapter7_aftermath",
+        "act1_chapter4_fork",
+    }
 
     loader = SceneLoader()
-    for scene_key in ["act1_chapter5_stub", "act1_chapter4_fork"]:
+    for scene_key in [
+        "act1_chapter5_stub",
+        "act1_chapter5_gauntlet",
+        "act1_chapter5_summit",
+        "act1_chapter6_approach",
+        "act1_chapter6_warden",
+        "act1_chapter7_aftermath",
+        "act1_chapter4_fork",
+    ]:
         entry = scenes.get(scene_key)
         assert isinstance(entry, dict)
         path_str = entry.get("path")

@@ -1,0 +1,370 @@
+{
+  "description": "Act 1 Chapter 2 ambush: combat lane with switch-gated route.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter2_ambush_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter2_ambush_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_ambush_start",
+          "trigger_radius": 54.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_ambush_ch2ambushstartzone_180_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_ambush_ch2ambushstartzone_180_300_0_0",
+      "name": "Ch2AmbushStartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 180,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Clear the lane."
+                }
+              ],
+              "text": "Ambush marker: Survive the ambush and clear the attackers."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter2_ambush_ch2ambushhintmarker_170_330_0_0",
+      "mesh_name": "Ch2AmbushHintMarker",
+      "name": "Ch2 Ambush Hint Marker",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 170,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "event_id": "act1_ch2_ambush_unlock",
+          "one_shot": true
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "act1_chapter2_ambush_ch2ambushswitch_360_300_0_0",
+      "name": "Ch2AmbushSwitch",
+      "sprite": "assets/placeholder.png",
+      "tag": "interactable",
+      "x": 360,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DoorLock": {
+          "starts_locked": true,
+          "unlock_event": "act1_ch2_ambush_unlock"
+        }
+      },
+      "behaviours": [
+        "DoorLock"
+      ],
+      "id": "act1_chapter2_ambush_ch2ambushdoor_460_300_0_0",
+      "name": "Ch2AmbushDoor",
+      "solid": true,
+      "sprite": "assets/door_locked.png",
+      "tag": "solid",
+      "x": 460,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 8
+            }
+          ],
+          "seed": 4202
+        },
+        "EnemyAI": {
+          "detect_radius": 180.0,
+          "speed": 56.0
+        },
+        "Health": {
+          "hp": 70,
+          "max_hp": 70
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "act1_chapter2_ambush_ch2raider_620_300_0_0",
+      "mesh_name": "Act1Ch2Raider",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 560,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_ambush_clear",
+          "trigger_radius": 52.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_ambush_ch2ambushclearzone_760_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_ambush_ch2ambushclearzone_760_300_0_0",
+      "name": "Ch2AmbushClearZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 760,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter2_RuinedGate.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter2_ambush_toruinedgatefromambush_920_300_0_0",
+      "name": "ToRuinedGateFromAmbush",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 920,
+      "y": 300,
+      "require_flags": [
+        "act1_ch2_ambush_cleared"
+      ]
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter2_Camp.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter2_ambush_returntochapter2camp_60_300_0_0",
+      "name": "ReturnToChapter2Camp",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 7
+            }
+          ],
+          "seed": 4203
+        },
+        "EnemyAI": {
+          "detect_radius": 170.0,
+          "speed": 57.0
+        },
+        "Health": {
+          "hp": 68,
+          "max_hp": 68
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "act1_chapter2_ambush_ch2raiderbeta_700_250_0_0",
+      "mesh_name": "Act1Ch2RaiderBeta",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 760,
+      "y": 230
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 6
+            }
+          ],
+          "seed": 4204
+        },
+        "EnemyAI": {
+          "detect_radius": 90.0,
+          "speed": 54.0
+        },
+        "Health": {
+          "hp": 64,
+          "max_hp": 64
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "act1_chapter2_ambush_ch2raiderreinforcement_860_350_0_0",
+      "mesh_name": "Act1Ch2RaiderReinforcement",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 940,
+      "y": 350
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter2_ambush_ch2ambushcovercrate_520_300_0_0",
+      "name": "Ch2AmbushCoverCrate",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "tag": "solid",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "id": "act1_chapter2_ambush_ch2ambushfieldsupplies_500_260_0_0",
+      "mesh_name": "Ch2AmbushFieldSupplies",
+      "name": "Ch2AmbushFieldSupplies",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 500,
+      "y": 260
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_ambush_clear_fallback",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_ambush_ch2ambushclearfallbackzone_900_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_ambush_ch2ambushclearfallbackzone_900_300_0_0",
+      "name": "Ch2AmbushClearFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 900,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch2AmbushClearZone",
+          "set_flags": {
+            "act1_ch2_ambush_cleared": true
+          },
+          "forbid_flags": [
+            "act1_ch2_ambush_cleared"
+          ],
+          "once": true,
+          "toast": "Objective complete: Ambush cleared. Gate unlocked.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter2_ambush_ch2ambushclearedstatesync_m1000_m1000_0_0",
+      "name": "Ch2AmbushClearedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch2AmbushClearFallbackZone",
+          "set_flags": {
+            "act1_ch2_ambush_cleared": true
+          },
+          "forbid_flags": [
+            "act1_ch2_ambush_cleared"
+          ],
+          "once": true,
+          "toast": "Objective complete: Ambush cleared. Gate unlocked.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter2_ambush_ch2ambushclearedfbstatesync_m1000_m1000_0_0",
+      "name": "Ch2AmbushClearedFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 1 Chapter 2 - Ambush",
+  "schema_version": 1,
+  "version": 1
+}

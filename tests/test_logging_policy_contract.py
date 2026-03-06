@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 PROD_ROOTS = (ROOT / "engine", ROOT / "mesh_cli", ROOT / "tooling")
 
@@ -24,6 +23,8 @@ GETLOGGER_ALLOWLIST = {
     "engine/prefabs.py",
     "engine/lighting/shadows.py",
     "engine/scene_controller.py",
+    "engine/scene_controller_core.py",
+    "engine/scene_controller_impl.py",
     "engine/scene_runtime/transitions.py",
     "engine/scene_runtime/persistence.py",
     "engine/tooling_runtime/doctor_assets_registry.py",
@@ -117,4 +118,3 @@ def test_no_new_module_level_warned_once_sets() -> None:
         "Use engine.log_utils.log_once() instead of new module-level *_warned_once/*_logged_once sets. "
         f"Offenders: {violations}"
     )
-

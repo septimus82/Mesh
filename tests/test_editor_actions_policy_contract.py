@@ -3,6 +3,11 @@
 import ast
 from pathlib import Path
 
+import pytest
+
+
+MAX_EDITOR_ACTIONS_LINES = 2300
+
 
 def _get_function_node(source: str, name: str) -> ast.FunctionDef:
     mod = ast.parse(source)
@@ -34,3 +39,11 @@ def test_no_duplicate_enabled_helpers() -> None:
             names.append(node.name)
     duplicates = {name for name in names if names.count(name) > 1}
     assert not duplicates, f"Duplicate _enabled_ helpers found: {sorted(duplicates)}"
+
+
+@pytest.mark.fast
+def test_editor_actions_line_count_ratcheted() -> None:
+    line_count = len(Path("engine/editor/editor_actions.py").read_text(encoding="utf-8").splitlines())
+    assert line_count <= MAX_EDITOR_ACTIONS_LINES, (
+        f"editor_actions.py grew: {line_count} lines (max {MAX_EDITOR_ACTIONS_LINES})"
+    )

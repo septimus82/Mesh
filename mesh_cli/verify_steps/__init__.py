@@ -18,8 +18,13 @@ STEP_ORDER: tuple[str, ...] = (
     "mypy-baseline-guard",
     "mypy-island",
     "exception-budget-guard",
+    "swallow-scan-gate",
+    "exception-policy-scan",
     "pytest-fast",
     "pytest-fast-duration-guard",
+    "runtime-player-smoke",
+    "player-package-gate",
+    "perf-baseline-compare",
     "world-progression-check",
     "spawn-placeholder-safety",
     "stamp-audit",
@@ -47,4 +52,3 @@ __all__ = [
     "VerifyStepContext",
     "run_verify_steps",
 ]
-

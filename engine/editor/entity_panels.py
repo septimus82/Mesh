@@ -6,7 +6,7 @@ and filtering entity lists. State management remains in EditorModeController.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, TYPE_CHECKING, cast
 
 from .state import (
     ENTITY_PANEL_FIELDS,
@@ -373,7 +373,7 @@ def _format_field_value(field: "InspectorField") -> str:
         if value is None:
             return "0.0"
         try:
-            return f"{float(value):.1f}"  # type: ignore[arg-type]
+            return f"{float(cast(Any, value)):.1f}"
         except (TypeError, ValueError):
             return str(value)
     

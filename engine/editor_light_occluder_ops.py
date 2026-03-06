@@ -466,7 +466,7 @@ def find_closest_edge_insert_index(
 def snap_world_point(
     point: tuple[float, float],
     mode: str,
-    tile_size_px: int | None,
+    tile_size_px: int | float | None,
 ) -> tuple[float, float]:
     x = float(point[0])
     y = float(point[1])

@@ -1,0 +1,562 @@
+{
+  "description": "Act 2 Chapter 5 Overseer arena: boss aggro, AoE warning, suppression windows, and shard payoffs.",
+  "name": "Act 2 Chapter 5 - Overseer",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter5_overseer_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter5_overseer_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "behaviour_config": {
+        "Health": {
+          "hp": 180,
+          "max_hp": 180
+        },
+        "EnemyAI": {
+          "detect_radius": 220.0,
+          "speed": 58.0
+        },
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 30
+            }
+          ],
+          "seed": 7501
+        }
+      },
+      "id": "act2_chapter5_overseer_boss_700_300_0_0",
+      "mesh_name": "Act2Ch5OverseerBoss",
+      "name": "Act2Ch5OverseerBoss",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_boss_aggro",
+          "trigger_radius": 52.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_overseer_bossaggrozone_520_300_0_0"
+        }
+      },
+      "id": "act2_chapter5_overseer_bossaggrozone_520_300_0_0",
+      "name": "Act2Chapter5BossAggroZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5BossAggroZone",
+          "set_flags": {
+            "act2_ch5_boss_entered": true
+          },
+          "forbid_flags": [
+            "act2_ch5_boss_entered"
+          ],
+          "once": true,
+          "toast": "Overseer engaged.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_overseer_bossaggrostatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5BossAggroStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Move!"
+                }
+              ],
+              "text": "AoE marker: Impact in 2s..."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act2_chapter5_overseer_aoewarnmarker_620_260_0_0",
+      "mesh_name": "Act2Ch5AoeWarnMarker",
+      "name": "Act2Ch5AoeWarnMarker",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 620,
+      "y": 260
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_aoe_warn",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_overseer_aoewarnzone_620_260_0_0"
+        }
+      },
+      "id": "act2_chapter5_overseer_aoewarnzone_620_260_0_0",
+      "name": "Act2Chapter5AoeWarnZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 620,
+      "y": 260
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5AoeWarnZone",
+          "set_flags": {
+            "act2_ch5_aoe_warn_seen": true
+          },
+          "forbid_flags": [
+            "act2_ch5_aoe_warn_seen"
+          ],
+          "once": true,
+          "toast": "Impact in 2s...",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_overseer_aoewarnstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5AoeWarnStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 7.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act2_chapter5_overseer_hazardstripa_420_300_0_0",
+      "name": "Act2Ch5HazardStripA",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch5_hazard_suppressed"
+      ],
+      "x": 420,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 7.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act2_chapter5_overseer_hazardstripb_520_300_0_0",
+      "name": "Act2Ch5HazardStripB",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch5_hazard_suppressed"
+      ],
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 7.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act2_chapter5_overseer_hazardstripc_820_300_0_0",
+      "name": "Act2Ch5HazardStripC",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act2_ch5_hazard_suppressed"
+      ],
+      "x": 820,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_suppression_switch_a",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_overseer_suppressionswitchzonea_360_250_0_0"
+        }
+      },
+      "id": "act2_chapter5_overseer_suppressionswitchzonea_360_250_0_0",
+      "name": "Act2Chapter5SuppressionSwitchZoneA",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 360,
+      "y": 250
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_suppression_switch_b",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_overseer_suppressionswitchzoneb_900_250_0_0"
+        }
+      },
+      "id": "act2_chapter5_overseer_suppressionswitchzoneb_900_250_0_0",
+      "name": "Act2Chapter5SuppressionSwitchZoneB",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 900,
+      "y": 250
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5SuppressionSwitchZoneA",
+          "set_flags": {
+            "act2_ch5_hazard_suppressed": true
+          },
+          "once": false,
+          "toast": "Suppression active.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_overseer_suppressionswitchastatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5SuppressionSwitchAStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5SuppressionSwitchZoneB",
+          "set_flags": {
+            "act2_ch5_hazard_suppressed": true
+          },
+          "once": false,
+          "toast": "Suppression active.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_overseer_suppressionswitchbstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5SuppressionSwitchBStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_suppression_expire",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_overseer_suppressionexpirezone_680_300_0_0"
+        }
+      },
+      "id": "act2_chapter5_overseer_suppressionexpirezone_680_300_0_0",
+      "name": "Act2Chapter5SuppressionExpireZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 680,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5SuppressionExpireZone",
+          "set_flags": {
+            "act2_ch5_hazard_suppressed": false
+          },
+          "require_flags": [
+            "act2_ch5_hazard_suppressed"
+          ],
+          "once": false,
+          "toast": "Suppression faded.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_overseer_suppressionexpirestatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5SuppressionExpireStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_shard_a_assist",
+          "trigger_radius": 36.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_overseer_shardaassistzone_300_220_0_0"
+        }
+      },
+      "id": "act2_chapter5_overseer_shardaassistzone_300_220_0_0",
+      "name": "Act2Chapter5ShardAAssistZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "require_flags": [
+        "act2_ch3_reward_shard_a"
+      ],
+      "x": 300,
+      "y": 220
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5ShardAAssistZone",
+          "set_flags": {
+            "act2_ch5_hazard_suppressed": true
+          },
+          "require_flags": [
+            "act2_ch3_reward_shard_a"
+          ],
+          "once": false,
+          "toast": "Shard A resonance extends suppression.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_overseer_shardaassiststatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5ShardAAssistStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "id": "act2_chapter5_overseer_shardbhealpickup_980_220_0_0",
+      "mesh_name": "Act2Ch5ShardBHealPickup",
+      "name": "Act2Ch5ShardBHealPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "require_flags": [
+        "act2_ch3_reward_shard_b"
+      ],
+      "x": 980,
+      "y": 220
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_boss_defeat",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_overseer_bossdefeatzone_1080_300_0_0"
+        }
+      },
+      "id": "act2_chapter5_overseer_bossdefeatzone_1080_300_0_0",
+      "name": "Act2Chapter5BossDefeatZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 1080,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5BossDefeatZone",
+          "set_flags": {
+            "act2_ch5_boss_defeated": true
+          },
+          "forbid_flags": [
+            "act2_ch5_boss_defeated"
+          ],
+          "once": true,
+          "toast": "Objective complete: Overseer defeated.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_overseer_bossdefeatstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5BossDefeatStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter5_Epilogue.json"
+        }
+      },
+      "id": "act2_chapter5_overseer_toepilogue_1200_300_0_0",
+      "name": "ToAct2Chapter5Epilogue",
+      "require_flags": [
+        "act2_ch5_boss_defeated"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 1200,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter5_Antechamber.json"
+        }
+      },
+      "id": "act2_chapter5_overseer_returntoantechamber_60_300_0_0",
+      "name": "ReturnToAct2Chapter5Antechamber",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch5_boss_defeated": true
+          },
+          "require_flags": [
+            "act2_ch5_boss_defeated"
+          ],
+          "once": false
+        }
+      },
+      "id": "act2_chapter5_overseer_bossdefeatedrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5BossDefeatedRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

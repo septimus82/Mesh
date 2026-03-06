@@ -1,0 +1,30 @@
+{
+  "description": "Hollowmere Outskirts: puzzle_lite (scaffolded)",
+  "lighting_showcase": false,
+  "notes": "Scaffolded golden_slice2 variant N2",
+  "steps": [
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice2_variant_n.json",
+        "--dry-run",
+        "--strict",
+        "--check-refs"
+      ],
+      "cmd": "pipeline"
+    },
+    {
+      "args": [
+        "--plan",
+        "plans/golden_slice_noop.json",
+        "--world",
+        "worlds/golden_slice2_variant_n.json",
+        "--dry-run",
+        "--demo"
+      ],
+      "cmd": "pipeline"
+    }
+  ]
+}

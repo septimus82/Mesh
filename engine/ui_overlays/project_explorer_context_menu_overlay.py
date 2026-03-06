@@ -16,21 +16,6 @@ from .providers import project_explorer_context_menu_provider
 if TYPE_CHECKING:
     from ..game import GameWindow
 
-# Reuse constants from model
-from ..editor.project_explorer_context_menu_model import (
-    CONTEXT_MENU_ITEM_HEIGHT,
-    CONTEXT_MENU_WIDTH,
-    CONTEXT_MENU_PADDING_Y,
-    CONTEXT_MENU_PADDING_X,
-    CONTEXT_MENU_BG_COLOR,
-    CONTEXT_MENU_BORDER_COLOR,
-    CONTEXT_MENU_HOVER_COLOR,
-    CONTEXT_MENU_TEXT_COLOR,
-    CONTEXT_MENU_DISABLED_TEXT_COLOR,
-    CONTEXT_MENU_FONT_SIZE
-)
-from ..editor.project_explorer_context_menu_layout_model import clamp_menu_rect
-
 class ProjectExplorerContextMenuOverlay(UIElement):
     """Draws the project explorer context menu."""
     
@@ -39,6 +24,20 @@ class ProjectExplorerContextMenuOverlay(UIElement):
         self._ui_cache = UiTextCache(TextCache(max_size=32))
         
     def draw(self) -> None:
+        from ..editor.project_explorer_context_menu_layout_model import clamp_menu_rect
+        from ..editor.project_explorer_context_menu_model import (
+            CONTEXT_MENU_BG_COLOR,
+            CONTEXT_MENU_BORDER_COLOR,
+            CONTEXT_MENU_DISABLED_TEXT_COLOR,
+            CONTEXT_MENU_FONT_SIZE,
+            CONTEXT_MENU_HOVER_COLOR,
+            CONTEXT_MENU_ITEM_HEIGHT,
+            CONTEXT_MENU_PADDING_X,
+            CONTEXT_MENU_PADDING_Y,
+            CONTEXT_MENU_TEXT_COLOR,
+            CONTEXT_MENU_WIDTH,
+        )
+
         payload = project_explorer_context_menu_provider(self.window)
         if not payload or not payload.get("open"):
             return

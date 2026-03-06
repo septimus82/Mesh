@@ -68,7 +68,7 @@ class OfferPerkChoice(Behaviour):
         "once": ParamDef(bool, default=True, description="Only offer once"),
     }
 
-    def __init__(self, entity: Sprite, window, **config) -> None:  # type: ignore[override]
+    def __init__(self, entity: Any, window: Any, **config: Any) -> None:
         merged = self._merge_entity_data(entity, config)
         super().__init__(entity, window, **merged)
         self.start_event = str(merged.get("start_event", "")).strip()

@@ -1,0 +1,42 @@
+{
+  "description": "Golden Slice showcase (all): runs G/H/I/J/K/L in order",
+  "notes": "Deterministic demo: golden_slice_variants g/h/i/j/k/l",
+  "steps": [
+    {
+      "args": [
+        "golden_slice_variant_g"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "golden_slice_variant_h"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "golden_slice_variant_i"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "golden_slice_variant_j"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "golden_slice_variant_k"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "golden_slice_variant_l"
+      ],
+      "cmd": "run-preset"
+    }
+  ]
+}

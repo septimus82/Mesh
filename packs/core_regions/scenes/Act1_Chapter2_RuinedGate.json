@@ -189,7 +189,10 @@
       "sprite": "assets/placeholder.png",
       "tag": "door",
       "x": 960,
-      "y": 300
+      "y": 300,
+      "require_flags": [
+        "act1_ch2_ambush_cleared"
+      ]
     },
     {
       "behaviour_config": {
@@ -207,6 +210,55 @@
       "tag": "door",
       "x": 60,
       "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch2_checkpoint_reached",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter2_ruinedgate_ch2checkpointzone_920_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter2_ruinedgate_ch2checkpointzone_920_300_0_0",
+      "name": "Ch2CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 920,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch2CheckpointZone",
+          "set_flags": {
+            "act1_ch2_checkpoint": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch2_ambush_cleared"
+          ],
+          "forbid_flags": [
+            "act1_ch2_checkpoint"
+          ],
+          "toast": "Checkpoint reached: Chapter 2",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter2_ruinedgate_ch2checkpointstatesync_m1000_m1000_0_0",
+      "name": "Ch2CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
     }
   ],
   "name": "Act 1 Chapter 2 - Ruined Gate",

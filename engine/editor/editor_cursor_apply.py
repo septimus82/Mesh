@@ -11,6 +11,18 @@ from typing import Any
 import engine.optional_arcade as optional_arcade
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def apply_editor_cursor(window: Any, cursor_kind: str | None) -> None:
     """Apply cursor kind to the window (best-effort).
 
@@ -39,6 +51,7 @@ def apply_editor_cursor(window: Any, cursor_kind: str | None) -> None:
             setattr(window, "_last_cursor_kind", kind)
             return
         except Exception:  # noqa: BLE001
+            _log_swallow("EDIT-001", "engine/editor/editor_cursor_apply.py pass-only blanket swallow")
             pass
 
     setter = getattr(arcade, "set_mouse_cursor", None)
@@ -47,6 +60,7 @@ def apply_editor_cursor(window: Any, cursor_kind: str | None) -> None:
             setter(cursor)
             setattr(window, "_last_cursor_kind", kind)
         except Exception:  # noqa: BLE001
+            _log_swallow("EDIT-002", "engine/editor/editor_cursor_apply.py pass-only blanket swallow")
             pass
 
 

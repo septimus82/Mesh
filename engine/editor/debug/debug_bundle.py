@@ -14,6 +14,7 @@ from engine.combat_constants import (
 from engine.hud_model import build_hud_view_model, merge_event_histories
 from engine.persistence_io import dumps_json_deterministic
 from engine.save_runtime.io import get_save_runtime_diagnostics_snapshot
+from engine.logging_tools import get_logger
 
 from engine.editor.behaviour_inspector import build_entity_behaviour_summary
 from .cutscene_debug_model import CutsceneDebugViewModel, build_cutscene_debug_view_model
@@ -25,6 +26,16 @@ from .debug_panels_state import (
 )
 from .event_monitor_model import build_event_log_view_model_from_settings
 from .quest_debug_model import QuestDebugViewModel, build_quest_debug_view_model
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,6 +123,7 @@ def _safe_engine_version() -> str | None:
 
         return str(ENGINE_VERSION)
     except Exception:
+        _log_swallow("DBGB-001", "engine version lookup fallback", once=True)
         return None
 
 
@@ -129,6 +141,7 @@ def _build_world_snapshot(window: Any | None) -> dict[str, Any]:
             if scene_controller is not None:
                 current = compute_world_digest_from_scene(scene_controller, quest_manager, frame=0)
         except Exception:
+            _log_swallow("DBGB-002", "world digest computation fallback", once=True)
             current = ""
 
     recent = _collect_recent_digests(window)
@@ -243,6 +256,7 @@ def _build_lighting_snapshot(window: Any | None) -> dict[str, Any]:
         )
         plan_digest = plan.digest()
     except Exception:
+        _log_swallow("DBGB-003", "lighting plan digest fallback", once=True)
         plan_digest = ""
 
     return {
@@ -269,6 +283,7 @@ def _build_render_snapshot(window: Any | None) -> dict[str, Any] | None:
             "scene_id": plan.scene_id,
         }
     except Exception:
+        _log_swallow("DBGB-004", "render plan snapshot fallback", once=True)
         return None
 
 
@@ -544,6 +559,7 @@ def _collect_gameplay_history(window: Any | None, *, limit: int = 200) -> list[d
     try:
         history = list(getter(limit))
     except Exception:
+        _log_swallow("DBGB-005", "gameplay event history fallback", once=True)
         return []
 
     rows: list[dict[str, Any]] = []
@@ -571,6 +587,7 @@ def _collect_mesh_history(window: Any | None, *, limit: int = 200) -> list[dict[
     try:
         recent = list(getter(limit))
     except Exception:
+        _log_swallow("DBGB-006", "mesh event history fallback", once=True)
         return []
 
     rows: list[dict[str, Any]] = []

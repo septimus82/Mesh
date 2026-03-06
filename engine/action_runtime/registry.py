@@ -13,6 +13,18 @@ from engine.ui import maybe_enqueue_lighting_toggle_tip
 from engine import savegame
 
 
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
 def _noop(_window: object) -> None:
     return
 
@@ -125,6 +137,7 @@ def _toggle_pause_menu(window: object) -> None:
         try:
             pause_menu.visible = paused
         except Exception:  # noqa: BLE001
+            _log_swallow("REGI-001", "engine/action_runtime/registry.py pass-only blanket swallow")
             pass
     logger = getattr(window, "console_log", None)
     if callable(logger):

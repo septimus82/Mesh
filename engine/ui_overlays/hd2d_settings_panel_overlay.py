@@ -19,8 +19,18 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 import engine.optional_arcade as optional_arcade
 from .common import UIElement
 from ..text_draw import draw_text_cached, TextCache
-from ..editor.editor_shell_layout import EditorShellLayout, compute_editor_shell_layout
-from ..editor.editor_dock_query import get_raw_dock_widths
+
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:
     from engine.game import GameWindow
@@ -124,10 +134,14 @@ class Hd2dSettingsPanelOverlay(UIElement):
         controller = getattr(self.window, "editor_controller", None)
         if controller is None:
             return (320, 320)
+        from ..editor.editor_dock_query import get_raw_dock_widths
+
         return get_raw_dock_widths(controller)
 
-    def _get_layout(self) -> EditorShellLayout:
+    def _get_layout(self) -> Any:
         """Get current editor layout."""
+        from ..editor.editor_shell_layout import compute_editor_shell_layout
+
         size = (self.window.width, self.window.height)
         dock_widths = self._get_dock_widths()
         return compute_editor_shell_layout(
@@ -163,6 +177,7 @@ class Hd2dSettingsPanelOverlay(UIElement):
                 if isinstance(result, dict):
                     payload = result
             except Exception:  # noqa: BLE001
+                _log_swallow("HDDS-001", "engine/ui_overlays/hd2d_settings_panel_overlay.py pass-only blanket swallow")
                 pass
 
         settings = payload.get("settings", {})
@@ -182,7 +197,7 @@ class Hd2dSettingsPanelOverlay(UIElement):
 
     def _draw_panel(
         self,
-        layout: EditorShellLayout,
+        layout: Any,
         rows: List[Hd2dPanelRow],
         cursor_index: int,
         sections_expanded: Dict[str, bool],
@@ -477,10 +492,14 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
         controller = getattr(self.window, "editor_controller", None)
         if controller is None:
             return (320, 320)
+        from ..editor.editor_dock_query import get_raw_dock_widths
+
         return get_raw_dock_widths(controller)
 
-    def _get_layout(self) -> EditorShellLayout:
+    def _get_layout(self) -> Any:
         """Get current editor layout."""
+        from ..editor.editor_shell_layout import compute_editor_shell_layout
+
         size = (self.window.width, self.window.height)
         dock_widths = self._get_dock_widths()
         return compute_editor_shell_layout(
@@ -513,6 +532,7 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
                 if isinstance(result, dict):
                     payload = result
             except Exception:  # noqa: BLE001
+                _log_swallow("HDDS-002", "engine/ui_overlays/hd2d_settings_panel_overlay.py pass-only blanket swallow")
                 pass
 
         if not payload.get("visible"):
@@ -536,7 +556,7 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
 
     def _draw_panel(
         self,
-        layout: EditorShellLayout,
+        layout: Any,
         rows: List[Hd2dPanelRow],
         cursor_index: int,
         sections_expanded: Dict[str, bool],

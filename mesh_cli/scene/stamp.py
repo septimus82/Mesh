@@ -1,7 +1,7 @@
 import argparse
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from engine.paths import resolve_path
 from engine.persistence_io import write_json_atomic
@@ -18,6 +18,17 @@ from mesh_cli.scene.tilemap import (
     _tilemap_try_resolve_tile_size_for_stamp,
     _tilemap_validate_scene_payload,
 )
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def _default_stamp_entity_id(
@@ -61,14 +72,14 @@ def _compute_scene_stamp_report_legacy_do_not_use(
 
     try:
         raw_scene = json.loads(resolved_scene.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: scene stamp command isolation
         raise _StampReportError(f"failed to parse scene JSON: {scene_path_display}: {exc}") from exc
     if not isinstance(raw_scene, dict):
         raise _StampReportError(f"scene JSON root must be an object: {scene_path_display}")
 
     try:
         stamp = json.loads(resolved_stamp.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: scene stamp command isolation
         raise _StampReportError(f"failed to parse stamp JSON: {stamp_path_raw}: {exc}") from exc
     if not isinstance(stamp, dict):
         raise _StampReportError(f"stamp JSON root must be an object: {stamp_path_raw}")
@@ -81,7 +92,8 @@ def _compute_scene_stamp_report_legacy_do_not_use(
     try:
         stamp_w = int(stamp.get("width", 0))
         stamp_h = int(stamp.get("height", 0))
-    except Exception:
+    except Exception:  # noqa: BLE001  # REASON: scene stamp command isolation
+        _log_swallow("STMP-014", "stamp width/height parse", once=True)
         stamp_w = 0
         stamp_h = 0
     if stamp_w <= 0 or stamp_h <= 0:
@@ -97,7 +109,9 @@ def _compute_scene_stamp_report_legacy_do_not_use(
         entities: list[dict[str, Any]] = []
         scene["entities"] = entities
     elif isinstance(entities_value, list):
-        entities = entities_value  # type: ignore[assignment]
+        if any(not isinstance(row, dict) for row in entities_value):
+            raise _StampReportError(f"scene.entities entries must be objects: {scene_path_display}")
+        entities = cast(list[dict[str, Any]], entities_value)
     else:
         raise _StampReportError(f"scene.entities must be a list: {scene_path_display}")
 
@@ -122,7 +136,7 @@ def _compute_scene_stamp_report_legacy_do_not_use(
     prefabs_path = resolve_path("assets/prefabs.json")
     try:
         prefabs_payload = json.loads(prefabs_path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: scene stamp command isolation
         raise _StampReportError(f"failed to read prefabs: {prefabs_path}: {exc}") from exc
     if not isinstance(prefabs_payload, list):
         raise _StampReportError(f"prefabs payload must be a list: {prefabs_path}")
@@ -396,7 +410,8 @@ def _handle_scene_stamp(args: argparse.Namespace) -> int:
 
     try:
         raw_scene = json.loads(resolved_scene.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: scene stamp command isolation
+        _log_swallow("STMP-015", "apply scene JSON parse", once=True)
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path_display}: {exc}")
         return 1
     if not isinstance(raw_scene, dict):
@@ -405,7 +420,8 @@ def _handle_scene_stamp(args: argparse.Namespace) -> int:
 
     try:
         stamp = json.loads(resolved_stamp.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: scene stamp command isolation
+        _log_swallow("STMP-016", "apply stamp JSON parse", once=True)
         print(f"[Mesh][CLI] Error: failed to parse stamp JSON: {stamp_path_raw}: {exc}")
         return 1
     if not isinstance(stamp, dict):
@@ -421,7 +437,8 @@ def _handle_scene_stamp(args: argparse.Namespace) -> int:
     try:
         stamp_w = int(stamp.get("width", 0))
         stamp_h = int(stamp.get("height", 0))
-    except Exception:
+    except Exception:  # noqa: BLE001  # REASON: scene stamp command isolation
+        _log_swallow("STMP-017", "apply stamp width/height parse", once=True)
         stamp_w = 0
         stamp_h = 0
     if stamp_w <= 0 or stamp_h <= 0:
@@ -438,7 +455,10 @@ def _handle_scene_stamp(args: argparse.Namespace) -> int:
         entities: list[dict[str, Any]] = []
         scene["entities"] = entities
     elif isinstance(entities_value, list):
-        entities = entities_value  # type: ignore[assignment]
+        if any(not isinstance(row, dict) for row in entities_value):
+            print(f"[Mesh][CLI] Error: scene.entities entries must be objects: {scene_path_display}")
+            return 1
+        entities = cast(list[dict[str, Any]], entities_value)
     else:
         print(f"[Mesh][CLI] Error: scene.entities must be a list: {scene_path_display}")
         return 1
@@ -467,7 +487,8 @@ def _handle_scene_stamp(args: argparse.Namespace) -> int:
     prefabs_path = resolve_path("assets/prefabs.json")
     try:
         prefabs_payload = json.loads(prefabs_path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: scene stamp command isolation
+        _log_swallow("STMP-018", "prefabs JSON parse", once=True)
         print(f"[Mesh][CLI] Error: failed to read prefabs: {prefabs_path}: {exc}")
         return 1
     if not isinstance(prefabs_payload, list):
@@ -535,7 +556,8 @@ def _handle_scene_stamp(args: argparse.Namespace) -> int:
             w = int(w_value)
             h = int(h_value)
             tile = int(tile_value)
-        except Exception:
+        except Exception:  # noqa: BLE001  # REASON: scene stamp command isolation
+            _log_swallow("STMP-019", "apply tile coords parse", once=True)
             print(f"[Mesh][CLI] Error: stamp.tiles[{idx}] x/y/w/h/tile must be integers")
             return 1
 
@@ -562,7 +584,8 @@ def _handle_scene_stamp(args: argparse.Namespace) -> int:
         try:
             if fill_rect(tiles_cache[layer_id], dims=dims, x0=x0, y0=y0, x1=x1, y1=y1, tile=tile):
                 changed = True
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: scene stamp command isolation
+            _log_swallow("STMP-020", "fill_rect bounds", once=True)
             print(f"[Mesh][CLI] Error: stamp tile rect out of bounds for layer '{layer_id}': {exc}")
             return 1
 
@@ -583,7 +606,8 @@ def _handle_scene_stamp(args: argparse.Namespace) -> int:
         try:
             rel_x = int(x_value)
             rel_y = int(y_value)
-        except Exception:
+        except Exception:  # noqa: BLE001  # REASON: scene stamp command isolation
+            _log_swallow("STMP-021", "apply entity coords parse", once=True)
             print(f"[Mesh][CLI] Error: stamp.entities[{idx}].x/y must be integers")
             return 1
         if rel_x < 0 or rel_y < 0 or rel_x >= stamp_w or rel_y >= stamp_h:
@@ -690,7 +714,8 @@ def _handle_scene_stamp_report(args: argparse.Namespace) -> int:
 
         try:
             raw_scene = json.loads(resolved_scene.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: scene stamp command isolation
+            _log_swallow("STMP-022", "report scene JSON parse", once=True)
             print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path_display}: {exc}")
             return 1
         if not isinstance(raw_scene, dict):
@@ -699,7 +724,8 @@ def _handle_scene_stamp_report(args: argparse.Namespace) -> int:
 
         try:
             stamp = json.loads(resolved_stamp.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: scene stamp command isolation
+            _log_swallow("STMP-023", "report stamp JSON parse", once=True)
             print(f"[Mesh][CLI] Error: failed to parse stamp JSON: {stamp_path_raw}: {exc}")
             return 1
         if not isinstance(stamp, dict):

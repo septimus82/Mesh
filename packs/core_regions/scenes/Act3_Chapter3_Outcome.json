@@ -1,0 +1,238 @@
+{
+  "description": "Act 3 Chapter 3 outcome: affinity-reactive layout cue, checkpoint, and chapter completion.",
+  "name": "Act 3 Chapter 3 - Outcome",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter3_outcome_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter3_outcome_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "id": "act3_chapter3_outcome_affinityapickup_360_260_0_0",
+      "mesh_name": "Act3Ch3AffinityAPickup",
+      "name": "Act3Ch3AffinityAPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "require_flags": [
+        "act3_ch3_affinity_a"
+      ],
+      "x": 360,
+      "y": 260
+    },
+    {
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "id": "act3_chapter3_outcome_affinitybpickup_360_340_0_0",
+      "mesh_name": "Act3Ch3AffinityBPickup",
+      "name": "Act3Ch3AffinityBPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "require_flags": [
+        "act3_ch3_affinity_b"
+      ],
+      "x": 360,
+      "y": 340
+    },
+    {
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "id": "act3_chapter3_outcome_affinityneutralpickup_420_300_0_0",
+      "mesh_name": "Act3Ch3AffinityNeutralPickup",
+      "name": "Act3Ch3AffinityNeutralPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "require_flags": [
+        "act3_ch3_affinity_neutral"
+      ],
+      "x": 420,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch3_checkpoint",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter3CheckpointZone"
+        }
+      },
+      "id": "act3_chapter3_outcome_checkpointzone_540_300_0_0",
+      "name": "Act3Chapter3CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 540,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter3CheckpointZone",
+          "set_flags": {
+            "act3_ch3_checkpoint": true
+          },
+          "require_flags": [
+            "act3_ch3_committed"
+          ],
+          "forbid_flags": [
+            "act3_ch3_checkpoint"
+          ],
+          "once": true,
+          "toast": "Checkpoint reached: Act 3 Chapter 3",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter3_outcome_checkpointstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch3CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch3_complete",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter3CompleteZone"
+        }
+      },
+      "id": "act3_chapter3_outcome_completezone_760_300_0_0",
+      "name": "Act3Chapter3CompleteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 760,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter3CompleteZone",
+          "set_flags": {
+            "act3_chapter3_complete": true
+          },
+          "require_flags": [
+            "act3_ch3_committed"
+          ],
+          "forbid_flags": [
+            "act3_chapter3_complete"
+          ],
+          "once": true,
+          "toast": "Objective complete: Act 3 Chapter 3.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter3_outcome_completestatesync_m1000_m1000_0_0",
+      "name": "Act3Ch3CompleteStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter3_Commit.json"
+        }
+      },
+      "id": "act3_chapter3_outcome_returntocommit_60_300_0_0",
+      "name": "ReturnToAct3Chapter3Commit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter4_Entry.json"
+        }
+      },
+      "id": "act3_chapter3_outcome_toact3chapter4entry_980_300_0_0",
+      "name": "ToAct3Chapter4Entry",
+      "require_flags": [
+        "act3_chapter3_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 980,
+      "y": 300
+    }
+  ]
+}

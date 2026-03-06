@@ -1,0 +1,291 @@
+{
+  "description": "Act 2 Chapter 5 antechamber: briefing, loop hints, and ante checkpoint before the Overseer arena.",
+  "name": "Act 2 Chapter 5 - Antechamber",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter5_ante_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter5_ante_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Proceed to the arena."
+                }
+              ],
+              "text": "Warden relay: the Overseer controls the hazard mesh ahead. Suppression switches are your opening."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act2_chapter5_ante_briefingnpc_260_300_0_0",
+      "mesh_name": "Act2Ch5BriefingNpc",
+      "name": "Act2Ch5BriefingNpc",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 260,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_ante_briefing",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_ante_briefingzone_220_300_0_0"
+        }
+      },
+      "id": "act2_chapter5_ante_briefingzone_220_300_0_0",
+      "name": "Act2Chapter5AnteBriefingZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 220,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5AnteBriefingZone",
+          "set_flags": {
+            "act2_ch5_briefed": true
+          },
+          "forbid_flags": [
+            "act2_ch5_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Enter the Overseer arena.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_ante_briefedstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5BriefedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_checkpoint_ante",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_ante_checkpointzone_520_300_0_0"
+        }
+      },
+      "id": "act2_chapter5_ante_checkpointzone_520_300_0_0",
+      "name": "Act2Chapter5AnteCheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 520,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5AnteCheckpointZone",
+          "set_flags": {
+            "act2_ch5_checkpoint_ante": true
+          },
+          "require_flags": [
+            "act2_ch5_briefed"
+          ],
+          "forbid_flags": [
+            "act2_ch5_checkpoint_ante"
+          ],
+          "once": true,
+          "toast": "Checkpoint reached: Act 2 Chapter 5 (Antechamber)",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_ante_checkpointstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5AnteCheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch5_ante_reentry_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter5_ante_reentryprobezone_130_300_0_0"
+        }
+      },
+      "id": "act2_chapter5_ante_reentryprobezone_130_300_0_0",
+      "name": "Act2Chapter5AnteReentryProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 130,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5AnteReentryProbeZone",
+          "set_flags": {
+            "act2_ch5_ante_reentry_1": true
+          },
+          "forbid_flags": [
+            "act2_ch5_boss_entered",
+            "act2_ch5_ante_reentry_1"
+          ],
+          "once": true
+        }
+      },
+      "id": "act2_chapter5_ante_reentryvisitstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5AnteReentryVisitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter5AnteReentryProbeZone",
+          "set_flags": {
+            "act2_ch5_ante_reentry_2": true
+          },
+          "require_flags": [
+            "act2_ch5_ante_reentry_1"
+          ],
+          "forbid_flags": [
+            "act2_ch5_boss_entered",
+            "act2_ch5_ante_reentry_2"
+          ],
+          "once": true,
+          "toast": "Hint: enter the arena and trigger suppression when hazards rise.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act2_chapter5_ante_reentryhintstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5AnteReentryHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter5_Overseer.json"
+        }
+      },
+      "id": "act2_chapter5_ante_toact2chapter5overseer_900_300_0_0",
+      "name": "ToAct2Chapter5Overseer",
+      "require_flags": [
+        "act2_ch5_briefed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 900,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter4_Final.json"
+        }
+      },
+      "id": "act2_chapter5_ante_returntoact2chapter4final_60_300_0_0",
+      "name": "ReturnToAct2Chapter4Final",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act2_ch5_briefed": true
+          },
+          "require_flags": [
+            "act2_ch5_briefed"
+          ],
+          "once": false
+        }
+      },
+      "id": "act2_chapter5_ante_briefedrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch5BriefedRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

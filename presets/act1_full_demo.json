@@ -1,0 +1,42 @@
+{
+  "description": "Act 1 full demo: prologue \u2192 chapter 1 \u2192 chapter 2 \u2192 chapter 3 \u2192 chapter 4 \u2192 chapter 5",
+  "notes": "Deterministic run: act1_prologue then act1_chapter1 then act1_chapter2 then act1_chapter3 then act1_chapter4 then act1_chapter5",
+  "steps": [
+    {
+      "args": [
+        "act1_prologue"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "act1_chapter1"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "act1_chapter2"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "act1_chapter3"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "act1_chapter4"
+      ],
+      "cmd": "run-preset"
+    },
+    {
+      "args": [
+        "act1_chapter5"
+      ],
+      "cmd": "run-preset"
+    }
+  ]
+}

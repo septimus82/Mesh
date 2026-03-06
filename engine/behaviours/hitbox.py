@@ -21,6 +21,17 @@ if TYPE_CHECKING:
     from engine.game import GameWindow
 
 
+def _try_rumble(window: object, intensity: float, duration_s: float) -> None:
+    input_controller = getattr(window, "input_controller", None)
+    manager = getattr(input_controller, "manager", None) if input_controller is not None else None
+    rumble = getattr(manager, "rumble", None) if manager is not None else None
+    if callable(rumble):
+        try:
+            rumble(float(intensity), float(duration_s), 0)
+        except Exception:
+            return
+
+
 @register_behaviour(
     "Hitbox",
     description="Temporary entity that deals damage on contact.",
@@ -141,7 +152,14 @@ class Hitbox(Behaviour):
 
                 # Audio feedback
                 if hasattr(self.window, "audio"):
-                    self.window.audio.play_sound("assets/sounds/hit.wav", volume=0.6)
+                    self.window.audio.play_world_sfx(
+                        "assets/sounds/hit.wav",
+                        world_pos=(float(target.center_x), float(target.center_y)),
+                        window=self.window,
+                        base_volume=0.6,
+                        profile="melee",
+                    )
+                _try_rumble(self.window, 0.5, 0.06)
 
                 # Visual feedback?
                 # self.window.spawn_particle(...)

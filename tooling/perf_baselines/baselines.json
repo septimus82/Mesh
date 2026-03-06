@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "mode": "scene_counter_capture_baseline",
+  "scene_set": "tooling/perf_baselines/scenes.json",
+  "ticks": 120,
+  "metric_names": [
+    "active_entity_count",
+    "audio_entity_count",
+    "audio_updates",
+    "collider_candidate_count",
+    "collision_overlap_checks",
+    "draw_batches",
+    "entity_count",
+    "entity_update_calls",
+    "renderable_entity_count",
+    "trigger_zone_count"
+  ],
+  "tolerances": {
+    "__default__": {
+      "increase_allowed": 0
+    }
+  },
+  "scenes": [
+    {
+      "id": "act2_ch1_hazard_hall",
+      "path": "packs/core_regions/scenes/Act2_Chapter1_HazardHall.json",
+      "counters": {
+        "active_entity_count": 17,
+        "audio_entity_count": 0,
+        "audio_updates": 0,
+        "collider_candidate_count": 10,
+        "collision_overlap_checks": 1920,
+        "draw_batches": 0,
+        "entity_count": 26,
+        "entity_update_calls": 2040,
+        "renderable_entity_count": 0,
+        "trigger_zone_count": 6
+      }
+    },
+    {
+      "id": "act3_ch5_phase_field",
+      "path": "packs/core_regions/scenes/Act3_Chapter5_PhaseField.json",
+      "counters": {
+        "active_entity_count": 9,
+        "audio_entity_count": 0,
+        "audio_updates": 0,
+        "collider_candidate_count": 5,
+        "collision_overlap_checks": 840,
+        "draw_batches": 0,
+        "entity_count": 15,
+        "entity_update_calls": 1080,
+        "renderable_entity_count": 0,
+        "trigger_zone_count": 2
+      }
+    },
+    {
+      "id": "act4_ch1_entry",
+      "path": "packs/core_regions/scenes/Act4_Chapter1_Entry.json",
+      "counters": {
+        "active_entity_count": 6,
+        "audio_entity_count": 0,
+        "audio_updates": 0,
+        "collider_candidate_count": 3,
+        "collision_overlap_checks": 600,
+        "draw_batches": 0,
+        "entity_count": 8,
+        "entity_update_calls": 720,
+        "renderable_entity_count": 0,
+        "trigger_zone_count": 2
+      }
+    },
+    {
+      "id": "upper_hall_heaviest_practical",
+      "path": "scenes/upper_hall.json",
+      "counters": {
+        "active_entity_count": 30,
+        "audio_entity_count": 0,
+        "audio_updates": 0,
+        "collider_candidate_count": 3,
+        "collision_overlap_checks": 600,
+        "draw_batches": 120,
+        "entity_count": 30,
+        "entity_update_calls": 3600,
+        "renderable_entity_count": 1,
+        "trigger_zone_count": 2
+      }
+    }
+  ],
+  "totals": {
+    "active_entity_count": 62,
+    "audio_entity_count": 0,
+    "audio_updates": 0,
+    "collider_candidate_count": 21,
+    "collision_overlap_checks": 3960,
+    "draw_batches": 120,
+    "entity_count": 79,
+    "entity_update_calls": 7440,
+    "renderable_entity_count": 1,
+    "trigger_zone_count": 12
+  }
+}
+

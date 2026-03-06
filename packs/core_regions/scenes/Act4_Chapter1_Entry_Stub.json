@@ -1,0 +1,114 @@
+{
+  "description": "Act 4 Chapter 1 entry stub: compatibility bridge into the full Chapter 1 intro.",
+  "name": "Act 4 Chapter 1 - Entry Stub",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act4_chapter1_entry_stub_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act4_chapter1_entry_stub_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act4_ch1_entry_briefing",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "Act4Chapter1EntryBriefingZone"
+        }
+      },
+      "id": "act4_chapter1_entry_stub_briefingzone_300_300_0_0",
+      "name": "Act4Chapter1EntryBriefingZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 300,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act4Chapter1EntryBriefingZone",
+          "set_flags": {
+            "act4_ch1_started": true
+          },
+          "forbid_flags": [
+            "act4_ch1_started"
+          ],
+          "once": true,
+          "toast": "Act 4 begins.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act4_chapter1_entry_stub_startedstatesync_m1000_m1000_0_0",
+      "name": "Act4Ch1StartedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act4_Chapter1_Entry.json"
+        }
+      },
+      "id": "act4_chapter1_entry_stub_toact4chapter1entry_940_300_0_0",
+      "name": "ToAct4Chapter1Entry",
+      "require_flags": [
+        "act4_ch1_started"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 940,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter10_Exit.json"
+        }
+      },
+      "id": "act4_chapter1_entry_stub_returntoact3chapter10exit_60_300_0_0",
+      "name": "ReturnToAct3Chapter10Exit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ]
+}

@@ -1,0 +1,363 @@
+{
+  "description": "Act 3 Chapter 1 field gate: shard-gated hazard disable with fail-safe bypass.",
+  "name": "Act 3 Chapter 1 - Field Gate",
+  "schema_version": 1,
+  "version": 1,
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act3_chapter1_fieldgate_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act3_chapter1_fieldgate_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "Dialogue"
+      ],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Use console."
+                }
+              ],
+              "text": "Field console: shard resonance required for direct field shutdown."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "id": "act3_chapter1_fieldgate_shardconsole_460_300_0_0",
+      "mesh_name": "Act3Ch1ShardConsole",
+      "name": "Act3Ch1ShardConsole",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 460,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch1_shard_console_use",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter1ShardConsoleZone"
+        }
+      },
+      "id": "act3_chapter1_fieldgate_shardconsolezone_460_300_0_0",
+      "name": "Act3Chapter1ShardConsoleZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 460,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act3_ch1_console_hint",
+          "trigger_radius": 38.0,
+          "trigger_target": "Player",
+          "zone_id": "Act3Chapter1ConsoleHintZone"
+        }
+      },
+      "id": "act3_chapter1_fieldgate_consolehintzone_380_300_0_0",
+      "name": "Act3Chapter1ConsoleHintZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 380,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter1ConsoleHintZone",
+          "set_flags": {
+            "act3_ch1_console_hint_seen": true
+          },
+          "forbid_flags": [
+            "act3_ch1_console_hint_seen",
+            "act3_ch1_field_disabled"
+          ],
+          "once": true,
+          "toast": "Hint: use the shard console to disable the field.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter1_fieldgate_consolehintstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch1ConsoleHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter1ShardConsoleZone",
+          "set_flags": {
+            "act3_ch1_field_disabled": true
+          },
+          "require_flags": [
+            "act2_ch3_reward_shard_a"
+          ],
+          "forbid_flags": [
+            "act3_ch1_field_disabled"
+          ],
+          "once": true,
+          "toast": "Field disabled.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter1_fieldgate_shardadisablestatesync_m1000_m1000_0_0",
+      "name": "Act3Ch1ShardADisableStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter1ShardConsoleZone",
+          "set_flags": {
+            "act3_ch1_field_disabled": true
+          },
+          "require_flags": [
+            "act2_ch3_reward_shard_b"
+          ],
+          "forbid_flags": [
+            "act3_ch1_field_disabled"
+          ],
+          "once": true,
+          "toast": "Field disabled.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter1_fieldgate_shardbdisablestatesync_m1000_m1000_0_0",
+      "name": "Act3Ch1ShardBDisableStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act3Chapter1ShardConsoleZone",
+          "set_flags": {
+            "act3_ch1_bypass_open": true
+          },
+          "forbid_flags": [
+            "act2_ch3_reward_shard_a",
+            "act2_ch3_reward_shard_b",
+            "act3_ch1_field_disabled",
+            "act3_ch1_bypass_open"
+          ],
+          "once": true,
+          "toast": "Warning: shard signature missing. Bypass route opened.",
+          "toast_seconds": 2.0
+        }
+      },
+      "id": "act3_chapter1_fieldgate_noshardfallbackstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch1NoShardFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 7.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act3_chapter1_fieldgate_hazardstripa_560_300_0_0",
+      "name": "Act3Ch1HazardStripA",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act3_ch1_field_disabled"
+      ],
+      "x": 560,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "DamageOnTouch"
+      ],
+      "behaviour_config": {
+        "DamageOnTouch": {
+          "damage": 7.0,
+          "destroy_on_hit": false,
+          "once": true,
+          "target_name": "Player"
+        }
+      },
+      "id": "act3_chapter1_fieldgate_hazardstripb_660_300_0_0",
+      "name": "Act3Ch1HazardStripB",
+      "sprite": "assets/placeholder.png",
+      "tag": "hazard",
+      "forbid_flags": [
+        "act3_ch1_field_disabled"
+      ],
+      "x": 660,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter1_Relay.json"
+        }
+      },
+      "id": "act3_chapter1_fieldgate_torelay_980_300_0_0",
+      "name": "ToAct3Chapter1Relay",
+      "require_flags": [
+        "act3_ch1_field_disabled"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 980,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter1_Relay.json"
+        }
+      },
+      "id": "act3_chapter1_fieldgate_torelaybypass_980_220_0_0",
+      "name": "ToAct3Chapter1RelayBypass",
+      "require_flags": [
+        "act3_ch1_bypass_open"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 980,
+      "y": 220
+    },
+    {
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act3_Chapter1_Entry.json"
+        }
+      },
+      "id": "act3_chapter1_fieldgate_returntoentry_60_300_0_0",
+      "name": "ReturnToAct3Chapter1Entry",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch1_field_disabled": true
+          },
+          "require_flags": [
+            "act3_ch1_field_disabled"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter1_fieldgate_fielddisabledrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch1FieldDisabledRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_loaded",
+          "set_flags": {
+            "act3_ch1_bypass_open": true
+          },
+          "require_flags": [
+            "act3_ch1_bypass_open"
+          ],
+          "once": false
+        }
+      },
+      "id": "act3_chapter1_fieldgate_bypassrecheckstatesync_m1000_m1000_0_0",
+      "name": "Act3Ch1BypassRecheckStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ]
+}

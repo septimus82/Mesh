@@ -1,0 +1,333 @@
+{
+  "description": "Act 1 Chapter 3 archive: dialogue and seal puzzle before the courtyard.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter3_archive_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter3_archive_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "event": {
+                    "type": "act1_ch3_archive_accept"
+                  },
+                  "id": "ch3_archive_accept",
+                  "text": "I'll recover the route notes."
+                }
+              ],
+              "text": "Archivist: Raiders moved through the courtyard. Flip the seal switch and clear the path."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter3_archive_archivist_280_300_0_0",
+      "mesh_name": "Ch3Archivist",
+      "name": "Archivist Rell",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 280,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch3_archive_note",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter3_archive_chapter3archivenotezone_360_240_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter3_archive_chapter3archivenotezone_360_240_0_0",
+      "name": "Chapter3ArchiveNoteZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 360,
+      "y": 240
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "event_id": "act1_ch3_archive_unlock_event",
+          "one_shot": true
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "act1_chapter3_archive_ch3archiveswitch_440_300_0_0",
+      "name": "Ch3ArchiveSwitch",
+      "sprite": "assets/switch_off.png",
+      "tag": "puzzle",
+      "x": 440,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DoorLock": {
+          "starts_locked": true,
+          "unlock_event": "act1_ch3_archive_unlock_event"
+        }
+      },
+      "behaviours": [
+        "DoorLock"
+      ],
+      "id": "act1_chapter3_archive_ch3archivesealdoor_560_300_0_0",
+      "name": "Ch3ArchiveSealDoor",
+      "solid": true,
+      "sprite": "assets/door_locked.png",
+      "tag": "solid",
+      "x": 560,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter3_Courtyard.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter3_archive_tochapter3courtyard_760_300_0_0",
+      "name": "ToChapter3Courtyard",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 760,
+      "y": 300,
+      "require_flags": [
+        "act1_ch3_archive_briefed"
+      ]
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter3_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter3_archive_returntochapter3stub_60_300_0_0",
+      "name": "ReturnToChapter3Stub",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Understood."
+                }
+              ],
+              "text": "Marked note: Search the archive for the marked note."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter3_archive_ch3archivehintnote_160_330_0_0",
+      "mesh_name": "Ch3ArchiveHintNote",
+      "name": "Archive Hint Note",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 160,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch3_archive_brief_fallback",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter3_archive_ch3archivebriefingfallbackzone_700_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter3_archive_ch3archivebriefingfallbackzone_700_300_0_0",
+      "name": "Ch3ArchiveBriefingFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Chapter3ArchiveNoteZone",
+          "set_flags": {
+            "act1_ch3_archive_briefed": true
+          },
+          "forbid_flags": [
+            "act1_ch3_archive_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Secure the courtyard.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter3_archive_ch3archivebriefedstatesync_m1000_m1000_0_0",
+      "name": "Ch3ArchiveBriefedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch3ArchiveBriefingFallbackZone",
+          "set_flags": {
+            "act1_ch3_archive_briefed": true
+          },
+          "forbid_flags": [
+            "act1_ch3_archive_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Secure the courtyard.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter3_archive_ch3archivebriefedfbstatesync_m1000_m1000_0_0",
+      "name": "Ch3ArchiveBriefedFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch3_archive_reentry_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter3_archive_ch3archivereentryprobezone_130_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter3_archive_ch3archivereentryprobezone_130_300_0_0",
+      "name": "Ch3ArchiveReentryProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 130,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch3ArchiveReentryProbeZone",
+          "set_flags": {
+            "act1_ch3_archive_reentry_2": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch3_archive_reentry_1"
+          ],
+          "forbid_flags": [
+            "act1_ch3_archive_briefed",
+            "act1_ch3_archive_reentry_2"
+          ],
+          "toast": "Hint: Search the archive for the marked note.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter3_archive_ch3archivereentryreentryhintstatesync_m1000_m1000_0_0",
+      "name": "Ch3ArchiveReentryHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch3ArchiveReentryProbeZone",
+          "set_flags": {
+            "act1_ch3_archive_reentry_1": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act1_ch3_archive_briefed",
+            "act1_ch3_archive_reentry_1"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter3_archive_ch3archivereentryreentryvisitstatesync_m1000_m1000_0_0",
+      "name": "Ch3ArchiveReentryVisitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 1 Chapter 3 - Archive",
+  "schema_version": 1,
+  "version": 1
+}

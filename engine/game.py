@@ -183,6 +183,18 @@ from .services import (
 )
 from .ui_overlays import providers as ui_providers
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 _BEHAVIOUR_META_EXPLICIT = "__explicit_behaviour_keys__"
 _OPTIONAL_BEHAVIOUR_DEFAULTS: tuple[tuple[str, str], ...] = ()
 _MISSING = object()
@@ -197,6 +209,7 @@ def _resolve_input_service(window: Any) -> InputService:
     try:
         setattr(window, "input_service", service)
     except Exception:
+        _log_swallow("GAME-001", "engine/game.py pass-only blanket swallow")
         pass
     return service
 
@@ -209,6 +222,7 @@ def _resolve_persistence_service(window: Any) -> PersistenceService:
     try:
         setattr(window, "persistence_service", service)
     except Exception:
+        _log_swallow("GAME-002", "engine/game.py pass-only blanket swallow")
         pass
     return service
 
@@ -221,6 +235,7 @@ def _resolve_replay_service(window: Any) -> ReplayService:
     try:
         setattr(window, "replay_service", service)
     except Exception:
+        _log_swallow("GAME-003", "engine/game.py pass-only blanket swallow")
         pass
     return service
 
@@ -321,7 +336,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         )
         try:
             engine.optional_arcade.arcade.set_background_color(engine.optional_arcade.arcade.color.DARK_BLUE_GRAY)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("GAME-001", "engine/game.py blanket swallow", once=True)
             logger.warning("[Mesh][GameWindow] WARNING: Failed to set background color: %r", exc)
 
         load_builtin_behaviours()
@@ -360,7 +376,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
                         self.world_controller.id,
                         world_file,
                     )
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                    _log_swallow("GAME-002", "engine/game.py blanket swallow", once=True)
                     logger.error("[Mesh][World] Failed to load '%s': %s", world_file, exc)
 
         self.scene_loader = SceneLoader()
@@ -433,6 +450,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.command_palette_prompt_step_index: int = 0
         self.command_palette_prompt_values: dict[str, Any] = {}
         self.last_macro_args: dict[str, dict[str, Any]] = {}
+        self.asset_hot_reload_watcher: Any | None = None
         self.undo_stack: list[UndoFrame] = []
         self.redo_stack: list[UndoFrame] = []
         self._undo_ts_counter: int = 0
@@ -442,14 +460,16 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         if cutscene_path.exists():
             try:
                 self.cutscene_controller.load_from_file(str(cutscene_path))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("GAME-003", "engine/game.py blanket swallow", once=True)
                 logger.error("[Mesh][Cutscene] Failed to load cutscenes.json: %s", exc)
         ambient = list(getattr(self.engine_config, "lighting_ambient_color", [10, 10, 10, 255]))
         ambient_alpha = getattr(self.engine_config, "ambient_darkness_alpha", None)
         if ambient_alpha is not None and len(ambient) >= 4:
             try:
                 ambient[3] = int(ambient_alpha)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("GAME-004", "engine/game.py pass-only blanket swallow")
                 pass
         self.lighting = LightManager(
             self,
@@ -586,6 +606,9 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         from engine.ui_overlays.perf import PerfOverlay
         self.perf_overlay = PerfOverlay(self)
         self.register_ui_element(self.perf_overlay)
+        from engine.ui_overlays.profiler_overlay import ProfilerOverlay
+        self.profiler_overlay = ProfilerOverlay(self, provider=ui_providers.profiler_provider)
+        self.register_ui_element(self.profiler_overlay)
 
         self.light_occluder_overlay = LightOccluderEditorOverlay(self); self.register_ui_element(self.light_occluder_overlay)
 
@@ -654,6 +677,23 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.input_service = build_input_service()
         self.persistence_service = build_persistence_service()
         self.replay_service = build_replay_service()
+        from engine.asset_hot_reload_watcher import maybe_start_hot_reload_watcher  # noqa: PLC0415
+
+        self.asset_hot_reload_watcher = maybe_start_hot_reload_watcher(self)
+        watcher = self.asset_hot_reload_watcher
+        configure_polling = getattr(watcher, "configure_polling", None) if watcher is not None else None
+        if callable(configure_polling):
+            configure_polling(
+                (
+                    "assets/shaders",
+                    "assets/sprites",
+                    "assets/textures",
+                    "assets/audio",
+                    "assets/sounds",
+                    "packs",
+                ),
+                poll_interval_s=0.5,
+            )
 
         # Plugin / mod system
         from .plugin_system import PluginManager
@@ -665,7 +705,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             if _mods_dir and _mods_dir.is_dir():
                 self.plugin_manager.load_all(self, _mods_dir)
                 self.plugin_manager.enable_all()
-        except Exception as _exc:  # noqa: BLE001
+        except Exception as _exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("GAME-004", "engine/game.py blanket swallow", once=True)
             logger.warning("[Mesh][Plugins] Plugin loading failed: %s", _exc)
 
         logger.info("[Mesh][GameWindow] Initialized %sx%s window", width, height)
@@ -865,6 +906,23 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         logger.info("[Mesh][GameWindow] Starting Arcade loop...")
         engine.optional_arcade.arcade.run()
 
+    def _stop_asset_hot_reload_watcher(self) -> None:
+        from engine.asset_hot_reload_watcher import stop_hot_reload_watcher  # noqa: PLC0415
+
+        stop_hot_reload_watcher(self)
+
+    def on_close(self) -> None:
+        self._stop_asset_hot_reload_watcher()
+        base_on_close = getattr(engine.optional_arcade.arcade.Window, "on_close", None)
+        if callable(base_on_close):
+            base_on_close(self)
+
+    def close(self) -> None:
+        self._stop_asset_hot_reload_watcher()
+        base_close = getattr(engine.optional_arcade.arcade.Window, "close", None)
+        if callable(base_close):
+            base_close(self)
+
     @property
     def all_sprites(self) -> Iterator[engine.optional_arcade.arcade.Sprite]:
         """Iterate through every sprite across all layers."""
@@ -929,7 +987,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         if visible:
             try:
                 self.set_flag("auto_opened_quest_log", True)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("GAME-005", "engine/game.py blanket swallow", once=True)
                 logger.warning(
                     "[Mesh][GameWindow] WARNING: Failed to set flag 'auto_opened_quest_log': %r",
                     exc,
@@ -1146,7 +1205,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         if event_bus is not None:
             try:
                 event_bus.emit_event(event)
-            except Exception as exc:  # noqa: BLE001 - event bus should not break runtime
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation - event bus should not break runtime
+                _log_swallow("GAME-006", "engine/game.py blanket swallow", once=True)
                 logger.error("[Mesh][EventBus] ERROR forwarding event '%s': %s", event.type, exc)
 
     def emit_signal(self, event_type: str, **payload: Any) -> None:

@@ -24,6 +24,18 @@ from typing import Any, Dict, List, Optional
 from engine.arcade_compat import activate_framebuffer, clear_framebuffer, close_framebuffer_activation
 from engine.logging_tools import get_logger
 
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    from engine.logging_tools import get_logger
+
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -362,7 +374,8 @@ class PostProcessPipeline:
                 for uname, uval in effect.uniforms().items():
                     try:
                         program[uname] = uval
-                    except Exception:  # noqa: BLE001
+                    except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+                        _log_swallow("POST-001", "engine/post_processing.py pass-only blanket swallow")
                         pass
 
                 # CRT needs resolution.
@@ -371,7 +384,8 @@ class PostProcessPipeline:
                 } or effect.name == 'crt':
                     try:
                         program['u_resolution'] = (float(targets.width), float(targets.height))
-                    except Exception:  # noqa: BLE001
+                    except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+                        _log_swallow("POST-002", "engine/post_processing.py pass-only blanket swallow")
                         pass
 
                 quad = self._ensure_quad(window)
@@ -395,7 +409,8 @@ class PostProcessPipeline:
             from engine import optional_arcade
             win = optional_arcade.arcade.get_window()
             return getattr(win, "ctx", None)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("PSPR-001", "engine/post_processing.py blanket swallow", once=True)
             return None
 
     def _ensure_targets(self, window: Any) -> Optional[_PingPongTargets]:
@@ -416,7 +431,8 @@ class PostProcessPipeline:
             fbo_a = ctx.framebuffer(color_attachments=[tex_a])
             tex_b = ctx.texture((w, h), components=4)
             fbo_b = ctx.framebuffer(color_attachments=[tex_b])
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("PSPR-002", "engine/post_processing.py blanket swallow", once=True)
             logger.warning("[PostProcess] Failed to create offscreen targets")
             return None
 
@@ -434,7 +450,8 @@ class PostProcessPipeline:
             from engine import optional_arcade
             self._quad = optional_arcade.arcade.gl.geometry.quad_2d_fs()
             return self._quad
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("PSPR-003", "engine/post_processing.py blanket swallow", once=True)
             return None
 
     def _blit_texture(self, window: Any, tex: Any) -> None:
@@ -448,15 +465,7 @@ class PostProcessPipeline:
         if prog is None:
             prog = ctx.program(
                 vertex_shader=PostProcessEffect._VERTEX_SOURCE,
-                fragment_shader="""
-                #version 330
-                uniform sampler2D u_texture;
-                in vec2 v_uv;
-                out vec4 fragColor;
-                void main() {
-                    fragColor = texture(u_texture, v_uv);
-                }
-                """,
+                fragment_shader=self._PASSTHROUGH_FRAGMENT_SOURCE,
             )
             setattr(ctx, key, prog)
 
@@ -465,3 +474,69 @@ class PostProcessPipeline:
         quad = self._ensure_quad(window)
         if quad is not None:
             quad.render(prog)
+
+    _PASSTHROUGH_FRAGMENT_SOURCE: str = """
+                #version 330
+                uniform sampler2D u_texture;
+                in vec2 v_uv;
+                out vec4 fragColor;
+                void main() {
+                    fragColor = texture(u_texture, v_uv);
+                }
+                """
+
+    def reload_shaders(
+        self,
+        window: Any,
+        *,
+        changed_paths: tuple[str, ...] | None = None,
+    ) -> dict[str, int]:
+        """Best-effort shader recompilation with last-good fallback."""
+        _ = changed_paths  # Reserved for richer diagnostics; compilation scope is post-process only.
+        counts = {
+            "shader_programs_reloaded": 0,
+            "shader_programs_failed": 0,
+        }
+        ctx = self._get_ctx(window)
+        if ctx is None:
+            return counts
+
+        for effect in self.effects:
+            cache_key = f"_mesh_pp_{effect.name}_program"
+            previous_program = getattr(ctx, cache_key, None)
+            try:
+                compiled = ctx.program(
+                    vertex_shader=PostProcessEffect._VERTEX_SOURCE,
+                    fragment_shader=effect.fragment_source,
+                )
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("PSPR-004", "engine/post_processing.py blanket swallow", once=True)
+                counts["shader_programs_failed"] += 1
+                if previous_program is not None:
+                    setattr(ctx, cache_key, previous_program)
+                logger.warning(
+                    "[PostProcess] Shader reload failed for effect '%s': %s",
+                    effect.name,
+                    exc,
+                )
+                continue
+            setattr(ctx, cache_key, compiled)
+            counts["shader_programs_reloaded"] += 1
+
+        passthrough_key = "_mesh_pp_passthrough_program"
+        previous_passthrough = getattr(ctx, passthrough_key, None)
+        try:
+            passthrough = ctx.program(
+                vertex_shader=PostProcessEffect._VERTEX_SOURCE,
+                fragment_shader=self._PASSTHROUGH_FRAGMENT_SOURCE,
+            )
+        except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("PSPR-005", "engine/post_processing.py blanket swallow", once=True)
+            counts["shader_programs_failed"] += 1
+            if previous_passthrough is not None:
+                setattr(ctx, passthrough_key, previous_passthrough)
+            logger.warning("[PostProcess] Shader reload failed for passthrough program: %s", exc)
+        else:
+            setattr(ctx, passthrough_key, passthrough)
+            counts["shader_programs_reloaded"] += 1
+        return counts

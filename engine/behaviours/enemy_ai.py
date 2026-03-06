@@ -8,6 +8,17 @@ from typing import TYPE_CHECKING
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
+from engine.logging_tools import get_logger
+
+_SWALLOW_ONCE_TAGS: set[str] = set()
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once and tag in _SWALLOW_ONCE_TAGS:
+        return
+    if once:
+        _SWALLOW_ONCE_TAGS.add(tag)
+    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
 
 if TYPE_CHECKING:
     from arcade import Sprite
@@ -266,20 +277,23 @@ class EnemyAI(Behaviour):
         if bus is not None:
             try:
                 bus.emit_event(MeshEvent(type=self.attack_event, payload={"attacker": self.entity, "target": self._target}))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("ENAI-001", "engine/behaviours/enemy_ai.py blanket swallow", once=True)
                 self._log_exception_once("emit_attack_event", exc)
         animator = self._get_animator_behaviour()
         if animator is not None and hasattr(animator, "request_state_override"):
             try:
                 animator.request_state_override("attack", "attack", self.attack_anim_duration)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("ENAI-002", "engine/behaviours/enemy_ai.py blanket swallow", once=True)
                 self._log_exception_once("request_state_override", exc)
         behaviours = getattr(self.entity, "mesh_behaviours_runtime", [])
         for behaviour in behaviours:
             if hasattr(behaviour, "attack"):
                 try:
                     behaviour.attack()
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                    _log_swallow("ENAI-003", "engine/behaviours/enemy_ai.py blanket swallow", once=True)
                     self._log_exception_once("combat_attack", exc)
                 break
 
@@ -293,7 +307,8 @@ class EnemyAI(Behaviour):
         current = getattr(health, "health", None) or getattr(health, "current_health", None)
         try:
             ratio = float(current) / float(max_hp)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+            _log_swallow("ENAI-004", "engine/behaviours/enemy_ai.py blanket swallow", once=True)
             self._log_exception_once("health_ratio", exc)
             return False
         return ratio <= self.flee_below_health
@@ -326,7 +341,8 @@ class EnemyAI(Behaviour):
         if animator is not None and hasattr(animator, "set_facing"):
             try:
                 animator.set_facing(self._facing)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("ENAI-005", "engine/behaviours/enemy_ai.py blanket swallow", once=True)
                 self._log_exception_once("set_facing", exc)
 
     def _get_animator_behaviour(self):

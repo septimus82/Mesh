@@ -1,0 +1,225 @@
+{
+  "description": "Act 1 Chapter 7 aftermath: resolution scene and final Act 1 completion handoff.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter7_aftermath_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter7_aftermath_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Act 1 stands."
+                }
+              ],
+              "text": "Warden Echo: The lane is secure. Carry the fragment and mark the chapter complete."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter7_aftermath_warden_echo_320_300_0_0",
+      "mesh_name": "Ch7WardenEcho",
+      "name": "Warden Echo",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 320,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Resolve the aftermath."
+                }
+              ],
+              "text": "Aftermath marker: Report to the echo and close the arc."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter7_aftermath_ch7hintmarker_180_330_0_0",
+      "mesh_name": "Ch7AftermathHintMarker",
+      "name": "Ch7 Aftermath Hint Marker",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 180,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch7_after_resolve",
+          "trigger_radius": 48.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter7_aftermath_chapter7aftermathresolvezone_500_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter7_aftermath_chapter7aftermathresolvezone_500_300_0_0",
+      "name": "Chapter7AftermathResolveZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 500,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Chapter7AftermathResolveZone",
+          "set_flags": {
+            "act1_chapter7_complete": true,
+            "act1_act1_complete": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch6_warden_defeated"
+          ],
+          "forbid_flags": [
+            "act1_chapter7_complete"
+          ],
+          "toast": "Objective complete: Act 1 resolved.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter7_aftermath_ch7resolvestatesync_m1000_m1000_0_0",
+      "name": "Ch7ResolveStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch7_checkpoint_reached",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter7_aftermath_ch7checkpointzone_620_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter7_aftermath_ch7checkpointzone_620_300_0_0",
+      "name": "Ch7CheckpointZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 620,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch7CheckpointZone",
+          "set_flags": {
+            "act1_ch7_checkpoint": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch6_warden_defeated"
+          ],
+          "forbid_flags": [
+            "act1_ch7_checkpoint"
+          ],
+          "toast": "Checkpoint reached: Chapter 7",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter7_aftermath_ch7checkpointstatesync_m1000_m1000_0_0",
+      "name": "Ch7CheckpointStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter1_Threshold.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter7_aftermath_toact2chapter1threshold_860_300_0_0",
+      "name": "ToAct2Chapter1Threshold",
+      "require_flags": [
+        "act1_act1_complete"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 860,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter6_Warden.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter7_aftermath_returntochapter6warden_60_300_0_0",
+      "name": "ReturnToChapter6Warden",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    }
+  ],
+  "name": "Act 1 Chapter 7 - Aftermath",
+  "schema_version": 1,
+  "version": 1
+}

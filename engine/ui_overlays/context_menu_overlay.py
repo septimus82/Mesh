@@ -9,7 +9,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import engine.optional_arcade as optional_arcade
-from engine.editor.editor_menu_hover_query import get_context_menu_hover_id
 
 from ..text_draw import draw_text_cached, TextCache
 from .common import UIElement, draw_panel_bg
@@ -52,6 +51,7 @@ class ContextMenuOverlay(UIElement):
             compute_context_menu_layout,
             CONTEXT_MENU_FONT_SIZE,
         )
+        from engine.editor.editor_menu_hover_query import get_context_menu_hover_id
 
         # Get current state
         menu_x = getattr(controller, "_context_menu_x", 0)

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Set
+import os
+from typing import Any, Dict, Iterable, List, Set
 
 
 class InputManager:
@@ -24,6 +25,44 @@ class InputManager:
         self._gamepad_actions_supported: Set[str] = set()
         self._gamepad_axes: Dict[tuple[str, str], float] = {}
         self._input_source: str = "keyboard_mouse"
+        self._rumble_backend: object | None = None
+        self._rumble_enabled_config: bool = False
+        self._rumble_strength_config: float = 1.0
+
+    @staticmethod
+    def _clamp01(value: Any, default: float = 0.0) -> float:
+        try:
+            coerced = float(value)
+        except (TypeError, ValueError):
+            coerced = float(default)
+        if coerced < 0.0:
+            return 0.0
+        if coerced > 1.0:
+            return 1.0
+        return coerced
+
+    @staticmethod
+    def _parse_bool(value: Any, default: bool = False) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in {"1", "true", "yes", "on"}:
+                return True
+            if lowered in {"0", "false", "no", "off"}:
+                return False
+        return bool(default)
+
+    def _resolve_env_rumble_override(self) -> bool | None:
+        raw = os.environ.get("MESH_RUMBLE")
+        if raw is None:
+            return None
+        lowered = str(raw).strip().lower()
+        if lowered in {"1", "true", "yes", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "off"}:
+            return False
+        return False
 
     @property
     def input_source(self) -> str:
@@ -58,6 +97,71 @@ class InputManager:
             }
         if source_active:
             self._input_source = "gamepad"
+
+    def set_rumble_backend(self, backend: object | None) -> None:
+        """Set the best-effort backend object used for controller rumble."""
+        self._rumble_backend = backend
+
+    def set_rumble_config(self, *, enabled: Any, strength: Any) -> None:
+        """Configure persisted/default rumble settings."""
+        self._rumble_enabled_config = self._parse_bool(enabled, default=False)
+        self._rumble_strength_config = self._clamp01(strength, default=1.0)
+
+    def is_rumble_enabled(self) -> bool:
+        """Return whether rumble is effectively enabled after env override."""
+        env_override = self._resolve_env_rumble_override()
+        if env_override is not None:
+            return bool(env_override)
+        return bool(self._rumble_enabled_config)
+
+    def get_rumble_strength(self) -> float:
+        """Return current rumble strength multiplier [0..1]."""
+        return float(self._rumble_strength_config)
+
+    def has_rumble_backend(self) -> bool:
+        """Return whether a backend is currently connected."""
+        return self._rumble_backend is not None
+
+    def rumble(self, intensity: float, duration_s: float, player_index: int = 0) -> None:
+        """Best-effort controller rumble (no-op when unsupported/disabled)."""
+        if not self.is_rumble_enabled():
+            return
+        if int(player_index) != 0:
+            return
+        try:
+            scaled = float(intensity) * float(self._rumble_strength_config)
+            strength = self._clamp01(scaled, default=0.0)
+            duration = max(0.0, float(duration_s))
+        except (TypeError, ValueError):
+            return
+        if strength <= 0.0 or duration <= 0.0:
+            return
+        backend = self._rumble_backend
+        if backend is None:
+            return
+
+        candidates: tuple[tuple[str, str], ...] = (
+            ("rumble", "strength_duration"),
+            ("start_rumble", "weak_strong_duration_ms"),
+            ("rumble_play_weak_strong", "weak_strong_duration_ms"),
+            ("set_rumble", "weak_strong_duration"),
+            ("play_rumble", "strength_duration"),
+        )
+        for method_name, call_kind in candidates:
+            method = getattr(backend, method_name, None)
+            if not callable(method):
+                continue
+            try:
+                if call_kind == "strength_duration":
+                    method(strength, duration)
+                elif call_kind == "weak_strong_duration_ms":
+                    duration_ms = int(round(duration * 1000.0))
+                    method(strength, strength, duration_ms)
+                else:
+                    method(strength, strength, duration)
+            except Exception:
+                return
+            return
 
     # --- raw key tracking -------------------------------------------------
     def press(self, key: int) -> None:
@@ -194,6 +298,10 @@ class InputManager:
         self.bind("move_down", arcade_module.key.S)
         self.bind("move_left", arcade_module.key.A)
         self.bind("move_right", arcade_module.key.D)
+        self.bind("move_up", arcade_module.key.UP)
+        self.bind("move_down", arcade_module.key.DOWN)
+        self.bind("move_left", arcade_module.key.LEFT)
+        self.bind("move_right", arcade_module.key.RIGHT)
 
     def bind_default_actions(self, arcade_module) -> None:
         """Bind the default movement keys plus interaction shortcuts."""
@@ -207,6 +315,11 @@ class InputManager:
         self.bind("toggle_editor", arcade_module.key.F4)
         self.bind("toggle_help", arcade_module.key.H)
         self.bind("toggle_inspector", arcade_module.key.I)
+        self.bind("pause_menu", arcade_module.key.ESCAPE)
+        self.bind("quick_save", arcade_module.key.F5)
+        self.bind("save_game", arcade_module.key.F8)
+        self.bind("quick_load", arcade_module.key.F9)
+        self.bind("quickload_last_save", arcade_module.key.F10)
 
 
     def start_text_capture(self) -> None:

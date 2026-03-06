@@ -1,0 +1,294 @@
+{
+  "description": "Act 2 Chapter 1 threshold: briefing and route setup before the hazard hall.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act2_chapter1_threshold_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act2_chapter1_threshold_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "I will take the bypass route."
+                }
+              ],
+              "text": "Pathwarden: Stay off the red hazard strip. Take the upper bypass lane and regroup in the safe room."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act2_chapter1_threshold_pathwarden_280_300_0_0",
+      "mesh_name": "Act2Ch1Pathwarden",
+      "name": "Pathwarden",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 280,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Understood."
+                }
+              ],
+              "text": "Threshold sign: Hazard zone ahead. Use the upper bypass."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act2_chapter1_threshold_hazardtutorialsign_170_330_0_0",
+      "mesh_name": "Act2Ch1HazardTutorialSign",
+      "name": "Act2Ch1HazardTutorialSign",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 170,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch1_briefing",
+          "trigger_radius": 44.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter1_threshold_act2chapter1briefingzone_340_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter1_threshold_act2chapter1briefingzone_340_300_0_0",
+      "name": "Act2Chapter1BriefingZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 340,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch1_briefing_fallback",
+          "trigger_radius": 42.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter1_threshold_act2chapter1briefingfallbackzone_700_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter1_threshold_act2chapter1briefingfallbackzone_700_300_0_0",
+      "name": "Act2Chapter1BriefingFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 700,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act2_Chapter1_HazardHall.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter1_threshold_toact2chapter1hazardhall_820_300_0_0",
+      "name": "ToAct2Chapter1HazardHall",
+      "require_flags": [
+        "act2_ch1_briefed"
+      ],
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 820,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter7_Aftermath.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act2_chapter1_threshold_returntochapter7aftermath_60_300_0_0",
+      "name": "ReturnToChapter7Aftermath",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1BriefingZone",
+          "set_flags": {
+            "act2_ch1_briefed": true
+          },
+          "forbid_flags": [
+            "act2_ch1_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Cross the hazard hall.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_threshold_act2ch1briefedstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1BriefedStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1BriefingFallbackZone",
+          "set_flags": {
+            "act2_ch1_briefed": true
+          },
+          "forbid_flags": [
+            "act2_ch1_briefed"
+          ],
+          "once": true,
+          "toast": "Objective updated: Cross the hazard hall.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_threshold_act2ch1briefedfbstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1BriefedFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act2_ch1_threshold_reentry_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act2_chapter1_threshold_act2chapter1thresholdreentryprobezone_130_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act2_chapter1_threshold_act2chapter1thresholdreentryprobezone_130_300_0_0",
+      "name": "Act2Chapter1ThresholdReentryProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 130,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1ThresholdReentryProbeZone",
+          "set_flags": {
+            "act2_ch1_threshold_reentry_2": true
+          },
+          "once": true,
+          "require_flags": [
+            "act2_ch1_threshold_reentry_1"
+          ],
+          "forbid_flags": [
+            "act2_ch1_briefed",
+            "act2_ch1_threshold_reentry_2"
+          ],
+          "toast": "Hint: Get the threshold briefing before entering the hazard hall.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_threshold_act2ch1thresholdreentryhintstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1ThresholdReentryHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Act2Chapter1ThresholdReentryProbeZone",
+          "set_flags": {
+            "act2_ch1_threshold_reentry_1": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act2_ch1_briefed",
+            "act2_ch1_threshold_reentry_1"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act2_chapter1_threshold_act2ch1thresholdreentryvisitstatesync_m1000_m1000_0_0",
+      "name": "Act2Ch1ThresholdReentryVisitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 2 Chapter 1 - Threshold",
+  "schema_version": 1,
+  "version": 1
+}

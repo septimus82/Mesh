@@ -10,6 +10,22 @@
         "start"
       ]
     },
+    "act1_chapter5_gauntlet": {
+      "path": "packs/core_regions/scenes/Act1_Chapter5_Gauntlet.json",
+      "label": "Act 1 Chapter 5 Gauntlet",
+      "tags": [
+        "combat",
+        "gated"
+      ]
+    },
+    "act1_chapter5_summit": {
+      "path": "packs/core_regions/scenes/Act1_Chapter5_Summit.json",
+      "label": "Act 1 Chapter 5 Summit",
+      "tags": [
+        "dialogue",
+        "payoff"
+      ]
+    },
     "act1_chapter4_fork": {
       "path": "packs/core_regions/scenes/Act1_Chapter4_Fork.json",
       "label": "Act 1 Chapter 4 Fork",
@@ -17,13 +33,87 @@
         "branch",
         "payoff"
       ]
+    },
+    "act1_chapter6_approach": {
+      "path": "packs/core_regions/scenes/Act1_Chapter6_Approach.json",
+      "label": "Act 1 Chapter 6 Approach",
+      "tags": [
+        "setup",
+        "briefing"
+      ]
+    },
+    "act1_chapter6_warden": {
+      "path": "packs/core_regions/scenes/Act1_Chapter6_Warden.json",
+      "label": "Act 1 Chapter 6 Warden Arena",
+      "tags": [
+        "combat",
+        "boss"
+      ]
+    },
+    "act1_chapter7_aftermath": {
+      "path": "packs/core_regions/scenes/Act1_Chapter7_Aftermath.json",
+      "label": "Act 1 Chapter 7 Aftermath",
+      "tags": [
+        "resolution",
+        "dialogue"
+      ]
     }
   },
   "links": [
     {
       "from": "act1_chapter5_stub",
+      "to": "act1_chapter5_gauntlet",
+      "via": "ToChapter5Gauntlet"
+    },
+    {
+      "from": "act1_chapter5_gauntlet",
+      "to": "act1_chapter5_stub",
+      "via": "ReturnToChapter5Stub"
+    },
+    {
+      "from": "act1_chapter5_gauntlet",
+      "to": "act1_chapter5_summit",
+      "via": "ToChapter5Summit"
+    },
+    {
+      "from": "act1_chapter5_summit",
+      "to": "act1_chapter5_gauntlet",
+      "via": "ReturnToChapter5Gauntlet"
+    },
+    {
+      "from": "act1_chapter5_stub",
       "to": "act1_chapter4_fork",
       "via": "Chapter5ReturnDoor"
+    },
+    {
+      "from": "act1_chapter5_summit",
+      "to": "act1_chapter6_approach",
+      "via": "ToChapter6Approach"
+    },
+    {
+      "from": "act1_chapter6_approach",
+      "to": "act1_chapter5_summit",
+      "via": "ReturnToChapter5Summit"
+    },
+    {
+      "from": "act1_chapter6_approach",
+      "to": "act1_chapter6_warden",
+      "via": "ToChapter6Warden"
+    },
+    {
+      "from": "act1_chapter6_warden",
+      "to": "act1_chapter6_approach",
+      "via": "ReturnToChapter6Approach"
+    },
+    {
+      "from": "act1_chapter6_warden",
+      "to": "act1_chapter7_aftermath",
+      "via": "ToChapter7Aftermath"
+    },
+    {
+      "from": "act1_chapter7_aftermath",
+      "to": "act1_chapter6_warden",
+      "via": "ReturnToChapter6Warden"
     }
   ]
 }

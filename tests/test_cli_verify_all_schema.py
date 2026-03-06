@@ -52,6 +52,7 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
         "verify_all_summary",
         "verify_step_durations",
         "verify_step_budget_check",
+        "overlay_perf",
         "shadow_backend",
         "swallowed_exceptions",
         "release_notes_json",
@@ -70,6 +71,12 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
         "encounter_audit_summary",
         "encounter_audit_compact",
         "encounter_headroom",
+        "perf_run",
+        "perf_compare",
+        "player_package_manifest",
+        "player_package_check",
+        "player_package_runtime_smoke",
+        "player_package_runtime_diagnostics_snapshot",
         "authoring_trace",
         "authoring_trace_budget_check",
         "verify_report",
@@ -78,6 +85,7 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
     assert written["verify_all_summary"] == "artifacts/verify_all_summary.json"
     assert written["verify_step_durations"] == "artifacts/verify_step_durations.json"
     assert written["verify_step_budget_check"] == "artifacts/verify_step_budget_check.json"
+    assert written["overlay_perf"] is None
     assert written["scenes_index"] == "artifacts/scenes_index.json"
     assert written["worlds_index"] == "artifacts/worlds_index.json"
     assert written["replays_summary"] == "artifacts/replays_summary.json"
@@ -92,6 +100,12 @@ def test_verify_all_schema_success_with_artifacts(monkeypatch, tmp_path, capsys)
     assert written["encounter_audit_summary"] == "artifacts/encounter_audit_summary.json"
     assert written["encounter_audit_compact"] == "artifacts/encounter_audit_compact.json"
     assert written["encounter_headroom"] == "artifacts/encounter_headroom.json"
+    assert written["perf_run"] is None
+    assert written["perf_compare"] is None
+    assert written["player_package_manifest"] is None
+    assert written["player_package_check"] is None
+    assert written["player_package_runtime_smoke"] is None
+    assert written["player_package_runtime_diagnostics_snapshot"] is None
     assert written["shadow_backend"] == "artifacts/shadow_backend.json"
     assert written["swallowed_exceptions"] == "artifacts/swallowed_exceptions.json"
     assert written["release_notes_json"] is None
@@ -157,6 +171,7 @@ def test_verify_all_schema_failure_includes_skipped_steps(monkeypatch, tmp_path,
     assert written["verify_all_summary"] == "artifacts/verify_all_summary.json"
     assert written["verify_step_durations"] == "artifacts/verify_step_durations.json"
     assert written["verify_step_budget_check"] == "artifacts/verify_step_budget_check.json"
+    assert written["overlay_perf"] is None
     assert written["shadow_backend"] == "artifacts/shadow_backend.json"
     assert written["swallowed_exceptions"] == "artifacts/swallowed_exceptions.json"
     assert written["release_notes_json"] is None
@@ -172,6 +187,12 @@ def test_verify_all_schema_failure_includes_skipped_steps(monkeypatch, tmp_path,
     assert written["encounter_audit_summary"] is None
     assert written["encounter_audit_compact"] is None
     assert written["encounter_headroom"] is None
+    assert written["perf_run"] is None
+    assert written["perf_compare"] is None
+    assert written["player_package_manifest"] is None
+    assert written["player_package_check"] is None
+    assert written["player_package_runtime_smoke"] is None
+    assert written["player_package_runtime_diagnostics_snapshot"] is None
     assert written["scenes_index"] is None
     assert written["worlds_index"] is None
     assert written["doctor_assets"] is None

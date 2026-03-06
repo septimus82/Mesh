@@ -32,6 +32,7 @@ def test_importing_editor_controller_has_no_side_effects_and_exports_surface(mon
         "engine.editor_runtime.ops",
         "engine.editor_runtime.render",
         "engine.editor_runtime",
+        "engine.editor_controller_core",
         "engine.editor_controller",
     ]
     saved_modules = {name: sys.modules.get(name) for name in module_names}

@@ -1,0 +1,404 @@
+{
+  "description": "Act 1 Chapter 5 gauntlet: clear the final guard lane before the summit.",
+  "entities": [
+    {
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "id": "act1_chapter5_gauntlet_player_120_300_0_0",
+      "name": "Player",
+      "sprite": "assets/placeholder.png",
+      "tag": "player",
+      "x": 120,
+      "y": 300
+    },
+    {
+      "behaviours": [],
+      "id": "act1_chapter5_gauntlet_spawndefault_100_300_0_0",
+      "name": "SpawnDefault",
+      "sprite": "assets/placeholder.png",
+      "tag": "spawn_point",
+      "x": 100,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch5_gauntlet_start",
+          "trigger_radius": 54.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter5_gauntlet_ch5gauntletstartzone_200_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5gauntletstartzone_200_300_0_0",
+      "name": "Ch5GauntletStartZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 200,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SwitchInteract": {
+          "event_id": "act1_ch5_gauntlet_unlock",
+          "one_shot": true
+        }
+      },
+      "behaviours": [
+        "SwitchInteract"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5gauntletswitch_360_300_0_0",
+      "name": "Ch5GauntletSwitch",
+      "sprite": "assets/switch_off.png",
+      "tag": "interactable",
+      "x": 360,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "DoorLock": {
+          "starts_locked": true,
+          "unlock_event": "act1_ch5_gauntlet_unlock"
+        }
+      },
+      "behaviours": [
+        "DoorLock"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5gauntletdoor_470_300_0_0",
+      "name": "Ch5GauntletDoor",
+      "solid": true,
+      "sprite": "assets/door_locked.png",
+      "tag": "solid",
+      "x": 470,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "EnemyAI": {
+          "detect_radius": 210.0,
+          "speed": 64.0
+        },
+        "Health": {
+          "hp": 102,
+          "max_hp": 102
+        },
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 15
+            }
+          ],
+          "seed": 4501
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5sentinel_660_300_0_0",
+      "mesh_name": "Act1Ch5Sentinel",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 620,
+      "y": 320
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch5_gauntlet_clear",
+          "trigger_radius": 54.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter5_gauntlet_ch5gauntletclearzone_820_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5gauntletclearzone_820_300_0_0",
+      "name": "Ch5GauntletClearZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 820,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter5_Summit.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter5_gauntlet_tochapter5summit_980_300_0_0",
+      "name": "ToChapter5Summit",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 980,
+      "y": 300,
+      "require_flags": [
+        "act1_ch5_ready_for_summit"
+      ]
+    },
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "SpawnDefault",
+          "target_scene": "packs/core_regions/scenes/Act1_Chapter5_Stub.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "id": "act1_chapter5_gauntlet_returntochapter5stub_60_300_0_0",
+      "name": "ReturnToChapter5Stub",
+      "sprite": "assets/placeholder.png",
+      "tag": "door",
+      "x": 60,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue_nodes": {
+            "start": {
+              "choices": [
+                {
+                  "end": true,
+                  "text": "Understood."
+                }
+              ],
+              "text": "Route marker: Push through the gauntlet."
+            }
+          },
+          "dialogue": {},
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        "Dialogue"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5gauntlethintmarker_160_330_0_0",
+      "mesh_name": "Ch5GauntletHintMarker",
+      "name": "Gauntlet Hint Marker",
+      "sprite": "assets/placeholder.png",
+      "tag": "npc",
+      "x": 160,
+      "y": 330
+    },
+    {
+      "behaviour_config": {
+        "DropTable": {
+          "drops": [
+            {
+              "chance": 1.0,
+              "gold": 13
+            }
+          ],
+          "seed": 4502
+        },
+        "EnemyAI": {
+          "detect_radius": 110.0,
+          "speed": 58.0
+        },
+        "Health": {
+          "hp": 98,
+          "max_hp": 98
+        }
+      },
+      "behaviours": [
+        "Health",
+        "EnemyAI",
+        "DropTable"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5sentinelbeta_900_250_0_0",
+      "mesh_name": "Act1Ch5SentinelBeta",
+      "prefab_id": "slime_blob",
+      "tag": "enemy",
+      "x": 980,
+      "y": 250
+    },
+    {
+      "behaviour_config": {
+        "PickupCollectible": {
+          "collector_tag": "player",
+          "item_amount": 1,
+          "item_id": "healing_potion",
+          "once": true,
+          "remove_on_collect": true
+        }
+      },
+      "behaviours": [
+        "PickupCollectible"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5gauntletbreatherpickup_780_300_0_0",
+      "mesh_name": "Ch5GauntletBreatherPickup",
+      "name": "Ch5GauntletBreatherPickup",
+      "sprite": "assets/placeholder.png",
+      "tag": "collectible",
+      "x": 780,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch5_ready_fallback",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter5_gauntlet_ch5readyforsummitfallbackzone_960_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5readyforsummitfallbackzone_960_300_0_0",
+      "name": "Ch5ReadyForSummitFallbackZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 960,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch5GauntletClearZone",
+          "set_flags": {
+            "act1_ch5_ready_for_summit": true
+          },
+          "forbid_flags": [
+            "act1_ch5_ready_for_summit"
+          ],
+          "once": true,
+          "toast": "Objective updated: Ascend to the summit.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5readyforsummitstatesync_m1000_m1000_0_0",
+      "name": "Ch5ReadyForSummitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch5ReadyForSummitFallbackZone",
+          "set_flags": {
+            "act1_ch5_ready_for_summit": true
+          },
+          "forbid_flags": [
+            "act1_ch5_ready_for_summit"
+          ],
+          "once": true,
+          "toast": "Objective updated: Ascend to the summit.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5readyforsummitfbstatesync_m1000_m1000_0_0",
+      "name": "Ch5ReadyForSummitFallbackStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "on_trigger": "act1_ch5_gauntlet_reentry_probe",
+          "trigger_radius": 40.0,
+          "trigger_target": "Player",
+          "zone_id": "act1_chapter5_gauntlet_ch5gauntletreentryprobezone_130_300_0_0"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5gauntletreentryprobezone_130_300_0_0",
+      "name": "Ch5GauntletReentryProbeZone",
+      "sprite": "assets/placeholder.png",
+      "tag": "trigger",
+      "x": 130,
+      "y": 300
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch5GauntletReentryProbeZone",
+          "set_flags": {
+            "act1_ch5_gauntlet_reentry_2": true
+          },
+          "once": true,
+          "require_flags": [
+            "act1_ch5_gauntlet_reentry_1"
+          ],
+          "forbid_flags": [
+            "act1_ch5_ready_for_summit",
+            "act1_ch5_gauntlet_reentry_2"
+          ],
+          "toast": "Hint: Push through the gauntlet to unlock the summit route.",
+          "toast_seconds": 2.0
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5gauntletreentryreentryhintstatesync_m1000_m1000_0_0",
+      "name": "Ch5GauntletReentryHintStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    },
+    {
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "entered_zone",
+          "payload_field": "zone",
+          "payload_value": "Ch5GauntletReentryProbeZone",
+          "set_flags": {
+            "act1_ch5_gauntlet_reentry_1": true
+          },
+          "once": true,
+          "forbid_flags": [
+            "act1_ch5_ready_for_summit",
+            "act1_ch5_gauntlet_reentry_1"
+          ]
+        }
+      },
+      "behaviours": [
+        "SetGameStateOnEvent"
+      ],
+      "id": "act1_chapter5_gauntlet_ch5gauntletreentryreentryvisitstatesync_m1000_m1000_0_0",
+      "name": "Ch5GauntletReentryVisitStateSync",
+      "sprite": "assets/placeholder.png",
+      "tag": "system",
+      "x": -1000.0,
+      "y": -1000.0
+    }
+  ],
+  "name": "Act 1 Chapter 5 - Gauntlet",
+  "schema_version": 1,
+  "version": 1
+}
