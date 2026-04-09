@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import random
-from typing import Any
+from typing import Any, Callable
 
 from ..inventory import get_or_create_inventory, load_item_database
 from .base import Behaviour, ParamDef
@@ -38,6 +38,7 @@ class DropTable(Behaviour):
             seed = None
         self._rng = random.Random(seed)
 
+        self._unsubscribe: Callable[[], None] | None
         self._unsubscribe = None
         raw_drops = self.config.get("drops") or []
         normalized: list[dict[str, Any]] = []
@@ -74,7 +75,8 @@ class DropTable(Behaviour):
         }
 
     def _on_event(self, event: Any) -> None:
-        payload = getattr(event, "payload", {}) or {}
+        payload_obj = getattr(event, "payload", None)
+        payload: dict[str, Any] = payload_obj if isinstance(payload_obj, dict) else {}
         if self.match_self:
             actor = payload.get("actor") or payload.get("entity") or payload.get("target")
             if actor is not None and actor is not self.entity:
@@ -109,7 +111,8 @@ class DropTable(Behaviour):
         if item_id:
             try:
                 db = load_item_database()
-                label = db.get(item_id).name if db.get(item_id) else item_id
+                item_def = db.get(item_id)
+                label = item_def.name if item_def is not None else item_id
             except Exception:
                 label = item_id
             inv = get_or_create_inventory(gs.state.values)
@@ -126,18 +129,21 @@ class DropTable(Behaviour):
             try:
                 logger(message)
                 return
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: HUD console hooks are optional and loot flow must continue
                 if not getattr(self, "_mesh_console_log_error_logged", False):
                     print(f"[Mesh][DropTable] ERROR calling console_log: {exc}")
                     setattr(self, "_mesh_console_log_error_logged", True)
         print(f"[Loot] {message}")
 
     def on_destroy(self) -> None:
-        if self._unsubscribe:
+        unsubscribe = self._unsubscribe
+        if unsubscribe is not None:
             try:
-                self._unsubscribe()
-            except Exception as exc:  # noqa: BLE001
+                unsubscribe()
+            except Exception as exc:  # noqa: BLE001  # REASON: event-bus unsubscribe callbacks must not break teardown
                 if not getattr(self, "_mesh_unsubscribe_error_logged", False):
                     print(f"[Mesh][DropTable] ERROR running unsubscribe handler: {exc}")
                     setattr(self, "_mesh_unsubscribe_error_logged", True)
-        super().on_destroy()
+        on_destroy = getattr(super(), "on_destroy", None)
+        if callable(on_destroy):
+            on_destroy()

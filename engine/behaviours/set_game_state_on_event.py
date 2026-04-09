@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Callable, Dict, List
 
 if TYPE_CHECKING:
     from arcade import Sprite
@@ -132,13 +132,13 @@ class SetGameStateOnEvent(Behaviour):
         if not (self.flags_to_set or self.flags_to_clear or self.counter_increments):
             print("[Mesh][SetGameStateOnEvent] WARNING: no flags/counters configured")
 
+        self._unsubscribe: Callable[[], None] | None
+        self._unsubscribe = None
         if self.event_type:
             self._unsubscribe = self.window.event_bus.subscribe(self.event_type, self.on_event)
-        else:
-            self._unsubscribe = None
 
     def destroy(self) -> None:
-        if self._unsubscribe:
+        if self._unsubscribe is not None:
             self._unsubscribe()
             self._unsubscribe = None
 

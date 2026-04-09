@@ -19,6 +19,7 @@ from engine.editor.hd2d_batch_radius_model import (
     format_batch_radius_label,
     nudge_batch_radius,
 )
+from tests._typing import as_any
 
 
 # =============================================================================
@@ -87,9 +88,9 @@ class TestClampBatchRadius:
 
     def test_invalid_type_returns_default(self) -> None:
         """Invalid types should return default."""
-        assert clamp_batch_radius(None) == HD2D_BATCH_RADIUS_DEFAULT  # type: ignore[arg-type]
-        assert clamp_batch_radius("abc") == HD2D_BATCH_RADIUS_DEFAULT  # type: ignore[arg-type]
-        assert clamp_batch_radius([]) == HD2D_BATCH_RADIUS_DEFAULT  # type: ignore[arg-type]
+        assert clamp_batch_radius(as_any(None)) == HD2D_BATCH_RADIUS_DEFAULT
+        assert clamp_batch_radius(as_any("abc")) == HD2D_BATCH_RADIUS_DEFAULT
+        assert clamp_batch_radius(as_any([])) == HD2D_BATCH_RADIUS_DEFAULT
 
 
 # =============================================================================
@@ -134,9 +135,9 @@ class TestNudgeBatchRadius:
 
     def test_invalid_types_return_default(self) -> None:
         """Invalid types should return default."""
-        assert nudge_batch_radius(None, 16) == HD2D_BATCH_RADIUS_DEFAULT  # type: ignore[arg-type]
-        assert nudge_batch_radius(96, None) == HD2D_BATCH_RADIUS_DEFAULT  # type: ignore[arg-type]
-        assert nudge_batch_radius("abc", 16) == HD2D_BATCH_RADIUS_DEFAULT  # type: ignore[arg-type]
+        assert nudge_batch_radius(as_any(None), 16) == HD2D_BATCH_RADIUS_DEFAULT
+        assert nudge_batch_radius(96, as_any(None)) == HD2D_BATCH_RADIUS_DEFAULT
+        assert nudge_batch_radius(as_any("abc"), 16) == HD2D_BATCH_RADIUS_DEFAULT
 
 
 # =============================================================================
@@ -164,8 +165,8 @@ class TestFormatBatchRadiusLabel:
 
     def test_invalid_type_uses_default(self) -> None:
         """Invalid types should use default value."""
-        assert format_batch_radius_label(None) == f"Batch: {HD2D_BATCH_RADIUS_DEFAULT}px"  # type: ignore[arg-type]
-        assert format_batch_radius_label("abc") == f"Batch: {HD2D_BATCH_RADIUS_DEFAULT}px"  # type: ignore[arg-type]
+        assert format_batch_radius_label(as_any(None)) == f"Batch: {HD2D_BATCH_RADIUS_DEFAULT}px"
+        assert format_batch_radius_label(as_any("abc")) == f"Batch: {HD2D_BATCH_RADIUS_DEFAULT}px"
 
 
 # =============================================================================

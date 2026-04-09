@@ -11,6 +11,7 @@ from engine.scene_index import SceneRow
 from engine.ui_overlays import scene_browser_overlay as overlay_module
 from engine.ui_overlays.scene_browser_overlay import SceneBrowserOverlay
 from engine.ui_overlays.widgets import Rect
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -92,7 +93,7 @@ def test_scene_browser_overlay_visible_rows_deterministic(monkeypatch: pytest.Mo
     _stub_draw(monkeypatch)
     controller = _SceneBrowserControllerStub(_make_rows(20))
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-    overlay = SceneBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = SceneBrowserOverlay(as_any(window))
 
     overlay.draw()
     first = _visible_signature(overlay)
@@ -104,7 +105,7 @@ def test_scene_browser_overlay_visible_rows_deterministic(monkeypatch: pytest.Mo
 def test_scene_browser_overlay_tab_toggles_focus() -> None:
     controller = _SceneBrowserControllerStub(_make_rows(10))
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-    overlay = SceneBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = SceneBrowserOverlay(as_any(window))
     overlay._was_open = True
     overlay._text_input.focused = True
 
@@ -121,7 +122,7 @@ def test_scene_browser_overlay_up_down_keeps_selection_visible(monkeypatch: pyte
     _stub_draw(monkeypatch)
     controller = _SceneBrowserControllerStub(_make_rows(24))
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-    overlay = SceneBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = SceneBrowserOverlay(as_any(window))
     overlay.draw()
     overlay.toggle_focus()
     assert overlay._focus_target == "results"
@@ -137,7 +138,7 @@ def test_scene_browser_overlay_enter_activates_only_in_results_focus(monkeypatch
     _stub_draw(monkeypatch)
     controller = _SceneBrowserControllerStub(_make_rows(8))
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-    overlay = SceneBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = SceneBrowserOverlay(as_any(window))
     overlay.draw()
 
     assert overlay._focus_target == "input"
@@ -154,7 +155,7 @@ def test_scene_browser_overlay_wheel_scroll_clamps(monkeypatch: pytest.MonkeyPat
     _stub_draw(monkeypatch)
     controller = _SceneBrowserControllerStub(_make_rows(30))
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-    overlay = SceneBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = SceneBrowserOverlay(as_any(window))
     overlay.draw()
     bounds = overlay._results_rect
     assert isinstance(bounds, Rect)

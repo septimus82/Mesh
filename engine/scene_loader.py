@@ -539,7 +539,7 @@ class SceneLoader:
         if entity.get("prefab_id"):
             try:
                 entity = get_prefab_manager().resolve(entity)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: prefab resolution failures should fall back to the raw authored entity payload
                 _log_swallow("SCEN-001", "engine/scene_loader.py pass-only blanket swallow")
                 pass
         for key, value in DEFAULT_ENTITY.items():

@@ -228,13 +228,13 @@ def _handle_entity_select_paste(window: Any, state: Any, sc: Any) -> bool:
     if callable(to_world) and isinstance(mx, (int, float)) and isinstance(my, (int, float)):
         try:
             anchor_x, anchor_y = to_world(float(mx), float(my))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: screen-to-world conversion failures should fall back to non-cursor selection anchors
             anchor_x, anchor_y = None, None
     if not (isinstance(anchor_x, (int, float)) and isinstance(anchor_y, (int, float))):
         finder = getattr(sc, "_find_player_sprite", None) if sc is not None else None
         try:
             player = finder() if callable(finder) else None
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: player anchor lookup is optional and should fall back to no player selection anchor
             player = None
         if player is not None:
             anchor_x, anchor_y = float(player.center_x), float(player.center_y)

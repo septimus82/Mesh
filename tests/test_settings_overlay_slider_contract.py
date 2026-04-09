@@ -7,6 +7,7 @@ import pytest
 from engine import optional_arcade
 from engine.input import InputManager
 from engine.ui import SettingsOverlay
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -39,7 +40,7 @@ def test_settings_overlay_sfx_slider_drag_updates_config_field() -> None:
     window.engine_config = types.SimpleNamespace(input_bindings={})
     window.input_controller = types.SimpleNamespace(manager=manager)
 
-    overlay = SettingsOverlay(window)  # type: ignore[arg-type]
+    overlay = SettingsOverlay(as_any(window))
     overlay.open()
     overlay.settings.music_volume = 0.42
     bounds = overlay._layout_sfx_slider()
@@ -71,7 +72,7 @@ def test_settings_overlay_master_slider_drag_updates_config_field() -> None:
     window.engine_config = types.SimpleNamespace(input_bindings={}, master_volume=0.5)
     window.input_controller = types.SimpleNamespace(manager=manager)
 
-    overlay = SettingsOverlay(window)  # type: ignore[arg-type]
+    overlay = SettingsOverlay(as_any(window))
     overlay.open()
     bounds = overlay._layout_master_slider()
 
@@ -101,7 +102,7 @@ def test_settings_overlay_music_slider_drag_updates_config_field() -> None:
     window.engine_config = types.SimpleNamespace(input_bindings={})
     window.input_controller = types.SimpleNamespace(manager=manager)
 
-    overlay = SettingsOverlay(window)  # type: ignore[arg-type]
+    overlay = SettingsOverlay(as_any(window))
     overlay.open()
     overlay.settings.sfx_volume = 0.33
     bounds = overlay._layout_music_slider()
@@ -136,7 +137,7 @@ def test_settings_overlay_rumble_slider_drag_updates_config_field() -> None:
     )
     window.input_controller = types.SimpleNamespace(manager=manager)
 
-    overlay = SettingsOverlay(window)  # type: ignore[arg-type]
+    overlay = SettingsOverlay(as_any(window))
     overlay.open()
     bounds = overlay._layout_rumble_slider()
 
@@ -169,7 +170,7 @@ def test_settings_overlay_rumble_toggle_click_updates_config_and_live_apply() ->
     )
     window.input_controller = types.SimpleNamespace(manager=manager)
 
-    overlay = SettingsOverlay(window)  # type: ignore[arg-type]
+    overlay = SettingsOverlay(as_any(window))
     overlay.open()
     bounds = overlay._layout_rumble_toggle()
 

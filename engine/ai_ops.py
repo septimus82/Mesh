@@ -347,7 +347,7 @@ class AIOps:
                 map_json = _load_json(resolved)
                 width = int(map_json.get("width", 0)) or None
                 height = int(map_json.get("height", 0)) or None
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: map dimension inference warning fallback
                 if not getattr(self, "_mesh_paint_tiles_map_dim_error_logged", False):
                     print(f"[Mesh][AIOps] WARNING: Failed to infer map dimensions from '{resolved}': {exc}")
                     setattr(self, "_mesh_paint_tiles_map_dim_error_logged", True)
@@ -664,7 +664,7 @@ class AIOps:
                     )
                 else:
                     res = AIOpsResult(False, f"Unknown operation type '{op_type}'")
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: apply_job operation isolation for batch execution
                 res = AIOpsResult(False, f"{op_type} failed: {exc}")
             results.append({"ok": res.ok, "message": res.message, "data": res.data})
             overall_ok = overall_ok and res.ok

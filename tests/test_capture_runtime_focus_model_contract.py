@@ -29,6 +29,7 @@ from engine.input_runtime.capture_runtime_focus_model import (
     CaptureFocusSnapshot,
     compute_active_scopes,
 )
+from tests._typing import as_any
 
 
 def _make_snapshot(**overrides) -> CaptureFocusSnapshot:
@@ -139,7 +140,7 @@ class TestCaptureFocusSnapshot:
         """Snapshot should be immutable (frozen dataclass)."""
         snap = _make_snapshot()
         with pytest.raises(AttributeError):
-            snap.show_debug = True  # type: ignore
+            as_any(snap).show_debug = True
 
 
 class TestComputeActiveScopes:

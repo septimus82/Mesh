@@ -17,6 +17,7 @@ from engine.editor.selection_outline import (
     rect_to_border_segments,
     rect_to_corner_markers,
 )
+from tests._typing import as_any
 
 
 # -----------------------------------------------------------------------------
@@ -131,7 +132,7 @@ class TestResolveEntityBounds:
         assert result is None
 
     def test_handles_invalid_entity_data(self) -> None:
-        result = resolve_entity_bounds("not a dict", None)  # type: ignore
+        result = resolve_entity_bounds(as_any("not a dict"), None)
         assert result is None
 
 

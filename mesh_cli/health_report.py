@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +28,7 @@ def _safe_read_json(path: Path) -> dict[str, Any] | None:
         return None
     try:
         payload = read_json(path)
-    except Exception:
+    except (OSError, json.JSONDecodeError, ValueError):
         return None
     if isinstance(payload, dict):
         return payload
@@ -39,7 +40,7 @@ def _read_int_file(path: Path) -> int | None:
         return None
     try:
         return int(path.read_text(encoding="utf-8").strip() or "0")
-    except Exception:
+    except (OSError, ValueError):
         return None
 
 
@@ -48,7 +49,7 @@ def _count_mypy_baseline_errors(path: Path) -> int | None:
         return None
     try:
         lines = path.read_text(encoding="utf-8").splitlines()
-    except Exception:
+    except OSError:
         return None
     return sum(1 for line in lines if ": error:" in line)
 
@@ -62,7 +63,7 @@ def _collect_hotspots(repo_root: Path, *, limit: int = _HOTSPOT_LIMIT) -> list[d
         for path in sorted(base.rglob("*.py")):
             try:
                 text = path.read_text(encoding="utf-8")
-            except Exception:
+            except OSError:
                 continue
             nonempty_lines = sum(1 for line in text.splitlines() if line.strip())
             rel_path = path.relative_to(repo_root).as_posix()
@@ -162,4 +163,3 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
 
 def handle(args: argparse.Namespace) -> int:
     return _handle_health_report(args)
-

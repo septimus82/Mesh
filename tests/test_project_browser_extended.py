@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import engine.optional_arcade
+from tests._typing import as_any
 
 # Ensure arcade fallback for headless runs.
 if not engine.optional_arcade.has_arcade():
@@ -32,7 +33,7 @@ def test_project_browser_open_flow(tmp_path, monkeypatch):
     (proj / "config.json").write_text("{}", encoding="utf-8")
     
     window = SimpleNamespace(width=800, height=600, paused=False)
-    menu = MainMenuOverlay(window) # type: ignore
+    menu = MainMenuOverlay(as_any(window))
     menu.open()
     
     # Mock project items to select "Open Existing Project..."
@@ -80,7 +81,7 @@ def test_project_remove_recent(tmp_path, monkeypatch):
     assert len(recents) == 2
     
     window = SimpleNamespace(width=800, height=600, paused=False)
-    menu = MainMenuOverlay(window) # type: ignore
+    menu = MainMenuOverlay(as_any(window))
     menu.open()
     
     # Select first recent (order is usually FIFO or LIFO? implementation uses append so LIFO-ish if we use set logic.. check implementation)

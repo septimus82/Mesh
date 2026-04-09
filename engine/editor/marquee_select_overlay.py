@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
 from ..logging_tools import get_logger
+from ..ui_overlays.common import UIElement
 from .selection_outline import RectF, rect_to_border_segments
 
 if TYPE_CHECKING:
@@ -24,7 +25,7 @@ MARQUEE_FILL_COLOR = (100, 200, 255, 30)  # Cyan fill with low alpha
 MARQUEE_LINE_WIDTH = 1.5
 
 
-class MarqueeSelectOverlay:
+class MarqueeSelectOverlay(UIElement):
     """Overlay for rendering marquee selection rectangle in world space."""
 
     def __init__(self, window: Any) -> None:
@@ -33,7 +34,7 @@ class MarqueeSelectOverlay:
         Args:
             window: Game window to query controller from.
         """
-        self.window = window
+        super().__init__(window)
         self._visible = True
 
     @property

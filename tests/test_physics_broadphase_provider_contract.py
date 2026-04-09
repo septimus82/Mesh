@@ -6,20 +6,20 @@ from engine.ui_overlays import providers as ui_providers
 from engine import physics_runtime
 
 
-def test_physics_broadphase_provider_payload() -> None:
+def test_physics_broadphase_provider_payload(monkeypatch) -> None:
     window = SimpleNamespace(show_debug=True)
 
-    original = physics_runtime.get_broadphase_stats
-    try:
-        physics_runtime.get_broadphase_stats = lambda: {  # type: ignore[assignment]
+    monkeypatch.setattr(
+        physics_runtime,
+        "get_broadphase_stats",
+        lambda: {
             "enabled": True,
             "build_count": 3,
             "candidate_count": 5,
             "exact_checks_count": 7,
-        }
-        payload = ui_providers.physics_broadphase_provider(window)
-    finally:
-        physics_runtime.get_broadphase_stats = original  # type: ignore[assignment]
+        },
+    )
+    payload = ui_providers.physics_broadphase_provider(window)
 
     assert payload["enabled"] is True
     assert payload["build_count"] == 3

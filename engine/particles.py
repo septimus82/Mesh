@@ -58,7 +58,7 @@ def _resolve_particle_seed(window: Any) -> int | None:
         return None
     try:
         return int(seed_value)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: malformed particle seed values should fall back to nondeterministic effect RNG setup
         _log_swallow("PART-001", "engine/particles.py blanket swallow", once=True)
         return None
 

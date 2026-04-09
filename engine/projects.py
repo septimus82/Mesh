@@ -25,7 +25,7 @@ def _normalize_root(root: str) -> str:
         if path.exists():
             path = path.resolve()
         return str(path)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: invalid project-root path strings should fall back to the original text for later resolution
         return text
 
 
@@ -46,7 +46,7 @@ def _read_payload(path: Path) -> dict[str, Any] | None:
         raw = json_io.read_json(path)
     except FileNotFoundError:
         return None
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: malformed project metadata payloads should fall back to no persisted projects payload
         return None
     if not isinstance(raw, dict):
         return None

@@ -6,6 +6,7 @@ import pytest
 
 import engine.optional_arcade as optional_arcade
 from engine.ui_overlays.pause_menu import PauseMenu
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -43,7 +44,7 @@ def test_pause_menu_main_uses_widgets_and_click_matches_enter(
 
     monkeypatch.setattr(optional_arcade, "arcade", arcade_stub)
 
-    menu_enter = PauseMenu(_window())  # type: ignore[arg-type]
+    menu_enter = PauseMenu(as_any(_window()))
     menu_enter.visible = True
     menu_enter.state = "main"
     menu_enter.selected_index = 1  # Settings
@@ -51,7 +52,7 @@ def test_pause_menu_main_uses_widgets_and_click_matches_enter(
     assert handled_enter is True
     assert menu_enter.state == "settings"
 
-    menu_click = PauseMenu(_window())  # type: ignore[arg-type]
+    menu_click = PauseMenu(as_any(_window()))
     menu_click.visible = True
     menu_click.state = "main"
     menu_click.draw()
@@ -59,6 +60,6 @@ def test_pause_menu_main_uses_widgets_and_click_matches_enter(
     target = menu_click._main_menu_buttons[1]
     assert target.last_rect is not None
     rect = target.last_rect
-    handled_click = menu_click.on_mouse_press(rect.center_x, rect.center_y, 1, 0)  # type: ignore[arg-type]
+    handled_click = as_any(menu_click).on_mouse_press(rect.center_x, rect.center_y, 1, 0)
     assert handled_click is True
     assert menu_click.state == "settings"

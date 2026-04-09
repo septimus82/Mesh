@@ -369,7 +369,7 @@ def run_runtime_scene(
             scene_name = str(payload.get("name", "<unnamed>"))
             print(f"[Mesh][RuntimeOnly] Loaded scene '{scene_name}' from {target_scene}")
         return _finish(0, scene_loaded=str(payload.get("name", "<unnamed>")))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: runtime-only entrypoint failures should emit diagnostics and return a controlled exit code
         diag_add_exception(
             "runtime_entry.unhandled_exception",
             exc,

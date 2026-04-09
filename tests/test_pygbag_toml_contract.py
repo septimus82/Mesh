@@ -24,5 +24,5 @@ def test_pygbag_toml_contract() -> None:
 
     for required in ("packs/**", "assets/**", "config.json"):
         assert required in include
-    for required in ("tests/**", "artifacts/**"):
+    for required in ("tests/**", "artifacts/**", ".mesh/**", ".venv/**", "build/**", "dist/**"):
         assert required in exclude

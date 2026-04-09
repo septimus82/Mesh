@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import engine.editor_controller as editor_module
 import engine.optional_arcade as optional_arcade
 from engine.editor_controller import EditorModeController
+from tests._typing import as_any
 
 
 class _StubSprite(SimpleNamespace):
@@ -41,9 +42,9 @@ def _build_controller(payload: dict, scene_path: str, monkeypatch) -> EditorMode
     sprite = _StubSprite(payload["entities"][0])
     scene_controller = _StubSceneController(payload, [sprite], scene_path)
     window = SimpleNamespace(strict_mode=False, scene_controller=scene_controller, width=800, height=600)
-    controller = EditorModeController(window)  # type: ignore[arg-type]
+    controller = EditorModeController(as_any(window))
     controller.active = True
-    controller.selected_entity = sprite  # type: ignore[assignment]
+    as_any(controller).selected_entity = sprite
     return controller
 
 

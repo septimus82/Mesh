@@ -72,10 +72,10 @@ def save_current_scene(controller: Any) -> None:
             enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
             if callable(enqueue):
                 enqueue(tr("UI_SCENE_SAVED"), seconds=2.0)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: optional save toast notifications should not block a completed scene save
             _log_swallow("OPSX-001", "engine/editor_runtime/ops.py pass-only blanket swallow")
             pass
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: scene save failures should log without crashing editor runtime commands
         logger.info("[Editor] Error saving scene: %s", exc)
 
 

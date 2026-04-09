@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import pytest
 
+from tests._typing import as_any
+
 
 # =============================================================================
 # Pure Model Tests - format_hd2d_preview_indicator_text
@@ -101,9 +103,9 @@ class TestFormatHd2dPreviewIndicatorText:
         """Non-string values return empty string."""
         from engine.editor.hd2d_preview_indicator_model import format_hd2d_preview_indicator_text
 
-        assert format_hd2d_preview_indicator_text(123) == ""  # type: ignore[arg-type]
-        assert format_hd2d_preview_indicator_text([]) == ""  # type: ignore[arg-type]
-        assert format_hd2d_preview_indicator_text({}) == ""  # type: ignore[arg-type]
+        assert format_hd2d_preview_indicator_text(as_any(123)) == ""
+        assert format_hd2d_preview_indicator_text(as_any([])) == ""
+        assert format_hd2d_preview_indicator_text(as_any({})) == ""
 
 
 # =============================================================================

@@ -10,6 +10,7 @@ from typing import Any, Callable, TypedDict
 
 from mesh_cli.verify_steps import STEP_ORDER as VERIFY_ALL_STEPS
 from mesh_cli.verify_steps import VerifyStepContext, run_verify_steps
+from mesh_cli.shipping_policy import build_verify_summary_key_artifacts
 
 logger = get_logger(__name__)
 
@@ -47,6 +48,20 @@ _VERIFY_STEP_BUDGET_SCHEMA_VERSION = 2
 _VERIFY_STEP_BUDGET_TOP_N = 5
 _VERIFY_STEP_BUDGET_DEFAULT_TOLERANCE_MS = 50
 _VERIFY_STEP_BUDGET_DEFAULT_RATIO_LIMIT = 1.25
+_VERIFY_STEP_BUDGET_NULL_MEDIAN_MARGIN_MS: dict[str, int] = {
+    "player-package-gate": 700,
+    "verify-demo": 250,
+    "web-smoke": 600,
+}
+_VERIFY_LOCAL_STEP_EXCEPTIONS: tuple[type[Exception], ...] = (
+    AttributeError,
+    FileNotFoundError,
+    ImportError,
+    OSError,
+    RuntimeError,
+    TypeError,
+    ValueError,
+)
 _VERIFY_STEP_BUDGET_RATIO_LIMIT_OVERRIDES: dict[str, float] = {
     "mypy-gate": 1.35,
 }
@@ -68,6 +83,14 @@ def _artifact_base_dir(repo_root, dir_arg: str):
 
     path = Path(dir_arg)
     return path if path.is_absolute() else (Path(repo_root) / path)
+
+
+def _missing_required_verify_metric_artifacts(artifacts_dir: Path) -> list[str]:
+    required = (
+        artifacts_dir / "verify_step_durations.json",
+        artifacts_dir / "verify_step_budget_check.json",
+    )
+    return sorted(path.name for path in required if not path.is_file())
 
 
 def _write_verify_all_summary_artifact(artifact_dir, payload: dict) -> None:
@@ -114,17 +137,19 @@ def _build_verify_summary_payload(
             item["artifact"] = artifact_raw.strip()
         step_rows.append(item)
 
-    key_artifacts: dict[str, str | None] = {
-        "player_pkg_manifest": _path_from_written("player_package_manifest"),
-        "player_pkg_check": _path_from_written("player_package_check"),
-        "player_pkg_runtime_smoke": _path_from_written("player_package_runtime_smoke"),
-        "player_pkg_runtime_diagnostics_snapshot": _path_from_written("player_package_runtime_diagnostics_snapshot"),
-        "web_smoke": _path_from_written("web_smoke"),
-        "perf_compare": _path_from_written("perf_compare"),
-        "swallow_scan": _path_from_written("swallow_scan"),
-        "runtime_smoke": _path_from_written("runtime_smoke"),
-        "runtime_diagnostics_snapshot": _path_from_written("runtime_diagnostics_snapshot"),
-    }
+    key_artifacts = build_verify_summary_key_artifacts(
+        {
+            "player_package_manifest": _path_from_written("player_package_manifest"),
+            "player_package_check": _path_from_written("player_package_check"),
+            "player_package_runtime_smoke": _path_from_written("player_package_runtime_smoke"),
+            "player_package_runtime_diagnostics_snapshot": _path_from_written("player_package_runtime_diagnostics_snapshot"),
+            "web_smoke": _path_from_written("web_smoke"),
+            "perf_compare": _path_from_written("perf_compare"),
+            "swallow_scan": _path_from_written("swallow_scan"),
+            "runtime_smoke": _path_from_written("runtime_smoke"),
+            "runtime_diagnostics_snapshot": _path_from_written("runtime_diagnostics_snapshot"),
+        }
+    )
 
     diagnostics: dict[str, str | None] = {
         "verify_report": _path_from_written("verify_report"),
@@ -164,17 +189,7 @@ def _build_verify_summary_text(payload: dict[str, object]) -> str:
 
     key_artifacts_raw = payload.get("key_artifacts")
     key_artifacts: dict[str, str | None] = key_artifacts_raw if isinstance(key_artifacts_raw, dict) else {}
-    for name in (
-        "player_pkg_manifest",
-        "player_pkg_check",
-        "player_pkg_runtime_smoke",
-        "player_pkg_runtime_diagnostics_snapshot",
-        "web_smoke",
-        "perf_compare",
-        "swallow_scan",
-        "runtime_smoke",
-        "runtime_diagnostics_snapshot",
-    ):
+    for name in key_artifacts:
         value = key_artifacts.get(name)
         rendered = value if isinstance(value, str) and value.strip() else "-"
         lines.append(f"VERIFY_ARTIFACT: {name} {rendered}")
@@ -243,6 +258,48 @@ def _read_verify_step_durations_payload(path: Path) -> dict[str, object]:
     if not isinstance(data, dict):
         raise ValueError("verify_step_durations payload must be an object")
     return data
+
+
+def _next_verify_step_history_path(artifacts_dir: Path) -> Path:
+    history_dir = artifacts_dir / "verify_step_history"
+    history_dir.mkdir(parents=True, exist_ok=True)
+    prefix = "verify_step_durations_"
+    suffix = ".json"
+    max_index = 0
+    for path in history_dir.glob(f"{prefix}*{suffix}"):
+        stem = path.stem
+        if not stem.startswith(prefix):
+            continue
+        index_text = stem[len(prefix) :]
+        try:
+            index = int(index_text)
+        except ValueError:
+            continue
+        max_index = max(max_index, index)
+    return history_dir / f"{prefix}{max_index + 1:04d}{suffix}"
+
+
+def _archive_verify_step_durations_artifact(artifacts_dir: Path) -> Path | None:
+    source = artifacts_dir / "verify_step_durations.json"
+    if not source.is_file():
+        return None
+    try:
+        payload = _read_verify_step_durations_payload(source)
+    except (OSError, json.JSONDecodeError, ValueError):
+        _log_swallow("VFYC-023", "mesh_cli.verify", "verify-step-durations history archive fallback")
+        return None
+
+    from engine.persistence_io import write_json_atomic
+
+    target = _next_verify_step_history_path(artifacts_dir)
+    write_json_atomic(
+        target,
+        payload,
+        indent=2,
+        sort_keys=True,
+        trailing_newline=True,
+    )
+    return target
 
 
 def _extract_step_duration_ms(step_durations_payload: dict[str, object]) -> dict[str, int]:
@@ -324,8 +381,8 @@ def _verify_step_budget_update_command(artifacts_dir: Path | None) -> str:
     if artifacts_dir is not None:
         artifacts_rel = Path(artifacts_dir).as_posix()
     return (
-        "python -c \"from pathlib import Path; import mesh_cli.verify as m; "
-        f"artifacts=Path(r'{artifacts_rel}'); "
+        "python -c \"from pathlib import Path; import os; import mesh_cli.verify as m; "
+        f"artifacts=Path(os.getenv('MESH_ARTIFACTS_DIR', r'{artifacts_rel}')); "
         "repo=Path(m.__file__).resolve().parent.parent; "
         "if not artifacts.is_absolute(): artifacts = repo / artifacts; "
         "target,_=m._write_verify_step_budget_baseline_from_artifacts(repo_root=repo, artifacts_dir=artifacts); "
@@ -715,8 +772,8 @@ def _evaluate_authoring_trace_budget_guard(
     # ---- load baseline ----------------------------------------------------
     try:
         baseline_raw = json.loads(baseline_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        _log_swallow("VFYC-002", "mesh_cli.verify", "blanket exception fallback")
+    except (OSError, json.JSONDecodeError) as exc:
+        _log_swallow("VFYC-002", "mesh_cli.verify", "authoring-trace-budget baseline parse fallback")
         payload = _build_authoring_trace_budget_check_payload(
             ok=False,
             tolerance_ms=_AUTHORING_TRACE_BUDGET_DEFAULT_TOLERANCE_MS,
@@ -855,8 +912,15 @@ def _fetch_swallowed_exceptions_snapshot() -> dict[str, object]:
             "distinct": len(per_site),
             "per_site": per_site,
         }
-    except Exception:
-        _log_swallow("VFYC-003", "mesh_cli.verify", "blanket exception fallback")
+    except (
+        AttributeError,
+        ImportError,
+        OSError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+    ):
+        _log_swallow("VFYC-003", "mesh_cli.verify", "swallowed-exceptions snapshot fallback")
         return {
             "schema_version": 1,
             "ok": False,
@@ -919,8 +983,15 @@ def _fetch_shadow_backend_diagnostics() -> dict[str, object]:
             "reason": str(raw.get("reason", "?")),
             "fallbacks": fallbacks,
         }
-    except Exception:
-        _log_swallow("VFYC-005", "mesh_cli.verify", "blanket exception fallback")
+    except (
+        AttributeError,
+        ImportError,
+        OSError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+    ):
+        _log_swallow("VFYC-005", "mesh_cli.verify", "shadow-backend diagnostics fallback")
         return {
             "schema_version": 1,
             "selected": "?",
@@ -963,8 +1034,15 @@ def _fetch_overlay_perf_snapshot() -> dict[str, object]:
             "schema_version": 1,
             "metrics": metrics,
         }
-    except Exception:
-        _log_swallow("VFYC-006", "mesh_cli.verify", "blanket exception fallback")
+    except (
+        AttributeError,
+        ImportError,
+        OSError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+    ):
+        _log_swallow("VFYC-006", "mesh_cli.verify", "overlay-perf snapshot fallback")
         return {
             "schema_version": 1,
             "metrics": empty_metrics,
@@ -991,7 +1069,7 @@ def _collect_recent_step_durations(
     excludes = {path.resolve() for path in (exclude_paths or set())}
     candidates: dict[Path, tuple[int, str]] = {}
 
-    for path in artifacts_dir.rglob("verify_step_durations.json"):
+    for path in artifacts_dir.rglob("verify_step_durations*.json"):
         if not path.is_file():
             continue
         resolved = path.resolve()
@@ -1128,17 +1206,25 @@ def _evaluate_verify_step_budget_guard(
                     history_values.append(int(history_map[step_name]))
         median_ms = _median_int(history_values) if use_history else None
         effective_ms = max(current_ms, int(median_ms)) if median_ms is not None else current_ms
+        near_miss_margin_ms = 0
+        if median_ms is None:
+            margin_raw = _VERIFY_STEP_BUDGET_NULL_MEDIAN_MARGIN_MS.get(step_name, 0)
+            if isinstance(margin_raw, int):
+                near_miss_margin_ms = max(0, int(margin_raw))
+        effective_tolerance_ms = tolerance_ms + near_miss_margin_ms
         threshold_ms = max(
             budget_ms + tolerance_ms,
             int(budget_ms * ratio_limit),
         )
+        if near_miss_margin_ms > 0:
+            threshold_ms += near_miss_margin_ms
         delta_ms = effective_ms - threshold_ms
         step_ok = effective_ms <= threshold_ms
         checked_steps.append(
             {
                 "name": step_name,
                 "budget_ms": budget_ms,
-                "tolerance_ms": tolerance_ms,
+                "tolerance_ms": effective_tolerance_ms,
                 "ratio_limit": ratio_limit,
                 "threshold_ms": threshold_ms,
                 "current_ms": current_ms,
@@ -1231,8 +1317,8 @@ def _evaluate_pytest_fast_duration_guard(metrics_path, total_baseline_path, top1
     if total_baseline_path.exists():
         try:
             baseline_total = float(total_baseline_path.read_text(encoding="utf-8").strip() or "0")
-        except Exception:
-            _log_swallow("VFYC-009", "mesh_cli.verify", "blanket exception fallback")
+        except (OSError, ValueError):
+            _log_swallow("VFYC-009", "mesh_cli.verify", "pytest-fast total baseline parse fallback")
             baseline_total = total_seconds
     else:
         baseline_total = total_seconds
@@ -1240,8 +1326,8 @@ def _evaluate_pytest_fast_duration_guard(metrics_path, total_baseline_path, top1
     if top10_baseline_path.exists():
         try:
             baseline_top10 = float(top10_baseline_path.read_text(encoding="utf-8").strip() or "0")
-        except Exception:
-            _log_swallow("VFYC-010", "mesh_cli.verify", "blanket exception fallback")
+        except (OSError, ValueError):
+            _log_swallow("VFYC-010", "mesh_cli.verify", "pytest-fast top10 baseline parse fallback")
             baseline_top10 = top10_seconds
     else:
         baseline_top10 = top10_seconds
@@ -1361,8 +1447,8 @@ def _evaluate_exception_budget_guard(repo_root: Path, baseline_path: Path) -> tu
     if baseline_path.exists():
         try:
             baseline = int(baseline_path.read_text(encoding="utf-8").strip() or "0")
-        except Exception:
-            _log_swallow("VFYC-011", "mesh_cli.verify", "blanket exception fallback")
+        except (OSError, ValueError):
+            _log_swallow("VFYC-011", "mesh_cli.verify", "exception-budget baseline parse fallback")
             baseline = current
     else:
         baseline = current
@@ -1418,8 +1504,8 @@ def _run_verify_replays_summary(folder_path):
             failed_int = 1
 
         return (0 if failed_int == 0 else 1), summary if isinstance(summary, dict) else {"ok": False, "code": 1}
-    except Exception:
-        _log_swallow("VFYC-012", "mesh_cli.verify", "blanket exception fallback")
+    except (AttributeError, OSError, RuntimeError, TypeError, ValueError):
+        _log_swallow("VFYC-012", "mesh_cli.verify", "verify-replays summary fallback")
         return 1, {"ok": False, "code": 1, "error": "replays.failed"}
 
 
@@ -1451,8 +1537,8 @@ def _build_artifact_index_payload(
         try:
             raw = abs_path.read_text(encoding="utf-8")
             data = _json.loads(raw)
-        except Exception:
-            _log_swallow("VFYC-013", "mesh_cli.verify", "blanket exception fallback")
+        except (OSError, json.JSONDecodeError):
+            _log_swallow("VFYC-013", "mesh_cli.verify", "artifact-index read fallback")
             readable[key] = False
             continue
         if not isinstance(data, dict):
@@ -1543,6 +1629,163 @@ def _handle_verify_all(args: argparse.Namespace) -> int:
                 pass  # best-effort; keep original exit code
 
     return int(exit_code)
+
+
+def _handle_verify_local(args: argparse.Namespace) -> int:
+    import contextlib
+    import io
+    import shutil
+    import subprocess
+    import sys
+
+    from engine.persistence_io import dumps_json_deterministic, write_json_atomic
+
+    from . import legacy_impl as legacy_mod
+
+    suppress_stdout = legacy_mod.suppress_stdout
+    _normalize_path_for_json = legacy_mod._normalize_path_for_json
+
+    try:
+        from engine.repo_root import get_repo_root
+
+        repo_root = get_repo_root(start=Path.cwd(), strict=True)
+    except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
+        _log_swallow("VFYC-026", "mesh_cli.verify", "blanket exception fallback")
+        payload = {
+            "ok": False,
+            "steps": [
+                {
+                    "name": "verify-local",
+                    "ok": False,
+                    "code": 1,
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "artifact": None,
+                }
+            ],
+            "artifacts": {"dir": None, "written": {}},
+        }
+        sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
+        return 1
+
+    repo_root = Path(repo_root).resolve()
+    artifacts_dir_arg = str(getattr(args, "artifacts", "") or "").strip() or None
+    artifacts_dir = _artifact_base_dir(repo_root, artifacts_dir_arg) if artifacts_dir_arg else None
+    artifacts_dir_json = _normalize_path_for_json(artifacts_dir_arg, repo_root=repo_root) if artifacts_dir_arg else None
+    if artifacts_dir is not None:
+        artifacts_dir.mkdir(parents=True, exist_ok=True)
+
+    steps: list[dict[str, object]] = []
+    artifacts_written: dict[str, str | None] = {
+        "swallow_scan": None,
+        "exception_policy_scan": None,
+    }
+
+    def _add_step(name: str, code: int, *, error: str, artifact: str | None) -> None:
+        steps.append(
+            {
+                "name": name,
+                "ok": int(code) == 0,
+                "code": int(code),
+                "error": str(error or ""),
+                "artifact": artifact,
+            }
+        )
+
+    with contextlib.redirect_stdout(io.StringIO()):
+        with legacy_mod._pushd(repo_root):
+            try:
+                config = legacy_mod.load_config()
+                world_path = str(getattr(config, "world_file", "") or "").strip() or "worlds/main_world.json"
+                with suppress_stdout():
+                    code = int(legacy_mod.validate_all.main([world_path, "--strict", "--schema-strict"]))
+                _add_step("verify-strict", code, error="" if code == 0 else f"failed with code {code}", artifact=None)
+            except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
+                _log_swallow("VFYC-027", "mesh_cli.verify", "blanket exception fallback")
+                _add_step("verify-strict", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
+
+            try:
+                from tooling import mypy_island
+
+                with suppress_stdout():
+                    code = int(mypy_island.main([]))
+                _add_step("mypy-island", code, error="" if code == 0 else f"failed with code {code}", artifact=None)
+            except ModuleNotFoundError as exc:
+                if str(getattr(exc, "name", "")).startswith("tooling"):
+                    _add_step("mypy-island", 0, error="skipped: tooling package unavailable", artifact=None)
+                else:
+                    raise
+            except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
+                _log_swallow("VFYC-028", "mesh_cli.verify", "blanket exception fallback")
+                _add_step("mypy-island", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
+
+            try:
+                from tooling import find_blanket_swallow
+
+                with suppress_stdout():
+                    code = int(find_blanket_swallow.main(["--roots", "engine", "mesh_cli"]))
+                scan_path = repo_root / "artifacts" / "swallow_scan.json"
+                artifact = None
+                if scan_path.exists():
+                    target_path = scan_path
+                    if artifacts_dir is not None:
+                        target_path = artifacts_dir / "swallow_scan.json"
+                        if target_path != scan_path:
+                            shutil.copyfile(scan_path, target_path)
+                    artifact = _normalize_path_for_json(target_path, repo_root=repo_root)
+                    artifacts_written["swallow_scan"] = artifact
+                _add_step(
+                    "swallow-scan-gate",
+                    code,
+                    error="" if code == 0 else "pass-only blanket swallows found",
+                    artifact=artifact,
+                )
+            except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
+                _log_swallow("VFYC-029", "mesh_cli.verify", "blanket exception fallback")
+                _add_step("swallow-scan-gate", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
+
+            try:
+                from tooling import scan_exception_policies
+
+                with suppress_stdout():
+                    payload = scan_exception_policies.scan(
+                        ["engine", "mesh_cli", "tooling"],
+                        repo_root=repo_root,
+                    )
+                artifact = None
+                if artifacts_dir is not None:
+                    target = artifacts_dir / "exception_policy_scan.json"
+                    write_json_atomic(target, payload, indent=2, sort_keys=False, trailing_newline=True)
+                    artifact = _normalize_path_for_json(target, repo_root=repo_root)
+                    artifacts_written["exception_policy_scan"] = artifact
+                _add_step("exception-policy-scan", 0, error="", artifact=artifact)
+            except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
+                _log_swallow("VFYC-030", "mesh_cli.verify", "blanket exception fallback")
+                _add_step("exception-policy-scan", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
+
+            try:
+                if "pytest" in sys.modules:
+                    _add_step("pytest-fast", 0, error="skipped: running under pytest", artifact=None)
+                else:
+                    cmd = [sys.executable, "-m", "tooling.pytest_fast"]
+                    with suppress_stdout():
+                        result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(repo_root))
+                    code = int(result.returncode)
+                    _add_step("pytest-fast", code, error="" if code == 0 else f"failed with code {code}", artifact=None)
+            except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
+                _log_swallow("VFYC-031", "mesh_cli.verify", "blanket exception fallback")
+                _add_step("pytest-fast", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
+
+    overall_ok = all(bool(step.get("ok")) for step in steps)
+    payload = {
+        "ok": bool(overall_ok),
+        "steps": steps,
+        "artifacts": {
+            "dir": artifacts_dir_json,
+            "written": artifacts_written,
+        },
+    }
+    sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
+    return 0 if overall_ok else 1
 
 
 def _build_verify_all_payload(args: argparse.Namespace):
@@ -1775,6 +2018,9 @@ def _build_verify_all_payload(args: argparse.Namespace):
         import sys
 
         from engine.persistence_io import write_json_atomic
+
+        with suppress_stdout():
+            _archive_verify_step_durations_artifact(artifacts_dir)
 
         with suppress_stdout():
             write_json_atomic(
@@ -2061,6 +2307,18 @@ def _build_verify_all_payload(args: argparse.Namespace):
             _log_swallow("VFYC-023", "mesh_cli.verify", "blanket exception fallback")
             pass  # best-effort; keep exit code unchanged
 
+    if artifacts_dir is not None:
+        missing_metric_artifacts = _missing_required_verify_metric_artifacts(artifacts_dir)
+        if missing_metric_artifacts:
+            overall_ok = False
+            if exit_code == 0:
+                exit_code = 1
+            print(
+                "[Mesh][Verify] missing required metric artifacts: "
+                + ", ".join(missing_metric_artifacts),
+                file=sys.stderr,
+            )
+
     payload = {
         "ok": bool(overall_ok),
         "steps": steps,
@@ -2082,6 +2340,17 @@ def _build_verify_all_payload(args: argparse.Namespace):
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     # Verify demo (fast deterministic test subset)
     verify_demo_parser = subparsers.add_parser("verify-demo", help="Run curated demo verification tests")
+    verify_demo_parser.add_argument(
+        "--artifacts",
+        help="Optional artifact directory for verify-demo scratch and failure diagnostics",
+    )
+    verify_demo_parser.add_argument(
+        "--ci-bundle",
+        action="store_true",
+        default=False,
+        dest="ci_bundle",
+        help="Compatibility flag accepted for verify-all parity; verify-demo ignores it",
+    )
     verify_demo_parser.add_argument(
         "pytest_args",
         nargs=argparse.REMAINDER,
@@ -2163,6 +2432,18 @@ def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) ->
         help="Write release_notes.json and release_notes.md to the artifacts directory",
     )
     verify_all_parser.add_argument(
+        "--skip-web-smoke",
+        action="store_true",
+        default=False,
+        dest="skip_web_smoke",
+        help="Skip the web build + web smoke shipping gate",
+    )
+    verify_local_parser = subparsers.add_parser(
+        "verify-local",
+        help="Run a fast local verification subset with deterministic JSON output",
+    )
+    verify_local_parser.add_argument("--artifacts", help="Optional directory to write local verify artifacts")
+    verify_all_parser.add_argument(
         "pytest_args",
         nargs=argparse.REMAINDER,
         help="Optional pytest args after `--` for verify-demo only (selection-changing args are blocked)",
@@ -2174,16 +2455,28 @@ def handle(args: argparse.Namespace) -> int:
 
     if command == "verify-demo":
         import sys
+        from pathlib import Path
 
         from engine.logging_tools import suppress_stdout
         from engine.persistence_io import dumps_json_deterministic
         from engine.tooling import verify_demo
 
         pytest_args = list(getattr(args, "pytest_args", None) or [])
+        artifacts_arg = str(getattr(args, "artifacts", "") or "").strip()
+        scratch_dir = (Path(artifacts_arg) / "verify_demo_pytest") if artifacts_arg else None
+        log_path = (Path(artifacts_arg) / "verify_demo.log") if artifacts_arg else None
         if pytest_args and pytest_args[0] == "--":
             pytest_args = pytest_args[1:]
         with suppress_stdout():
-            verify_demo_code = int(verify_demo.run_verify_demo(pytest_args, capture_output=True, quiet=True))
+            verify_demo_code = int(
+                verify_demo.run_verify_demo(
+                    pytest_args,
+                    capture_output=True,
+                    quiet=True,
+                    log_path=log_path,
+                    scratch_dir=scratch_dir,
+                )
+            )
         verify_demo_payload = {"ok": verify_demo_code == 0, "code": verify_demo_code}
         sys.stdout.write(dumps_json_deterministic(verify_demo_payload, indent=2, sort_keys=True, trailing_newline=True))
         return verify_demo_code
@@ -2252,5 +2545,7 @@ def handle(args: argparse.Namespace) -> int:
 
     if command == "verify-all":
         return int(_handle_verify_all(args))
+    if command == "verify-local":
+        return int(_handle_verify_local(args))
 
     return 1

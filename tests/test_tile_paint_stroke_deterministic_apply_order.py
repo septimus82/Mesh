@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 
 import arcade
+from tests._typing import as_any
 
 
 def _world_for_tile(*, tx: int, ty: int, map_h: int, tile_w: int, tile_h: int) -> tuple[float, float]:
@@ -74,8 +75,8 @@ def test_tile_paint_stroke_deterministic_apply_order(monkeypatch) -> None:
             },
         )()
 
-        window.mark_scene_dirty = lambda *_a: None  # type: ignore[attr-defined]
-        window.push_undo_frame = lambda reason: GameWindow.push_undo_frame(window, reason)  # type: ignore[attr-defined]
+        as_any(window).mark_scene_dirty = lambda *_a: None
+        as_any(window).push_undo_frame = lambda reason: GameWindow.push_undo_frame(window, reason)
 
         controller = type(
             "Ctl",
@@ -115,4 +116,3 @@ def test_tile_paint_stroke_deterministic_apply_order(monkeypatch) -> None:
         assert calls == expected_order
     finally:
         palette.enabled = original_enabled
-

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,7 @@ def _safe_read_json(path: Path) -> dict[str, Any] | None:
         return None
     try:
         payload = read_json(path)
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         return None
     return payload if isinstance(payload, dict) else None
 
@@ -321,4 +322,3 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json-out", default="")
     args = parser.parse_args(argv)
     return _handle_debug_report(args)
-

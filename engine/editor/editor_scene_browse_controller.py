@@ -69,7 +69,7 @@ class EditorSceneBrowseController:
             from engine.editor.editor_ui_state import save_editor_ui_state_for_editor  # noqa: PLC0415
 
             save_editor_ui_state_for_editor(self._editor)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor UI state persistence is best-effort and should not block scene switcher toggles
             _log_swallow("EDIT-001", "engine/editor/editor_scene_browse_controller.py pass-only blanket swallow")
             pass
         return bool(self._editor.scene_switcher_active)
@@ -93,7 +93,7 @@ class EditorSceneBrowseController:
             from engine.editor.editor_ui_state import save_editor_ui_state_for_editor  # noqa: PLC0415
 
             save_editor_ui_state_for_editor(self._editor)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor UI state persistence is best-effort and should not block scene browser toggles
             _log_swallow("EDIT-002", "engine/editor/editor_scene_browse_controller.py pass-only blanket swallow")
             pass
         return bool(self._editor.scene_browser_active)

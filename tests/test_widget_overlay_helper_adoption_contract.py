@@ -9,6 +9,7 @@ from engine.ui_overlays.asset_browser_overlay import AssetBrowserOverlay
 from engine.ui_overlays.find_everything_overlay import FindEverythingOverlay
 from engine.ui_overlays.keybinds_overlay import KeybindsOverlay
 from engine.ui_overlays.scene_browser_overlay import SceneBrowserOverlay
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -110,7 +111,7 @@ def test_migrated_overlays_keep_focus_surface_and_public_methods(
         text_cache=None,
         editor_controller=SimpleNamespace(),
     )
-    overlay = overlay_type(window)  # type: ignore[misc]
+    overlay = as_any(overlay_type)(as_any(window))
     if has_reset:
         getattr(overlay, "reset_for_open")()
 

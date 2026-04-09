@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import Any, cast
 
 from ..pathfinding import NavGrid
 from .base import Behaviour, ParamDef
@@ -156,7 +156,7 @@ class PatrolChaseBehaviour(Behaviour):
                 continue
             try:
                 points.append((float(entry["x"]), float(entry["y"])))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: malformed authored waypoint entries should be skipped without breaking patrol setup
                 continue
         return points
 
@@ -184,7 +184,17 @@ class PatrolChaseBehaviour(Behaviour):
         scene = getattr(self.window, "scene_controller", None)
         getter = getattr(scene, "get_nav_grid", None) if scene is not None else None
         if callable(getter):
-            return getter()
+            grid = getter()
+            if isinstance(grid, NavGrid):
+                return grid
+            if (
+                callable(getattr(grid, "world_to_tile", None))
+                and callable(getattr(grid, "tile_to_world_center", None))
+                and callable(getattr(grid, "find_path", None))
+                and callable(getattr(grid, "has_line_of_sight", None))
+                and callable(getattr(grid, "is_walkable", None))
+            ):
+                return cast(NavGrid, grid)
         return None
 
     def _ensure_waypoints(self) -> None:
@@ -202,7 +212,7 @@ class PatrolChaseBehaviour(Behaviour):
             try:
                 x = float(getattr(sprite, "center_x"))
                 y = float(getattr(sprite, "center_y"))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: malformed tagged waypoint sprites should be skipped without breaking patrol discovery
                 continue
             candidates.append((y, x, self._entity_id(sprite)))
         candidates.sort(key=lambda t: (t[0], t[1], t[2]))

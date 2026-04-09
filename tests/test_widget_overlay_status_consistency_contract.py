@@ -19,6 +19,7 @@ from engine.ui_overlays.asset_browser_overlay import AssetBrowserOverlay
 from engine.ui_overlays.find_everything_overlay import FindEverythingOverlay
 from engine.ui_overlays.keybinds_overlay import KeybindsOverlay
 from engine.ui_overlays.scene_browser_overlay import SceneBrowserOverlay
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -124,7 +125,7 @@ class _FindCase(_OverlayCase):
         controller.activate_find_selection = _activate
 
         window = SimpleNamespace(width=1280, height=720, editor_controller=controller, input=None, input_controller=None)
-        overlay = FindEverythingOverlay(window)  # type: ignore[arg-type]
+        overlay = FindEverythingOverlay(as_any(window))
         super().__init__(overlay=overlay, text_sink=self._texts)
         controller.set_find_query("")
 
@@ -211,7 +212,7 @@ class _SceneCase(_OverlayCase):
         controller._scene_browser_open_selected = _open_selected
 
         window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-        overlay = SceneBrowserOverlay(window)  # type: ignore[arg-type]
+        overlay = SceneBrowserOverlay(as_any(window))
         super().__init__(overlay=overlay, text_sink=self._texts)
         _refresh()
 
@@ -325,7 +326,7 @@ class _KeybindsCase(_OverlayCase):
 
         editor = SimpleNamespace(keybinds=controller)
         window = SimpleNamespace(width=1280, height=720, editor_controller=editor, text_cache=None)
-        overlay = KeybindsOverlay(window)  # type: ignore[arg-type]
+        overlay = KeybindsOverlay(as_any(window))
         overlay.visible = True
         super().__init__(overlay=overlay, text_sink=self._texts)
 
@@ -400,7 +401,7 @@ class _AssetCase(_OverlayCase):
         controller._activate_selected_asset = _activate
 
         window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-        overlay = AssetBrowserOverlay(window)  # type: ignore[arg-type]
+        overlay = AssetBrowserOverlay(as_any(window))
         super().__init__(overlay=overlay, text_sink=self._texts)
         _set_filter("")
 

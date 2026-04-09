@@ -15,13 +15,20 @@ from engine.ui import (
 )
 
 
+class _HUD:
+    def __init__(self) -> None:
+        self.toasts: list[str] = []
+
+    def enqueue_toast(self, message: object, *, seconds: float = 4.0) -> None:  # noqa: ARG002
+        self.toasts.append(str(message))
+
+
 class _Window:
     def __init__(self) -> None:
         self.event_bus = MeshEventBus()
         self._flags: dict[str, bool] = {}
         self.flag_calls: list[tuple[str, bool]] = []
-        self.player_hud = types.SimpleNamespace(toasts=[])
-        self.player_hud.enqueue_toast = lambda message, *, seconds=4.0: self.player_hud.toasts.append(str(message))  # type: ignore[assignment]  # noqa: ARG005
+        self.player_hud = _HUD()
         self.demo_complete_calls: list[float] = []
         self.demo_complete_overlay = types.SimpleNamespace(
             show=lambda *, seconds=DEMO_COMPLETE_ENDCAP_SECONDS: self.demo_complete_calls.append(float(seconds))

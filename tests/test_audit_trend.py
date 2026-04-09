@@ -1,19 +1,24 @@
 import unittest
 import json
+import os
+import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from engine.tooling import content_commands
 from tests.utils.args_factory import make_audit_trend_args
 
 class TestAuditTrend(unittest.TestCase):
     def setUp(self):
-        self.test_dir = Path("tests/temp_trend")
-        self.test_dir.mkdir(exist_ok=True)
+        temp_root = Path("artifacts/test_tmp")
+        temp_root.mkdir(parents=True, exist_ok=True)
+        self._temp_dir = tempfile.TemporaryDirectory(dir=temp_root)
+        self.test_dir = Path(self._temp_dir.name)
+        self._old_cwd = Path.cwd()
+        os.chdir(self.test_dir)
         
     def tearDown(self):
-        import shutil
-        if self.test_dir.exists():
-            shutil.rmtree(self.test_dir)
+        os.chdir(self._old_cwd)
+        self._temp_dir.cleanup()
 
     @patch("engine.tooling.content_commands.read_lock")
     def test_audit_trend_command(self, mock_read_lock):
@@ -38,7 +43,7 @@ class TestAuditTrend(unittest.TestCase):
         mock_read_lock.side_effect = side_effect
         
         args = make_audit_trend_args(
-            locks=str(self.test_dir / "*.json"),
+            locks="*.json",
             json=True
         )
         

@@ -16,6 +16,7 @@ from engine.editor.keybinds_ui_model import KeybindRow, KeybindsState
 from engine.scene_index import SceneRow
 from engine.ui_overlays import scene_browser_overlay as scene_overlay_module
 from engine.ui_overlays.scene_browser_overlay import SceneBrowserOverlay
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -151,7 +152,7 @@ def test_scene_browser_filter_change_preserves_selection_and_keeps_visible(
     controller = _SceneControllerStub(rows)
     controller.scene_browser_index = 1
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-    overlay = SceneBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = SceneBrowserOverlay(as_any(window))
 
     overlay.draw()
     assert overlay.append_text("k") is True

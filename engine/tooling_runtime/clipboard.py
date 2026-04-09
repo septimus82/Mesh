@@ -48,6 +48,5 @@ def try_copy_to_clipboard(text: str, *, is_web: bool = False, is_headless: bool 
         root.update()
         root.destroy()
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: clipboard access depends on host GUI state and should degrade to a simple unavailable result across platform-specific failures
         return False
-

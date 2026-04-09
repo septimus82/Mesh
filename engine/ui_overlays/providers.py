@@ -11,6 +11,14 @@ _OVERLAY_PERF: dict[str, dict[str, float]] = {}
 
 logger = get_logger(__name__)
 _SWALLOW_ONCE_TAGS: set[str] = set()
+_PROVIDER_FALLBACK_EXCEPTIONS: tuple[type[Exception], ...] = (
+    AttributeError,
+    ImportError,
+    OSError,
+    RuntimeError,
+    TypeError,
+    ValueError,
+)
 
 def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
     if once and tag in _SWALLOW_ONCE_TAGS:
@@ -205,7 +213,7 @@ def scene_inspector_provider(window: Any) -> dict[str, Any]:
         if isinstance(mx, (int, float)) and isinstance(my, (int, float)) and hasattr(window, "screen_to_world"):
             try:
                 world_x, world_y = window.screen_to_world(float(mx), float(my))
-            except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+            except _PROVIDER_FALLBACK_EXCEPTIONS:
                 _log_swallow("UOVP-001", "engine.ui_overlays.providers blanket exception fallback")
                 world_x, world_y = None, None
             if isinstance(world_x, (int, float)) and isinstance(world_y, (int, float)):
@@ -214,7 +222,7 @@ def scene_inspector_provider(window: Any) -> dict[str, Any]:
                 for layer in layers.values():
                     try:
                         hits = optional_arcade.arcade.get_sprites_at_point((float(world_x), float(world_y)), layer)
-                    except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+                    except _PROVIDER_FALLBACK_EXCEPTIONS:
                         _log_swallow("UOVP-002", "engine.ui_overlays.providers blanket exception fallback")
                         hits = []
                     if hits:
@@ -238,7 +246,7 @@ def scene_inspector_provider(window: Any) -> dict[str, Any]:
                             manager = get_prefab_manager()
                             manager.load()
                             source = manager.prefab_sources.get(prefab_id)
-                        except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+                        except _PROVIDER_FALLBACK_EXCEPTIONS:
                             _log_swallow("UOVP-003", "engine.ui_overlays.providers blanket exception fallback")
                             source = None
                         if isinstance(source, str) and source.strip():
@@ -297,7 +305,7 @@ def hd2d_depth_debug_provider(window: Any) -> dict[str, Any]:
     for layer in layers.values():
         try:
             all_sprites.extend(layer)
-        except Exception:
+        except _PROVIDER_FALLBACK_EXCEPTIONS:
             _log_swallow("UOVP-004", "engine.ui_overlays.providers blanket exception fallback")
             pass
 
@@ -367,7 +375,7 @@ def tile_paint_provider(window: Any) -> dict[str, Any]:
     ty = None
     try:
         world_x, world_y = window.screen_to_world(float(window.mouse_x), float(window.mouse_y))
-    except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+    except _PROVIDER_FALLBACK_EXCEPTIONS:
         _log_swallow("UOVP-005", "engine.ui_overlays.providers blanket exception fallback")
         world_x, world_y = None, None
 
@@ -449,7 +457,7 @@ def entity_paint_provider(window: Any) -> dict[str, Any]:
     if isinstance(mx, (int, float)) and isinstance(my, (int, float)) and hasattr(window, "screen_to_world"):
         try:
             world_x, world_y = window.screen_to_world(float(mx), float(my))
-        except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+        except _PROVIDER_FALLBACK_EXCEPTIONS:
             _log_swallow("UOVP-006", "engine.ui_overlays.providers blanket exception fallback")
             world_x, world_y = None, None
 
@@ -502,7 +510,7 @@ def entity_paint_provider(window: Any) -> dict[str, Any]:
                     "prefab_id": hover.get("prefab_id"),
                     "name": hover.get("mesh_name"),
                 }
-        except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+        except _PROVIDER_FALLBACK_EXCEPTIONS:
             _log_swallow("UOVP-007", "engine.ui_overlays.providers blanket exception fallback")
             hover_entity = {}
 
@@ -560,7 +568,7 @@ def capture_provider(window: Any) -> dict[str, Any]:
         tile_w, tile_h = getattr(instance, "tile_size", (0, 0))
         try:
             wx, wy = window.screen_to_world(float(window.mouse_x), float(window.mouse_y))
-        except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+        except _PROVIDER_FALLBACK_EXCEPTIONS:
             _log_swallow("UOVP-008", "engine.ui_overlays.providers blanket exception fallback")
             wx, wy = None, None
         if isinstance(wx, (int, float)) and isinstance(wy, (int, float)):
@@ -624,7 +632,7 @@ def profiler_provider(window: Any) -> dict[str, Any]:
         }
     try:
         perf_snapshot = snapshotter()
-    except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+    except _PROVIDER_FALLBACK_EXCEPTIONS:
         _log_swallow("UOVP-009", "engine.ui_overlays.providers blanket exception fallback")
         return {
             "profiler_enabled": True,
@@ -656,7 +664,7 @@ def profiler_provider(window: Any) -> dict[str, Any]:
     if entity_count is None and callable(get_all_entities):
         try:
             entity_count = len(get_all_entities())
-        except Exception:
+        except _PROVIDER_FALLBACK_EXCEPTIONS:
             _log_swallow("UOVP-010", "engine.ui_overlays.providers blanket exception fallback")
             entity_count = 0
 
@@ -673,7 +681,7 @@ def profiler_provider(window: Any) -> dict[str, Any]:
         if callable(enabled_getter):
             try:
                 rumble_enabled = bool(enabled_getter())
-            except Exception:
+            except _PROVIDER_FALLBACK_EXCEPTIONS:
                 _log_swallow("UOVP-011", "engine.ui_overlays.providers blanket exception fallback")
                 rumble_enabled = False
         strength_getter = getattr(input_manager, "get_rumble_strength", None)
@@ -686,7 +694,7 @@ def profiler_provider(window: Any) -> dict[str, Any]:
         if callable(backend_getter):
             try:
                 rumble_backend_connected = bool(backend_getter())
-            except Exception:
+            except _PROVIDER_FALLBACK_EXCEPTIONS:
                 _log_swallow("UOVP-012", "engine.ui_overlays.providers blanket exception fallback")
                 rumble_backend_connected = False
     runtime_summary = {
@@ -991,7 +999,7 @@ def command_palette_provider(window: Any) -> dict[str, Any]:
                                     if isinstance(e, dict) and str(e.get("id") or "") == primary_id:
                                         try:
                                             pos = (float(e.get("x", 0.0)), float(e.get("y", 0.0)))
-                                        except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+                                        except _PROVIDER_FALLBACK_EXCEPTIONS:
                                             _log_swallow("UOVP-016", "engine.ui_overlays.providers blanket exception fallback")
                                             pos = (0.0, 0.0)
                                         break
@@ -1006,7 +1014,7 @@ def command_palette_provider(window: Any) -> dict[str, Any]:
                         try:
                             cx, cy = to_world(float(mx), float(my))
                             pos = (float(cx), float(cy))
-                        except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+                        except _PROVIDER_FALLBACK_EXCEPTIONS:
                             _log_swallow("UOVP-017", "engine.ui_overlays.providers blanket exception fallback")
                             pos = None
 
@@ -1020,7 +1028,7 @@ def command_palette_provider(window: Any) -> dict[str, Any]:
                                 if isinstance(e, dict) and str(e.get("prefab_id") or "") == "player":
                                     try:
                                         player_pos = (float(e.get("x", 0.0)), float(e.get("y", 0.0)))
-                                    except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+                                    except _PROVIDER_FALLBACK_EXCEPTIONS:
                                         _log_swallow("UOVP-018", "engine.ui_overlays.providers blanket exception fallback")
                                         player_pos = (0.0, 0.0)
                                     break
@@ -1207,7 +1215,7 @@ def interact_prompt_provider(window: Any) -> Any:
         return None
     try:
         player_sprite = finder()
-    except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+    except _PROVIDER_FALLBACK_EXCEPTIONS:
         _log_swallow("UOVP-019", "engine.ui_overlays.providers blanket exception fallback")
         player_sprite = None
     if player_sprite is None:
@@ -1215,7 +1223,7 @@ def interact_prompt_provider(window: Any) -> Any:
 
     try:
         entities = list(window.all_sprites)
-    except Exception:  # noqa: BLE001  # REASON: provider isolation fallback
+    except _PROVIDER_FALLBACK_EXCEPTIONS:
         _log_swallow("UOVP-020", "engine.ui_overlays.providers blanket exception fallback")
         return None
     getter = getattr(window, "get_flag", None)

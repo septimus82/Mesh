@@ -11,7 +11,7 @@ from engine.tooling.content_inventory import discover_scene_paths
 def _rel_posix(path: Path, root: Path) -> str:
     try:
         return path.resolve().relative_to(root.resolve()).as_posix()
-    except Exception:
+    except (OSError, RuntimeError, ValueError):
         return path.as_posix()
 
 
@@ -58,7 +58,7 @@ def lint_encounter_preset_references(*, repo_root: Path) -> dict[str, Any]:
         rel = _rel_posix(scene_path, root)
         try:
             scene = _safe_read_json_object(scene_path)
-        except Exception as exc:  # noqa: BLE001
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
             errors.append(
                 {
                     "code": "scene.json.invalid",
@@ -102,4 +102,3 @@ def lint_encounter_preset_references(*, repo_root: Path) -> dict[str, Any]:
             "error_count": len(errors),
         },
     }
-

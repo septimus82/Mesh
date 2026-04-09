@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import arcade
 
+from tests._game_window_undo_stub import as_game_window, bind_game_window_undo_methods
+
 
 def test_entity_paste_integrates_undo_redo(capsys) -> None:
     from engine.entity_select_mode import EntitySelectState
-    from engine.game import GameWindow
     from engine.input_runtime import capture as input_capture
     from engine.palette_mode import get_state
     from engine.scene_controller import SceneController
@@ -35,17 +36,8 @@ def test_entity_paste_integrates_undo_redo(capsys) -> None:
             },
         )()
 
-        def _mark_scene_dirty(self, reason: str) -> None:
-            self.scene_dirty = True
-            self.scene_dirty_reason = str(reason)
-            self.scene_dirty_counter = int(getattr(self, "scene_dirty_counter", 0) or 0) + 1
-
-        window.mark_scene_dirty = _mark_scene_dirty.__get__(window)  # type: ignore[attr-defined]
-        window.push_undo_frame = lambda reason: GameWindow.push_undo_frame(window, reason)  # type: ignore[attr-defined]
-        window.undo = lambda: GameWindow.undo(window)  # type: ignore[attr-defined]
-        window.redo = lambda: GameWindow.redo(window)  # type: ignore[attr-defined]
-
-        sc = SceneController(window)  # type: ignore[arg-type]
+        bind_game_window_undo_methods(window, include_undo=True, include_redo=True)
+        sc = SceneController(as_game_window(window))
         sc.current_scene_path = "scenes/foo.json"
         sc._loaded_scene_source_data = {
             "entities": [{"id": "a", "prefab_id": "slime_blob", "x": 1.0, "y": 2.0}],
@@ -71,4 +63,3 @@ def test_entity_paste_integrates_undo_redo(capsys) -> None:
         assert any(e["id"] == "a__paste0" for e in sc.get_authored_scene_payload()["entities"])
     finally:
         palette.enabled = original_enabled
-

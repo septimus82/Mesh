@@ -43,6 +43,7 @@ from engine.sprite_shadow_model import (
     MIN_ALPHA,
     MAX_ALPHA,
 )
+from tests._typing import as_any
 
 
 class TestShadowParamsDataclass:
@@ -56,7 +57,7 @@ class TestShadowParamsDataclass:
     def test_shadowparams_frozen(self) -> None:
         params = ShadowParams(scale=1.0, alpha=0.35, offset_y=-4.0)
         with pytest.raises(AttributeError):
-            params.scale = 2.0  # type: ignore[misc]
+            as_any(params).scale = 2.0
 
 
 class TestShadowEllipseDataclass:
@@ -69,7 +70,7 @@ class TestShadowEllipseDataclass:
     def test_shadowellipse_frozen(self) -> None:
         ellipse = ShadowEllipse(cx=100.0, cy=50.0, width=24.0, height=8.0)
         with pytest.raises(AttributeError):
-            ellipse.cx = 200.0  # type: ignore[misc]
+            as_any(ellipse).cx = 200.0
 
 
 class TestComputeShadowParams:
@@ -452,7 +453,7 @@ class TestContactShadowParamsDataclass:
     def test_contactshadowparams_frozen(self) -> None:
         params = ContactShadowParams(scale=0.5, alpha=0.5, offset_y=-2.0)
         with pytest.raises(AttributeError):
-            params.scale = 1.0  # type: ignore[misc]
+            as_any(params).scale = 1.0
 
 
 class TestComputeContactShadowParams:
@@ -541,7 +542,7 @@ class TestAoShadowParamsDataclass:
     def test_aoshadowparams_frozen(self) -> None:
         params = AoShadowParams(scale=1.5, alpha=0.1, offset_y=-5.0)
         with pytest.raises(AttributeError):
-            params.scale = 2.0  # type: ignore[misc]
+            as_any(params).scale = 2.0
 
 
 class TestComputeAoShadowParams:

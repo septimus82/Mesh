@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
+from tests._typing import as_any
 
 
 def _patch_arcade(monkeypatch):
@@ -46,7 +47,7 @@ def test_title_menu_continue_visibility(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("MESH_REPO_ROOT", str(tmp_path))
 
     window = _Window()
-    menu = MainMenuOverlay(window)  # type: ignore[arg-type]
+    menu = MainMenuOverlay(as_any(window))
     menu.open()
     if getattr(menu, "state", "") == "project_browser":
         menu._activate_project_selection()
@@ -57,7 +58,7 @@ def test_title_menu_continue_visibility(tmp_path: Path, monkeypatch) -> None:
     save = SaveGameV1(scene_path="scenes/door_field.json", player_x=1.0, player_y=2.0, flags={})
     save_savegame(save_path, save)
 
-    menu2 = MainMenuOverlay(window)  # type: ignore[arg-type]
+    menu2 = MainMenuOverlay(as_any(window))
     menu2.open()
     if getattr(menu2, "state", "") == "project_browser":
         menu2._activate_project_selection()
@@ -72,7 +73,7 @@ def test_title_menu_selection_clamps_and_start_game(tmp_path: Path, monkeypatch)
 
     monkeypatch.setenv("MESH_REPO_ROOT", str(tmp_path))
     window = _Window()
-    menu = MainMenuOverlay(window)  # type: ignore[arg-type]
+    menu = MainMenuOverlay(as_any(window))
     menu.open()
     # Skip project browser to avoid _reload_project_config overwriting world_controller
     menu.state = "main"

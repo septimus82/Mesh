@@ -165,7 +165,7 @@ class EditorDebugOverlayController:
         text = self.build_swallowed_exceptions_copy_text(limit=limit)
         try:
             from engine.tooling_runtime.clipboard import try_copy_to_clipboard  # noqa: PLC0415
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: clipboard support is optional and should not block debug overlay actions
             return False
         is_web = bool(getattr(window, "is_web", False))
         is_headless = bool(getattr(window, "is_headless", False))
@@ -267,7 +267,7 @@ class EditorDebugOverlayController:
 
             raw = get_shadow_backend_diagnostics()
             diagnostics = raw if isinstance(raw, dict) else {}
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: shadow backend diagnostics are optional and should not break the debug overlay refresh
             diagnostics = {}
 
         normalized = {
@@ -455,7 +455,7 @@ class EditorDebugOverlayController:
             raw = path.read_text(encoding="utf-8")
             data = json.loads(raw)
             return data if isinstance(data, dict) else None
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: verify snapshot JSON reads are best-effort and should not break the debug overlay
             return None
 
     def _unavailable_verify_snapshot_payload(self) -> dict[str, str]:

@@ -119,7 +119,7 @@ def test_web_smoke_writes_failure_artifact_for_missing_build_dir(tmp_path: Path)
     assert "WEB_BUILD_DIR_MISSING" in codes
 
 
-def test_build_web_wrapper_enables_disable_sound_format_error_by_default(monkeypatch) -> None:
+def test_build_web_wrapper_enables_disable_sound_format_error_by_default(monkeypatch, tmp_path: Path) -> None:
     import tooling.build_web as build_web
 
     captured: dict[str, object] = {}
@@ -129,21 +129,28 @@ def test_build_web_wrapper_enables_disable_sound_format_error_by_default(monkeyp
         stdout = ""
         stderr = ""
 
-    def _fake_run(cmd, *, capture_output, text):  # noqa: ANN001
+    def _fake_run(cmd, *, capture_output, text, cwd):  # noqa: ANN001
         captured["cmd"] = list(cmd)
+        captured["cwd"] = cwd
         assert capture_output is True
         assert text is True
         return _Result()
 
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(build_web, "_copy_stage_tree", lambda **_kwargs: None)
+    monkeypatch.setattr(build_web, "_copy_built_output", lambda **_kwargs: None)
     monkeypatch.setattr(build_web.subprocess, "run", _fake_run)
     rc = build_web.main(["web_main.py"])
     assert rc == 0
     command = captured["cmd"]
     assert isinstance(command, list)
     assert "--disable-sound-format-error" in command
+    assert captured["cwd"] == str(tmp_path / "artifacts" / "_web_build_stage")
 
 
-def test_build_web_wrapper_reports_tooling_failure_diagnostic_for_mp3_error(monkeypatch, capsys) -> None:
+def test_build_web_wrapper_reports_tooling_failure_diagnostic_for_mp3_error(
+    monkeypatch, capsys, tmp_path: Path
+) -> None:
     import tooling.build_web as build_web
 
     class _Result:
@@ -154,10 +161,12 @@ def test_build_web_wrapper_reports_tooling_failure_diagnostic_for_mp3_error(monk
             "has a common unsupported format."
         )
 
-    def _fake_run(cmd, *, capture_output, text):  # noqa: ANN001
-        _ = (cmd, capture_output, text)
+    def _fake_run(cmd, *, capture_output, text, cwd):  # noqa: ANN001
+        _ = (cmd, capture_output, text, cwd)
         return _Result()
 
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(build_web, "_copy_stage_tree", lambda **_kwargs: None)
     monkeypatch.setattr(build_web.subprocess, "run", _fake_run)
     rc = build_web.main(["web_main.py"])
     out = capsys.readouterr()
@@ -165,3 +174,30 @@ def test_build_web_wrapper_reports_tooling_failure_diagnostic_for_mp3_error(monk
     assert rc == 1
     assert "WEB_BUILD_TOOLING_FAILED" in out.err
     assert "--disable-sound-format-error" in out.err
+
+
+def test_build_web_wrapper_accepts_valid_staged_output_after_pygbag_false_negative(
+    monkeypatch, capsys, tmp_path: Path
+) -> None:
+    import tooling.build_web as build_web
+
+    class _Result:
+        returncode = 1
+        stdout = "build output ready"
+        stderr = "[WinError 32] file is in use"
+
+    def _fake_run(cmd, *, capture_output, text, cwd):  # noqa: ANN001
+        _ = (cmd, capture_output, text, cwd)
+        return _Result()
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(build_web, "_copy_stage_tree", lambda **_kwargs: None)
+    monkeypatch.setattr(build_web, "_copy_built_output", lambda **_kwargs: None)
+    monkeypatch.setattr(build_web.subprocess, "run", _fake_run)
+    monkeypatch.setattr("mesh_cli.web_smoke.run_web_smoke", lambda **_kwargs: 0)
+
+    rc = build_web.main(["web_main.py"])
+    out = capsys.readouterr()
+
+    assert rc == 0
+    assert "passed web smoke; continuing" in out.out

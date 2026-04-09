@@ -7,6 +7,7 @@ import arcade
 
 from engine.savegame import SaveGameV1, save_savegame
 from engine.ui import MainMenuOverlay
+from tests._typing import as_any
 
 
 class _Window:
@@ -35,7 +36,7 @@ def test_main_menu_continue_loads_save(tmp_path: Path, monkeypatch) -> None:
     save_savegame(save_path, save)
 
     window = _Window()
-    menu = MainMenuOverlay(window)  # type: ignore[arg-type]
+    menu = MainMenuOverlay(as_any(window))
     menu.open()
     if getattr(menu, "state", "") == "project_browser":
         menu._activate_project_selection()

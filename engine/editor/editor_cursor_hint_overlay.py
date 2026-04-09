@@ -59,7 +59,7 @@ class EditorCursorHintOverlay(UIElement):
 
         try:
             mouse_x, mouse_y = get_mouse_pos()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: cursor position hooks are optional and should not block overlay drawing
             return
 
         # Get hint text
@@ -72,7 +72,7 @@ class EditorCursorHintOverlay(UIElement):
 
         try:
             hint_text = get_hint(window_w, window_h)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: hint providers are best-effort and should not break the overlay pass
             return
 
         if not hint_text:
@@ -105,7 +105,7 @@ class EditorCursorHintOverlay(UIElement):
             optional_arcade.arcade.draw_rectangle_filled(
                 box_cx, box_cy, box_width, box_height, HINT_BG_COLOR
             )
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: hint background drawing failures should not break the editor overlay pass
             _log_swallow("EDIT-001", "engine/editor/editor_cursor_hint_overlay.py pass-only blanket swallow")
             pass
 
@@ -126,6 +126,6 @@ class EditorCursorHintOverlay(UIElement):
                 anchor_y="bottom",
                 cache=cache,
             )
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: cached hint text drawing failures should not break the editor overlay pass
             _log_swallow("EDIT-002", "engine/editor/editor_cursor_hint_overlay.py pass-only blanket swallow")
             pass

@@ -40,7 +40,7 @@ class NavGrid:
 def _parse_int(value: Any) -> int:
     try:
         return int(value)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: malformed integer-like nav-grid values should fall back to zero during payload parsing
         return 0
 
 
@@ -87,7 +87,7 @@ def build_nav_grid_from_scene_payload(scene_payload: dict[str, Any]) -> NavGrid 
             try:
                 if int(tile) != 0:
                     blocked.add(idx)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: malformed authored collision tile values should invalidate that nav-grid payload build
                 return None
         break
 
@@ -130,10 +130,9 @@ def build_nav_grid_from_tilemap_instance(tilemap_instance: Any) -> NavGrid | Non
         try:
             tx = int(float(getattr(sprite, "center_x")) // float(tile_w))
             ty = int(float(getattr(sprite, "center_y")) // float(tile_h))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed collision sprite positions should skip only that sprite when building the runtime nav grid
             continue
         if 0 <= tx < width and 0 <= ty < height:
             blocked.add(ty * width + tx)
 
     return NavGrid(width=width, height=height, tile_w=tile_w, tile_h=tile_h, blocked=frozenset(blocked))
-

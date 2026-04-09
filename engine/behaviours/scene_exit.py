@@ -66,7 +66,7 @@ class SceneExit(Behaviour):
         if bus is not None and self._subscription is not None:
             try:
                 bus.unsubscribe(self._subscription)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: teardown unsubscribe failures should not block scene exit cleanup
                 if not getattr(self, "_mesh_unsubscribe_error_logged", False):
                     print(f"[Mesh][SceneExit] ERROR unsubscribing: {exc}")
                     setattr(self, "_mesh_unsubscribe_error_logged", True)

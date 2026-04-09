@@ -4,6 +4,7 @@ import types
 
 from engine.events import MeshEventBus
 from engine.game import GameWindow
+from tests._typing import as_any
 
 
 def test_emit_signal_enqueues_event_before_bus_wildcard_enqueue() -> None:
@@ -22,15 +23,14 @@ def test_emit_signal_enqueues_event_before_bus_wildcard_enqueue() -> None:
     dummy.event_bus.subscribe_all(dummy._on_any_event)
 
     def _emit_event(event) -> None:
-        GameWindow.emit_event(dummy, event)  # type: ignore[arg-type]
+        GameWindow.emit_event(as_any(dummy), event)
 
     dummy.emit_event = _emit_event
 
-    GameWindow.emit_signal(dummy, "a", value=1)  # type: ignore[arg-type]
-    GameWindow.emit_signal(dummy, "b", value=2)  # type: ignore[arg-type]
+    GameWindow.emit_signal(as_any(dummy), "a", value=1)
+    GameWindow.emit_signal(as_any(dummy), "b", value=2)
 
     q = dummy._mesh_event_queue
     assert [e.type for e in q] == ["a", "a", "b", "b"]
     assert q[0] is q[1]
     assert q[2] is q[3]
-

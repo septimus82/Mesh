@@ -12,6 +12,7 @@ from engine.provenance import (
     get_provenance,
     provenance_to_dict,
 )
+from tests._typing import as_any
 
 
 class TestProvenanceDataclass:
@@ -20,7 +21,7 @@ class TestProvenanceDataclass:
     def test_frozen(self) -> None:
         prov = Provenance()
         with pytest.raises(AttributeError):
-            prov.tool_name = "X"  # type: ignore[misc]
+            as_any(prov).tool_name = "X"
 
     def test_defaults(self) -> None:
         prov = Provenance()

@@ -11,11 +11,12 @@ from engine.ui import (
     build_inspector_lines,
 )
 from engine.ui_controller import UIController
+from tests._typing import as_any
 
 
 def test_inspector_toggle_flips_visibility() -> None:
     window = types.SimpleNamespace(width=800, height=600)
-    overlay = InspectorOverlay(window)  # type: ignore[arg-type]
+    overlay = InspectorOverlay(as_any(window))
 
     assert overlay.visible is False
     overlay.toggle()
@@ -70,9 +71,9 @@ def test_inspector_visible_does_not_block_movement_dispatch(monkeypatch) -> None
     )
     window.config_path = "config.json"
 
-    window.ui_controller = UIController(window)  # type: ignore[arg-type]
+    window.ui_controller = UIController(as_any(window))
 
-    overlay = InspectorOverlay(window)  # type: ignore[arg-type]
+    overlay = InspectorOverlay(as_any(window))
     overlay.set_visible(True)
     window.ui_controller.register_ui_element(overlay)
 
@@ -80,7 +81,7 @@ def test_inspector_visible_does_not_block_movement_dispatch(monkeypatch) -> None
     mock_dispatch = MagicMock(return_value=True)
     monkeypatch.setattr("engine.input_controller.dispatch_action", mock_dispatch)
 
-    controller = InputController(window)  # type: ignore[arg-type]
+    controller = InputController(as_any(window))
 
     controller.manager.press(arcade.key.W)
     controller.update(0.016)

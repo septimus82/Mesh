@@ -26,7 +26,7 @@ def resolve_web_build_dir(repo_root: Path | None = None) -> Path:
         return root / DEFAULT_WEB_BUILD_DIR
     try:
         parsed = tomllib.loads(config_path.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, tomllib.TOMLDecodeError):
         return root / DEFAULT_WEB_BUILD_DIR
     pygbag = parsed.get("pygbag")
     if isinstance(pygbag, dict):

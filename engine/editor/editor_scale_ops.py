@@ -141,7 +141,7 @@ def _find_entity_by_id(scene_json: Dict[str, Any], entity_id: str) -> Dict[str, 
     if key.startswith("idx:"):
         try:
             idx = int(key.split(":", 1)[1])
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed idx entity ids should fall back to the name-based scale lookup path
             idx = -1
         if 0 <= idx < len(entities) and isinstance(entities[idx], dict):
             found: dict[str, Any] = entities[idx]

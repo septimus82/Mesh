@@ -7,6 +7,7 @@ import pytest
 import engine.optional_arcade as optional_arcade
 from engine.ui_overlays.find_everything_overlay import FindEverythingOverlay
 from engine.ui_overlays import find_everything_overlay as overlay_module
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -37,7 +38,7 @@ def _make_overlay() -> tuple[FindEverythingOverlay, _FindControllerStub]:
         editor_controller=controller,
         input=SimpleNamespace(input_source="keyboard_mouse"),
     )
-    overlay = FindEverythingOverlay(window)  # type: ignore[arg-type]
+    overlay = FindEverythingOverlay(as_any(window))
     return overlay, controller
 
 

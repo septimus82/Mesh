@@ -11,7 +11,7 @@ HAS_ARCADE = False
 try:  # pragma: no cover - exercised in headless tests
     import arcade as _arcade
     HAS_ARCADE = True
-except Exception:  # noqa: BLE001 - optional dependency
+except Exception:  # noqa: BLE001  # REASON: arcade import failures should fall back to the headless arcade shim
     _arcade = arcade_fallback
     HAS_ARCADE = False
 

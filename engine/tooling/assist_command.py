@@ -167,7 +167,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
             return None
         try:
             obj, _end = decoder.raw_decode(text[start:])
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed triage JSON fragments should fail closed to no extracted triage payload
             _log_swallow("ASCM-002", "engine/tooling/assist_command.py blanket swallow", once=True)
             return None
         return obj if isinstance(obj, dict) else None

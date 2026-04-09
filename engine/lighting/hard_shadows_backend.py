@@ -49,7 +49,7 @@ def ensure_render_targets(window: Any, size: tuple[int, int]) -> HardShadowsTarg
         try:
             win = optional_arcade.arcade.get_window()
             ctx = getattr(win, "ctx", None)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: global arcade window lookups are optional and should fall back to no hard-shadows context
             ctx = None
     if ctx is None:
         return None
@@ -59,7 +59,7 @@ def ensure_render_targets(window: Any, size: tuple[int, int]) -> HardShadowsTarg
         light_fbo = ctx.framebuffer(color_attachments=[light_tex])
         mask_tex = ctx.texture((w, h), components=4)
         mask_fbo = ctx.framebuffer(color_attachments=[mask_tex])
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: framebuffer allocation failures should disable hard-shadows targets without breaking lighting setup
         return None
 
     targets = HardShadowsTargets(
@@ -151,7 +151,7 @@ def composite_to_window(
             diffuse_tex.use(0)
             light_tex.use(1)
             mask_tex.use(2)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: texture bind failures should skip hard-shadows compositing without breaking the frame
             return False
 
         program["diffuse_tex"] = 0
@@ -160,10 +160,10 @@ def composite_to_window(
 
         try:
             window.use()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: window framebuffer activation failures should fall through to the existing composite render attempt
             _log_swallow("HARD-001", "engine/lighting/hard_shadows_backend.py pass-only blanket swallow")
             pass
         quad.render(program)
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: hard-shadows composite failures should disable the pass without breaking frame rendering
         return False

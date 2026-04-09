@@ -5,6 +5,9 @@ identical behavior to the original implementation.
 """
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 import pytest
 
 
@@ -230,6 +233,98 @@ class TestCommandPaletteRegistryContract:
         for name in expected_handlers:
             fn = getattr(registry, name, None)
             assert callable(fn), f"Missing/uncallable handler symbol: {name}"
+
+    @pytest.mark.fast
+    def test_support_helper_symbols_preserve_registry_surface(self) -> None:
+        import engine.command_palette_registry as registry
+        import engine.command_palette_registry_options as options
+        import engine.command_palette_registry_parse_helpers as parse_helpers
+        import engine.command_palette_registry_selection as selection
+        import engine.command_palette_registry_support as support
+
+        for name in (
+            "enabled_has_scene",
+            "enabled_selection_has_non_player",
+            "default_scene_create",
+            "_set_last_props_action",
+            "_set_last_config_action",
+            "_get_player_pos_from_authored",
+            "_get_entity_pos_from_authored",
+            "_get_cursor_world_pos",
+            "_resolve_macro_anchor_pos",
+        ):
+            assert getattr(registry, name, None) is getattr(support, name, None), f"registry helper drifted: {name}"
+
+        for name in (
+            "_list_prefab_ids_from_assets_cached",
+            "_list_behaviour_names_cached",
+            "options_all_scenes",
+            "options_recent_scenes",
+            "options_prefab_ids",
+            "options_behaviour_names",
+            "options_behaviours_in_selection",
+            "options_scene_paths",
+            "options_dialogue_speakers",
+            "options_macro_anchor",
+        ):
+            assert getattr(registry, name, None) is getattr(options, name, None), f"registry option helper drifted: {name}"
+
+        for name in (
+            "_entity_has_behaviour",
+            "_get_authored_payload",
+            "_get_selection_ids_and_primary",
+            "_parse_float",
+        ):
+            assert getattr(registry, name, None) is getattr(selection, name.removeprefix("_"), None), (
+                f"registry selection helper drifted: {name}"
+            )
+
+        for name in (
+            "_parse_toast_and_seconds",
+            "_parse_align_args",
+            "_parse_distribute_args",
+            "_parse_snap_args",
+            "_parse_nudge_args",
+            "_parse_rotate_args",
+            "_parse_planes_toggle_repeat_args",
+            "_parse_planes_select_args",
+            "_parse_planes_move_to_args",
+        ):
+            assert getattr(registry, name, None) is getattr(
+                parse_helpers, name, None
+            ), f"registry parse helper drifted: {name}"
+
+    @pytest.mark.fast
+    def test_support_module_stays_focused_on_enablement_defaults_and_macro_helpers(self) -> None:
+        source_path = Path("engine/command_palette_registry_support.py")
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+
+        imported_modules: set[str] = set()
+        top_level_defs: list[str] = []
+        for node in tree.body:
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imported_modules.add(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                imported_modules.add(module)
+            elif isinstance(node, ast.FunctionDef):
+                top_level_defs.append(node.name)
+
+        forbidden_import_prefixes = (
+            "mesh_cli",
+            "engine.command_palette_registry_actions",
+            "engine.command_palette_registry_defs",
+            "engine.command_palette_registry_options",
+        )
+        for module_name in sorted(imported_modules):
+            assert not module_name.startswith(
+                forbidden_import_prefixes
+            ), f"support module import drifted: {module_name}"
+
+        allowed_prefixes = ("enabled_", "default_", "_set_last_", "_get_", "_resolve_", "_log_swallow")
+        unexpected_defs = [name for name in top_level_defs if not name.startswith(allowed_prefixes)]
+        assert unexpected_defs == [], f"support module became a junk drawer: {unexpected_defs}"
 
     @pytest.mark.fast
     def test_known_command_ids_present_and_count_stable(self) -> None:

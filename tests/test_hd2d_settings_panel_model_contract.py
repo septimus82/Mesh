@@ -33,6 +33,7 @@ from engine.editor.hd2d_settings_panel_model import (
     sanitize_hd2d_setting_patch,
     sanitize_hd2d_setting_value,
 )
+from tests._typing import as_any
 
 
 # =============================================================================
@@ -178,9 +179,9 @@ class TestParseHd2dSceneSettings:
 
     def test_handles_invalid_payload_types(self) -> None:
         """Should handle invalid payload types gracefully."""
-        assert isinstance(parse_hd2d_scene_settings(None), Hd2dSettings)  # type: ignore[arg-type]
-        assert isinstance(parse_hd2d_scene_settings("invalid"), Hd2dSettings)  # type: ignore[arg-type]
-        assert isinstance(parse_hd2d_scene_settings([]), Hd2dSettings)  # type: ignore[arg-type]
+        assert isinstance(parse_hd2d_scene_settings(as_any(None)), Hd2dSettings)
+        assert isinstance(parse_hd2d_scene_settings(as_any("invalid")), Hd2dSettings)
+        assert isinstance(parse_hd2d_scene_settings(as_any([])), Hd2dSettings)
 
     def test_handles_invalid_settings_types(self) -> None:
         """Should handle invalid settings dict type."""
@@ -291,8 +292,8 @@ class TestSanitizeHd2dSettingPatch:
 
     def test_returns_empty_for_invalid_input(self) -> None:
         """Should return empty dict for invalid input."""
-        assert sanitize_hd2d_setting_patch(None) == {}  # type: ignore[arg-type]
-        assert sanitize_hd2d_setting_patch("invalid") == {}  # type: ignore[arg-type]
+        assert sanitize_hd2d_setting_patch(as_any(None)) == {}
+        assert sanitize_hd2d_setting_patch(as_any("invalid")) == {}
 
     def test_sanitizes_all_patch_values(self) -> None:
         """Should sanitize all values in patch."""
@@ -360,7 +361,7 @@ class TestApplyHd2dSettingPatch:
 
     def test_handles_invalid_payload(self) -> None:
         """Should handle invalid payload type."""
-        result = apply_hd2d_setting_patch(None, {"shadows_enabled": False})  # type: ignore[arg-type]
+        result = apply_hd2d_setting_patch(as_any(None), {"shadows_enabled": False})
         assert result == {"settings": {"shadows_enabled": False}}
 
     def test_preserves_other_scene_keys(self) -> None:
@@ -563,7 +564,7 @@ class TestHd2dSettingsDataclass:
         """Should be frozen (immutable)."""
         settings = parse_hd2d_scene_settings({})
         with pytest.raises(AttributeError):
-            settings.shadows_enabled = False  # type: ignore[misc]
+            as_any(settings).shadows_enabled = False
 
     def test_has_all_expected_fields(self) -> None:
         """Should have all expected fields."""

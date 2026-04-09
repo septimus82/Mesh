@@ -189,7 +189,7 @@ class EditorSearchController:
             from engine.editor.editor_ui_state import save_editor_ui_state_for_editor  # noqa: PLC0415
 
             save_editor_ui_state_for_editor(self._editor)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: editor UI state persistence is best-effort and should not block search panel toggles
             _log_swallow("EDIT-001", "engine/editor/editor_search_controller.py pass-only blanket swallow")
             pass
         return bool(self._editor.panels.is_command_palette_open())

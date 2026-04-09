@@ -17,7 +17,7 @@ def _normalize_color(value: Any) -> tuple[int, int, int, int]:
                 max(0, min(255, b)),
                 max(0, min(255, a)),
             )
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed color tuples should fall back to an opaque white shafts tint
             return (255, 255, 255, 255)
     return (255, 255, 255, 255)
 

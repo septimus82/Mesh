@@ -82,7 +82,7 @@ def load_prefab_infos() -> tuple[PrefabInfo, ...]:
     path = resolve_path("assets/prefabs.json")
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: malformed prefab catalogs should fall back to an empty paint-mode prefab list
         return ()
     if not isinstance(data, list):
         return ()

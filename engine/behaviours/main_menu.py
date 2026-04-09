@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 from ..input_bindings import known_actions, snapshot_bindings
 from ..ui import UIElement
@@ -9,7 +9,7 @@ from .registry import register_behaviour
 import engine.optional_arcade as optional_arcade
 
 if TYPE_CHECKING:
-    import optional_arcade.arcade
+    from arcade import Sprite
     from ..game import GameWindow
 
 @register_behaviour("MainMenuBehaviour", description="Handles the main menu logic and rendering.")
@@ -17,7 +17,7 @@ class MainMenuBehaviour(Behaviour):
 
     """Handles the main menu logic and rendering."""
 
-    def __init__(self, entity: "optional_arcade.arcade.Sprite", window: GameWindow, **config: Any):
+    def __init__(self, entity: "Sprite", window: GameWindow, **config: Any):
         super().__init__(entity, window, **config)
 
         self.options = ["New Game", "Load Game", "Settings", "Credits", "Quit"]
@@ -151,13 +151,14 @@ class MainMenuBehaviour(Behaviour):
             self.window.audio.set_master_volume(new_vol)
         # Play a test sound if we had one, or just rely on music volume changing
 
-    def _confirm_unsaved_action(self, reason: str, action) -> bool:
+    def _confirm_unsaved_action(self, reason: str, action: Callable[[], object]) -> bool:
         editor = getattr(self.window, "editor_controller", None)
         if editor is None or not getattr(editor, "active", False):
             return False
         blocker = getattr(editor, "confirm_unsaved_changes", None)
         if callable(blocker):
-            return blocker(reason, action)
+            blocked = blocker(reason, action)
+            return isinstance(blocked, bool) and blocked
         return False
 
     def start_new_game(self) -> None:
@@ -197,9 +198,6 @@ class MainMenuUI(UIElement):
         super().__init__(window)
         self.behaviour = behaviour
 
-    def on_key_press(self, key: int, modifiers: int) -> bool:
-        self.behaviour.handle_input(key)
-        return True
 
     def draw(self) -> None:
         if self.behaviour.state == "main":

@@ -45,6 +45,7 @@ def test_verify_demo_runtime_builds_exact_curated_pytest_argv() -> None:
         "-q",
         "-W",
         "error",
+        "--ignore-glob=tests/temp_*",
         *curated,
     ]
 

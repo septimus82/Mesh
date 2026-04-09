@@ -258,7 +258,7 @@ def _debug_config_mutate_for_behaviour(
             root[wanted_behaviour] = cfg
         try:
             did = bool(mutate(cfg))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: per-entity debug config mutation failures should skip only that entity update
             did = False
         if did:
             changed += 1

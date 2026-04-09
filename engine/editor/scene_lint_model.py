@@ -442,7 +442,7 @@ def _collect_invalid_transform_fields(entity: dict[str, Any]) -> list[dict[str, 
 def _is_invalid_number(value: Any) -> bool:
     try:
         return not math.isfinite(float(value))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: non-numeric lint values should not be treated as invalid finite numbers
         return False
 
 

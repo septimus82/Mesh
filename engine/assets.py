@@ -26,7 +26,7 @@ class AssetManager:
             texture = optional_arcade.arcade.load_texture(path)
             logger.debug("Loaded texture '%s'", path)
             return texture
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: asset texture load backend isolation
             logger.error("Failed to load texture '%s': %s", path, exc)
             return None
 

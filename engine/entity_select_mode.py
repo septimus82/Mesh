@@ -82,7 +82,7 @@ def other_authoring_modes_active(window: Any) -> bool:
 
         if bool(get_state().enabled):
             return True
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: optional palette-mode state checks should not block entity selection mode activation
         _log_swallow("ENTI-001", "engine/entity_select_mode.py pass-only blanket swallow")
         pass
 

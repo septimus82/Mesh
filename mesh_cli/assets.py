@@ -30,6 +30,19 @@ logger = get_logger(__name__)
 
 
 _SWALLOW_ONCE_TAGS: set[str] = set()
+_ASSETS_PATH_FALLBACK_EXCEPTIONS: tuple[type[Exception], ...] = (
+    OSError,
+    RuntimeError,
+)
+_ASSETS_REPO_ROOT_FALLBACK_EXCEPTIONS: tuple[type[Exception], ...] = (
+    OSError,
+    RuntimeError,
+    ValueError,
+)
+_ASSETS_NUMERIC_PARSE_EXCEPTIONS: tuple[type[Exception], ...] = (
+    TypeError,
+    ValueError,
+)
 
 def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
     if once and tag in _SWALLOW_ONCE_TAGS:
@@ -65,7 +78,7 @@ def _normalize_path_for_json(path: Path | str, *, repo_root: Path | None = None)
         p = Path(repo_root) / p
     try:
         p = p.resolve()
-    except Exception:
+    except _ASSETS_PATH_FALLBACK_EXCEPTIONS:
         _log_swallow("ASST-001", "mesh_cli.assets blanket exception fallback")
         pass
 
@@ -73,12 +86,12 @@ def _normalize_path_for_json(path: Path | str, *, repo_root: Path | None = None)
     if root is not None:
         try:
             root = Path(root).resolve()
-        except Exception:
+        except _ASSETS_PATH_FALLBACK_EXCEPTIONS:
             _log_swallow("ASST-002", "mesh_cli.assets blanket exception fallback")
             root = Path(root)
         try:
             return p.relative_to(root).as_posix()
-        except Exception:
+        except ValueError:
             _log_swallow("ASST-003", "mesh_cli.assets blanket exception fallback")
             pass
     return p.as_posix()
@@ -710,7 +723,7 @@ def _handle_assets_import_sprites(args: argparse.Namespace) -> int:
     repo_root = None
     try:
         repo_root = get_repo_root(start=Path.cwd(), strict=False)
-    except Exception:
+    except _ASSETS_REPO_ROOT_FALLBACK_EXCEPTIONS:
         _log_swallow("ASST-006", "mesh_cli.assets blanket exception fallback")
         repo_root = None
     base_dir = repo_root or Path.cwd()
@@ -827,7 +840,7 @@ def _upsert_sprite_prefab(
     out_path = Path(out_path_raw)
     try:
         existing = json.loads(out_path.read_text(encoding="utf-8")) if out_path.exists() else []
-    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+    except (OSError, json.JSONDecodeError) as exc:
         _log_swallow("ASST-008", "mesh_cli.assets blanket exception fallback")
         print(f"[Mesh][Sprite] ERROR: failed to read '{out_path_raw}': {exc}")
         return 1
@@ -912,7 +925,7 @@ def _handle_sprite_import_sheet(args: argparse.Namespace) -> int:
         with Image.open(image_path) as img:
             sheet_w = int(img.width)
             sheet_h = int(img.height)
-    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+    except (ImportError, OSError, ValueError) as exc:
         _log_swallow("ASST-009", "mesh_cli.assets blanket exception fallback")
         print(f"[Mesh][Sprite] ERROR: failed to read image '{image_path_raw}': {exc}")
         return 1
@@ -963,7 +976,7 @@ def _handle_sprite_import_sheet(args: argparse.Namespace) -> int:
     repo_root = None
     try:
         repo_root = get_repo_root(start=Path.cwd(), strict=False)
-    except Exception:
+    except _ASSETS_REPO_ROOT_FALLBACK_EXCEPTIONS:
         _log_swallow("ASST-010", "mesh_cli.assets blanket exception fallback")
         repo_root = None
 
@@ -985,7 +998,7 @@ def _handle_sprite_import_sheet(args: argparse.Namespace) -> int:
         try:
             x_str, y_str = str(anchor_raw).split(",", 1)
             entity["anchor"] = [float(x_str), float(y_str)]
-        except Exception:
+        except _ASSETS_NUMERIC_PARSE_EXCEPTIONS:
             _log_swallow("ASST-011", "mesh_cli.assets blanket exception fallback")
             print("[Mesh][Sprite] ERROR: --anchor must be formatted as x,y")
             return 1
@@ -1000,7 +1013,7 @@ def _handle_sprite_import_sheet(args: argparse.Namespace) -> int:
                 "w": float(w_str),
                 "h": float(h_str),
             }
-        except Exception:
+        except _ASSETS_NUMERIC_PARSE_EXCEPTIONS:
             _log_swallow("ASST-012", "mesh_cli.assets blanket exception fallback")
             print("[Mesh][Sprite] ERROR: --hitbox must be formatted as x,y,w,h")
             return 1
@@ -1038,7 +1051,7 @@ def _handle_sprite_import_aseprite(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(json_path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+    except (OSError, json.JSONDecodeError) as exc:
         _log_swallow("ASST-013", "mesh_cli.assets blanket exception fallback")
         print(f"[Mesh][Sprite] ERROR: failed to read JSON '{json_path_raw}': {exc}")
         return 1
@@ -1093,7 +1106,7 @@ def _handle_sprite_import_aseprite(args: argparse.Namespace) -> int:
             with Image.open(image_path) as img:
                 sheet_w = int(img.width)
                 sheet_h = int(img.height)
-        except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        except (ImportError, OSError, ValueError) as exc:
             _log_swallow("ASST-014", "mesh_cli.assets blanket exception fallback")
             print(f"[Mesh][Sprite] ERROR: failed to read image '{image_path}': {exc}")
             return 1
@@ -1278,7 +1291,7 @@ def _handle_sprite_import_aseprite(args: argparse.Namespace) -> int:
     repo_root = None
     try:
         repo_root = get_repo_root(start=Path.cwd(), strict=False)
-    except Exception:
+    except _ASSETS_REPO_ROOT_FALLBACK_EXCEPTIONS:
         _log_swallow("ASST-015", "mesh_cli.assets blanket exception fallback")
         repo_root = None
 
@@ -1302,7 +1315,7 @@ def _handle_sprite_import_aseprite(args: argparse.Namespace) -> int:
         try:
             x_str, y_str = str(anchor_raw).split(",", 1)
             entity["anchor"] = [float(x_str), float(y_str)]
-        except Exception:
+        except _ASSETS_NUMERIC_PARSE_EXCEPTIONS:
             _log_swallow("ASST-016", "mesh_cli.assets blanket exception fallback")
             print("[Mesh][Sprite] ERROR: --anchor must be formatted as x,y")
             return 1
@@ -1317,7 +1330,7 @@ def _handle_sprite_import_aseprite(args: argparse.Namespace) -> int:
                 "w": float(w_str),
                 "h": float(h_str),
             }
-        except Exception:
+        except _ASSETS_NUMERIC_PARSE_EXCEPTIONS:
             _log_swallow("ASST-017", "mesh_cli.assets blanket exception fallback")
             print("[Mesh][Sprite] ERROR: --hitbox must be formatted as x,y,w,h")
             return 1

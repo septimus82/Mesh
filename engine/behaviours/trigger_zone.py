@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from typing import Any
 
 from ..constants import EVENT_ENTERED_ZONE
 from ..event_emit import emit_gameplay_event
@@ -43,18 +44,19 @@ class TriggerZoneBehaviour(Behaviour):
         "on_trigger": ParamDef(str, default="", description="Label describing the triggered event"),
     }
 
-    def __init__(self, entity, window, **config) -> None:
+    def __init__(self, entity, window, **config: Any) -> None:
         super().__init__(entity, window, **config)
-        self.radius = self.config.get("trigger_radius")
+        self.radius: float | None = None
+        raw_radius = self.config.get("trigger_radius")
         self.target_name = str(self.config.get("trigger_target", "")).strip()
         self.event_name = str(self.config.get("on_trigger", "")).strip()
         self._triggered = False
 
-        if not self.radius or not self.target_name:
+        if not raw_radius or not self.target_name:
             print("[Mesh][Behaviour:Trigger] WARNING: trigger_radius and trigger_target required")
             self._disabled = True
         else:
-            self.radius = float(self.radius)
+            self.radius = float(raw_radius)
             self._disabled = False
 
     def update(self, dt: float) -> None:  # noqa: ARG002
@@ -65,10 +67,14 @@ class TriggerZoneBehaviour(Behaviour):
         if target is None:
             return
 
+        radius = self.radius
+        if radius is None:
+            return
+
         dx = target.center_x - self.entity.center_x
         dy = target.center_y - self.entity.center_y
         dist = math.hypot(dx, dy)
-        if dist <= float(self.radius):
+        if dist <= radius:
             self._triggered = True
             entity_name = getattr(self.entity, "mesh_name", "<unnamed>")
             event = self.event_name or "event"

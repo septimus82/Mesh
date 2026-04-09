@@ -6,7 +6,7 @@ import json
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Sequence, cast
+from typing import Any, Iterable, Sequence, cast
 import engine.optional_arcade as optional_arcade
 from PIL import Image
 
@@ -22,6 +22,19 @@ def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
     if once:
         _SWALLOW_ONCE_TAGS.add(tag)
     get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
+def _read_json_dict(path: Path, *, tag: str, context: str) -> dict[str, Any] | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001  # REASON: malformed external JSON tilemap payloads should fail closed at the file boundary
+        _log_swallow(tag, "engine/tilemap.py blanket swallow", once=True)
+        print(f"[Mesh][Tilemap] WARNING: Failed to parse {context} '{path}': {exc}")
+        return None
+    if not isinstance(payload, dict):
+        print(f"[Mesh][Tilemap] WARNING: {context.capitalize()} '{path}' must decode to an object")
+        return None
+    return payload
 
 
 FLIP_HORIZONTAL = 0x80000000
@@ -126,7 +139,7 @@ class TilemapManager:
 
         try:
             payload: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: malformed tilemap payloads should fail closed without creating a runtime tilemap instance
             _log_swallow("TMAP-001", "engine/tilemap.py blanket swallow", once=True)
             print(f"[Mesh][Tilemap] ERROR: Could not parse '{map_path}': {exc}")
             return None
@@ -292,17 +305,12 @@ class TilemapManager:
             try:
                 tree = ET.parse(path)
                 root = tree.getroot()
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: malformed external TSX tilesets should be skipped without aborting tilemap loading
                 _log_swallow("TMAP-002", "engine/tilemap.py blanket swallow", once=True)
                 print(f"[Mesh][Tilemap] WARNING: Failed to parse TSX '{path}': {exc}")
                 return None
             return self._tileset_from_tsx(root, path)
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
-            _log_swallow("TMAP-003", "engine/tilemap.py blanket swallow", once=True)
-            print(f"[Mesh][Tilemap] WARNING: Failed to parse tileset '{path}': {exc}")
-            return None
+        return _read_json_dict(path, tag="TMAP-003", context="tileset")
 
     def _tileset_from_tsx(self, root: ET.Element, path: Path) -> dict[str, Any]:
         image = root.find("image")
@@ -501,7 +509,7 @@ class TilemapManager:
                 )
             )
             texture = optional_arcade.arcade.Texture(cropped)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: tile crop failures should skip only the missing tile texture and keep tilemap rendering alive
             _log_swallow("TMAP-004", "engine/tilemap.py blanket swallow", once=True)
             print(f"[Mesh][Tilemap] WARNING: Failed to crop tile {local_id} from '{tileset.image_path}': {exc}")
             return None
@@ -516,12 +524,12 @@ class TilemapManager:
             resolved = resolve_path(image_path)
             with Image.open(resolved) as img:
                 loaded = img.convert("RGBA")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: unreadable tileset images should skip only that cached tileset image load
             _log_swallow("TMAP-005", "engine/tilemap.py blanket swallow", once=True)
             print(f"[Mesh][Tilemap] WARNING: Failed to load tileset image '{image_path}': {exc}")
             return None
         self._tileset_images[image_path] = loaded
-        return loaded
+        return cast(Image.Image, loaded)
 
     def clear_texture_cache(self) -> int:
         count = len(self._tile_texture_cache)

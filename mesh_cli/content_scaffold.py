@@ -291,7 +291,7 @@ def _read_json(path: Path) -> Any:
         raise ValueError(f"required file not found: {path.as_posix()}")
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError(f"failed to parse JSON at {path.as_posix()}: {exc}") from exc
 
 

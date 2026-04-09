@@ -214,7 +214,7 @@ def sanitize_transform_value(value: Any, default: float) -> float:
     """Clamp NaN/inf to defaults."""
     try:
         num = float(value)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: non-numeric transform defaults should fall back to the provided safe transform value
         return float(default)
     if num != num or num in (float("inf"), float("-inf")):
         return float(default)

@@ -32,7 +32,7 @@ def _safe_read_json(path: Path) -> tuple[dict[str, Any] | None, str | None]:
     try:
         raw = path.read_text(encoding="utf-8")
         data = json.loads(raw)
-    except Exception as exc:
+    except (OSError, json.JSONDecodeError) as exc:
         return None, f"unreadable JSON: {path.as_posix()}: {type(exc).__name__}"
     if not isinstance(data, dict):
         return None, f"unreadable JSON: {path.as_posix()}: expected object"

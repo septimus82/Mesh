@@ -87,7 +87,7 @@ def load_manifest(pack_root: Path) -> tuple[PackManifest, list[str]]:
 
     try:
         payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: malformed pack manifests should report a parse error and fall back to the implicit manifest defaults
         errors.append(f"{_format_path(manifest_path, roots)}: parse_error: {exc}")
         manifest = PackManifest(
             id=pack_root.name,

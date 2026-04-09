@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from engine.editor_controller import EditorModeController
+from tests._typing import as_any
 
 
 def _stub_controller() -> EditorModeController:
@@ -19,7 +20,7 @@ def _stub_controller() -> EditorModeController:
     def _mark_dirty() -> None:
         return None
 
-    controller._mark_dirty = _mark_dirty  # type: ignore[assignment]
+    as_any(controller)._mark_dirty = _mark_dirty
     return controller
 
 

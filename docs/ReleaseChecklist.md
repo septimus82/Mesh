@@ -25,7 +25,7 @@ Use this checklist to cut a "player build" release artifact. This does not requi
   - `ok=true`
   - `player-package-gate: ok`
   - `runtime-player-smoke: ok` (or equivalent runtime smoke step)
-  - `web-smoke: ok` (or web gate equivalent)
+  - `web-smoke: ok`
   - `perf-baseline-compare: ok`
 
 ## Build the distributable package

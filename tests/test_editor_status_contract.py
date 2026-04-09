@@ -15,7 +15,7 @@ class _StubSceneController:
         self._loaded_scene_data = {"name": name} if name else {}
 
     @property
-    def current_scene_data(self):  # type: ignore[override]
+    def current_scene_data(self) -> dict[str, str]:
         return self._loaded_scene_data
 
 

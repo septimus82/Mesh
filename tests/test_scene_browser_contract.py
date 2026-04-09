@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import engine.editor_controller as editor_module
 from engine.editor_controller import EditorModeController
 from engine.scene_index import SceneListing, SceneRow, build_scene_rows
+from tests._typing import as_any
 
 
 def _build_controller(monkeypatch) -> EditorModeController:
@@ -13,7 +14,7 @@ def _build_controller(monkeypatch) -> EditorModeController:
 
     scene_controller = SimpleNamespace(_loaded_scene_data={}, current_scene_path="")
     window = SimpleNamespace(strict_mode=False, scene_controller=scene_controller, width=800, height=600)
-    controller = EditorModeController(window)  # type: ignore[arg-type]
+    controller = EditorModeController(as_any(window))
     controller.active = True
     return controller
 
@@ -61,7 +62,7 @@ def test_scene_browser_open_uses_same_path_as_switcher(monkeypatch) -> None:
         calls.append(scene_id)
         return True
 
-    controller._open_scene_by_id = _record  # type: ignore[assignment]
+    as_any(controller)._open_scene_by_id = _record
 
     controller._scene_switcher_cached = [("packs/core/scenes/alpha.json", "Alpha")]
     controller.scene_switcher_index = 0

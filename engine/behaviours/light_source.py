@@ -192,14 +192,14 @@ class LightSource(Behaviour):
         if hasattr(light, "radius"):
             try:
                 light.radius = radius
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: renderer-specific light objects can reject radius writes without breaking gameplay
                 if not getattr(self, "_mesh_light_radius_error_logged", False):
                     print(f"[Mesh][LightSource] ERROR setting light radius: {exc}")
                     setattr(self, "_mesh_light_radius_error_logged", True)
         if color is not None and hasattr(light, "color"):
             try:
                 light.color = color
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: renderer-specific light objects can reject color writes without breaking gameplay
                 if not getattr(self, "_mesh_light_color_error_logged", False):
                     print(f"[Mesh][LightSource] ERROR setting light color: {exc}")
                     setattr(self, "_mesh_light_color_error_logged", True)

@@ -11,13 +11,20 @@ from engine.savegame import SaveGameV1, load_savegame, save_savegame
 from engine.ui import compute_objective_tracker_lines
 
 
+class _HUD:
+    def __init__(self) -> None:
+        self.toasts: list[str] = []
+
+    def enqueue_toast(self, message: object, *, seconds: float = 4.0) -> None:  # noqa: ARG002
+        self.toasts.append(str(message))
+
+
 class _Window:
     def __init__(self) -> None:
         self.event_bus = MeshEventBus()
         self._flags: dict[str, bool] = {}
         self.flag_calls: list[tuple[str, bool]] = []
-        self.player_hud = types.SimpleNamespace(toasts=[])
-        self.player_hud.enqueue_toast = lambda message, *, seconds=4.0: self.player_hud.toasts.append(str(message))  # type: ignore[assignment]  # noqa: ARG005
+        self.player_hud = _HUD()
         self.next_spawn: str | None = None
         self.scene_changes: list[str] = []
 

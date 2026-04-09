@@ -470,7 +470,7 @@ def end_hard_shadows_composite(manager: Any) -> bool:
         )
         if not draw_ok:
             raise TypeError("LightLayer.draw signature unsupported for hard-shadow target render")
-    except Exception:
+    except (AttributeError, OSError, RuntimeError, TypeError, ValueError):
         _log_swallow(
             "SHDW-010",
             "engine.lighting.shadow_pipeline.end_hard_shadows_composite",

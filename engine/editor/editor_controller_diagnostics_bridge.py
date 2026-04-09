@@ -20,7 +20,7 @@ def scan_scene_problems(self):
                 from engine.prefabs import get_prefab_manager  # noqa: PLC0415
                 manager = get_prefab_manager()
                 return bool(manager.get_prefab(prefab_id))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: prefab resolver failures should degrade to a missing prefab result without breaking diagnostics scans
                 return False
 
     issues = self.problems.scan_scene(scene, repo_root, resolver)

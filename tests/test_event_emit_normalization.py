@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 import pytest
 
 from engine.event_runtime.emit import emit_event
+from tests._typing import as_any
 
 
 @dataclass
@@ -36,6 +37,5 @@ def test_payload_is_shallow_copied() -> None:
 def test_bad_payload_type_has_deterministic_error_string() -> None:
     window = _CaptureWindow()
     with pytest.raises(TypeError) as excinfo:
-        emit_event(window, "test_event", payload=["nope"])  # type: ignore[arg-type]
+        emit_event(window, "test_event", payload=as_any(["nope"]))
     assert str(excinfo.value) == "payload must be a dict, got list"
-

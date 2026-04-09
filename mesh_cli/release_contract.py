@@ -356,7 +356,7 @@ def _finalize_report(
     if report_path is not None:
         try:
             validate_release_report_v1(report)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: release contract CLI should fail deterministically when report validation raises unexpectedly
             print(f"[Mesh][Release] ERROR invalid report: {exc}")
             return 1
         if not _write_report(report_path, report):
@@ -369,7 +369,7 @@ def _write_report(path: Path, report: dict) -> bool:
     try:
         json_io.write_json_atomic(path, report)
         return True
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: release contract CLI should report unexpected JSON write failures as a deterministic write error
         print(f"[Mesh][Release] ERROR failed to write report: {exc}")
         return False
 

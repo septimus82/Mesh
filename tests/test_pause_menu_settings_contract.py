@@ -7,6 +7,7 @@ import pytest
 import engine.optional_arcade as optional_arcade
 from engine.input import InputManager
 from engine.ui_overlays.menus import PauseMenu
+from tests._typing import as_any
 
 
 class _StubAudio:
@@ -61,7 +62,7 @@ def test_pause_menu_settings_volume_clamps_and_applies(monkeypatch) -> None:
     monkeypatch.setattr(optional_arcade, "arcade", arcade_stub)
 
     window, audio, cfg = _make_window()
-    menu = PauseMenu(window)  # type: ignore[arg-type]
+    menu = PauseMenu(as_any(window))
     menu.visible = True
     menu.state = "settings"
     menu._settings_index = 0
@@ -83,7 +84,7 @@ def test_pause_menu_settings_toggles_fog_and_shadows(monkeypatch) -> None:
     monkeypatch.setattr(optional_arcade, "arcade", arcade_stub)
 
     window, _audio, cfg = _make_window()
-    menu = PauseMenu(window)  # type: ignore[arg-type]
+    menu = PauseMenu(as_any(window))
     menu.visible = True
     menu.state = "settings"
 
@@ -108,7 +109,7 @@ def test_pause_menu_settings_gamepad_navigation(monkeypatch) -> None:
     manager = InputManager()
     window.input = manager
 
-    menu = PauseMenu(window)  # type: ignore[arg-type]
+    menu = PauseMenu(as_any(window))
     menu.visible = True
     menu.state = "settings"
     menu._settings_index = 0

@@ -280,14 +280,14 @@ class EditorEntityPanelsController:
         if summary.id.startswith("idx:"):
             try:
                 idx = int(summary.id.split(":", 1)[1])
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: malformed idx panel ids should fall back to non-index entity lookup
                 idx = -1
             if idx >= 0:
                 try:
                     all_sprites = list(self._editor.window.scene_controller.all_sprites)
                     if idx < len(all_sprites):
                         return all_sprites[idx]
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: sprite list probing is best-effort and should not break entity panel selection
                     _log_swallow("EDIT-001", "engine/editor/editor_entity_panels_controller.py pass-only blanket swallow")
                     pass
             scene = self.entity_panels_scene_data()
@@ -339,7 +339,7 @@ class EditorEntityPanelsController:
         if key in {"x", "y"}:
             try:
                 numeric = float(value)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: invalid numeric field edits should fail the update without mutating entity state
                 return False
             if key == "x":
                 self._editor.window.scene_controller._apply_entity_mutation(sprite, x=numeric)
@@ -356,7 +356,7 @@ class EditorEntityPanelsController:
         elif key in {"rotation_deg", "rotation"}:
             try:
                 rotation = float(value) % 360.0
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: invalid rotation field edits should fail the update without mutating entity state
                 return False
             entity_data["rotation"] = rotation
             sprite.angle = rotation

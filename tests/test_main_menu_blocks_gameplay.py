@@ -8,6 +8,7 @@ import arcade
 from engine.input_controller import InputController
 from engine.ui import MainMenuOverlay
 from engine.ui_controller import UIController
+from tests._typing import as_any
 
 
 def test_main_menu_blocks_gameplay(monkeypatch) -> None:
@@ -38,12 +39,12 @@ def test_main_menu_blocks_gameplay(monkeypatch) -> None:
     window.console_controller = _Console()
     window.editor_controller = types.SimpleNamespace(active=False)
 
-    window.ui_controller = UIController(window)  # type: ignore[arg-type]
+    window.ui_controller = UIController(as_any(window))
 
-    controller = InputController(window)  # type: ignore[arg-type]
+    controller = InputController(as_any(window))
     window.input_controller = controller
 
-    menu = MainMenuOverlay(window)  # type: ignore[arg-type]
+    menu = MainMenuOverlay(as_any(window))
     menu.open()
     window.ui_controller.register_ui_element(menu)
 
@@ -60,4 +61,3 @@ def test_main_menu_blocks_gameplay(monkeypatch) -> None:
     controller.on_key_press(arcade.key.E, 0)
     controller.update(0.016)
     assert mock_interact.call_count == 0
-

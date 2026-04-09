@@ -50,7 +50,7 @@ def apply_editor_cursor(window: Any, cursor_kind: str | None) -> None:
             setter(cursor)
             setattr(window, "_last_cursor_kind", kind)
             return
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: window cursor setter failures should not break editor input handling
             _log_swallow("EDIT-001", "engine/editor/editor_cursor_apply.py pass-only blanket swallow")
             pass
 
@@ -59,7 +59,7 @@ def apply_editor_cursor(window: Any, cursor_kind: str | None) -> None:
         try:
             setter(cursor)
             setattr(window, "_last_cursor_kind", kind)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: arcade cursor fallback failures should not break editor input handling
             _log_swallow("EDIT-002", "engine/editor/editor_cursor_apply.py pass-only blanket swallow")
             pass
 

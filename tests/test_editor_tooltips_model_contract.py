@@ -24,6 +24,7 @@ from engine.editor_tooltips_model import (
 )
 from tests._dock_stub import make_dock_stub
 from tests._session_stub import make_session_stub
+from tests._typing import as_any
 
 
 def _panels(*, command_palette_open: bool = False, context_menu_open: bool = False) -> SimpleNamespace:
@@ -61,7 +62,7 @@ class TestTooltipHit:
     def test_frozen(self) -> None:
         hit = TooltipHit(kind="dock_tab", id="Scene", text="Test")
         with pytest.raises(AttributeError):
-            hit.kind = "other"  # type: ignore[misc]
+            as_any(hit).kind = "other"
 
     def test_equality(self) -> None:
         a = TooltipHit(kind="dock_tab", id="Scene", text="Test")
@@ -87,7 +88,7 @@ class TestTooltipLayout:
     def test_frozen(self) -> None:
         layout = TooltipLayout(x=100.0, y=200.0, w=150.0, h=24.0)
         with pytest.raises(AttributeError):
-            layout.x = 50.0  # type: ignore[misc]
+            as_any(layout).x = 50.0
 
 
 # -----------------------------------------------------------------------------

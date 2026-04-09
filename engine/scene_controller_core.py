@@ -537,7 +537,7 @@ class SceneController:
         if assets is not None:
             try:
                 texture = assets.get_texture(asset_path)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: assets-manager texture lookup failures should fall back to direct texture loading for that background plane
                 record_swallowed("engine.scene_controller._get_background_plane_texture.assets_get_texture", exc)
 
         # Fallback to direct load
@@ -698,7 +698,7 @@ class SceneController:
                 set_hit_box(points)
             else:
                 set_hit_box()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: invalid collision polygon application should skip only that sprite hitbox update
             logger.debug("Failed to apply collision polygon on %s", getattr(sprite, 'mesh_name', '?'), exc_info=True); return
 
     def _build_behaviour_instantiation_lines(self, limit: int = 24) -> list[str]:
@@ -978,7 +978,7 @@ class SceneController:
             from engine.lighting.occluders import OCCLUDER_CACHE  # noqa: PLC0415
 
             OCCLUDER_CACHE.invalidate()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: occluder cache invalidation failures should not block tilemap teardown
             logger.debug("Occluder cache invalidation failed", exc_info=True)
 
     def get_loaded_scene_payload(self) -> Dict[str, Any]:
@@ -1637,7 +1637,7 @@ class SceneController:
                         continue
                     try:
                         on_event(event)
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:  # noqa: BLE001  # REASON: non-strict behaviour event delivery failures should report and continue dispatching remaining behaviours
                         if getattr(self.window, "strict_mode", False):
                             raise
                         entity_name = getattr(sprite, "mesh_name", "<unnamed>")

@@ -23,7 +23,7 @@ def _handle_scene_validate_backgrounds(args: argparse.Namespace) -> int:
 
     try:
         scene = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, json.JSONDecodeError) as exc:  # REASON: scene backgrounds CLI should report scene JSON parse failures deterministically before validation begins
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {normalized_scene_path}: {exc}")
         return 1
 
@@ -126,7 +126,7 @@ def _handle_scene_backgrounds_add_layer(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, json.JSONDecodeError) as exc:  # REASON: background layer list CLI should report scene JSON parse failures deterministically before inspecting layers
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
     if not isinstance(data, dict):
@@ -202,7 +202,7 @@ def _handle_scene_backgrounds_remove_layer(args: argparse.Namespace) -> int:
 
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, json.JSONDecodeError) as exc:  # REASON: background layer edit CLI should report scene JSON parse failures deterministically before mutating layers
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
     if not isinstance(data, dict):

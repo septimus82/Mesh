@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from engine.scene_runtime.spawn import resolve_spawn_target
+from tests._typing import as_any
 
 
 class _StubSprite:
@@ -53,7 +54,7 @@ def test_spawn_resolution_prefers_marker_over_index() -> None:
     res = resolve_spawn_target(
         " spawna ",
         all_sprites=[marker],
-        scene_index=idx,  # type: ignore[arg-type]
+        scene_index=as_any(idx),
         scene_data={},
     )
 
@@ -68,7 +69,7 @@ def test_spawn_resolution_order_id_then_zone_then_mesh() -> None:
     res = resolve_spawn_target(
         "Zone42",
         all_sprites=[],
-        scene_index=idx,  # type: ignore[arg-type]
+        scene_index=as_any(idx),
         scene_data={},
     )
 
@@ -83,7 +84,7 @@ def test_spawn_resolution_mesh_after_id_and_zone() -> None:
     res = resolve_spawn_target(
         "MeshOnly",
         all_sprites=[],
-        scene_index=idx,  # type: ignore[arg-type]
+        scene_index=as_any(idx),
         scene_data={},
     )
 
@@ -99,7 +100,7 @@ def test_spawn_resolution_falls_back_to_spawns_dict() -> None:
     res = resolve_spawn_target(
         "Start",
         all_sprites=[],
-        scene_index=idx,  # type: ignore[arg-type]
+        scene_index=as_any(idx),
         scene_data=scene_data,
     )
 
@@ -107,4 +108,3 @@ def test_spawn_resolution_falls_back_to_spawns_dict() -> None:
     assert res.marker is None
     assert res.spawn == {"x": 1, "y": 2}
     assert idx.calls == [("id", "Start"), ("zone_id", "Start"), ("mesh_name", "Start")]
-

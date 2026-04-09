@@ -401,7 +401,7 @@ class SaveManager:
                 ),
                 hint="Try a different slot or delete the corrupt save.",
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: fallback-to-start-scene diagnostics should still return a controlled load failure when recovery reporting fails
             diag_add_exception(
                 LOAD_FALLBACK_TO_START_SCENE,
                 exc,

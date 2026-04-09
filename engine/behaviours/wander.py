@@ -16,7 +16,7 @@ Save/restore:
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 from ..event_emit import emit_gameplay_event
 from ..gameplay_event_bus import EventConfigError
@@ -193,7 +193,15 @@ class WanderBehaviour(Behaviour):
         scene = getattr(self.window, "scene_controller", None)
         getter = getattr(scene, "get_nav_grid", None) if scene else None
         if callable(getter):
-            return getter()
+            grid = getter()
+            if isinstance(grid, NavGrid):
+                return grid
+            if (
+                callable(getattr(grid, "world_to_tile", None))
+                and callable(getattr(grid, "tile_center_world", None))
+                and callable(getattr(grid, "is_walkable", None))
+            ):
+                return cast(NavGrid, grid)
         return None
     
     def _get_origin(self) -> Tuple[float, float]:
@@ -230,7 +238,7 @@ class WanderBehaviour(Behaviour):
             
             # Check if walkable
             tile = grid.world_to_tile(cx, cy)
-            if not grid.is_walkable(*tile):
+            if not grid.is_walkable(tile):
                 continue
             
             # Check minimum distance from current position

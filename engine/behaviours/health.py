@@ -135,7 +135,7 @@ class Health(Behaviour):
                 gs = getattr(self.window, "game_state_controller", None)
                 defense = float(gs.get_player_stats().get("defense", 0)) if gs is not None else 0.0
                 incoming = max(0.0, incoming - defense)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: player stat access resilience fallback
                 if not getattr(self, "_mesh_defense_error_logged", False):
                     print(f"[Mesh][Health] ERROR applying defense reduction: {exc}")
                     setattr(self, "_mesh_defense_error_logged", True)

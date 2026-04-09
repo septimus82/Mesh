@@ -215,10 +215,13 @@ class OfferPerkChoice(Behaviour):
         return final_list
 
     def _handle_choice(self, choice: Dict[str, Any]) -> None:
-        choice_id = choice.get("id")
+        raw_choice_id = choice.get("id")
+        choice_id = raw_choice_id if isinstance(raw_choice_id, str) else None
         if choice_id == "cancel":
             self._close_dialogue()
             self._active = False
+            return
+        if choice_id is None:
             return
 
         # Apply perk

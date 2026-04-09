@@ -9,6 +9,36 @@ from __future__ import annotations
 from typing import Any, Callable
 
 
+def _list_prefab_ids_from_assets_cached() -> tuple[str, ...]:
+    from engine.command_palette import _list_prefab_ids_from_assets  # noqa: PLC0415
+
+    return _list_prefab_ids_from_assets()
+
+
+def _list_behaviour_names_cached() -> tuple[str, ...]:
+    from engine.command_palette import _list_behaviour_names  # noqa: PLC0415
+
+    return _list_behaviour_names()
+
+
+def _default_get_authored_payload(window: Any) -> dict[str, Any] | None:
+    from engine.command_palette_registry_selection import get_authored_payload  # noqa: PLC0415
+
+    return get_authored_payload(window)
+
+
+def _default_get_selection_ids_and_primary(window: Any) -> tuple[list[str], str]:
+    from engine.command_palette_registry_selection import get_selection_ids_and_primary  # noqa: PLC0415
+
+    return get_selection_ids_and_primary(window)
+
+
+def _default_entity_has_behaviour(entity: dict[str, Any], behaviour_type: str) -> bool:
+    from engine.command_palette_registry_selection import entity_has_behaviour  # noqa: PLC0415
+
+    return entity_has_behaviour(entity, behaviour_type)
+
+
 def options_all_scenes(_w: Any) -> list[tuple[str, str]]:
     """Return all known scene paths as options."""
     from engine.scene_index import iter_known_scene_paths  # noqa: PLC0415
@@ -33,36 +63,36 @@ def options_recent_scenes(w: Any) -> list[tuple[str, str]]:
 def options_prefab_ids(
     _w: Any,
     *,
-    list_prefab_ids: Callable[[], tuple[str, ...]],
+    list_prefab_ids: Callable[[], tuple[str, ...]] | None = None,
 ) -> list[tuple[str, str]]:
     """Return all prefab IDs as options."""
-    ids = list_prefab_ids()
+    ids = (list_prefab_ids or _list_prefab_ids_from_assets_cached)()
     return [(pid, pid) for pid in ids]
 
 
 def options_behaviour_names(
     _w: Any,
     *,
-    list_behaviour_names: Callable[[], tuple[str, ...]],
+    list_behaviour_names: Callable[[], tuple[str, ...]] | None = None,
 ) -> list[tuple[str, str]]:
     """Return all behaviour names as options."""
-    names = list_behaviour_names()
+    names = (list_behaviour_names or _list_behaviour_names_cached)()
     return [(n, n) for n in names]
 
 
 def options_behaviours_in_selection(
     w: Any,
     *,
-    get_authored_payload: Callable[[Any], dict[str, Any] | None],
-    get_selection_ids_and_primary: Callable[[Any], tuple[list[str], str]],
+    get_authored_payload: Callable[[Any], dict[str, Any] | None] | None = None,
+    get_selection_ids_and_primary: Callable[[Any], tuple[list[str], str]] | None = None,
 ) -> list[tuple[str, str]]:
     """Return behaviours present in selected entities as options."""
     from engine.entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
 
-    authored = get_authored_payload(w)
+    authored = (get_authored_payload or _default_get_authored_payload)(w)
     if authored is None:
         return []
-    selected_ids, _primary = get_selection_ids_and_primary(w)
+    selected_ids, _primary = (get_selection_ids_and_primary or _default_get_selection_ids_and_primary)(w)
     entities = ensure_entities_list(authored)
 
     names: set[str] = set()
@@ -93,13 +123,13 @@ def options_scene_paths(_w: Any) -> list[tuple[str, str]]:
 def options_dialogue_speakers(
     w: Any,
     *,
-    get_authored_payload: Callable[[Any], dict[str, Any] | None],
-    entity_has_behaviour: Callable[[dict[str, Any], str], bool],
+    get_authored_payload: Callable[[Any], dict[str, Any] | None] | None = None,
+    entity_has_behaviour: Callable[[dict[str, Any], str], bool] | None = None,
 ) -> list[tuple[str, str]]:
     """Return entity IDs of dialogue speakers in scene."""
     from engine.entity_paint_mode import ensure_entities_list  # noqa: PLC0415
 
-    authored = get_authored_payload(w)
+    authored = (get_authored_payload or _default_get_authored_payload)(w)
     if authored is None:
         return []
     entities = ensure_entities_list(authored)
@@ -107,7 +137,7 @@ def options_dialogue_speakers(
     for ent in entities:
         if not isinstance(ent, dict):
             continue
-        if not entity_has_behaviour(ent, "Dialogue"):
+        if not (entity_has_behaviour or _default_entity_has_behaviour)(ent, "Dialogue"):
             continue
         entity_id = ent.get("id")
         if isinstance(entity_id, str) and entity_id.strip():
@@ -119,12 +149,11 @@ def options_dialogue_speakers(
 def options_macro_anchor(
     w: Any,
     *,
-    get_selection_ids_and_primary: Callable[[Any], tuple[list[str], str]],
+    get_selection_ids_and_primary: Callable[[Any], tuple[list[str], str]] | None = None,
 ) -> list[tuple[str, str]]:
     """Return anchor options for macros."""
-    selected_ids, _primary_id = get_selection_ids_and_primary(w)
+    selected_ids, _primary_id = (get_selection_ids_and_primary or _default_get_selection_ids_and_primary)(w)
     base = [("cursor", "cursor"), ("player", "player")]
     if selected_ids:
         return [("primary", "primary"), *base]
     return base
-

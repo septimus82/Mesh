@@ -77,7 +77,7 @@ def handle_mouse_drag(
         and controller.shape_drag_index >= 0
         and (buttons & optional_arcade.arcade.MOUSE_BUTTON_LEFT)
     ):
-        return controller.shape.update_shape_point(wx, wy, modifiers)
+        return bool(controller.shape.update_shape_point(wx, wy, modifiers))
 
     # Rotate dragging (multi-select)
     if getattr(controller, "_rotate_drag_active", False) and controller.selected_entity and controller.tool_mode == "MOVE":

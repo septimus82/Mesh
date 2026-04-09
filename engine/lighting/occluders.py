@@ -250,7 +250,7 @@ def build_entity_occluders_from_scene_payload(scene_payload: Mapping[str, Any]) 
         try:
             base_x = float(entity.get("x", 0.0))
             base_y = float(entity.get("y", 0.0))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed occluder base positions should fall back to origin offsets for that entity only
             base_x = 0.0
             base_y = 0.0
         name = (

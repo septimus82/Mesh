@@ -70,7 +70,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
         try:
             x = int(a)
             y = int(b)
-        except Exception:
+        except (TypeError, ValueError):
             _log_swallow("ROOM-002", "grid/tile pair parse fallback", once=True)
             print(f"[Mesh][CLI] Error: invalid {label}: {spec!r} (expected ints)")
             return None
@@ -91,7 +91,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
         a, b = text.split(",", 1)
         try:
             return int(a.strip()), int(b.strip())
-        except Exception:
+        except (TypeError, ValueError):
             _log_swallow("ROOM-003", "stamp origin parse fallback", once=True)
             print(f"[Mesh][CLI] Error: invalid --stamp-origin: {spec!r} (expected ints)")
             return None
@@ -152,7 +152,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
 
     try:
         world_payload = json.loads(resolved_world.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         _log_swallow("ROOM-004", "world JSON parse failure", once=True)
         print(f"[Mesh][CLI] Error: failed to parse world JSON: {normalize_scene_path(world_path)}: {exc}")
         return 1
@@ -202,7 +202,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
                 continue
             try:
                 out[sid.strip()] = (float(ent.get("x", 0.0)), float(ent.get("y", 0.0)))
-            except Exception:
+            except (TypeError, ValueError):
                 _log_swallow("ROOM-001", "spawn coord parse", once=True)
                 out[sid.strip()] = (0.0, 0.0)
         return out
@@ -214,7 +214,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
             return None
         try:
             payload = json.loads(resolved.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             _log_swallow("ROOM-005", "scene JSON parse failure", once=True)
             print(f"[Mesh][CLI] Error: failed to parse scene JSON: {normalize_scene_path(scene_path)}: {exc}")
             return None
@@ -248,7 +248,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
             print(f"[Mesh][CLI] Error: {first.path} :: {first.code} :: {first.detail}")
             return 1
         macro_asset = parse_macro_asset(macro_payload, rel_path=normalize_scene_path(door_macro))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: room CLI should collapse macro asset load and validation failures into a deterministic door-macro error
         _log_swallow("ROOM-006", "door macro load failure", once=True)
         print(f"[Mesh][CLI] Error: failed to load macro asset: {normalize_scene_path(door_macro)}: {exc}")
         return 1
@@ -276,7 +276,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
 
     try:
         user_kv = _parse_kv(raw_user_args)
-    except Exception as exc:
+    except ValueError as exc:
         _log_swallow("ROOM-007", "macro arg parse failure", once=True)
         print(f"[Mesh][CLI] Error: {exc}")
         return 2
@@ -419,7 +419,7 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
             primary_entity_id=primary_entity_id,
             cursor_world_pos=(float(from_x), float(from_y)),
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: room CLI should collapse unexpected macro application failures into a deterministic nonzero exit
         _log_swallow("ROOM-008", "scene macro apply failure", once=True)
         print(f"[Mesh][CLI] Error: macro-apply failed: {type(exc).__name__}: {exc}")
         return 1

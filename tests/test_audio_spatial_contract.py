@@ -10,6 +10,10 @@ import engine.optional_arcade as optional_arcade
 pytestmark = [pytest.mark.fast]
 
 
+def _stub_get_sound(monkeypatch: pytest.MonkeyPatch, manager: audio_mod.AudioManager) -> None:
+    monkeypatch.setattr(manager, "get_sound", lambda _path: object())
+
+
 def test_attenuate_endpoints_and_monotonic_linear() -> None:
     max_dist = 100.0
     g0 = audio_mod._attenuate(0.0, max_dist=max_dist, rolloff="linear")
@@ -42,7 +46,7 @@ def test_play_sound_at_applies_distance_and_pan(monkeypatch: pytest.MonkeyPatch)
         "play_sound",
         lambda _sound, **kwargs: calls.append(dict(kwargs)),
     )
-    manager.get_sound = lambda _path: object()  # type: ignore[method-assign]
+    _stub_get_sound(monkeypatch, manager)
 
     manager.play_sound_at(
         "assets/sounds/hit.wav",
@@ -67,7 +71,7 @@ def test_play_sound_at_far_distance_skips_play(monkeypatch: pytest.MonkeyPatch) 
         "play_sound",
         lambda _sound, **kwargs: calls.append(dict(kwargs)),
     )
-    manager.get_sound = lambda _path: object()  # type: ignore[method-assign]
+    _stub_get_sound(monkeypatch, manager)
 
     manager.play_sound_at(
         "assets/sounds/hit.wav",
@@ -89,7 +93,7 @@ def test_play_sound_at_resolves_listener_from_window_camera_when_missing(
         "play_sound",
         lambda _sound, **kwargs: calls.append(dict(kwargs)),
     )
-    manager.get_sound = lambda _path: object()  # type: ignore[method-assign]
+    _stub_get_sound(monkeypatch, manager)
     window = type("W", (), {"camera": type("C", (), {"position": (0.0, 0.0)})()})()
 
     manager.play_sound_at(
@@ -118,7 +122,7 @@ def test_play_sound_at_listener_resolution_failure_keeps_non_spatial_fallback(
         "play_sound",
         lambda _sound, **kwargs: calls.append(dict(kwargs)),
     )
-    manager.get_sound = lambda _path: object()  # type: ignore[method-assign]
+    _stub_get_sound(monkeypatch, manager)
 
     class _BrokenWindow:
         camera = object()
@@ -152,7 +156,7 @@ def test_play_sound_at_occluded_applies_volume_multiplier(
         "play_sound",
         lambda _sound, **kwargs: calls.append(dict(kwargs)),
     )
-    manager.get_sound = lambda _path: object()  # type: ignore[method-assign]
+    _stub_get_sound(monkeypatch, manager)
 
     query_calls = {"n": 0}
 
@@ -190,7 +194,7 @@ def test_play_sound_at_unoccluded_keeps_volume_and_pan_unchanged(
         "play_sound",
         lambda _sound, **kwargs: calls.append(dict(kwargs)),
     )
-    manager.get_sound = lambda _path: object()  # type: ignore[method-assign]
+    _stub_get_sound(monkeypatch, manager)
 
     class _Scene:
         @staticmethod
@@ -403,7 +407,7 @@ def test_play_sound_at_missing_occlusion_query_keeps_volume_and_pan_unchanged(
         "play_sound",
         lambda _sound, **kwargs: calls.append(dict(kwargs)),
     )
-    manager.get_sound = lambda _path: object()  # type: ignore[method-assign]
+    _stub_get_sound(monkeypatch, manager)
 
     window = type("W", (), {"scene_controller": object()})()
     manager.play_sound_at(
@@ -430,7 +434,7 @@ def test_play_sound_at_does_not_query_occlusion_without_listener(
         "play_sound",
         lambda _sound, **kwargs: calls.append(dict(kwargs)),
     )
-    manager.get_sound = lambda _path: object()  # type: ignore[method-assign]
+    _stub_get_sound(monkeypatch, manager)
 
     query_calls = {"n": 0}
 
@@ -565,7 +569,7 @@ def test_existing_play_sound_behavior_unchanged(monkeypatch: pytest.MonkeyPatch)
         "play_sound",
         lambda _sound, **kwargs: calls.append(dict(kwargs)),
     )
-    manager.get_sound = lambda _path: object()  # type: ignore[method-assign]
+    _stub_get_sound(monkeypatch, manager)
 
     manager.play_sound("assets/sounds/hit.wav", volume=0.8)
     assert len(calls) == 1

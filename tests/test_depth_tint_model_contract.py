@@ -25,6 +25,7 @@ from engine.depth_tint_model import (
     compute_sprite_tint,
     apply_tint_to_sprite_color,
 )
+from tests._typing import as_any
 
 
 class TestDepthTintSettingsDataclass:
@@ -52,7 +53,7 @@ class TestDepthTintSettingsDataclass:
         """Settings dataclass is frozen."""
         settings = DepthTintSettings()
         with pytest.raises(AttributeError):
-            settings.enabled = True  # type: ignore[misc]
+            as_any(settings).enabled = True
 
 
 class TestComputeDepthFactor:
@@ -134,7 +135,7 @@ class TestLerpColor:
 
     def test_handles_rgb_input(self) -> None:
         """Works with RGB (no alpha) input."""
-        result = lerp_color((255, 0, 0), (0, 255, 0), 0.5)  # type: ignore[arg-type]
+        result = lerp_color(as_any((255, 0, 0)), as_any((0, 255, 0)), 0.5)
         assert result == (128, 128, 0, 255)  # Alpha defaults to 255
 
     def test_clamps_t(self) -> None:
@@ -245,7 +246,7 @@ class TestApplyTintToColor:
 
     def test_handles_rgb_base(self) -> None:
         """Works with RGB base color."""
-        base = (200, 150, 100)  # type: ignore[arg-type]
+        base = as_any((200, 150, 100))
         result = apply_tint_to_color(base, (255, 255, 255, 255))
         assert result == (200, 150, 100, 255)
 

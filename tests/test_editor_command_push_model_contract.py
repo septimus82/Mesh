@@ -16,6 +16,7 @@ from engine.editor.editor_command_push_model import (
     format_default_undo_label,
     should_push_command,
 )
+from tests._typing import as_any
 
 
 # =============================================================================
@@ -74,10 +75,10 @@ class TestComputeCommandBackfill:
 
     def test_handles_non_dict_gracefully(self) -> None:
         """Should handle non-dict input gracefully."""
-        result = compute_command_backfill(None)  # type: ignore[arg-type]
+        result = compute_command_backfill(as_any(None))
         assert result is None
 
-        result = compute_command_backfill("string")  # type: ignore[arg-type]
+        result = compute_command_backfill(as_any("string"))
         assert result == "string"
 
     def test_handles_unknown_command_type(self) -> None:
@@ -158,7 +159,7 @@ class TestFormatDefaultUndoLabel:
 
     def test_handles_non_dict_cmd(self) -> None:
         """Should handle non-dict command gracefully."""
-        result = format_default_undo_label(None)  # type: ignore[arg-type]
+        result = format_default_undo_label(as_any(None))
         assert "Unknown Action" in result
 
 
@@ -200,5 +201,5 @@ class TestBackfillLabelFromAction:
 
     def test_handles_non_dict_gracefully(self) -> None:
         """Should handle non-dict input gracefully."""
-        result = backfill_label_from_action(None, "id", "title")  # type: ignore[arg-type]
+        result = backfill_label_from_action(as_any(None), "id", "title")
         assert result is None

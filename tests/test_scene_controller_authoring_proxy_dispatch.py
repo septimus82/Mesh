@@ -15,6 +15,7 @@ import inspect
 from typing import Any
 
 import pytest
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -147,7 +148,7 @@ def test_proxy_dispatches_to_authoring_runtime(method_name: str, fn_name: str) -
         )
         return sentinel
 
-    sc._call_authoring = lambda fn, *a, **kw: _spy_call(sc, fn, *a, **kw)  # type: ignore[assignment]
+    as_any(sc)._call_authoring = lambda fn, *a, **kw: _spy_call(sc, fn, *a, **kw)
 
     method = getattr(SceneController, method_name)
     pos, kw = _auto_args(method)

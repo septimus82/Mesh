@@ -26,7 +26,7 @@ def _resolve_manager(window: Any) -> Any | None:
 def _iter_entries(manager: Any) -> Iterable[dict[str, Any]]:
     try:
         entries = manager.list_active_quests()
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: quest-manager list failures should fall back to no active quest entries for the UI
         return []
     return entries if isinstance(entries, list) else []
 

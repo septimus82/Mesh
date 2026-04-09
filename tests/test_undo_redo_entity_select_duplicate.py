@@ -4,6 +4,8 @@ import copy
 
 import arcade
 
+from tests._game_window_undo_stub import bind_game_window_undo_methods
+
 
 class _FakeSceneController:
     def __init__(self, *, scene_path: str, payload: dict) -> None:
@@ -50,7 +52,6 @@ class _FakeSceneController:
 
 def _make_window(scene_controller: _FakeSceneController):
     from engine.entity_select_mode import EntitySelectState
-    from engine.game import GameWindow
 
     window = type(
         "W",
@@ -73,15 +74,7 @@ def _make_window(scene_controller: _FakeSceneController):
         },
     )()
 
-    def _mark_scene_dirty(self, reason: str) -> None:
-        self.scene_dirty = True
-        self.scene_dirty_reason = str(reason)
-        self.scene_dirty_counter = int(getattr(self, "scene_dirty_counter", 0) or 0) + 1
-
-    window.mark_scene_dirty = _mark_scene_dirty.__get__(window)  # type: ignore[attr-defined]
-    window.push_undo_frame = lambda reason: GameWindow.push_undo_frame(window, reason)  # type: ignore[attr-defined]
-    window.undo = lambda: GameWindow.undo(window)  # type: ignore[attr-defined]
-    window.redo = lambda: GameWindow.redo(window)  # type: ignore[attr-defined]
+    bind_game_window_undo_methods(window, include_undo=True, include_redo=True)
     return window
 
 

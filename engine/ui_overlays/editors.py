@@ -88,7 +88,7 @@ class TilePaintOverlay(UIElement):
         if callable(self.provider):
             try:
                 payload = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: tile-paint overlay should keep rendering even if an optional provider callback fails
                 payload = None
         return format_tile_paint_overlay_lines(payload if isinstance(payload, dict) else None)
 
@@ -196,7 +196,7 @@ class EntityPaintOverlay(UIElement):
         if callable(self.provider):
             try:
                 payload = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: entity-paint overlay should keep rendering even if an optional provider callback fails
                 payload = None
         return format_entity_paint_overlay_lines(payload if isinstance(payload, dict) else None)
 
@@ -357,7 +357,7 @@ class EntitySelectOverlay(UIElement):
         if callable(self.provider):
             try:
                 payload = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: entity-select overlay should keep rendering even if an optional provider callback fails
                 payload = None
         return format_entity_select_overlay_lines(payload if isinstance(payload, dict) else None)
 
@@ -443,7 +443,7 @@ class CaptureOverlay(UIElement):
         if callable(self.provider):
             try:
                 payload = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: capture overlay should keep rendering even if an optional provider callback fails
                 payload = None
         return format_capture_overlay_lines(payload if isinstance(payload, dict) else None)
 

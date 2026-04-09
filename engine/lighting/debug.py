@@ -13,7 +13,7 @@ def _try_call(fn: Any, *args: object, **kwargs: object) -> None:
         return
     try:
         fn(*args, **kwargs)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: optional debug draw callbacks should fail closed without breaking lighting debug rendering
         return
 
 

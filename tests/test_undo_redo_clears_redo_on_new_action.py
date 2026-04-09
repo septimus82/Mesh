@@ -4,6 +4,8 @@ import copy
 
 import arcade
 
+from tests._game_window_undo_stub import bind_game_window_undo_methods
+
 
 class _TilemapInstance:
     map_size = (2, 2)
@@ -30,7 +32,6 @@ class _FakeSceneController:
 
 
 def _make_window(scene_controller: _FakeSceneController):
-    from engine.game import GameWindow
     from engine.tile_paint_mode import TilePaintState
 
     window = type(
@@ -54,15 +55,7 @@ def _make_window(scene_controller: _FakeSceneController):
         },
     )()
 
-    def _mark_scene_dirty(self, reason: str) -> None:
-        self.scene_dirty = True
-        self.scene_dirty_reason = str(reason)
-        self.scene_dirty_counter += 1
-
-    window.mark_scene_dirty = _mark_scene_dirty.__get__(window)  # type: ignore[attr-defined]
-    window.push_undo_frame = lambda reason: GameWindow.push_undo_frame(window, reason)  # type: ignore[attr-defined]
-    window.undo = lambda: GameWindow.undo(window)  # type: ignore[attr-defined]
-    window.redo = lambda: GameWindow.redo(window)  # type: ignore[attr-defined]
+    bind_game_window_undo_methods(window, include_undo=True, include_redo=True)
     return window
 
 

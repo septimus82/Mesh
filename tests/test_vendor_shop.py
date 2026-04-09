@@ -4,6 +4,7 @@ from engine.behaviours.vendor import Vendor
 from engine.events import MeshEventBus
 from engine.game_state_controller import GameStateController
 from engine.ui import ShopPanel
+from tests._typing import as_any
 
 
 class StubItemDef:
@@ -127,7 +128,7 @@ def test_shop_panel_cursor_and_confirm():
         height=600,
         game_state_controller=None,
     )
-    panel = ShopPanel(window)  # type: ignore[arg-type]
+    panel = ShopPanel(as_any(window))
     called = []
 
     class StubVendor:
@@ -148,7 +149,7 @@ def test_shop_panel_sell_mode_calls_vendor(monkeypatch):
         height=600,
         game_state_controller=None,
     )
-    panel = ShopPanel(window)  # type: ignore[arg-type]
+    panel = ShopPanel(as_any(window))
     called = []
 
     class StubVendor:
@@ -183,7 +184,7 @@ def test_shop_panel_enqueues_toast_from_vendor_result():
             return {"ok": True, "message": "Bought A x1 (-1g)"}
 
     window.player_hud = StubHUD()
-    panel = ShopPanel(window)  # type: ignore[arg-type]
+    panel = ShopPanel(as_any(window))
     panel.open(StubVendor(), [{"item_id": "a"}])
     panel.confirm_purchase()
     assert received == ["Bought A x1 (-1g)"]

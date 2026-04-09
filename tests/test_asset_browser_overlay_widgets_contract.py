@@ -10,6 +10,7 @@ from engine.editor.editor_asset_browser_controller import EditorAssetBrowserCont
 from engine.ui_overlays import asset_browser_overlay as overlay_module
 from engine.ui_overlays.asset_browser_overlay import AssetBrowserOverlay
 from engine.ui_overlays.widgets import Rect
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -105,7 +106,7 @@ def _visible_signature(overlay: AssetBrowserOverlay) -> list[tuple[int, str, flo
 def _make_overlay(row_count: int = 20) -> tuple[AssetBrowserOverlay, _AssetControllerStub]:
     controller = _AssetControllerStub(_make_rows(row_count))
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-    overlay = AssetBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = AssetBrowserOverlay(as_any(window))
     return overlay, controller
 
 

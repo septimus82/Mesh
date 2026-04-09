@@ -21,7 +21,7 @@ def extract_light_pos_radius(light: Any) -> tuple[float, float, float] | None:
             r = float(radius)
             if r > 0:
                 return (lx, ly, r)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed light position/radius descriptors should skip that light during shadow selection
             return None
     try:
         lx = float(getattr(light, "x", 0.0))
@@ -29,7 +29,7 @@ def extract_light_pos_radius(light: Any) -> tuple[float, float, float] | None:
         r = float(getattr(light, "radius", 0.0))
         if r > 0:
             return (lx, ly, r)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: malformed fallback light position/radius attributes should skip that light during shadow selection
         return None
     return None
 
@@ -106,7 +106,7 @@ def select_shadow_light(manager: Any) -> tuple[str, tuple[float, float], float, 
                 continue
             setattr(manager, "_last_shadow_light_skip_reasons", skip_reasons)
             return ("static", (lx, ly), r, cfg)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed static-light config values should skip that config during shadow selection
             _record("static_cfg:bad_values")
             continue
 

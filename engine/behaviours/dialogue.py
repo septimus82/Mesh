@@ -425,7 +425,7 @@ class Dialogue(Behaviour):
         box = self._get_box()
         if box is None:
             return False
-        return box.advance(owner=self._owner_id)
+        return bool(box.advance(owner=self._owner_id))
 
     def _handle_dialogue_input(self) -> None:
         box = self._get_box()

@@ -38,6 +38,7 @@ from engine.editor.hd2d_entity_overrides_model import (
     parse_hd2d_entity_overrides_dict,
     sanitize_hd2d_entity_override_patch,
 )
+from tests._typing import as_any
 
 
 # =============================================================================
@@ -161,7 +162,7 @@ class TestParseHd2dEntityOverrides:
 
     def test_handles_non_dict_input(self) -> None:
         """Should handle non-dict input gracefully."""
-        result = parse_hd2d_entity_overrides(None)  # type: ignore[arg-type]
+        result = parse_hd2d_entity_overrides(as_any(None))
         assert isinstance(result, Hd2dEntityOverrides)
         assert result.shadow_enabled is None
 
@@ -510,7 +511,7 @@ class TestHd2dEntityOverridesDataclass:
             outline_radius_px=None,
         )
         with pytest.raises(Exception):  # FrozenInstanceError
-            overrides.shadow_enabled = True  # type: ignore[misc]
+            as_any(overrides).shadow_enabled = True
 
     def test_can_set_values_at_construction(self) -> None:
         """Should be able to set values at construction."""
@@ -586,9 +587,9 @@ class TestExtractOverridePatch:
 
     def test_non_dict_returns_empty_patch(self) -> None:
         """Non-dict input should return empty patch."""
-        assert extract_override_patch(None) == {}  # type: ignore[arg-type]
-        assert extract_override_patch([]) == {}  # type: ignore[arg-type]
-        assert extract_override_patch("str") == {}  # type: ignore[arg-type]
+        assert extract_override_patch(as_any(None)) == {}
+        assert extract_override_patch(as_any([])) == {}
+        assert extract_override_patch(as_any("str")) == {}
 
     def test_extracts_only_override_keys(self) -> None:
         """Should only extract known override keys."""
@@ -652,9 +653,9 @@ class TestCountPatchFields:
 
     def test_non_dict_returns_zero(self) -> None:
         """Non-dict input should return 0."""
-        assert count_patch_fields(None) == 0  # type: ignore[arg-type]
-        assert count_patch_fields([]) == 0  # type: ignore[arg-type]
-        assert count_patch_fields("str") == 0  # type: ignore[arg-type]
+        assert count_patch_fields(as_any(None)) == 0
+        assert count_patch_fields(as_any([])) == 0
+        assert count_patch_fields(as_any("str")) == 0
 
     def test_counts_non_none_fields(self) -> None:
         """Should count non-None fields."""

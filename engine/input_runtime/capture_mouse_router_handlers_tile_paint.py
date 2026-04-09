@@ -55,7 +55,7 @@ def _handle_tile_paint_mouse_press(window: Any, event: MouseEvent) -> bool:
     tile_w, tile_h = getattr(instance, "tile_size", (0, 0))
     try:
         world_x, world_y = window.screen_to_world(float(event.x), float(event.y))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: screen-to-world conversion failures should fall back to no tile-paint click handling
         return True
     from engine.tile_paint_mode import compute_tile_paint_tool, peek_tile_value, world_to_tile  # noqa: PLC0415
 
@@ -81,7 +81,7 @@ def _handle_tile_paint_mouse_press(window: Any, event: MouseEvent) -> bool:
         if _iter_fn is not None:
             try:
                 payloads = [p for p in cast(Callable[..., list[dict]], _iter_fn)() if isinstance(p, dict)]
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: authored scene payload queries are optional and should fall back to loaded scene payloads only
                 payloads = []
         if not payloads and sc is not None and isinstance(getattr(sc, "_loaded_scene_data", None), dict):
             payloads = [sc._loaded_scene_data]
@@ -149,7 +149,7 @@ def _handle_tile_paint_mouse_release(window: Any, event: MouseEvent) -> bool:
     if _iter_fn2 is not None:
         try:
             payloads = [p for p in cast(Callable[..., list[dict]], _iter_fn2)() if isinstance(p, dict)]
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: authored scene payload queries are optional and should fall back to loaded scene payloads only
             payloads = []
     if not payloads and sc is not None and isinstance(getattr(sc, "_loaded_scene_data", None), dict):
         payloads = [sc._loaded_scene_data]
@@ -259,7 +259,7 @@ def _handle_tile_paint_mouse_release(window: Any, event: MouseEvent) -> bool:
                     )
             if changed_any:
                 changed_coords.add((int(cx), int(cy)))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: stroke apply failures should clear transient tile-paint drag state without blocking later input handling
         state.stroke_active = False
         state.stroke_anchor = None
         state.stroke_last_hit = None

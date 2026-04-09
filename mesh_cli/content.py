@@ -75,7 +75,7 @@ def _handle_episode_new(args: argparse.Namespace) -> int:
     except ValueError as exc:
         print(f"[Mesh][Content] ERROR: {exc}")
         return 2
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: content scaffold CLI should collapse unexpected scaffold failures into a deterministic nonzero exit with context
         print(f"[Mesh][Content] ERROR: {type(exc).__name__}: {exc}")
         return 1
 

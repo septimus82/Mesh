@@ -272,7 +272,7 @@ def format_entity_field_value(
             raw = entity_data.get(key, 0.0)
         try:
             value = float(raw)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: invalid numeric entity field values should display as the default inspector placeholder
             value = 0.0
         if key == "rotation_deg":
             value = value % 360.0
@@ -313,7 +313,7 @@ def get_entity_numeric_value(
         raw = entity_data.get(key, 0.0)
     try:
         value = float(raw)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: invalid numeric entity field values should fall back to the default inspector numeric value
         value = 0.0
     if key == "rotation_deg":
         value = value % 360.0

@@ -72,7 +72,7 @@ def _resolve_repo_root(start: Path) -> Path:
         resolved = get_repo_root(start=start, strict=False)
         if resolved is not None:
             return Path(resolved).resolve()
-    except Exception:
+    except (ImportError, OSError, RuntimeError, ValueError):
         _log_swallow("PLAY-001", "mesh_cli/player_package.py pass-only blanket swallow")
         pass
     return start.resolve()

@@ -141,7 +141,7 @@ def _resolve_light_symbols(
             layer = getattr(mod, "LightLayer", None)
             if light is not None and layer is not None:
                 return light, layer
-        except Exception:  # noqa: BLE001  # REASON: import fallback
+        except (ImportError, AttributeError, OSError):  # noqa: BLE001  # REASON: import fallback
             _log_swallow(
                 "LGIN-001",
                 "engine.lighting.__init__._resolve_light_symbols",
@@ -349,7 +349,7 @@ class LightManager:
         if alpha_override is not None:
             try:
                 alpha = int(alpha_override)
-            except Exception:  # noqa: BLE001  # REASON: alpha parse
+            except (TypeError, ValueError):  # noqa: BLE001  # REASON: alpha parse
                 _log_swallow(
                     "LGIN-002",
                     "engine.lighting.__init__.LightManager._ambient_rgba",
@@ -471,7 +471,7 @@ class LightManager:
             cam = getattr(self.window, "camera", None)
             cam_pos = getattr(cam, "position", (0.0, 0.0)) if cam is not None else (0.0, 0.0)
             offset = (float(cam_pos[0]), float(cam_pos[1]))
-        except Exception:  # noqa: BLE001  # REASON: camera offset
+        except (TypeError, ValueError, IndexError, KeyError):  # REASON: camera offset coercion fallback
             _log_swallow(
                 "LGIN-008",
                 "engine.lighting.__init__.LightManager.end",
@@ -576,8 +576,10 @@ class LightManager:
             return
         lx, ly, radius = selected
         try:
-            polys = build_shadow_polygons((float(lx), float(ly)), float(radius), rects)
-        except Exception:  # noqa: BLE001  # REASON: polygon build
+            light_pos = (float(lx), float(ly))
+            light_radius = float(radius)
+            polys = build_shadow_polygons(light_pos, light_radius, rects)
+        except (AttributeError, IndexError, KeyError, TypeError, ValueError):  # REASON: debug geometry shape/coercion fallback
             _log_swallow(
                 "LGIN-012",
                 "engine.lighting.__init__.LightManager._draw_debug_geometry",
@@ -662,7 +664,7 @@ class LightManager:
             return None
         try:
             flicker_speed = float(flicker_speed)
-        except Exception:  # noqa: BLE001  # REASON: speed parse
+        except (TypeError, ValueError):  # noqa: BLE001  # REASON: speed parse
             _log_swallow(
                 "LGIN-013",
                 "engine.lighting.__init__.LightManager.register_dynamic_light",
@@ -671,7 +673,7 @@ class LightManager:
             flicker_speed = 1.0
         try:
             flicker_amount = float(flicker_amount)
-        except Exception:  # noqa: BLE001  # REASON: amount parse
+        except (TypeError, ValueError):  # noqa: BLE001  # REASON: amount parse
             _log_swallow(
                 "LGIN-014",
                 "engine.lighting.__init__.LightManager.register_dynamic_light",
@@ -685,7 +687,7 @@ class LightManager:
             else:
                 try:
                     seed_used = int(flicker_seed)
-                except Exception:  # noqa: BLE001  # REASON: seed parse
+                except (TypeError, ValueError):  # noqa: BLE001  # REASON: seed parse
                     _log_swallow(
                         "LGIN-015",
                         "engine.lighting.__init__.LightManager.register_dynamic_light",
@@ -726,7 +728,7 @@ class LightManager:
             if radius_px is not None:
                 try:
                     radius_px = float(radius_px)
-                except Exception:  # noqa: BLE001  # REASON: radius parse
+                except (TypeError, ValueError):  # noqa: BLE001  # REASON: radius parse
                     _log_swallow(
                         "LGIN-016",
                         "engine.lighting.__init__.LightManager.register_dynamic_light",
@@ -737,7 +739,7 @@ class LightManager:
             if intensity is not None:
                 try:
                     intensity = float(intensity)
-                except Exception:  # noqa: BLE001  # REASON: intensity parse
+                except (TypeError, ValueError):  # noqa: BLE001  # REASON: intensity parse
                     _log_swallow(
                         "LGIN-017",
                         "engine.lighting.__init__.LightManager.register_dynamic_light",
@@ -837,31 +839,48 @@ class LightManager:
         return layer
 
     def _create_light(self, x: float, y: float, radius: float, color: Any, mode: str) -> Any:
+        if _Light is None:
+            return None
+        if isinstance(color, str):
+            raw = color.strip()
+            if raw.startswith("#"):
+                hex_ = raw[1:]
+                if len(hex_) in {6, 8}:
+                    try:
+                        r = int(hex_[0:2], 16)
+                        g = int(hex_[2:4], 16)
+                        b = int(hex_[4:6], 16)
+                        if len(hex_) == 8:
+                            a = int(hex_[6:8], 16)
+                            color = (r, g, b, a)
+                        else:
+                            color = (r, g, b)
+                    except ValueError:  # REASON: hex color parse
+                        _log_swallow(
+                            "LGIN-019",
+                            "engine.lighting.__init__.LightManager._create_light",
+                            "parse_hex_color",
+                            once=True,
+                        )
+            else:
+                named = getattr(getattr(engine.optional_arcade.arcade, "color", None), raw.upper(), None)
+                if named is not None:
+                    color = named
         try:
-            if _Light is None:
-                return None
-            if isinstance(color, str):
-                raw = color.strip()
-                if raw.startswith("#"):
-                    hex_ = raw[1:]
-                    if len(hex_) in {6, 8}:
-                        try:
-                            r = int(hex_[0:2], 16)
-                            g = int(hex_[2:4], 16)
-                            b = int(hex_[4:6], 16)
-                            if len(hex_) == 8:
-                                a = int(hex_[6:8], 16)
-                                color = (r, g, b, a)
-                            else:
-                                color = (r, g, b)
-                        except ValueError:
-                            pass
-                else:
-                    named = getattr(getattr(engine.optional_arcade.arcade, "color", None), raw.upper(), None)
-                    if named is not None:
-                        color = named
-            return _Light(float(x), float(y), float(radius), color, mode=str(mode))
-        except Exception as exc:  # noqa: BLE001  # REASON: light construct
+            light_x = float(x)
+            light_y = float(y)
+            light_radius = float(radius)
+        except (TypeError, ValueError):  # REASON: light construct numeric coercion fallback
+            _log_swallow(
+                "LGIN-019",
+                "engine.lighting.__init__.LightManager._create_light",
+                "construct_light",
+                once=True,
+            )
+            return None
+        try:
+            return _Light(light_x, light_y, light_radius, color, mode=str(mode))
+        except (AttributeError, OSError, TypeError, ValueError):  # REASON: light construct backend/shape fallback
             _log_swallow(
                 "LGIN-019",
                 "engine.lighting.__init__.LightManager._create_light",
@@ -882,8 +901,12 @@ class LightManager:
                         b = int(hex_[4:6], 16)
                         a = int(hex_[6:8], 16) if len(hex_) == 8 else 255
                         return (r, g, b, a)
-                    except ValueError:
-                        pass
+                    except ValueError:  # REASON: hex color parse
+                        _log_swallow(
+                            "LGIN-020",
+                            "engine.lighting.__init__.LightManager._normalize_color",
+                            "normalize_hex_color",
+                        )
             named = getattr(getattr(engine.optional_arcade.arcade, "color", None), raw.upper(), None)
             if named is not None:
                 color = named
@@ -900,7 +923,7 @@ class LightManager:
                         max(0, min(255, b)),
                         max(0, min(255, a)),
                     )
-                except Exception:  # noqa: BLE001  # REASON: color parse
+                except (TypeError, ValueError, IndexError):  # noqa: BLE001  # REASON: color parse
                     _log_swallow(
                         "LGIN-020",
                         "engine.lighting.__init__.LightManager._normalize_color",
@@ -922,7 +945,7 @@ class LightManager:
     def set_ambient_darkness_alpha(self, alpha: int) -> None:
         try:
             self.ambient_darkness_alpha = int(alpha)
-        except Exception:  # noqa: BLE001  # REASON: alpha parse
+        except (TypeError, ValueError):  # noqa: BLE001  # REASON: alpha parse
             _log_swallow(
                 "LGIN-021",
                 "engine.lighting.__init__.LightManager.set_ambient_darkness_alpha",
@@ -939,7 +962,7 @@ class LightManager:
                 try:
                     adder(light)
                     return
-                except Exception:
+                except (AttributeError, OSError, RuntimeError, TypeError, ValueError):
                     _log_swallow(
                         "LGIN-022",
                         "engine.lighting.__init__.LightManager._add_light",
@@ -969,7 +992,7 @@ class LightManager:
                 try:
                     adder(occluder)
                     return
-                except Exception:
+                except (AttributeError, OSError, RuntimeError, TypeError, ValueError):
                     _log_swallow(
                         "LGIN-024",
                         "engine.lighting.__init__.LightManager._add_occluder",
@@ -1000,7 +1023,7 @@ class LightManager:
                 try:
                     adder(points, **light_config)
                     return True
-                except Exception:
+                except (AttributeError, OSError, RuntimeError, TypeError, ValueError):
                     _log_swallow(
                         "LGIN-026",
                         "engine.lighting.__init__.LightManager._add_polygon_light",

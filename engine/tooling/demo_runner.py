@@ -33,7 +33,6 @@ def launch_demo(start_scene: str | None = None, world_path: str | None = None) -
 
         window.run()
         return 0
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001  # REASON: demo-launch failures should report the error and return a controlled nonzero exit code
         print(f"Error launching demo: {e}")
         return 1
-

@@ -141,5 +141,5 @@ class ListenForEvent(Behaviour):
             return
         try:
             window_emit(self.forward_as, **payload)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: event forwarding failures should be reported without breaking the source event reaction
             print(f"[Mesh][ListenForEvent] ERROR forwarding '{self.forward_as}': {exc}")

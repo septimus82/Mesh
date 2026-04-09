@@ -196,7 +196,7 @@ def apply_last_saved_at(scene_payload: dict, tx: int, ty: int, layer_id: str = "
     try:
         with open(resolve_path(path), "r", encoding="utf-8") as f:
             payload = json.load(f)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001  # REASON: malformed saved stamp/brush payloads should log and skip only that persisted palette item
         _log_swallow("PLMD-002", "engine/palette_mode.py blanket swallow", once=True)
         logger.error(f"Failed to load last_saved item {path}: {e}")
         return False

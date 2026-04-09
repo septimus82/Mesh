@@ -141,7 +141,7 @@ def _create_thumb_sync(
         canvas.save(tmp_path, format="PNG")
         os.replace(tmp_path, thumb_path)
         return thumb_path
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: thumbnail generation failures should log and fall back to no cached palette thumbnail
         _log_swallow("EDPT-007", f"resolved={resolved.as_posix()} exc={exc}")
         _LOG.warning("[Editor][Palette] Failed to create thumbnail for %s: %s", resolved.as_posix(), exc)
         return None

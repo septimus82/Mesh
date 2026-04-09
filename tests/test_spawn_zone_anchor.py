@@ -12,6 +12,7 @@ from engine.game_state_controller import GameStateController
 from engine.scene_index import SceneIndex
 from engine.scene_controller import SceneController
 from engine import savegame
+from tests._typing import as_any
 
 
 class _WindowForGameState:
@@ -21,7 +22,7 @@ class _WindowForGameState:
 
 def test_entered_zone_event_records_last_zone_id():
     window = _WindowForGameState()
-    controller = GameStateController(window)  # type: ignore[arg-type]
+    controller = GameStateController(as_any(window))
 
     controller.handle_event({"type": EVENT_ENTERED_ZONE, "payload": {"zone": "ZoneA"}})
 
@@ -43,7 +44,7 @@ def test_snapshot_payload_includes_spawn_zone_id(tmp_path, monkeypatch):
         def __init__(self) -> None:
             self.engine_config = _StubEngineConfig("worlds/act1_prologue.json")
             self.scene_controller = _StubSceneController("packs/core_regions/scenes/Act1_Prologue_Cabin.json")
-            self.game_state_controller = GameStateController(self)  # type: ignore[arg-type]
+            self.game_state_controller = GameStateController(as_any(self))
             self.set_next_spawn_point = MagicMock()
             self.request_scene_change = MagicMock()
 
@@ -70,7 +71,7 @@ def test_snapshot_load_queues_spawn_zone_id(tmp_path, monkeypatch):
         def __init__(self) -> None:
             self.engine_config = _StubEngineConfig("worlds/act1_prologue.json")
             self.scene_controller = _StubSceneController("packs/core_regions/scenes/Act1_Prologue_Cabin.json")
-            self.game_state_controller = GameStateController(self)  # type: ignore[arg-type]
+            self.game_state_controller = GameStateController(as_any(self))
             self.set_next_spawn_point = MagicMock()
             self.request_scene_change = MagicMock()
 
@@ -127,7 +128,7 @@ class _StubWindowForSceneController:
 
 def test_pending_spawn_point_can_target_named_zone_entity():
     window = _StubWindowForSceneController("ZoneA")
-    controller = SceneController(window)  # type: ignore[arg-type]
+    controller = SceneController(as_any(window))
 
     player = MagicMock()
     player.mesh_tag = "player"

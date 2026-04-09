@@ -24,6 +24,7 @@ STEP_ORDER: tuple[str, ...] = (
     "pytest-fast-duration-guard",
     "runtime-player-smoke",
     "player-package-gate",
+    "web-smoke",
     "perf-baseline-compare",
     "world-progression-check",
     "spawn-placeholder-safety",

@@ -50,7 +50,7 @@ class TimeOfDayGate(Behaviour):
         if dn is not None and hasattr(dn, "hour"):
             try:
                 return float(dn.hour)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: invalid day/night hour reads should fall back to a safe default without breaking gate updates
                 if not getattr(self, "_mesh_day_night_hour_error_logged", False):
                     print(f"[Mesh][TimeOfDayGate] ERROR reading day/night hour: {exc}")
                     setattr(self, "_mesh_day_night_hour_error_logged", True)
@@ -82,7 +82,7 @@ class TimeOfDayGate(Behaviour):
         if isinstance(self._bus, MeshEventBus):
             try:
                 self._bus.emit(event_name, entity=getattr(self.entity, "mesh_name", None))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: event bus emit failures should not break gate state transitions
                 if not getattr(self, "_mesh_emit_error_logged", False):
                     print(f"[Mesh][TimeOfDayGate] ERROR emitting '{event_name}': {exc}")
                     setattr(self, "_mesh_emit_error_logged", True)
@@ -91,7 +91,7 @@ class TimeOfDayGate(Behaviour):
         if self._affect_visibility:
             try:
                 self.entity.visible = bool(self._active)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: entity visibility writes can fail on legacy sprites and should not break gate state updates
                 if not getattr(self, "_mesh_visible_error_logged", False):
                     print(f"[Mesh][TimeOfDayGate] ERROR setting entity visibility: {exc}")
                     setattr(self, "_mesh_visible_error_logged", True)

@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from .shipping_policy import iter_ship_check_artifact_specs
+
 
 _SECTION_ORDER: tuple[str, ...] = ("verify", "package", "web", "perf")
 
@@ -47,16 +49,7 @@ def _display_path(root_display: str, relpath: str) -> str:
 
 
 def _artifact_spec_rows() -> tuple[tuple[str, str, bool, str], ...]:
-    return (
-        ("player_manifest", "player_pkg/manifest.json", True, "package"),
-        ("player_package_check", "player_pkg/package_check.json", True, "package"),
-        ("player_runtime_smoke", "player_pkg/runtime_smoke.json", True, "package"),
-        ("runtime_diagnostics_snapshot", "runtime_diagnostics_snapshot.json", True, "verify"),
-        ("web_smoke", "web_smoke.json", True, "web"),
-        ("perf_compare", "perf_compare.json", True, "perf"),
-        ("perf_run", "perf_run.json", False, "perf"),
-        ("verify_bundle", "verify_all_summary.json", False, "verify"),
-    )
+    return iter_ship_check_artifact_specs()
 
 
 def _load_web_smoke_codes(artifacts_root: Path) -> tuple[str, ...]:
@@ -155,7 +148,7 @@ def build_ship_check_summary(
     )
 
 
-def _run_verify_all_ci_bundle(artifacts_arg: str) -> tuple[int, dict[str, Any]]:
+def _run_verify_all_ci_bundle(artifacts_arg: str, *, skip_web: bool) -> tuple[int, dict[str, Any]]:
     from . import verify as verify_commands
 
     verify_args = argparse.Namespace(
@@ -169,6 +162,7 @@ def _run_verify_all_ci_bundle(artifacts_arg: str) -> tuple[int, dict[str, Any]]:
         artifact_index=False,
         ci_bundle=True,
         release_notes_artifact=False,
+        skip_web_smoke=bool(skip_web),
         pytest_args=[],
     )
     payload, code = verify_commands._build_verify_all_payload(verify_args)
@@ -180,6 +174,7 @@ def _verify_required_steps_ok(
     payload: dict[str, Any],
     *,
     skip_package: bool,
+    skip_web: bool,
     skip_perf: bool,
 ) -> bool:
     steps = payload.get("steps")
@@ -189,6 +184,8 @@ def _verify_required_steps_ok(
     ignored_failures = set()
     if skip_package:
         ignored_failures.add("player-package-gate")
+    if skip_web:
+        ignored_failures.add("web-smoke")
     if skip_perf:
         ignored_failures.add("perf-baseline-compare")
 
@@ -217,7 +214,51 @@ def _call_quietly(func, /, *args, **kwargs):
         return func(*args, **kwargs)
 
 
+def _run_web_gate(*, repo_root: Path, artifacts_path: Path, quiet: bool) -> int:
+    import subprocess
+    import sys
+
+    build_cmd = [
+        sys.executable,
+        "-m",
+        "mesh_cli",
+        "build-web",
+        "--out",
+        str(artifacts_path / "web_build"),
+    ]
+    if quiet:
+        build_result = _call_quietly(subprocess.run, build_cmd, capture_output=True, text=True, cwd=str(repo_root))
+    else:
+        build_result = subprocess.run(build_cmd, capture_output=True, text=True, cwd=str(repo_root))
+    build_code = int(build_result.returncode)
+
+    from .web_smoke import run_web_smoke
+
+    web_smoke_path = artifacts_path / "web_smoke.json"
+    if quiet:
+        smoke_code = int(
+            _call_quietly(
+                run_web_smoke,
+                build_dir=(artifacts_path / "web_build").as_posix(),
+                artifact_path=web_smoke_path.as_posix(),
+            )
+        )
+    else:
+        smoke_code = int(
+            run_web_smoke(
+                build_dir=(artifacts_path / "web_build").as_posix(),
+                artifact_path=web_smoke_path.as_posix(),
+            )
+        )
+
+    if build_code != 0:
+        return build_code
+    return smoke_code
+
+
 def _handle_ship_check(args: argparse.Namespace) -> int:
+    from engine.repo_root import get_repo_root
+
     artifacts_arg = str(getattr(args, "artifacts", "") or "artifacts").strip() or "artifacts"
     quiet = bool(getattr(args, "quiet", False))
     skip_verify = bool(getattr(args, "skip_verify", False))
@@ -229,6 +270,7 @@ def _handle_ship_check(args: argparse.Namespace) -> int:
     artifacts_path = Path(artifacts_arg)
     if not artifacts_path.is_absolute():
         artifacts_path = (Path.cwd() / artifacts_path).resolve()
+    repo_root = get_repo_root(start=Path.cwd(), strict=False)
 
     gate_ok = True
 
@@ -236,14 +278,15 @@ def _handle_ship_check(args: argparse.Namespace) -> int:
         if not quiet:
             print("[Mesh][ShipCheck] Running verify-all --ci-bundle")
         if quiet:
-            verify_code, verify_payload = _call_quietly(_run_verify_all_ci_bundle, artifacts_arg)
+            verify_code, verify_payload = _call_quietly(_run_verify_all_ci_bundle, artifacts_arg, skip_web=skip_web)
         else:
-            verify_code, verify_payload = _run_verify_all_ci_bundle(artifacts_arg)
+            verify_code, verify_payload = _run_verify_all_ci_bundle(artifacts_arg, skip_web=skip_web)
         verify_ok = verify_code == 0
         if not verify_ok:
             verify_ok = _verify_required_steps_ok(
                 verify_payload,
                 skip_package=skip_package,
+                skip_web=skip_web,
                 skip_perf=skip_perf,
             )
         gate_ok = bool(gate_ok and verify_ok)
@@ -280,32 +323,18 @@ def _handle_ship_check(args: argparse.Namespace) -> int:
     elif not quiet:
         print("[Mesh][ShipCheck] Skipping package-player")
 
-    if not skip_web:
+    should_run_standalone_web = bool(skip_verify and not skip_web)
+    if should_run_standalone_web:
         if not quiet:
             print("[Mesh][ShipCheck] Running web-smoke")
-        from .web_smoke import run_web_smoke
-
-        web_artifact = artifacts_path / "web_smoke.json"
-        if quiet:
-            web_code = int(
-                _call_quietly(
-                    run_web_smoke,
-                    build_dir=None,
-                    artifact_path=web_artifact.as_posix(),
-                )
-            )
-        else:
-            web_code = int(
-                run_web_smoke(
-                    build_dir=None,
-                    artifact_path=web_artifact.as_posix(),
-                )
-            )
+        web_code = _run_web_gate(repo_root=Path(repo_root).resolve(), artifacts_path=artifacts_path, quiet=quiet)
         gate_ok = bool(gate_ok and web_code == 0)
         if web_code != 0 and not continue_on_web_fail and not quiet:
             print("[Mesh][ShipCheck] web-smoke failed")
-    elif not quiet:
+    elif skip_web and not quiet:
         print("[Mesh][ShipCheck] Skipping web-smoke")
+    elif not quiet:
+        print("[Mesh][ShipCheck] Using verify-all web-smoke result")
 
     summary = build_ship_check_summary(
         artifacts_root=artifacts_path,

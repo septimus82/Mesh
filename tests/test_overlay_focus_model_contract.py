@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from engine.ui_overlays.widget_overlay_helpers import OverlayFocusModel
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -39,7 +40,7 @@ def test_overlay_focus_model_invalid_focus_target_handling_is_deterministic() ->
     assert model.focus == "input"
     assert model.reset("") == "input"
     assert model.focus == "input"
-    assert model.reset(None) == "input"  # type: ignore[arg-type]
+    assert model.reset(as_any(None)) == "input"
     assert model.focus == "input"
 
 

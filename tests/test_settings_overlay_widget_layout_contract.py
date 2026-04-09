@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import types
+from pathlib import Path
 
 import pytest
 
 from engine.ui import SettingsOverlay
 from engine.ui_overlays import settings_overlay as overlay_module
 from engine.ui_overlays.widgets import DrawInstruction, LayoutResult, Rect
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -27,8 +29,8 @@ class _Audio:
         self.music_volume = float(volume)
 
 
-def _make_overlay(monkeypatch: pytest.MonkeyPatch, tmp_path: object) -> SettingsOverlay:
-    settings_path = tmp_path / "settings_widget_layout_contract.json"  # type: ignore[operator]
+def _make_overlay(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> SettingsOverlay:
+    settings_path = tmp_path / "settings_widget_layout_contract.json"
     monkeypatch.setenv("MESH_SETTINGS_PATH", str(settings_path))
     window = types.SimpleNamespace(
         width=1024,
@@ -42,7 +44,7 @@ def _make_overlay(monkeypatch: pytest.MonkeyPatch, tmp_path: object) -> Settings
         ),
         input_controller=types.SimpleNamespace(manager=None),
     )
-    overlay = SettingsOverlay(window)  # type: ignore[arg-type]
+    overlay = SettingsOverlay(as_any(window))
     overlay.open()
     return overlay
 
@@ -63,7 +65,7 @@ def _instruction_signature(layout: LayoutResult) -> list[tuple[str, str, str, tu
 
 
 def test_settings_overlay_section_layout_contract_deterministic(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: object
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     overlay = _make_overlay(monkeypatch, tmp_path)
     lines = overlay.get_lines()
@@ -94,7 +96,7 @@ def test_settings_overlay_section_layout_contract_deterministic(
 
 
 def test_settings_overlay_overview_options_panel_bg_suppressed_in_draw(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: object
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     overlay = _make_overlay(monkeypatch, tmp_path)
     filled_calls: list[tuple[float, float, float, float, object]] = []
@@ -129,4 +131,3 @@ def test_settings_overlay_overview_options_panel_bg_suppressed_in_draw(
 
     overlay.draw()
     assert len(filled_calls) == 1
-

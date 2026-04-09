@@ -128,9 +128,9 @@ class DoctorRunner:
 
             with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
                 code = int(runner())
-        except SystemExit as e:  # noqa: BLE001
+        except SystemExit as e:  # noqa: BLE001  # REASON: embedded tooling commands may terminate via SystemExit and should be converted into doctor tool exit codes
             code = int(e.code) if isinstance(e.code, int) else 1
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001  # REASON: embedded tooling command failures should be captured into doctor output without aborting the remaining checks
             code = 1
             buf.write(f"[DOCTOR][{name}] exception: {e}\n")
         return ToolRun(name=name, exit_code=code, output=buf.getvalue())
@@ -157,7 +157,7 @@ class DoctorRunner:
                 return ToolRun(name="lock", exit_code=1, output=buf.getvalue())
             buf.write("[Mesh][Lock] OK: content.lock.json is up to date\n")
             return ToolRun(name="lock", exit_code=0, output=buf.getvalue())
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001  # REASON: lock-audit failures should report a controlled doctor error instead of aborting the doctor run
             buf.write(f"[Mesh][Lock] ERROR: {e}\n")
             return ToolRun(name="lock", exit_code=1, output=buf.getvalue())
 
@@ -169,7 +169,7 @@ class DoctorRunner:
             if stripped.startswith("{") and stripped.endswith("}"):
                 try:
                     payload = json.loads(stripped)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: malformed validate-all JSON lines should be ignored while preserving other doctor findings
                     payload = None
                 if isinstance(payload, dict) and {"code", "path", "message"}.issubset(payload.keys()):
                     code = str(payload.get("code") or "")

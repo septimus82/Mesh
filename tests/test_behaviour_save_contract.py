@@ -25,6 +25,7 @@ from engine.behaviours.saveable import (
     is_saveable_behaviour,
     validate_saveable_state,
 )
+from tests._typing import as_any
 
 
 # ============================================================================
@@ -415,13 +416,13 @@ class TestStateValidation:
 
     def test_invalid_non_dict(self) -> None:
         """Non-dict state is invalid."""
-        errors = validate_saveable_state("not a dict")  # type: ignore
+        errors = validate_saveable_state(as_any("not a dict"))
         assert len(errors) == 1
         assert "must be dict" in errors[0]
 
     def test_invalid_non_string_keys(self) -> None:
         """Dict keys must be strings."""
-        state = {1: "value"}  # type: ignore
+        state = as_any({1: "value"})
         errors = validate_saveable_state(state)
         assert len(errors) > 0
         assert "must be str" in errors[0]

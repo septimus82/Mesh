@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import engine.optional_arcade
+from tests._typing import as_any
 
 # Ensure arcade fallback for headless runs.
 if not engine.optional_arcade.has_arcade():
@@ -26,7 +27,7 @@ def test_web_preview_hidden_on_web(monkeypatch):
     monkeypatch.setenv("PYGBAG", "1")
     
     window = SimpleNamespace(width=800, height=600, paused=False)
-    menu = MainMenuOverlay(window) # type: ignore
+    menu = MainMenuOverlay(as_any(window))
     
     items = menu._items()
     actions = [item[1] for item in items]
@@ -48,7 +49,7 @@ def test_web_preview_success(monkeypatch, tmp_path):
     mock_preview.start_web_preview = mock_start
     
     window = SimpleNamespace(width=800, height=600, paused=False, player_hud=MagicMock())
-    menu = MainMenuOverlay(window) # type: ignore
+    menu = MainMenuOverlay(as_any(window))
     
     menu._attempt_run_web_preview()
     
@@ -75,7 +76,7 @@ def test_web_preview_missing_build(monkeypatch, tmp_path):
     mock_preview.start_web_preview = mock_start
     
     window = SimpleNamespace(width=800, height=600, paused=False, player_hud=MagicMock())
-    menu = MainMenuOverlay(window) # type: ignore
+    menu = MainMenuOverlay(as_any(window))
     
     menu._attempt_run_web_preview()
     

@@ -21,6 +21,12 @@ python -m mesh_cli verify-all --artifacts artifacts --ci-bundle
 ```
 
 Must complete with `ok=true`.
+The verify summary must include the shipping gates:
+
+- `runtime-player-smoke`
+- `player-package-gate`
+- `web-smoke`
+- `perf-baseline-compare`
 
 ### 2) Player package gate
 
@@ -52,7 +58,7 @@ Expected artifact schema includes:
 
 ### 4) Web build + web smoke gate
 
-CI must run and pass the web gate and produce:
+The verify pipeline must build the web target, run `web-smoke`, and produce:
 
 - `artifacts/web_smoke.json`
 

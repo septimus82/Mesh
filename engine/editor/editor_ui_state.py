@@ -126,7 +126,7 @@ def load_editor_ui_state(
         payload = json_io.read_json(state_path)
     except FileNotFoundError:
         return defaults
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: corrupt UI state files should log and fall back to default editor UI layout
         _LOG.warning("Failed to read editor UI state from %s: %s", state_path, exc)
         return defaults
     loaded = load_ui_state(payload)
@@ -165,7 +165,7 @@ def save_editor_ui_state(
     try:
         state_path.parent.mkdir(parents=True, exist_ok=True)
         json_io.write_json_atomic(state_path, payload)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: UI state persistence failures should log without breaking editor shutdown flows
         _LOG.warning("Failed to save editor UI state to %s: %s", state_path, exc)
 
 
@@ -180,7 +180,7 @@ def reset_editor_ui_state(
             return False
         state_path.unlink()
         return True
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: UI state reset failures should log without breaking editor recovery flows
         _LOG.warning("Failed to reset editor UI state at %s: %s", state_path, exc)
         return False
 

@@ -17,6 +17,7 @@ from engine.ui_overlays.asset_browser_overlay import AssetBrowserOverlay
 from engine.ui_overlays.find_everything_overlay import FindEverythingOverlay
 from engine.ui_overlays.keybinds_overlay import KeybindsOverlay
 from engine.ui_overlays.scene_browser_overlay import SceneBrowserOverlay
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -91,7 +92,7 @@ def _make_find_case() -> _Case:
     controller.activate_find_selection = _activate_find_selection
 
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller, input=None, input_controller=None)
-    overlay = FindEverythingOverlay(window)  # type: ignore[arg-type]
+    overlay = FindEverythingOverlay(as_any(window))
 
     return _Case(
         overlay=overlay,
@@ -148,7 +149,7 @@ def _make_scene_case() -> _Case:
     controller._scene_browser_open_selected = _open_selected
 
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-    overlay = SceneBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = SceneBrowserOverlay(as_any(window))
 
     return _Case(
         overlay=overlay,
@@ -192,7 +193,7 @@ def _make_keybinds_case(monkeypatch: pytest.MonkeyPatch) -> _Case:
 
     editor = SimpleNamespace(keybinds=controller)
     window = SimpleNamespace(width=1280, height=720, editor_controller=editor, text_cache=None)
-    overlay = KeybindsOverlay(window)  # type: ignore[arg-type]
+    overlay = KeybindsOverlay(as_any(window))
     overlay.visible = True
 
     def _keybinds_data(_controller: Any, **_kwargs: Any) -> dict[str, Any]:
@@ -289,7 +290,7 @@ def _make_asset_case() -> _Case:
     controller._activate_selected_asset = _activate_selected_asset
 
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-    overlay = AssetBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = AssetBrowserOverlay(as_any(window))
 
     return _Case(
         overlay=overlay,

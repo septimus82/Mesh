@@ -113,7 +113,7 @@ def load_editor_session_state(
         payload = json_io.read_json(state_path)
     except FileNotFoundError:
         return EditorSessionState()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: corrupt session state files should log and fall back to a clean editor session
         _LOG.warning("Failed to read editor session state from %s: %s", state_path, exc)
         return EditorSessionState()
     return load_editor_session_state_payload(payload)
@@ -130,7 +130,7 @@ def save_editor_session_state(
     try:
         state_path.parent.mkdir(parents=True, exist_ok=True)
         json_io.write_json_atomic(state_path, payload)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: session state persistence failures should log without breaking editor shutdown flows
         _LOG.warning("Failed to save editor session state to %s: %s", state_path, exc)
 
 

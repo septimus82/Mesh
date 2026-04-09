@@ -11,8 +11,22 @@ include = [
   "worlds/**"
 ]
 exclude = [
+  ".mesh/**",
+  ".mypy_cache/**",
+  ".pytest_cache/**",
+  ".ruff_cache/**",
+  ".venv/**",
+  ".vscode/**",
   ".git/**",
   "artifacts/**",
+  "build/**",
+  "dist/**",
+  "docs/**",
+  "examples/**",
+  "MagicMock/**",
   "__pycache__/**",
+  "plans/**",
+  "replays/**",
+  "saves/**",
   "tests/**"
 ]

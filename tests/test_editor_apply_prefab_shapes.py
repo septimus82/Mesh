@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import engine.editor_controller as editor_module
 from engine.editor_controller import EditorModeController
+from tests._editor_window_stub import EditorWindowStub, as_game_window
 
 
 class _StubSceneController:
@@ -49,16 +50,8 @@ def _build_controller(monkeypatch, prefab_entity: dict) -> EditorModeController:
     monkeypatch.setattr(editor_module, "load_prefab_palette", lambda *a, **k: [])
     monkeypatch.setattr("engine.prefabs.get_prefab_manager", lambda: _StubPrefabs(prefab_entity))
 
-    window = SimpleNamespace()
-    window.strict_mode = False
-    window.paused = False
-    window.width = 800
-    window.height = 600
-    window.scene_controller = _StubSceneController([])
-    window.screen_to_world = lambda x, y: (float(x), float(y))
-    window.camera_controller = SimpleNamespace(zoom=1.0)
-
-    controller = EditorModeController(window)  # type: ignore[arg-type]
+    window = EditorWindowStub(scene_controller=_StubSceneController([]))
+    controller = EditorModeController(as_game_window(window))
     controller.active = True
     return controller
 

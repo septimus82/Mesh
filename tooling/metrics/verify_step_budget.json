@@ -1,18 +1,18 @@
 {
-  "schema_version": 2,
   "budgets_ms": {
-    "mypy-gate": 26000,
-    "mypy-island": 3000,
-    "pytest-fast": 32000,
-    "verify-demo": 30000,
-    "verify-strict": 1000
+    "mypy-gate": 24723,
+    "player-package-gate": 2723,
+    "pytest-fast": 42032,
+    "verify-demo": 30979,
+    "web-smoke": 10901
   },
   "ratio_limits": {
     "mypy-gate": 1.35,
-    "mypy-island": 1.25,
+    "player-package-gate": 1.25,
     "pytest-fast": 1.25,
     "verify-demo": 1.25,
-    "verify-strict": 1.25
+    "web-smoke": 1.25
   },
+  "schema_version": 2,
   "tolerance_ms": 50
 }

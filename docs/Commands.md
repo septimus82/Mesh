@@ -32,7 +32,7 @@ By default it runs:
 
 - `verify-all --ci-bundle`
 - `package-player --smoke`
-- `web-smoke`
+- `web-smoke` via the `verify-all --ci-bundle` shipping gate
 
 ```bash
 python -m mesh_cli ship-check --artifacts artifacts
@@ -45,3 +45,13 @@ Useful optional flags:
 - `--skip-perf`
 - `--skip-verify`
 - `--quiet`
+
+### `verify-local`
+
+Runs a faster local verification subset for editor and runtime iteration.
+It reuses the existing strict validation, mypy island, swallow scan, exception policy scan, and `pytest-fast` checks.
+
+```bash
+python -m mesh_cli verify-local
+python -m mesh_cli verify-local --artifacts artifacts/local_verify
+```

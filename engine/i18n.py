@@ -37,7 +37,7 @@ def _load_locale(code: str) -> Dict[str, str]:
                     for k, v in raw.items()
                     if isinstance(k, str)
                 }
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: malformed locale files should fall back to an empty translation table
         data = {}
     _LOCALE_CACHE[code] = data
     return data
@@ -55,6 +55,6 @@ def tr(key: str, **fmt: Any) -> str:
     if fmt:
         try:
             return text.format(**fmt)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: translation formatting failures should fall back to the untranslated template text
             return text
     return text

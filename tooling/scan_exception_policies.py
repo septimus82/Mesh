@@ -1,7 +1,7 @@
 """Deterministic scanner for exception-handling policies.
 
 Scans Python source files and reports:
-- BLE001 suppression count  (``# noqa: BLE001``)
+- BLE001 suppression count  (``# noqa: BLE001  # REASON: documented example``)
 - Broad-catch count          (``except Exception`` / bare ``except:``)
 - Silent broad-catch count   (broad catches lacking SWALLOW logging or re-raise)
 
@@ -55,6 +55,8 @@ _SWALLOW_LOGGING_RE = re.compile(
 )
 
 _RAISE_RE = re.compile(r"^\s*raise\b")
+_MISSING_BLE001_REASON_SITES_LIMIT = 25
+_MISSING_BLE001_REASON_LOG_LIMIT = 5
 
 
 # ---------------------------------------------------------------------------
@@ -127,16 +129,25 @@ def _scan_file(
     try:
         raw = filepath.read_text(encoding="utf-8", errors="replace")
     except OSError:
-        return {"file": rel, "ble001": 0, "ble001_missing_reason": 0, "broad": 0, "silent": []}
+        return {
+            "file": rel,
+            "ble001": 0,
+            "ble001_missing_reason": 0,
+            "ble001_missing_reason_lines": [],
+            "broad": 0,
+            "silent": [],
+        }
 
     lines = raw.splitlines()
     ble001_total = 0
     ble001_missing_reason = 0
-    for ln in lines:
+    ble001_missing_reason_lines: list[int] = []
+    for lineno, ln in enumerate(lines, start=1):
         if _BLE001_RE.search(ln):
             ble001_total += 1
             if not _BLE001_WITH_REASON_RE.search(ln):
                 ble001_missing_reason += 1
+                ble001_missing_reason_lines.append(lineno)
     
     except_pass_count = len(_EXCEPT_PASS_RE.findall(raw))
 
@@ -150,6 +161,7 @@ def _scan_file(
             "file": rel,
             "ble001": ble001_total,
             "ble001_missing_reason": ble001_missing_reason,
+            "ble001_missing_reason_lines": ble001_missing_reason_lines,
             "except_pass": except_pass_count,
             "broad": 0,
             "silent": [],
@@ -172,10 +184,54 @@ def _scan_file(
         "file": rel,
         "ble001": ble001_total,
         "ble001_missing_reason": ble001_missing_reason,
+        "ble001_missing_reason_lines": ble001_missing_reason_lines,
         "except_pass": except_pass_count,
         "broad": broad_count,
         "silent": silent_entries,
     }
+
+
+def _build_missing_ble001_reason_summary(
+    sites: list[tuple[str, int]],
+    *,
+    limit: int = _MISSING_BLE001_REASON_SITES_LIMIT,
+) -> dict[str, Any]:
+    ordered_sites = sorted(
+        ((str(path), int(line)) for path, line in sites),
+        key=lambda item: (item[0], item[1]),
+    )
+    return {
+        "missing_ble001_reason_total": len(ordered_sites),
+        "missing_ble001_reason_sites_first": [
+            f"{path}:{line}" for path, line in ordered_sites[:limit]
+        ],
+        "missing_ble001_reason_sites_limit": int(limit),
+    }
+
+
+def _format_missing_ble001_reason_log(
+    payload: dict[str, Any],
+    *,
+    limit: int = _MISSING_BLE001_REASON_LOG_LIMIT,
+) -> str:
+    total = int(
+        payload.get(
+            "missing_ble001_reason_total",
+            payload.get("ble001_missing_reason_count", 0),
+        )
+    )
+    raw_sites = payload.get("missing_ble001_reason_sites_first")
+    sites = [
+        str(site).strip()
+        for site in raw_sites
+        if isinstance(site, str) and str(site).strip()
+    ] if isinstance(raw_sites, list) else []
+    shown = ", ".join(sites[:limit]) if sites else "none"
+    return (
+        "[exception-policy-scan] "
+        f"missing_ble001_reason_total={total} "
+        f"missing_ble001_reason_sites_first[{int(limit)}]={shown}"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +265,7 @@ def scan(
     total_except_pass = 0
     total_broad = 0
     all_silent: list[dict[str, Any]] = []
+    all_ble001_missing_reason_sites: list[tuple[str, int]] = []
     ble001_per_file: dict[str, int] = {}
     ble001_missing_reason_per_file: dict[str, int] = {}
     silent_per_file: dict[str, int] = {}
@@ -220,6 +277,9 @@ def scan(
         total_except_pass += result.get("except_pass", 0)
         total_broad += result["broad"]
         all_silent.extend(result["silent"])
+        all_ble001_missing_reason_sites.extend(
+            (result["file"], int(line)) for line in result.get("ble001_missing_reason_lines", [])
+        )
         if result["ble001"] > 0:
             ble001_per_file[result["file"]] = result["ble001"]
         if result["ble001_missing_reason"] > 0:
@@ -231,11 +291,13 @@ def scan(
     ble001_top = sorted(ble001_per_file.items(), key=lambda t: (-t[1], t[0]))
     ble001_missing_reason_top = sorted(ble001_missing_reason_per_file.items(), key=lambda t: (-t[1], t[0]))
     silent_top = sorted(silent_per_file.items(), key=lambda t: (-t[1], t[0]))
+    missing_ble001_reason_summary = _build_missing_ble001_reason_summary(all_ble001_missing_reason_sites)
 
     return {
         "schema_version": 1,
         "ble001_count_total": total_ble001,
         "ble001_missing_reason_count": total_ble001_missing_reason,
+        **missing_ble001_reason_summary,
         "except_pass_count_total": total_except_pass,
         "broad_catch_count_total": total_broad,
         "silent_broad_catch_count_total": len(all_silent),

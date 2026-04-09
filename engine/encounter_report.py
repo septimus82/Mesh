@@ -441,7 +441,7 @@ def generate_encounter_report(
                 data = json.load(f)
                 if "encounter_budget_profiles" in data:
                     profiles = data["encounter_budget_profiles"]
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: broken budget profile config should log once and fall back to default encounter profiles
             _log_swallow("ENCR-002", "engine/encounter_report.py blanket swallow", once=True)
             if not getattr(generate_encounter_report, "_mesh_profile_load_error_logged", False):
                 print(f"[Mesh][EncounterReport] ERROR loading encounter budget profiles: {exc}")
@@ -717,7 +717,7 @@ def compute_current_scene_encounter_report(scene_controller: Any) -> EncounterSc
     difficulty = str(profile).strip() if isinstance(profile, str) and profile.strip() else "normal"
     try:
         return _extract_stats(scene_data, scene_path, difficulty, cast(HeadlessSceneController, scene_controller))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: scene stat extraction is best-effort and should not abort encounter report generation
         _log_swallow("ENCR-005", "engine/encounter_report.py blanket swallow", once=True)
         return None
 

@@ -45,7 +45,11 @@ def test_planes_move_to_suggestions_with_context_falls_back_to_plane_ids_count()
 def test_provider_passes_planes_context_to_suggestions(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: list[dict[str, object] | None] = []
 
-    def _fake_build_arg_suggestions(command_id: str, raw_arg: str, context=None):  # type: ignore[no-untyped-def]
+    def _fake_build_arg_suggestions(
+        command_id: str,
+        raw_arg: str,
+        context: object | None = None,
+    ) -> list[str]:
         if command_id == "planes.move_to":
             captured.append(context)
         return ["top", "bottom", "last"]

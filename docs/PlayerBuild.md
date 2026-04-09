@@ -78,6 +78,7 @@ python -m mesh_cli verify-all --artifacts artifacts --ci-bundle
 Includes:
 
 - `player-package-gate`
+- `web-smoke`
 - builds `artifacts/player_pkg`
 - validates cleanliness + manifest determinism
 - runs packaged runtime smoke

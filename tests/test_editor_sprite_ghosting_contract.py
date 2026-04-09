@@ -14,6 +14,7 @@ from engine.editor.editor_sprite_ghosting import (
     apply_ghosting_to_sprites,
     restore_ghosted_sprites,
 )
+from tests._typing import as_any
 
 
 # -----------------------------------------------------------------------------
@@ -341,7 +342,7 @@ class TestGhostSpriteSnapshot:
         )
 
         with pytest.raises(AttributeError):
-            snapshot.entity_id = "changed"  # type: ignore
+            as_any(snapshot).entity_id = "changed"
 
     def test_allows_none_values(self) -> None:
         """Should allow None for both old_alpha and old_color_rgb."""

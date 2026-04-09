@@ -25,7 +25,7 @@ def _handle_validate_world(args: argparse.Namespace) -> int:
     try:
         with open(world_path, "r") as f:
             world = json.load(f)
-    except Exception as e:
+    except (OSError, json.JSONDecodeError) as e:
         print(f"Failed to parse world JSON: {e}")
         return 1
 
@@ -61,7 +61,7 @@ def _handle_world_add_scene(args: argparse.Namespace) -> int:
 
     try:
         raw_world = json.loads(resolved_world.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, json.JSONDecodeError) as exc:  # REASON: world CLI should report world JSON parse failures deterministically before validating the world structure
         print(f"[Mesh][CLI] Error: failed to parse world JSON: {normalize_scene_path(world_path)}: {exc}")
         return 1
 
@@ -233,7 +233,7 @@ def _handle_world_link_scenes(args: argparse.Namespace) -> int:
 
     try:
         world_payload = json.loads(resolved_world.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, json.JSONDecodeError) as exc:  # REASON: world CLI should report world JSON parse failures deterministically before inspecting scene mappings
         print(f"[Mesh][CLI] Error: failed to parse world JSON: {normalize_scene_path(world_path)}: {exc}")
         return 1
     if not isinstance(world_payload, dict):
@@ -278,7 +278,7 @@ def _handle_world_link_scenes(args: argparse.Namespace) -> int:
             return None
         try:
             raw_scene = json.loads(resolved_scene.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except (OSError, json.JSONDecodeError) as exc:  # REASON: world CLI should report scene JSON parse failures deterministically before applying scene defaults
             print(f"[Mesh][CLI] Error: failed to parse scene JSON: {normalize_scene_path(scene_path)}: {exc}")
             return None
         if not isinstance(raw_scene, dict):

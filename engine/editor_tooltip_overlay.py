@@ -44,7 +44,7 @@ class EditorTooltipOverlay(UIElement):
 
         try:
             mouse_x, mouse_y = get_mouse_pos()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: cursor position hooks are optional and should not block tooltip overlay updates
             return
 
         # Get window dimensions

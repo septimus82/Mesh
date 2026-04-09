@@ -94,7 +94,7 @@ class LightOccluderEditorOverlay(UIElement):
                         default = float(prop.get("default", 0.0))
                         try:
                             value = float(light.get(key, default))
-                        except Exception:  # noqa: BLE001
+                        except Exception:  # noqa: BLE001  # REASON: light occluder editor should fall back to the property default when a stored value is malformed
                             value = default
                         prefix = ">" if i == idx else " "
                         lines.append(f"{prefix} {prop.get('name')}: {value:.2f}")
@@ -152,7 +152,7 @@ class LightOccluderEditorOverlay(UIElement):
                     continue
                 try:
                     poly.append((float(entry[0]), float(entry[1])))
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: malformed stored polygon points should be skipped so the remaining occluder path can still be previewed
                     continue
             if len(poly) >= 2:
                 optional_arcade.arcade.draw_line_strip(poly, optional_arcade.arcade.color.YELLOW, 2)
@@ -166,7 +166,7 @@ class LightOccluderEditorOverlay(UIElement):
         if isinstance(draft, list) and len(draft) >= 1:
             try:
                 draft_poly = [(float(x), float(y)) for x, y in draft]
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: malformed draft points should clear the preview instead of breaking the light occluder overlay
                 draft_poly = []
             if len(draft_poly) >= 2:
                 optional_arcade.arcade.draw_line_strip(draft_poly, optional_arcade.arcade.color.ORANGE, 2)

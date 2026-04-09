@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -28,7 +29,7 @@ from mesh_cli.new_game import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_args(**overrides):  # type: ignore[no-untyped-def]
+def _make_args(**overrides: Any) -> object:
     """Build a minimal argparse.Namespace-like object."""
     import argparse
 

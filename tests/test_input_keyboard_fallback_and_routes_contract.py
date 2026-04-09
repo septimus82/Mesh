@@ -9,6 +9,7 @@ import pytest
 import engine.optional_arcade as optional_arcade
 from engine.input import InputManager
 from engine.input_controller import InputController
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -77,7 +78,7 @@ def test_bind_default_actions_include_arrow_movement_and_pause() -> None:
 
 def test_capture_route_falls_through_when_no_action_taken() -> None:
     window = _StubWindow(input_bindings=None, show_debug=False)
-    controller = InputController(window)  # type: ignore[arg-type]
+    controller = InputController(as_any(window))
     key = optional_arcade.arcade.key.P  # Routed to perf toggle.
 
     consumed = controller.on_key_press(key, 0)
@@ -88,7 +89,7 @@ def test_capture_route_falls_through_when_no_action_taken() -> None:
 
 def test_pause_menu_action_reachable_from_keyboard() -> None:
     window = _StubWindow(input_bindings={"move_up": ["W"]}, show_debug=False)
-    controller = InputController(window)  # type: ignore[arg-type]
+    controller = InputController(as_any(window))
     key = optional_arcade.arcade.key.ESCAPE
     dispatched: list[str] = []
 
@@ -108,7 +109,7 @@ def test_save_load_actions_reachable_in_gameplay_scope() -> None:
         },
         show_debug=False,
     )
-    controller = InputController(window)  # type: ignore[arg-type]
+    controller = InputController(as_any(window))
     key = optional_arcade.arcade.key
     dispatched: list[str] = []
 

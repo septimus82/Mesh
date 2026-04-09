@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 from engine.editor_controller import EditorModeController
 from engine.editor.scene_lint_model import SceneLintIssue
+from tests._typing import as_any
 
 
 def _create_mock_editor() -> EditorModeController:
@@ -27,7 +28,7 @@ def _create_mock_editor() -> EditorModeController:
     editor_module.PREFAB_PALETTE = []
     
     try:
-        controller = EditorModeController(window)  # type: ignore[arg-type]
+        controller = EditorModeController(as_any(window))
         controller.active = True
         return controller
     finally:

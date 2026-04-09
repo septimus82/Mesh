@@ -90,7 +90,7 @@ def validate_content_contract(
     for file_path in _unique_sorted(paths, repo_root):
         try:
             payload = json.loads(file_path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: malformed content payloads should record a contract error and skip only that file
             _log_swallow("CNCT-001", "engine/tooling/content_contract.py blanket swallow", once=True)
             errors.append(
                 ContractError(
@@ -502,7 +502,7 @@ def _load_prefab_ids(prefabs_path: Path) -> tuple[set[str], str | None]:
         return set(), None
     try:
         payload = json.loads(prefabs_path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: malformed prefabs.json payloads should report a prefab index error and skip only that prefab file
         _log_swallow("CNCT-004", "engine/tooling/content_contract.py blanket swallow", once=True)
         return set(), f"failed to parse prefabs.json: {exc}"
     if not isinstance(payload, list):

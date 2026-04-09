@@ -30,7 +30,7 @@ def record_recent_scene(window: Any, scene_path: str) -> None:
     try:
         while p in recent:
             recent.remove(p)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: recent-scene list cleanup failures should not block recording the current scene path
         _log_swallow("SCEN-001", "engine/game_runtime/scene_ops.py pass-only blanket swallow")
         pass
     recent.insert(0, p)
@@ -41,7 +41,7 @@ def record_recent_scene(window: Any, scene_path: str) -> None:
         on_recent = getattr(window, "_on_recent_scene_recorded", None)
         if callable(on_recent):
             on_recent(p)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: recent-scene callbacks are optional and should not break recent-scene bookkeeping
         _log_swallow("SCEN-002", "engine/game_runtime/scene_ops.py pass-only blanket swallow")
         pass
 

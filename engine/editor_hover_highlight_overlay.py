@@ -38,6 +38,7 @@ from engine.editor.editor_menu_hover_query import (
 )
 from engine.editor.editor_modal_state_query import get_active_menu_id
 from engine.logging_tools import get_logger
+from engine.ui_overlays.common import UIElement
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController
@@ -93,7 +94,7 @@ def _get_line_width_for_kind(kind: HoverHighlightKind) -> float:
     return HOVER_BORDER_WIDTH
 
 
-class EditorHoverHighlightOverlay:
+class EditorHoverHighlightOverlay(UIElement):
     """Overlay for rendering hover highlights.
     
     Handles both UI-space highlights (menu bar, dock tabs, etc.) and
@@ -106,7 +107,7 @@ class EditorHoverHighlightOverlay:
         Args:
             window: Game window to query controller from.
         """
-        self.window = window
+        super().__init__(window)
         self._visible = True
         self._cached_specs: Tuple[HoverHighlightSpec, ...] = ()
 

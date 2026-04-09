@@ -2,21 +2,17 @@ from __future__ import annotations
 
 import copy
 import importlib
-import json
-import os
-import time
 import sys
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple
+import time as _time
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+
 import engine.optional_arcade as optional_arcade
-
-from engine.logging_tools import get_logger; logger = get_logger(__name__)
-
-from engine.asset_index import AssetRow
-from engine.asset_place_overlay import draw_asset_placement_ghost
+from engine.editor.editor_file_ops_controller import EditorFileOpsController
+from engine.logging_tools import get_logger
 from engine.repo_root import get_repo_root
 
-from .behaviours import get_behaviour_param_defs
+from .behaviours import get_behaviour_param_defs as _get_behaviour_param_defs
 from .behaviours.utils import (
     HITBOX_CANONICAL,
     HITBOX_CLASSNAMES,
@@ -24,139 +20,54 @@ from .behaviours.utils import (
     TRIGGER_ZONE_CLASSNAMES,
     ZONE_TARGET_HITBOX,
     ZONE_TARGET_TRIGGER,
-    describe_zone_behaviour,
 )
 from .editor_palette import DEFAULT_PREFAB_PATH
-from .editor_entity_ops import EntitySummary
-from .editor_prefab_variant_ops import DiffRow
 from .editor_runtime import ops as editor_ops
-from engine.editor.editor_search_controller import EditorSearchController
-from engine.editor.editor_file_ops_controller import EditorFileOpsController
-from engine.editor.editor_project_explorer_controller import ProjectExplorerController
-from engine.editor.editor_project_explorer_actions_controller import (
-    EditorProjectExplorerActionsController,
-)
-from engine.editor.editor_entity_panels_controller import EditorEntityPanelsController
-from engine.editor.editor_hierarchy_controller import EditorHierarchyController
-from engine.editor.editor_draw_controller import EditorDrawController
-from engine.editor.editor_cursor_controller import EditorCursorController
-from engine.editor.editor_problems_actions_controller import EditorProblemsActionsController
-from engine.editor.editor_find_actions_controller import EditorFindActionsController
-from engine.editor.editor_entity_ops_controller import EditorEntityOpsController
-from engine.editor.editor_command_dispatch_controller import EditorCommandDispatchController
-from engine.editor.editor_align_controller import EditorAlignController
-from engine.editor.editor_scene_browse_controller import EditorSceneBrowseController
-from engine.editor.editor_scene_open_controller import EditorSceneOpenController
-from engine.editor.editor_problems_controller import ProblemsController
-from engine.editor.editor_panels_controller import EditorPanelsController
-from engine.editor.editor_dock_controller import EditorDockController
-from engine.editor.editor_hover_state_controller import EditorHoverStateController
-from engine.editor.editor_history_controller import EditorHistoryController
-from engine.editor.editor_inspector_controller import EditorInspectorController
-from engine.editor.editor_dialogue_controller import EditorDialogueController
-from engine.editor.editor_debug_panels_controller import EditorDebugPanelsController
-from engine.editor.editor_debug_overlay_controller import EditorDebugOverlayController
-from engine.editor.editor_overlay_controller import EditorOverlayController
-from engine.editor.editor_tool_controller import EditorToolController
-from engine.editor.editor_animation_controller import EditorAnimationController
-from engine.editor.editor_tile_controller import EditorTileController
-from engine.editor.editor_lights_controller import EditorLightsController
-from engine.editor.editor_palette_controller import EditorPaletteController
-from engine.editor.editor_prefab_controller import EditorPrefabController
-from engine.editor.editor_shape_controller import EditorShapeController
-from engine.editor.editor_clipboard_controller import EditorClipboardController
-from engine.editor.editor_hd2d_controller import EditorHd2dController
-from engine.editor.editor_duplicate_controller import EditorDuplicateController
-from engine.editor.editor_marquee_controller import EditorMarqueeController
-from engine.editor.editor_play_controller import EditorPlayController
-from engine.editor.editor_keymap_controller import EditorKeymapController
-from engine.editor.editor_dock_query import get_effective_dock_widths
-from engine.editor.editor_providers_controller import EditorProvidersController
-from .editor_light_occluder_ops import (
-    COOKIE_PRESETS,
-    LIGHT_COLOR_PRESETS,
-    LIGHTING_PRESET_ORDER,
-    LIGHTING_PRESETS,
-    add_occluder,
-    add_light,
-    capture_lighting_preset,
-    apply_lighting_preset as apply_lighting_preset_ops,
-    apply_occluder_command,
-    build_delete_polygon_cmd,
-    build_finish_polygon_cmd,
-    build_insert_point_cmd,
-    build_move_point_cmd,
-    build_remove_point_cmd,
-    cycle_light_color,
-    cycle_light_cookie,
-    ensure_scene_lights,
-    ensure_scene_occluders,
-    find_closest_edge_insert_index,
-    invert_occluder_command,
-    toggle_light_flicker,
-    update_light_property,
-)
 from .import_tools import repair_package_submodule_attr
-from .i18n import tr
-from .ui_overlays.common import (
-    _draw_rectangle_filled,
-    draw_outline_centered,
-    draw_panel_bg,
-)
-from engine.repo_root import get_repo_root
 
 if TYPE_CHECKING:
-    from .game import GameWindow
-    from .scene_index import SceneRow
+    from engine.editor.editor_command_dispatch_controller import (
+        EditorCommandDispatchController,
+    )
+    from engine.editor.editor_cursor_controller import EditorCursorController
+    from engine.editor.editor_dock_controller import EditorDockController
+    from engine.editor.editor_draw_controller import EditorDrawController
     from engine.workspace_settings import WorkspaceSettings
+    from .editor.editor_gizmo_feedback import GizmoFeedbackState
+    from .editor.editor_hd2d_controller import EditorHd2dController
+    from .editor.editor_hierarchy_controller import EditorHierarchyController
+    from .editor.editor_keymap_controller import EditorKeymapController
+    from .editor.editor_lights_controller import EditorLightsController
+    from .editor.editor_marquee_controller import EditorMarqueeController
+    from .editor.editor_overlay_controller import EditorOverlayController
+    from .editor.editor_palette_controller import EditorPaletteController
+    from .editor.editor_play_controller import EditorPlayController
+    from .editor.editor_prefab_controller import EditorPrefabController
+    from .editor.editor_shape_controller import EditorShapeController
+    from .editor.editor_undo_controller import EditorUndoController
+    from .editor.editor_entity_ops_controller import EditorEntityOpsController
+    from .editor.editor_duplicate_controller import EditorDuplicateController
+    from .editor.keymap_override_model import ScopedOverrides
+    from .game import GameWindow
 
 # Import from extracted modules
-from .editor.state import (
-    TOOL_MODE_MOVE,
-    TOOL_MODE_PATH,
-    TOOL_MODE_ZONE,
-    TRANSFORM_MODE_MOVE,
-    TRANSFORM_MODE_ROTATE,
-    TRANSFORM_MODE_SCALE,
-    ENTITY_PANEL_FOCUS_OUTLINER,
-    ENTITY_PANEL_FOCUS_INSPECTOR,
-    ENTITY_PANEL_FIELDS,
-    EditorDirtyState,
-    EditorPlaySession,
+from .editor.editor_controller_bootstrap import (
+    bootstrap_browser_state as _bootstrap_browser_state,
 )
-from .editor.scene_opening import (
-    open_scene_by_id as _open_scene_by_id_impl,
+from .editor.editor_controller_bootstrap import (
+    bootstrap_dependencies as _bootstrap_dependencies,
 )
-from .editor.editor_asset_browser_controller import EditorAssetBrowserController
-from .editor.editor_workspace_controller import EditorWorkspaceController
-from .editor.editor_selection_controller import EditorSelectionController
-from .editor.editor_scene_ops import EditorSceneOpsController
-from .editor.editor_undo_controller import EditorUndoController
-from .editor.editor_ui_flow_controller import EditorUIFlowController
-from .editor.editor_session_controller import EditorSessionController
-from .editor.editor_unsaved_changes_controller import EditorUnsavedChangesController
-from .editor.input_router import bind_input_router_methods as _bind_input_router_methods
-from .editor.selection_clipboard import (
-    bind_selection_clipboard_methods as _bind_selection_clipboard_methods,
+from .editor.editor_controller_bootstrap import (
+    bootstrap_overlay_state as _bootstrap_overlay_state,
 )
-from .editor.overlays_modals import (
-    bind_overlays_modals_methods as _bind_overlays_modals_methods,
+from .editor.editor_controller_bootstrap import (
+    bootstrap_runtime_state as _bootstrap_runtime_state,
 )
-
-from .editor.editor_controller_workspace_lifecycle import (
-    bind_workspace_lifecycle_methods as _bind_workspace_lifecycle_methods,
-)
-from .editor.editor_controller_ui_state import (
-    bind_ui_state_methods as _bind_ui_state_methods,
-)
-from .editor.editor_controller_scene_ops import (
-    bind_scene_ops_methods as _bind_scene_ops_methods,
+from .editor.editor_controller_content_panels_bridge import (
+    bind_content_panels_bridge_methods as _bind_content_panels_bridge_methods,
 )
 from .editor.editor_controller_diagnostics_bridge import (
     bind_diagnostics_bridge_methods as _bind_diagnostics_bridge_methods,
-)
-from .editor.editor_controller_input_routing import (
-    bind_input_routing_methods as _bind_input_routing_methods,
 )
 from .editor.editor_controller_entity_panels_bridge import (
     bind_entity_panels_bridge_methods as _bind_entity_panels_bridge_methods,
@@ -164,15 +75,47 @@ from .editor.editor_controller_entity_panels_bridge import (
 from .editor.editor_controller_find_browser_bridge import (
     bind_find_browser_bridge_methods as _bind_find_browser_bridge_methods,
 )
-from .editor.editor_controller_content_panels_bridge import (
-    bind_content_panels_bridge_methods as _bind_content_panels_bridge_methods,
+from .editor.editor_controller_input_routing import (
+    bind_input_routing_methods as _bind_input_routing_methods,
 )
 from .editor.editor_controller_project_explorer_bridge import (
     bind_project_explorer_bridge_methods as _bind_project_explorer_bridge_methods,
 )
+from .editor.editor_controller_scene_ops import (
+    bind_scene_ops_methods as _bind_scene_ops_methods,
+)
+from .editor.editor_controller_ui_state import (
+    bind_ui_state_methods as _bind_ui_state_methods,
+)
+from .editor.editor_controller_workspace_lifecycle import (
+    bind_workspace_lifecycle_methods as _bind_workspace_lifecycle_methods,
+)
+from .editor.editor_scene_ops import EditorSceneOpsController
+from .editor.editor_selection_controller import EditorSelectionController
+from .editor.editor_session_controller import EditorSessionController
+from .editor.editor_ui_flow_controller import EditorUIFlowController
+from .editor.editor_workspace_controller import EditorWorkspaceController
+from .editor.input_router import bind_input_router_methods as _bind_input_router_methods
+from .editor.overlays_modals import (
+    bind_overlays_modals_methods as _bind_overlays_modals_methods,
+)
+from .editor.selection_clipboard import (
+    bind_selection_clipboard_methods as _bind_selection_clipboard_methods,
+)
+from .editor.state import (
+    EditorDirtyState,
+)
+from .editor import state as _editor_state
+
+logger = get_logger(__name__)
 
 ZONE_BEHAVIOUR_CANONICAL = TRIGGER_ZONE_CANONICAL | HITBOX_CANONICAL
 ZONE_BEHAVIOUR_CLASSNAMES = TRIGGER_ZONE_CLASSNAMES | HITBOX_CLASSNAMES
+TOOL_MODE_MOVE = _editor_state.TOOL_MODE_MOVE
+TOOL_MODE_PATH = _editor_state.TOOL_MODE_PATH
+TOOL_MODE_ZONE = _editor_state.TOOL_MODE_ZONE
+get_behaviour_param_defs = _get_behaviour_param_defs
+time = _time
 
 
 PREFAB_PALETTE: list[dict[str, Any]] | None = None
@@ -217,11 +160,20 @@ def load_prefab_palette(*args: Any, **kwargs: Any) -> list[dict[str, Any]]:
             if current_id is not _MODULE_INSTANCE_ID:
                 fn = getattr(current, "load_prefab_palette", None)
                 if callable(fn) and fn is not load_prefab_palette:
-                    return fn(*args, **kwargs)
-        except Exception: logger.debug("SWALLOW[%s] %s", "EDIT-001", "engine/editor_controller.py pass-only blanket swallow", exc_info=True); pass
+                    forwarded = _coerce_prefab_palette_rows(fn(*args, **kwargs))
+                    if forwarded is not None:
+                        return forwarded
+        except Exception:
+            logger.debug(
+                "SWALLOW[%s] %s",
+                "EDIT-001",
+                "engine/editor_controller.py pass-only blanket swallow",
+                exc_info=True,
+            )
     from .editor_palette import load_prefab_palette as _impl
 
-    return _impl(*args, **kwargs)
+    loaded = _coerce_prefab_palette_rows(_impl(*args, **kwargs))
+    return loaded if loaded is not None else []
 
 
 def get_prefab_palette() -> list[dict[str, Any]]:
@@ -232,15 +184,105 @@ def get_prefab_palette() -> list[dict[str, Any]]:
             if current_id is not _MODULE_INSTANCE_ID:
                 fn = getattr(current, "get_prefab_palette", None)
                 if callable(fn) and fn is not get_prefab_palette:
-                    return fn()
-        except Exception: logger.debug("SWALLOW[%s] %s", "EDIT-002", "engine/editor_controller.py pass-only blanket swallow", exc_info=True); pass
+                    forwarded = _coerce_prefab_palette_rows(fn())
+                    if forwarded is not None:
+                        return forwarded
+        except Exception:
+            logger.debug(
+                "SWALLOW[%s] %s",
+                "EDIT-002",
+                "engine/editor_controller.py pass-only blanket swallow",
+                exc_info=True,
+            )
 
     global PREFAB_PALETTE
     if PREFAB_PALETTE is None:
         PREFAB_PALETTE = load_prefab_palette()
     return PREFAB_PALETTE
 
+
+def _coerce_prefab_palette_rows(value: object) -> list[dict[str, Any]] | None:
+    if not isinstance(value, list):
+        return None
+    rows: list[dict[str, Any]] = []
+    for entry in value:
+        if not isinstance(entry, dict):
+            return None
+        rows.append(entry)
+    return rows
+
 class EditorModeController:
+    _file_ops_ctl: EditorFileOpsController
+    _ui_flow_ctl: EditorUIFlowController
+    _selection_ctl: EditorSelectionController
+    _scene_ops: EditorSceneOpsController
+    _workspace_ctl: EditorWorkspaceController
+    undo: EditorUndoController
+    lights: EditorLightsController
+    play: EditorPlayController
+    palette: EditorPaletteController
+    hd2d: EditorHd2dController
+    duplicate: EditorDuplicateController
+    marquee: EditorMarqueeController
+    keymap: EditorKeymapController
+    draw: EditorDrawController
+    overlay: EditorOverlayController
+    prefab: EditorPrefabController
+    shape: EditorShapeController
+    entity_ops: EditorEntityOpsController
+    command_dispatch: EditorCommandDispatchController
+    dock: EditorDockController
+    cursor: EditorCursorController
+    hierarchy: EditorHierarchyController
+    entity_panels_active: bool
+    entity_panels_focus: str
+    scene_switcher_active: bool
+    scene_browser_active: bool
+    asset_browser_active: bool
+    asset_browser_filter: str
+    asset_browser_kind: str
+    hierarchy_filter: str
+    hierarchy_rename_buffer: str
+    dialogue_edit_buffer: str
+    animation_edit_buffer: str
+    tile_panel_active: bool
+    lights_tool_active: bool
+    lights_selection: Optional[int]
+    lights_dragging: bool
+    lights_original_pos: Optional[tuple[float, float]]
+    occluder_tool_active: bool
+    occluder_dragging: bool
+    occluder_drag_origin: Optional[tuple[float, float]]
+    asset_place_active: bool
+    selected_waypoint_index: int
+    transform_mode: str
+    snap_enabled: bool
+    snap_mode: str
+    shape_drag_index: int
+    shape_snap_enabled: bool
+    _entity_panels_selected_id: str | None
+    _ghost_originals_enabled: bool
+    _ghost_originals_alpha: int
+    _ghost_originals_dim_scale: float
+    _hd2d_default_preset_id: str | None
+    _hd2d_batch_radius_px: int
+    _menu_active: Optional[str]
+    _menu_hover_item_id: Optional[str]
+    _context_menu_x: float
+    _context_menu_y: float
+    _context_menu_hover_id: Optional[str]
+    _multiselect_drag_starts: Dict[str, tuple[float, float]]
+    _move_preview_delta_xy: Tuple[float, float] | None
+    _rotate_drag_active: bool
+    _rotate_preview_delta_deg: float | None
+    _scale_drag_active: bool
+    _scale_preview_factor: float | None
+    _transform_drag_mouse_start: Tuple[float, float] | None
+    _transform_drag_pivot: Tuple[float, float] | None
+    _transform_drag_start_rots: Dict[str, float]
+    _transform_drag_start_scales: Dict[str, float]
+    _transform_snap_active: bool
+
     def __init__(self, window: GameWindow):
         self.window = window
         self.active: bool = False
@@ -248,7 +290,7 @@ class EditorModeController:
         self.entity_dragging: bool = False
         self.entity_drag_start_pos: Optional[tuple[float, float]] = None
         self.grid_size: float = 16.0
-        self._repo_root_override: Any = None  # For testing: set to a Path to override get_repo_root
+        self._repo_root_override: Path | None = None  # For testing: set to a Path to override get_repo_root
         # _keymap_overrides - DELEGATED to EditorKeymapController
         # Panel/controller wiring (set by EditorPanelsController)
         self.ui_layers: Any = None
@@ -257,118 +299,9 @@ class EditorModeController:
         self.confirm_modal: Any = None
         self.confirm_modal_overlay: Any = None
         self.project_context_menu_overlay: Any = None
-        
-        # Sub-controllers (Vertical Slice Diet V2)
-        # We initialize these early so legacy fields can be proxied to them
-        self._workspace_ctl = EditorWorkspaceController(self)
-        self._selection_ctl = EditorSelectionController(self)
-        self._scene_ops = EditorSceneOpsController(self)
-        self.undo = EditorUndoController(self, max_history=50)
-        self._ui_flow_ctl = EditorUIFlowController(self)
-        self.search = EditorSearchController(self, self._ui_flow_ctl)
-        self._file_ops_ctl = EditorFileOpsController(self)
-        self.session = EditorSessionController()
-        from engine.editor.editor_focus_controller import EditorFocusController  # noqa: PLC0415
-
-        self.focus = EditorFocusController(self)
-        self.project_explorer = ProjectExplorerController(self._get_repo_root())
-        self.project_explorer_actions = EditorProjectExplorerActionsController(self)
-        self.scene_browse = EditorSceneBrowseController(self)
-        self.scene_open = EditorSceneOpenController(self)
-        self.problems = ProblemsController(include_structured_diagnostics=True)
-        self.panels = EditorPanelsController(self)
-        self.providers = EditorProvidersController(self)
-        self.unsaved_confirm = EditorUnsavedChangesController(self)
-        self.dialogue = EditorDialogueController(self)
-        self.debug_panels = EditorDebugPanelsController(self)
-        self.debug_overlay = EditorDebugOverlayController(self)
-        self.overlay = EditorOverlayController(self)
-        self.tool = EditorToolController(self)
-        self.animation = EditorAnimationController(self)
-        self.tile = EditorTileController(self)
-        self.lights = EditorLightsController(self)
-        self.shape = EditorShapeController(self)
-        self.palette = EditorPaletteController(self)
-        self.prefab = EditorPrefabController(self)
-        self.inspector = EditorInspectorController(self)
-        self.clipboard = EditorClipboardController(self)
-        self.hd2d = EditorHd2dController(self)
-        self.duplicate = EditorDuplicateController(self)
-        self.marquee = EditorMarqueeController(self)
-        self.play = EditorPlayController(self)
-        self.keymap = EditorKeymapController(self)
-        self.entity_panels_controller = EditorEntityPanelsController(self)
-        self.hierarchy = EditorHierarchyController(self)
-        self.asset_browser = EditorAssetBrowserController(self)
-        self.draw = EditorDrawController(self)
-        self.cursor = EditorCursorController(self)
-        self.problems_actions = EditorProblemsActionsController(self)
-        self.find_actions = EditorFindActionsController(self)
-        self.entity_ops = EditorEntityOpsController(self)
-        self.command_dispatch = EditorCommandDispatchController(self)
-        self.align = EditorAlignController(self)
-
-        # Multi-selection state
-        # DELEGATED to EditorSelectionController
-        # self._selected_entity_ids: List[str] = []
-        # self._primary_entity_id: Optional[str] = None
-        self._multiselect_drag_starts: Dict[str, tuple[float, float]] = {}
-
-        # Inspector state
-        self.inspector_active: bool = False
-        self.inspector_selection_index: int = 0
-        self._cached_inspector_items: List[Dict[str, Any]] = []
-        self._last_entity_revision: int = 0
-
-        # Entity panels (Outliner/Inspector)
-        self.entity_panels_active: bool = False
-        self.entity_panels_focus: str = ENTITY_PANEL_FOCUS_OUTLINER
-        self.entity_panels_filter: str = ""
-        self.entity_panels_filter_active: bool = False
-        self.entity_panels_selection_index: int = 0
-        self.entity_panels_inspector_index: int = 0
-        self.entity_panels_text_edit_active: bool = False
-        self.entity_panels_text_field: str | None = None
-        self.entity_panels_text_buffer: str = ""
-        self._cached_entity_panels_list: List[EntitySummary] = []
-        self._entity_panels_selected_id: str | None = None
-
-        # Scene switcher state
-        self.scene_switcher_active: bool = False
-        self.scene_switcher_query: str = ""
-        self.scene_switcher_index: int = 0
-        # self.scene_switcher_recent: list[str] = [] # DELEGATED to EditorWorkspaceController
-        self._scene_switcher_cached: list[tuple[str, str]] = []
-
-        # Scene browser state
-        self.scene_browser_active: bool = False
-        self.scene_browser_query: str = ""
-        self.scene_browser_index: int = 0
-        self._scene_browser_cached_rows: list["SceneRow"] = []
-
-        # Asset browser state
-        self.asset_browser_active: bool = False
-        self.asset_browser_filter: str = ""
-        self.asset_browser_kind: str = "All"
-        self.asset_browser_selection_index: int = 0
-        self._asset_browser_cached_rows: list[AssetRow] = []
-        self._asset_browser_filtered_rows: list[AssetRow] = []
-
-        # Undo history controller
-        self.history = EditorHistoryController(self)
-
-        # Problems panel state
-        # MOVED to self.problems (ProblemsController)
-
-        # Find Everything launcher state
-        # DELEGATED to EditorUIFlowController
-        # self._find_everything_open: bool = False
-        # self._find_everything_query: str = ""
-        # self._find_everything_selection_index: int = 0
-        # self._find_everything_cached_results: list[Any] = []
-        # self._find_everything_all_results: list[Any] = []
-        # self._find_everything_counts: dict[str, object] = {"total": 0, "by_group": {}}
-        # self._find_asset_lookup: dict[str, Any] = {}
+        self.session: EditorSessionController
+        _bootstrap_dependencies(self)
+        _bootstrap_browser_state(self)
 
         # Palette state
         self.palette_active: bool = False
@@ -387,202 +320,14 @@ class EditorModeController:
         self._cached_palette_list: List[Dict[str, Any]] = list(self.prefab_palette)
         self._palette_thumb_textures: Dict[str, optional_arcade.arcade.Texture] = {}
         self._palette_tag_ranked: List[str] = []
-
-        # Command palette state delegated to EditorSearchController
-
-        # Menu bar state
-        self._menu_active: Optional[str] = None
+        _bootstrap_runtime_state(self)
         self._menu_hover_item_id: Optional[str] = None
-
-        # Context menu state (right-click menu)
-        self._context_menu_x: float = 0.0
-        self._context_menu_y: float = 0.0
         self._context_menu_hover_id: Optional[str] = None
-
-        # Dock state controller (tabs + sizing/collapse)
-        self.dock = EditorDockController(self.session, left_tab="Outliner", right_tab="Inspector")
-        self.hover = EditorHoverStateController(self.dock)
-
-        # Component Inspector state (for right dock "Inspector" tab)
-        self._inspector_sections_expanded: Dict[str, bool] = {}  # section_id -> expanded
-        self._inspector_cursor: Tuple[str, int] = ("transform", 0)  # (section_id, row_index)
-        self._inspector_text_edit_active: bool = False
-        self._inspector_text_buffer: str = ""
-        
-        # Component Inspector v1 state
-        self._component_inspector_index: int = 0  # Selection index in flattened row list
-        self._add_component_picker_active: bool = False
-        self._add_component_picker_index: int = 0
-        self._add_component_picker_options: List[str] = []  # ["sprite", "light", "collider"]
-
-        # Clipboard state - DELEGATED to EditorClipboardController
-        # self._entity_clipboard: Optional[Dict[str, Any]] = None
-        # self._entity_clipboard_source_id: Optional[str] = None
-        # self._hd2d_overrides_clipboard: Optional[Dict[str, Any]] = None
-
-        # HD-2D batch paste radius (loaded from workspace settings)
-        self._hd2d_batch_radius_px: int = 96
-
-        # Tool state
-        self.tool_mode: str = TOOL_MODE_MOVE
-        self.transform_mode: str = TRANSFORM_MODE_MOVE  # "move", "rotate", "scale"
-        self.selected_waypoint_index: int = -1
-        self.zone_behaviour_index: int = 0
-        self.zone_edit_target: str = ZONE_TARGET_TRIGGER
-
-        # Rotate/Scale drag state
-        self._rotate_drag_active: bool = False
-        self._scale_drag_active: bool = False
-        self._transform_drag_pivot: Tuple[float, float] | None = None
-        self._transform_drag_mouse_start: Tuple[float, float] | None = None
-        self._transform_drag_start_rots: Dict[str, float] = {}
-        self._transform_drag_start_scales: Dict[str, float] = {}
-
-        # Transform preview state for gizmo overlay
-        self._move_preview_delta_xy: Tuple[float, float] | None = None
-        self._rotate_preview_delta_deg: float | None = None
-        self._scale_preview_factor: float | None = None
-        self._transform_snap_active: bool = False
-
-        # Marquee box selection state - DELEGATED to EditorMarqueeController
-        # State accessed via marquee controller: _marquee_active, _marquee_start_world, etc.
-
-        # Alt-drag duplicate state - DELEGATED to EditorDuplicateController
-        # State accessed via duplicate controller: _alt_dup_active, _alt_dup_specs, etc.
-
-        # Cursor hint state - DELEGATED to EditorCursorController
-        # State accessed via cursor controller: _last_mouse_x, _last_mouse_y
-
-        # Undo/Redo state
-        # DELEGATED to EditorSceneOpsController
-        # self.undo_stack: List[Dict[str, Any]] = []
-        # self.redo_stack: List[Dict[str, Any]] = []
-        # self.scene_dirty: bool = False
-        self.dirty_state = EditorDirtyState()
-        self.play_session = EditorPlaySession()
-
-        # Hierarchy state
-        self.hierarchy_active: bool = False
-        self.hierarchy_filter: str = ""
-        self.hierarchy_selection_index: int = 0
-        self.hierarchy_filter_active: bool = False
-        self.hierarchy_rename_active: bool = False
-        self.hierarchy_rename_buffer: str = ""
-        self._cached_hierarchy_list: List[optional_arcade.arcade.Sprite] = []
-        self._hierarchy_name_cache: Dict[int, str] = {}
-
-
-        # Dialogue / Quest inspector state
-        self.dialogue_panel_active: bool = False
-        self.dialogue_selected_node: int = 0
-        self.dialogue_selected_choice: int = 0
-        self.dialogue_field_focus: str = "node_text"
-        self.dialogue_editing: bool = False
-        self.dialogue_edit_buffer: str = ""
-        self._cached_dialogue_nodes: List[str] = []
-        self._dialogue_warnings: List[str] = []
-
-        # Animation panel state
-        self.animation_active: bool = False
-        self.animation_selected_index: int = 0
-        self.animation_field_focus: str = "mode"
-        self.animation_editing: bool = False
-        self.animation_edit_buffer: str = ""
-        self._cached_animation_names: List[str] = []
-
-        # Tile painting state
-        self.tile_panel_active: bool = False
         self.session.set_tile_paint_active(self.tile_panel_active)
-        self.tile_palette: List[int] = []
-        self.tile_palette_index: int = 0
-        self.tile_layer_index: int = 0
-        self.tile_layers: List[str] = []
-        # Lights tool state
-        self.lights_tool_active: bool = False
-        self.lights_selection: Optional[int] = None
-        self.lights_dragging: bool = False
-        self.lights_drag_start: Optional[tuple[float, float]] = None
-        self.lights_original_pos: Optional[tuple[float, float]] = None
-        self._light_color_palette: List[str] = list(LIGHT_COLOR_PRESETS)
-        self._light_cookie_palette: List[str | None] = list(COOKIE_PRESETS)
-        self.light_property_index: int = 0
-        self._light_property_defs: list[dict[str, Any]] = [
-            {"name": "radius_px", "key": "radius", "default": 160.0, "step": 4.0, "min": 8.0},
-            {"name": "flicker_amount", "key": "flicker_amount", "default": 0.0, "step": 0.05, "min": 0.0, "max": 1.0},
-            {"name": "flicker_speed", "key": "flicker_speed", "default": 1.0, "step": 0.25, "min": 0.0},
-            {"name": "cookie_scale", "key": "cookie_scale", "default": 1.0, "step": 0.1, "min": 0.0},
-            {"name": "cookie_rotation_deg", "key": "cookie_rotation_deg", "default": 0.0, "step": 5.0, "wrap": 360.0},
-        ]
-        self.lighting_preset_label: str | None = None
-        self.lighting_preset_until: float = 0.0
-
-        # HD-2D preset preview state - DELEGATED to EditorHd2dController
-        # State accessed via hd2d controller: _hd2d_preview_active, _hd2d_preview_snapshot, _hd2d_preview_preset_id
-
-        # Scene occluder tool state
-        self.occluder_tool_active: bool = False
-        self.occluder_points: List[tuple[float, float]] = []
-        self.occluder_selection: Optional[int] = None
-        self.occluder_vertex_selection: Optional[int] = None
-        self.occluder_dragging: bool = False
-        self.occluder_drag_origin: Optional[tuple[float, float]] = None
-
-        # Asset Placement Mode
-        self.asset_place_active: bool = False
-        self.asset_place_path: Optional[str] = None
-        self.asset_place_kind: Optional[str] = None
-
-        # Snap settings (lights + occluders)
-        self.snap_enabled: bool = False
-        self.snap_mode: str = "grid16"
-
-        # Ghost originals settings (for alt-drag duplicate visual feedback)
-        self._ghost_originals_enabled: bool = True
-        self._ghost_originals_alpha: int = 90
-        self._ghost_originals_dim_scale: float = 0.65
-
-        # HD2D default preset (for auto-apply on new scenes)
-        self._hd2d_default_preset_id: str | None = None
 
         self._workspace_ctl.load_on_startup()
         self.load_keymap_overrides()
-
-        # Shape editing state (entity-local collision/occluder polygons)
-        self.shape_edit_mode: Optional[str] = None
-        self.shape_edit_points: List[tuple[float, float]] = []
-        self.shape_edit_original: List[tuple[float, float]] = []
-        self.shape_edit_entity: Optional[optional_arcade.arcade.Sprite] = None
-        self.shape_drag_index: int = -1
-        self.shape_snap_enabled: bool = False
-        self._status_message: str | None = None
-        self._status_until: float = 0.0
-        self._show_swallowed_exceptions_overlay: bool = False
-        self._swallowed_exceptions_overlay_summary: str = "no swallowed exceptions recorded"
-        self._swallowed_exceptions_overlay_distinct_sites: int = 0
-        self._swallowed_exceptions_overlay_total_count: int = 0
-        self._swallowed_exceptions_overlay_next_refresh_ts: float = 0.0
-
-        # UI Text Objects (Optimization)
-        self._overlay_text_obj = optional_arcade.arcade.Text(
-            text="",
-            x=10,
-            y=0, # Updated dynamically
-            color=optional_arcade.arcade.color.YELLOW,
-            font_size=12,
-            font_name="Consolas",
-            multiline=True,
-            width=400
-        )
-        self._palette_text_obj = optional_arcade.arcade.Text(
-            text="",
-            x=0, # Updated dynamically
-            y=0,
-            color=optional_arcade.arcade.color.WHITE,
-            font_size=12,
-            font_name="Consolas",
-            multiline=True,
-            width=200
-        )
+        _bootstrap_overlay_state(self)
 
     # -- Sub-Controller Accessors --
 
@@ -610,17 +355,6 @@ class EditorModeController:
         return self._workspace_ctl
 
     # -- EditorUiFlowHost Protocol Implementation --
-    
-        
-        
-        
-        
-        
-
-
-
-        
-        
 
     # -- Vertical Slice Diet V2 Delegation Properties --
 
@@ -639,7 +373,7 @@ class EditorModeController:
     @recent_projects.setter
     def recent_projects(self, value: List[str]) -> None:
         self._workspace_ctl.recent_projects = value
-        
+
     @property
     def scene_switcher_recent(self) -> List[str]:
         return self._workspace_ctl.recent_scenes
@@ -650,33 +384,19 @@ class EditorModeController:
 
     @property
     def undo_stack(self) -> List[Dict[str, Any]]:
-        undo_ctrl = getattr(self, "undo", None)
-        if undo_ctrl is not None and hasattr(undo_ctrl, "undo_stack"):
-            return undo_ctrl.undo_stack
-        return []
+        return self.undo.undo_stack
 
     @undo_stack.setter
     def undo_stack(self, value: List[Dict[str, Any]]) -> None:
-        undo_ctrl = getattr(self, "undo", None)
-        if undo_ctrl is not None and hasattr(undo_ctrl, "set_undo_stack"):
-            undo_ctrl.set_undo_stack(value)
-            return
-        return
+        self.undo.set_undo_stack(value)
 
     @property
     def redo_stack(self) -> List[Dict[str, Any]]:
-        undo_ctrl = getattr(self, "undo", None)
-        if undo_ctrl is not None and hasattr(undo_ctrl, "redo_stack"):
-            return undo_ctrl.redo_stack
-        return []
+        return self.undo.redo_stack
 
     @redo_stack.setter
     def redo_stack(self, value: List[Dict[str, Any]]) -> None:
-        undo_ctrl = getattr(self, "undo", None)
-        if undo_ctrl is not None and hasattr(undo_ctrl, "set_redo_stack"):
-            undo_ctrl.set_redo_stack(value)
-            return
-        return
+        self.undo.set_redo_stack(value)
 
     @property
     def scene_dirty(self) -> bool:
@@ -752,7 +472,7 @@ class EditorModeController:
     def _find_asset_lookup(self, value: Dict[str, Any]) -> None:
         self._ui_flow_ctl.asset_lookup = value
 
-    def _get_repo_root(self) -> Any:
+    def _get_repo_root(self) -> Path:
         """Get repo root, allowing override for testing."""
         if self._repo_root_override is not None:
             return self._repo_root_override
@@ -1012,7 +732,7 @@ class EditorModeController:
 
     # Keymap overrides accessor (DELEGATED to EditorKeymapController)
     @property
-    def _keymap_overrides(self) -> dict[str, str]:
+    def _keymap_overrides(self) -> "ScopedOverrides":
         return self.keymap.keymap_overrides
 
     # -------------------------------------------------------------------------
@@ -1293,7 +1013,7 @@ class EditorModeController:
 
     def _maybe_preview_hd2d_from_selection(self) -> None:
         """Check if current find selection is an HD2D preset and preview it.
-        
+
         DEPRECATED: delegated to EditorUIFlowController
         """
         self._ui_flow_ctl.maybe_preview_from_selection()

@@ -10,6 +10,7 @@ Tests the pure model functions for:
 from __future__ import annotations
 
 import pytest
+from tests._typing import as_any
 
 
 # =============================================================================
@@ -86,8 +87,8 @@ class TestIsValidDefaultPresetId:
         """Non-string values return False."""
         from engine.editor.hd2d_defaults_model import is_valid_default_preset_id
 
-        assert is_valid_default_preset_id(123) is False  # type: ignore[arg-type]
-        assert is_valid_default_preset_id([]) is False  # type: ignore[arg-type]
+        assert is_valid_default_preset_id(as_any(123)) is False
+        assert is_valid_default_preset_id(as_any([])) is False
 
 
 # =============================================================================
@@ -141,8 +142,8 @@ class TestSceneHasHd2dKeys:
         """Non-dict scene returns False."""
         from engine.editor.hd2d_defaults_model import scene_has_hd2d_keys
 
-        assert scene_has_hd2d_keys(None) is False  # type: ignore[arg-type]
-        assert scene_has_hd2d_keys("string") is False  # type: ignore[arg-type]
+        assert scene_has_hd2d_keys(as_any(None)) is False
+        assert scene_has_hd2d_keys(as_any("string")) is False
 
 
 # =============================================================================

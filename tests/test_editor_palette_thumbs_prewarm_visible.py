@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib import import_module
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -13,10 +14,11 @@ from engine import editor_palette_thumbs
 
 def _write_tiny_png(path: Path, *, rgba: tuple[int, int, int, int]) -> None:
     try:
-        from PIL import Image  # type: ignore[import-not-found]
+        image_module = import_module("PIL.Image")
     except Exception as exc:  # pragma: no cover
         raise RuntimeError("Pillow is required for thumbnail tests") from exc
 
+    Image = image_module
     path.parent.mkdir(parents=True, exist_ok=True)
     img = Image.new("RGBA", (2, 2), rgba)
     img.save(path, format="PNG")

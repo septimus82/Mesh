@@ -149,7 +149,7 @@ def _handle_list_scenes(args: argparse.Namespace) -> int:
         with suppress_stdout():
             repo_root = get_repo_root(start=Path.cwd(), strict=True)
             payload = list_scenes(repo_root=repo_root)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: scene inventory CLI should collapse unexpected repository scan failures into a deterministic error payload
         _log_swallow("SOPS-004", "list scenes inventory fallback", once=True)
         payload = {"ok": False, "error": _single_line_error(f"{type(exc).__name__}: {exc}")}
     out_path = str(getattr(args, "out", "") or "").strip() or None
@@ -206,7 +206,7 @@ def _handle_scene_create(args: argparse.Namespace) -> int:
     if resolved.exists():
         try:
             data = json.loads(resolved.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except (OSError, json.JSONDecodeError) as exc:  # REASON: scene create CLI should report scene JSON parse failures deterministically before mutating an existing scene
             _log_swallow("SOPS-005", "scene create JSON parse failure", once=True)
             print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
             return 1
@@ -333,7 +333,7 @@ def _handle_scene_create(args: argparse.Namespace) -> int:
             try:
                 z = int(z_s)
                 parallax = float(parallax_s)
-            except Exception:
+            except (TypeError, ValueError):
                 _log_swallow("SOPS-006", "background spec parse fallback", once=True)
                 print(f"[Mesh][CLI] Error: invalid --bg spec: {spec!r}")
                 return 2
@@ -373,7 +373,7 @@ def _handle_scene_create(args: argparse.Namespace) -> int:
         try:
             x = float(x_s)
             y = float(y_s)
-        except Exception:
+        except (TypeError, ValueError):
             _log_swallow("SOPS-007", "spawn spec parse fallback", once=True)
             print(f"[Mesh][CLI] Error: invalid --spawn spec: {spec!r} (expected numeric x/y)")
             return 2

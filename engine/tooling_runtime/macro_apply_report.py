@@ -41,7 +41,7 @@ def _find_player_pos(scene_payload: dict[str, Any]) -> tuple[float, float]:
             if pid == "player" or (isinstance(tags, list) and "player" in tags):
                 try:
                     return float(ent.get("x", 0.0)), float(ent.get("y", 0.0))
-                except Exception:
+                except (TypeError, ValueError):
                     return 0.0, 0.0
     return 0.0, 0.0
 
@@ -59,7 +59,7 @@ def _find_entity_pos(scene_payload: dict[str, Any], entity_id: str) -> tuple[flo
                 continue
             try:
                 return float(ent.get("x", 0.0)), float(ent.get("y", 0.0))
-            except Exception:
+            except (TypeError, ValueError):
                 return 0.0, 0.0
     return None
 
@@ -87,13 +87,13 @@ def _parse_arg_value(raw: str) -> Any:
     if text[:1] in "[{\"" or text in {"true", "false", "null"}:
         try:
             return json.loads(text)
-        except Exception:
+        except json.JSONDecodeError:
             return text
     try:
         if "." in text or "e" in text.lower():
             return float(text)
         return int(text)
-    except Exception:
+    except ValueError:
         return text
 
 
@@ -209,7 +209,7 @@ def compute_scene_macro_report(
         radius_raw = merged_args.get("radius")
         try:
             radius = float(cast(Any, radius_raw))
-        except Exception as exc:  # noqa: BLE001
+        except (TypeError, ValueError) as exc:
             raise ValueError(f"bad_args radius={radius_raw!r}") from exc
         toast = merged_args.get("toast")
         toast_text = str(toast).strip() if isinstance(toast, str) else ""
@@ -223,7 +223,7 @@ def compute_scene_macro_report(
         else:
             try:
                 toast_seconds_val = float(toast_seconds)
-            except Exception:
+            except (TypeError, ValueError):
                 toast_seconds_val = None
         after_payload, created, updated = sc.debug_build_macro_objective_zone_payload(
             center_x=float(pos[0]),

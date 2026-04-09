@@ -447,6 +447,6 @@ class ConsoleController:
             self.log("Texture cache cleared")
             return
 
-        count = len(self.window.assets._texture_cache)
+        count = self.window.assets.get_cache_size()
         self.log(f"Assets: {count} textures cached")
 

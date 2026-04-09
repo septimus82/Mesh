@@ -5,9 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-import subprocess
 import sys
-import zipfile
 from pathlib import Path
 from typing import Any, cast
 
@@ -20,6 +18,19 @@ from engine.provenance import (
     get_provenance,
     provenance_to_dict,
 )
+from mesh_cli.release_check_pipeline import (
+    _normalize_outputs,
+    _resolve_path,
+    _run_assets_audit,
+    _run_debug_bundle,
+    _run_export_build,
+    _run_step,
+    _run_verify_all,
+    _step_record,
+    _write_report,
+    _write_summary,
+    build_release_check_report,
+)
 from mesh_cli.release_notes import (
     format_release_notes_text,
     generate_release_notes,
@@ -27,7 +38,45 @@ from mesh_cli.release_notes import (
 )
 from mesh_cli.version_bump import BumpKind, bump_semver, bump_version_file
 from mesh_cli.version_info import get_tool_version
+from . import release_promote_packaging as _release_promote_packaging
+from . import release_promote_reporting as _release_promote_reporting
+from . import release_rc_helpers as _release_rc_helpers
+from . import release_rc_reporting as _release_rc_reporting
+from . import release_reporting as _release_reporting
+from . import release_ship_reporting as _release_ship_reporting
 
+_format_promote_report_text = _release_promote_reporting._format_promote_report_text
+_promote_report_paths = _release_promote_reporting._promote_report_paths
+_rc_report_paths = _release_reporting._rc_report_paths
+_rc_step = _release_reporting._rc_step
+_ship_report_paths = _release_reporting._ship_report_paths
+_summarize_verify_report = _release_promote_reporting._summarize_verify_report
+_write_promote_reports = _release_promote_reporting._write_promote_reports
+_write_rc_reports = _release_reporting._write_rc_reports
+_write_ship_reports = _release_reporting._write_ship_reports
+_read_manifest_from_zip = _release_promote_packaging._read_manifest_from_zip
+_determine_version_from_rc_manifest = _release_promote_packaging._determine_version_from_rc_manifest
+_extract_zip_to_work_dir = _release_promote_packaging._extract_zip_to_work_dir
+_inspect_rc_bundle_notes_manifest = _release_promote_packaging._inspect_rc_bundle_notes_manifest
+_prepare_packaging_work_dir = _release_promote_packaging._prepare_packaging_work_dir
+_write_embedded_promote_reports = _release_promote_packaging._write_embedded_promote_reports
+_rebuild_promoted_zip = _release_promote_packaging._rebuild_promoted_zip
+_rebuild_promoted_zip_with_report = _release_promote_packaging._rebuild_promoted_zip_with_report
+_build_promote_report = _release_promote_reporting._build_promote_report
+_build_ship_report = _release_ship_reporting._build_ship_report
+_set_promote_version = _release_promote_reporting._set_promote_version
+_set_promote_verify_summary = _release_promote_reporting._set_promote_verify_summary
+_set_ship_child_report_projection = _release_ship_reporting._set_ship_child_report_projection
+_set_ship_verify_summary = _release_ship_reporting._set_ship_verify_summary
+_git_run = _release_rc_helpers._git_run
+_git_available = _release_rc_helpers._git_available
+_git_tag_exists = _release_rc_helpers._git_tag_exists
+_default_tag_message = _release_rc_helpers._default_tag_message
+_create_local_tag = _release_rc_helpers._create_local_tag
+_build_rc_report = _release_rc_reporting._build_rc_report
+_set_rc_version_bump = _release_rc_reporting._set_rc_version_bump
+_set_rc_version_bump_rolled_back = _release_rc_reporting._set_rc_version_bump_rolled_back
+_update_rc_bundle_report = _release_rc_reporting._update_rc_bundle_report
 
 _SWALLOW_ONCE_TAGS: set[str] = set()
 
@@ -249,68 +298,13 @@ def _handle_notes(args: argparse.Namespace) -> int:
     return 0
 
 
-def _git_run(args: list[str]) -> subprocess.CompletedProcess[str] | None:
-    try:
-        return subprocess.run(
-            ["git", *args],
-            capture_output=True,
-            text=True,
-            timeout=8,
-        )
-    except (FileNotFoundError, OSError, subprocess.SubprocessError):
-        _log_swallow("RELS-001", "git unavailable")
-        return None
-
-
 _RC_SCHEMA_VERSION = 1
 _RC_DETERMINISTIC_TIMESTAMP = "1980-01-01T00:00:00Z"
 _PROMOTE_SCHEMA_VERSION = 1
 _PROMOTE_DETERMINISTIC_TIMESTAMP = "1980-01-01T00:00:00Z"
-_PROMOTE_EMBED_JSON = "promote/promote_report.json"
-_PROMOTE_EMBED_TXT = "promote/promote_report.txt"
+_PROMOTE_EMBED_JSON = _release_promote_packaging.PROMOTE_EMBED_JSON
+_PROMOTE_EMBED_TXT = _release_promote_packaging.PROMOTE_EMBED_TXT
 _SHIP_SCHEMA_VERSION = 1
-
-
-def _git_available() -> bool:
-    result = _git_run(["--version"])
-    return result is not None and result.returncode == 0
-
-
-def _git_tag_exists(tag_name: str) -> bool | None:
-    result = _git_run(["rev-parse", "-q", "--verify", f"refs/tags/{tag_name}"])
-    if result is None:
-        return None
-    return result.returncode == 0
-
-
-def _default_tag_message(version: str, notes_text: str | None = None) -> str:
-    text = notes_text
-    if text is None:
-        notes = generate_release_notes(deterministic=True, since=None, until="HEAD")
-        text = format_release_notes_text(notes)
-    header = "Mesh Release Notes"
-    for line in text.splitlines():
-        if line.strip():
-            header = line.strip()
-            break
-    return f"{header} v{version}"
-
-
-def _create_local_tag(*, tag_name: str, message: str) -> tuple[str, str | None]:
-    exists = _git_tag_exists(tag_name)
-    if exists is None:
-        return "skipped", "git unavailable"
-    if exists:
-        return "existing", f"tag already exists: {tag_name}"
-    created = _git_run(["tag", "-a", tag_name, "-m", message])
-    if created is None:
-        return "failed", "git execution failed while creating tag"
-    if created.returncode != 0:
-        detail = (created.stderr or created.stdout or "").strip()
-        if not detail:
-            detail = "unknown git tag error"
-        return "failed", detail
-    return "created", None
 
 
 def _handle_tag(args: argparse.Namespace) -> int:
@@ -358,76 +352,14 @@ def _handle_tag(args: argparse.Namespace) -> int:
     return 1
 
 
-def _rc_step(
-    name: str,
-    *,
-    ok: bool,
-    skipped: bool = False,
-    reason: str | None = None,
-    artifacts: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    return {
-        "name": name,
-        "ok": bool(ok),
-        "skipped": bool(skipped),
-        "reason": reason,
-        "artifacts": dict(artifacts or {}),
-    }
-
-
-def _rc_report_paths(zip_path: Path) -> tuple[Path, Path]:
-    return (
-        zip_path.with_name(f"{zip_path.name}.rc_report.json"),
-        zip_path.with_name(f"{zip_path.name}.rc_report.txt"),
-    )
-
-
-def _format_rc_report_text(report: dict[str, Any]) -> str:
-    lines: list[str] = []
-    lines.append("Mesh Release Candidate Report")
-    lines.append(f"Result: {'OK' if report.get('ok') else 'FAILED'}")
-    lines.append(f"Version: {report.get('version')}")
-    lines.append(f"Seed: {report.get('seed')}")
-    lines.append(f"Bundle: {report.get('bundle', {}).get('zip')}")
-    lines.append("")
-    lines.append("Steps:")
-    for step in report.get("steps", []):
-        name = str(step.get("name", ""))
-        if step.get("skipped"):
-            lines.append(f"- {name}: SKIPPED ({step.get('reason')})")
-        elif step.get("ok"):
-            lines.append(f"- {name}: OK")
-        else:
-            lines.append(f"- {name}: FAILED ({step.get('reason')})")
-    lines.append("")
-    tag = report.get("tag", {})
-    lines.append(f"Tag: {tag.get('status')} ({tag.get('name')})")
-    if tag.get("reason"):
-        lines.append(f"Tag Reason: {tag.get('reason')}")
-    bundle = report.get("bundle", {})
-    lines.append(
-        "Verify: "
-        f"verified={bundle.get('verified_count')} "
-        f"verifiable={bundle.get('verifiable_files')} "
-        f"sealed_manifest_verified={bundle.get('sealed_manifest_verified')}"
-    )
-    return "\n".join(lines) + "\n"
-
-
-def _write_rc_reports(zip_path: Path, report: dict[str, Any]) -> tuple[Path, Path]:
-    json_path, txt_path = _rc_report_paths(zip_path)
-    write_json_atomic(json_path, report, indent=2, sort_keys=True, trailing_newline=True)
-    write_text_atomic(txt_path, _format_rc_report_text(report), encoding="utf-8")
-    return json_path, txt_path
-
-
 def _handle_rc(args: argparse.Namespace) -> int:
-    from . import release_bundle
     from mesh_cli.bundle_verify import (
         DEFAULT_EXCLUDE_RULES,
         VerifyOptions,
         verify_zip,
     )
+
+    from . import release_bundle
 
     zip_path = Path(str(getattr(args, "out", "") or "").strip()).resolve()
     seed = int(getattr(args, "seed", 123))
@@ -481,72 +413,46 @@ def _handle_rc(args: argparse.Namespace) -> int:
 
     zip_path.parent.mkdir(parents=True, exist_ok=True)
     rc_work_dir = zip_path.parent / f"_rc_work_{zip_path.stem}"
-    if rc_work_dir.exists():
-        import shutil
+    _prepare_packaging_work_dir(rc_work_dir)
 
-        shutil.rmtree(rc_work_dir)
-    rc_work_dir.mkdir(parents=True, exist_ok=True)
-
-    report: dict[str, Any] = {
-        "schema_version": _RC_SCHEMA_VERSION,
-        "ok": False,
-        "version": version,
-        "seed": seed,
-        "campaign": campaign,
-        "dry_run": dry_run,
-        "args": {
-            "out": zip_path.name,
-            "seed": seed,
-            "version": version,
-            "bump": bump_kind,
-            "since": since,
-            "quiet": quiet,
-            "json": json_stdout,
-            "dry_run": dry_run,
-            "tag": do_tag,
-            "no_write_version": no_write_version,
-            "no_rollback": no_rollback,
-        },
-        "provenance": {
-            **provenance_to_dict(get_provenance(deterministic=True)),
-            "rc_version": version,
-        },
-        "steps": [],
-        "tag": {"name": tag_name, "status": "pending", "reason": None},
-        "bundle": {
-            "zip": zip_path.name,
-            "file_count": None,
-            "size_bytes": None,
-            "verified_count": None,
-            "verifiable_files": None,
-            "sealed_manifest_verified": None,
-        },
-        "reports": {
-            "json": f"{zip_path.name}.rc_report.json",
-            "txt": f"{zip_path.name}.rc_report.txt",
-        },
-    }
+    report = _build_rc_report(
+        schema_version=_RC_SCHEMA_VERSION,
+        version=version,
+        seed=seed,
+        campaign=campaign,
+        dry_run=dry_run,
+        zip_path=zip_path,
+        bump_kind=bump_kind,
+        since=since,
+        quiet=quiet,
+        json_stdout=json_stdout,
+        do_tag=do_tag,
+        no_write_version=no_write_version,
+        no_rollback=no_rollback,
+        provenance=provenance_to_dict(get_provenance(deterministic=True)),
+        tag_name=tag_name,
+    )
 
     if bump_payload is not None:
-        report["version_bump"] = {
-            "kind": bump_kind,
-            "old": bump_payload["old"],
-            "new": bump_payload["new"],
-            "file": bump_payload["file"],
-            "wrote": bool(version_written),
-            "rolled_back": False,
-            "no_write_version": no_write_version,
-        }
+        _set_rc_version_bump(
+            report,
+            bump_kind=bump_kind,
+            old_version=str(bump_payload["old"]),
+            new_version=str(bump_payload["new"]),
+            file_path=str(bump_payload["file"]),
+            wrote=bool(version_written),
+            no_write_version=no_write_version,
+        )
     elif bump_kind:
-        report["version_bump"] = {
-            "kind": bump_kind,
-            "old": original_version,
-            "new": version,
-            "file": "engine/version.py",
-            "wrote": False,
-            "rolled_back": False,
-            "no_write_version": no_write_version,
-        }
+        _set_rc_version_bump(
+            report,
+            bump_kind=bump_kind,
+            old_version=original_version,
+            new_version=version,
+            file_path="engine/version.py",
+            wrote=False,
+            no_write_version=no_write_version,
+        )
 
     def _rollback_if_needed() -> None:
         nonlocal rollback_applied
@@ -559,8 +465,7 @@ def _handle_rc(args: argparse.Namespace) -> int:
         try:
             version_file_path.write_bytes(version_snapshot_bytes)
             rollback_applied = True
-            if isinstance(report.get("version_bump"), dict):
-                report["version_bump"]["rolled_back"] = True
+            _set_rc_version_bump_rolled_back(report, True)
         except OSError as exc:
             report["steps"].append(
                 _rc_step(
@@ -626,7 +531,7 @@ def _handle_rc(args: argparse.Namespace) -> int:
                 artifacts={"json": notes_json_path.name, "txt": notes_txt_path.name},
             )
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: release-rc notes generation step isolation
         report["steps"].append(
             _rc_step(
                 "generate-release-notes",
@@ -698,16 +603,12 @@ def _handle_rc(args: argparse.Namespace) -> int:
 
     manifest_file_count: int | None = None
     try:
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            embedded_notes_payload = json.loads(zf.read("release_notes.json"))
-            embedded_notes_text = zf.read("release_notes.txt").decode("utf-8")
-            if notes_payload is not None and embedded_notes_payload != notes_payload:
-                raise ValueError("embedded release_notes.json mismatch")
-            if notes_text is not None and embedded_notes_text != notes_text:
-                raise ValueError("embedded release_notes.txt mismatch")
-            manifest_data = json.loads(zf.read("package_manifest.json"))
-            manifest_file_count = int(manifest_data.get("file_count", 0))
-    except Exception as exc:  # noqa: BLE001
+        manifest_file_count = _inspect_rc_bundle_notes_manifest(
+            zip_path,
+            expected_notes_payload=notes_payload,
+            expected_notes_text=notes_text,
+        )
+    except Exception as exc:  # noqa: BLE001  # REASON: release-rc manifest inspection step isolation
         if zip_path.exists():
             try:
                 zip_path.unlink()
@@ -743,15 +644,11 @@ def _handle_rc(args: argparse.Namespace) -> int:
             )
         )
 
-    counts = verify_report.get("counts", {})
-    report["bundle"].update(
-        {
-            "file_count": manifest_file_count,
-            "size_bytes": zip_path.stat().st_size if zip_path.exists() else None,
-            "verified_count": int(counts.get("verified_files", 0)),
-            "verifiable_files": int(counts.get("verifiable_files", 0)),
-            "sealed_manifest_verified": bool(verify_report.get("sealed_manifest_verified", False)),
-        }
+    _update_rc_bundle_report(
+        report,
+        manifest_file_count=manifest_file_count,
+        zip_path=zip_path,
+        verify_report=verify_report,
     )
     report["steps"].append(
         _rc_step(
@@ -765,180 +662,10 @@ def _handle_rc(args: argparse.Namespace) -> int:
     )
 
     report["ok"] = True
-    if isinstance(report.get("version_bump"), dict):
-        report["version_bump"]["rolled_back"] = bool(rollback_applied)
+    _set_rc_version_bump_rolled_back(report, rollback_applied)
     if not json_stdout and not quiet:
         print(f"[Mesh][Release-RC] OK: {zip_path.name}")
     return _emit_and_return(0)
-
-
-def _promote_report_paths(zip_path: Path) -> tuple[Path, Path]:
-    return (
-        zip_path.with_name(f"{zip_path.name}.promote_report.json"),
-        zip_path.with_name(f"{zip_path.name}.promote_report.txt"),
-    )
-
-
-def _summarize_verify_report(report: dict[str, Any]) -> dict[str, Any]:
-    counts = report.get("counts", {})
-    return {
-        "ok": bool(report.get("ok", False)),
-        "verified_count": int(counts.get("verified_files", report.get("verified_count", 0))),
-        "verifiable_files": int(counts.get("verifiable_files", report.get("file_count", 0))),
-        "manifest_files": int(counts.get("manifest_files", 0)),
-        "sealed_manifest_verified": bool(report.get("sealed_manifest_verified", False)),
-        "errors": list(report.get("errors", []))[:5],
-    }
-
-
-def _format_promote_report_text(report: dict[str, Any]) -> str:
-    lines: list[str] = []
-    lines.append("Mesh Release Promote Report")
-    lines.append(f"Result: {'OK' if report.get('ok') else 'FAILED'}")
-    lines.append(f"Version: {report.get('version')}")
-    lines.append(f"RC ZIP: {report.get('rc_zip')}")
-    lines.append(f"Final ZIP: {report.get('final_zip')}")
-    lines.append("")
-    rc_verify = report.get("rc_verify", {})
-    lines.append(
-        "RC Verify: "
-        f"ok={rc_verify.get('ok')} "
-        f"verified={rc_verify.get('verified_count')} "
-        f"verifiable={rc_verify.get('verifiable_files')} "
-        f"sealed_manifest_verified={rc_verify.get('sealed_manifest_verified')}"
-    )
-    final_verify = report.get("final_verify", {})
-    lines.append(
-        "Final Verify: "
-        f"ok={final_verify.get('ok')} "
-        f"verified={final_verify.get('verified_count')} "
-        f"verifiable={final_verify.get('verifiable_files')} "
-        f"sealed_manifest_verified={final_verify.get('sealed_manifest_verified')}"
-    )
-    lines.append("")
-    lines.append("Steps:")
-    for step in report.get("steps", []):
-        name = str(step.get("name", "") or "")
-        if step.get("skipped"):
-            lines.append(f"- {name}: SKIPPED ({step.get('reason')})")
-        elif step.get("ok"):
-            lines.append(f"- {name}: OK")
-        else:
-            lines.append(f"- {name}: FAILED ({step.get('reason')})")
-    lines.append("")
-    tag = report.get("tag", {})
-    lines.append(f"Tag: {tag.get('status')} ({tag.get('name')})")
-    if tag.get("reason"):
-        lines.append(f"Tag Reason: {tag.get('reason')}")
-    return "\n".join(lines) + "\n"
-
-
-def _write_promote_reports(out_zip_path: Path, report: dict[str, Any]) -> tuple[Path, Path]:
-    json_path, txt_path = _promote_report_paths(out_zip_path)
-    write_json_atomic(json_path, report, indent=2, sort_keys=True, trailing_newline=True)
-    write_text_atomic(txt_path, _format_promote_report_text(report), encoding="utf-8")
-    return json_path, txt_path
-
-
-def _read_manifest_from_zip(zip_path: Path) -> dict[str, Any]:
-    with zipfile.ZipFile(zip_path, "r") as zf:
-        raw = zf.read("package_manifest.json")
-    data = json.loads(raw)
-    if not isinstance(data, dict):
-        raise ValueError("package_manifest.json must be a JSON object")
-    return data
-
-
-def _determine_version_from_rc_manifest(manifest_data: dict[str, Any]) -> str | None:
-    provenance = manifest_data.get("provenance")
-    if isinstance(provenance, dict):
-        for key in ("rc_version", "tool_version", "engine_version"):
-            value = str(provenance.get(key, "") or "").strip()
-            if value:
-                return value
-    for key in ("engine_version",):
-        value = str(manifest_data.get(key, "") or "").strip()
-        if value:
-            return value
-    return None
-
-
-def _extract_zip_to_work_dir(zip_path: Path, work_dir: Path) -> None:
-    from pathlib import PurePosixPath
-
-    with zipfile.ZipFile(zip_path, "r") as zf:
-        for info in sorted(zf.infolist(), key=lambda row: row.filename):
-            rel = str(info.filename or "")
-            pp = PurePosixPath(rel)
-            if pp.is_absolute() or ".." in pp.parts:
-                raise ValueError(f"Unsafe archive path during promotion: {rel}")
-            target = work_dir.joinpath(*pp.parts)
-            if info.is_dir() or rel.endswith("/"):
-                target.mkdir(parents=True, exist_ok=True)
-                continue
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(zf.read(rel))
-
-
-def _write_embedded_promote_reports(work_dir: Path, report: dict[str, Any]) -> None:
-    promote_dir = work_dir / "promote"
-    promote_dir.mkdir(parents=True, exist_ok=True)
-    write_json_atomic(
-        promote_dir / "promote_report.json",
-        report,
-        indent=2,
-        sort_keys=True,
-        trailing_newline=True,
-    )
-    write_text_atomic(
-        promote_dir / "promote_report.txt",
-        _format_promote_report_text(report),
-        encoding="utf-8",
-    )
-
-
-def _rebuild_promoted_zip(
-    *,
-    work_dir: Path,
-    out_zip_path: Path,
-    seed: int,
-    campaign: str,
-    timestamp: str,
-) -> None:
-    from . import release_bundle
-    from mesh_cli.bundle_verify import MANIFEST_NAME, MANIFEST_TEXT_NAME
-
-    files: list[release_bundle.FileEntry] = []
-    for p in sorted(work_dir.rglob("*")):
-        if not p.is_file():
-            continue
-        rel = p.relative_to(work_dir).as_posix()
-        if rel in (MANIFEST_NAME, MANIFEST_TEXT_NAME):
-            continue
-        files.append(release_bundle.FileEntry(archive_path=rel, disk_path=p))
-
-    release_bundle._build_manifest_with_seal(
-        work_dir=work_dir,
-        seed=seed,
-        campaign=campaign,
-        timestamp=timestamp,
-        base_files=files,
-    )
-
-    final_files: list[release_bundle.FileEntry] = []
-    for p in sorted(work_dir.rglob("*")):
-        if p.is_file():
-            rel = p.relative_to(work_dir).as_posix()
-            final_files.append(release_bundle.FileEntry(archive_path=rel, disk_path=p))
-    final_files.sort(key=lambda row: row.archive_path)
-
-    out_zip_path.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(out_zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        for entry in final_files:
-            info = zipfile.ZipInfo(filename=entry.archive_path, date_time=release_bundle._ZIP_FIXED_DATE)
-            info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = 0o644 << 16
-            zf.writestr(info, entry.disk_path.read_bytes())
 
 
 def _handle_promote(args: argparse.Namespace) -> int:
@@ -963,49 +690,20 @@ def _handle_promote(args: argparse.Namespace) -> int:
 
     out_zip_path.parent.mkdir(parents=True, exist_ok=True)
 
-    report: dict[str, Any] = {
-        "schema_version": _PROMOTE_SCHEMA_VERSION,
-        "ok": False,
-        "dry_run": dry_run,
-        "rc_zip": rc_zip_path.name,
-        "final_zip": out_zip_path.name,
-        "version": None,
-        "args": {
-            "rc": rc_zip_path.name,
-            "out": out_zip_path.name,
-            "version": requested_version,
-            "tag": do_tag,
-            "notes_since": notes_since,
-            "quiet": quiet,
-            "json": json_stdout,
-            "dry_run": dry_run,
-        },
-        "provenance": provenance_to_dict(get_provenance(deterministic=True)),
-        "tag": {"name": None, "status": "pending", "reason": None},
-        "rc_verify": {
-            "ok": False,
-            "verified_count": 0,
-            "verifiable_files": 0,
-            "manifest_files": 0,
-            "sealed_manifest_verified": False,
-            "errors": [],
-        },
-        "final_verify": {
-            "ok": False,
-            "verified_count": 0,
-            "verifiable_files": 0,
-            "manifest_files": 0,
-            "sealed_manifest_verified": False,
-            "errors": [],
-        },
-        "reports": {
-            "json": f"{out_zip_path.name}.promote_report.json",
-            "txt": f"{out_zip_path.name}.promote_report.txt",
-            "embedded_json": _PROMOTE_EMBED_JSON,
-            "embedded_txt": _PROMOTE_EMBED_TXT,
-        },
-        "steps": [],
-    }
+    report = _build_promote_report(
+        schema_version=_PROMOTE_SCHEMA_VERSION,
+        rc_zip_path=rc_zip_path,
+        out_zip_path=out_zip_path,
+        requested_version=requested_version,
+        do_tag=do_tag,
+        notes_since=notes_since,
+        quiet=quiet,
+        json_stdout=json_stdout,
+        dry_run=dry_run,
+        provenance=provenance_to_dict(get_provenance(deterministic=True)),
+        embedded_json_name=_PROMOTE_EMBED_JSON,
+        embedded_txt_name=_PROMOTE_EMBED_TXT,
+    )
     work_dir: Path | None = None
     output_touched = False
 
@@ -1038,7 +736,11 @@ def _handle_promote(args: argparse.Namespace) -> int:
         str(rc_zip_path),
         options=VerifyOptions(strict=True, exclude=DEFAULT_EXCLUDE_RULES),
     )
-    report["rc_verify"] = _summarize_verify_report(rc_verify_report)
+    _set_promote_verify_summary(
+        report,
+        key="rc_verify",
+        summary=_summarize_verify_report(rc_verify_report),
+    )
     if not rc_verify_report.get("ok"):
         return _fail_with_step(
             _rc_step(
@@ -1068,8 +770,7 @@ def _handle_promote(args: argparse.Namespace) -> int:
     # 2) Determine target version
     detected_version = _determine_version_from_rc_manifest(rc_manifest)
     version = requested_version or detected_version or get_tool_version()
-    report["version"] = version
-    report["provenance"]["promote_version"] = version
+    _set_promote_version(report, version=version)
     report["steps"].append(
         _rc_step(
             "determine-version",
@@ -1120,24 +821,16 @@ def _handle_promote(args: argparse.Namespace) -> int:
     # 4) Rebuild final ZIP with embedded promote reports and refreshed manifest+seal
     work_dir = out_zip_path.parent / f"_promote_work_{out_zip_path.stem}"
     try:
-        if work_dir.exists():
-            shutil.rmtree(work_dir)
-        work_dir.mkdir(parents=True, exist_ok=True)
+        _prepare_packaging_work_dir(work_dir)
         _extract_zip_to_work_dir(rc_zip_path, work_dir)
-        _write_embedded_promote_reports(
-            work_dir,
-            json.loads(dumps_json_deterministic(report)),
-        )
-        seed = int(rc_manifest.get("seed", 123))
-        campaign = str(rc_manifest.get("campaign", "mini_campaign_01") or "mini_campaign_01")
         if out_zip_path.exists():
             out_zip_path.unlink()
             output_touched = True
-        _rebuild_promoted_zip(
+        _rebuild_promoted_zip_with_report(
             work_dir=work_dir,
             out_zip_path=out_zip_path,
-            seed=seed,
-            campaign=campaign,
+            report=report,
+            rc_manifest=rc_manifest,
             timestamp=_PROMOTE_DETERMINISTIC_TIMESTAMP,
         )
         output_touched = True
@@ -1159,7 +852,11 @@ def _handle_promote(args: argparse.Namespace) -> int:
         str(out_zip_path),
         options=VerifyOptions(strict=True, exclude=DEFAULT_EXCLUDE_RULES),
     )
-    report["final_verify"] = _summarize_verify_report(verify_report)
+    _set_promote_verify_summary(
+        report,
+        key="final_verify",
+        summary=_summarize_verify_report(verify_report),
+    )
     if not verify_report.get("ok"):
         return _fail_with_step(
             _rc_step(
@@ -1172,15 +869,11 @@ def _handle_promote(args: argparse.Namespace) -> int:
 
     # Re-embed reports so final verify summary is present inside the bundle.
     try:
-        _write_embedded_promote_reports(
-            work_dir,
-            json.loads(dumps_json_deterministic(report)),
-        )
-        _rebuild_promoted_zip(
+        _rebuild_promoted_zip_with_report(
             work_dir=work_dir,
             out_zip_path=out_zip_path,
-            seed=int(rc_manifest.get("seed", 123)),
-            campaign=str(rc_manifest.get("campaign", "mini_campaign_01") or "mini_campaign_01"),
+            report=report,
+            rc_manifest=rc_manifest,
             timestamp=_PROMOTE_DETERMINISTIC_TIMESTAMP,
         )
     except Exception as exc:
@@ -1192,7 +885,11 @@ def _handle_promote(args: argparse.Namespace) -> int:
         str(out_zip_path),
         options=VerifyOptions(strict=True, exclude=DEFAULT_EXCLUDE_RULES),
     )
-    report["final_verify"] = _summarize_verify_report(final_verify_report)
+    _set_promote_verify_summary(
+        report,
+        key="final_verify",
+        summary=_summarize_verify_report(final_verify_report),
+    )
     if not final_verify_report.get("ok"):
         return _fail_with_step(
             _rc_step(
@@ -1220,58 +917,12 @@ def _handle_promote(args: argparse.Namespace) -> int:
     return _emit_and_return(0)
 
 
-def _ship_report_paths(out_dir: Path) -> tuple[Path, Path]:
-    return out_dir / "ship_report.json", out_dir / "ship_report.txt"
-
-
-def _format_ship_report_text(report: dict[str, Any]) -> str:
-    lines: list[str] = []
-    lines.append("Mesh Release Ship Report")
-    lines.append(f"Result: {'OK' if report.get('ok') else 'FAILED'}")
-    lines.append(f"Out Dir: {report.get('out_dir')}")
-    lines.append(f"RC ZIP: {report.get('artifacts', {}).get('rc_zip')}")
-    lines.append(f"Final ZIP: {report.get('artifacts', {}).get('final_zip')}")
-    lines.append("")
-    rc_verify = report.get("verify", {}).get("rc", {})
-    final_verify = report.get("verify", {}).get("final", {})
-    lines.append(
-        "RC Verify: "
-        f"ok={rc_verify.get('ok')} "
-        f"verified={rc_verify.get('verified_count')} "
-        f"verifiable={rc_verify.get('verifiable_files')}"
-    )
-    lines.append(
-        "Final Verify: "
-        f"ok={final_verify.get('ok')} "
-        f"verified={final_verify.get('verified_count')} "
-        f"verifiable={final_verify.get('verifiable_files')}"
-    )
-    lines.append("")
-    lines.append("Steps:")
-    for step in report.get("steps", []):
-        name = str(step.get("name", "") or "")
-        if step.get("skipped"):
-            lines.append(f"- {name}: SKIPPED ({step.get('reason')})")
-        elif step.get("ok"):
-            lines.append(f"- {name}: OK")
-        else:
-            lines.append(f"- {name}: FAILED ({step.get('reason')})")
-    return "\n".join(lines) + "\n"
-
-
-def _write_ship_reports(out_dir: Path, report: dict[str, Any]) -> tuple[Path, Path]:
-    json_path, txt_path = _ship_report_paths(out_dir)
-    write_json_atomic(json_path, report, indent=2, sort_keys=True, trailing_newline=True)
-    write_text_atomic(txt_path, _format_ship_report_text(report), encoding="utf-8")
-    return json_path, txt_path
-
-
 def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
     try:
         if not path.is_file():
             return None
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         _log_swallow("RELS-007", "manifest JSON load")
         return None
     if not isinstance(data, dict):
@@ -1280,6 +931,7 @@ def _load_json_if_exists(path: Path) -> dict[str, Any] | None:
 
 
 def _handle_ship(args: argparse.Namespace) -> int:
+    from engine.repo_root import get_repo_root
     from mesh_cli.bundle_verify import (
         DEFAULT_EXCLUDE_RULES,
         VerifyOptions,
@@ -1291,7 +943,6 @@ def _handle_ship(args: argparse.Namespace) -> int:
         run_content_audit,
     )
     from mesh_cli.version_info import get_version_file_path
-    from engine.repo_root import get_repo_root
 
     repo_root = get_repo_root(start=Path.cwd(), strict=False)
     out_dir = Path(str(getattr(args, "out_dir", "") or "").strip()).resolve()
@@ -1311,58 +962,20 @@ def _handle_ship(args: argparse.Namespace) -> int:
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    report: dict[str, Any] = {
-        "schema_version": _SHIP_SCHEMA_VERSION,
-        "ok": False,
-        "dry_run": dry_run,
-        "out_dir": out_dir.name,
-        "seed": seed,
-        "bump": bump_kind,
-        "tag": do_tag,
-        "since": since,
-        "args": {
-            "out_dir": out_dir.name,
-            "seed": seed,
-            "bump": bump_kind,
-            "tag": do_tag,
-            "since": since,
-            "quiet": quiet,
-            "json": json_stdout,
-            "dry_run": dry_run,
-        },
-        "provenance": provenance_to_dict(get_provenance(deterministic=True)),
-        "artifacts": {
-            "content_audit_report_json": "content_audit_report.json",
-            "content_audit_report_txt": "content_audit_report.txt",
-            "rc_zip": rc_zip.name,
-            "rc_report_json": rc_report_json.name,
-            "rc_report_txt": rc_report_txt.name,
-            "final_zip": final_zip.name,
-            "promote_report_json": promote_report_json.name,
-            "promote_report_txt": promote_report_txt.name,
-            "ship_report_json": "ship_report.json",
-            "ship_report_txt": "ship_report.txt",
-        },
-        "verify": {
-            "rc": {
-                "ok": False,
-                "verified_count": 0,
-                "verifiable_files": 0,
-                "manifest_files": 0,
-                "sealed_manifest_verified": False,
-                "errors": [],
-            },
-            "final": {
-                "ok": False,
-                "verified_count": 0,
-                "verifiable_files": 0,
-                "manifest_files": 0,
-                "sealed_manifest_verified": False,
-                "errors": [],
-            },
-        },
-        "steps": [],
-    }
+    report = _build_ship_report(
+        schema_version=_SHIP_SCHEMA_VERSION,
+        out_dir=out_dir,
+        seed=seed,
+        bump_kind=bump_kind,
+        do_tag=do_tag,
+        since=since,
+        quiet=quiet,
+        json_stdout=json_stdout,
+        dry_run=dry_run,
+        provenance=provenance_to_dict(get_provenance(deterministic=True)),
+        rc_zip=rc_zip,
+        final_zip=final_zip,
+    )
 
     version_snapshot: bytes | None = None
     version_file_path: Path | None = None
@@ -1589,8 +1202,8 @@ def _handle_ship(args: argparse.Namespace) -> int:
         str(final_zip),
         options=VerifyOptions(strict=True, exclude=DEFAULT_EXCLUDE_RULES),
     )
-    report["verify"]["rc"] = _summarize_verify_report(rc_verify_report)
-    report["verify"]["final"] = _summarize_verify_report(final_verify_report)
+    _set_ship_verify_summary(report, key="rc", verify_report=rc_verify_report)
+    _set_ship_verify_summary(report, key="final", verify_report=final_verify_report)
     if not rc_verify_report.get("ok"):
         return _fail_with_step(
             _rc_step(
@@ -1624,14 +1237,11 @@ def _handle_ship(args: argparse.Namespace) -> int:
     )
 
     # Surface tag results from child reports.
-    if isinstance(promote_payload, dict):
-        report["tag_result"] = dict(promote_payload.get("tag", {}))
-        if "version" in promote_payload:
-            report["version"] = promote_payload["version"]
-    elif isinstance(rc_payload, dict):
-        report["tag_result"] = dict(rc_payload.get("tag", {}))
-        if "version" in rc_payload:
-            report["version"] = rc_payload["version"]
+    _set_ship_child_report_projection(
+        report,
+        rc_payload=rc_payload,
+        promote_payload=promote_payload,
+    )
 
     report["ok"] = True
     if not quiet and not json_stdout:
@@ -1661,39 +1271,13 @@ def _handle_check(args: argparse.Namespace) -> int:
     export_dir = artifacts_dir / "bundle"
     debug_bundle_path = artifacts_dir / "debug_bundle.json"
     verify_artifacts_dir = artifacts_dir
-    verify_summary_path = artifacts_dir / "verify_all_summary.json"
-    provenance = provenance_to_dict(get_provenance(deterministic=deterministic))
-    repo_root_field = "." if deterministic else repo_root.as_posix()
-    artifacts_dir_field = _normalize_report_path(artifacts_dir, repo_root) if deterministic else artifacts_dir.as_posix()
-
-    report: dict[str, Any] = {
-        "schema_version": 1,
-        "repo_root": repo_root_field,
-        "artifacts_dir": artifacts_dir_field,
-        "provenance": provenance,
-        "artifacts": {
-            "verify_all_summary": _normalize_report_path(verify_summary_path, repo_root)
-            if deterministic
-            else verify_summary_path.as_posix(),
-            "asset_audit_json": _normalize_report_path(asset_audit_path, repo_root)
-            if deterministic
-            else asset_audit_path.as_posix(),
-            "bundle_dir": _normalize_report_path(export_dir, repo_root)
-            if deterministic
-            else export_dir.as_posix(),
-            "debug_bundle_json": _normalize_report_path(debug_bundle_path, repo_root)
-            if deterministic
-            else debug_bundle_path.as_posix(),
-            "release_report_json": _normalize_report_path(report_path, repo_root)
-            if deterministic
-            else report_path.as_posix(),
-            "release_report_txt": _normalize_report_path(summary_path, repo_root)
-            if deterministic
-            else summary_path.as_posix(),
-        },
-        "steps": [],
-        "summary": {"ok": False, "failed_step": None, "skipped_steps": []},
-    }
+    report = build_release_check_report(
+        repo_root=repo_root,
+        artifacts_dir=artifacts_dir,
+        report_path=report_path,
+        summary_path=summary_path,
+        deterministic=deterministic,
+    )
 
     def _run_verify_all_step() -> tuple[int, dict[str, Any]]:
         try:
@@ -1757,244 +1341,3 @@ def _handle_check(args: argparse.Namespace) -> int:
         print(f"[Mesh][Release] FAILED at {failed_step} (exit={exit_code})")
         print(f"[Mesh][Release] Report: {report_path.as_posix()}")
     return exit_code or 1
-
-
-def _run_step(runner) -> tuple[int, dict[str, Any], str | None]:
-    try:
-        exit_code, outputs = runner()
-        return int(exit_code), dict(outputs or {}), None
-    except Exception as exc:  # noqa: BLE001
-        return 1, {}, f"{type(exc).__name__}: {exc}"
-
-
-def _run_verify_all(
-    repo_root: Path,
-    artifacts_dir: Path | None,
-    *,
-    deterministic: bool = False,
-) -> tuple[int, dict[str, Any]]:
-    args = argparse.Namespace(
-        command="verify-all",
-        out_dir=None,
-        artifacts=str(artifacts_dir) if artifacts_dir is not None else None,
-        no_index=False,
-        pytest_args=[],
-    )
-
-    payload, exit_code = _run_verify_all_payload(repo_root, args)
-    if deterministic and artifacts_dir is not None and isinstance(payload, dict):
-        normalized_payload = dict(payload)
-        pytest_fast = normalized_payload.get("pytest_fast")
-        if isinstance(pytest_fast, dict):
-            pytest_fast_norm = dict(pytest_fast)
-            if "total" in pytest_fast_norm:
-                pytest_fast_norm["total"] = 0.0
-            if "top10" in pytest_fast_norm:
-                pytest_fast_norm["top10"] = 0.0
-            normalized_payload["pytest_fast"] = pytest_fast_norm
-        payload = normalized_payload
-        write_json_atomic(
-            Path(artifacts_dir) / "verify_all_summary.json",
-            normalized_payload,
-            indent=2,
-            sort_keys=True,
-            trailing_newline=True,
-        )
-    outputs = {
-        "verify_all_ok": bool(payload.get("summary", {}).get("ok")) if isinstance(payload, dict) else False,
-        "verify_all_summary": (Path(artifacts_dir) / "verify_all_summary.json").as_posix()
-        if artifacts_dir is not None
-        else None,
-    }
-    return int(exit_code), outputs
-
-
-def _run_verify_all_payload(repo_root: Path, args: argparse.Namespace) -> tuple[dict, int]:
-    from mesh_cli.verify import _build_verify_all_payload
-
-    cwd = Path.cwd()
-    try:
-        os_chdir(repo_root)
-        payload, exit_code = _build_verify_all_payload(args)
-        return payload, int(exit_code)
-    finally:
-        os_chdir(cwd)
-
-
-def _run_assets_audit(repo_root: Path, out_path: Path) -> tuple[int, dict[str, Any]]:
-    from engine.tooling.assets_audit import run_asset_audit
-
-    exit_code, report = run_asset_audit(
-        repo_root=repo_root,
-        out_path=out_path,
-        pack_id=None,
-        strict=False,
-        with_orphans=False,
-        with_duplicates=False,
-        with_ownership=True,
-        warn_duplicates=True,
-        fail_missing=True,
-        fail_orphans=False,
-        fail_duplicates=False,
-        write_report=True,
-    )
-    summary = report.get("summary", {}) if isinstance(report, dict) else {}
-    outputs = {
-        "asset_audit_json": out_path.as_posix(),
-        "errors": summary.get("error_count"),
-        "warnings": summary.get("warning_count"),
-        "orphans": summary.get("orphan_count"),
-        "duplicate_groups": summary.get("duplicate_groups"),
-    }
-    return int(exit_code), outputs
-
-
-def _run_export_build(repo_root: Path, out_dir: Path, *, deterministic: bool = False) -> tuple[int, dict[str, Any]]:
-    from tooling.export_bundle import build_bundle
-
-    exit_code, manifest = build_bundle(
-        repo_root,
-        out_dir,
-        include_unused=False,
-        fail_on_missing=True,
-        deterministic=deterministic,
-    )
-    outputs: dict[str, Any] = {"bundle_dir": out_dir.as_posix()}
-    if manifest is not None:
-        outputs["file_count"] = int(getattr(manifest, "file_count", 0) or 0)
-        outputs["total_size"] = int(getattr(manifest, "total_size", 0) or 0)
-    return int(exit_code), outputs
-
-
-def _run_debug_bundle(repo_root: Path, out_path: Path, *, deterministic: bool = True) -> tuple[int, dict[str, Any]]:
-    from engine.config import load_config
-    from engine.logging_tools import suppress_stdout
-    from engine.services import build_replay_service
-    from engine.game import GameWindow
-
-    config = load_config()
-    window = GameWindow(
-        width=config.width,
-        height=config.height,
-        title=config.title,
-        fullscreen=config.fullscreen,
-        vsync=config.vsync,
-        config=config,
-        config_path="config.json",
-    )
-
-    try:
-        replay_service = build_replay_service()
-        with suppress_stdout():
-            window.load_scene(config.start_scene)
-        payload = replay_service.build_debug_bundle_payload(
-            window=window,
-            editor=None,
-            deterministic=bool(deterministic),
-        )
-        write_json_atomic(out_path, payload, indent=2, sort_keys=True, trailing_newline=True)
-        return 0, {"debug_bundle_json": out_path.as_posix()}
-    except Exception:  # noqa: BLE001
-        return 1, {"debug_bundle_json": out_path.as_posix()}
-    finally:
-        try:
-            window.close()
-        except Exception:
-            _log_swallow("RELE-001", "mesh_cli/release.py pass-only blanket swallow")
-            pass
-
-
-def _step_record(
-    name: str,
-    exit_code: int,
-    *,
-    outputs: dict[str, Any] | None = None,
-    error: str | None = None,
-) -> dict[str, Any]:
-    record: dict[str, Any] = {
-        "name": name,
-        "ok": exit_code == 0,
-        "exit_code": int(exit_code),
-    }
-    if outputs:
-        record["outputs"] = dict(outputs)
-    if error:
-        record["error"] = error
-    return record
-
-
-def _normalize_report_path(path: Path, repo_root: Path) -> str:
-    try:
-        return path.resolve().relative_to(repo_root).as_posix()
-    except ValueError:
-        return path.name
-
-
-def _normalize_outputs(outputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
-    normalized: dict[str, Any] = {}
-    for key, value in outputs.items():
-        if isinstance(value, str):
-            text = value.strip()
-            if text:
-                candidate = Path(text)
-                if candidate.is_absolute():
-                    normalized[key] = _normalize_report_path(candidate, repo_root)
-                    continue
-        normalized[key] = value
-    return normalized
-
-
-def _write_report(path: Path, report: dict[str, Any]) -> None:
-    write_json_atomic(path, report, indent=2, sort_keys=True, trailing_newline=True)
-
-
-def _write_summary(path: Path, report: dict[str, Any], *, failed_step: str | None, exit_code: int) -> None:
-    artifacts = report.get("artifacts", {})
-    lines = [
-        "Mesh Release Check",
-        f"Repo: {report.get('repo_root', '')}",
-        f"Artifacts: {report.get('artifacts_dir', '')}",
-    ]
-    prov_data = report.get("provenance")
-    if prov_data and isinstance(prov_data, dict):
-        from engine.provenance import Provenance, format_provenance_text as _fmt
-
-        lines.append("")
-        lines.append(_fmt(Provenance(**prov_data)))
-        lines.append("")
-    lines.append("Steps:")
-    for step in report.get("steps", []):
-        name = step.get("name", "")
-        status = "OK" if step.get("ok") else "FAILED"
-        code = step.get("exit_code", 1)
-        lines.append(f"- {name}: {status} (exit={code})")
-
-    if failed_step is None:
-        lines.append("Result: OK")
-    else:
-        lines.append(f"Result: FAILED at {failed_step} (exit={exit_code})")
-
-    if isinstance(artifacts, dict):
-        lines.append("Artifacts:")
-        for key in sorted(artifacts.keys()):
-            value = artifacts.get(key)
-            lines.append(f"- {key}: {value}")
-
-    text = "\n".join(lines) + "\n"
-    write_text_atomic(path, text, encoding="utf-8")
-
-
-def _resolve_path(value: object, repo_root: Path, default: Path) -> Path:
-    raw = str(value or "").strip()
-    if not raw:
-        return default
-    path = Path(raw)
-    if not path.is_absolute():
-        return repo_root / path
-    return path
-
-
-def os_chdir(path: Path) -> None:
-    import os
-
-    os.chdir(path)

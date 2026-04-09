@@ -5,6 +5,7 @@ from pathlib import Path
 import engine.optional_arcade as optional_arcade
 
 from engine.ui import DevBrowserOverlay
+from tests._typing import as_any
 
 
 def _stub_window():
@@ -54,7 +55,7 @@ def test_scene_preview_counts_and_schema_flags_are_deterministic(tmp_path: Path)
         encoding="utf-8",
     )
 
-    overlay = DevBrowserOverlay(_stub_window())  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(_stub_window()))
     overlay.mode = "scenes"
     overlay._items = [{"label": "my_scene.json", "scene_path": str(scene_path)}]
     overlay.selected_index = 0
@@ -97,7 +98,7 @@ def test_world_preview_counts_and_start_scene_existence(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    overlay = DevBrowserOverlay(_stub_window())  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(_stub_window()))
     overlay.mode = "worlds"
     overlay._items = [{"label": "my_world.json", "world_path": str(world_path)}]
     overlay.selected_index = 0
@@ -131,7 +132,7 @@ def test_world_start_scene_missing_is_reported(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    overlay = DevBrowserOverlay(_stub_window())  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(_stub_window()))
     overlay.mode = "worlds"
     overlay._items = [{"label": "my_world.json", "world_path": str(world_path)}]
     overlay.selected_index = 0
@@ -141,7 +142,7 @@ def test_world_start_scene_missing_is_reported(tmp_path: Path) -> None:
 
 
 def test_p_toggles_preview_without_affecting_state() -> None:
-    overlay = DevBrowserOverlay(_stub_window())  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(_stub_window()))
     overlay.visible = True
     overlay.mode = "scenes"
     overlay.filter_text = "abc"

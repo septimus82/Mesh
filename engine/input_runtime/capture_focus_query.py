@@ -89,7 +89,7 @@ def get_capture_focus_snapshot(controller: Any, modifiers: int | None = None) ->
         from engine.palette_mode import get_state  # noqa: PLC0415
 
         palette_state = get_state()
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: optional palette-mode state checks should fall back to no palette focus capture
         palette_state = None
     is_palette_mode_enabled = bool(palette_state and getattr(palette_state, "enabled", False))
 

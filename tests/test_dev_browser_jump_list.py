@@ -5,6 +5,7 @@ import engine.optional_arcade as optional_arcade
 
 from engine.scene_index import SceneIndex
 from engine.ui import DevBrowserOverlay
+from tests._typing import as_any
 
 
 class StubSprite:
@@ -35,7 +36,7 @@ def _make_window_with_sprites(sprites: list[StubSprite]):
 
 def test_l_only_works_in_jump_mode_in_scenes_tab() -> None:
     window = _make_window_with_sprites([])
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
 
     overlay.mode = "scenes"
@@ -65,7 +66,7 @@ def test_jump_list_build_order_and_first_wins_is_deterministic() -> None:
         StubSprite(entity_data={"id": "IdOnly"}, mesh_name=None),
     ]
     window = _make_window_with_sprites(sprites)
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
     overlay.mode = "scenes"
 
@@ -83,7 +84,7 @@ def test_jump_list_up_down_clamps() -> None:
         StubSprite(entity_data={"id": "c"}, mesh_name=None),
     ]
     window = _make_window_with_sprites(sprites)
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
     overlay.mode = "scenes"
 
@@ -106,7 +107,7 @@ def test_enter_with_list_open_jumps_and_closes_jump_mode_after_success() -> None
         StubSprite(entity_data={"behaviour_config": {"TriggerZone": {"zone_id": "Zone1"}}}, mesh_name=None),
     ]
     window = _make_window_with_sprites(sprites)
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
     overlay.mode = "scenes"
 
@@ -131,7 +132,7 @@ def test_enter_with_list_open_jumps_and_closes_jump_mode_after_success() -> None
 def test_esc_closes_list_first_then_exits_jump_mode() -> None:
     sprites = [StubSprite(entity_data={"id": "Alpha"}, mesh_name=None)]
     window = _make_window_with_sprites(sprites)
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
     overlay.mode = "scenes"
 
@@ -156,7 +157,7 @@ def test_typing_in_jump_mode_does_not_move_list_selection() -> None:
         StubSprite(entity_data={"id": "c"}, mesh_name=None),
     ]
     window = _make_window_with_sprites(sprites)
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
     overlay.mode = "scenes"
 

@@ -4,6 +4,8 @@ import copy
 
 import arcade
 
+from tests._game_window_undo_stub import bind_game_window_undo_methods
+
 
 class _FakeSceneController:
     def __init__(self, *, scene_path: str, payload: dict) -> None:
@@ -21,7 +23,6 @@ class _FakeSceneController:
 
 
 def test_undo_noop_on_scene_mismatch(capsys) -> None:
-    from engine.game import GameWindow
     from engine.input_runtime import capture as input_capture
     from engine.palette_mode import get_state
 
@@ -49,8 +50,7 @@ def test_undo_noop_on_scene_mismatch(capsys) -> None:
             },
         )()
 
-        window.push_undo_frame = lambda reason: GameWindow.push_undo_frame(window, reason)  # type: ignore[attr-defined]
-        window.undo = lambda: GameWindow.undo(window)  # type: ignore[attr-defined]
+        bind_game_window_undo_methods(window, include_undo=True)
 
         assert window.push_undo_frame("test") is True
         assert len(window.undo_stack) == 1

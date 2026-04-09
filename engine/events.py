@@ -268,7 +268,7 @@ class MeshEventBus:
         for callback in listeners + wildcard_listeners:
             try:
                 callback(event)
-            except Exception as exc:  # noqa: BLE001 - best-effort logging only
+            except Exception as exc:  # noqa: BLE001  # REASON: subscriber callback failures should be logged without aborting delivery to other listeners
                 logger.error(
                     "[Mesh][EventBus] ERROR delivering '%s' to %s: %s",
                     event.type,

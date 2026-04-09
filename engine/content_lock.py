@@ -31,7 +31,7 @@ def _hash_file(path: Path) -> Optional[str]:
         return hashlib.sha256(path.read_bytes()).hexdigest()
     except OSError:
         return None
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: unexpected file hash failures should log once and degrade to a missing hash entry
         _mesh_lock_log_once("hash_file", exc, context=str(path))
         return None
 
@@ -57,7 +57,7 @@ def _get_referenced_scenes(world_path: Path) -> List[str]:
         for s_def in world_data.get("scenes", {}).values():
             if "path" in s_def:
                 scenes.add(s_def["path"])
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: malformed world files should log once and degrade to an empty scene reference list
         _mesh_lock_log_once("referenced_scenes", exc, context=str(world_path))
 
     return sorted(list(scenes))
@@ -133,7 +133,7 @@ def build_lock(world_path: str = "worlds/main_world.json") -> Dict[str, Any]:
         # We suppress output and just get stats.
         report = audit_world(world_path)
         audit_snapshot = report["stats"]
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: audit snapshot failures should log once and preserve lock generation with an empty snapshot
         _mesh_lock_log_once("audit_snapshot", exc, context=str(world_path))
         audit_snapshot = {}
 

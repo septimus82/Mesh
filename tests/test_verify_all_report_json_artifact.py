@@ -239,7 +239,7 @@ def test_flag_not_set_no_artifact_written(tmp_path: Path, monkeypatch, capsys) -
         no_index=False,
     )
     verify_mod._handle_verify_all(args)
-    out = capsys.readouterr().out
+    capsys.readouterr()
 
     # verify_report.json should NOT be written (flag not set + _build_verify_all_payload is patched)
     assert not (artifacts / "verify_report.json").exists()

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
 from ..logging_tools import get_logger
+from ..ui_overlays.common import UIElement
 from .selection_outline import (
     RectF,
     SelectionOutline,
@@ -63,7 +64,7 @@ DUPLICATE_LINE_WIDTH = 2.0  # Thicker for duplicates
 HOVER_LINE_WIDTH = 1.0  # Thin for hover
 
 
-class SelectionOutlineOverlay:
+class SelectionOutlineOverlay(UIElement):
     """Overlay for rendering selection outlines in world space."""
 
     def __init__(self, window: Any) -> None:
@@ -72,7 +73,7 @@ class SelectionOutlineOverlay:
         Args:
             window: Game window to query controller from.
         """
-        self.window = window
+        super().__init__(window)
         self._visible = True
 
     @property

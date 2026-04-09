@@ -16,7 +16,7 @@ Save/restore:
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from ..gameplay_event_bus import EventConfigError
 from ..pathfinding import NavGrid, line_of_sight_clear
@@ -269,7 +269,14 @@ class ChaseTargetBehaviour(Behaviour):
         scene = getattr(self.window, "scene_controller", None)
         getter = getattr(scene, "get_nav_grid", None) if scene is not None else None
         if callable(getter):
-            return getter()
+            grid = getter()
+            if isinstance(grid, NavGrid):
+                return grid
+            if (
+                callable(getattr(grid, "world_to_tile", None))
+                and callable(getattr(grid, "tile_center_world", None))
+            ):
+                return cast(NavGrid, grid)
         return None
 
     @staticmethod

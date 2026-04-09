@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import arcade
 import engine.editor_controller as editor_module
 from engine.editor_controller import EditorModeController
+from tests._editor_window_stub import EditorWindowStub, as_game_window
 
 
 class _StubSprite:
@@ -21,18 +22,8 @@ def _build_controller(monkeypatch) -> EditorModeController:
     monkeypatch.setattr(editor_module, "PREFAB_PALETTE", [])
     monkeypatch.setattr(editor_module, "load_prefab_palette", lambda *a, **k: [])
 
-    window = SimpleNamespace()
-    window.strict_mode = False
-    window.paused = False
-    window.width = 800
-    window.height = 600
-    window._mouse_x = 0
-    window._mouse_y = 0
-    window.scene_controller = MagicMock()
-    window.screen_to_world = lambda x, y: (float(x), float(y))
-    window.camera_controller = SimpleNamespace(zoom=1.0)
-
-    controller = EditorModeController(window)  # type: ignore[arg-type]
+    window = EditorWindowStub(scene_controller=MagicMock())
+    controller = EditorModeController(as_game_window(window))
     controller.active = True
     return controller
 

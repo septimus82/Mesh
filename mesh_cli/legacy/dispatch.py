@@ -180,7 +180,7 @@ def dispatch(
         from .. import qa as qa_commands
 
         return int(qa_commands.handle(args))
-    if args.command in {"verify-demo", "verify-strict", "verify-replays", "verify-all"}:
+    if args.command in {"verify-demo", "verify-strict", "verify-replays", "verify-all", "verify-local"}:
         from .. import verify as verify_commands
 
         return int(verify_commands.handle(args))

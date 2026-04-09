@@ -79,7 +79,7 @@ def update_entity_field(scene_json: dict[str, Any], entity_id: str, field: str, 
     if key in {"x", "y"}:
         try:
             entity[key] = float(value)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: invalid numeric position edits should leave scene entity coordinates unchanged
             return scene_json
         return scene_json
 
@@ -90,7 +90,7 @@ def update_entity_field(scene_json: dict[str, Any], entity_id: str, field: str, 
     if key in {"rotation_deg", "rotation"}:
         try:
             rot = float(value)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: invalid rotation edits should leave scene entity rotation unchanged
             return scene_json
         entity["rotation"] = rot % 360.0
         return scene_json
@@ -122,7 +122,7 @@ def _find_entity(scene_json: dict[str, Any], entity_id: str) -> dict[str, Any] |
     if key.startswith("idx:"):
         try:
             idx = int(key.split(":", 1)[1])
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed idx entity ids should fall back to the non-index entity lookup path
             idx = -1
         if 0 <= idx < len(entities) and isinstance(entities[idx], dict):
             return cast(dict[str, Any], entities[idx])

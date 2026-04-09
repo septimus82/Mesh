@@ -83,7 +83,7 @@ def new_light_payload(
     if isinstance(default_color_rgba, list) and len(default_color_rgba) >= 3:
         try:
             color_rgba = [int(default_color_rgba[0]), int(default_color_rgba[1]), int(default_color_rgba[2]), int(default_color_rgba[3]) if len(default_color_rgba) > 3 else 255]
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed default light colors should fall back to no default occluder color
             color_rgba = None
     return {
         "x": float(x),
@@ -422,7 +422,7 @@ def find_closest_edge_insert_index(
         if isinstance(entry, (list, tuple)) and len(entry) == 2:
             try:
                 points.append((float(entry[0]), float(entry[1])))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: malformed occluder polygon points should be skipped during point normalization
                 continue
     if len(points) < 2:
         return (len(points), (float(world_point[0]), float(world_point[1])))
@@ -515,7 +515,7 @@ def update_light_property(
 
     try:
         value = float(new_value)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: invalid occluder numeric edits should leave the property unchanged
         return False
 
     if key == "radius":

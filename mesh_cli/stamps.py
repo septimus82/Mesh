@@ -131,7 +131,7 @@ def _handle_stamp(args: argparse.Namespace) -> int:
         prefabs_path = resolve_path("assets/prefabs.json")
         try:
             prefabs_payload = json.loads(prefabs_path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+        except (OSError, json.JSONDecodeError) as exc:
             _logger.debug("SWALLOW[STMP-002] prefabs.json parse error", exc_info=True)
             print(f"[Mesh][Stamp] ERROR: assets/prefabs.json :: prefabs.parse_error :: {exc}")
             return 1
@@ -280,7 +280,7 @@ def _handle_brush(args: argparse.Namespace) -> int:
             full_path = resolve_path(rel_path)
             try:
                 raw = json.loads(full_path.read_text(encoding="utf-8"))
-            except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+            except (OSError, json.JSONDecodeError) as exc:
                 _logger.debug("SWALLOW[STMP-006] brush parse error for %s", rel_path, exc_info=True)
                 brush_issues.append(BrushIssue(path=rel_path, code="brush.parse_error", detail=str(exc)))
                 continue
@@ -308,7 +308,7 @@ def _handle_brush(args: argparse.Namespace) -> int:
 
         try:
             raw = json.loads(brush_path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+        except (OSError, json.JSONDecodeError) as exc:
             _logger.debug("SWALLOW[STMP-007] brush parse error for %s", brush_path_raw, exc_info=True)
             print(f"[Mesh][Brush] ERROR: {brush_path_raw} :: brush.parse_error :: {exc}")
             return 1
@@ -391,7 +391,7 @@ def _handle_capture(args: argparse.Namespace) -> int:
             full_path = resolve_path(rel_path)
             try:
                 brush = json.loads(full_path.read_text(encoding="utf-8"))
-            except Exception:
+            except (OSError, json.JSONDecodeError):
                 _logger.debug("SWALLOW[STMP-010] capture brush parse failed for %s", rel_path, exc_info=True)
                 continue
             if not _is_captured(rel_path=rel_path, payload=brush):
@@ -414,7 +414,7 @@ def _handle_capture(args: argparse.Namespace) -> int:
         prefabs_path = resolve_path("assets/prefabs.json")
         try:
             prefabs_payload = json.loads(prefabs_path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+        except (OSError, json.JSONDecodeError) as exc:
             _logger.debug("SWALLOW[STMP-011] capture prefabs.json parse error", exc_info=True)
             print(f"[Mesh][Capture] ERROR: assets/prefabs.json :: prefabs.parse_error :: {exc}")
             return 1
@@ -440,7 +440,7 @@ def _handle_capture(args: argparse.Namespace) -> int:
             full_path = resolve_path(rel_path)
             try:
                 raw = json.loads(full_path.read_text(encoding="utf-8"))
-            except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+            except (OSError, json.JSONDecodeError) as exc:
                 _logger.debug("SWALLOW[STMP-013] capture brush parse failed for %s", rel_path, exc_info=True)
                 continue
             if not _is_captured(rel_path=rel_path, payload=raw):

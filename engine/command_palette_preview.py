@@ -159,7 +159,7 @@ def build_arg_preview(command_id: str, raw_arg: str) -> dict[str, Any]:
         if not callable(parser):
             return {"ok": False, "preview": None, "error": f"missing_parser:{parser_name}"}
         parsed = parser(raw_arg)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: preview parser failures should degrade to a stable error payload without breaking palette rendering
         return {"ok": False, "preview": None, "error": f"preview_exception:{type(exc).__name__}"}
 
     if not isinstance(parsed, dict):

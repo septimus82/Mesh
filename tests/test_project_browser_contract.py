@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from engine.projects import add_recent_project, get_recent_projects
+from tests._typing import as_any
 
 
 def _patch_arcade(monkeypatch) -> None:
@@ -50,7 +51,7 @@ def test_project_selection_sets_repo_root_for_scene_index(tmp_path: Path, monkey
     add_recent_project(str(project_root))
 
     window = SimpleNamespace(width=800, height=600, paused=False)
-    menu = MainMenuOverlay(window)  # type: ignore[arg-type]
+    menu = MainMenuOverlay(as_any(window))
     menu.open()
     assert menu.state == "project_browser"
 
@@ -68,7 +69,7 @@ def test_project_browser_skips_on_web(monkeypatch) -> None:
 
     monkeypatch.setenv("PYGBAG", "1")
     window = SimpleNamespace(width=800, height=600, paused=False)
-    menu = MainMenuOverlay(window)  # type: ignore[arg-type]
+    menu = MainMenuOverlay(as_any(window))
     menu.open()
     assert menu.state == "main"
     assert menu.get_lines()[0] == "TITLE SCREEN"
@@ -84,7 +85,7 @@ def test_project_browser_create_flow(tmp_path: Path, monkeypatch) -> None:
 
     window = SimpleNamespace(width=800, height=600, paused=False)
     
-    menu = MainMenuOverlay(window) # type: ignore
+    menu = MainMenuOverlay(as_any(window))
     menu.open()
     assert menu.state == "project_browser"
     
@@ -138,7 +139,7 @@ def test_project_browser_cancel_flow(monkeypatch) -> None:
     import engine.optional_arcade as optional_arcade
     
     window = SimpleNamespace(width=800, height=600, paused=False)
-    menu = MainMenuOverlay(window) # type: ignore
+    menu = MainMenuOverlay(as_any(window))
     menu.open()
     assert menu.state == "project_browser"
     

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
@@ -70,18 +70,18 @@ class IncrementCounterOnEvent(Behaviour):
 
     def __init__(self, entity, window, **config: Any) -> None:
         super().__init__(entity, window, **config)
-        self.event_type = self.config["event_type"]
-        self.payload_field = self.config["payload_field"]
-        self.payload_value = self.config["payload_value"]
-        self.counter = self.config["counter"]
+        self.event_type = str(self.config.get("event_type", "") or "")
+        self.payload_field = str(self.config.get("payload_field", "") or "")
+        self.payload_value = str(self.config.get("payload_value", "") or "")
+        self.counter = str(self.config.get("counter", "") or "")
         self.amount = float(self.config["amount"])
-        self.scope = self.config["scope"]
-        self.quest_id = self.config["quest_id"]
+        self.scope = str(self.config.get("scope", "global") or "global")
+        self.quest_id = str(self.config.get("quest_id", "") or "")
+        self._unsubscribe: Callable[[], None] | None
+        self._unsubscribe = None
 
         if self.event_type and self.counter:
             self._unsubscribe = self.window.event_bus.subscribe(self.event_type, self._on_event)
-        else:
-            self._unsubscribe = None
 
     def _on_event(self, event: MeshEvent) -> None:
         if self.payload_field:
@@ -98,6 +98,6 @@ class IncrementCounterOnEvent(Behaviour):
             print(f"[Mesh][IncrementCounterOnEvent] Incremented '{self.counter}' by {self.amount}")
 
     def destroy(self) -> None:
-        if self._unsubscribe:
+        if self._unsubscribe is not None:
             self._unsubscribe()
             self._unsubscribe = None

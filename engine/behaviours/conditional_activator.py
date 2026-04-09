@@ -9,7 +9,7 @@ from .registry import register_behaviour
 import engine.optional_arcade as optional_arcade
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
-    import optional_arcade.arcade
+    from arcade import Sprite
 
 
 @register_behaviour(
@@ -63,7 +63,7 @@ class ConditionalActivator(Behaviour):
         self._apply_state(self._requirements_met())
 
     @staticmethod
-    def _merge_entity_data(entity: "optional_arcade.arcade.Sprite", config: Dict[str, Any] | None) -> Dict[str, Any]:
+    def _merge_entity_data(entity: "Sprite", config: Dict[str, Any] | None) -> Dict[str, Any]:
         data = dict(getattr(entity, "mesh_entity_data", {}) or {})
         if config:
             data.update(config)

@@ -14,7 +14,11 @@ from engine.ui_overlays.providers import command_palette_provider
 pytestmark = pytest.mark.fast
 
 
-def _make_command(cmd_id: str, title: str, action) -> SimpleNamespace:  # type: ignore[no-untyped-def]
+def _make_command(
+    cmd_id: str,
+    title: str,
+    action: object,
+) -> SimpleNamespace:
     return SimpleNamespace(
         id=cmd_id,
         title=title,
@@ -113,4 +117,3 @@ def test_provider_includes_recent_section_in_deterministic_order(monkeypatch: py
     assert rows[2]["kind"] == "command"
     assert rows[2]["id"] == "cmd.a"
     assert payload.get("selected_row") == 2
-

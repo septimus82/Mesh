@@ -110,7 +110,7 @@ class EditorShapeController:
                         continue
                     try:
                         points.append((float(entry[0]), float(entry[1])))
-                    except Exception:  # noqa: BLE001
+                    except Exception:  # noqa: BLE001  # REASON: malformed stored shape points should be skipped without blocking shape edit mode
                         continue
         self._editor.shape_edit_mode = mode
         self._editor.shape_edit_entity = self._editor.selected_entity
@@ -161,7 +161,7 @@ class EditorShapeController:
         if camera_controller is not None:
             try:
                 zoom = float(getattr(camera_controller, "zoom", 1.0))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: invalid camera zoom values should fall back to the default shape pick radius
                 zoom = 1.0
         if zoom <= 0.0:
             zoom = 1.0
@@ -208,7 +208,7 @@ class EditorShapeController:
                 continue
             try:
                 points.append((float(entry[0]), float(entry[1])))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: malformed shape payload points should be skipped during shape state normalization
                 continue
         return points
 
@@ -221,7 +221,7 @@ class EditorShapeController:
                 continue
             try:
                 points.append([float(entry[0]), float(entry[1])])
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: malformed undo shape payload points should be skipped during undo snapshot normalization
                 continue
         return points
 

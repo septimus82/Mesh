@@ -19,7 +19,7 @@ def get_scene_inspector_payload(window: Any) -> dict[str, Any] | None:
         return None
     try:
         value = provider(window)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: scene-inspector provider failures should fail closed to no authoring snippet payload
         return None
     return value if isinstance(value, dict) else None
 
@@ -97,7 +97,7 @@ def _find_sprite_by_entity_id(window: Any, entity_id: str) -> Any | None:
 
         idx = SceneIndex.build_from_sprites(sprites)
         return idx.get_by_id(entity_id)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: SceneIndex lookup failures should fall back to a direct sprite scan for the requested entity id
         for sprite in sprites:
             data = getattr(sprite, "mesh_entity_data", None)
             if isinstance(data, dict):

@@ -11,6 +11,7 @@ from engine.editor_runtime import editor_input_key_handlers
 from engine.ui_overlays.find_everything_overlay import FindEverythingOverlay
 from engine.ui_overlays import find_everything_overlay as overlay_module
 from engine.ui_overlays.widgets import Rect
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -54,7 +55,7 @@ def _make_overlay(result_count: int = 12) -> tuple[FindEverythingOverlay, _FindC
         editor_controller=controller,
         input=SimpleNamespace(input_source="keyboard_mouse"),
     )
-    overlay = FindEverythingOverlay(window)  # type: ignore[arg-type]
+    overlay = FindEverythingOverlay(as_any(window))
     return overlay, controller
 
 

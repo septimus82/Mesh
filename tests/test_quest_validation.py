@@ -14,6 +14,7 @@ from engine.quest_runtime.validation import (
     validate_quest_definition,
     validate_quest_file,
 )
+from tests._typing import as_any
 
 
 class TestQuestValidationError:
@@ -398,7 +399,7 @@ class TestMigrateQuestDefinition:
 
     def test_non_dict_returns_empty(self):
         """Non-dict input returns empty structure."""
-        result = migrate_quest_definition([])  # type: ignore
+        result = migrate_quest_definition(as_any([]))
         assert result["schema_version"] == QUEST_DEFINITION_SCHEMA_VERSION
         assert result["quests"] == []
 

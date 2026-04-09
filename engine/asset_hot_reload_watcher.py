@@ -309,7 +309,7 @@ class HotReloadWatcher:
             return
         try:
             counts = _reload_render_assets(self.window, changed_paths=changed_paths)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: hot-reload refresh failures must not break watcher loop
             logger.warning("[Mesh][HotReload] asset reload failed: %s", exc)
             return
 

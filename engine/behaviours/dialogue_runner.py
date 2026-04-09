@@ -16,7 +16,7 @@ Save/restore:
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from ..diagnostics import Diagnostic, diagnostics_to_text
 from ..event_emit import emit_gameplay_event
@@ -366,7 +366,7 @@ class DialogueRunnerBehaviour(Behaviour):
         return encode_state(self.TYPE_ID, self.STATE_VERSION, self._inner_save_state())
 
     @staticmethod
-    def _is_legacy_v0_payload(payload: Dict[str, Any]) -> bool:
+    def _is_legacy_v0_payload(payload: Mapping[str, Any]) -> bool:
         required = {
             "enabled",
             "current_node",
@@ -378,7 +378,7 @@ class DialogueRunnerBehaviour(Behaviour):
         return required.issubset(set(payload.keys()))
 
     @staticmethod
-    def _adapt_legacy_v0(payload: Dict[str, Any]) -> Dict[str, Any]:
+    def _adapt_legacy_v0(payload: Mapping[str, Any]) -> Dict[str, Any]:
         return {
             "enabled": bool(payload.get("enabled", True)),
             "current_node": payload.get("current_node"),

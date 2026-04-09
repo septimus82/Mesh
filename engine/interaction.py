@@ -57,7 +57,7 @@ def pick_interactable(
         try:
             dx = float(getattr(entity, "center_x")) - px
             dy = float(getattr(entity, "center_y")) - py
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: entities without stable position attributes should be skipped during interactable distance ranking
             continue
 
         dist_sq = dx * dx + dy * dy
@@ -173,7 +173,7 @@ def perform_interaction(window: Any, *, max_dist: float = DEFAULT_INTERACT_MAX_D
 
     try:
         actor = finder()
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: player lookup failures should fall back to no interaction attempt
         return False
     if actor is None:
         return False

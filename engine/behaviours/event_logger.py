@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -33,11 +33,12 @@ class EventLogger(Behaviour):
         "events": ParamDef(str, default="*", description="Comma-separated list of events to log (or '*')"),
     }
 
-    def __init__(self, entity: "Sprite", window: "GameWindow", **config) -> None:
+    def __init__(self, entity: "Sprite", window: "GameWindow", **config: Any) -> None:
         super().__init__(entity, window, **config)
         raw_events = str(self.config.get("events", "*"))
         self.events_to_log = raw_events.split(",")
         self.events_to_log = [e.strip() for e in self.events_to_log if e.strip()]
+        self._unsubscribers: list[Callable[[], None]]
         self._unsubscribers = []
 
     def on_added(self) -> None:

@@ -283,7 +283,7 @@ def _handle_replay_check(args: argparse.Namespace) -> int:
     except ValueError as exc:
         print(f"[Mesh][Episode] ERROR: {exc}")
         return 2
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: episode CLI should collapse unexpected runtime failures into a deterministic nonzero exit with context
         print(f"[Mesh][Episode] ERROR: {type(exc).__name__}: {exc}")
         return 1
 
@@ -865,7 +865,7 @@ def _restore_saveable_state(
             restore(payload, **kwargs)
         else:
             restore(payload)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: replay restore should record unexpected restore failures in diagnostics before honoring restore policy
         if diagnostics is not None:
             diagnostics.add_exception(
                 "episode.restore_state.failed",
@@ -1067,7 +1067,7 @@ def _restore_context(
     ctx = _build_context(spec, start_quest=False)
     try:
         ctx.window.game_state_controller.state.restore(snapshot["flags"])
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: replay snapshot restore should record unexpected flag restore failures before re-raising
         if diagnostics is not None:
             diagnostics.add_exception(
                 "episode.restore.flags_failed",
@@ -1079,7 +1079,7 @@ def _restore_context(
         raise
     try:
         ctx.window.gameplay_event_bus.restore_state(snapshot["bus"])
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: replay snapshot restore should record unexpected event-bus restore failures before re-raising
         if diagnostics is not None:
             diagnostics.add_exception(
                 "episode.restore.bus_failed",
@@ -1343,7 +1343,7 @@ def _run_replay_once(spec: RuntimeSpec, replay_payload: dict[str, Any]) -> Repla
             tick_ms_max=tick_ms_max,
             save_restore_diagnostics=save_restore_diags.to_json(),
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: replay runner should convert unexpected execution failures into a deterministic failed result payload
         return ReplayRunResult(
             ok=False,
             error=f"{type(exc).__name__}: {exc}",

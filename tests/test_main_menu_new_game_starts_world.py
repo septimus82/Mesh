@@ -6,6 +6,7 @@ from pathlib import Path
 import arcade
 
 from engine.ui import MainMenuOverlay
+from tests._typing import as_any
 
 
 class _World:
@@ -38,7 +39,7 @@ def test_main_menu_new_game_starts_world_and_clears_flags(tmp_path: Path, monkey
     monkeypatch.setenv("MESH_REPO_ROOT", str(tmp_path))
 
     window = _Window()
-    menu = MainMenuOverlay(window)  # type: ignore[arg-type]
+    menu = MainMenuOverlay(as_any(window))
     menu.open()
     # Skip project browser and go directly to main menu state
     # to avoid _reload_project_config overwriting our mocked world_controller

@@ -51,13 +51,13 @@ def resolve_prefab_base(
 
     try:
         from .prefabs import get_prefab_manager  # noqa: PLC0415
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: prefab manager imports are optional and should fall back to no resolved variant data
         return {}
 
     try:
         manager = get_prefab_manager()
         resolved = manager.resolve_with_variant(prefab_id.strip(), variant_id)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: prefab variant resolution failures should fall back to no resolved variant data
         return {}
 
     if not isinstance(resolved, dict):

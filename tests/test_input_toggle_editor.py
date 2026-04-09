@@ -3,6 +3,7 @@ import types
 import arcade
 
 from engine.input_controller import InputController
+from tests._typing import as_any
 
 
 class StubEditorController:
@@ -20,7 +21,7 @@ def test_toggle_editor_action_calls_editor_toggle() -> None:
         config_path="config.json",
         editor_controller=StubEditorController(),
     )
-    controller = InputController(window)  # type: ignore[arg-type]
+    controller = InputController(as_any(window))
     controller.manager.press(arcade.key.F4)
     controller.update(0.016)
     assert window.editor_controller.calls == 1

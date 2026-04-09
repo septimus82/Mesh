@@ -23,7 +23,7 @@ def update(
     if callable(updater):
         try:
             updater(delta_time)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: manager update failures should log once and keep later input dispatch checks running
             if "input_update" not in log_once_set:
                 error = getattr(logger, "error", None)
                 if callable(error):

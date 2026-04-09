@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import arcade
 
+from tests._game_window_undo_stub import as_game_window
+
 
 def test_entity_copy_skips_player_noop_when_only_player(capsys) -> None:
     from engine.entity_select_mode import EntitySelectState
@@ -23,7 +25,7 @@ def test_entity_copy_skips_player_noop_when_only_player(capsys) -> None:
                 "console_controller": type("C", (), {"active": False, "toggle": lambda *_a: None, "process_key": lambda *_a: False})(),
             },
         )()
-        sc = SceneController(window)  # type: ignore[arg-type]
+        sc = SceneController(as_game_window(window))
         sc.current_scene_path = "scenes/foo.json"
         sc._loaded_scene_source_data = {
             "entities": [
@@ -40,4 +42,3 @@ def test_entity_copy_skips_player_noop_when_only_player(capsys) -> None:
         assert getattr(window, "entity_clipboard", None) is None
     finally:
         palette.enabled = original_enabled
-

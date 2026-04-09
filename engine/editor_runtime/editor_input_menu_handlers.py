@@ -136,7 +136,7 @@ def _execute_menu_item(controller: EditorController, item_id: str) -> None:
 
     try:
         run_editor_action(item_id, controller, controller.window)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: menu action failures should log without breaking the editor input menu loop
         logger.error("[Editor] Menu action failed: %s", exc)
 
 

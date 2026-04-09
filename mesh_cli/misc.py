@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -208,7 +207,7 @@ def _handle_play(args: argparse.Namespace) -> int:
     # Preload the scene to catch errors early, similar to main.py
     try:
         window.load_scene(config.start_scene)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: misc CLI should collapse unexpected scene-load failures into a deterministic startup error
         print(f"[Mesh][CLI] Failed to load scene '{config.start_scene}': {exc}")
         return 1
 
@@ -238,6 +237,9 @@ def _handle_build_web(args: argparse.Namespace) -> int:
     passthrough = [str(item) for item in (getattr(args, "extra_arg", None) or []) if str(item).strip()]
     disable_sound_format_error = bool(getattr(args, "disable_sound_format_error", True))
     cmd = [sys.executable, "-m", "tooling.build_web", entrypoint]
+    out_dir = str(getattr(args, "out", "") or "").strip()
+    if out_dir:
+        cmd.extend(["--out-dir", out_dir])
     cmd.append("--disable-sound-format-error" if disable_sound_format_error else "--no-disable-sound-format-error")
     for arg in passthrough:
         cmd.extend(["--extra-arg", arg])
@@ -245,24 +247,9 @@ def _handle_build_web(args: argparse.Namespace) -> int:
     if int(result.returncode) != 0:
         return int(result.returncode)
 
-    out_dir = str(getattr(args, "out", "") or "").strip()
-    if not out_dir:
+    if out_dir:
         return 0
 
-    from .web_smoke import resolve_web_build_dir
-
-    source_dir = resolve_web_build_dir(Path.cwd())
-    if not source_dir.exists():
-        print(f"[Mesh][Web] Error: expected build output not found at {source_dir.as_posix()}")
-        return 1
-
-    target_dir = Path(out_dir)
-    if not target_dir.is_absolute():
-        target_dir = Path.cwd() / target_dir
-    if target_dir.exists():
-        shutil.rmtree(target_dir)
-    target_dir.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(source_dir, target_dir)
     return 0
 
 
@@ -459,7 +446,7 @@ def _handle_dump_state(args: argparse.Namespace) -> int:
         
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
         return 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: dump-state CLI should emit a deterministic failure payload when runtime state export fails unexpectedly
         payload = {"ok": False, "code": 1, "error": "dump_state.failed"}
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
         return 1

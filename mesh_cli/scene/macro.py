@@ -65,7 +65,7 @@ def _handle_scene_macro_report(args: argparse.Namespace) -> int:
 
     try:
         scene_payload = json.loads(resolved_scene.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, json.JSONDecodeError) as exc:  # REASON: scene macro CLI should report scene JSON parse failures deterministically before computing a macro report
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
     if not isinstance(scene_payload, dict):
@@ -80,7 +80,7 @@ def _handle_scene_macro_report(args: argparse.Namespace) -> int:
             raw_args=raw_args,
             anchor_override=anchor_override,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: scene macro CLI should collapse unexpected macro report failures into a deterministic nonzero exit
         print(f"[Mesh][CLI] Error: macro-report failed: {type(exc).__name__}: {exc}")
         return 1
 
@@ -129,7 +129,7 @@ def _handle_scene_macro_apply(args: argparse.Namespace) -> int:
 
     try:
         scene_payload = json.loads(resolved_scene.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, json.JSONDecodeError) as exc:  # REASON: scene macro apply CLI should report scene JSON parse failures deterministically before macro application
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return 1
     if not isinstance(scene_payload, dict):
@@ -144,7 +144,7 @@ def _handle_scene_macro_apply(args: argparse.Namespace) -> int:
             raw_args=raw_args,
             anchor_override=anchor_override,
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: scene macro apply CLI should collapse unexpected macro application failures into a deterministic nonzero exit
         print(f"[Mesh][CLI] Error: macro-apply failed: {type(exc).__name__}: {exc}")
         return 1
 

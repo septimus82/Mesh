@@ -91,6 +91,15 @@ class Shooter(Behaviour):
         if self._cooldown_timer > 0:
             self._cooldown_timer -= dt
 
+    def _entity_name(self) -> str:
+        for attr_name in ("mesh_name", "name"):
+            raw_name = getattr(self.entity, attr_name, None)
+            if isinstance(raw_name, str):
+                name = raw_name.strip()
+                if name:
+                    return name
+        return "<unnamed>"
+
     def shoot_at(self, target_x: float, target_y: float) -> bool:
         """Attempt to shoot at a target position."""
         if self._cooldown_timer > 0:
@@ -108,7 +117,7 @@ class Shooter(Behaviour):
         # Spawn projectile
         self._spawn_projectile(angle_deg)
 
-        source_name = str(getattr(self.entity, "mesh_name", "") or "").strip() or "<unnamed>"
+        source_name = self._entity_name()
         source_entity_id = str(getattr(self.entity, "mesh_id", "") or "")
         emit_gameplay_event(
             self.window,
@@ -151,7 +160,7 @@ class Shooter(Behaviour):
         lifetime = self.range / self.projectile_speed
 
         projectile_data = {
-            "name": f"proj_{self.entity.mesh_name}",
+            "name": f"proj_{self._entity_name()}",
             "x": self.entity.center_x,
             "y": self.entity.center_y,
             "layer": "entities",

@@ -23,7 +23,7 @@ def sanitize_poly(
             continue
         try:
             pt = (float(entry[0]), float(entry[1]))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed point entries should be skipped during geometry point normalization
             continue
         if prev is not None and _points_close(prev, pt, eps):
             continue

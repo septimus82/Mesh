@@ -27,6 +27,7 @@ from tooling.asset_manifest import (
     get_asset_type,
     scan_asset_roots,
 )
+from tests._typing import as_any
 
 
 # --------------------------------------------------------------------------- #
@@ -360,7 +361,7 @@ class TestManifestEntry:
             mtime=0.0,
         )
         with pytest.raises(AttributeError):
-            entry.asset_id = "changed"  # type: ignore[misc]
+            as_any(entry).asset_id = "changed"
 
 
 class TestAssetReference:

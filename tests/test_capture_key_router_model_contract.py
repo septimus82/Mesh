@@ -41,6 +41,7 @@ from engine.input_runtime.capture_runtime_focus_model import (
     SCOPE_PROJECT_EXPLORER,
     SCOPE_TILE_PAINT,
 )
+from tests._typing import as_any
 
 
 # ---------------------------------------------------------------------------
@@ -313,10 +314,10 @@ def test_route_spec_is_frozen() -> None:
     route = RouteSpec(SCOPE_GLOBAL, KeyCombo(key.A, 0), "test", _when_always)
     
     with pytest.raises(AttributeError):
-        route.scope = SCOPE_CONSOLE  # type: ignore
+        as_any(route).scope = SCOPE_CONSOLE
     
     with pytest.raises(AttributeError):
-        route.action_id = "modified"  # type: ignore
+        as_any(route).action_id = "modified"
 
 
 @pytest.mark.fast
@@ -326,10 +327,10 @@ def test_key_combo_is_frozen() -> None:
     combo = KeyCombo(key=key.A, mods=0)
     
     with pytest.raises(AttributeError):
-        combo.key = key.B  # type: ignore
+        as_any(combo).key = key.B
     
     with pytest.raises(AttributeError):
-        combo.mods = 1  # type: ignore
+        as_any(combo).mods = 1
 
 
 # ---------------------------------------------------------------------------
@@ -349,4 +350,3 @@ def test_route_count_ratchet() -> None:
         f"Route table has {len(table)} routes, expected at least {MIN_ROUTES}. "
         f"Did you accidentally delete routes?"
     )
-

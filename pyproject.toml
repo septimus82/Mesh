@@ -70,18 +70,363 @@ exclude = [
 
 [[tool.mypy.overrides]]
 module = [
-    "engine.ai_audit",
-    "engine.ai_bundle",
-    "engine.ai_debug_overlay",
-    "engine.behaviours.*",
-    "engine.console_controller",
-    "engine.editor_controller",
-    "engine.game",
-    "engine.scene_controller",
-    "engine.tilemap",
+    "engine.behaviours.time_of_day_gate",
 ]
-disallow_untyped_defs = false
-ignore_errors = true
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.cutscene_trigger",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.grant_experience",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.quest_giver",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.scene_exit",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.toggle_scene_lights",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.event_logger",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.message_on_zone_enter",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.emit_event_on_event",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.collectible",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.damage_on_touch",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.follow",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.patrol",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.toggle_switch",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.increment_counter_on_event",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.trigger_zone",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.drop_table",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.conditional_activator",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.auto_animation_by_movement",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.listen_for_event",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.timer",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.quest_progress",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.set_game_state_on_event",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.scene_transition",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.pickup_collectible",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.wander",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.trigger_volume",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.patrol_path",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.flee_from_target",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.follow_path",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.chase_target",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.health",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.interactable",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.hitbox",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.inventory_holder",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.vendor",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.light_source",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.saveable",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.camera_follow",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.animator",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.main_menu",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.ranged_attack_ai",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.ranged_enemy_ai",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.shooter",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.projectile",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.offer_perk_choice",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.combat",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.npc_schedule",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.enemy_ai",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.patrol_chase",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.dialogue_runner",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.quest_hook",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.puzzle_behaviours",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.registry",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.utils",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.base",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.sequence_player",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.player_controller",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.dialogue",
+]
+ignore_errors = false
+
+[[tool.mypy.overrides]]
+module = [
+    "engine.behaviours.action_list_runner",
+]
+ignore_errors = false
 
 [[tool.mypy.overrides]]
 module = [

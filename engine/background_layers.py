@@ -43,7 +43,7 @@ class BackgroundTextureCache:
             return None
         try:
             tex = optional_arcade.arcade.load_texture(str(resolved))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: optional texture load failures should degrade to a warning instead of aborting scene setup
             logger.warning("Failed to load texture '%s': %s", raw, exc)
             return None
         self._cache[key] = tex

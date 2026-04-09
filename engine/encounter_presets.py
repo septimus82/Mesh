@@ -78,7 +78,7 @@ def load_encounter_presets(
 
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: malformed preset JSON should report a preset issue without aborting preset validation
         msg = _as_one_line(f"{label}: failed to parse JSON: {type(exc).__name__}: {exc}")
         issues.append(PresetIssue("ERROR", msg, ("ERROR", msg)))
         return {}, issues

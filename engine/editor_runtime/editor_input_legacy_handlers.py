@@ -50,7 +50,7 @@ def handle_input_legacy(
 
     if key == optional_arcade.arcade.key.J and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
         if not is_text_input_active(controller):
-            return run_action("editor.find_everything.toggle", controller, controller.window)
+            return bool(run_action("editor.find_everything.toggle", controller, controller.window))
         return True
 
     dock = getattr(controller, "dock", None)
@@ -93,15 +93,15 @@ def handle_input_legacy(
         and (modifiers & optional_arcade.arcade.key.MOD_SHIFT)
         and not (modifiers & optional_arcade.arcade.key.MOD_CTRL)
     ):
-        return controller.shape.toggle_shape_edit_mode("occluder")
+        return bool(controller.shape.toggle_shape_edit_mode("occluder"))
     if (
         key == optional_arcade.arcade.key.C
         and (modifiers & optional_arcade.arcade.key.MOD_SHIFT)
         and not (modifiers & optional_arcade.arcade.key.MOD_CTRL)
     ):
-        return controller.shape.toggle_shape_edit_mode("collision")
+        return bool(controller.shape.toggle_shape_edit_mode("collision"))
     if key == optional_arcade.arcade.key.O and not modifiers:
-        return run_action("editor.occluder_tool.toggle", controller, controller.window)
+        return bool(run_action("editor.occluder_tool.toggle", controller, controller.window))
 
     if controller.shape_edit_mode:
         if key in (optional_arcade.arcade.key.ESCAPE,):
@@ -111,7 +111,7 @@ def handle_input_legacy(
             controller.shape.commit_shape_edit()
             return True
         if key in (optional_arcade.arcade.key.BACKSPACE, optional_arcade.arcade.key.DELETE):
-            return controller.shape.remove_shape_point()
+            return bool(controller.shape.remove_shape_point())
         if key == optional_arcade.arcade.key.G and not modifiers:
             controller.shape_snap_enabled = not controller.shape_snap_enabled
             return True

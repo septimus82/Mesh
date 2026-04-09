@@ -31,7 +31,7 @@ def _safe_read_toml(path: Path) -> dict[str, Any] | None:
         return None
     try:
         payload = tomllib.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, tomllib.TOMLDecodeError):
         return None
     return payload if isinstance(payload, dict) else None
 
@@ -76,7 +76,7 @@ def _manifest_includes_examples_json(repo_root: Path) -> bool:
         return False
     try:
         lines = manifest_path.read_text(encoding="utf-8").splitlines()
-    except Exception:
+    except OSError:
         return False
     for raw in lines:
         line = raw.strip()
@@ -201,7 +201,7 @@ def _handle_release_preflight(args: argparse.Namespace) -> int:
     package_version = _read_package_version_from_pyproject(repo_root)
     try:
         from engine.public_api import PUBLIC_API_SEMVER  # noqa: PLC0415
-    except Exception:
+    except (ImportError, OSError):
         PUBLIC_API_SEMVER = "?"
 
     tag_raw = str(getattr(args, "tag", "") or "").strip()

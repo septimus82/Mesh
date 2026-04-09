@@ -68,14 +68,17 @@ def build_audit_report(scene_paths: List[Path] | None = None) -> AIAuditReport:
 
     # 3. Determine scenes to scan
     is_full_audit = scene_paths is None
+    resolved_scene_paths: List[Path] = []
     if is_full_audit:
-        scene_paths = []
         for key, entry in index.entries.items():
             if key.endswith(".json") and ("scenes/" in key or "scenes\\" in key):
-                scene_paths.append(entry.resolved_path)
+                resolved_scene_paths.append(entry.resolved_path)
+    else:
+        assert scene_paths is not None
+        resolved_scene_paths = list(scene_paths)
 
     # 4. Scan Scenes
-    for scene_path in scene_paths:
+    for scene_path in resolved_scene_paths:
         # Ensure path is absolute or resolved relative to cwd for reading
         if not scene_path.is_absolute():
             scene_path = resolve_path(str(scene_path))

@@ -145,7 +145,7 @@ def load_command_palette_state(
         payload = json_io.read_json(state_path)
     except FileNotFoundError:
         return [], {}
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: unreadable palette state files should fall back to empty state without breaking startup
         _LOG.warning("Failed to load command palette state from %s: %s", state_path, exc)
         return [], {}
     return load_palette_state(
@@ -177,5 +177,5 @@ def save_command_palette_state(
     try:
         state_path.parent.mkdir(parents=True, exist_ok=True)
         json_io.write_json_atomic(state_path, payload)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: state file write failures should log and preserve in-memory palette state
         _LOG.warning("Failed to save command palette state to %s: %s", state_path, exc)

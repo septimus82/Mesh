@@ -561,7 +561,7 @@ def content_contract_command(args: argparse.Namespace) -> int:
         try:
             log_path.parent.mkdir(parents=True, exist_ok=True)
             log_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: contract log write failures should report the error and return a controlled command failure
             _log_swallow("CTCM-006", "engine/tooling/content_commands.py blanket swallow", once=True)
             print(f"[Mesh][Contract] ERROR failed to write log: {exc}")
             return 1

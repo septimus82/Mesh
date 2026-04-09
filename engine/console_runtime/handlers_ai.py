@@ -15,7 +15,7 @@ def handle_ai_job(controller: Any, args: list[str]) -> bool:
     job_path = args[0]
     try:
         job = load_job(job_path)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: malformed AI job files should report to the console without breaking the command loop
         controller.log(f"[AI] Failed to load job '{job_path}': {exc}")
         return True
 
@@ -62,7 +62,7 @@ def handle_generate_docs(controller: Any, args: list[str]) -> bool:
     try:
         generate_docs(".", target_dir)
         controller.log(f"Docs generated in {target_dir}")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001  # REASON: docs generation failures should be reported without breaking the command loop
         controller.log(f"Error generating docs: {e}")
     return True
 
@@ -75,6 +75,6 @@ def handle_build_project_index(controller: Any, args: list[str]) -> bool:
     try:
         build_project_index(".", output)
         controller.log(f"Project index built to {output}")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001  # REASON: project index generation failures should be reported without breaking the command loop
         controller.log(f"Error building index: {e}")
     return True

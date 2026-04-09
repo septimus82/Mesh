@@ -36,6 +36,7 @@ from engine.input_runtime.capture_runtime_focus_model import (
     SCOPE_PRIORITY,
     SCOPE_TILE_PAINT,
 )
+from tests._typing import as_any
 
 
 # ---------------------------------------------------------------------------
@@ -384,7 +385,7 @@ def test_validate_route_table_rejects_non_tuple() -> None:
     """validate_route_table() rejects non-tuple input."""
     routes = list(build_mouse_routes())  # Convert to list
     with pytest.raises(RouteTableValidationError, match="must be tuple"):
-        validate_route_table(routes)  # type: ignore[arg-type]
+        validate_route_table(as_any(routes))
 
 
 @pytest.mark.fast
@@ -398,7 +399,7 @@ def test_validate_route_table_rejects_empty() -> None:
 def test_validate_route_table_rejects_invalid_entry_type() -> None:
     """validate_route_table() rejects routes that aren't MouseRouteSpec."""
     with pytest.raises(RouteTableValidationError, match="expected MouseRouteSpec"):
-        validate_route_table(("not a route",))  # type: ignore[arg-type]
+        validate_route_table(as_any(("not a route",)))
 
 
 @pytest.mark.fast

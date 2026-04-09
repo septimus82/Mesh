@@ -36,7 +36,7 @@ class EditorFindActionsController:
         # Normal command execution
         from engine.editor_commands import run_command  # noqa: PLC0415
 
-        return run_command(command_id, editor.window)
+        return bool(run_command(command_id, editor.window))
 
     def activate_find_scene(self, scene_id: str) -> bool:
         """Activate a scene from find-everything."""
@@ -59,15 +59,15 @@ class EditorFindActionsController:
 
     def activate_find_asset(self, asset_path: str) -> bool:
         """Activate an asset from find-everything."""
-        return self._editor.asset_browser.activate_find_asset(asset_path)
+        return bool(self._editor.asset_browser.activate_find_asset(asset_path))
 
     def spawn_find_asset(self, asset_path: str) -> bool:
         """Spawn an asset from find-everything."""
-        return self._editor.asset_browser._spawn_find_asset(asset_path)
+        return bool(self._editor.asset_browser._spawn_find_asset(asset_path))
 
     def copy_find_asset_path(self, asset_path: str) -> bool:
         """Copy asset path to clipboard from find-everything."""
-        return self._editor.asset_browser._copy_find_asset_path(asset_path)
+        return bool(self._editor.asset_browser._copy_find_asset_path(asset_path))
 
     def activate_find_problem(self, issue_id: str) -> bool:
         """Activate a problem from find-everything (show in Problems panel)."""

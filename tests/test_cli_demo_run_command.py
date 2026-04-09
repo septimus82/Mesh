@@ -339,14 +339,14 @@ class TestCLIDispatch:
                 "out_dir": str(out_dir), "schema_version": 1,
             }
 
-        original = demo_mod.run_demo
-        demo_mod.run_demo = fake  # type: ignore[assignment]
+        monkeypatch = pytest.MonkeyPatch()
+        monkeypatch.setattr(demo_mod, "run_demo", fake)
         try:
             args = _make_args(out_dir=str(Path.cwd() / "tmp_test"))
             rc = handle(args)
             assert rc == 0
         finally:
-            demo_mod.run_demo = original  # type: ignore[assignment]
+            monkeypatch.undo()
 
     def test_no_fail_flag(
         self, tmp_path: Path,
@@ -373,14 +373,14 @@ class TestCLIDispatch:
                 "schema_version": 1,
             }
 
-        original = demo_mod.run_demo
-        demo_mod.run_demo = fake_run  # type: ignore[assignment]
+        monkeypatch = pytest.MonkeyPatch()
+        monkeypatch.setattr(demo_mod, "run_demo", fake_run)
         try:
             args = _make_args(out_dir=str(tmp_path), no_fail=True)
             rc = handle(args)
             assert rc == 0
         finally:
-            demo_mod.run_demo = original  # type: ignore[assignment]
+            monkeypatch.undo()
 
     def test_quiet_flag_suppresses_stdout(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str],

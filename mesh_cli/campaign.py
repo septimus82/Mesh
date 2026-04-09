@@ -60,7 +60,7 @@ def _handle_replay_check(args: argparse.Namespace) -> int:
     try:
         from engine.repo_root import get_repo_root
         repo_root = get_repo_root()
-    except Exception:
+    except (OSError, ValueError):
         repo_root = Path.cwd()
 
     campaign_id: str = getattr(args, "campaign", "mini_campaign_01")

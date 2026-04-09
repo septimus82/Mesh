@@ -221,7 +221,7 @@ def _handle_capture_mode_execute(window: Any, capture_state: Any, *, validate_on
             try:
                 from engine.palette_mode import get_state  # noqa: PLC0415
                 get_state().hot_add_item(rel_path=str(capture_persist_result.rel_path))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: palette hot-add hooks are optional and should not block capture palette persistence
                 _log_swallow("CAPT-001", "engine/input_runtime/capture_key_router_handlers_palette.py pass-only blanket swallow")
                 pass
     return True

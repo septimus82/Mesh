@@ -3,6 +3,7 @@ import types
 import arcade
 
 from engine.input_controller import InputController
+from tests._typing import as_any
 
 
 class StubHelpOverlay:
@@ -20,8 +21,7 @@ def test_toggle_help_action_calls_help_overlay_toggle() -> None:
         config_path="config.json",
         help_overlay=overlay,
     )
-    controller = InputController(window)  # type: ignore[arg-type]
+    controller = InputController(as_any(window))
     controller.manager.press(arcade.key.H)
     controller.update(0.016)
     assert overlay.calls == 1
-

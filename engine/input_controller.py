@@ -131,7 +131,7 @@ def _coerce_button_value(value: object) -> bool:
     if callable(is_pressed):
         try:
             return bool(is_pressed())
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: input wrapper query failures should fall back to an unpressed state
             return False
     raw = getattr(value, "value", None)
     if isinstance(raw, (int, float)):
@@ -322,7 +322,7 @@ class InputController:
 
         try:
             controllers = list(get_controllers() or [])
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: controller enumeration failures should fall back to no connected controllers
             controllers = []
 
         if not controllers:
@@ -346,7 +346,7 @@ class InputController:
             if callable(opener):
                 try:
                     opener()
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: controller open failures should not break input backend initialization
                     _log_swallow("INPU-001", "engine/input_controller.py pass-only blanket swallow")
                     pass
 

@@ -71,6 +71,22 @@ def _read_json(path: Path) -> object:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _json_object(value: object) -> dict[str, object]:
+    assert isinstance(value, dict)
+    return value
+
+
+def _json_object_entries(value: object, key: str) -> list[dict[str, object]]:
+    raw_entries = _json_object(value).get(key)
+    assert isinstance(raw_entries, list)
+    return [entry for entry in raw_entries if isinstance(entry, dict)]
+
+
+def _json_list_entries(value: object) -> list[dict[str, object]]:
+    assert isinstance(value, list)
+    return [entry for entry in value if isinstance(entry, dict)]
+
+
 def test_episode_scaffold_is_deterministic(tmp_path: Path) -> None:
     root_a = tmp_path / "a"
     root_b = tmp_path / "b"
@@ -168,25 +184,25 @@ def test_episode_scaffold_writes_expected_registry_stubs(tmp_path: Path) -> None
     )
 
     events = _read_json(tmp_path / plan.events_rel_path)
-    event_names = {str(entry.get("name", "")) for entry in events["events"]}  # type: ignore[index]
+    event_names = {str(entry.get("name", "")) for entry in _json_object_entries(events, "events")}
     for name in plan.event_names:
         assert name in event_names
 
     quests = _read_json(tmp_path / plan.quests_rel_path)
-    quest_ids = {str(entry.get("id", "")) for entry in quests["quests"]}  # type: ignore[index]
+    quest_ids = {str(entry.get("id", "")) for entry in _json_object_entries(quests, "quests")}
     assert plan.quest_id in quest_ids
 
     cutscenes = _read_json(tmp_path / plan.cutscenes_rel_path)
-    cutscene_ids = {str(entry.get("id", "")) for entry in cutscenes["cutscenes"]}  # type: ignore[index]
+    cutscene_ids = {str(entry.get("id", "")) for entry in _json_object_entries(cutscenes, "cutscenes")}
     assert plan.cutscene_intro_id in cutscene_ids
     assert plan.cutscene_outro_id in cutscene_ids
 
     dialogues = _read_json(tmp_path / plan.dialogues_rel_path)
-    dialogue_ids = {str(entry.get("id", "")) for entry in dialogues["dialogues"]}  # type: ignore[index]
+    dialogue_ids = {str(entry.get("id", "")) for entry in _json_object_entries(dialogues, "dialogues")}
     assert plan.dialogue_id in dialogue_ids
 
     prefabs = _read_json(tmp_path / plan.prefabs_rel_path)
-    prefab_ids = {str(entry.get("id", "")) for entry in prefabs}  # type: ignore[arg-type]
+    prefab_ids = {str(entry.get("id", "")) for entry in _json_list_entries(prefabs)}
     for prefab_id in plan.prefab_ids:
         assert prefab_id in prefab_ids
 
@@ -219,9 +235,9 @@ def test_episode_scaffold_scene_references_valid_prefabs_and_behaviours(tmp_path
 
     scene = _read_json(tmp_path / plan.scene_rel_path)
     prefabs = _read_json(tmp_path / plan.prefabs_rel_path)
-    prefab_map = {str(entry.get("id", "")): entry for entry in prefabs}  # type: ignore[arg-type]
+    prefab_map = {str(entry.get("id", "")): entry for entry in _json_list_entries(prefabs)}
 
-    entities = list(scene.get("entities", []))  # type: ignore[union-attr]
+    entities = _json_object_entries(scene, "entities")
     for entity in entities:
         prefab_id = str(entity.get("prefab_id", "")).strip()
         if prefab_id:
@@ -230,7 +246,10 @@ def test_episode_scaffold_scene_references_valid_prefabs_and_behaviours(tmp_path
     allowed_behaviours = {"DialogueRunner", "TriggerVolume", "Interactable", "ActionListRunner"}
     for prefab_id in plan.prefab_ids:
         prefab = prefab_map[prefab_id]
-        behaviours = set(prefab["entity"]["behaviours"])  # type: ignore[index]
+        entity_data = _json_object(prefab.get("entity"))
+        raw_behaviours = entity_data.get("behaviours")
+        assert isinstance(raw_behaviours, list)
+        behaviours = {str(behaviour) for behaviour in raw_behaviours}
         assert behaviours
         assert behaviours.issubset(allowed_behaviours)
 

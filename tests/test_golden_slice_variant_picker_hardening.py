@@ -11,6 +11,7 @@ from engine.ui import (
     build_golden_slice_variant_picker_source,
 )
 from engine.ui_controller import UIController
+from tests._typing import as_any
 
 
 def test_variant_picker_missing_showcase_disables_selection(tmp_path: Path) -> None:
@@ -28,10 +29,10 @@ def test_variant_picker_missing_showcase_disables_selection(tmp_path: Path) -> N
     window.width = 800
     window.height = 600
     window.engine_config = types.SimpleNamespace(input_bindings=None)
-    window.ui_controller = UIController(window)  # type: ignore[arg-type]
+    window.ui_controller = UIController(as_any(window))
     window.player_hud = types.SimpleNamespace(enqueue_toast=MagicMock())
 
-    picker = GoldenSliceVariantPickerOverlay(window)  # type: ignore[arg-type]
+    picker = GoldenSliceVariantPickerOverlay(as_any(window))
     picker.set_visible(True)
     assert picker.visible is True
     assert picker._entries == []
@@ -72,11 +73,11 @@ def test_variant_picker_missing_preset_is_marked_missing_and_safe(tmp_path: Path
     window.width = 800
     window.height = 600
     window.engine_config = types.SimpleNamespace(input_bindings=None)
-    window.ui_controller = UIController(window)  # type: ignore[arg-type]
+    window.ui_controller = UIController(as_any(window))
     window.player_hud = types.SimpleNamespace(enqueue_toast=MagicMock())
     window.request_scene_change = MagicMock()
 
-    picker = GoldenSliceVariantPickerOverlay(window)  # type: ignore[arg-type]
+    picker = GoldenSliceVariantPickerOverlay(as_any(window))
     picker.set_visible(True)
     assert picker.visible is True
     assert len(picker._entries) == 1
@@ -95,7 +96,7 @@ def test_variant_picker_blocks_movement_dispatch_when_open(monkeypatch) -> None:
     window.width = 800
     window.height = 600
     window.engine_config = types.SimpleNamespace(input_bindings=None)
-    window.ui_controller = UIController(window)  # type: ignore[arg-type]
+    window.ui_controller = UIController(as_any(window))
     window.player_hud = types.SimpleNamespace(enqueue_toast=MagicMock())
 
     dummy = types.SimpleNamespace(calls=0)
@@ -108,14 +109,14 @@ def test_variant_picker_blocks_movement_dispatch_when_open(monkeypatch) -> None:
     dummy.on_key_press = _dummy_on_key_press
     window.ui_controller.register_ui_element(dummy)
 
-    picker = GoldenSliceVariantPickerOverlay(window)  # type: ignore[arg-type]
+    picker = GoldenSliceVariantPickerOverlay(as_any(window))
     picker.visible = True
     window.ui_controller.register_ui_element(picker)
 
     dispatch = MagicMock(return_value=True)
     monkeypatch.setattr("engine.input_controller.dispatch_action", dispatch)
 
-    controller = InputController(window)  # type: ignore[arg-type]
+    controller = InputController(as_any(window))
     controller.manager.press(arcade.key.W)
     controller.update(0.016)
     dispatch.assert_not_called()

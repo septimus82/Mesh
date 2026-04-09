@@ -54,7 +54,7 @@ def parse_float(text: str) -> float | None:
     """Parse float from text, returning ``None`` on failure."""
     try:
         return float(str(text).strip())
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: invalid numeric prompt input should fail closed to None without breaking palette parsing
         return None
 
 
@@ -71,4 +71,3 @@ def entity_has_behaviour(ent: dict[str, Any], behaviour: str) -> bool:
             if isinstance(bt, str) and bt.strip() == behaviour:
                 return True
     return False
-

@@ -46,8 +46,12 @@ def _move(entity: Any, colliders: list[Any]) -> None:
     physics_runtime.move_entity_with_physics(entity, (1, 0), colliders)
 
 
-def test_cache_rebuild_on_in_place_collider_mutation() -> None:
-    optional_arcade.arcade.check_for_collision_with_list = _fake_collision  # type: ignore[attr-defined]
+def test_cache_rebuild_on_in_place_collider_mutation(monkeypatch) -> None:
+    monkeypatch.setattr(
+        optional_arcade.arcade,
+        "check_for_collision_with_list",
+        _fake_collision,
+    )
     physics_runtime.reset_broadphase_cache()
     physics_runtime.set_broadphase_enabled(True)
 

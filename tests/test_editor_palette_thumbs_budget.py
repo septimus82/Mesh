@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib import import_module
 from pathlib import Path
 
 import pytest
@@ -10,10 +11,11 @@ from engine import editor_palette_thumbs
 def _write_tiny_png(path: Path, *, rgba: tuple[int, int, int, int]) -> None:
     """Write a valid tiny PNG using Pillow (Mesh already uses PIL for thumbs)."""
     try:
-        from PIL import Image  # type: ignore[import-not-found]
+        image_module = import_module("PIL.Image")
     except Exception as exc:  # pragma: no cover
         raise RuntimeError("Pillow is required for thumbnail tests") from exc
 
+    Image = image_module
     img = Image.new("RGBA", (2, 2), rgba)
     path.parent.mkdir(parents=True, exist_ok=True)
     img.save(path, format="PNG")

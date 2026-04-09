@@ -16,6 +16,7 @@ from engine.ui_overlays.asset_browser_overlay import AssetBrowserOverlay
 from engine.ui_overlays.find_everything_overlay import FindEverythingOverlay
 from engine.ui_overlays.keybinds_overlay import KeybindsOverlay
 from engine.ui_overlays.scene_browser_overlay import SceneBrowserOverlay
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -71,7 +72,7 @@ def test_find_everything_overlay_reopen_resets_transient_state(monkeypatch: pyte
         _find_everything_selection_index=0,
     )
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller, input=None, input_controller=None)
-    overlay = FindEverythingOverlay(window)  # type: ignore[arg-type]
+    overlay = FindEverythingOverlay(as_any(window))
 
     overlay._focus_target = "results"
     overlay._text_input.focused = False
@@ -119,7 +120,7 @@ def test_scene_browser_overlay_reopen_resets_transient_state(monkeypatch: pytest
         },
     )
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-    overlay = SceneBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = SceneBrowserOverlay(as_any(window))
 
     overlay._focus_target = "results"
     overlay._text_input.focused = False
@@ -163,7 +164,7 @@ def test_keybinds_overlay_reset_hooks_reopen_clean_state(monkeypatch: pytest.Mon
     controller = SimpleNamespace(state=state, visible_rows=rows)
     editor = SimpleNamespace(keybinds=controller)
     window = SimpleNamespace(width=1280, height=720, editor_controller=editor, text_cache=None)
-    overlay = KeybindsOverlay(window)  # type: ignore[arg-type]
+    overlay = KeybindsOverlay(as_any(window))
     overlay.visible = True
 
     def _data(_controller: object, **_kwargs: object) -> dict[str, object]:
@@ -241,7 +242,7 @@ def test_asset_browser_overlay_reset_hooks_reopen_clean_state(monkeypatch: pytes
         dock=dock,
     )
     window = SimpleNamespace(width=1280, height=720, editor_controller=controller)
-    overlay = AssetBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = AssetBrowserOverlay(as_any(window))
 
     overlay._focus_target = "results"
     overlay._text_input.focused = False

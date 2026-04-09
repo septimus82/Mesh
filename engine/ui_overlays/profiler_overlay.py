@@ -137,7 +137,7 @@ class ProfilerOverlay(UIElement):
         if callable(self.provider):
             try:
                 value = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: profiler overlay should keep rendering even if an optional provider callback fails
                 value = None
             if isinstance(value, dict):
                 payload = value

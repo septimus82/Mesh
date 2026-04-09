@@ -31,8 +31,12 @@ def _move(entity: Any, colliders: list[Any]) -> None:
     physics_runtime.move_entity_with_physics(entity, (1, 0), colliders)
 
 
-def test_cache_rebuild_on_scene_switch() -> None:
-    optional_arcade.arcade.check_for_collision_with_list = _fake_collision  # type: ignore[attr-defined]
+def test_cache_rebuild_on_scene_switch(monkeypatch) -> None:
+    monkeypatch.setattr(
+        optional_arcade.arcade,
+        "check_for_collision_with_list",
+        _fake_collision,
+    )
     physics_runtime.reset_broadphase_cache()
     physics_runtime.set_broadphase_enabled(True)
 
@@ -47,8 +51,12 @@ def test_cache_rebuild_on_scene_switch() -> None:
     assert build_b == build_a + 1
 
 
-def test_cache_stable_with_same_key() -> None:
-    optional_arcade.arcade.check_for_collision_with_list = _fake_collision  # type: ignore[attr-defined]
+def test_cache_stable_with_same_key(monkeypatch) -> None:
+    monkeypatch.setattr(
+        optional_arcade.arcade,
+        "check_for_collision_with_list",
+        _fake_collision,
+    )
     physics_runtime.reset_broadphase_cache()
     physics_runtime.set_broadphase_enabled(True)
 
@@ -61,8 +69,12 @@ def test_cache_stable_with_same_key() -> None:
     assert build2 == build1
 
 
-def test_cache_rebuild_on_collider_change() -> None:
-    optional_arcade.arcade.check_for_collision_with_list = _fake_collision  # type: ignore[attr-defined]
+def test_cache_rebuild_on_collider_change(monkeypatch) -> None:
+    monkeypatch.setattr(
+        optional_arcade.arcade,
+        "check_for_collision_with_list",
+        _fake_collision,
+    )
     physics_runtime.reset_broadphase_cache()
     physics_runtime.set_broadphase_enabled(True)
 

@@ -294,7 +294,7 @@ def run_demo(
             record["exit_code"] = int(code)
             record["ok"] = code == 0
             record["outputs"] = outputs
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: demo harness should record per-step unexpected failures and stop with a deterministic failing step result
             record["exit_code"] = 1
             record["error"] = f"{type(exc).__name__}: {exc}"
 

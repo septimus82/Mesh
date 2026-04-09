@@ -13,6 +13,8 @@ from dataclasses import dataclass
 
 import pytest
 
+from tests._typing import as_any
+
 
 class TestNormalizeRepoRelativePath:
     """Tests for normalize_repo_relative_path."""
@@ -111,7 +113,7 @@ class TestFindRowIndexForPath:
 
         rows = ["a.py", "b.py"]
         assert find_row_index_for_path(rows, "", lambda x: x) is None
-        assert find_row_index_for_path(rows, None, lambda x: x) is None  # type: ignore[arg-type]
+        assert find_row_index_for_path(rows, as_any(None), lambda x: x) is None
 
     def test_returns_none_for_empty_rows(self) -> None:
         from engine.editor.project_explorer_reveal_model import find_row_index_for_path

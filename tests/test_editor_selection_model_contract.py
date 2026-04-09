@@ -22,6 +22,7 @@ from engine.editor.editor_selection_model import (
     selection_count,
     selection_summary,
 )
+from tests._typing import as_any
 
 
 # =============================================================================
@@ -196,7 +197,7 @@ class TestSelectionCount:
         """Should check single selection if ids list not available."""
         state = MockState(primary_entity_id="entity_1")
         # Clear the list to force fallback
-        state._selected_entity_ids = None  # type: ignore[assignment]
+        as_any(state)._selected_entity_ids = None
         # Actually let's test with proper attribute removal
         delattr(state, "_selected_entity_ids")
         assert selection_count(state) == 1

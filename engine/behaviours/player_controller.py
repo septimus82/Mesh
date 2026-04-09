@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from ..player_actions import (
     PlayerActionState,
@@ -27,10 +27,6 @@ def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
     from engine.logging_tools import get_logger
 
     get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
-if TYPE_CHECKING:  # pragma: no cover - typing only
-    import optional_arcade.arcade
-
 
 @register_behaviour(
     "PlayerController",
@@ -196,7 +192,7 @@ class PlayerController(Behaviour):
             if callable(setter):
                 try:
                     setter(facing)
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: optional animator hooks can fail without blocking core player movement
                     if not getattr(self, "_mesh_set_facing_error_logged", False):
                         print(f"[Mesh][PlayerController] ERROR forwarding facing to animator: {exc}")
                         setattr(self, "_mesh_set_facing_error_logged", True)
@@ -224,7 +220,7 @@ class PlayerController(Behaviour):
 
         try:
             perform_interaction(window, max_dist=float(self.INTERACT_RADIUS))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: interaction failures should be reported to the console without breaking input handling
             logger = getattr(window, "console_log", None)
             if callable(logger):
                 logger(f"Interaction failed: {exc}")

@@ -113,7 +113,7 @@ class Combat(Behaviour):
                 if gs is not None:
                     stats = gs.get_player_stats()
                     self.damage = float(stats.get("attack", self.damage))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: player stat lookup failures should not block combat behaviour initialization
                 if not getattr(self, "_mesh_player_stats_damage_error_logged", False):
                     print(f"[Mesh][Combat] ERROR applying player stats damage override: {exc}")
                     setattr(self, "_mesh_player_stats_damage_error_logged", True)
@@ -123,6 +123,15 @@ class Combat(Behaviour):
     def update(self, dt: float) -> None:
         if self._cooldown_timer > 0:
             self._cooldown_timer -= dt
+
+    def _entity_name(self) -> str:
+        for attr_name in ("mesh_name", "name"):
+            raw_name = getattr(self.entity, attr_name, None)
+            if isinstance(raw_name, str):
+                name = raw_name.strip()
+                if name:
+                    return name
+        return "<unnamed>"
 
     def attack(self) -> bool:
         """Attempt to perform an attack. Returns True if successful."""
@@ -206,7 +215,7 @@ class Combat(Behaviour):
             return
 
         hitbox_data = {
-            "name": f"hitbox_{self.entity.mesh_name}",
+            "name": f"hitbox_{self._entity_name()}",
             "x": hitbox_x,
             "y": hitbox_y,
             "layer": "entities", # Or a debug layer?

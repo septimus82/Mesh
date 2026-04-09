@@ -91,7 +91,7 @@ class DayNightCycle:
         color = self._interpolated_color(self._hour)
         try:
             self.lighting.ambient_color = color
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: ambient color writes can fail on some lighting backends and should not stop the day-night cycle
             if not getattr(self, "_mesh_ambient_error_logged", False):
                 print(f"[Mesh][DayNight] WARNING: Failed to set ambient_color: {exc!r}")
                 setattr(self, "_mesh_ambient_error_logged", True)

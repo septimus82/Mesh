@@ -18,6 +18,7 @@ from engine.editor.hd2d_controller_helpers_model import (
     get_batch_radius_default,
     validate_clipboard_patch,
 )
+from tests._typing import as_any
 
 
 # =============================================================================
@@ -66,7 +67,7 @@ class TestComputeClipboardPatchFromEntity:
 
     def test_handles_non_dict_gracefully(self) -> None:
         """Should handle non-dict input gracefully."""
-        patch = compute_clipboard_patch_from_entity(None)  # type: ignore[arg-type]
+        patch = compute_clipboard_patch_from_entity(as_any(None))
         assert patch == {}
 
 
@@ -143,7 +144,7 @@ class TestCountClipboardPatchFields:
 
     def test_handles_non_dict_gracefully(self) -> None:
         """Should handle non-dict input gracefully."""
-        assert count_clipboard_patch_fields(None) == 0  # type: ignore[arg-type]
+        assert count_clipboard_patch_fields(as_any(None)) == 0
 
 
 # =============================================================================
@@ -187,6 +188,6 @@ class TestValidateClipboardPatch:
 
     def test_returns_false_for_non_dict(self) -> None:
         """Should return False for non-dict types."""
-        assert validate_clipboard_patch("string") is False  # type: ignore[arg-type]
-        assert validate_clipboard_patch([1, 2, 3]) is False  # type: ignore[arg-type]
-        assert validate_clipboard_patch(123) is False  # type: ignore[arg-type]
+        assert validate_clipboard_patch(as_any("string")) is False
+        assert validate_clipboard_patch(as_any([1, 2, 3])) is False
+        assert validate_clipboard_patch(as_any(123)) is False

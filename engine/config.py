@@ -134,7 +134,7 @@ def _coerce_type(value: Any, target_type: Any) -> Any:
         return target_type(value)
     except (TypeError, ValueError):
         return value
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: unexpected coercion failures should log once and preserve the original config value
         if not getattr(_coerce_type, "_mesh_error_logged", False):
             print(f"[Mesh][Config] ERROR coercing config value: {exc}")
             setattr(_coerce_type, "_mesh_error_logged", True)
@@ -248,7 +248,7 @@ def load_config(path: str | None = None) -> EngineConfig:
     inline_presets = cfg.presets if isinstance(cfg.presets, dict) else {}
     try:
         split_presets = _load_split_presets_or_none(presets_dir)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: split preset load failures should fall back to inline presets without breaking config load
         print(f"[Mesh][Config] WARNING: Failed to load split presets from '{presets_dir}': {exc}")
         diag_add_exception(
             "config.presets.split_load_failed",

@@ -68,12 +68,12 @@ def run_pipeline_result(
     def _run_step(name: str, runner) -> int:
         try:
             result = runner()
-        except SystemExit as e:  # noqa: BLE001
+        except SystemExit as e:  # noqa: BLE001  # REASON: embedded pipeline steps may terminate via SystemExit and should be converted into pipeline failure codes
             code = e.code if isinstance(e.code, int) else 1
             print(f"[PIPELINE] {name} -> FAILED")
             issues.append(Issue(code=name, message=f"{name} failed", severity="error"))
             return int(code)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001  # REASON: embedded pipeline steps can fail with mixed exception types and should collapse into a deterministic pipeline failure
             print(f"[PIPELINE] {name} -> FAILED: {e}")
             issues.append(Issue(code=name, message=f"{name} failed: {e}", severity="error"))
             return 1

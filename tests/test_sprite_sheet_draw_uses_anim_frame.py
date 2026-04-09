@@ -4,6 +4,7 @@ import arcade
 from PIL import Image
 
 from engine.animation import AnimationFactory
+from tests._typing import as_any
 
 
 class DummyAssets:
@@ -26,7 +27,7 @@ def test_sprite_sheet_draw_uses_anim_frame_after_updates():
             sheet.putpixel((x, y), (0, 255, 0, 255))
 
     base_texture = arcade.Texture(name="sheet", image=sheet)
-    factory = AnimationFactory(DummyAssets(base_texture))  # type: ignore[arg-type]
+    factory = AnimationFactory(as_any(DummyAssets(base_texture)))
 
     sprite = arcade.Sprite()
     entity = {
@@ -48,4 +49,3 @@ def test_sprite_sheet_draw_uses_anim_frame_after_updates():
 
     player.update(0.10)
     assert sprite.texture.image.getpixel((8, 8))[:3] == (255, 0, 0)
-

@@ -20,6 +20,7 @@ from engine.parallax_model import (
     sort_background_planes,
     background_planes_to_payloads,
 )
+from tests._typing import as_any
 
 
 # -----------------------------------------------------------------------------
@@ -121,7 +122,7 @@ class TestBackgroundPlane:
         """BackgroundPlane should be frozen (immutable)."""
         plane = BackgroundPlane(asset_path="bg.png")
         with pytest.raises(AttributeError):
-            plane.asset_path = "other.png"  # type: ignore
+            as_any(plane).asset_path = "other.png"
 
 
 # -----------------------------------------------------------------------------

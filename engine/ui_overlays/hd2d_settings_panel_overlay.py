@@ -176,7 +176,7 @@ class Hd2dSettingsPanelOverlay(UIElement):
                 result = self.provider(self.window)
                 if isinstance(result, dict):
                     payload = result
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: settings panel overlay should remain visible even if an optional provider callback fails
                 _log_swallow("HDDS-001", "engine/ui_overlays/hd2d_settings_panel_overlay.py pass-only blanket swallow")
                 pass
 
@@ -531,7 +531,7 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
                 result = self.provider(self.window)
                 if isinstance(result, dict):
                     payload = result
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: entity settings overlay should remain visible even if an optional provider callback fails
                 _log_swallow("HDDS-002", "engine/ui_overlays/hd2d_settings_panel_overlay.py pass-only blanket swallow")
                 pass
 

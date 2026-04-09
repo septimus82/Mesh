@@ -52,7 +52,7 @@ def _run_cmd(argv: list[str], *, label: str) -> tuple[bool, str]:
             capture_output=True,
             text=True,
         )
-    except Exception as exc:
+    except OSError as exc:
         msg = f"[{label}] failed to launch: {exc}"
         return False, msg
 
@@ -68,7 +68,7 @@ def _utc_now_iso() -> str:
     try:
         now = datetime.now(UTC).replace(microsecond=0)
         return now.isoformat().replace("+00:00", "Z")
-    except Exception:
+    except (OverflowError, OSError, ValueError):
         return "1970-01-01T00:00:00Z"
 
 
@@ -80,7 +80,7 @@ def _get_source_commit(repo_root: Path) -> str:
             capture_output=True,
             text=True,
         )
-    except Exception:
+    except OSError:
         return "unknown"
     if result.returncode != 0:
         return "unknown"
@@ -94,7 +94,7 @@ def _read_package_version(repo_root: Path) -> str:
         return "unknown"
     try:
         payload = tomllib.loads(pyproject.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, tomllib.TOMLDecodeError):
         return "unknown"
     if not isinstance(payload, dict):
         return "unknown"
@@ -113,7 +113,7 @@ def _read_public_api_semver(repo_root: Path) -> str:
         return "unknown"
     try:
         text = version_py.read_text(encoding="utf-8")
-    except Exception:
+    except OSError:
         return "unknown"
     match = _VERSION_LINE_RE.search(text)
     if match is None:

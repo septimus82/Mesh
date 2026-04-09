@@ -387,7 +387,7 @@ class TweenManager:
             if tween.on_complete is not None:
                 try:
                     tween.on_complete()
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: tween completion callbacks are optional user hooks and should not break chained tween processing
                     _log_swallow("TWEE-001", "engine/tweens.py pass-only blanket swallow")
                     pass
             # Start chained tween if present

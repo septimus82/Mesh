@@ -84,7 +84,7 @@ class EditorProblemsActionsController:
     def _reveal_in_project_explorer(self, path: str) -> bool:
         """Reveal a path in the Project Explorer."""
         # Use project explorer actions controller to reveal.
-        return self._editor.project_explorer_actions.reveal_path(path)
+        return bool(self._editor.project_explorer_actions.reveal_path(path))
 
     def _toast(self, message: str, seconds: float = 2.5) -> None:
         """Show a toast notification for problems panel actions."""

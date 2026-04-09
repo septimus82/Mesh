@@ -10,6 +10,7 @@ from engine.ui import (
     filter_dev_browser_items,
 )
 from engine.ui_controller import UIController
+from tests._typing import as_any
 
 
 def _stub_window_for_input(*, bindings: dict[str, list[str]]):
@@ -32,13 +33,13 @@ def _stub_window_for_input(*, bindings: dict[str, list[str]]):
         handle_text_input=MagicMock(),
     )
 
-    window.ui_controller = UIController(window)  # type: ignore[arg-type]
+    window.ui_controller = UIController(as_any(window))
     return window
 
 
 def test_dev_browser_toggle_flips_visibility() -> None:
     window = types.SimpleNamespace(width=800, height=600)
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
 
     assert overlay.visible is False
     overlay.toggle()
@@ -55,14 +56,14 @@ def test_dev_browser_modal_capture_blocks_movement_and_esc_closes(monkeypatch) -
         }
     )
 
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.set_visible(True)
     window.ui_controller.register_ui_element(overlay)
 
     mock_dispatch = MagicMock(return_value=True)
     monkeypatch.setattr("engine.input_controller.dispatch_action", mock_dispatch)
 
-    controller = InputController(window)  # type: ignore[arg-type]
+    controller = InputController(as_any(window))
 
     controller.manager.press(optional_arcade.arcade.key.W)
     controller.update(0.016)
@@ -92,7 +93,7 @@ def test_dev_browser_filtering_is_deterministic_and_stable_order() -> None:
 
 def test_dev_browser_no_results_message_when_filter_excludes_all() -> None:
     window = types.SimpleNamespace(width=800, height=600)
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
 
     overlay.visible = True
     overlay.mode = "worlds"

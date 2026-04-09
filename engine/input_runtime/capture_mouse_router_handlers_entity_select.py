@@ -57,7 +57,7 @@ def _handle_entity_select_mouse_press(window: Any, event: MouseEvent) -> bool:
         return True
     try:
         world_x, world_y = window.screen_to_world(float(event.x), float(event.y))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: screen-to-world conversion failures should fall back to no entity-select click handling
         return True
 
     # Check if clicking on an entity via scene_inspector_overlay
@@ -69,7 +69,7 @@ def _handle_entity_select_mouse_press(window: Any, event: MouseEvent) -> bool:
             payload = provider(window)
             hover = payload.get("hover", {}) if isinstance(payload, dict) else {}
             clicked_entity_id = hover.get("id") if isinstance(hover, dict) else None
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: inspector hover payload queries are optional and should fall back to marquee selection behavior
             _log_swallow("CAPT-001", "engine/input_runtime/capture_mouse_router_handlers_entity_select.py pass-only blanket swallow")
             pass
 
@@ -131,7 +131,7 @@ def _handle_entity_select_mouse_release(window: Any, event: MouseEvent) -> bool:
 
     try:
         world_x, world_y = window.screen_to_world(float(event.x), float(event.y))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: screen-to-world conversion failures should clear drag state and skip entity-select release handling
         clear_drag(state)
         return True
 

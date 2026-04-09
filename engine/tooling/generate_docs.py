@@ -56,7 +56,7 @@ def generate_docs(out_dir: Path | str = "docs") -> None:
     console_sections = _fetch_console_help_sections()
     try:
         project_index = build_project_index()
-    except Exception as exc:  # noqa: BLE001 - keep docs generation resilient
+    except Exception as exc:  # noqa: BLE001  # REASON: project-index generation failures should fall back to an error-shaped scenes doc payload
         project_index = {
             "error": str(exc),
             "scenes": [],
@@ -80,7 +80,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         generate_docs(args.out_dir)
-    except Exception as exc:  # noqa: BLE001 - fail fast for CLI users
+    except Exception as exc:  # noqa: BLE001  # REASON: docs CLI failures should report the error and return a controlled nonzero exit code
         print(f"[Mesh][Docs] ERROR: {exc}")
         return 1
 
@@ -234,7 +234,7 @@ def _key_names_for_codes(codes: Iterable[int], *, arcade_mod: object | None) -> 
         if callable(symbol_string):
             try:
                 label = symbol_string(int(code))
-            except Exception:  # noqa: BLE001 - arcade/pyglet differences
+            except Exception:  # noqa: BLE001  # REASON: arcade key-name lookup differences should fall back to the numeric key label
                 label = None
         names.append(label or f"KEY_{code}")
     return names

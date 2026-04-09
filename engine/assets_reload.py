@@ -89,7 +89,7 @@ def _reload_changed_asset_textures(window: Any, image_paths: tuple[str, ...]) ->
         previous_texture = cache.get(cache_key)
         try:
             texture = loader(cache_key)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: per-texture reload failures must preserve prior cached texture
             _log_swallow("ASSE-003", "texture reload fallback", once=True)
             logger.warning("[Mesh][HotReload] texture reload failed for '%s': %s", image_path, exc)
             texture = None
@@ -144,14 +144,14 @@ def reload_render_assets(
             for audio_path in audio_changed_paths:
                 try:
                     invalidate_muffled_variant_cache(audio_path)
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: cache invalidate failures must not block hot-reload audio updates
                     _log_swallow("ASSE-004", "audio muffled variant cache invalidate fallback", once=True)
                     logger.warning("[Mesh][HotReload] muffled variant cache invalidate failed: %s", exc)
         reload_cached_sounds = getattr(audio_manager, "reload_cached_sounds", None)
         if callable(reload_cached_sounds):
             try:
                 audio_reloaded, audio_failed = reload_cached_sounds(audio_changed_paths)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: audio cache reload failures must not abort hot-reload pass
                 _log_swallow("ASSE-005", "audio reload fallback", once=True)
                 logger.warning("[Mesh][HotReload] audio reload failed: %s", exc)
                 audio_reloaded, audio_failed = 0, 0
@@ -220,7 +220,7 @@ def reload_render_assets(
         if callable(reload_shaders):
             try:
                 shader_counts = reload_shaders(window, changed_paths=changed_paths)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: shader reload failures must not abort asset hot-reload reporting
                 _log_swallow("ASSE-007", "shader reload fallback", once=True)
                 logger.warning("[Mesh][HotReload] shader reload failed: %s", exc)
             else:

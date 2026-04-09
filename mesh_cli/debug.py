@@ -114,7 +114,7 @@ def _handle_export(args: argparse.Namespace) -> int:
 
     try:
         repo_root = get_repo_root()
-    except Exception:
+    except (OSError, ValueError):
         repo_root = Path.cwd()
 
     out_raw = str(getattr(args, "out", "") or "")
@@ -138,7 +138,7 @@ def _handle_export(args: argparse.Namespace) -> int:
         )
         print(f"[Mesh][Debug] wrote bundle to {out_path}")
         return 0
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: debug bundle export should collapse unexpected runtime failures into a deterministic CLI error code
         print(f"[Mesh][Debug] export failed: {type(exc).__name__}: {exc}")
         return 1
     finally:

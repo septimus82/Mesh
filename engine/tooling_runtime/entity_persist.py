@@ -24,7 +24,7 @@ def validate_scene_payload(scene_payload: dict[str, Any]) -> list[str]:
     loader = SceneLoader()
     try:
         full = loader.apply_scene_defaults(scene_payload)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: scene validation should fall back to the raw payload when default application fails on partial authoring data
         full = scene_payload
     report = loader.validate_scene(full, strict=False)
     errors = [str(e) for e in (report.errors or [])]
@@ -53,7 +53,7 @@ def persist_scene_payload(
     if resolved.exists():
         try:
             existing = json.loads(resolved.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: unreadable existing scene content should be treated as unknown so persist can still decide whether to overwrite deterministically
             existing = None
         if existing == compacted:
             return PersistResult(ok=True, path=scene_path_display, wrote=False, errors=[])
@@ -62,4 +62,3 @@ def persist_scene_payload(
 
     write_json_atomic(Path(resolved), compacted, indent=2, sort_keys=True, trailing_newline=True)
     return PersistResult(ok=True, path=scene_path_display, wrote=True, errors=[])
-

@@ -109,22 +109,41 @@ class ParticleEmitter(Behaviour):
         if errors:
             raise ValueError(errors[0])
         super().__init__(entity, window, **merged_config)
-        self._mode = _coerce_mode(self.mode)
-        self._count = max(0, int(self.count))
-        self._rate = float(self.rate)
-        self._offset = _coerce_offset(self.offset)
-        self._spawn_cfg = _resolve_spawn_shape_config(self.config)
-        self._life_min, self._life_max = _coerce_range(self.life_min, self.life_max, 0.1, 0.2)
-        self._speed_min, self._speed_max = _coerce_range(self.speed_min, self.speed_max, 0.0, 0.0)
-        self._alpha_curve = _coerce_curve(self.alpha_curve)
-        self._scale_curve = _coerce_curve(self.scale_curve)
-        self._size = max(0.0, float(self.size))
-        self._color = _coerce_color(self.color)
-        self._shape = str(self.shape or "circle")
-        self._sprite_path = _coerce_sprite_path(self.sprite)
+        config_data = self.config
+        self._mode = _coerce_mode(config_data.get("mode"))
+        self._count = max(0, int(config_data.get("count", 8)))
+        self._rate = float(config_data.get("rate", 12.0))
+        self._offset = _coerce_offset(config_data.get("offset"))
+        self._spawn_cfg = _resolve_spawn_shape_config(config_data)
+        self._life_min, self._life_max = _coerce_range(
+            config_data.get("life_min"),
+            config_data.get("life_max"),
+            0.1,
+            0.2,
+        )
+        self._speed_min, self._speed_max = _coerce_range(
+            config_data.get("speed_min"),
+            config_data.get("speed_max"),
+            0.0,
+            0.0,
+        )
+        self._alpha_curve = _coerce_curve(config_data.get("alpha_curve"))
+        self._scale_curve = _coerce_curve(config_data.get("scale_curve"))
+        self._size = max(0.0, float(config_data.get("size", 4.0)))
+        self._color = _coerce_color(config_data.get("color"))
+        self._shape = str(config_data.get("shape") or "circle")
+        self._sprite_path = _coerce_sprite_path(config_data.get("sprite"))
         if self._sprite_path is None:
             self._sprite_path = _coerce_sprite_path(self.config.get("sprite_path"))
-        anim_config = _resolve_animation_config(self.config, self._sprite_path)
+        self._anim_frames: tuple[int, ...] | None
+        self._anim_fps: float | None
+        self._anim_loop: bool
+        self._anim_phase: str
+        self._anim_frame_size: tuple[int, int] | None
+        self._anim_grid_cols: int | None
+        self._sprite_rect: tuple[int, int, int, int] | None
+        self._random_frame_picker: _RandomFramePicker | None
+        anim_config = _resolve_animation_config(config_data, self._sprite_path)
         if anim_config is not None:
             (
                 self._anim_frames,
@@ -144,17 +163,18 @@ class ParticleEmitter(Behaviour):
             self._anim_frame_size = None
             self._anim_grid_cols = None
             self._sprite_rect, self._random_frame_picker = _resolve_sprite_frame_config(
-                self.config,
+                config_data,
                 self._sprite_path,
             )
-        self._additive = bool(self.additive)
-        self._scale0 = float(self.scale0)
-        self._scale1 = float(self.scale1)
-        self._alpha0 = float(self.alpha0)
-        self._alpha1 = float(self.alpha1)
-        self._max_alive = int(self.max_alive) if int(self.max_alive) > 0 else 0
-        self._emitter_id = self._resolve_emitter_id(self.emitter_id)
-        self._rng = random.Random(_coerce_optional_int(self.seed))
+        self._additive = bool(config_data.get("additive", False))
+        self._scale0 = float(config_data.get("scale0", 1.0))
+        self._scale1 = float(config_data.get("scale1", 0.0))
+        self._alpha0 = float(config_data.get("alpha0", 255.0))
+        self._alpha1 = float(config_data.get("alpha1", 0.0))
+        max_alive = int(config_data.get("max_alive", 0))
+        self._max_alive = max_alive if max_alive > 0 else 0
+        self._emitter_id = self._resolve_emitter_id(str(config_data.get("emitter_id", "")))
+        self._rng = random.Random(_coerce_optional_int(config_data.get("seed")))
         self._rate_accum = RateAccumulator()
         self._burst_fired = False
 
@@ -227,12 +247,17 @@ class ParticleEmitter(Behaviour):
     def _apply_animation_metadata(self, particles: list[Any]) -> None:
         if not particles or self._anim_frames is None:
             return
+        anim_fps = self._anim_fps
+        frame_size = self._anim_frame_size
+        grid_cols = self._anim_grid_cols
+        if anim_fps is None or frame_size is None or grid_cols is None:
+            return
         for particle in particles:
             particle.anim_frames = self._anim_frames
-            particle.anim_fps = self._anim_fps
+            particle.anim_fps = anim_fps
             particle.anim_loop = self._anim_loop
-            particle.frame_size = self._anim_frame_size
-            particle.grid_cols = self._anim_grid_cols
+            particle.frame_size = frame_size
+            particle.grid_cols = grid_cols
             if self._anim_phase == "random":
                 particle.anim_phase_offset = self._rng.randrange(len(self._anim_frames))
             else:
@@ -241,7 +266,7 @@ class ParticleEmitter(Behaviour):
             if idx is None:
                 continue
             frame = self._anim_frames[idx]
-            particle.sprite_rect = _frame_index_to_rect(frame, self._anim_frame_size, self._anim_grid_cols)
+            particle.sprite_rect = _frame_index_to_rect(frame, frame_size, grid_cols)
 
     def _apply_emitter_cap(self, system: ParticleSystem, desired: int) -> int:
         if self._max_alive <= 0:

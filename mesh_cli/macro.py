@@ -90,7 +90,7 @@ def handle(args: argparse.Namespace) -> int:
             full_path = resolve_path(rel_path)
             try:
                 payload = json.loads(full_path.read_text(encoding="utf-8"))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: macro validation should record per-file parse failures and continue scanning the remaining macro assets
                 _log_swallow("MCRO-002", "mesh_cli/macro.py blanket swallow", once=True)
                 macro_issues.append(MacroAssetIssue(path=rel_path, code="macro_asset.parse_error", detail=str(exc)))
                 continue
@@ -133,7 +133,7 @@ def handle(args: argparse.Namespace) -> int:
             return 1
         try:
             payload = load_macro_asset(str(macro_path))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: macro CLI should surface macro asset parse failures as deterministic validation errors
             _log_swallow("MCRO-004", "mesh_cli/macro.py blanket swallow", once=True)
             print(f"[Mesh][Macro] ERROR: {macro_path_raw} :: macro_asset.parse_error :: {exc}")
             return 1

@@ -59,7 +59,7 @@ def validate_encounter_set_uniqueness(
             continue
         try:
             loaded = json.loads(resolved.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: uniqueness validation should record per-source JSON load failures and continue checking the remaining encounter set sources
             msg = f"encounter_sets.load_failed source={src_display} error={type(exc).__name__}"
             issues.append(
                 EncounterSetUniquenessIssue(

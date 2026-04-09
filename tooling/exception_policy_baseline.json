@@ -1,6 +1,10 @@
 {
-  "ble001_count_total": 746,
-  "ble001_missing_reason_max": 322,
-  "silent_broad_catch_count_total": 493,
-  "silent_broad_catch_max": 493
+  "schema_version": 1,
+  "ble001_count_total": 738,
+  "broad_catch_count_total": 1331,
+  "except_pass_count_total": 0,
+  "silent_broad_catch_count_total": 482,
+  "silent_broad_catch_max": 482,
+  "ble001_missing_reason_count": 0,
+  "ble001_missing_reason_max": 0
 }

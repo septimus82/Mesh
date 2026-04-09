@@ -163,7 +163,7 @@ def _fallback_scene_display_name(scene_path: Path) -> str:
 def _scene_display_name(scene_path: Path) -> str:
     try:
         raw = json.loads(scene_path.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: unreadable or malformed scene payloads should fall back to the filename-based display label
         _log_swallow("SCIX-001", "engine/scene_index.py blanket swallow", once=True)
         raw = None
     if isinstance(raw, dict):
@@ -178,7 +178,7 @@ def list_pack_scene_listings(packs_root: str | Path | None = None) -> list[Scene
     try:
         if not root.exists():
             return []
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: inaccessible packs roots should fail closed to an empty scene listing
         _log_swallow("SCIX-002", "engine/scene_index.py blanket swallow", once=True)
         return []
 
@@ -280,7 +280,7 @@ def iter_known_scene_paths() -> list[str]:
         return []
     try:
         raw = json.loads(world_path.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: unreadable or malformed main-world scene indexes should fail closed to no discovered scene paths
         _log_swallow("SCIX-004", "engine/scene_index.py blanket swallow", once=True)
         return []
     if not isinstance(raw, dict):
@@ -313,6 +313,6 @@ def validate_scene_path_exists(path: str) -> bool:
     resolved = resolve_path(p)
     try:
         return Path(resolved).exists()
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: invalid resolved scene paths should fail closed to a missing-scene result
         _log_swallow("SCIX-005", "engine/scene_index.py blanket swallow", once=True)
         return False

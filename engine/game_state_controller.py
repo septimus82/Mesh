@@ -184,7 +184,7 @@ class GameStateController:
             if bus is not None:
                 try:
                     bus.emit(EVENT_LEVEL_UP, level=state.level, xp=state.xp, stats=self.get_player_stats())
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: level-up event emission failures should log once without blocking XP progression
                     if not getattr(self, "_mesh_level_up_emit_error_logged", False):
                         logger.error("[Mesh][GameState] ERROR emitting level up event: %s", exc)
                         setattr(self, "_mesh_level_up_emit_error_logged", True)
@@ -192,7 +192,7 @@ class GameStateController:
             if callable(console_log):
                 try:
                     console_log(f"[XP] Level up! Reached level {state.level}")
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: level-up console logging failures should log once without blocking XP progression
                     if not getattr(self, "_mesh_level_up_console_error_logged", False):
                         logger.error("[Mesh][GameState] ERROR writing level up console log: %s", exc)
                         setattr(self, "_mesh_level_up_console_error_logged", True)
@@ -311,7 +311,7 @@ class GameStateController:
         eq = getattr(self.state, "equipment", {}) or {}
         try:
             db = load_item_database()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: equipment bonus calculation should log once and fall back to zero bonuses when item data fails to load
             if not getattr(self, "_mesh_item_db_error_logged", False):
                 logger.error("[Mesh][GameState] ERROR loading item database for equipment bonuses: %s", exc)
                 setattr(self, "_mesh_item_db_error_logged", True)

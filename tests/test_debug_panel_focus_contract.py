@@ -38,8 +38,8 @@ class StubController:
     session: object = field(default_factory=make_session_stub)
     panels: PanelsStub = field(default_factory=PanelsStub)
     workspace_data: WorkspaceSettings = field(default_factory=WorkspaceSettings)
-    search: object = field(default=None)
-    debug_panels: EditorDebugPanelsController = field(default=None)  # type: ignore[assignment]
+    search: object | None = None
+    debug_panels: EditorDebugPanelsController | None = None
     entity_panels_active: bool = False
     asset_browser_active: bool = False
     entity_panels_filter_active: bool = False

@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 import engine.optional_arcade as optional_arcade
 from ..logging_tools import get_logger
+from ..ui_overlays.common import UIElement
 from .editor_gizmo_feedback import (
     GizmoFeedbackState,
     build_gizmo_feedback_lines,
@@ -32,7 +33,7 @@ PIVOT_MARKER_BASE_SIZE = 12.0
 PIVOT_MARKER_LINE_WIDTH = 2.0
 
 
-class EditorGizmoOverlay:
+class EditorGizmoOverlay(UIElement):
     """Overlay for gizmo feedback during transform operations."""
 
     def __init__(self, window: Any) -> None:
@@ -41,7 +42,7 @@ class EditorGizmoOverlay:
         Args:
             window: Game window to query controller from.
         """
-        self.window = window
+        super().__init__(window)
         self._draw_text_cached: Callable[..., Any] | None = None
 
     @property

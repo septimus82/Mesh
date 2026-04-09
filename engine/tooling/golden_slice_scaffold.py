@@ -67,7 +67,7 @@ def golden_slice_scaffold_command(args: argparse.Namespace) -> int:
     except ValueError as exc:
         print(f"[Mesh][GoldenSlice] ERROR: {exc}")
         return 2
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: scaffold command failures should report the error and return a controlled nonzero exit code
         print(f"[Mesh][GoldenSlice] ERROR: {exc!r}")
         return 1
 
@@ -158,7 +158,7 @@ def _write_json_file(
     if path.exists():
         try:
             existing = json.loads(path.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: pre-existing scaffold files with invalid JSON should fail fast as a controlled validation error
             raise ValueError(f"{path} exists but is not valid JSON: {exc}") from exc
         if existing == payload:
             return

@@ -17,6 +17,7 @@ from engine.editor_hover_highlight_model import (
     is_ui_blocked,
     resolve_hover_highlights,
 )
+from tests._typing import as_any
 from tests._session_stub import make_session_stub
 
 
@@ -88,7 +89,7 @@ class TestHighlightRect:
         """Test that HighlightRect is immutable."""
         r = HighlightRect(x=10, y=20, w=100, h=50)
         with pytest.raises(AttributeError):
-            r.x = 99  # type: ignore
+            as_any(r).x = 99
 
 
 class TestHoverHighlightSpec:
@@ -123,7 +124,7 @@ class TestHoverHighlightSpec:
         rect = HighlightRect(x=0, y=0, w=100, h=30)
         spec = HoverHighlightSpec(kind=HoverHighlightKind.DOCK_TAB, rect=rect)
         with pytest.raises(AttributeError):
-            spec.kind = HoverHighlightKind.SPLITTER  # type: ignore
+            as_any(spec).kind = HoverHighlightKind.SPLITTER
 
 
 class TestResolveHoverHighlights:

@@ -5,6 +5,7 @@ import engine.optional_arcade as optional_arcade
 
 from engine.game import GameWindow
 from engine.ui import DevBrowserOverlay
+from tests._typing import as_any
 
 
 class _StubSceneIndex:
@@ -55,7 +56,7 @@ def _stub_window(*, idx: _StubSceneIndex | None, scene_loaded: bool = True):
 
 def test_jump_mode_toggles_with_slash_only_in_scenes_mode() -> None:
     window = _stub_window(idx=_StubSceneIndex(id_match=True))
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
 
     overlay.mode = "worlds"
@@ -69,7 +70,7 @@ def test_jump_mode_toggles_with_slash_only_in_scenes_mode() -> None:
 
 def test_jump_input_does_not_touch_filter_and_esc_exits_jump_mode() -> None:
     window = _stub_window(idx=_StubSceneIndex(id_match=True))
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
     overlay.mode = "scenes"
     overlay.filter_text = "filter"
@@ -90,7 +91,7 @@ def test_jump_input_does_not_touch_filter_and_esc_exits_jump_mode() -> None:
 def test_jump_success_uses_resolution_order_and_requests_reload_and_toast_once() -> None:
     idx = _StubSceneIndex(zone_match=True)
     window = _stub_window(idx=idx)
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
     overlay.mode = "scenes"
 
@@ -110,7 +111,7 @@ def test_jump_success_uses_resolution_order_and_requests_reload_and_toast_once()
 def test_jump_success_prefers_id_then_zone_then_mesh() -> None:
     idx = _StubSceneIndex(id_match=True, zone_match=True, mesh_match=True)
     window = _stub_window(idx=idx)
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
     overlay.mode = "scenes"
 
@@ -124,7 +125,7 @@ def test_jump_success_prefers_id_then_zone_then_mesh() -> None:
 def test_jump_not_found_stays_in_jump_mode_and_does_not_reload() -> None:
     idx = _StubSceneIndex()
     window = _stub_window(idx=idx)
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
     overlay.mode = "scenes"
 
@@ -142,7 +143,7 @@ def test_jump_not_found_stays_in_jump_mode_and_does_not_reload() -> None:
 
 def test_jump_unavailable_no_scene_loaded_toasts_and_does_nothing() -> None:
     window = _stub_window(idx=_StubSceneIndex(id_match=True), scene_loaded=False)
-    overlay = DevBrowserOverlay(window)  # type: ignore[arg-type]
+    overlay = DevBrowserOverlay(as_any(window))
     overlay.visible = True
     overlay.mode = "scenes"
 
@@ -165,7 +166,7 @@ def test_game_window_request_reload_current_scene_delegates() -> None:
             calls.append(clear_assets)
 
     dummy = Dummy()
-    GameWindow.request_reload_current_scene(dummy)  # type: ignore[arg-type]
-    GameWindow.request_reload_current_scene(dummy, clear_assets=True)  # type: ignore[arg-type]
+    GameWindow.request_reload_current_scene(as_any(dummy))
+    GameWindow.request_reload_current_scene(as_any(dummy), clear_assets=True)
     assert calls == [False, True]
 

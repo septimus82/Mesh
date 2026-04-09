@@ -14,6 +14,7 @@ from typing import Any
 from unittest import mock
 
 import pytest
+from tests._typing import as_any
 
 
 class TkinterAccessError(Exception):
@@ -224,7 +225,7 @@ class TestClipboardNoHangRegression:
         from engine.tooling_runtime.clipboard import try_copy_to_clipboard
 
         assert try_copy_to_clipboard("") is False
-        assert try_copy_to_clipboard(None) is False  # type: ignore[arg-type]
+        assert try_copy_to_clipboard(as_any(None)) is False
 
 
 class TestClipboardToolingModule:

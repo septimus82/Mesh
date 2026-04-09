@@ -12,6 +12,7 @@ import pytest
 from engine.editor.find_everything_model import FindItem, FindResult, filter_find_items, build_find_display_rows
 from engine.editor.scene_lint_model import SceneLintIssue
 from engine.editor_controller import EditorModeController
+from tests._typing import as_any
 from tests._session_stub import make_session_stub
 from tests._dock_stub import make_dock_stub
 
@@ -341,7 +342,7 @@ def test_find_everything_hint_line_by_input_source(monkeypatch: pytest.MonkeyPat
     ctrl._find_everything_counts = {"total": 1, "by_group": {"Scenes": 1, "Entities": 0, "Assets": 0, "Problems": 0, "Commands": 0}}
 
     monkeypatch.setattr(optional_arcade, "arcade", arcade_stub)
-    overlay = FindEverythingOverlay(ctrl.window)  # type: ignore[arg-type]
+    overlay = FindEverythingOverlay(as_any(ctrl.window))
 
     captured: list[str] = []
 
@@ -349,16 +350,12 @@ def test_find_everything_hint_line_by_input_source(monkeypatch: pytest.MonkeyPat
         captured.append(str(text))
 
     from engine.ui_overlays import find_everything_overlay as overlay_module
-    original = overlay_module.draw_text_cached
-    overlay_module.draw_text_cached = _capture  # type: ignore[assignment]
-    try:
-        ctrl.window.input = SimpleNamespace(input_source="keyboard_mouse")
-        overlay.draw()
-        assert "Enter: Open   Esc: Close   Up/Down: Navigate" in captured
+    monkeypatch.setattr(overlay_module, "draw_text_cached", _capture)
+    ctrl.window.input = SimpleNamespace(input_source="keyboard_mouse")
+    overlay.draw()
+    assert "Enter: Open   Esc: Close   Up/Down: Navigate" in captured
 
-        captured.clear()
-        ctrl.window.input = SimpleNamespace(input_source="gamepad")
-        overlay.draw()
-        assert "A: Open   B: Close   D-pad: Navigate" in captured
-    finally:
-        overlay_module.draw_text_cached = original
+    captured.clear()
+    ctrl.window.input = SimpleNamespace(input_source="gamepad")
+    overlay.draw()
+    assert "A: Open   B: Close   D-pad: Navigate" in captured

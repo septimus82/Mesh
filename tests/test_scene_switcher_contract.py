@@ -8,6 +8,7 @@ import engine.editor_controller as editor_module
 from engine.command_palette import filter_options
 from engine.editor_controller import EditorModeController
 from engine.scene_index import list_pack_scene_listings
+from tests._typing import as_any
 
 
 def _build_controller(monkeypatch, request_scene_change=None) -> EditorModeController:
@@ -23,7 +24,7 @@ def _build_controller(monkeypatch, request_scene_change=None) -> EditorModeContr
     )
     if request_scene_change is not None:
         window.request_scene_change = request_scene_change
-    controller = EditorModeController(window)  # type: ignore[arg-type]
+    controller = EditorModeController(as_any(window))
     controller.active = True
     return controller
 

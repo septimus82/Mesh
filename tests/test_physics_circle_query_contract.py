@@ -42,8 +42,12 @@ def _no_collision(_proxy: Any, _sprites: Any) -> list[Any]:
     return []
 
 
-def _prepare_query_state(colliders: list[Any]) -> None:
-    optional_arcade.arcade.check_for_collision_with_list = _no_collision  # type: ignore[attr-defined]
+def _prepare_query_state(monkeypatch: pytest.MonkeyPatch, colliders: list[Any]) -> None:
+    monkeypatch.setattr(
+        optional_arcade.arcade,
+        "check_for_collision_with_list",
+        _no_collision,
+    )
     physics_runtime.reset_broadphase_cache()
     physics_runtime.set_broadphase_enabled(True)
     mover = _Sprite("mover", 0.0, 0.0, 2.0, 2.0)
@@ -51,47 +55,55 @@ def _prepare_query_state(colliders: list[Any]) -> None:
     physics_runtime.move_entity_with_physics(mover, (0.0, 0.0), colliders)
 
 
-def test_query_overlaps_circle_returns_expected_set_and_sorted_order() -> None:
+def test_query_overlaps_circle_returns_expected_set_and_sorted_order(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     colliders = [
         _Sprite("z_far", 20.0, 0.0, 2.0, 2.0),
         _Sprite("b_circle", 0.0, 3.0, 2.0, 2.0, circle_radius=1.0),
         _Sprite("a_box", 2.0, 0.0, 2.0, 2.0),
     ]
-    _prepare_query_state(colliders)
+    _prepare_query_state(monkeypatch, colliders)
 
     hits = physics_runtime.query_overlaps_circle(0.0, 0.0, 3.0)
     assert hits == ["a_box", "b_circle"]
 
 
-def test_query_overlaps_circle_boundary_touching_is_excluded() -> None:
+def test_query_overlaps_circle_boundary_touching_is_excluded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     colliders = [
         _Sprite("touch_aabb", 4.0, 0.0, 2.0, 2.0),   # nearest point at x=3 -> exactly radius distance
         _Sprite("touch_circle", 5.0, 0.0, 2.0, 2.0, circle_radius=2.0),  # distance 5, radii 3+2
     ]
-    _prepare_query_state(colliders)
+    _prepare_query_state(monkeypatch, colliders)
 
     hits = physics_runtime.query_overlaps_circle(0.0, 0.0, 3.0)
     assert hits == []
 
 
-def test_query_overlaps_circle_include_sensors_and_solids_gating() -> None:
+def test_query_overlaps_circle_include_sensors_and_solids_gating(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     colliders = [
         _Sprite("solid", 1.0, 0.0, 2.0, 2.0, is_sensor=False),
         _Sprite("sensor", 1.0, 1.0, 2.0, 2.0, is_sensor=True),
     ]
-    _prepare_query_state(colliders)
+    _prepare_query_state(monkeypatch, colliders)
 
     assert physics_runtime.query_overlaps_circle(0.0, 0.0, 3.0, include_sensors=False, include_solids=True) == ["solid"]
     assert physics_runtime.query_overlaps_circle(0.0, 0.0, 3.0, include_sensors=True, include_solids=False) == ["sensor"]
 
 
-def test_query_overlaps_circle_layer_filter_is_deterministic() -> None:
+def test_query_overlaps_circle_layer_filter_is_deterministic(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     colliders = [
         _Sprite("enemy_a", 1.0, 0.0, 2.0, 2.0, layer="enemies"),
         _Sprite("enemy_b", 2.0, 0.0, 2.0, 2.0, layer="enemies"),
         _Sprite("pickup", 1.0, 1.0, 2.0, 2.0, layer="pickups"),
     ]
-    _prepare_query_state(colliders)
+    _prepare_query_state(monkeypatch, colliders)
 
     hits = physics_runtime.query_overlaps_circle(0.0, 0.0, 3.0, layers={"enemies"})
     assert hits == ["enemy_a", "enemy_b"]
@@ -104,7 +116,7 @@ def test_query_overlaps_circle_fallback_full_scan_increments_perf_counter(
         _Sprite("near", 1.0, 0.0, 2.0, 2.0),
         _Sprite("far", 100.0, 0.0, 2.0, 2.0),
     ]
-    _prepare_query_state(colliders)
+    _prepare_query_state(monkeypatch, colliders)
     physics_runtime.set_broadphase_enabled(True)
     monkeypatch.setattr(
         physics_runtime._BROADPHASE_CACHE,

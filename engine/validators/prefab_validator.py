@@ -73,7 +73,7 @@ class PrefabValidator:
                     from engine.geometry_tools import sanitize_poly  # noqa: PLC0415
 
                     sanitized = sanitize_poly(points)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: prefab validation should treat malformed polygon data as invalid geometry without aborting the rest of the prefab checks
                     sanitized = []
                 if not sanitized:
                     self.warnings.append(f"Prefab '{pid}' {field} is invalid/degenerate")

@@ -23,6 +23,38 @@ if TYPE_CHECKING:  # pragma: no cover
     from ..ui_toasts import ToastManager
 
 
+def _collect_hud_history_entries(
+    getter: Callable[[int], Any],
+    *,
+    limit: int,
+    tag: str,
+    source: str,
+) -> list[Any]:
+    try:
+        return list(getter(limit))
+    except (TypeError, ValueError):  # REASON: HUD history adapters should only fail on bad limit/coercion inputs
+        if tag not in _LOG_ONCE:
+            logger.debug("SWALLOW[%s] %s", tag, source, exc_info=True)
+            _LOG_ONCE.add(tag)
+        return []
+
+
+def _read_active_quest_entries(
+    quest_manager: Any,
+    *,
+    once_key: str,
+    context: str,
+) -> list[Any] | None:
+    try:
+        entries = quest_manager.list_active_quests()
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:  # REASON: quest overlay fallbacks only expect quest state shape/coercion failures
+        if once_key not in _LOG_ONCE:
+            logger.error("%s: %s", context, exc, exc_info=True)
+            _LOG_ONCE.add(once_key)
+        return None
+    return entries if isinstance(entries, list) else None
+
+
 class InteractPromptOverlay(UIElement):
     def __init__(self, window: "GameWindow", *, provider: Any | None = None) -> None:
         super().__init__(window)
@@ -33,7 +65,15 @@ class InteractPromptOverlay(UIElement):
         if callable(self.provider):
             try:
                 payload = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: interact prompt overlay should keep drawing even if an optional provider callback fails
+                if "HUD-001" not in _LOG_ONCE:
+                    logger.debug(
+                        "SWALLOW[%s] %s",
+                        "HUD-001",
+                        "engine.ui_overlays.hud.InteractPromptOverlay.draw provider",
+                        exc_info=True,
+                    )
+                    _LOG_ONCE.add("HUD-001")
                 payload = None
 
         from ..interaction import get_interact_prompt  # noqa: PLC0415
@@ -126,7 +166,15 @@ class ObjectiveTrackerOverlay(UIElement):
         if callable(self.provider):
             try:
                 value = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: objective tracker overlay should keep drawing even if an optional provider callback fails
+                if "HUD-002" not in _LOG_ONCE:
+                    logger.debug(
+                        "SWALLOW[%s] %s",
+                        "HUD-002",
+                        "engine.ui_overlays.hud.ObjectiveTrackerOverlay.draw provider",
+                        exc_info=True,
+                    )
+                    _LOG_ONCE.add("HUD-002")
                 value = None
             if isinstance(value, (list, tuple)):
                 lines = [str(line) for line in value if str(line)]
@@ -552,14 +600,12 @@ class PlayerHUD(UIElement):
     def build_pinned_objective_text(quest_manager: Any, *, max_chars: int = 220) -> str | None:
         if quest_manager is None or not hasattr(quest_manager, "list_active_quests"):
             return None
-        try:
-            entries = quest_manager.list_active_quests()
-        except Exception as exc:
-            if "ui_pinned_objective" not in _LOG_ONCE:
-                logger.error("Error reading active quests for pinned objective: %s", exc, exc_info=True)
-                _LOG_ONCE.add("ui_pinned_objective")
-            return None
-        if not isinstance(entries, list) or not entries:
+        entries = _read_active_quest_entries(
+            quest_manager,
+            once_key="ui_pinned_objective",
+            context="Error reading active quests for pinned objective",
+        )
+        if not entries:
             return None
 
         picked: dict[str, Any] | None = None
@@ -610,12 +656,12 @@ class PlayerHUD(UIElement):
         if qm is None:
             return None
 
-        try:
-            entries = qm.list_active_quests()
-        except Exception as exc:
-            if "ui_quest_log_hint" not in _LOG_ONCE:
-                logger.error("Error reading active quests for quest log hint: %s", exc, exc_info=True)
-                _LOG_ONCE.add("ui_quest_log_hint")
+        entries = _read_active_quest_entries(
+            qm,
+            once_key="ui_quest_log_hint",
+            context="Error reading active quests for quest log hint",
+        )
+        if entries is None:
             return None
         active_statuses = {"active", "in_progress", "started"}
         has_active = False
@@ -857,19 +903,23 @@ class PlayerHUD(UIElement):
         gameplay_bus = getattr(self.window, "gameplay_event_bus", None)
         gameplay_getter = getattr(gameplay_bus, "get_history", None) if gameplay_bus is not None else None
         if callable(gameplay_getter):
-            try:
-                gameplay_history = list(gameplay_getter(limit))
-            except Exception:
-                gameplay_history = []
+            gameplay_history = _collect_hud_history_entries(
+                gameplay_getter,
+                limit=limit,
+                tag="HUD-003",
+                source="engine.ui_overlays.hud.PlayerHUD._collect_hud_history gameplay_history",
+            )
 
         mesh_history: list[Any] = []
         event_bus = getattr(self.window, "event_bus", None)
         mesh_getter = getattr(event_bus, "get_recent_events", None) if event_bus is not None else None
         if callable(mesh_getter):
-            try:
-                mesh_history = list(mesh_getter(limit))
-            except Exception:
-                mesh_history = []
+            mesh_history = _collect_hud_history_entries(
+                mesh_getter,
+                limit=limit,
+                tag="HUD-004",
+                source="engine.ui_overlays.hud.PlayerHUD._collect_hud_history mesh_history",
+            )
 
         return tuple(merge_event_histories(gameplay_history, mesh_history))
 
@@ -910,12 +960,12 @@ def maybe_enqueue_quest_progress_toast(
     if qm is None:
         return False
 
-    try:
-        entries = qm.list_active_quests()
-    except Exception as exc:
-        if "ui_quest_progress_toast" not in _LOG_ONCE:
-            logger.error("Error reading active quests for progress toast: %s", exc, exc_info=True)
-            _LOG_ONCE.add("ui_quest_progress_toast")
+    entries = _read_active_quest_entries(
+        qm,
+        once_key="ui_quest_progress_toast",
+        context="Error reading active quests for progress toast",
+    )
+    if entries is None:
         return False
 
     key = "hud_last_quest_progress"
@@ -1022,12 +1072,12 @@ def maybe_auto_open_quest_log(window: Any, quest_manager: Any = None) -> bool:
     if qm is None:
         return False
 
-    try:
-        entries = qm.list_active_quests()
-    except Exception as exc:
-        if "ui_auto_open_quest_log" not in _LOG_ONCE:
-            logger.error("Error reading active quests for auto-open: %s", exc, exc_info=True)
-            _LOG_ONCE.add("ui_auto_open_quest_log")
+    entries = _read_active_quest_entries(
+        qm,
+        once_key="ui_auto_open_quest_log",
+        context="Error reading active quests for auto-open",
+    )
+    if entries is None:
         return False
     if not isinstance(entries, list) or not entries:
         return False
@@ -1539,7 +1589,7 @@ def maybe_finish_boss_gold_reward_toast(
         return False
     try:
         gold_before = float(pending.pop(pending_key))
-    except Exception:
+    except (TypeError, ValueError):
         return False
 
     getter = getattr(window, "get_counter", None)

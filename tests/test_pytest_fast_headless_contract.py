@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from tests._typing import as_any
 
 
 class ArcadeBlocker(importlib.abc.MetaPathFinder):
@@ -42,7 +43,7 @@ def test_pytest_fast_headless_contract(tmp_path: Path) -> None:
                 def __init__(self, *args: object, **kwargs: object) -> None:
                     raise AssertionError("SpriteList should not be instantiated in fast headless path")
 
-            arcade_mod.SpriteList = _SpriteList  # type: ignore[attr-defined]
+            as_any(arcade_mod).SpriteList = _SpriteList
 
         scene_path = tmp_path / "headless_scene.json"
         scene_path.write_text('{"name":"Headless","entities":[]}', encoding="utf-8")

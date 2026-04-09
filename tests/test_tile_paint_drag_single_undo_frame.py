@@ -4,6 +4,8 @@ import copy
 
 import arcade
 
+from tests._game_window_undo_stub import bind_game_window_undo_methods
+
 
 def _world_for_tile(*, tx: int, ty: int, map_h: int, tile_w: int, tile_h: int) -> tuple[float, float]:
     row_from_bottom = int(map_h - 1 - int(ty))
@@ -50,7 +52,6 @@ def _get_tiles(scene_payload: dict) -> list[int]:
 
 
 def test_tile_paint_drag_single_undo_frame() -> None:
-    from engine.game import GameWindow
     from engine.input_runtime import capture as input_capture
     from engine.palette_mode import get_state
     from engine.tile_paint_mode import TilePaintState
@@ -91,13 +92,7 @@ def test_tile_paint_drag_single_undo_frame() -> None:
             },
         )()
 
-        def _mark_scene_dirty(self, reason: str) -> None:
-            self.scene_dirty = True
-            self.scene_dirty_reason = str(reason)
-            self.scene_dirty_counter += 1
-
-        window.mark_scene_dirty = _mark_scene_dirty.__get__(window)  # type: ignore[attr-defined]
-        window.push_undo_frame = lambda reason: GameWindow.push_undo_frame(window, reason)  # type: ignore[attr-defined]
+        bind_game_window_undo_methods(window)
 
         controller = type(
             "Ctl",
@@ -127,4 +122,3 @@ def test_tile_paint_drag_single_undo_frame() -> None:
         assert window.scene_dirty_counter == 1
     finally:
         palette.enabled = original_enabled
-

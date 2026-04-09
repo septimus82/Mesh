@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -101,7 +102,7 @@ def test_copy_text_includes_verify_health_snapshot_and_throttles_io(
     read_counter = {"count": 0}
     original_read_text = Path.read_text
 
-    def _counting_read_text(self: Path, *args, **kwargs):  # type: ignore[no-untyped-def]
+    def _counting_read_text(self: Path, *args: Any, **kwargs: Any) -> str:
         if self.name in {"exception_budget.json", "verify_step_durations.json", "verify_step_budget_check.json"}:
             read_counter["count"] += 1
         return original_read_text(self, *args, **kwargs)

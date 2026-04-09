@@ -82,7 +82,7 @@ class SpriteSheetCache:
             try:
                 resolved = resolve_path(spec.path)
                 sheet_image = Image.open(resolved).convert("RGBA")
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: sprite sheet image load fallback preserves headless operation
                 logger.warning("Could not load sprite sheet '%s': %s", spec.path, exc)  # noqa: T201
                 return []
 
@@ -118,7 +118,7 @@ class SpriteSheetCache:
                         image=frame_image,
                     )
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: per-frame slice failure should not abort remaining frames
                 logger.warning(
                     "Failed to slice frame %d from '%s': %s", index, spec.path, exc
                 )
@@ -397,7 +397,7 @@ class AnimationPlayer:
                 data[key] = value
         try:
             self._event_sink(data)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: event sink failures must not break animation playback
             if self.debug:
                 self._log(f"event sink failure: {exc}")
 

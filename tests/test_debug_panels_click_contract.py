@@ -17,6 +17,7 @@ from engine.editor.debug_panels_model import (
     DEBUG_PANEL_PADDING,
     compute_debug_panel_content_bounds,
 )
+from tests._typing import as_any
 from tests._dock_stub import make_dock_stub
 from tests._search_stub import attach_search_stub
 from tests._session_stub import make_session_stub
@@ -92,7 +93,7 @@ def test_click_event_row_dispatches_select_action(monkeypatch: pytest.MonkeyPatc
         called["action"] = action_id
         return True
 
-    controller.run_editor_action = _run_editor_action  # type: ignore[assignment]
+    as_any(controller).run_editor_action = _run_editor_action
 
     handled = controller.debug_panels.handle_mouse_click(x, y, arcade_stub.MOUSE_BUTTON_LEFT)
     assert handled is True
@@ -135,7 +136,7 @@ def test_click_event_row_without_source_entity_is_noop(monkeypatch: pytest.Monke
         called["action"] = action_id
         return True
 
-    controller.run_editor_action = _run_editor_action  # type: ignore[assignment]
+    as_any(controller).run_editor_action = _run_editor_action
 
     handled = controller.debug_panels.handle_mouse_click(x, y, arcade_stub.MOUSE_BUTTON_LEFT)
     assert handled is True

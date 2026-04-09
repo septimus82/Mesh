@@ -136,7 +136,7 @@ def _toggle_pause_menu(window: object) -> None:
     if pause_menu is not None:
         try:
             pause_menu.visible = paused
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: pause menu stubs may reject visible assignment and should not break toggle flow
             _log_swallow("REGI-001", "engine/action_runtime/registry.py pass-only blanket swallow")
             pass
     logger = getattr(window, "console_log", None)

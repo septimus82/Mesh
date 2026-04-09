@@ -82,7 +82,7 @@ def _resolve_scene_paths(path: str) -> list[str]:
                 else:
                     # Assume it's a single scene
                     scene_paths.append(path)
-        except Exception as e:
+        except (OSError, json.JSONDecodeError) as e:
             print(f"Error reading {path}: {e}")
             return []
     elif os.path.isdir(path):
@@ -139,7 +139,7 @@ def _handle_encounter_diff(old_path: str, new_path: str, args: argparse.Namespac
     try:
         old_report = legacy_mod.load_report(old_path)
         new_report = legacy_mod.load_report(new_path)
-    except Exception as e:
+    except (AttributeError, KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as e:
         print(f"Error loading reports: {e}")
         return 1
 
@@ -167,7 +167,7 @@ def _handle_encounter_compare(baseline_path: str, target_path: str, args: argpar
 
     try:
         old_report = load_report(baseline_path)
-    except Exception as e:
+    except (AttributeError, KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as e:
         print(f"Error loading baseline {baseline_path}: {e}")
         return 1
 

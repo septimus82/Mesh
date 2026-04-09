@@ -159,7 +159,7 @@ def _coerce_rgba(value: Any) -> tuple[int, int, int, int] | None:
         g = max(0, min(255, int(value[1])))
         b = max(0, min(255, int(value[2])))
         a = max(0, min(255, int(value[3]))) if len(value) >= 4 else 255
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: malformed RGBA outline colors should be rejected without breaking outline loading
         return None
     return (r, g, b, a)
 
@@ -167,7 +167,7 @@ def _coerce_rgba(value: Any) -> tuple[int, int, int, int] | None:
 def _clamp_float(value: Any, min_value: float, max_value: float) -> float:
     try:
         numeric = float(value)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: invalid outline float inputs should fall back to the minimum outline scalar
         numeric = float(min_value)
     return max(min_value, min(max_value, numeric))
 
@@ -175,6 +175,6 @@ def _clamp_float(value: Any, min_value: float, max_value: float) -> float:
 def _clamp_int(value: Any, min_value: int, max_value: int) -> int:
     try:
         numeric = int(value)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: invalid outline integer inputs should fall back to the minimum outline scalar
         numeric = int(min_value)
     return max(min_value, min(max_value, numeric))

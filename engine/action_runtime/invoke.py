@@ -31,11 +31,10 @@ def invoke(
 
     try:
         handler(window)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: action handlers are plugin-style callouts surfaced as user-facing errors
         message = single_line_error(str(exc))
         if message:
             return False, f"{type(exc).__name__}: {message}"
         return False, f"{type(exc).__name__}"
 
     return True, ""
-

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from engine.tooling.validate_all import UnifiedValidator
@@ -10,14 +10,8 @@ from engine.tooling.validate_all import UnifiedValidator
 @dataclass
 class _SceneReport:
     ok: bool = True
-    errors: list[str] = None  # type: ignore[assignment]
-    warnings: list[str] = None  # type: ignore[assignment]
-
-    def __post_init__(self) -> None:
-        if self.errors is None:
-            self.errors = []
-        if self.warnings is None:
-            self.warnings = []
+    errors: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 def test_validate_all_summary_and_error_order_regression(tmp_path, monkeypatch, capsys) -> None:
@@ -59,10 +53,18 @@ def test_validate_all_summary_and_error_order_regression(tmp_path, monkeypatch, 
     )
 
     # Keep scene loader checks from pulling in real content dependencies.
-    validator.scene_loader.validate_scene_file = lambda *_a, **_k: _SceneReport()  # type: ignore[method-assign]
+    monkeypatch.setattr(
+        validator.scene_loader,
+        "validate_scene_file",
+        lambda *_a, **_k: _SceneReport(),
+    )
 
     # Keep transition validation from adding extra findings.
-    validator.transition_validator.validate = lambda *_a, **_k: True  # type: ignore[method-assign]
+    monkeypatch.setattr(
+        validator.transition_validator,
+        "validate",
+        lambda *_a, **_k: True,
+    )
     validator.transition_validator.errors = []
     validator.transition_validator.warnings = []
 
@@ -79,4 +81,3 @@ def test_validate_all_summary_and_error_order_regression(tmp_path, monkeypatch, 
 
     error_codes = [obj["code"] for obj in json_lines[:-1]]
     assert error_codes == ["entity.position.required", "world.scene_file.missing", "validate_all.legacy"]
-

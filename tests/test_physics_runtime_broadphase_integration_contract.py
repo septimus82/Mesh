@@ -34,7 +34,7 @@ def _run_move(entity: Any, delta: tuple[float, float], colliders: list[Any]) -> 
     return result.final_pos
 
 
-def test_broadphase_matches_baseline() -> None:
+def test_broadphase_matches_baseline(monkeypatch) -> None:
     colliders = [
         _Sprite(10, 0, 2, 2),  # right wall
         _Sprite(0, 10, 2, 2),  # top wall
@@ -42,8 +42,11 @@ def test_broadphase_matches_baseline() -> None:
     ]
     entity = _Sprite(0, 0, 2, 2)
 
-    # Patch collision function
-    optional_arcade.arcade.check_for_collision_with_list = _fake_collision  # type: ignore[attr-defined]
+    monkeypatch.setattr(
+        optional_arcade.arcade,
+        "check_for_collision_with_list",
+        _fake_collision,
+    )
 
     physics_runtime.set_broadphase_enabled(False)
     baseline = _run_move(entity, (15, 15), colliders)
@@ -57,10 +60,14 @@ def test_broadphase_matches_baseline() -> None:
     assert broad == baseline
 
 
-def test_broadphase_candidate_reduction_and_counters() -> None:
+def test_broadphase_candidate_reduction_and_counters(monkeypatch) -> None:
     colliders = [_Sprite(x * 20, 0, 2, 2) for x in range(200)]
     entity = _Sprite(0, 0, 2, 2)
-    optional_arcade.arcade.check_for_collision_with_list = _fake_collision  # type: ignore[attr-defined]
+    monkeypatch.setattr(
+        optional_arcade.arcade,
+        "check_for_collision_with_list",
+        _fake_collision,
+    )
 
     physics_runtime.set_broadphase_enabled(True)
     physics_runtime.reset_broadphase_cache()

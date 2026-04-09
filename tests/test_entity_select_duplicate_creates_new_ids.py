@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import arcade
 
+from tests._game_window_undo_stub import as_game_window
+
 
 def test_entity_select_duplicate_creates_new_ids(capsys) -> None:
     from engine.entity_select_mode import EntitySelectState
@@ -28,7 +30,7 @@ def test_entity_select_duplicate_creates_new_ids(capsys) -> None:
             },
         )()
 
-        sc = SceneController(window)  # type: ignore[arg-type]
+        sc = SceneController(as_game_window(window))
         sc.current_scene_path = "scenes/foo.json"
         sc._loaded_scene_source_data = {
             "entities": [
@@ -58,4 +60,3 @@ def test_entity_select_duplicate_creates_new_ids(capsys) -> None:
         assert window.entity_select_state.primary_id == "b__dup1"
     finally:
         palette.enabled = original_enabled
-

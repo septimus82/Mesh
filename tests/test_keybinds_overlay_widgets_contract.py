@@ -11,6 +11,7 @@ from engine.editor.keybinds_ui_model import KeybindRow, KeybindsState
 from engine.ui_overlays import keybinds_overlay as overlay_module
 from engine.ui_overlays.keybinds_overlay import KeybindsOverlay
 from engine.ui_overlays.widgets import Rect
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -86,7 +87,7 @@ def _make_overlay(row_count: int = 20) -> tuple[KeybindsOverlay, _KeybindsContro
     keybinds = _KeybindsControllerStub(_make_rows(row_count))
     editor = SimpleNamespace(active=True, keybinds=keybinds)
     window = SimpleNamespace(width=1280, height=720, editor_controller=editor, text_cache=None)
-    overlay = KeybindsOverlay(window)  # type: ignore[arg-type]
+    overlay = KeybindsOverlay(as_any(window))
     overlay.visible = True
     return overlay, keybinds
 

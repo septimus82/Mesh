@@ -27,7 +27,7 @@ def _read_pygbag_toml(path: Path) -> dict:
         return {}
     try:
         return tomllib.loads(path.read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
+    except (OSError, tomllib.TOMLDecodeError):  # REASON: web demo release helper should ignore malformed optional pygbag config and fall back to defaults
         return {}
 
 

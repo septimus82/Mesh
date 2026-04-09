@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import pytest
 
+from tests._typing import as_any
+
 
 class TestNormalizeQuery:
     """Tests for normalize_query determinism."""
@@ -23,7 +25,7 @@ class TestNormalizeQuery:
     def test_none_returns_empty(self) -> None:
         from engine.editor.project_explorer_rank_model import normalize_query
 
-        assert normalize_query(None) == ""  # type: ignore[arg-type]
+        assert normalize_query(as_any(None)) == ""
 
     def test_whitespace_only_returns_empty(self) -> None:
         from engine.editor.project_explorer_rank_model import normalize_query

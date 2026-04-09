@@ -29,6 +29,7 @@ from engine.editor.inspector_components_model import (
     move_cursor,
     toggle_section,
 )
+from tests._typing import as_any
 
 
 # -----------------------------------------------------------------------------
@@ -149,7 +150,7 @@ class TestComponentRow:
         """ComponentRow should be immutable."""
         row = ComponentRow.field("x", "X", 100.0, "float")
         with pytest.raises(AttributeError):
-            row.value = 200.0  # type: ignore[misc]
+            as_any(row).value = 200.0
 
 
 # -----------------------------------------------------------------------------
@@ -215,7 +216,7 @@ class TestInspectorCursor:
         """InspectorCursor should be immutable."""
         cursor = InspectorCursor(section_id="transform", row_index=1)
         with pytest.raises(AttributeError):
-            cursor.row_index = 2  # type: ignore[misc]
+            as_any(cursor).row_index = 2
 
 
 # -----------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import json
+import importlib.abc
 import importlib.util
 import sys
 from pathlib import Path
@@ -18,7 +19,9 @@ def _load_module_from_path(module_name: str, path: Path):
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
-    spec.loader.exec_module(module)  # type: ignore[assignment]
+    loader = spec.loader
+    assert isinstance(loader, importlib.abc.Loader)
+    loader.exec_module(module)
     return module
 
 

@@ -181,7 +181,7 @@ def handle_saveconfig(controller: Any, _args: list[str]) -> bool:
     try:
         save_config(controller.window.engine_config, controller.window.config_path)
         controller.log(f"Config saved to {controller.window.config_path}")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001  # REASON: config save failures should be reported without breaking the command loop
         controller.log(f"Error saving config: {e}")
     return True
 
@@ -219,5 +219,5 @@ def _persist_bindings(controller: Any, manager: Any) -> None:
         from engine.config import save_config
 
         save_config(cfg, getattr(controller.window, "config_path", "config.json"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: binding persistence failures should be reported without breaking input rebinding
         controller.log(f"Failed to save bindings: {exc}")

@@ -14,7 +14,7 @@ def _recent_push_many(window: object, *, attr: str, values: Sequence[object], ma
         try:
             while v in recent:
                 recent.remove(v)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: move-to-front cleanup failures should skip the duplicate removal without blocking capture history updates
             continue
         recent.insert(0, v)
     if len(recent) > int(max_items):

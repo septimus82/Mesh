@@ -24,6 +24,7 @@ from engine.editor.hd2d_entity_overrides_model import (
     apply_hd2d_entity_override_patch,
     clear_all_overrides,
 )
+from tests._typing import as_any
 
 
 # =============================================================================
@@ -41,8 +42,8 @@ class TestListEntitiesWithPositions:
 
     def test_invalid_input_returns_empty(self) -> None:
         """Invalid input should return empty list."""
-        assert list_entities_with_positions(None) == []  # type: ignore[arg-type]
-        assert list_entities_with_positions([]) == []  # type: ignore[arg-type]
+        assert list_entities_with_positions(as_any(None)) == []
+        assert list_entities_with_positions(as_any([])) == []
 
     def test_extracts_positions_from_list_entities(self) -> None:
         """Should extract positions from list-format entities."""
@@ -264,7 +265,7 @@ class TestComputeBatchApplyTargets:
     def test_invalid_mode_returns_empty(self) -> None:
         """Invalid mode should return empty list."""
         scene = {"entities": [{"id": "center", "x": 0.0, "y": 0.0}]}
-        result = compute_batch_apply_targets(scene, "center", "invalid")  # type: ignore[arg-type]
+        result = compute_batch_apply_targets(scene, "center", as_any("invalid"))
         assert result == []
 
     def test_batch_targets_radius_deterministic(self) -> None:

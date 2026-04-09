@@ -140,7 +140,7 @@ def _try_read_json(path: Path) -> tuple[bool, Any | None, str]:
     try:
         with open(path, "r", encoding="utf-8") as handle:
             return True, json.load(handle), ""
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: asset doctor records any registry JSON read failure as a per-file diagnostic instead of aborting the full audit
         _log_swallow("DARG-003", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
         return False, None, _single_line(f"{type(exc).__name__}: {exc}")
 
@@ -150,7 +150,7 @@ def _load_image_cache(path: Path) -> tuple[dict[str, dict[str, int]], bool]:
         return {}, False
     try:
         raw_cache = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: invalid image cache data should be ignored with a warning so doctor-assets can rebuild cache-backed diagnostics deterministically
         _log_swallow("DARG-004", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
         log.warning("[Assets] image size cache invalid: %s", exc)
         return {}, True
@@ -453,7 +453,7 @@ def run_scene_entity_checks(ctx: DoctorContext) -> None:
                     from engine.geometry_tools import sanitize_poly  # noqa: PLC0415
 
                     sanitized = sanitize_poly(points)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: invalid scene occluder polygons should degrade to an empty sanitized result so doctor-assets can keep auditing the scene
                     _log_swallow("DARG-007", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
                     sanitized = []
                 if sanitized:
@@ -684,7 +684,7 @@ def run_prefab_asset_checks(ctx: DoctorContext) -> None:
                     from engine.geometry_tools import sanitize_poly  # noqa: PLC0415
 
                     sanitized = sanitize_poly(points)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: invalid prefab occluder polygons should degrade to an empty sanitized result so doctor-assets can keep auditing prefab assets
                     _log_swallow("DARG-013", "engine.tooling_runtime.doctor_assets_registry blanket exception fallback")
                     sanitized = []
                 if sanitized:

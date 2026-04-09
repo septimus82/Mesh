@@ -8,6 +8,7 @@ import arcade
 from engine.input_controller import InputController
 from engine.ui import SettingsOverlay
 from engine.ui_controller import UIController
+from tests._typing import as_any
 
 
 def test_settings_overlay_blocks_gameplay_actions(monkeypatch) -> None:
@@ -37,13 +38,13 @@ def test_settings_overlay_blocks_gameplay_actions(monkeypatch) -> None:
 
     window.console_controller = _Console()
 
-    window.ui_controller = UIController(window)  # type: ignore[arg-type]
+    window.ui_controller = UIController(as_any(window))
     window.editor_controller = types.SimpleNamespace(active=False)
 
-    controller = InputController(window)  # type: ignore[arg-type]
+    controller = InputController(as_any(window))
     window.input_controller = controller
 
-    overlay = SettingsOverlay(window)  # type: ignore[arg-type]
+    overlay = SettingsOverlay(as_any(window))
     overlay.open()
     window.ui_controller.register_ui_element(overlay)
 
@@ -60,4 +61,3 @@ def test_settings_overlay_blocks_gameplay_actions(monkeypatch) -> None:
     controller.on_key_press(arcade.key.E, 0)
     controller.update(0.016)
     assert mock_interact.call_count == 0
-

@@ -266,7 +266,7 @@ def compute_scene_stamp_report(
     prefabs_path = resolve_path("assets/prefabs.json")
     try:
         prefabs_payload = json.loads(prefabs_path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: stamp report should surface prefab JSON read failures as a single deterministic report error
         raise StampReportError(f"failed to read prefabs: {prefabs_path}: {exc}") from exc
     if not isinstance(prefabs_payload, list):
         raise StampReportError(f"prefabs payload must be a list: {prefabs_path}")

@@ -169,7 +169,7 @@ class CommandPaletteOverlay(UIElement):
         if callable(self.provider):
             try:
                 payload = self.provider(self.window)
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: command palette overlay should keep rendering even if an optional provider callback fails
                 payload = None
         return format_command_palette_overlay_lines(payload if isinstance(payload, dict) else None)
 

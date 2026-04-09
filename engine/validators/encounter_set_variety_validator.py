@@ -86,7 +86,7 @@ def validate_encounter_set_variety(
             continue
         try:
             loaded = json.loads(resolved.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: variety validation should record per-source JSON load failures and continue checking the remaining encounter set sources
             src_display = str(src).replace("\\", "/")
             msg = f"encounter_sets.load_failed source={src_display} error={type(exc).__name__}"
             issues.append(
@@ -159,4 +159,3 @@ def validate_encounter_set_variety(
             for i in warnings
         ],
     }
-

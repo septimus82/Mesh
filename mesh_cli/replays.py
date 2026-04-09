@@ -240,7 +240,7 @@ def _handle_replays_run(args: argparse.Namespace) -> int:
     except ValueError as exc:
         print(f"[Mesh][Replays] ERROR: {exc}")
         return 2
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: replays CLI should collapse unexpected suite failures into a deterministic nonzero exit with context
         print(f"[Mesh][Replays] ERROR: {type(exc).__name__}: {exc}")
         return 1
 
@@ -422,7 +422,7 @@ def _handle_replays_update_golden(args: argparse.Namespace) -> int:
     except ValueError as exc:
         print(f"[Mesh][Replays] ERROR: {exc}")
         return 2
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: replay update CLI should collapse unexpected suite failures into a deterministic nonzero exit with context
         print(f"[Mesh][Replays] ERROR: {type(exc).__name__}: {exc}")
         return 1
 

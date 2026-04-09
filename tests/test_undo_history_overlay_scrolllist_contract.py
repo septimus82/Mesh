@@ -7,6 +7,7 @@ import pytest
 import engine.optional_arcade as optional_arcade
 from engine.ui_overlays.undo_history_overlay import UndoHistoryOverlay
 from engine.ui_overlays.widgets import Rect, ScrollList
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 
@@ -28,7 +29,7 @@ def _make_overlay() -> UndoHistoryOverlay:
         history=history,
     )
     window = SimpleNamespace(editor_controller=controller)
-    overlay = UndoHistoryOverlay(window)  # type: ignore[arg-type]
+    overlay = UndoHistoryOverlay(as_any(window))
     entries = [
         SimpleNamespace(index=i + 1, real_index=i, label=f"Entry {i}", is_current=(i == 0))
         for i in range(12)

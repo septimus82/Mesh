@@ -61,7 +61,7 @@ def rebuild_static_and_dynamic_lights(manager: Any) -> None:
                     seed_value = len(manager._flicker_lights)
                 try:
                     seed = int(seed_value)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: malformed flicker seed values should fall back to a deterministic zero seed
                     _log_swallow("SLBD-001", "engine/lighting/static_light_builder.py blanket swallow", once=True)
                     seed = 0
                 speed = float(cfg.get("flicker_speed", 1.0))
@@ -71,13 +71,13 @@ def rebuild_static_and_dynamic_lights(manager: Any) -> None:
                 if radius_px is not None:
                     try:
                         radius_px = float(radius_px)
-                    except Exception:  # noqa: BLE001
+                    except Exception:  # noqa: BLE001  # REASON: malformed flicker radius overrides should fall back to the base light radius
                         _log_swallow("SLBD-002", "engine/lighting/static_light_builder.py blanket swallow", once=True)
                         radius_px = None
                 if intensity is not None:
                     try:
                         intensity = float(intensity)
-                    except Exception:  # noqa: BLE001
+                    except Exception:  # noqa: BLE001  # REASON: malformed flicker intensity overrides should fall back to the base light color intensity
                         _log_swallow("SLBD-003", "engine/lighting/static_light_builder.py blanket swallow", once=True)
                         intensity = None
                 state = _FlickerLightState(
@@ -117,14 +117,14 @@ def rebuild_static_and_dynamic_lights(manager: Any) -> None:
             if radius_px is not None:
                 try:
                     radius_px = float(radius_px)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: malformed dynamic flicker radius overrides should fall back to the base light radius
                     _log_swallow("SLBD-004", "engine/lighting/static_light_builder.py blanket swallow", once=True)
                     radius_px = None
             intensity = handle.flicker_intensity
             if intensity is not None:
                 try:
                     intensity = float(intensity)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001  # REASON: malformed dynamic flicker intensity overrides should fall back to the base light color intensity
                     _log_swallow("SLBD-005", "engine/lighting/static_light_builder.py blanket swallow", once=True)
                     intensity = None
             state = _FlickerLightState(

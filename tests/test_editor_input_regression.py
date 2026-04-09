@@ -7,6 +7,7 @@ import arcade
 
 import engine.editor_controller as editor_module
 from engine.editor_controller import EditorModeController
+from tests._editor_window_stub import EditorWindowStub, as_game_window
 
 
 class _StubSprite:
@@ -70,17 +71,8 @@ def test_selection_picks_topmost_and_arrow_nudges_and_pushes_undo(monkeypatch) -
     s2 = _StubSprite(name="b", x=10.0, y=20.0)
     scene = _StubSceneController([s1, s2])
 
-    window = types.SimpleNamespace()
-    window.strict_mode = False
-    window.paused = False
-    window.width = 800
-    window.height = 600
-    window._mouse_x = 0
-    window._mouse_y = 0
-    window.scene_controller = scene
-    window.screen_to_world = lambda x, y: (float(x), float(y))
-
-    controller = EditorModeController(window)  # type: ignore[arg-type]
+    window = EditorWindowStub(scene_controller=scene)
+    controller = EditorModeController(as_game_window(window))
     controller.toggle()
     assert controller.active is True
     assert window.paused is True
@@ -100,4 +92,3 @@ def test_selection_picks_topmost_and_arrow_nudges_and_pushes_undo(monkeypatch) -
     assert s2.center_x == before_x - controller.grid_size
     assert controller.undo_stack
     assert controller.undo_stack[-1]["type"] == "MoveEntity"
-

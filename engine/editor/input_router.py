@@ -164,7 +164,7 @@ def _snap_world_point(self: Any, world_x: float, world_y: float) -> tuple[float,
         if isinstance(tile_size_value, tuple) and len(tile_size_value) >= 1:
             try:
                 tile_size = int(tile_size_value[0])
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: invalid tile-size metadata should fall back to unsnapped world-space routing
                 tile_size = None
     return snap_world_point((float(world_x), float(world_y)), self.snap_mode, tile_size)
 

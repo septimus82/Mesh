@@ -70,7 +70,7 @@ def prepare_light_layer(
         elif hasattr(layer, "ambient_color"):
             layer.ambient_color = ambient_color
         return True
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: LightLayer ambient-color adapters should fail closed when backend-specific setters reject the value
         _log_swallow("LGRT-001", "engine/lighting/lighting_render.py blanket swallow", once=True)
         return False
 
@@ -94,7 +94,7 @@ def draw_layer_safe(layer: Any) -> bool:
             layer.draw()
             return True
         return False
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: LightLayer draw failures should skip the lighting pass without aborting frame rendering
         _log_swallow("LGRT-002", "engine/lighting/lighting_render.py blanket swallow", once=True)
         return False
 
@@ -124,7 +124,7 @@ def clear_layer(layer: Any) -> bool:
                 layer.remove(light)
             return True
         return False
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: LightLayer clear failures should leave the existing layer state intact without aborting lighting updates
         _log_swallow("LGRT-003", "engine/lighting/lighting_render.py blanket swallow", once=True)
         return False
 
@@ -147,7 +147,7 @@ def add_light_to_layer(layer: Any, light: Any) -> bool:
             layer.add(light)
             return True
         return False
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: LightLayer add failures should skip the individual light without aborting lighting updates
         _log_swallow("LGRT-004", "engine/lighting/lighting_render.py blanket swallow", once=True)
         return False
 
@@ -170,7 +170,7 @@ def remove_light_from_layer(layer: Any, light: Any) -> bool:
             layer.remove(light)
             return True
         return False
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: LightLayer remove failures should skip the individual light without aborting lighting updates
         _log_swallow("LGRT-005", "engine/lighting/lighting_render.py blanket swallow", once=True)
         return False
 

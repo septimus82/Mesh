@@ -107,8 +107,14 @@ class AIDebugOverlay:
     def _world_to_screen(self, window: "GameWindow", camera: Any, wx: float, wy: float) -> tuple[float, float]:
         if camera and hasattr(camera, "project"):
             try:
-                return camera.project((wx, wy))
-            except Exception as exc:  # noqa: BLE001
+                projected = camera.project((wx, wy))
+                if (
+                    isinstance(projected, tuple)
+                    and len(projected) == 2
+                    and all(isinstance(value, (int, float)) for value in projected)
+                ):
+                    return float(projected[0]), float(projected[1])
+            except Exception as exc:  # noqa: BLE001  # REASON: camera projection fallbacks must not block overlay rendering
                 if not getattr(self, "_mesh_project_error_logged", False):
                     print(f"[Mesh][AIDebug] ERROR projecting world coords: {exc}")
                     setattr(self, "_mesh_project_error_logged", True)

@@ -152,7 +152,7 @@ class EnemyAI(Behaviour):
             return
         logged.add(key)
         print(f"[Mesh][EnemyAI] ERROR {key}: {exc}")
-        self._state: str = self.IDLE
+        self._state = self.IDLE
 
     def update(self, dt: float) -> None:
         if self._attack_cooldown_timer > 0:
@@ -303,10 +303,16 @@ class EnemyAI(Behaviour):
         health = self._get_health_behaviour()
         if health is None:
             return False
-        max_hp = getattr(health, "max_health", None) or getattr(health, "max_hp", None)
-        current = getattr(health, "health", None) or getattr(health, "current_health", None)
+        raw_max_hp = getattr(health, "max_health", None)
+        if raw_max_hp is None:
+            raw_max_hp = getattr(health, "max_hp", None)
+        raw_current = getattr(health, "health", None)
+        if raw_current is None:
+            raw_current = getattr(health, "current_health", None)
+        if not isinstance(raw_max_hp, int | float) or not isinstance(raw_current, int | float):
+            return False
         try:
-            ratio = float(current) / float(max_hp)
+            ratio = float(raw_current) / float(raw_max_hp)
         except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
             _log_swallow("ENAI-004", "engine/behaviours/enemy_ai.py blanket swallow", once=True)
             self._log_exception_once("health_ratio", exc)

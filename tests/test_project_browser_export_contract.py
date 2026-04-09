@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import engine.optional_arcade
+from tests._typing import as_any
 
 # Ensure arcade fallback for headless runs.
 if not engine.optional_arcade.has_arcade():
@@ -32,7 +33,7 @@ def test_export_web_demo_exists_desktop(monkeypatch):
     monkeypatch.setenv("PYGBAG", "0")
     
     window = SimpleNamespace(width=800, height=600, paused=False)
-    menu = MainMenuOverlay(window) # type: ignore
+    menu = MainMenuOverlay(as_any(window))
     
     items = menu._items()
     actions = [item[1] for item in items]
@@ -43,7 +44,7 @@ def test_export_web_demo_hidden_web(monkeypatch):
     monkeypatch.setenv("PYGBAG", "1")
     
     window = SimpleNamespace(width=800, height=600, paused=False)
-    menu = MainMenuOverlay(window) # type: ignore
+    menu = MainMenuOverlay(as_any(window))
     
     items = menu._items()
     actions = [item[1] for item in items]
@@ -66,7 +67,7 @@ def test_export_web_demo_success(monkeypatch, tmp_path):
     mock_release.build_and_zip_web_demo = mock_build
     
     window = SimpleNamespace(width=800, height=600, paused=False, player_hud=MagicMock())
-    menu = MainMenuOverlay(window) # type: ignore
+    menu = MainMenuOverlay(as_any(window))
     
     # Direct invocation to avoid navigating menu
     menu._attempt_export_web_demo()
@@ -94,7 +95,7 @@ def test_export_web_demo_failure(monkeypatch, tmp_path):
     mock_release.build_and_zip_web_demo = mock_build
     
     window = SimpleNamespace(width=800, height=600, paused=False, player_hud=MagicMock())
-    menu = MainMenuOverlay(window) # type: ignore
+    menu = MainMenuOverlay(as_any(window))
     
     menu._attempt_export_web_demo()
     

@@ -6,6 +6,7 @@ import arcade
 
 from engine.input import InputManager
 from engine.ui import SettingsOverlay
+from tests._typing import as_any
 
 
 class _Audio:
@@ -36,7 +37,7 @@ def test_settings_overlay_remaps_key_and_persists(monkeypatch, tmp_path) -> None
     window.engine_config = types.SimpleNamespace(input_bindings={})
     window.input_controller = types.SimpleNamespace(manager=manager)
 
-    overlay = SettingsOverlay(window)  # type: ignore[arg-type]
+    overlay = SettingsOverlay(as_any(window))
     overlay.apply()
 
     overlay.open()
@@ -64,4 +65,3 @@ def test_settings_overlay_remaps_key_and_persists(monkeypatch, tmp_path) -> None
 
     saved = load_settings(settings_path)
     assert saved.keybinds["move_up"] == arcade.key.K
-

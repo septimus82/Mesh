@@ -108,7 +108,7 @@ def _apply_editor_sprite_ghosting(window: "GameWindow") -> tuple[list, dict]:
         _ghosting_cache["sprites_by_id"] = sprites_by_id
 
         return snapshots, sprites_by_id
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: editor ghosting is visual-only and should log without breaking the runtime tick
         _log_swallow("GTCK-001", "engine/game_runtime/tick.py blanket swallow", once=True)
         # Ghosting is visual polish only, but we still count swallow sites.
         record_swallowed("engine.game_runtime.tick._apply_editor_sprite_ghosting", exc)
@@ -124,7 +124,7 @@ def _restore_editor_sprite_ghosting(snapshots: list, sprites_by_id: dict) -> Non
     try:
         from engine.editor.editor_sprite_ghosting import restore_ghosted_sprites
         restore_ghosted_sprites(snapshots, sprites_by_id)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: editor ghosting restoration is visual-only and should log without breaking the runtime tick
         _log_swallow("GTCK-002", "engine/game_runtime/tick.py blanket swallow", once=True)
         record_swallowed("engine.game_runtime.tick._restore_editor_sprite_ghosting", exc)
 
@@ -208,7 +208,7 @@ def on_update(window: "GameWindow", delta_time: float) -> None:
     if audio is not None:
         try:
             audio.update(delta_time)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: audio update failures should log once without aborting the runtime tick
             _log_swallow("GTCK-003", "engine/game_runtime/tick.py blanket swallow", once=True)
             if not getattr(window, "_mesh_audio_update_error_logged", False):
                 logger.warning("[Mesh][Audio] WARNING: update failed: %r", exc)
@@ -244,7 +244,7 @@ def on_update(window: "GameWindow", delta_time: float) -> None:
             if lighting is not None and getattr(window.day_night, "enabled", False):
                 r, g, b = window.day_night.compute_ambient_rgb()
                 lighting.set_ambient_rgb(r, g, b)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: day-night updates are best-effort and should log without aborting the runtime tick
             _log_swallow("GTCK-004", "engine/game_runtime/tick.py blanket swallow", once=True)
             if not getattr(window, "_mesh_day_night_error_logged", False):
                 logger.warning("[Mesh][DayNight] WARNING: update failed: %r", exc)
@@ -258,7 +258,7 @@ def on_update(window: "GameWindow", delta_time: float) -> None:
         for event in events:
             try:
                 window.game_state_controller.handle_event(event)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: event handler failures should log without blocking delivery of later runtime events
                 _log_swallow("GTCK-005", "engine/game_runtime/tick.py blanket swallow", once=True)
                 logger.error("[Mesh][Game] ERROR handling '%s': %s", event.type, exc)
     window._debug_print_events(events)

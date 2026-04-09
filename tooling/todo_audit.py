@@ -71,7 +71,7 @@ def scan_repo(root: Path) -> list[MarkerHit]:
     for path in iter_files(root):
         try:
             text = path.read_text(encoding="utf-8", errors="ignore")
-        except Exception:
+        except OSError:
             continue
         for idx, line in enumerate(text.splitlines(), start=1):
             match = pattern.search(line)

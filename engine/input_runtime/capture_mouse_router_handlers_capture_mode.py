@@ -52,7 +52,7 @@ def _handle_capture_mode_mouse_press(window: Any, event: MouseEvent) -> bool:
     tile_w, tile_h = getattr(instance, "tile_size", (0, 0))
     try:
         world_x, world_y = window.screen_to_world(float(event.x), float(event.y))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: screen-to-world conversion failures should fall back to no capture-mode tile click handling
         return True
     from engine.tile_paint_mode import world_to_tile  # noqa: PLC0415
 
@@ -143,7 +143,7 @@ def _handle_capture_mode_mouse_scroll(window: Any, event: MouseEvent) -> bool:
             tile_w, tile_h = getattr(instance, "tile_size", (0, 0))
             try:
                 world_x, world_y = window.screen_to_world(float(event.x), float(event.y))
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: screen-to-world conversion failures should fall back to no capture-mode tile hover preview
                 world_x, world_y = None, None
             if isinstance(world_x, (int, float)) and isinstance(world_y, (int, float)):
                 from engine.tile_paint_mode import world_to_tile  # noqa: PLC0415

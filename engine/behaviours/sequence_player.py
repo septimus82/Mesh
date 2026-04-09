@@ -131,7 +131,10 @@ class SequencePlayer(Behaviour):
         owner_hint = str(merged.get("lock_owner", self.entity_name)).strip() or self.entity_name
         self._lock_owner = f"sequence::{owner_hint}"
         self.once = bool(merged.get("once", True))
-        self.default_move_speed = float(merged.get("default_move_speed", merged.get("move_speed", 120.0)))
+        raw_default_move_speed = merged.get("default_move_speed", merged.get("move_speed", 120.0))
+        if raw_default_move_speed is None:
+            raw_default_move_speed = 120.0
+        self.default_move_speed = float(raw_default_move_speed)
         self.move_tolerance = max(0.5, float(merged.get("move_tolerance", 2.0)))
         self.config.update(
             {
@@ -263,7 +266,8 @@ class SequencePlayer(Behaviour):
         if "remaining" not in state:
             state["remaining"] = duration
         state["remaining"] = max(0.0, float(state["remaining"]) - dt)
-        return state["remaining"] <= 0.0
+        remaining = state.get("remaining", 0.0)
+        return float(remaining) <= 0.0
 
     def _step_signal(self, step: dict[str, Any], dt: float) -> bool:  # noqa: ARG002
         event_type = str(step.get("event") or step.get("event_type") or "").strip()
@@ -365,12 +369,15 @@ class SequencePlayer(Behaviour):
                     pass
 
         if not window.is_dialogue_active(owner=self._dialogue_owner):
-            if state.get("post_wait", 0.0) > 0.0:
-                state["post_wait"] = max(0.0, state["post_wait"] - dt)
-                return state["post_wait"] <= 0.0
+            post_wait = float(state.get("post_wait", 0.0))
+            if post_wait > 0.0:
+                post_wait = max(0.0, post_wait - dt)
+                state["post_wait"] = post_wait
+                return post_wait <= 0.0
             return True
 
-        if state.get("wait_for_close"):
+        wait_for_close = bool(state.get("wait_for_close", False))
+        if wait_for_close:
             return False
         return False
 
@@ -380,7 +387,8 @@ class SequencePlayer(Behaviour):
             state["event_received"] = False
             state["timeout"] = max(0.0, float(step.get("timeout", 0.0)))
             state["elapsed"] = 0.0
-        if state["event_received"]:
+        event_received = bool(state.get("event_received", False))
+        if event_received:
             return True
         timeout = state.get("timeout", 0.0)
         if timeout > 0.0:

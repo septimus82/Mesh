@@ -30,3 +30,14 @@ def test_editor_controller_key_symbols_preserve_identity() -> None:
         assert old_sym is not None, f"old path missing {name}"
         assert core_sym is not None, f"core path missing {name}"
         assert old_sym is core_sym, f"symbol identity changed for {name}"
+
+
+def test_editor_controller_bootstrap_module_exports_expected_helpers() -> None:
+    bootstrap_mod = importlib.import_module("engine.editor.editor_controller_bootstrap")
+    for name in (
+        "bootstrap_dependencies",
+        "bootstrap_browser_state",
+        "bootstrap_runtime_state",
+        "bootstrap_overlay_state",
+    ):
+        assert callable(getattr(bootstrap_mod, name, None)), f"bootstrap helper missing {name}"

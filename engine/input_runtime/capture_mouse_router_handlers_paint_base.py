@@ -49,7 +49,7 @@ def screen_to_world_safe(window: Any, x: float, y: float) -> tuple[float, float]
     try:
         world_x, world_y = window.screen_to_world(float(x), float(y))
         return (float(world_x), float(world_y))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: screen-to-world conversion failures should fall back to no paint-base cursor position
         return None
 
 
@@ -106,7 +106,7 @@ def get_authoring_payloads(window: Any) -> list[dict]:
             payloads = [p for p in result if isinstance(p, dict)]
             if payloads:
                 return payloads
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: authored scene payload queries are optional and should fall back to loaded scene payloads only
             _log_swallow("CAPT-001", "engine/input_runtime/capture_mouse_router_handlers_paint_base.py pass-only blanket swallow")
             pass
     

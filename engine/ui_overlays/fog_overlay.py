@@ -18,7 +18,7 @@ def _normalize_rgba(value: Any) -> tuple[int, int, int, int]:
             b = int(value[2])
             a = int(value[3]) if len(value) > 3 else 255
             return (r, g, b, a)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: fog overlay should fall back to a transparent color when config values are malformed
             return (255, 255, 255, 0)
     return (255, 255, 255, 0)
 

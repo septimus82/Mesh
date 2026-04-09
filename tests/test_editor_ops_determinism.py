@@ -5,6 +5,8 @@ from typing import Any
 
 import engine.editor_controller as editor_module
 from engine.editor_controller import EditorModeController
+from tests._editor_window_stub import EditorWindowStub, as_game_window
+from tests._typing import as_any
 
 
 class _ParamDef:
@@ -45,13 +47,11 @@ def test_inspector_param_order_is_sorted_deterministically(monkeypatch) -> None:
 
     monkeypatch.setattr(inspector_module, "get_behaviour_param_defs", fake_param_defs)
 
-    window = types.SimpleNamespace()
-    window.strict_mode = False
-    window.scene_controller = _StubSceneController()
+    window = EditorWindowStub(scene_controller=_StubSceneController())
 
-    controller = EditorModeController(window)  # type: ignore[arg-type]
+    controller = EditorModeController(as_game_window(window))
     controller.active = True
-    controller.selected_entity = _StubSprite()  # type: ignore[assignment]
+    as_any(controller).selected_entity = _StubSprite()
 
     items = controller._build_inspector_items()
     keys = [item["name"] for item in items if item.get("type") == "param"]

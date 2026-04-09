@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import engine.editor_controller as editor_module
 import engine.optional_arcade as optional_arcade
 from engine.editor_controller import EditorModeController
+from tests._typing import as_any
 
 
 class _StubSprite(SimpleNamespace):
@@ -73,9 +74,9 @@ def _build_controller(monkeypatch, scene_path: str = "packs/core/scenes/test_sce
         camera=_StubCamera(),
     )
     window.get_camera_center = lambda: (64.0, 96.0)
-    controller = EditorModeController(window)  # type: ignore[arg-type]
+    controller = EditorModeController(as_any(window))
     controller.active = True
-    controller.selected_entity = sprite  # type: ignore[assignment]
+    as_any(controller).selected_entity = sprite
     return controller, sprite, window
 
 

@@ -11,6 +11,7 @@ from engine.editor.editor_cursor_model import (
     CursorHintResult,
     build_cursor_hint,
 )
+from tests._typing import as_any
 
 
 # -----------------------------------------------------------------------------
@@ -34,7 +35,7 @@ class TestCursorHintResult:
     def test_frozen(self) -> None:
         result = CursorHintResult(text="Hint", kind="type")
         with pytest.raises(AttributeError):
-            result.text = "changed"  # type: ignore[misc]
+            as_any(result).text = "changed"
 
     def test_equality(self) -> None:
         a = CursorHintResult(text="Hint", kind="type")

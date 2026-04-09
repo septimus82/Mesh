@@ -19,6 +19,7 @@ def test_cli_parser_registers_expected_core_subcommands() -> None:
     choices = set(subparsers_action.choices.keys())
     for command in (
         "verify-all",
+        "verify-local",
         "verify-demo",
         "verify-strict",
         "scene",

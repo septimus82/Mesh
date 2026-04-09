@@ -23,7 +23,7 @@ def _load_scene_payload(scene_path: str) -> tuple[dict[str, Any], Any] | tuple[N
         return None, None
     try:
         data = json.loads(resolved.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except (OSError, json.JSONDecodeError) as exc:  # REASON: prefab override CLI should report scene JSON parse failures deterministically before inspecting entity overrides
         print(f"[Mesh][CLI] Error: failed to parse scene JSON: {scene_path}: {exc}")
         return None, None
     if not isinstance(data, dict):

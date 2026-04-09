@@ -8,6 +8,7 @@ import pytest
 import engine.editor_controller as editor_module
 import engine.editor.editor_inspector_controller as inspector_module
 from engine.editor_controller import EditorModeController
+from tests._typing import as_any
 
 
 class _ParamDef:
@@ -81,7 +82,7 @@ def test_undo_redo_entity_edits(monkeypatch: pytest.MonkeyPatch) -> None:
     window.scene_controller = _StubSceneController()
     window.screen_to_world = lambda x, y: (x, y)
 
-    controller = EditorModeController(window)  # type: ignore[arg-type]
+    controller = EditorModeController(as_any(window))
     controller.active = True
     controller.palette_active = True
     controller.palette_index = 0

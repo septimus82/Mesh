@@ -273,7 +273,7 @@ def run_replay_suite(folder: str, *, window_factory=None) -> dict[str, Any]:
                     ok = False
                     error = _single_line_error(exp_error)
 
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: replay suite records mixed script runtime failures as single-line case errors and continues the remaining cases
             ok = False
             if isinstance(exc, ValueError):
                 error = _single_line_error(str(exc))

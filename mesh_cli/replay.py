@@ -228,7 +228,7 @@ def _handle_replay_hash(args: argparse.Namespace) -> int:
     if expect_path:
         try:
             expected_hash = _load_expected_hash(Path(expect_path))
-        except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+        except (OSError, ValueError) as exc:  # REASON: cli fallback isolation
             _log_swallow("RPLY-007", "_load_expected_hash failed", once=True)
             print(f"[Mesh][ReplayHash] ERROR: {exc}")
             return 1

@@ -36,7 +36,7 @@ def _safe_read_json(path: Path) -> dict[str, Any] | None:
     try:
         raw = path.read_text(encoding="utf-8")
         data = json.loads(raw)
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         return None
     return data if isinstance(data, dict) else None
 

@@ -60,7 +60,7 @@ def _maybe_handle_debug_entity_select_press(window: Any, event: MouseEvent) -> b
     
     try:
         world_x, world_y = window.screen_to_world(float(event.x), float(event.y))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: screen-to-world conversion failures should fall back to no entity-select click handling
         return True
     
     # Check if clicking on an entity via scene_inspector_overlay
@@ -72,7 +72,7 @@ def _maybe_handle_debug_entity_select_press(window: Any, event: MouseEvent) -> b
             payload = provider(window)
             hover = payload.get("hover", {}) if isinstance(payload, dict) else {}
             clicked_entity_id = hover.get("id") if isinstance(hover, dict) else None
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: inspector hover payload queries are optional and should fall back to marquee selection behavior
             _log_swallow("CAPT-001", "engine/input_runtime/capture_mouse_router_handlers_global.py pass-only blanket swallow")
             pass
     
@@ -134,7 +134,7 @@ def _maybe_handle_debug_entity_select_release(window: Any, event: MouseEvent) ->
     
     try:
         world_x, world_y = window.screen_to_world(float(event.x), float(event.y))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: screen-to-world conversion failures should clear drag state and skip entity-select release handling
         clear_drag(state)
         return True
     
@@ -169,7 +169,7 @@ def _maybe_handle_debug_entity_select_release(window: Any, event: MouseEvent) ->
                     multi = bool(event.modifiers & optional_arcade.arcade.key.MOD_SHIFT)
                     if not multi:
                         set_selection(window, state, [])
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: inspector hover payload queries are optional and should fall back to existing release selection behavior
                 _log_swallow("CAPT-002", "engine/input_runtime/capture_mouse_router_handlers_global.py pass-only blanket swallow")
                 pass
     else:

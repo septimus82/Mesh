@@ -70,7 +70,7 @@ class UIController:
             if callable(handler):
                 try:
                     handler(width, height)
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # noqa: BLE001  # REASON: one misbehaving UI element should not prevent resize notifications from reaching the rest of the overlay stack
                     logger.warning("on_resize failed for %s: %r", element.__class__.__name__, exc)
 
     def update(self, dt: float) -> None:

@@ -19,6 +19,7 @@ from engine.editor.editor_alt_drag_duplicate_ops import (
     remove_alt_drag_duplicates,
     should_start_alt_drag_duplicate,
 )
+from tests._typing import as_any
 
 
 # -----------------------------------------------------------------------------
@@ -522,4 +523,4 @@ class TestDuplicateEntitySpec:
     def test_frozen(self) -> None:
         spec = DuplicateEntitySpec("a", "b", {}, (0.0, 0.0), (0.0, 0.0))
         with pytest.raises(AttributeError):
-            spec.src_id = "changed"  # type: ignore
+            as_any(spec).src_id = "changed"

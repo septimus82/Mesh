@@ -105,7 +105,7 @@ def build_lighting_stats(manager: Any) -> dict[str, Any]:
         stats.setdefault("mask_backend", getattr(manager.window, "_mesh_shadow_mask_backend", None))
         if os.environ.get("MESH_SHADOWS_TRACE") == "1":
             stats.setdefault("mask_error", getattr(manager.window, "_mesh_shadow_mask_error", None))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: optional window-side shadow debug fields should fail closed without blocking lighting stats snapshots
         _log_swallow("LIGH-001", "engine/lighting/lighting_stats.py pass-only blanket swallow")
         pass
     return stats

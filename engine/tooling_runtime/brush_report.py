@@ -140,7 +140,7 @@ def compute_scene_brush_report(
 
     try:
         brush = validate_brush(brush_payload)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: brush validation can raise mixed schema errors that should be wrapped into a single user-facing brush report failure
         raise BrushReportError(f"invalid brush JSON: {brush_path_raw}: {exc}") from exc
 
     loader = SceneLoader()
@@ -165,7 +165,7 @@ def compute_scene_brush_report(
         layer = get_layer_by_id(tile_layers, str(layer_id))
     except KeyError as exc:
         raise BrushReportError(f"tile layer not found: {layer_id}") from exc
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: malformed layer metadata can raise mixed lookup errors and should be reported as a stable invalid-layer failure
         raise BrushReportError(f"invalid layer id: {exc}") from exc
 
     try:
@@ -182,7 +182,7 @@ def compute_scene_brush_report(
         )
     except IndexError as exc:
         raise BrushReportError(str(exc)) from exc
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: brush application normalizes mixed tile edit failures into a deterministic dry-run error result
         raise BrushReportError(f"failed to apply brush: {exc}") from exc
 
     tile_changes: list[dict[str, Any]] = []

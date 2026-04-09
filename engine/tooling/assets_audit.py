@@ -589,7 +589,7 @@ def _scan_tileset_file(
         try:
             tree = ET.parse(tileset_path)
             root = tree.getroot()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: malformed TSX tilesets should record an audit error and skip only that tileset reference
             _log_swallow("AAUD-001", f"_check_tileset_tsx: parse failed: {tileset_path}", once=False)
             errors.append(
                 AssetAuditError(
@@ -975,7 +975,7 @@ def _resolve_entity_with_prefab(prefab_manager: Any, entity: dict[str, Any], pre
 def _load_json(path: Path, repo_root: Path, errors: list[AssetAuditError]) -> dict[str, Any] | None:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: malformed JSON assets should record an audit error and skip only that asset payload
         _log_swallow("AAUD-002", f"_load_json: parse failed: {path}", once=False)
         errors.append(
             AssetAuditError(

@@ -17,6 +17,7 @@ from engine.editor.marquee_select import (
     get_marquee_rect_from_state,
 )
 from engine.editor.selection_outline import RectF
+from tests._typing import as_any
 
 
 # -----------------------------------------------------------------------------
@@ -301,4 +302,4 @@ class TestMarqueeState:
             shift=False,
         )
         with pytest.raises(AttributeError):
-            state.active = False  # type: ignore
+            as_any(state).active = False

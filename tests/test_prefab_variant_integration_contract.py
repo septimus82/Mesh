@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import engine.editor_controller as editor_module
 from engine.editor_controller import EditorModeController
 from engine.editor_prefab_variant_ops import DiffRow
+from tests._typing import as_any
 
 
 class _StubSprite(SimpleNamespace):
@@ -56,9 +57,9 @@ def _build_controller(payload: dict, monkeypatch) -> tuple[EditorModeController,
     sprite = _StubSprite(payload["entities"][0])
     scene_controller = _StubSceneController(payload, [sprite])
     window = SimpleNamespace(strict_mode=False, scene_controller=scene_controller, width=800, height=600)
-    controller = EditorModeController(window)  # type: ignore[arg-type]
+    controller = EditorModeController(as_any(window))
     controller.active = True
-    controller.selected_entity = sprite  # type: ignore[assignment]
+    as_any(controller).selected_entity = sprite
     return controller, sprite
 
 

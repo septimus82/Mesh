@@ -59,7 +59,7 @@ def _handle_entity_paint_mouse_press(window: Any, event: MouseEvent) -> bool:
     scene_path = str(getattr(sc, "current_scene_path", "") or "")
     try:
         world_x, world_y = window.screen_to_world(float(event.x), float(event.y))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: screen-to-world conversion failures should fall back to no entity-paint placement click
         return True
 
     entity_id = make_entity_id(scene_path, prefab_id, float(world_x), float(world_y))
@@ -80,7 +80,7 @@ def _handle_entity_paint_mouse_press(window: Any, event: MouseEvent) -> bool:
         if callable(authored):
             try:
                 payloads_list.append(authored())
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # REASON: authored scene payload queries are optional and should fall back to loaded scene payloads only
                 payloads_list = []
         if not payloads_list and sc is not None and isinstance(getattr(sc, "_loaded_scene_data", None), dict):
             payloads_list.append(sc._loaded_scene_data)

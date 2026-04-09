@@ -75,7 +75,7 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
                     f"{counts.get('asset_textures_cleared', 0) + counts.get('render_queue_textures_cleared', 0) + counts.get('particle_textures_cleared', 0)}"
                     ")"
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: asset reload failures should report to the runtime console without aborting input dispatch
                 window.console_log(f"[Assets] Reload failed: {exc}")
             return
 

@@ -91,7 +91,7 @@ def normalize_project_path(path: str) -> str:
         if resolved.exists():
             resolved = resolved.resolve()
         return str(resolved)
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: invalid recent project paths should fall back to the original text without breaking workspace history
         return text
 
 

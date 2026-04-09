@@ -73,7 +73,7 @@ def _load_quest_definitions() -> Dict[str, str]:
                         if not isinstance(title, str) or not title.strip():
                             title = qid
                         definitions[qid] = title
-        except Exception:
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             _log_swallow("AICO-001", "engine/tooling/ai_context_exporter.py pass-only blanket swallow")
             pass # Ignore errors in quest loading for context export
 

@@ -138,7 +138,7 @@ def _inventory_add(controller: Any, inventory: Any, item_id: str, amount: int) -
     before = inventory.get_count(normalized)
     try:
         added = inventory.add_item(normalized, amount)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: inventory add failures should be reported without breaking the command loop
         controller.log(f"Inventory add failed: {exc}")
         return
     after = inventory.get_count(normalized)
@@ -168,7 +168,7 @@ def _inventory_remove(controller: Any, inventory: Any, item_id: str, amount: int
         return
     try:
         removed = inventory.remove_item(normalized, amount)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: inventory remove failures should be reported without breaking the command loop
         controller.log(f"Inventory remove failed: {exc}")
         return
     if not removed:

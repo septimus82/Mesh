@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from engine.behaviours.light_source import LightSource
+from tests._typing import as_any
 
 
 class _StubLight:
@@ -20,7 +21,8 @@ class _StubLighting:
         base = color_rgba if isinstance(color_rgba, (tuple, list)) else (255, 255, 255, 255)
         if isinstance(base, (tuple, list)):
             base = tuple(int(round(v)) for v in base[:4]) + (255,) * max(0, 4 - len(base))
-        light = _StubLight(radius, base)  # type: ignore[arg-type]
+        rgba = tuple(int(v) for v in base[:4])
+        light = _StubLight(radius, rgba)
         handle = SimpleNamespace(light=light, base_radius=float(radius), base_color=base)
         self.last_handle = handle
         return handle
@@ -32,7 +34,7 @@ def _build_light(seed: int) -> LightSource:
     window = SimpleNamespace(lighting=lighting)
     source = LightSource(
         entity,
-        window,  # type: ignore[arg-type]
+        as_any(window),
         radius=80.0,
         color_rgba=(120, 160, 200, 255),
         flicker_enabled=True,
@@ -83,7 +85,7 @@ def test_seed_change_resets_deterministic_stream() -> None:
     source = _build_light(123)
     _sample_sequence(source, steps=5)
     source.config["flicker_seed"] = 999
-    source.flicker_seed = 999  # type: ignore[attr-defined]
+    as_any(source).flicker_seed = 999
 
     seq_after = _sample_sequence(source, steps=6)
 

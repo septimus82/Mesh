@@ -13,7 +13,7 @@ def is_interact_key(controller: Any, key: int) -> bool:
     try:
         binder = getattr(controller.manager, "is_key_bound_to_action", None)
         return bool(callable(binder) and binder("interact", key))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # REASON: custom interact key binding lookups should fall back to the default interact key only
         return False
 
 
@@ -252,7 +252,7 @@ def _handle_savegame_save(window: Any) -> bool:
         logger = getattr(window, "console_log", None)
         if callable(logger):
             logger(f"[SaveGame] Saved to {save_path}")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: savegame write failures should report to the runtime console without aborting global action dispatch
         logger = getattr(window, "console_log", None)
         if callable(logger):
             logger(f"[SaveGame] Save failed: {exc}")
@@ -284,7 +284,7 @@ def _handle_savegame_load_or_play(window: Any) -> bool:
         logger = getattr(window, "console_log", None)
         if callable(logger):
             logger(f"[SaveGame] Loaded from {save_path}")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: savegame load/apply failures should report to the runtime console without aborting global action dispatch
         logger = getattr(window, "console_log", None)
         if callable(logger):
             logger(f"[SaveGame] Load failed: {exc}")

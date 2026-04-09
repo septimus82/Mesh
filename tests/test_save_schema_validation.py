@@ -19,6 +19,7 @@ from engine.save_runtime.schema import (
     migrate_save,
     validate_save,
 )
+from tests._typing import as_any
 
 
 class TestMigrateSave:
@@ -74,7 +75,7 @@ class TestMigrateSave:
     def test_non_dict_raises_validation_error(self) -> None:
         """Non-dict payloads raise SaveValidationError."""
         with pytest.raises(SaveValidationError, match=r"must be a JSON object"):
-            migrate_save([1, 2, 3])  # type: ignore
+            migrate_save(as_any([1, 2, 3]))
     
     def test_state_renamed_to_game_state(self) -> None:
         """Old 'state' field is renamed to 'game_state'."""
@@ -214,7 +215,7 @@ class TestLoadAndValidate:
     def test_non_dict_rejected(self) -> None:
         """Non-dict input rejected immediately."""
         with pytest.raises(SaveValidationError, match=r"must be a JSON object"):
-            load_and_validate("not a dict")  # type: ignore
+            load_and_validate(as_any("not a dict"))
 
 
 class TestSaveValidationErrorFormatting:

@@ -8,6 +8,7 @@ import pytest
 
 from engine import optional_arcade
 from engine.editor.editor_history_controller import EditorHistoryController
+from tests._typing import as_any
 from tests._dock_stub import make_dock_stub
 from tests._search_stub import attach_search_stub
 from tests._session_stub import make_session_stub
@@ -102,7 +103,7 @@ def test_mouse_click_triggers_jump(monkeypatch: pytest.MonkeyPatch) -> None:
         called["cursor"] = cursor_index
         return True
 
-    ctrl.history.jump_to = _jump  # type: ignore[assignment]
+    as_any(ctrl.history).jump_to = _jump
 
     layout = compute_editor_shell_layout(ctrl.window.width, ctrl.window.height, 320, 320)
     dock = layout.right_dock

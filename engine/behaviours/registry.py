@@ -237,10 +237,10 @@ def create_behaviour(
         )
         try:
             instance = cls(entity, window)
-        except Exception as inner_exc:  # noqa: BLE001
+        except Exception as inner_exc:  # noqa: BLE001  # REASON: legacy no-config fallback should report constructor failures without breaking scene load
             print(f"[Mesh][Behaviour] ERROR: Failed to instantiate '{canonical}': {inner_exc}")
             return None
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: behaviour constructor failures should be reported without breaking scene load
         print(f"[Mesh][Behaviour] ERROR: Failed to instantiate '{canonical}': {exc}")
         return None
 
@@ -281,12 +281,12 @@ def reload_behaviour_modules() -> int:
             else:
                 importlib.import_module(module_name)
             reloaded += 1
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: module reload failures should identify the bad behaviour module without hiding the reload loop failure
             raise RuntimeError(f"Failed to reload '{module_name}': {exc}") from exc
 
     try:
         importlib.reload(behaviours_pkg)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: package reload failures should surface with behaviour package context
         raise RuntimeError(f"Behaviour package reload failed: {exc}") from exc
 
     return reloaded

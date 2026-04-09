@@ -251,7 +251,7 @@ def _verify_manifest_seal(
     try:
         seal_raw = zf.read(MANIFEST_SEAL_NAME)
         seal_data = json.loads(seal_raw)
-    except Exception as exc:
+    except (KeyError, RuntimeError, TypeError, ValueError, zipfile.BadZipFile, json.JSONDecodeError) as exc:
         message = f"Cannot parse {MANIFEST_SEAL_NAME}: {exc}"
         if strict:
             errors.append(message)
@@ -454,7 +454,7 @@ def verify_zip(
         try:
             raw = zf.read(MANIFEST_NAME)
             manifest = json.loads(raw)
-        except Exception as exc:
+        except (KeyError, RuntimeError, TypeError, ValueError, zipfile.BadZipFile, json.JSONDecodeError) as exc:
             errors.append(f"Cannot parse {MANIFEST_NAME}: {exc}")
             return report
 

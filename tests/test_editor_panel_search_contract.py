@@ -19,6 +19,7 @@ from engine.editor.undo_history_model import (
 )
 from engine.editor_runtime import input as editor_input
 from engine.editor_controller import EditorModeController
+from tests._typing import as_any
 from tests._search_stub import attach_search_stub
 from tests._session_stub import make_session_stub
 from tests._dock_stub import make_dock_stub
@@ -49,8 +50,8 @@ class StubController:
     _inspector_text_edit_active: bool = False
     entity_panels_filter_active: bool = False
     asset_browser_filter: str = ""
-    undo_stack: list[dict] = None  # type: ignore[assignment]
-    redo_stack: list[dict] = None  # type: ignore[assignment]
+    undo_stack: list[dict] | None = None
+    redo_stack: list[dict] | None = None
     history: EditorHistoryController = field(init=False)
     project_explorer: object = field(default_factory=lambda: SimpleNamespace(search_query=""))
     problems: object = field(default_factory=lambda: SimpleNamespace(query=""))
@@ -201,7 +202,7 @@ def test_enter_blocked_while_search_focused(monkeypatch: pytest.MonkeyPatch) -> 
     def _activate_selected_asset() -> None:
         activated["called"] = True
 
-    controller._activate_selected_asset = _activate_selected_asset  # type: ignore[attr-defined]
+    as_any(controller)._activate_selected_asset = _activate_selected_asset
 
     editor_input.handle_input(controller, arcade_stub.key.ENTER, 0)
     assert activated["called"] is False
@@ -217,6 +218,6 @@ def test_enter_blocked_while_search_focused(monkeypatch: pytest.MonkeyPatch) -> 
         jumped["called"] = True
         return True
 
-    controller.history.jump_to = _jump  # type: ignore[assignment]
+    as_any(controller.history).jump_to = _jump
     controller.history.handle_input(arcade_stub.key.ENTER, 0)
     assert jumped["called"] is False

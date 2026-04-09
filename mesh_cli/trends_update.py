@@ -29,7 +29,7 @@ def _safe_read_json(path: Path) -> dict[str, Any] | None:
         return None
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, json.JSONDecodeError):
         return None
     return payload if isinstance(payload, dict) else None
 
@@ -39,7 +39,7 @@ def _safe_read_toml(path: Path) -> dict[str, Any] | None:
         return None
     try:
         payload = tomllib.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+    except (OSError, tomllib.TOMLDecodeError):
         return None
     return payload if isinstance(payload, dict) else None
 
@@ -94,7 +94,7 @@ def _read_public_api_semver(repo_root: Path) -> str:
         return "?"
     try:
         text = version_path.read_text(encoding="utf-8")
-    except Exception:
+    except OSError:
         return "?"
     marker = "PUBLIC_API_SEMVER"
     for raw in text.splitlines():

@@ -43,7 +43,7 @@ def _handle_fx_validate() -> int:
         for line in result.messages:
             print(line)
         return 0 if result.ok else 2
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: FX validation CLI should collapse unexpected validation failures into a deterministic nonzero exit
         print(f"[Mesh][FX] ERROR: {exc}")
         return 1
 

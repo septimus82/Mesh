@@ -34,7 +34,7 @@ def load_presets_from_pack(pack_root: Path) -> dict[str, dict[str, Any]]:
         return {}
     try:
         payload = json.loads(presets_path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: malformed fx preset JSON should raise a clear ValueError without aborting fx preset loading with raw parser errors
         raise ValueError(f"{presets_path.as_posix()}: failed to parse presets.json: {exc}") from exc
     if not isinstance(payload, dict):
         raise ValueError(f"{presets_path.as_posix()}: presets.json root must be an object")

@@ -481,7 +481,7 @@ class EditorProjectExplorerActionsController:
             copy_fn = getattr(pyperclip_module, "copy", None)
             if callable(copy_fn):
                 copy_fn(text)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: clipboard support is optional and should not block project explorer actions
             _log_swallow("EDIT-001", "engine/editor/project_explorer/editor_project_explorer_actions_controller.py pass-only blanket swallow")
             # Clipboard not available (headless, web, missing deps) - silent no-op
             pass

@@ -104,7 +104,7 @@ def handle_reload_behaviours(controller: Any, _args: list[str]) -> bool:
     """``reload_behaviours`` — hot-reload behaviour modules."""
     try:
         reloaded = reload_behaviour_modules()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: behaviour hot-reload failures should be reported without breaking the console command loop
         controller.window.scene_controller._hot_reload_log(f"Behaviour reload failed: {exc}")
         return True
     controller.window.scene_controller._hot_reload_log(
@@ -470,7 +470,7 @@ def _apply_behaviour_runtime_update(
         try:
             hook(field_name, value)
             updated = True
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: runtime config hooks are optional and should not block config updates when they fail
             # Can't call controller.log here (no controller ref), but the caller
             # will report success/failure based on return value.
             _ = exc

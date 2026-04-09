@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import Any, cast
 
 from ..pathfinding import NavGrid, astar
 from .base import Behaviour, ParamDef
@@ -111,7 +111,7 @@ class FollowPathBehaviour(Behaviour):
             return None
         try:
             return float(value)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: invalid authored goal coordinates should fall back to None without breaking behaviour init
             return None
 
     def update(self, dt: float) -> None:
@@ -206,7 +206,14 @@ class FollowPathBehaviour(Behaviour):
         scene = getattr(self.window, "scene_controller", None)
         getter = getattr(scene, "get_nav_grid", None) if scene is not None else None
         if callable(getter):
-            return getter()
+            grid = getter()
+            if isinstance(grid, NavGrid):
+                return grid
+            if (
+                callable(getattr(grid, "world_to_tile", None))
+                and callable(getattr(grid, "tile_center_world", None))
+            ):
+                return cast(NavGrid, grid)
         return None
 
     def _resolve_goal_world(self) -> tuple[float, float] | None:

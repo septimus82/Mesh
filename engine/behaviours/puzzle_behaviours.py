@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 if TYPE_CHECKING:
     from arcade import Sprite
 
@@ -10,6 +11,48 @@ from ..event_emit import emit_gameplay_event
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
+
+
+def _explicit_attr(ctx: object, name: str) -> Any:
+    """Read only explicitly-defined attributes to avoid MagicMock auto attrs."""
+    try:
+        return object.__getattribute__(ctx, name)
+    except Exception:
+        return None
+
+
+def _emit_puzzle_event(
+    ctx: object,
+    event_type: str,
+    payload: dict[str, Any],
+    *,
+    source_entity_id: str,
+    source_behaviour: str,
+) -> None:
+    """Preserve legacy MeshEvent emission while supporting gameplay_event_bus."""
+    gameplay_bus = _explicit_attr(ctx, "gameplay_event_bus")
+    if gameplay_bus is not None and hasattr(gameplay_bus, "emit"):
+        emit_gameplay_event(
+            ctx,
+            event_type,
+            payload,
+            source_entity_id=source_entity_id,
+            source_behaviour=source_behaviour,
+        )
+        return
+
+    legacy_bus = _explicit_attr(ctx, "event_bus")
+    if legacy_bus is not None and hasattr(legacy_bus, "emit"):
+        legacy_bus.emit(MeshEvent(event_type, payload))
+        return
+
+    emit_gameplay_event(
+        ctx,
+        event_type,
+        payload,
+        source_entity_id=source_entity_id,
+        source_behaviour=source_behaviour,
+    )
 
 
 @register_behaviour(
@@ -60,9 +103,10 @@ class SwitchInteract(Behaviour):
             return
 
         self.activated = True
-        emit_gameplay_event(
-            getattr(self.window, "event_bus", None),
-            MeshEvent(self.event_id, {"source": self.entity}),
+        _emit_puzzle_event(
+            self.window,
+            self.event_id,
+            {"source": self.entity},
             source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
             source_behaviour="SwitchInteract",
         )
@@ -131,9 +175,10 @@ class DoorLock(Behaviour):
         self._update_collision()
 
         # Emit door_unlocked event for chaining.
-        emit_gameplay_event(
-            getattr(self.window, "event_bus", None),
-            MeshEvent("door_unlocked", {"door_id": getattr(self.entity, "id", "unknown")}),
+        _emit_puzzle_event(
+            self.window,
+            "door_unlocked",
+            {"door_id": getattr(self.entity, "id", "unknown")},
             source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
             source_behaviour="DoorLock",
         )

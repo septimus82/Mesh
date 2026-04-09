@@ -87,7 +87,7 @@ def _handle_entity_paint_slot_action(window: Any, entity_state: Any, action_id: 
         try:
             from engine.entity_paint_mode import get_selected_prefab_id  # noqa: PLC0415
             current_prefab = get_selected_prefab_id(entity_state)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: optional prefab selection queries should fall back to no active prefab slot assignment
             current_prefab = None
         if not isinstance(current_prefab, str) or not current_prefab.strip():
             print(f"PREFAB_SLOT_ASSIGN noop reason=empty slot={slot}")
@@ -117,7 +117,7 @@ def _handle_entity_paint_slot_action(window: Any, entity_state: Any, action_id: 
                 print(f"PREFAB_SLOT_SELECT ok slot={slot} prefab={prefab_id.strip()}")
             else:
                 print(f"PREFAB_SLOT_SELECT noop reason=empty slot={slot}")
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: prefab slot selection helpers are optional and should fall back to a no-op slot select
             print(f"PREFAB_SLOT_SELECT noop reason=empty slot={slot}")
         return True
 

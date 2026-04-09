@@ -181,7 +181,7 @@ class SelfTestManager:
                 if hasattr(behaviour, "update"):
                     behaviour.update(0.016)
                 results.append(SelfTestResult(test_name, True))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: self-test behaviour probes should convert behaviour failures into explicit failing test results
                 results.append(SelfTestResult(test_name, False, message=str(exc)))
         return results
 
@@ -226,7 +226,7 @@ class SelfTestManager:
                                 if "UNKNOWN" in msg or "missing required" in msg:
                                     warnings.append(f"{entity} {beh}: {msg}")
                     results.append(SelfTestResult(label, True, warnings=warnings))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: scene validation failures should convert into explicit failing self-test scene results
                 results.append(SelfTestResult(label, False, message=str(exc)))
         return results
 
@@ -251,7 +251,7 @@ class SelfTestManager:
                     raw = json.load(handle)
                 WorldController(raw)
                 results.append(SelfTestResult(label, True))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: world load failures should convert into explicit failing self-test world results
                 results.append(SelfTestResult(label, False, message=str(exc)))
         return results
 
@@ -295,6 +295,6 @@ class SelfTestManager:
                         if "type" not in step:
                             warnings.append(f"cutscene '{cid}' step {idx} missing type")
                 results.append(SelfTestResult(label, True, warnings=warnings))
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: cutscene validation failures should convert into explicit failing self-test cutscene results
                 results.append(SelfTestResult(label, False, message=str(exc)))
         return results

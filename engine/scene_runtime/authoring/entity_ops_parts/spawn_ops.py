@@ -103,11 +103,11 @@ def debug_duplicate_entities_by_ids(controller: "SceneController", ids: list[str
         clone["id"] = new_id
         try:
             clone["x"] = float(clone.get("x", 0.0)) + float(dx)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed duplicated-entity X positions should fall back to the requested spawn offset
             clone["x"] = float(dx)
         try:
             clone["y"] = float(clone.get("y", 0.0)) + float(dy)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: malformed duplicated-entity Y positions should fall back to the requested spawn offset
             clone["y"] = float(dy)
 
         authored_entities.append(clone)
@@ -117,7 +117,7 @@ def debug_duplicate_entities_by_ids(controller: "SceneController", ids: list[str
         sprite = None
         try:
             sprite = controller._create_sprite(dict(clone))
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: sprite creation failures should skip only the live preview sprite for that duplicated entity
             sprite = None
         if sprite is not None:
             layer_name = str(clone.get("layer") or "entities")
