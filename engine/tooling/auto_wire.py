@@ -287,9 +287,9 @@ class AutoWireController:
 
             ent_layer = None
             if isinstance(layers, list):
-                for l in layers:
-                    if l.get("name") == "entities":
-                        ent_layer = l
+                for layer in layers:
+                    if layer.get("name") == "entities":
+                        ent_layer = layer
                         break
                 if not ent_layer:
                     ent_layer = {"name": "entities", "entities": {}}

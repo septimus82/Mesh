@@ -229,13 +229,13 @@ def rect_to_border_segments(
         Tuple of 4 segments (top, right, bottom, left).
         Each segment is (x1, y1, x2, y2).
     """
-    l, r, b, t = rect.left, rect.right, rect.bottom, rect.top
+    left, right, bottom, top = rect.left, rect.right, rect.bottom, rect.top
 
     # Order: top, right, bottom, left
-    top_seg = (l, t, r, t)
-    right_seg = (r, t, r, b)
-    bottom_seg = (r, b, l, b)
-    left_seg = (l, b, l, t)
+    top_seg = (left, top, right, top)
+    right_seg = (right, top, right, bottom)
+    bottom_seg = (right, bottom, left, bottom)
+    left_seg = (left, bottom, left, top)
 
     return (top_seg, right_seg, bottom_seg, left_seg)
 
@@ -253,18 +253,18 @@ def rect_to_corner_markers(
     Returns:
         List of 4 corner markers, each as (horizontal_seg, vertical_seg).
     """
-    l, r, b, t = rect.left, rect.right, rect.bottom, rect.top
+    left, right, bottom, top = rect.left, rect.right, rect.bottom, rect.top
     s = marker_size
 
     corners = [
         # Top-left: horizontal goes right, vertical goes down
-        ((l, t, l + s, t), (l, t, l, t - s)),
+        ((left, top, left + s, top), (left, top, left, top - s)),
         # Top-right: horizontal goes left, vertical goes down
-        ((r - s, t, r, t), (r, t, r, t - s)),
+        ((right - s, top, right, top), (right, top, right, top - s)),
         # Bottom-right: horizontal goes left, vertical goes up
-        ((r - s, b, r, b), (r, b, r, b + s)),
+        ((right - s, bottom, right, bottom), (right, bottom, right, bottom + s)),
         # Bottom-left: horizontal goes right, vertical goes up
-        ((l, b, l + s, b), (l, b, l, b + s)),
+        ((left, bottom, left + s, bottom), (left, bottom, left, bottom + s)),
     ]
 
     return corners

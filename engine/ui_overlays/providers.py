@@ -917,7 +917,7 @@ def command_palette_provider(window: Any) -> dict[str, Any]:
                 page_start = max(0, len(filtered_opts) - 8)
             prompt_page = filtered_opts[page_start : page_start + 8]
             prompt_selected_row = idx2 - page_start
-            prompt_rows = [{"value": v, "label": l} for (v, l) in prompt_page]
+            prompt_rows = [{"value": value, "label": label} for (value, label) in prompt_page]
     elif prompt_active and prompt_kind.strip().lower() == "text":
         preview_payload = build_arg_preview(prompt_command_id, prompt_text)
         suggestions_context: dict[str, Any] | None = None

@@ -162,13 +162,13 @@ def filter_options(options: Iterable[tuple[str, str]], query: str) -> list[tuple
     scored: list[tuple[tuple[int, int, str, str], tuple[str, str]]] = []
     for value, label in options:
         v = str(value or "").strip()
-        l = str(label or "").strip()
-        if not v and not l:
+        label_text = str(label or "").strip()
+        if not v and not label_text:
             continue
-        l_l = l.lower()
+        label_lower = label_text.lower()
         v_l = v.lower()
         if not q:
-            scored.append(((0, 0, l_l, v_l), (v, l or v)))
+            scored.append(((0, 0, label_lower, v_l), (v, label_text or v)))
             continue
 
         rank = 999

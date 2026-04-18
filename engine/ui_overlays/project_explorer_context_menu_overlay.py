@@ -64,7 +64,7 @@ class ProjectExplorerContextMenuOverlay(UIElement):
         # "common" says: def _draw_rectangle_filled(x, y, width, height, color): ...
         
         # Let's rely on arcade LTRB for absolute positioning clarity
-        l, r = mx, mx + w
+        left, right = mx, mx + w
         # Y is traditionally bottom-up in Arcade, but menus often computed top-down.
         # However, our controller computes window-relative coordinates where (0,0) might be bottom-left?
         # GameWindow usually uses bottom-left origin. Mouse y is also bottom-left.
@@ -92,9 +92,9 @@ class ProjectExplorerContextMenuOverlay(UIElement):
         t = my + h
         
         # Subtle shadow + panel
-        optional_arcade.arcade.draw_lrtb_rectangle_filled(l + 1, r + 1, t - 1, b - 1, (0, 0, 0, 120))
-        optional_arcade.arcade.draw_lrtb_rectangle_filled(l, r, t, b, CONTEXT_MENU_BG_COLOR)
-        optional_arcade.arcade.draw_lrtb_rectangle_outline(l, r, t, b, CONTEXT_MENU_BORDER_COLOR, 1)
+        optional_arcade.arcade.draw_lrtb_rectangle_filled(left + 1, right + 1, t - 1, b - 1, (0, 0, 0, 120))
+        optional_arcade.arcade.draw_lrtb_rectangle_filled(left, right, t, b, CONTEXT_MENU_BG_COLOR)
+        optional_arcade.arcade.draw_lrtb_rectangle_outline(left, right, t, b, CONTEXT_MENU_BORDER_COLOR, 1)
         
         # 2. Items
         # Render top to bottom
@@ -116,14 +116,14 @@ class ProjectExplorerContextMenuOverlay(UIElement):
             # Hover
             if item.kind != "separator" and (i == hover_idx or (hover_idx is None and i == selected_idx)):
                 optional_arcade.arcade.draw_lrtb_rectangle_filled(
-                    l + 1, r - 1, item_top, item_bottom, CONTEXT_MENU_HOVER_COLOR
+                    left + 1, right - 1, item_top, item_bottom, CONTEXT_MENU_HOVER_COLOR
                 )
                 
             # Text
             if item.kind == "separator":
                 mid_y = (item_top + item_bottom) / 2
                 optional_arcade.arcade.draw_line(
-                    l + left_pad, mid_y, r - right_pad, mid_y, CONTEXT_MENU_BORDER_COLOR, 1
+                    left + left_pad, mid_y, right - right_pad, mid_y, CONTEXT_MENU_BORDER_COLOR, 1
                 )
                 continue
 
@@ -136,11 +136,11 @@ class ProjectExplorerContextMenuOverlay(UIElement):
             
             # Label
             # anchors: left, center_y
-            cx = l + left_pad
+            cx = left + left_pad
             cy = item_bottom + (CONTEXT_MENU_ITEM_HEIGHT / 2)
             
             shortcut = getattr(item, "shortcut_text", None) or ""
-            sc_x = r - right_pad
+            sc_x = right - right_pad
             max_label_w = max(0.0, (sc_x - label_gutter) - cx)
             max_label_chars = int(max_label_w / approx_char_w) if max_label_w > 0 else 0
             label_text = str(item.title or "")
@@ -195,8 +195,8 @@ class ProjectExplorerContextMenuOverlay(UIElement):
                 visible_n = 0
                 start_n = 0
             if total_n > 0 and visible_n > 0 and total_n > visible_n:
-                track_left = r - 3
-                track_right = r - 1
+                track_left = right - 3
+                track_right = right - 1
                 track_top = t - CONTEXT_MENU_PADDING_Y
                 track_bottom = b + CONTEXT_MENU_PADDING_Y
                 optional_arcade.arcade.draw_lrtb_rectangle_filled(

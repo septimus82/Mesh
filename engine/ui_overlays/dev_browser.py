@@ -614,7 +614,7 @@ class DevBrowserOverlay(UIElement):
             ok, raw, err = self._read_json_for_preview(path)
             if not ok or raw is None:
                 lines = ["Preview (World)", f"file: {Path(path).name}", f"error: {err}"]
-                self._preview_cache[cache_key] = [_safe_truncate(l, INSPECTOR_MAX_LINE_CHARS) for l in lines]
+                self._preview_cache[cache_key] = [_safe_truncate(line, INSPECTOR_MAX_LINE_CHARS) for line in lines]
                 return self._preview_cache[cache_key]
             lines = self._world_preview_lines(path, raw)
             self._preview_cache[cache_key] = lines
@@ -629,7 +629,7 @@ class DevBrowserOverlay(UIElement):
         ok, raw, err = self._read_json_for_preview(path)
         if not ok or raw is None:
             lines = ["Preview (Scene)", f"file: {Path(path).name}", f"error: {err}"]
-            self._preview_cache[cache_key] = [_safe_truncate(l, INSPECTOR_MAX_LINE_CHARS) for l in lines]
+            self._preview_cache[cache_key] = [_safe_truncate(line, INSPECTOR_MAX_LINE_CHARS) for line in lines]
             return self._preview_cache[cache_key]
         lines = self._scene_preview_lines(path, raw)
         self._preview_cache[cache_key] = lines

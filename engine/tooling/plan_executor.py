@@ -458,7 +458,10 @@ class PlanExecutor:
             if "links" not in world:
                 world["links"] = []
             # Check if link exists
-            exists = any((l["from"] == link_from and l["to"] == scene_id) for l in world["links"])
+            exists = any(
+                link["from"] == link_from and link["to"] == scene_id
+                for link in world["links"]
+            )
             if not exists:
                 world["links"].append({"from": link_from, "to": scene_id})
                 world["links"].append({"from": scene_id, "to": link_from})
