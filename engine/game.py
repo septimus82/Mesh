@@ -555,13 +555,10 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self._undo_ts_counter: int = 0
         self._undo_suppress_count: int = 0
         self.cutscene_controller = CutsceneController(self)
-        cutscene_path = Path("cutscenes.json")
-        if cutscene_path.exists():
-            try:
-                self.cutscene_controller.load_from_file(str(cutscene_path))
-            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
-                _log_swallow("GAME-003", "engine/game.py blanket swallow", once=True)
-                logger.error("[Mesh][Cutscene] Failed to load cutscenes.json: %s", exc)
+        try:
+            self.cutscene_controller.load_from_file("cutscenes.json")
+        except FileNotFoundError:
+            pass
         ambient = list(getattr(self.engine_config, "lighting_ambient_color", [10, 10, 10, 255]))
         ambient_alpha = getattr(self.engine_config, "ambient_darkness_alpha", None)
         if ambient_alpha is not None and len(ambient) >= 4:

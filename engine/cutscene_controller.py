@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from engine.logging_tools import get_logger
+from engine.schema_validation import validate
 
 
 logger = get_logger(__name__)
@@ -51,19 +52,9 @@ class CutsceneController:
 
     def load_from_file(self, path: str) -> None:
         p = Path(path)
-        if not p.exists():
-            return
-        try:
-            raw = json.loads(p.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001
-            print(f"[Mesh][Cutscene] Failed to load '{path}': {exc}")
-            return
-        if isinstance(raw, dict):
-            raw_entries = raw.get("cutscenes") or []
-        elif isinstance(raw, list):
-            raw_entries = raw
-        else:
-            raw_entries = []
+        raw = json.loads(p.read_text(encoding="utf-8"))
+        validate(raw, "cutscene.schema.json", p)
+        raw_entries = raw.get("cutscenes", [])
         self.register_cutscenes([e for e in raw_entries if isinstance(e, dict)])
 
     def _parse_cutscene(self, payload: dict[str, Any]) -> Optional[Cutscene]:
