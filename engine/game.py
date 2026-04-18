@@ -112,8 +112,6 @@ from .perf import PerfStats
 from .render_queue import SpriteRenderQueue
 from .render_queue_arcade import ArcadeSpriteBatcher
 from .quests import QuestManager
-from .runtime_settings import ensure_runtime_settings, RuntimeSettings
-from .runtime_settings_storage import load_runtime_settings, resolve_runtime_settings_path
 from .save_manager import SaveManager
 from .scene_controller import SceneController
 from .scene_loader import SceneLoader
@@ -134,6 +132,7 @@ from .world_controller import WorldController
 from .game_runtime import tick as game_tick
 from .game_runtime import events as game_events
 from .game_runtime.undo import UndoFrame
+from .game_parts.audio_coordinator import init_audio_coordinator as _init_audio_coordinator
 from .game_parts._shared import resolve_persistence_service as _resolve_persistence_service
 from .game_parts._shared import resolve_replay_service as _resolve_replay_service
 from .game_parts.input_router import bind_input_router_methods as _bind_input_router_methods
@@ -359,19 +358,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.assets = AssetManager()
         self.animation_factory = AnimationFactory(self.assets)
         self.tilemap_manager = TilemapManager(self.assets)
-        self.audio = AudioManager()
-        self.audio.set_master_volume(self.engine_config.master_volume)
-        self.audio.set_sfx_volume(self.engine_config.sfx_volume)
-        self.audio.set_music_volume(self.engine_config.music_volume)
-        self.runtime_settings = ensure_runtime_settings(self)
-        self.runtime_settings_path = resolve_runtime_settings_path()
-        loaded_settings = load_runtime_settings(
-            self.runtime_settings_path,
-            base=self.runtime_settings,
-        )
-        if isinstance(loaded_settings, RuntimeSettings):
-            self.runtime_settings = loaded_settings
-        self.runtime_settings.apply(self)
+        _init_audio_coordinator(self, audio_manager_cls=AudioManager)
         self.console_controller = ConsoleController(self)
         self.camera_controller = CameraController(self)
         self.scene_controller = SceneController(self)
