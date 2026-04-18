@@ -120,62 +120,26 @@ from .scene_controller import SceneController
 from .scene_loader import SceneLoader
 from .tilemap import TilemapManager
 from .ui import (
-    CommandPaletteOverlay,
-    CaptureOverlay,
-    DemoCompleteOverlay,
-    DevBrowserOverlay,
-    EntityPaintOverlay,
-    EntitySelectOverlay,
-    EncounterDebugOverlay,
     GameOverScreen,
     GoldenSliceDemoHUDStripOverlay,
     GoldenSliceVariantPickerOverlay,
-    HD2DPreviewIndicatorOverlay,
     HelpOverlay,
     InspectorOverlay,
-    InteractPromptOverlay,
-    MainMenuOverlay,
-    HotReloadOverlay,
-    ObjectiveTrackerOverlay,
     PauseMenu,
     PlayerHUD,
-    SceneDirtyOverlay,
-    PhysicsBroadphaseOverlay,
-    SceneInspectorOverlay,
     SettingsOverlay,
-    TilePaintOverlay,
-    UIElement,
     maybe_trigger_demo_complete_endcap,
 )
 from .ui_controller import UIController
 from .world_controller import WorldController
-from .ui_overlays.transition_fade import TransitionFadeOverlay
-from .ui_overlays.light_occluder_editor import LightOccluderEditorOverlay
-from .ui_overlays.fog_overlay import FogOverlay
-from .ui_overlays.entity_panels_overlay import EntityPanelsOverlay
-from .ui_overlays.editor_status_bar_overlay import EditorStatusBarOverlay
-from .ui_overlays.editor_shell_overlay import EditorShellOverlay
-from .editor.editor_cursor_hint_overlay import EditorCursorHintOverlay
-from .ui_overlays.scene_switcher_overlay import SceneSwitcherOverlay
-from .ui_overlays.scene_browser_overlay import SceneBrowserOverlay
-from .ui_overlays.project_explorer_overlay import ProjectExplorerOverlay
-from .ui_overlays.asset_browser_overlay import AssetBrowserOverlay
-from .ui_overlays.undo_history_overlay import UndoHistoryOverlay
-from .ui_overlays.problems_panel_overlay import ProblemsPanelOverlay
-from .ui_overlays.debug_panels_overlay import DebugPanelsOverlay
-from .ui_overlays.find_everything_overlay import FindEverythingOverlay
-from .ui_overlays.component_inspector_overlay import ComponentInspectorOverlay
-from .ui_overlays.hd2d_settings_panel_overlay import Hd2dSettingsPanelOverlay
-from .editor.editor_gizmo_overlay import EditorGizmoOverlay
-from .editor.selection_outline_overlay import SelectionOutlineOverlay
-from .editor.marquee_select_overlay import MarqueeSelectOverlay
 from .game_runtime import tick as game_tick
-from .game_runtime import ui_wiring as game_ui_wiring
 from .game_runtime import events as game_events
 from .game_runtime.undo import UndoFrame
 from .game_parts._shared import resolve_persistence_service as _resolve_persistence_service
 from .game_parts._shared import resolve_replay_service as _resolve_replay_service
 from .game_parts.input_router import bind_input_router_methods as _bind_input_router_methods
+from .game_parts.ui_dispatcher import bind_ui_dispatcher_methods as _bind_ui_dispatcher_methods
+from .game_parts.ui_dispatcher import init_ui_dispatcher as _init_ui_dispatcher
 from .services import (
     InputService,
     PersistenceService,
@@ -184,9 +148,6 @@ from .services import (
     build_persistence_service,
     build_replay_service,
 )
-from .ui_overlays import providers as ui_providers
-
-
 _SWALLOW_ONCE_TAGS: set[str] = set()
 
 def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
@@ -269,9 +230,20 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     replay_service: ReplayService
 
     if TYPE_CHECKING:
+        def advance_dialogue(self, *, owner: str | None = None) -> bool: ...
+        def clear_ui_elements(self) -> None: ...
+        def close_dialogue(self, *, owner: str | None = None) -> None: ...
+        def dialogue_blocks_input(self) -> bool: ...
         def clear_input_locks(self) -> None: ...
         def get_pressed_keys(self) -> set[int]: ...
+        def hide_character_panel(self) -> None: ...
+        def hide_inventory_overlay(self) -> None: ...
+        def hide_quest_log(self) -> None: ...
+        def is_character_panel_visible(self) -> bool: ...
+        def is_dialogue_active(self, *, owner: str | None = None) -> bool: ...
         def is_input_locked(self) -> bool: ...
+        def is_inventory_overlay_visible(self) -> bool: ...
+        def is_quest_log_visible(self) -> bool: ...
         def lock_player_input(self, *, owner: str | None = None) -> None: ...
         def on_key_press(self, key: int, modifiers: int) -> None: ...
         def on_key_release(self, key: int, modifiers: int) -> None: ...
@@ -291,6 +263,12 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         def on_text(self, text: str) -> None: ...
         def on_text_motion(self, motion: int) -> None: ...
         def player_input_blocked(self) -> bool: ...
+        def quest_log_blocks_input(self) -> bool: ...
+        def register_ui_element(self, element: object) -> None: ...
+        def show_dialogue(self, entries: Sequence[dict[str, str]], *, owner: str) -> bool: ...
+        def toggle_character_panel(self) -> bool: ...
+        def toggle_inventory_overlay(self) -> bool: ...
+        def toggle_quest_log(self) -> bool: ...
         def unlock_player_input(self, *, owner: str | None = None) -> None: ...
 
     def __init__(
@@ -492,144 +470,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             ),
         )
 
-        # Initialize UI elements
-        game_ui_wiring.init_default_overlays(
-            self,
-            PlayerHUD=PlayerHUD,
-            GameOverScreen=GameOverScreen,
-            PauseMenu=PauseMenu,
-            HelpOverlay=HelpOverlay,
-            InspectorOverlay=InspectorOverlay,
-            GoldenSliceVariantPickerOverlay=GoldenSliceVariantPickerOverlay,
-            GoldenSliceDemoHUDStripOverlay=GoldenSliceDemoHUDStripOverlay,
-            DevBrowserOverlay=DevBrowserOverlay,
-        )
-
-        self.encounter_debug_overlay = EncounterDebugOverlay(self, provider=ui_providers.encounter_debug_provider)
-        self.register_ui_element(self.encounter_debug_overlay)
-
-        self.scene_dirty_overlay = SceneDirtyOverlay(self, provider=ui_providers.scene_dirty_provider)
-        self.register_ui_element(self.scene_dirty_overlay)
-        self.physics_broadphase_overlay = PhysicsBroadphaseOverlay(self, provider=ui_providers.physics_broadphase_provider)
-        self.register_ui_element(self.physics_broadphase_overlay)
-
-        self.hd2d_preview_indicator_overlay = HD2DPreviewIndicatorOverlay(self, provider=ui_providers.hd2d_preview_indicator_provider)
-        self.register_ui_element(self.hd2d_preview_indicator_overlay)
-
-        self.hot_reload_overlay = HotReloadOverlay(self)
-        self.register_ui_element(self.hot_reload_overlay)
-
-        from engine.entity_select_mode import EntitySelectState  # noqa: PLC0415
-
-        self.entity_select_state = EntitySelectState()
-
-        self.entity_select_overlay = EntitySelectOverlay(self, provider=ui_providers.entity_select_provider)
-        self.register_ui_element(self.entity_select_overlay)
-
-        self.scene_inspector_overlay = SceneInspectorOverlay(self, provider=ui_providers.scene_inspector_provider)
-        self.register_ui_element(self.scene_inspector_overlay)
-
-        from engine.tile_paint_mode import TilePaintState  # noqa: PLC0415
-
-        self.tile_paint_state = TilePaintState()
-
-        self.tile_paint_overlay = TilePaintOverlay(self, provider=ui_providers.tile_paint_provider)
-        self.register_ui_element(self.tile_paint_overlay)
-
-        from engine.entity_paint_mode import EntityPaintState  # noqa: PLC0415
-
-        self.entity_paint_state = EntityPaintState()
-
-        self.entity_paint_overlay = EntityPaintOverlay(self, provider=ui_providers.entity_paint_provider)
-        self.register_ui_element(self.entity_paint_overlay)
-
-        from engine.capture_mode import CaptureState  # noqa: PLC0415
-
-        self.capture_state = CaptureState()
-        self.capture_persist_armed = False
-        self.capture_persist_status = ""
-
-        self.capture_overlay = CaptureOverlay(self, provider=ui_providers.capture_provider)
-        self.register_ui_element(self.capture_overlay)
-
-        self.command_palette_overlay = CommandPaletteOverlay(self, provider=ui_providers.command_palette_provider)
-        self.register_ui_element(self.command_palette_overlay)
-
-        self.editor_command_palette_overlay = CommandPaletteOverlay(self, provider=ui_providers.editor_command_palette_provider); self.register_ui_element(self.editor_command_palette_overlay)
-
-        # Editor shell draws first (behind other editor overlays)
-        self.editor_shell_overlay = EditorShellOverlay(self); self.register_ui_element(self.editor_shell_overlay)
-
-        # Menu bar draws on top of shell but below panels
-        from engine.ui_overlays.menu_bar_overlay import MenuBarOverlay
-        self.menu_bar_overlay = MenuBarOverlay(self); self.register_ui_element(self.menu_bar_overlay)
-
-        # Context menu (right-click) draws on top of everything
-        from engine.ui_overlays.context_menu_overlay import ContextMenuOverlay
-        self.context_menu_overlay = ContextMenuOverlay(self); self.register_ui_element(self.context_menu_overlay)
-
-        self.entity_panels_overlay = EntityPanelsOverlay(self); self.register_ui_element(self.entity_panels_overlay)
-        self.component_inspector_overlay = ComponentInspectorOverlay(self); self.register_ui_element(self.component_inspector_overlay)
-        self.hd2d_settings_panel_overlay = Hd2dSettingsPanelOverlay(self, provider=ui_providers.hd2d_settings_panel_provider); self.register_ui_element(self.hd2d_settings_panel_overlay)
-        self.editor_status_bar_overlay = EditorStatusBarOverlay(self); self.register_ui_element(self.editor_status_bar_overlay)
-        self.scene_switcher_overlay = SceneSwitcherOverlay(self); self.register_ui_element(self.scene_switcher_overlay)
-        self.scene_browser_overlay = SceneBrowserOverlay(self); self.register_ui_element(self.scene_browser_overlay)
-        self.project_explorer_overlay = ProjectExplorerOverlay(self); self.register_ui_element(self.project_explorer_overlay)
-        self.asset_browser_overlay = AssetBrowserOverlay(self); self.register_ui_element(self.asset_browser_overlay)
-        self.undo_history_overlay = UndoHistoryOverlay(self); self.register_ui_element(self.undo_history_overlay)
-        self.problems_panel_overlay = ProblemsPanelOverlay(self); self.register_ui_element(self.problems_panel_overlay)
-        self.debug_panels_overlay = DebugPanelsOverlay(self); self.register_ui_element(self.debug_panels_overlay)
-        self.find_everything_overlay = FindEverythingOverlay(self); self.register_ui_element(self.find_everything_overlay)
-
-        self.interact_prompt_overlay = InteractPromptOverlay(self, provider=ui_providers.interact_prompt_provider); self.register_ui_element(self.interact_prompt_overlay)
-        self.objective_tracker_overlay = ObjectiveTrackerOverlay(self, provider=ui_providers.objective_tracker_provider); self.register_ui_element(self.objective_tracker_overlay)
-
-        self.demo_complete_overlay = DemoCompleteOverlay(self); self.register_ui_element(self.demo_complete_overlay)
-        self.main_menu_overlay = MainMenuOverlay(self); self.register_ui_element(self.main_menu_overlay)
-
-        self.settings_overlay = SettingsOverlay(self)
-        self.settings_overlay.apply()
-        self.register_ui_element(self.settings_overlay)
-
-        from engine.ui_overlays.perf import PerfOverlay
-        self.perf_overlay = PerfOverlay(self)
-        self.register_ui_element(self.perf_overlay)
-        from engine.ui_overlays.profiler_overlay import ProfilerOverlay
-        self.profiler_overlay = ProfilerOverlay(self, provider=ui_providers.profiler_provider)
-        self.register_ui_element(self.profiler_overlay)
-
-        self.light_occluder_overlay = LightOccluderEditorOverlay(self); self.register_ui_element(self.light_occluder_overlay)
-
-        self.selection_outline_overlay = SelectionOutlineOverlay(self); self.register_ui_element(self.selection_outline_overlay)
-
-        from engine.editor_hover_highlight_overlay import EditorHoverHighlightOverlay
-        self.editor_hover_highlight_overlay = EditorHoverHighlightOverlay(self); self.register_ui_element(self.editor_hover_highlight_overlay)
-
-        self.marquee_select_overlay = MarqueeSelectOverlay(self); self.register_ui_element(self.marquee_select_overlay)
-
-        self.editor_gizmo_overlay = EditorGizmoOverlay(self); self.register_ui_element(self.editor_gizmo_overlay)
-
-        from engine.editor_tooltip_overlay import EditorTooltipOverlay
-        self.editor_tooltip_overlay = EditorTooltipOverlay(self); self.register_ui_element(self.editor_tooltip_overlay)
-
-        self.editor_cursor_hint_overlay = EditorCursorHintOverlay(self); self.register_ui_element(self.editor_cursor_hint_overlay)
-
-        self.fog_overlay = FogOverlay(self)
-        self.register_ui_element(self.fog_overlay)
-
-        self.transition_fade_overlay = TransitionFadeOverlay(self)
-        self.register_ui_element(self.transition_fade_overlay)
-
-        self.main_menu_overlay.open()
-
-        # Check for preset header toast
-        preset_id = os.environ.get("MESH_ACTIVE_PRESET")
-        preset_desc = os.environ.get("MESH_PRESET_DESCRIPTION")
-        preset_notes = os.environ.get("MESH_PRESET_NOTES")
-        if preset_id:
-            desc_text = f" — {preset_desc}" if preset_desc else ""
-            notes_text = f" (Notes: {preset_notes})" if preset_notes else ""
-            self.player_hud.enqueue_toast(f"Preset: {preset_id}{desc_text}{notes_text}")
+        _init_ui_dispatcher(self)
 
         self.paused: bool = False
         self.game_over: bool = False
@@ -928,71 +769,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         """Return the first sprite whose mesh_name matches the provided value."""
         return self.scene_controller.find_sprite_by_name(name)
 
-    def register_ui_element(self, element: UIElement) -> None:
-        self.ui_controller.register_ui_element(element)
-
-    def clear_ui_elements(self) -> None:
-        self.ui_controller.clear_ui_elements()
-
-    def show_dialogue(self, entries: Sequence[dict[str, str]], *, owner: str) -> bool:
-        return self.ui_controller.show_dialogue(entries, owner=owner)
-
-    def advance_dialogue(self, *, owner: str | None = None) -> bool:
-        return self.ui_controller.advance_dialogue(owner=owner)
-
-    def close_dialogue(self, *, owner: str | None = None) -> None:
-        self.ui_controller.close_dialogue(owner=owner)
-
-    def is_dialogue_active(self, *, owner: str | None = None) -> bool:
-        return self.ui_controller.is_dialogue_active(owner=owner)
-
-    def dialogue_blocks_input(self) -> bool:
-        return self.ui_controller.dialogue_blocks_input()
-
-    def is_quest_log_visible(self) -> bool:
-        return self.ui_controller.is_quest_log_visible()
-
-    def quest_log_blocks_input(self) -> bool:
-        return self.ui_controller.quest_log_blocks_input()
-
-    def toggle_quest_log(self) -> bool:
-        visible = self.ui_controller.toggle_quest_log()
-        if visible:
-            try:
-                self.set_flag("auto_opened_quest_log", True)
-            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
-                _log_swallow("GAME-005", "engine/game.py blanket swallow", once=True)
-                logger.warning(
-                    "[Mesh][GameWindow] WARNING: Failed to set flag 'auto_opened_quest_log': %r",
-                    exc,
-                )
-        return visible
-
-    def hide_quest_log(self) -> None:
-        self.ui_controller.hide_quest_log()
-
-    def toggle_inventory_overlay(self) -> bool:
-        return self.ui_controller.toggle_inventory_overlay()
-
-    def toggle_character_panel(self) -> bool:
-        return self.ui_controller.toggle_character_panel()
-
-    def hide_character_panel(self) -> None:
-        self.ui_controller.hide_character_panel()
-
-    def is_character_panel_visible(self) -> bool:
-        return self.ui_controller.is_character_panel_visible()
-
-    def hide_inventory_overlay(self) -> None:
-        self.ui_controller.hide_inventory_overlay()
-
-    def is_inventory_overlay_visible(self) -> bool:
-        return self.ui_controller.is_inventory_overlay_visible()
-
-
-
-
-
+    
     def _resolve_collisions_stage(self, delta_time: float) -> None:  # noqa: ARG002
         """Reserved hook for deterministic collision processing."""
         # Intentionally empty: projects can subclass GameWindow and override
@@ -1378,3 +1155,4 @@ class GameWindow(engine.optional_arcade.arcade.Window):
 
 
 _bind_input_router_methods(GameWindow)
+_bind_ui_dispatcher_methods(GameWindow)
