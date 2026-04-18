@@ -75,7 +75,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Sequence
 
 import engine.optional_arcade
 
@@ -125,7 +125,6 @@ from .ui import (
     PauseMenu,
     PlayerHUD,
     SettingsOverlay,
-    maybe_trigger_demo_complete_endcap,
 )
 from .ui_controller import UIController
 from .world_controller import WorldController
@@ -136,6 +135,7 @@ from .game_parts.audio_coordinator import init_audio_coordinator as _init_audio_
 from .game_parts._shared import resolve_persistence_service as _resolve_persistence_service
 from .game_parts._shared import resolve_replay_service as _resolve_replay_service
 from .game_parts.input_router import bind_input_router_methods as _bind_input_router_methods
+from .game_parts.state_facade import bind_state_facade_methods as _bind_state_facade_methods
 from .game_parts.update_loop import bind_update_loop_methods as _bind_update_loop_methods
 from .game_parts.ui_dispatcher import bind_ui_dispatcher_methods as _bind_ui_dispatcher_methods
 from .game_parts.ui_dispatcher import init_ui_dispatcher as _init_ui_dispatcher
@@ -229,27 +229,108 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     replay_service: ReplayService
 
     if TYPE_CHECKING:
+        @property
+        def all_sprites(self) -> Iterator[engine.optional_arcade.arcade.Sprite]: ...
+        def add_camera_trauma(
+            self,
+            amount: float,
+            *,
+            decay: float | None = None,
+            max_offset: float | None = None,
+            frequency: float | None = None,
+            seed: int | None = None,
+        ) -> None: ...
         def _draw_debug_output(self, lines: list[str]) -> None: ...
         def _draw_debug_overlay(self) -> None: ...
+        def _debug_print_events(self, events: list[MeshEvent]) -> None: ...
         def _draw_shadowcast_debug(self) -> None: ...
+        def _consume_next_spawn_point(self) -> str | None: ...
+        def _on_any_event(self, event: MeshEvent) -> None: ...
+        def _on_any_event_boss_reward_clarity(self, event: MeshEvent) -> None: ...
+        def _on_collectible_event(self, event: MeshEvent) -> None: ...
+        def _on_damage_event(self, event: MeshEvent) -> None: ...
+        def _on_entity_died(self, event: MeshEvent) -> None: ...
+        def _on_level_up(self, event: MeshEvent) -> None: ...
         def _resolve_collisions_stage(self, delta_time: float) -> None: ...
+        def _snapshot_current_authored_scene_payload(self) -> UndoFrame | None: ...
         def _toggle_paused_state(self) -> bool: ...
+        def _undo_enabled(self) -> bool: ...
         def advance_dialogue(self, *, owner: str | None = None) -> bool: ...
+        def build_scene_snapshot(self, compact: bool = False) -> dict[str, Any]: ...
+        @property
+        def camera(self) -> Any: ...
         def clear_ui_elements(self) -> None: ...
+        def clear_hot_reload_error(self) -> None: ...
+        def clear_scene_dirty(self) -> None: ...
+        def clamp_camera_to_rect(
+            self,
+            target_x: float,
+            target_y: float,
+            rect: tuple[float, float, float, float],
+            *,
+            padding: float = 0.0,
+        ) -> tuple[float, float]: ...
+        def clamp_camera_to_world(
+            self,
+            target_x: float,
+            target_y: float,
+            *,
+            padding: float = 0.0,
+        ) -> tuple[float, float]: ...
         def close_dialogue(self, *, owner: str | None = None) -> None: ...
+        def consume_events(self) -> list[MeshEvent]: ...
         def draw_debug_overlay(self) -> None: ...
         def dialogue_blocks_input(self) -> bool: ...
         def clear_input_locks(self) -> None: ...
+        def emit_event(self, event: MeshEvent) -> None: ...
+        def emit_signal(self, event_type: str, **payload: Any) -> None: ...
+        def find_entity(self, identifier: str | int) -> engine.optional_arcade.arcade.Sprite | None: ...
+        def find_sprite_by_name(self, name: str | None) -> engine.optional_arcade.arcade.Sprite | None: ...
+        @property
+        def game_state(self) -> GameState: ...
+        def get_all_entities(self) -> list[engine.optional_arcade.arcade.Sprite]: ...
+        def get_camera_area_for_point(self, x: float, y: float) -> CameraArea | None: ...
+        def get_camera_center(self) -> tuple[float, float]: ...
+        def get_chapter(self) -> int: ...
+        def get_counter(self, name: str, default: float = 0.0) -> float: ...
+        def get_flag(self, name: str, default: bool = False) -> bool: ...
+        def get_main_quest(self) -> str | None: ...
+        def get_next_spawn_point(self) -> str | None: ...
         def get_pressed_keys(self) -> set[int]: ...
+        def get_playtime_seconds(self) -> float: ...
+        def get_recent_scenes(self) -> list[str]: ...
+        def get_sprites_in_layer(self, layer_name: str) -> engine.optional_arcade.arcade.SpriteList | None: ...
+        def get_var(self, name: str, default: Any = None) -> Any: ...
         def hide_character_panel(self) -> None: ...
         def hide_inventory_overlay(self) -> None: ...
         def hide_quest_log(self) -> None: ...
+        def inc_counter(self, name: str, amount: float = 1.0) -> float: ...
         def is_character_panel_visible(self) -> bool: ...
         def is_dialogue_active(self, *, owner: str | None = None) -> bool: ...
         def is_input_locked(self) -> bool: ...
         def is_inventory_overlay_visible(self) -> bool: ...
         def is_quest_log_visible(self) -> bool: ...
         def lock_player_input(self, *, owner: str | None = None) -> None: ...
+        def load_scene(self, scene_path: str) -> dict[str, Any]: ...
+        def mark_scene_dirty(self, reason: str) -> None: ...
+        def move_entity_with_collision(
+            self,
+            sprite: engine.optional_arcade.arcade.Sprite,
+            dx: float,
+            dy: float,
+            friction: float = 1.0,
+        ) -> None: ...
+        def on_collectible_picked(
+            self,
+            collectible: engine.optional_arcade.arcade.Sprite,
+            collector: engine.optional_arcade.arcade.Sprite,
+        ) -> None: ...
+        def on_damage(
+            self,
+            source: engine.optional_arcade.arcade.Sprite,
+            target: engine.optional_arcade.arcade.Sprite,
+            amount: float,
+        ) -> None: ...
         def on_key_press(self, key: int, modifiers: int) -> None: ...
         def on_key_release(self, key: int, modifiers: int) -> None: ...
         def on_mouse_drag(
@@ -269,14 +350,71 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         def on_text_motion(self, motion: int) -> None: ...
         def on_draw(self) -> None: ...
         def on_update(self, delta_time: float) -> None: ...
+        def persist_scene_to_disk(self) -> Any: ...
         def player_input_blocked(self) -> bool: ...
+        def push_undo_frame(self, reason: str) -> bool: ...
+        def queue_scene_change(self, scene_path: str, *, spawn_id: str | None = None) -> None: ...
         def quest_log_blocks_input(self) -> bool: ...
         def register_ui_element(self, element: object) -> None: ...
+        def record_recent_scene(self, scene_path: str) -> None: ...
+        def redo(self) -> bool: ...
+        def reload_current_scene(self) -> None: ...
+        def reload_scene(self, new_path: str | None = None) -> bool: ...
+        def reload_scene_from_disk(self) -> bool: ...
+        def request_reload_current_scene(self, clear_assets: bool = False) -> None: ...
+        def request_scene_change(self, scene_path: str) -> None: ...
+        def request_scene_reload(self, clear_assets: bool = False) -> None: ...
+        def save_scene_as(self, new_scene_path: str) -> Any: ...
+        def screen_to_world(self, x: float, y: float) -> tuple[float, float]: ...
+        def set_camera_zoom_target(self, zoom: float, *, speed: float | None = None) -> None: ...
+        def set_chapter(self, chapter: int) -> None: ...
+        def set_counter(self, name: str, value: float = 0.0) -> float: ...
+        def set_flag(self, name: str, value: bool = True) -> None: ...
+        def set_hot_reload_error(self, message: str, scene_path: str | None = None) -> None: ...
+        def set_main_quest(self, quest_id: str | None) -> None: ...
+        def set_next_spawn_point(self, spawn_id: str | None) -> None: ...
+        def set_var(self, name: str, value: Any) -> None: ...
         def show_dialogue(self, entries: Sequence[dict[str, str]], *, owner: str) -> bool: ...
+        def should_collide(
+            self,
+            sprite_a: engine.optional_arcade.arcade.Sprite,
+            sprite_b: engine.optional_arcade.arcade.Sprite,
+        ) -> bool: ...
+        def start_camera_shake(
+            self,
+            *,
+            duration: float,
+            amplitude: float,
+            frequency: float = 18.0,
+            falloff: float = 1.0,
+        ) -> None: ...
+        def stop_camera_shake(self) -> None: ...
+        def toggle_flag(self, name: str) -> bool: ...
         def toggle_character_panel(self) -> bool: ...
         def toggle_inventory_overlay(self) -> bool: ...
         def toggle_quest_log(self) -> bool: ...
+        def track_scene_subscription(self, unsubscribe: Callable[[], None]) -> None: ...
+        def undo(self) -> bool: ...
         def unlock_player_input(self, *, owner: str | None = None) -> None: ...
+        def update_camera_follow(
+            self,
+            *,
+            target_x: float,
+            target_y: float,
+            dt: float,
+            lerp_factor: float | None = None,
+            follow_strength: float | None = None,
+            deadzone_px: float | None = None,
+            deadzone_w: float | None = None,
+            deadzone_h: float | None = None,
+            max_speed: float | None = None,
+            padding: float = 0.0,
+            zoom: float | None = None,
+            zoom_speed: float | None = None,
+            min_zoom: float | None = None,
+            max_zoom: float | None = None,
+        ) -> None: ...
+        def warp_to_scene(self, scene_path: str) -> None: ...
 
     def __init__(
         self,
@@ -556,92 +694,6 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def mouse_y(self) -> float:
         return self.input_controller.mouse_y
 
-    def should_collide(self, sprite_a: engine.optional_arcade.arcade.Sprite, sprite_b: engine.optional_arcade.arcade.Sprite) -> bool:
-        return self.scene_controller.should_collide(sprite_a, sprite_b)
-
-
-
-    def load_scene(self, scene_path: str) -> Dict[str, Any]:
-        """Load entities from a JSON scene file and build sprites for them."""
-        return _resolve_persistence_service(self).load_scene(self, scene_path)
-
-    def request_scene_reload(self, clear_assets: bool = False) -> None:
-        """Request that the currently loaded scene reload on the next frame."""
-        _resolve_persistence_service(self).request_scene_reload(self, clear_assets=clear_assets)
-
-    def request_reload_current_scene(self, clear_assets: bool = False) -> None:
-        """Request that the currently loaded scene reload on the next frame."""
-        _resolve_persistence_service(self).request_reload_current_scene(self, clear_assets=clear_assets)
-
-    def request_scene_change(self, scene_path: str) -> None:
-        """Request that a different scene load on the next frame."""
-        _resolve_persistence_service(self).request_scene_change(self, scene_path)
-
-    def queue_scene_change(self, scene_path: str, *, spawn_id: str | None = None) -> None:
-        """Request that the game switches to another scene at the end of the frame."""
-        _resolve_persistence_service(self).queue_scene_change(self, scene_path, spawn_id=spawn_id)
-
-    def mark_scene_dirty(self, reason: str) -> None:
-        _resolve_persistence_service(self).mark_scene_dirty(self, reason)
-
-    def record_recent_scene(self, scene_path: str) -> None:
-        _resolve_persistence_service(self).record_recent_scene(self, scene_path)
-
-    def get_recent_scenes(self) -> list[str]:
-        return _resolve_persistence_service(self).get_recent_scenes(self)
-
-    def clear_scene_dirty(self) -> None:
-        _resolve_persistence_service(self).clear_scene_dirty(self)
-
-    def set_hot_reload_error(self, message: str, scene_path: str | None = None) -> None:
-        self.hot_reload_error_message = str(message or "").strip()
-        self.hot_reload_error_scene_path = str(scene_path or "").strip()
-        self.hot_reload_error_visible = bool(self.hot_reload_error_message)
-
-    def clear_hot_reload_error(self) -> None:
-        self.hot_reload_error_message = ""
-        self.hot_reload_error_scene_path = ""
-        self.hot_reload_error_visible = False
-
-    def _undo_enabled(self) -> bool:
-        return _resolve_persistence_service(self).undo_enabled(self)
-
-    def _snapshot_current_authored_scene_payload(self) -> UndoFrame | None:
-        return _resolve_persistence_service(self).snapshot_current_authored_scene_payload(self)
-
-    def push_undo_frame(self, reason: str) -> bool:
-        return _resolve_persistence_service(self).push_undo_frame(self, reason)
-
-    def undo(self) -> bool:
-        return _resolve_persistence_service(self).undo(self)
-
-    def redo(self) -> bool:
-        return _resolve_persistence_service(self).redo(self)
-
-    def reload_scene_from_disk(self) -> bool:
-        return _resolve_persistence_service(self).reload_scene_from_disk(self)
-
-    def persist_scene_to_disk(self):
-        return _resolve_persistence_service(self).persist_scene_to_disk(self)
-
-    def save_scene_as(self, new_scene_path: str) -> Any:
-        return _resolve_persistence_service(self).save_scene_as(self, new_scene_path)
-
-    def reload_scene(self, new_path: str | None = None) -> bool:
-        """Hot reload the current (or provided) scene immediately."""
-        return _resolve_persistence_service(self).reload_scene(self, new_path)
-
-    def reload_current_scene(self) -> None:
-        """Debug: Reload the current scene from disk."""
-        _resolve_persistence_service(self).reload_current_scene(self)
-
-    def warp_to_scene(self, scene_path: str) -> None:
-        """Debug: Warp to a specific scene."""
-        _resolve_persistence_service(self).warp_to_scene(self, scene_path)
-
-    def track_scene_subscription(self, unsubscribe: Callable[[], None]) -> None:
-        self.scene_controller.track_scene_subscription(unsubscribe)
-
 
     def run(self) -> None:
         """Start Arcade's main loop."""
@@ -665,23 +717,6 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         if callable(base_close):
             base_close(self)
 
-    @property
-    def all_sprites(self) -> Iterator[engine.optional_arcade.arcade.Sprite]:
-        """Iterate through every sprite across all layers."""
-        return self.scene_controller.all_sprites
-
-    def find_entity(self, identifier: str | int) -> engine.optional_arcade.arcade.Sprite | None:
-        """Find an entity by ID (index) or name."""
-        return self.scene_controller.find_entity(identifier)
-
-    def get_all_entities(self) -> list[engine.optional_arcade.arcade.Sprite]:
-        """Return a stable list of all entities."""
-        return self.scene_controller.get_all_entities()
-
-    def find_sprite_by_name(self, name: str | None) -> engine.optional_arcade.arcade.Sprite | None:
-        """Return the first sprite whose mesh_name matches the provided value."""
-        return self.scene_controller.find_sprite_by_name(name)
-
     def on_resize(self, width: int, height: int) -> None:
         super().on_resize(width, height)
         self.engine_config.width = int(width)
@@ -702,222 +737,6 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         if lighting is not None:
             lighting.resize(int(width), int(height))
 
-    def get_sprites_in_layer(self, layer_name: str) -> engine.optional_arcade.arcade.SpriteList | None:
-        return self.scene_controller.get_sprites_in_layer(layer_name)
-
-    def get_camera_center(self) -> tuple[float, float]:
-        return self.camera_controller.get_camera_center()
-
-    def build_scene_snapshot(self, compact: bool = False) -> Dict[str, Any]:
-        """Build a JSON-serializable snapshot of the current scene state."""
-        return _resolve_replay_service(self).build_scene_snapshot(self, compact=compact)
-
-    def clamp_camera_to_world(
-        self,
-        target_x: float,
-        target_y: float,
-        *,
-        padding: float = 0.0,
-    ) -> tuple[float, float]:
-        return self.camera_controller.clamp_camera_to_world(target_x, target_y, padding=padding)
-
-    def clamp_camera_to_rect(
-        self,
-        target_x: float,
-        target_y: float,
-        rect: tuple[float, float, float, float],
-        *,
-        padding: float = 0.0,
-    ) -> tuple[float, float]:
-        return self.camera_controller.clamp_camera_to_rect(target_x, target_y, rect, padding=padding)
-
-    def screen_to_world(self, x: float, y: float) -> tuple[float, float]:
-        return self.camera_controller.screen_to_world(x, y)
-
-    def get_camera_area_for_point(self, x: float, y: float) -> CameraArea | None:
-        # Note: CameraArea is now in camera_controller, but we return it as Any or import it if needed.
-        # Since we removed the class definition from this file, we should probably update the return type hint
-        # or import CameraArea. We imported CameraController, but not CameraArea.
-        # Let's fix the import first.
-        return self.camera_controller.get_camera_area_for_point(x, y)
-
-    def update_camera_follow(
-        self,
-        *,
-        target_x: float,
-        target_y: float,
-        dt: float,
-        lerp_factor: float | None = None,
-        follow_strength: float | None = None,
-        deadzone_px: float | None = None,
-        deadzone_w: float | None = None,
-        deadzone_h: float | None = None,
-        max_speed: float | None = None,
-        padding: float = 0.0,
-        zoom: float | None = None,
-        zoom_speed: float | None = None,
-        min_zoom: float | None = None,
-        max_zoom: float | None = None,
-    ) -> None:
-        self.camera_controller.update_camera_follow(
-            target_x=target_x,
-            target_y=target_y,
-            dt=dt,
-            lerp_factor=lerp_factor,
-            follow_strength=follow_strength,
-            deadzone_px=deadzone_px,
-            deadzone_w=deadzone_w,
-            deadzone_h=deadzone_h,
-            max_speed=max_speed,
-            padding=padding,
-            zoom=zoom,
-            zoom_speed=zoom_speed,
-            min_zoom=min_zoom,
-            max_zoom=max_zoom,
-        )
-
-    def set_camera_zoom_target(self, zoom: float, *, speed: float | None = None) -> None:
-        self.camera_controller.set_zoom_target(zoom, speed=speed)
-
-    def start_camera_shake(
-        self,
-        *,
-        duration: float,
-        amplitude: float,
-        frequency: float = 18.0,
-        falloff: float = 1.0,
-    ) -> None:
-        self.camera_controller.start_camera_shake(
-            duration=duration,
-            amplitude=amplitude,
-            frequency=frequency,
-            falloff=falloff,
-        )
-
-    def add_camera_trauma(
-        self,
-        amount: float,
-        *,
-        decay: float | None = None,
-        max_offset: float | None = None,
-        frequency: float | None = None,
-        seed: int | None = None,
-    ) -> None:
-        self.camera_controller.add_camera_trauma(
-            amount,
-            decay=decay,
-            max_offset=max_offset,
-            frequency=frequency,
-            seed=seed,
-        )
-
-    def stop_camera_shake(self) -> None:
-        self.camera_controller.stop_camera_shake()
-
-    def emit_event(self, event: MeshEvent) -> None:
-        self._mesh_event_queue.append(event)
-        event_bus = getattr(self, "event_bus", None)
-        if event_bus is not None:
-            try:
-                event_bus.emit_event(event)
-            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation - event bus should not break runtime
-                _log_swallow("GAME-006", "engine/game.py blanket swallow", once=True)
-                logger.error("[Mesh][EventBus] ERROR forwarding event '%s': %s", event.type, exc)
-
-    def emit_signal(self, event_type: str, **payload: Any) -> None:
-        emit_event_normalized(self, str(event_type), dict(payload))
-
-    def consume_events(self) -> list[MeshEvent]:
-        events = self._mesh_event_queue
-        self._mesh_event_queue = []
-        return events
-
-    @property
-    def game_state(self) -> GameState:
-        return self.game_state_controller.state
-
-    @game_state.setter
-    def game_state(self, value: GameState) -> None:
-        self.game_state_controller.state = value
-
-    def set_flag(self, name: str, value: bool = True) -> None:
-        key = str(name)
-        previous = self.game_state_controller.get_flag(key, False)
-        self.game_state_controller.set_flag(key, bool(value))
-        if key == "demo.reached_cellar":
-            current = self.game_state_controller.get_flag(key, False)
-            maybe_trigger_demo_complete_endcap(self, previous=previous, current=current)
-
-    def get_flag(self, name: str, default: bool = False) -> bool:
-        return self.game_state_controller.get_flag(name, default)
-
-    def toggle_flag(self, name: str) -> bool:
-        return self.game_state_controller.toggle_flag(name)
-
-    def inc_counter(self, name: str, amount: float = 1.0) -> float:
-        return self.game_state_controller.inc_counter(name, amount)
-
-    def get_counter(self, name: str, default: float = 0.0) -> float:
-        return self.game_state_controller.get_counter(name, default)
-
-    def set_counter(self, name: str, value: float = 0.0) -> float:
-        return self.game_state_controller.set_counter(name, value)
-
-    def add_counter(self, name: str, delta: float = 1.0) -> float:
-        return self.game_state_controller.add_counter(name, delta)
-
-    def set_var(self, name: str, value: Any) -> None:
-        self.game_state_controller.set_var(name, value)
-
-    def get_var(self, name: str, default: Any = None) -> Any:
-        return self.game_state_controller.get_var(name, default)
-
-    def set_chapter(self, chapter: int) -> None:
-        self.game_state_controller.set_chapter(chapter)
-
-    def get_chapter(self) -> int:
-        return self.game_state_controller.get_chapter()
-
-    def set_main_quest(self, quest_id: str | None) -> None:
-        self.game_state_controller.set_main_quest(quest_id)
-
-    def get_main_quest(self) -> str | None:
-        return self.game_state_controller.get_main_quest()
-
-    def get_playtime_seconds(self) -> float:
-        return self.game_state_controller.get_playtime_seconds()
-
-    def set_next_spawn_point(self, spawn_id: str | None) -> None:
-        self.game_state_controller.set_next_spawn_point(spawn_id)
-
-    def get_next_spawn_point(self) -> str | None:
-        return self.game_state_controller.get_next_spawn_point()
-
-    def _consume_next_spawn_point(self) -> str | None:
-        return self.game_state_controller.consume_next_spawn_point()
-
-    def _debug_print_events(self, events: list[MeshEvent]) -> None:
-        if not events or not self.show_debug:
-            return
-        for event in events:
-            payload = event.payload or {}
-            payload_preview = (
-                payload.get("name")
-                or payload.get("collectible")
-                or payload.get("collectible_name")
-                or payload.get("label")
-                or payload
-            )
-            logger.info("[Mesh][Event] %s %s", event.type, payload_preview)
-
-
-
-    def on_collectible_picked(self, collectible: engine.optional_arcade.arcade.Sprite, collector: engine.optional_arcade.arcade.Sprite) -> None:
-        self.scene_controller.on_collectible_picked(collectible, collector)
-
-    def on_damage(self, source: engine.optional_arcade.arcade.Sprite, target: engine.optional_arcade.arcade.Sprite, amount: float) -> None:
-        self.scene_controller.on_damage(source, target, amount)
-
     # ------------------------------------------------------------------
     # Console: delegated to ConsoleController
     # ------------------------------------------------------------------
@@ -929,39 +748,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.console_log(f"[HotReload] {message}")
 
 
-
-    def move_entity_with_collision(
-        self,
-        sprite: engine.optional_arcade.arcade.Sprite,
-        dx: float,
-        dy: float,
-        friction: float = 1.0,
-    ) -> None:
-        self.scene_controller.move_entity_with_collision(sprite, dx, dy, friction)
-
-    @property
-    def camera(self) -> Any:
-        return self.camera_controller.camera
-
-    def _on_entity_died(self, event: MeshEvent) -> None:
-        game_events.on_entity_died(self, event)
-
-    def _on_any_event_boss_reward_clarity(self, event: MeshEvent) -> None:
-        game_events.on_any_event_boss_reward_clarity(self, event)
-
-    def _on_damage_event(self, event: MeshEvent) -> None:
-        game_events.on_damage_event(self, event)
-
-    def _on_collectible_event(self, event: MeshEvent) -> None:
-        game_events.on_collectible_event(self, event)
-
-    def _on_level_up(self, event: MeshEvent) -> None:
-        game_events.on_level_up(self, event)
-
-    def _on_any_event(self, event: MeshEvent) -> None:
-        game_events.on_any_event(self, event)
-
-
 _bind_input_router_methods(GameWindow)
+_bind_state_facade_methods(GameWindow)
 _bind_update_loop_methods(GameWindow)
 _bind_ui_dispatcher_methods(GameWindow)
