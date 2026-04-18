@@ -9,6 +9,9 @@ from engine.events import MeshEventBus
 from engine.schema_validation import SchemaValidationError
 
 
+pytestmark = [pytest.mark.fast]
+
+
 class DummyCamera:
     def __init__(self):
         self.position = (0.0, 0.0)
