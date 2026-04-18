@@ -12,6 +12,7 @@ requires-python = ">=3.11"
 dependencies = [
     # Runtime line after Arcade 3.x migration.
     "arcade>=3,<4",
+    "jsonschema>=4,<5",
     "pillow>=10,<12",
 ]
 
