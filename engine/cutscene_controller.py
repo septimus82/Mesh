@@ -7,17 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .logging_tools import get_logger
 from engine.logging_tools import get_logger
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 logger = get_logger(__name__)
@@ -65,8 +55,7 @@ class CutsceneController:
             return
         try:
             raw = json.loads(p.read_text(encoding="utf-8"))
-        except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
-            _log_swallow("CUTS-001", "engine/cutscene_controller.py blanket swallow", once=True)
+        except Exception as exc:  # noqa: BLE001
             print(f"[Mesh][Cutscene] Failed to load '{path}': {exc}")
             return
         if isinstance(raw, dict):
@@ -236,8 +225,7 @@ class CutsceneController:
         if bus is not None and event_type:
             try:
                 bus.emit(event_type, **{k: v for k, v in data.items() if k not in {"type", "event", "name"}})
-            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
-                _log_swallow("CUTS-002", "engine/cutscene_controller.py blanket swallow", once=True)
+            except Exception as exc:  # noqa: BLE001
                 logger.error("[Mesh][Cutscene] emit_event failed: %s", exc)
         return True
 
@@ -246,6 +234,24 @@ class CutsceneController:
         entries = data.get("entries") or data.get("lines")
         speaker = data.get("speaker") or ""
         text = data.get("text")
+        target_id = str(data.get("target") or "").strip()
+        dialogue_id = str(data.get("dialogue_id") or "").strip()
+        node_id = data.get("node_id")
+        if target_id or dialogue_id:
+            target = self._find_entity(target_id) if target_id else None
+            candidates = [target] if target is not None else list(getattr(getattr(self.window, "scene_controller", None), "all_sprites", []) or [])
+            try:
+                for entity in candidates:
+                    for behaviour in getattr(entity, "behaviours", []):
+                        if type(behaviour).__name__ != "DialogueRunnerBehaviour":
+                            continue
+                        if dialogue_id and getattr(behaviour, "dialogue_id", "") != dialogue_id:
+                            continue
+                        behaviour.start(node_id if isinstance(node_id, str) and node_id else None)
+                        return True
+            except Exception as exc:  # noqa: BLE001
+                print(f"[Mesh][Cutscene] start_dialogue failed: {exc}")
+            return True
         owner = "cutscene"
         ui = getattr(self.window, "ui_controller", None)
         if entries is None and text:
@@ -253,8 +259,7 @@ class CutsceneController:
         if ui is not None and entries:
             try:
                 ui.show_dialogue(entries, owner=owner)
-            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
-                _log_swallow("CUTS-003", "engine/cutscene_controller.py blanket swallow", once=True)
+            except Exception as exc:  # noqa: BLE001
                 print(f"[Mesh][Cutscene] start_dialogue failed: {exc}")
         return True
 

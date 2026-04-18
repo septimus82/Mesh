@@ -292,6 +292,10 @@
     "startDialogueStep": {
       "type": "object",
       "properties": {
+        "dialogue_id": {
+          "type": "string",
+          "minLength": 1
+        },
         "entries": {
           "type": "array",
           "items": {
@@ -309,12 +313,20 @@
         "speaker": {
           "type": "string"
         },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
         "text": {
           "type": "string",
           "minLength": 1
         },
         "type": {
           "const": "start_dialogue"
+        },
+        "node_id": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [
@@ -334,6 +346,16 @@
         {
           "required": [
             "text"
+          ]
+        },
+        {
+          "required": [
+            "dialogue_id"
+          ]
+        },
+        {
+          "required": [
+            "target"
           ]
         }
       ],
