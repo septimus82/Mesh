@@ -5,6 +5,9 @@ import pytest
 from engine.schema_validation import SchemaValidationError, validate
 
 
+pytestmark = [pytest.mark.fast]
+
+
 def test_cutscene_schema_accepts_start_dialogue_references() -> None:
     payload = {
         "cutscenes": [

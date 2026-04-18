@@ -216,7 +216,7 @@ class CutsceneController:
         if bus is not None and event_type:
             try:
                 bus.emit(event_type, **{k: v for k, v in data.items() if k not in {"type", "event", "name"}})
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
                 logger.error("[Mesh][Cutscene] emit_event failed: %s", exc)
         return True
 
@@ -240,7 +240,7 @@ class CutsceneController:
                             continue
                         behaviour.start(node_id if isinstance(node_id, str) and node_id else None)
                         return True
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
                 print(f"[Mesh][Cutscene] start_dialogue failed: {exc}")
             return True
         owner = "cutscene"
@@ -250,7 +250,7 @@ class CutsceneController:
         if ui is not None and entries:
             try:
                 ui.show_dialogue(entries, owner=owner)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
                 print(f"[Mesh][Cutscene] start_dialogue failed: {exc}")
         return True
 
