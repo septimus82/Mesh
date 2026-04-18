@@ -10,12 +10,12 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set
 
 from .behaviours.registry import get_behaviour_info, get_behaviour_param_defs
-from .diagnostics import add_exception as diag_add_exception
 from .diagnostics import error as diag_error
 from .diagnostics import warn as diag_warn
 from .migrations import migrate_payload
 from .paths import resolve_path
 from .prefabs import get_prefab_manager
+from .schema_validation import validate
 
 
 _SWALLOW_ONCE_TAGS: set[str] = set()
@@ -143,38 +143,18 @@ class SceneLoader:
         """Return the full scene dictionary from a JSON file."""
         full_path = resolve_path(scene_path)
         if not full_path.exists():
-            print(f"[Mesh][SceneLoader] WARNING: Missing scene file '{scene_path}'")
             diag_warn(
                 "scene_loader.scene_missing",
                 f"Missing scene file '{scene_path}'",
                 "engine.scene_loader",
                 location=str(scene_path),
             )
-            return self._default_scene()
+            raise FileNotFoundError(f"Scene file not found: {scene_path}")
 
-        try:
-            with full_path.open("r", encoding="utf-8") as handle:
-                raw_scene: Dict[str, Any] = json.load(handle)
-        except json.JSONDecodeError as exc:
-            print(f"[Mesh][SceneLoader] ERROR: JSON parse failure in '{scene_path}': {exc}")
-            diag_add_exception(
-                "scene_loader.scene_json_parse_failed",
-                exc,
-                "engine.scene_loader",
-                location=str(scene_path),
-            )
-            return self._default_scene()
-        except OSError as exc:
-            print(f"[Mesh][SceneLoader] ERROR: Could not read '{scene_path}': {exc}")
-            diag_add_exception(
-                "scene_loader.scene_read_failed",
-                exc,
-                "engine.scene_loader",
-                location=str(scene_path),
-            )
-            return self._default_scene()
-
-        scene = self.apply_scene_defaults(raw_scene)
+        raw_scene: Dict[str, Any] = json.loads(full_path.read_text(encoding="utf-8"))
+        migrated_scene = migrate_payload("scene", raw_scene)
+        validate(migrated_scene, "scene.schema.json", full_path)
+        scene = self._apply_scene_defaults(migrated_scene, migrated=True)
 
         scene_report = self.validate_scene(scene, validate_entities=False)
         self._log_validation_report(scene_report, context=f"Scene '{scene.get('name', '<unnamed>')}'")
@@ -517,9 +497,9 @@ class SceneLoader:
             f"{label}: field 'animation_root_motion' must be a boolean, number, or object when present",
         )
 
-    def _apply_scene_defaults(self, raw_scene: Dict[str, Any]) -> Dict[str, Any]:
-        # 0. Migrate
-        raw_scene = migrate_payload("scene", raw_scene)
+    def _apply_scene_defaults(self, raw_scene: Dict[str, Any], *, migrated: bool = False) -> Dict[str, Any]:
+        if not migrated:
+            raw_scene = migrate_payload("scene", raw_scene)
 
         scene = copy.deepcopy(raw_scene)
         scene.setdefault("name", "<unnamed>")
