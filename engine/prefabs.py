@@ -9,6 +9,7 @@ from typing import Any, Dict, Optional, cast
 
 from engine.content_packs import discover_packs
 from engine.paths import get_content_roots, resolve_path
+from engine.schema_validation import validate
 
 log = logging.getLogger(__name__)
 
@@ -22,6 +23,12 @@ def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
     from engine.logging_tools import get_logger
 
     get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+
+
+def _load_prefab_entries(source_path: Path) -> list[Dict[str, Any]]:
+    data = json.loads(source_path.read_text(encoding="utf-8"))
+    validate(data, "prefab.schema.json", source_path)
+    return cast(list[Dict[str, Any]], data)
 
 
 class PrefabManager:
@@ -115,52 +122,36 @@ class PrefabManager:
         if not base_path.exists():
             print("[Mesh][Prefabs] WARNING: assets/prefabs.json not found")
         else:
-            try:
-                data = json.loads(base_path.read_text(encoding="utf-8"))
-                if isinstance(data, list):
-                    source_label = _format_source(base_path)
-                    for entry in data:
-                        if isinstance(entry, dict) and entry.get("id"):
-                            prefab_id = str(entry["id"])
-                            merged[prefab_id] = entry
-                            source_map[prefab_id] = source_label
-                            _record_source(prefab_id, source_label)
-                else:
-                    print(f"[Mesh][Prefabs] WARNING: {base_path} must contain a list")
-            except Exception as e:  # noqa: BLE001  # REASON: prefabs fallback isolation
-                _log_swallow("PREF-005", "base prefabs load", once=True)
-                print(f"[Mesh][Prefabs] Failed to load prefabs: {e}")
+            data = _load_prefab_entries(base_path)
+            source_label = _format_source(base_path)
+            for entry in data:
+                prefab_id = str(entry["id"])
+                merged[prefab_id] = entry
+                source_map[prefab_id] = source_label
+                _record_source(prefab_id, source_label)
 
         pack_sources = sources[1:] if len(sources) > 1 else []
         for pack_path in pack_sources:
-            try:
-                pack_data = json.loads(pack_path.read_text(encoding="utf-8"))
-                if not isinstance(pack_data, list):
-                    print(f"[Mesh][Prefabs] WARNING: {pack_path} must contain a list")
-                    continue
-                source_label = _format_source(pack_path)
-                for entry in pack_data:
-                    if isinstance(entry, dict) and entry.get("id"):
-                        prefab_id = str(entry["id"])
-                        if prefab_id in merged and warn_overrides:
-                            old_source = source_map.get(prefab_id, "")
-                            new_source = source_label
-                            key = (prefab_id, old_source, new_source)
-                            if key not in warned_overrides:
-                                warned_overrides.add(key)
-                                log.warning(
-                                    "[Prefabs] override id=%s from=%s to=%s",
-                                    prefab_id,
-                                    old_source,
-                                    new_source,
-                                )
-                        merged[prefab_id] = entry
-                        source_map[prefab_id] = source_label
-                        _record_source(prefab_id, source_label)
-                print(f"[Mesh][Prefabs] Loaded {len(pack_data)} prefabs from {pack_path}")
-            except Exception as e:  # noqa: BLE001  # REASON: prefabs fallback isolation
-                _log_swallow("PREF-006", "pack prefabs load", once=True)
-                print(f"[Mesh][Prefabs] Failed to load prefabs from {pack_path}: {e}")
+            pack_data = _load_prefab_entries(pack_path)
+            source_label = _format_source(pack_path)
+            for entry in pack_data:
+                prefab_id = str(entry["id"])
+                if prefab_id in merged and warn_overrides:
+                    old_source = source_map.get(prefab_id, "")
+                    new_source = source_label
+                    key = (prefab_id, old_source, new_source)
+                    if key not in warned_overrides:
+                        warned_overrides.add(key)
+                        log.warning(
+                            "[Prefabs] override id=%s from=%s to=%s",
+                            prefab_id,
+                            old_source,
+                            new_source,
+                        )
+                merged[prefab_id] = entry
+                source_map[prefab_id] = source_label
+                _record_source(prefab_id, source_label)
+            print(f"[Mesh][Prefabs] Loaded {len(pack_data)} prefabs from {pack_path}")
 
         sorted_ids = sorted(merged)
         self._prefabs = {pid: merged[pid] for pid in sorted_ids}
