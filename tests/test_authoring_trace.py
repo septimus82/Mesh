@@ -272,8 +272,8 @@ def test_overlay_includes_authoring_trace_when_enabled() -> None:
 
     assert "Authoring Trace" in lines
     assert "enabled: true  total_calls: 7" in lines
-    assert any("debug_snap_to_grid" in l and "count=5" in l for l in lines)
-    assert any("debug_set_name" in l and "count=2" in l for l in lines)
+    assert any("debug_snap_to_grid" in line and "count=5" in line for line in lines)
+    assert any("debug_set_name" in line and "count=2" in line for line in lines)
     assert "----------------" in lines
 
 
@@ -295,7 +295,7 @@ def test_overlay_shows_error_in_trace_line() -> None:
     lines: list[str] = []
     overlay._append_authoring_trace_lines(lines)
 
-    assert any("err=ValueError:boom" in l for l in lines)
+    assert any("err=ValueError:boom" in line for line in lines)
 
 
 def test_overlay_absent_when_debug_off() -> None:

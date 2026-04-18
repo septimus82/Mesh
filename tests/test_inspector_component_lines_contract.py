@@ -135,7 +135,7 @@ class TestBuildComponentInspectorLines:
         lines = build_component_inspector_lines(components, selection_index=0)
         
         # Sprite/Light/Collider are removable
-        sprite_line = next(l for l in lines if "[SpriteRenderer]" in l)
+        sprite_line = next(line for line in lines if "[SpriteRenderer]" in line)
         assert "[-]" in sprite_line
 
     def test_transform_not_removable_marker(self, full_entity: Dict[str, Any]):
@@ -143,7 +143,7 @@ class TestBuildComponentInspectorLines:
         components = build_components(full_entity)
         lines = build_component_inspector_lines(components, selection_index=0)
         
-        transform_line = next(l for l in lines if "[Transform]" in l)
+        transform_line = next(line for line in lines if "[Transform]" in line)
         assert "[-]" not in transform_line
 
     def test_text_edit_mode_shows_buffer(self, minimal_entity: Dict[str, Any]):
@@ -153,7 +153,7 @@ class TestBuildComponentInspectorLines:
         lines = build_component_inspector_lines(components, selection_index=1, edit_state=edit_state)
         
         # First field (X) should show buffer with cursor
-        x_line = next(l for l in lines if "X:" in l)
+        x_line = next(line for line in lines if "X:" in line)
         assert "123_" in x_line
 
 
@@ -170,8 +170,8 @@ class TestLineOrdering:
         lines = build_component_inspector_lines(components, selection_index=0, show_add_row=False)
         
         # Find Transform header and X field indices
-        transform_idx = next(i for i, l in enumerate(lines) if "[Transform]" in l)
-        x_idx = next(i for i, l in enumerate(lines) if "X:" in l)
+        transform_idx = next(i for i, line in enumerate(lines) if "[Transform]" in line)
+        x_idx = next(i for i, line in enumerate(lines) if "X:" in line)
         
         assert transform_idx < x_idx
 
@@ -180,10 +180,10 @@ class TestLineOrdering:
         components = build_components(full_entity)
         lines = build_component_inspector_lines(components, selection_index=0, show_add_row=False)
         
-        transform_idx = next(i for i, l in enumerate(lines) if "[Transform]" in l)
-        sprite_idx = next(i for i, l in enumerate(lines) if "[SpriteRenderer]" in l)
-        light_idx = next(i for i, l in enumerate(lines) if "[LightSource]" in l)
-        collider_idx = next(i for i, l in enumerate(lines) if "[Collider]" in l)
+        transform_idx = next(i for i, line in enumerate(lines) if "[Transform]" in line)
+        sprite_idx = next(i for i, line in enumerate(lines) if "[SpriteRenderer]" in line)
+        light_idx = next(i for i, line in enumerate(lines) if "[LightSource]" in line)
+        collider_idx = next(i for i, line in enumerate(lines) if "[Collider]" in line)
         
         assert transform_idx < sprite_idx < light_idx < collider_idx
 

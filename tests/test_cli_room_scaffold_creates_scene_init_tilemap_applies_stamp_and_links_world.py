@@ -123,7 +123,7 @@ def test_cli_room_scaffold_creates_scene_init_tilemap_applies_stamp_and_links_wo
 
     layers = tilemap.get("tile_layers")
     assert isinstance(layers, list)
-    ground = next((l for l in layers if isinstance(l, dict) and l.get("id") == "Ground"), None)
+    ground = next((layer for layer in layers if isinstance(layer, dict) and layer.get("id") == "Ground"), None)
     assert isinstance(ground, dict)
     tiles = ground.get("tiles")
     assert isinstance(tiles, list)

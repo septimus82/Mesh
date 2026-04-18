@@ -230,7 +230,7 @@ class TestArtifactsFlag:
             run_cmd=FakeRunner(),
         )
         assert code == 2
-        assert any("not found" in l for l in lines)
+        assert any("not found" in line for line in lines)
 
 
 # ---------------------------------------------------------------------------
@@ -251,7 +251,7 @@ class TestNoVerifyAll:
             run_cmd=FakeRunner(),
         )
         assert code == 2
-        assert any("--no-verify-all requires --artifacts" in l for l in lines)
+        assert any("--no-verify-all requires --artifacts" in line for line in lines)
 
     def test_no_verify_all_with_artifacts_ok(self, tmp_path: Path) -> None:
         from mesh_cli.baseline_update import baseline_update
@@ -341,7 +341,7 @@ class TestFailurePropagation:
         runner = FakeRunner({"verify-all": (False, "BOOM\n")})
         code, lines = mod.baseline_update(baseline_dir=baseline, run_cmd=runner)
         assert code == 2
-        assert any("verify-all failed" in l for l in lines)
+        assert any("verify-all failed" in line for line in lines)
 
     def test_validate_failure(self, tmp_path: Path) -> None:
         from mesh_cli.baseline_update import baseline_update
@@ -357,7 +357,7 @@ class TestFailurePropagation:
             run_cmd=runner,
         )
         assert code == 2
-        assert any("artifacts-validate failed" in l for l in lines)
+        assert any("artifacts-validate failed" in line for line in lines)
 
 
 # ---------------------------------------------------------------------------

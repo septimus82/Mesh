@@ -35,7 +35,7 @@ def test_world_links_spawn_ids_valid() -> None:
 
     errors: list[str] = []
 
-    for link in sorted(links, key=lambda l: (str(l.get("from") or ""), str(l.get("to") or ""), str(l.get("via") or ""))):
+    for link in sorted(links, key=lambda link: (str(link.get("from") or ""), str(link.get("to") or ""), str(link.get("via") or ""))):
         if not isinstance(link, dict):
             continue
         via = link.get("via")

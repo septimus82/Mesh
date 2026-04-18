@@ -65,4 +65,4 @@ class TestWizardWorldWiring:
                 world_out = json.loads(content)
                 
                 assert "new_scene" in world_out["scenes"]
-                assert any(l["from"] == "hub" and l["to"] == "new_scene" for l in world_out["links"])
+                assert any(link["from"] == "hub" and link["to"] == "new_scene" for link in world_out["links"])
