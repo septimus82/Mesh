@@ -11,6 +11,15 @@ def _write_json(path: Path, payload: object) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _prefab(prefab_id: str, sprite: str) -> dict[str, object]:
+    return {
+        "display_name": prefab_id,
+        "entity": {"sprite": sprite},
+        "id": prefab_id,
+        "tags": ["test"],
+    }
+
+
 def _setup_prefabs(tmp_path: Path, monkeypatch) -> PrefabManager:
     assets_path = tmp_path / "assets" / "prefabs.json"
     alpha_path = tmp_path / "packs" / "alpha" / "data" / "prefabs.json"
@@ -19,19 +28,19 @@ def _setup_prefabs(tmp_path: Path, monkeypatch) -> PrefabManager:
     _write_json(
         assets_path,
         [
-            {"id": "p_tree", "entity": {"sprite": "base.png"}},
+            _prefab("p_tree", "base.png"),
         ],
     )
     _write_json(
         alpha_path,
         [
-            {"id": "p_tree", "entity": {"sprite": "alpha.png"}},
+            _prefab("p_tree", "alpha.png"),
         ],
     )
     _write_json(
         beta_path,
         [
-            {"id": "p_tree", "entity": {"sprite": "beta.png"}},
+            _prefab("p_tree", "beta.png"),
         ],
     )
 
