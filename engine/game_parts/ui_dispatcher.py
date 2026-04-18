@@ -218,43 +218,43 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
         window.player_hud.enqueue_toast(f"Preset: {preset_id}{desc_text}{notes_text}")
 
 
-def register_ui_element(self, element: UIElement) -> None:
+def register_ui_element(self: "GameWindow", element: UIElement) -> None:
     self.ui_controller.register_ui_element(element)
 
 
-def clear_ui_elements(self) -> None:
+def clear_ui_elements(self: "GameWindow") -> None:
     self.ui_controller.clear_ui_elements()
 
 
-def show_dialogue(self, entries: Sequence[dict[str, str]], *, owner: str) -> bool:
+def show_dialogue(self: "GameWindow", entries: Sequence[dict[str, str]], *, owner: str) -> bool:
     return self.ui_controller.show_dialogue(entries, owner=owner)
 
 
-def advance_dialogue(self, *, owner: str | None = None) -> bool:
+def advance_dialogue(self: "GameWindow", *, owner: str | None = None) -> bool:
     return self.ui_controller.advance_dialogue(owner=owner)
 
 
-def close_dialogue(self, *, owner: str | None = None) -> None:
+def close_dialogue(self: "GameWindow", *, owner: str | None = None) -> None:
     self.ui_controller.close_dialogue(owner=owner)
 
 
-def is_dialogue_active(self, *, owner: str | None = None) -> bool:
+def is_dialogue_active(self: "GameWindow", *, owner: str | None = None) -> bool:
     return self.ui_controller.is_dialogue_active(owner=owner)
 
 
-def dialogue_blocks_input(self) -> bool:
+def dialogue_blocks_input(self: "GameWindow") -> bool:
     return self.ui_controller.dialogue_blocks_input()
 
 
-def is_quest_log_visible(self) -> bool:
+def is_quest_log_visible(self: "GameWindow") -> bool:
     return self.ui_controller.is_quest_log_visible()
 
 
-def quest_log_blocks_input(self) -> bool:
+def quest_log_blocks_input(self: "GameWindow") -> bool:
     return self.ui_controller.quest_log_blocks_input()
 
 
-def toggle_quest_log(self) -> bool:
+def toggle_quest_log(self: "GameWindow") -> bool:
     visible = self.ui_controller.toggle_quest_log()
     if visible:
         try:
@@ -270,31 +270,31 @@ def toggle_quest_log(self) -> bool:
     return visible
 
 
-def hide_quest_log(self) -> None:
+def hide_quest_log(self: "GameWindow") -> None:
     self.ui_controller.hide_quest_log()
 
 
-def toggle_inventory_overlay(self) -> bool:
+def toggle_inventory_overlay(self: "GameWindow") -> bool:
     return self.ui_controller.toggle_inventory_overlay()
 
 
-def toggle_character_panel(self) -> bool:
+def toggle_character_panel(self: "GameWindow") -> bool:
     return self.ui_controller.toggle_character_panel()
 
 
-def hide_character_panel(self) -> None:
+def hide_character_panel(self: "GameWindow") -> None:
     self.ui_controller.hide_character_panel()
 
 
-def is_character_panel_visible(self) -> bool:
+def is_character_panel_visible(self: "GameWindow") -> bool:
     return self.ui_controller.is_character_panel_visible()
 
 
-def hide_inventory_overlay(self) -> None:
+def hide_inventory_overlay(self: "GameWindow") -> None:
     self.ui_controller.hide_inventory_overlay()
 
 
-def is_inventory_overlay_visible(self) -> bool:
+def is_inventory_overlay_visible(self: "GameWindow") -> bool:
     return self.ui_controller.is_inventory_overlay_visible()
 
 

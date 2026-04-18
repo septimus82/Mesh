@@ -12,6 +12,7 @@ logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from typing import Any
+    from engine.game import GameWindow
 
 
 def _draw_debug_overlay(self) -> None:
@@ -94,7 +95,7 @@ def _resolve_collisions_stage(self, delta_time: float) -> None:  # noqa: ARG001
     """Reserved hook for deterministic collision processing."""
 
 
-def _toggle_paused_state(self) -> bool:
+def _toggle_paused_state(self: "GameWindow") -> bool:
     """Flip the paused flag and report the new state."""
     self.paused = not getattr(self, "paused", False)
     logger.info("[Mesh][Debug] paused = %s", self.paused)

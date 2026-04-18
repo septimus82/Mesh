@@ -6,42 +6,43 @@ from ._shared import resolve_input_service
 
 if TYPE_CHECKING:
     import engine.optional_arcade
+    from engine.game import GameWindow
 
 
-def lock_player_input(self, *, owner: str | None = None) -> None:
+def lock_player_input(self: "GameWindow", *, owner: str | None = None) -> None:
     self.input_controller.lock_player_input(owner=owner)
 
 
-def unlock_player_input(self, *, owner: str | None = None) -> None:
+def unlock_player_input(self: "GameWindow", *, owner: str | None = None) -> None:
     self.input_controller.unlock_player_input(owner=owner)
 
 
-def clear_input_locks(self) -> None:
+def clear_input_locks(self: "GameWindow") -> None:
     self.input_controller.clear_input_locks()
 
 
-def is_input_locked(self) -> bool:
+def is_input_locked(self: "GameWindow") -> bool:
     return self.input_controller.is_input_locked()
 
 
-def player_input_blocked(self) -> bool:
+def player_input_blocked(self: "GameWindow") -> bool:
     return self.input_controller.player_input_blocked()
 
 
-def on_key_press(self, key: int, modifiers: int) -> None:
+def on_key_press(self: "GameWindow", key: int, modifiers: int) -> None:
     resolve_input_service(self).on_key_press(self, key, modifiers)
 
 
-def on_key_release(self, key: int, modifiers: int) -> None:
+def on_key_release(self: "GameWindow", key: int, modifiers: int) -> None:
     resolve_input_service(self).on_key_release(self, key, modifiers)
 
 
-def on_mouse_motion(self, x: float, y: float, dx: float, dy: float) -> None:
+def on_mouse_motion(self: "GameWindow", x: float, y: float, dx: float, dy: float) -> None:
     resolve_input_service(self).on_mouse_motion(self, x, y, dx, dy)
 
 
 def on_mouse_drag(
-    self,
+    self: "GameWindow",
     x: float,
     y: float,
     dx: float,
@@ -52,27 +53,27 @@ def on_mouse_drag(
     resolve_input_service(self).on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
 
 
-def on_mouse_release(self, x: float, y: float, button: int, modifiers: int) -> None:
+def on_mouse_release(self: "GameWindow", x: float, y: float, button: int, modifiers: int) -> None:
     resolve_input_service(self).on_mouse_release(self, x, y, button, modifiers)
 
 
-def on_mouse_press(self, x: float, y: float, button: int, modifiers: int) -> None:
+def on_mouse_press(self: "GameWindow", x: float, y: float, button: int, modifiers: int) -> None:
     resolve_input_service(self).on_mouse_press(self, x, y, button, modifiers)
 
 
-def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> None:
+def on_mouse_scroll(self: "GameWindow", x: float, y: float, scroll_x: float, scroll_y: float) -> None:
     resolve_input_service(self).on_mouse_scroll(self, x, y, scroll_x, scroll_y)
 
 
-def on_text(self, text: str) -> None:
+def on_text(self: "GameWindow", text: str) -> None:
     resolve_input_service(self).on_text(self, text)
 
 
-def on_text_motion(self, motion: int) -> None:  # noqa: ARG001
+def on_text_motion(self: "GameWindow", motion: int) -> None:  # noqa: ARG001
     return
 
 
-def get_pressed_keys(self) -> set[int]:
+def get_pressed_keys(self: "GameWindow") -> set[int]:
     return self.input_controller.get_keys_down()
 
 
