@@ -1,7 +1,12 @@
+import json
+from pathlib import Path
+
 import engine.optional_arcade as optional_arcade
+import pytest
 
 from engine.cutscene_controller import CutsceneController
 from engine.events import MeshEventBus
+from engine.schema_validation import SchemaValidationError
 
 
 class DummyCamera:
@@ -23,6 +28,7 @@ class DummyCameraController:
 class DummySceneController:
     def __init__(self, sprite):
         self._sprite = sprite
+        self.all_sprites = [sprite]
 
     def find_sprite(self, identifier):
         name = str(identifier)
@@ -67,6 +73,16 @@ class DummyWindow:
         self.game_state_controller = DummyGameState()
         self.event_bus = MeshEventBus()
         self.ui_controller = DummyUIController()
+
+
+class DialogueRunnerBehaviour:
+    def __init__(self, dialogue_id: str):
+        self.dialogue_id = dialogue_id
+        self.started_with = None
+
+    def start(self, node_id: str | None = None):
+        self.started_with = node_id
+        return True
 
 
 def test_cutscene_wait_and_move():
@@ -177,3 +193,98 @@ def test_cutscene_dialogue_steps():
     window.ui_controller.clear()
     controller.update(0.01)
     assert not controller.is_running
+
+
+def test_cutscene_start_dialogue_targets_dialogue_runner():
+    sprite = optional_arcade.arcade.Sprite()
+    sprite.mesh_name = "mentor"
+    runner = DialogueRunnerBehaviour("intro_dialogue")
+    sprite.behaviours = [runner]
+    window = DummyWindow(sprite)
+    window.ui_controller = None
+    controller = CutsceneController(window)
+    controller.register_cutscenes(
+        [
+            {
+                "id": "intro",
+                "steps": [
+                    {
+                        "type": "start_dialogue",
+                        "dialogue_id": "intro_dialogue",
+                        "target": "mentor",
+                        "node_id": "start",
+                    }
+                ],
+            }
+        ]
+    )
+
+    assert controller.play_cutscene("intro")
+
+    controller.update(0.01)
+
+    assert runner.started_with == "start"
+
+
+def test_load_from_file_registers_valid_cutscenes(tmp_path: Path):
+    path = tmp_path / "cutscenes.json"
+    path.write_text(
+        json.dumps(
+            {
+                "cutscenes": [
+                    {
+                        "id": "intro",
+                        "steps": [
+                            {"type": "wait", "duration": 0.1},
+                            {"type": "emit_event", "event": "done"},
+                        ],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    sprite = optional_arcade.arcade.Sprite()
+    sprite.mesh_name = "hero"
+    controller = CutsceneController(DummyWindow(sprite))
+
+    controller.load_from_file(str(path))
+
+    assert "intro" in controller.cutscenes
+
+
+def test_load_from_file_invalid_json_raises(tmp_path: Path):
+    path = tmp_path / "cutscenes.json"
+    path.write_text("{bad json", encoding="utf-8")
+
+    sprite = optional_arcade.arcade.Sprite()
+    sprite.mesh_name = "hero"
+    controller = CutsceneController(DummyWindow(sprite))
+
+    with pytest.raises(json.JSONDecodeError):
+        controller.load_from_file(str(path))
+
+
+def test_load_from_file_schema_invalid_raises(tmp_path: Path):
+    path = tmp_path / "cutscenes.json"
+    path.write_text(
+        json.dumps(
+            {
+                "cutscenes": [
+                    {
+                        "id": "intro",
+                        "commands": [{"type": "wait", "duration": 0.1}],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    sprite = optional_arcade.arcade.Sprite()
+    sprite.mesh_name = "hero"
+    controller = CutsceneController(DummyWindow(sprite))
+
+    with pytest.raises(SchemaValidationError):
+        controller.load_from_file(str(path))
