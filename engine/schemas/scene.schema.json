@@ -1,0 +1,497 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "engine/schemas/scene.schema.json",
+  "title": "Mesh Scene",
+  "type": "object",
+  "properties": {
+    "background_layers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/backgroundLayer"
+      }
+    },
+    "collision_rules": {
+      "type": "object",
+      "patternProperties": {
+        "^[^:]+:[^:]+$": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "description": {
+      "type": "string"
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/sceneEntity"
+      }
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/sceneLayer"
+      }
+    },
+    "lights": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/light"
+      }
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "occluders": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/occluder"
+      }
+    },
+    "schema_version": {
+      "type": "integer"
+    },
+    "settings": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "tilemap": {
+      "$ref": "#/$defs/tilemap"
+    },
+    "version": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "backgroundLayer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parallax": {
+          "type": "number"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "repeat": {
+          "type": "boolean"
+        },
+        "repeat_x": {
+          "type": "boolean"
+        },
+        "repeat_y": {
+          "type": "boolean"
+        },
+        "z": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "path",
+        "z"
+      ],
+      "additionalProperties": false
+    },
+    "colorValue": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 3,
+          "maxItems": 4
+        }
+      ]
+    },
+    "legacyTilemapLayer": {
+      "type": "object",
+      "properties": {
+        "collision": {
+          "type": "boolean"
+        },
+        "collision_tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "draw": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parallax": {
+          "type": "number"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "z": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "enum": [
+                "background",
+                "foreground"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "light": {
+      "type": "object",
+      "properties": {
+        "color": {
+          "$ref": "#/$defs/colorValue"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "flicker_amount": {
+          "type": "number"
+        },
+        "flicker_enabled": {
+          "type": "boolean"
+        },
+        "flicker_seed": {
+          "type": "integer"
+        },
+        "flicker_speed": {
+          "type": "number"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "radius": {
+          "type": "number"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "color",
+        "mode",
+        "radius",
+        "x",
+        "y"
+      ],
+      "additionalProperties": false
+    },
+    "layeredEntity": {
+      "type": "object",
+      "properties": {
+        "behaviours": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "tags": {
+          "$ref": "entity.schema.json#/$defs/nonEmptyStringArray"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "behaviours",
+        "tags",
+        "type",
+        "x",
+        "y"
+      ],
+      "additionalProperties": false
+    },
+    "occluder": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "height": {
+              "type": "number"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "const": "rect"
+            },
+            "width": {
+              "type": "number"
+            },
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "height",
+            "id",
+            "type",
+            "width",
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "points": {
+              "type": "array",
+              "items": {
+                "$ref": "entity.schema.json#/$defs/point"
+              },
+              "minItems": 3
+            },
+            "type": {
+              "const": "poly"
+            }
+          },
+          "required": [
+            "id",
+            "points",
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "sceneEntity": {
+      "allOf": [
+        {
+          "$ref": "entity.schema.json"
+        },
+        {
+          "required": [
+            "x",
+            "y"
+          ]
+        }
+      ]
+    },
+    "sceneEntityCollection": {
+      "oneOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sceneEntity"
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/sceneEntity"
+              },
+              {
+                "$ref": "#/$defs/layeredEntity"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "sceneLayer": {
+      "type": "object",
+      "properties": {
+        "entities": {
+          "$ref": "#/$defs/sceneEntityCollection"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "tileLayer": {
+      "type": "object",
+      "properties": {
+        "collision": {
+          "type": "boolean"
+        },
+        "collision_tag": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "draw": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parallax": {
+          "type": "number"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "tiles": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "z": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "z"
+      ],
+      "additionalProperties": false
+    },
+    "tilemap": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "collision_layer_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "layers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/legacyTilemapLayer"
+              }
+            },
+            "overrides": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "tileheight": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "tilewidth": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "layers",
+            "path"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "collision_layer_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "height": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "tile_layers": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/tileLayer"
+              }
+            },
+            "tileheight": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "tilewidth": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "width": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "height",
+            "tile_layers",
+            "tileheight",
+            "tilewidth",
+            "width"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}
