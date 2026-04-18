@@ -13,6 +13,7 @@ from .diagnostics import add_exception as diag_add_exception
 from .diagnostics import error as diag_error
 from .diagnostics import warn as diag_warn
 from .repo_root import find_repo_root
+from .schema_validation import validate
 
 
 @dataclass
@@ -208,19 +209,8 @@ def load_config(path: str | None = None) -> EngineConfig:
         )
         return cfg
 
-    try:
-        raw = json.loads(cfg_path.read_text(encoding="utf-8"))
-        if not isinstance(raw, dict):
-            raise ValueError("config root is not an object")
-    except Exception as exc:
-        print(f"[Mesh][Config] Failed to load '{cfg_path}': {exc}; using defaults")
-        diag_add_exception(
-            "config.load_failed",
-            exc,
-            "engine.config",
-            location=str(cfg_path),
-        )
-        return cfg
+    raw = json.loads(cfg_path.read_text(encoding="utf-8"))
+    validate(raw, "config.schema.json", cfg_path)
 
     setattr(cfg, "_loaded_keys", set(raw.keys()))
 

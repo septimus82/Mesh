@@ -21,7 +21,6 @@ def test_config_split_preset_failure_records_structured_diagnostic(tmp_path: Pat
     cfg_path.write_text(
         json.dumps(
             {
-                "unknown_setting_for_contract": True,
                 "presets": {"inline_demo": {"start_scene": "scenes/runtime_smoke_scene.json"}},
             },
             sort_keys=True,

@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from engine.config import load_config
+from engine.schema_validation import SchemaValidationError
 
 
 pytestmark = [pytest.mark.fast]
@@ -174,6 +175,21 @@ def test_split_presets_fallback_to_inline_when_split_invalid(tmp_path: Path) -> 
     cfg = load_config(str(cfg_path))
     assert cfg.presets == inline
     assert getattr(cfg, "_presets_source", None) == "config_inline"
+
+
+def test_load_config_rejects_invalid_start_scene_type(tmp_path: Path) -> None:
+    cfg_path = tmp_path / "config.json"
+    cfg_path.write_text(
+        json.dumps({"start_scene": 123, "title": "Validation Demo"}, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SchemaValidationError) as exc_info:
+        load_config(str(cfg_path))
+
+    assert exc_info.value.file_path == str(cfg_path)
+    assert exc_info.value.json_pointer == "/start_scene"
+    assert "config.schema.json" in str(exc_info.value)
 
 
 def test_config_presets_compat_mirror_matches_split_aggregate() -> None:
