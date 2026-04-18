@@ -242,7 +242,15 @@ class PauseMenu(UIElement):
                 cache=self._text_cache,
             )
 
-        draw_text_cached("Press ESC to return", self.window.width / 2, 50, color=optional_arcade.arcade.color.GRAY, font_size=14, anchor_x="center", cache=self._text_cache)
+        draw_text_cached(
+            "Press ESC to return",
+            self.window.width / 2,
+            50,
+            color=optional_arcade.arcade.color.GRAY,
+            font_size=14,
+            anchor_x="center",
+            cache=self._text_cache,
+        )
 
     def _draw_load_menu(self) -> None:
         self._title.text = "LOAD GAME"
@@ -251,8 +259,24 @@ class PauseMenu(UIElement):
         self._title.draw()
 
         if not self.save_slots:
-            draw_text_cached("No saves found", self.window.width / 2, self.window.height / 2, color=optional_arcade.arcade.color.GRAY, font_size=20, anchor_x="center", cache=self._text_cache)
-            draw_text_cached("Press ESC to return", self.window.width / 2, 50, color=optional_arcade.arcade.color.GRAY, font_size=14, anchor_x="center", cache=self._text_cache)
+            draw_text_cached(
+                "No saves found",
+                self.window.width / 2,
+                self.window.height / 2,
+                color=optional_arcade.arcade.color.GRAY,
+                font_size=20,
+                anchor_x="center",
+                cache=self._text_cache,
+            )
+            draw_text_cached(
+                "Press ESC to return",
+                self.window.width / 2,
+                50,
+                color=optional_arcade.arcade.color.GRAY,
+                font_size=14,
+                anchor_x="center",
+                cache=self._text_cache,
+            )
             return
 
         start_y = self.window.height / 2 + 20
@@ -269,7 +293,15 @@ class PauseMenu(UIElement):
                 cache=self._text_cache,
             )
 
-        draw_text_cached("Press ESC to return", self.window.width / 2, 50, color=optional_arcade.arcade.color.GRAY, font_size=14, anchor_x="center", cache=self._text_cache)
+        draw_text_cached(
+            "Press ESC to return",
+            self.window.width / 2,
+            50,
+            color=optional_arcade.arcade.color.GRAY,
+            font_size=14,
+            anchor_x="center",
+            cache=self._text_cache,
+        )
 
     def _draw_settings_menu(self) -> None:
         self._title.text = "SETTINGS"

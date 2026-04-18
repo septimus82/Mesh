@@ -46,7 +46,15 @@ class ParticleEmitter(Behaviour):
     # "behaviour_config": {"ParticleEmitter": {"sprite": "packs/.../fx/spark.png", "additive": true}}
     # "behaviour_config": {"ParticleEmitter": {"sprite": "packs/.../fx/spark.png", "frames": [0,1,2], "frame_size": [16,16], "grid_cols": 4}}
     # "behaviour_config": {"ParticleEmitter": {"sprite": "packs/.../fx/spark.png", "frame_range": [2,5], "frame_size": [16,16], "grid_cols": 4}}
-    # "behaviour_config": {"ParticleEmitter": {"sprite": "packs/.../fx/spark.png", "anim_frames": [0,1,2,3], "anim_fps": 12, "frame_size": [16,16], "grid_cols": 4}}
+    # "behaviour_config": {
+    #   "ParticleEmitter": {
+    #     "sprite": "packs/.../fx/spark.png",
+    #     "anim_frames": [0,1,2,3],
+    #     "anim_fps": 12,
+    #     "frame_size": [16,16],
+    #     "grid_cols": 4,
+    #   }
+    # }
     # "behaviour_config": {"ParticleEmitter": {"spawn_shape": "circle", "radius": 12.0}}
     # "behaviour_config": {"ParticleEmitter": {"spawn_shape": "box", "box_size": [16, 8]}}
     # "behaviour_config": {"ParticleEmitter": {"spawn_shape": "line", "line_from": [-8, 0], "line_to": [8, 0]}}

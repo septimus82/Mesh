@@ -31,7 +31,12 @@ from ..lighting.flicker import FlickerNoise, apply_light_flicker
         {"name": "cookie_offset_px", "type": "array", "default": None},
         {"name": "flicker_enabled", "type": "bool", "default": False, "description": "Whether the light radius should flicker over time."},
         {"name": "flicker_seed", "type": "int", "default": None},
-        {"name": "flicker_amount", "type": "float", "default": 20.0, "description": "Flicker intensity scale (0..1); values >1 treated as legacy pixel radius."},
+        {
+            "name": "flicker_amount",
+            "type": "float",
+            "default": 20.0,
+            "description": "Flicker intensity scale (0..1); values >1 treated as legacy pixel radius.",
+        },
         {"name": "flicker_radius_px", "type": "float", "default": None, "description": "Override radius flicker in pixels (legacy)."},
         {"name": "flicker_intensity", "type": "float", "default": None, "description": "Override intensity flicker scale (0..1)."},
         {"name": "flicker_speed", "type": "float", "default": 5.0, "description": "Flicker speed in cycles per second (roughly)."},

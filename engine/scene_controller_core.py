@@ -458,7 +458,12 @@ class SceneController:
         return _save_load_proxy.get_authored_scene_payload(self, scene_load_apply_runtime=_scene_load_apply_runtime, authoring_runtime=_authoring_runtime)
 
     def debug_apply_authored_scene_payload(self, authored_payload: Dict[str, Any]) -> bool:
-        return _save_load_proxy.debug_apply_authored_scene_payload(self, authored_payload, scene_load_apply_runtime=_scene_load_apply_runtime, authoring_runtime=_authoring_runtime)
+        return _save_load_proxy.debug_apply_authored_scene_payload(
+            self,
+            authored_payload,
+            scene_load_apply_runtime=_scene_load_apply_runtime,
+            authoring_runtime=_authoring_runtime,
+        )
 
     # ------------------------------------------------------------------
     # Generic authoring-call proxy

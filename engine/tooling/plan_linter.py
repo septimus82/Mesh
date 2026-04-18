@@ -125,7 +125,9 @@ def lint_ai_plan(plan: Plan) -> List[Issue]:
         from dataclasses import asdict  # noqa: PLC0415
 
         plan_dict = asdict(plan)
-    except (AttributeError, RecursionError, TypeError):  # REASON: placeholder lint falls back to direct attributes when dataclass flattening fails on partial or mocked plan objects
+    except (AttributeError, RecursionError, TypeError):
+        # REASON: placeholder lint falls back to direct attributes when
+        # dataclass flattening fails on partial or mocked plan objects
         plan_dict = {"wizard": plan.wizard, "version": plan.version, "inputs": plan.inputs, "actions": plan.actions}
 
     _iter_strings(plan_dict, "")

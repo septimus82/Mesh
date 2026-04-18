@@ -460,7 +460,10 @@ def audit_trend_command(args: argparse.Namespace) -> None:
 
     for entry in trend_data:
         delta_str = f"{entry['delta_total']:+d}" if entry['delta_total'] != 0 else "-"
-        print(f"{entry['file']:<30} {entry['total_unused']:<10} {delta_str:<10} {entry['unused_textures']:<8} {entry['unused_audio']:<8} {entry['unused_data']:<8}")
+        print(
+            f"{entry['file']:<30} {entry['total_unused']:<10} {delta_str:<10} "
+            f"{entry['unused_textures']:<8} {entry['unused_audio']:<8} {entry['unused_data']:<8}"
+        )
 
 def _check_thresholds(
     args: argparse.Namespace,

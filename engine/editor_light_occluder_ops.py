@@ -82,7 +82,12 @@ def new_light_payload(
     color_rgba = None
     if isinstance(default_color_rgba, list) and len(default_color_rgba) >= 3:
         try:
-            color_rgba = [int(default_color_rgba[0]), int(default_color_rgba[1]), int(default_color_rgba[2]), int(default_color_rgba[3]) if len(default_color_rgba) > 3 else 255]
+            color_rgba = [
+                int(default_color_rgba[0]),
+                int(default_color_rgba[1]),
+                int(default_color_rgba[2]),
+                int(default_color_rgba[3]) if len(default_color_rgba) > 3 else 255,
+            ]
         except Exception:  # noqa: BLE001  # REASON: malformed default light colors should fall back to no default occluder color
             color_rgba = None
     return {

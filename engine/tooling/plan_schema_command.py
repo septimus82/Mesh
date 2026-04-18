@@ -44,7 +44,16 @@ METADATA = {
     },
     "add_transition": {
         "description": "Add a transition trigger to a scene",
-        "arg_types": {"scene_path": "string", "target_scene": "string", "x": "integer", "y": "integer", "name": "string", "sprite": "string", "spawn_id": "string", "allow_interact": "boolean"}
+        "arg_types": {
+            "scene_path": "string",
+            "target_scene": "string",
+            "x": "integer",
+            "y": "integer",
+            "name": "string",
+            "sprite": "string",
+            "spawn_id": "string",
+            "allow_interact": "boolean",
+        }
     },
     "add_puzzle_switch_door": {
         "description": "Add a puzzle switch and door to a scene",

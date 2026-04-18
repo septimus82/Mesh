@@ -16,7 +16,13 @@ from engine.tooling import preset_commands
 from .validate_all import UnifiedValidator
 
 
-def run_check(world_path: str = "worlds/main_world.json", full: bool = False, replay_trace: Optional[str] = None, check_refs: bool = False, frozen: bool = False) -> bool:
+def run_check(
+    world_path: str = "worlds/main_world.json",
+    full: bool = False,
+    replay_trace: Optional[str] = None,
+    check_refs: bool = False,
+    frozen: bool = False,
+) -> bool:
     """Run daily-driver quality checks."""
     # 0. Preset Lint
     config = load_config()
@@ -232,12 +238,33 @@ def run_check(world_path: str = "worlds/main_world.json", full: bool = False, re
 
         # Snapshot verification
         print("[Mesh][Check] Verifying CLI snapshot...")
-        if subprocess.run([sys.executable, "mesh_cli.py", "cli-snapshot", "--out", "docs/generated/cli_snapshot.json", "--verify"], capture_output=False).returncode != 0:
+        if subprocess.run(
+            [
+                sys.executable,
+                "mesh_cli.py",
+                "cli-snapshot",
+                "--out",
+                "docs/generated/cli_snapshot.json",
+                "--verify",
+            ],
+            capture_output=False,
+        ).returncode != 0:
             print("[Mesh][Check] CLI snapshot verification failed.")
             return _fail()
 
         print("[Mesh][Check] Verifying Plan schema...")
-        if subprocess.run([sys.executable, "mesh_cli.py", "plan", "schema", "--out", "docs/generated/plan_schema.json", "--verify"], capture_output=False).returncode != 0:
+        if subprocess.run(
+            [
+                sys.executable,
+                "mesh_cli.py",
+                "plan",
+                "schema",
+                "--out",
+                "docs/generated/plan_schema.json",
+                "--verify",
+            ],
+            capture_output=False,
+        ).returncode != 0:
             print("[Mesh][Check] Plan schema verification failed.")
             return _fail()
 

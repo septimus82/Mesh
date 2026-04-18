@@ -232,7 +232,14 @@ class MainMenuUI(UIElement):
 
         if not self.behaviour.save_slots:
             optional_arcade.arcade.draw_text("No saves found", self.window.width / 2, start_y, optional_arcade.arcade.color.GRAY, 20, anchor_x="center")
-            optional_arcade.arcade.draw_text("Press ESC to return", self.window.width / 2, start_y - 40, optional_arcade.arcade.color.WHITE, 16, anchor_x="center")
+            optional_arcade.arcade.draw_text(
+                "Press ESC to return",
+                self.window.width / 2,
+                start_y - 40,
+                optional_arcade.arcade.color.WHITE,
+                16,
+                anchor_x="center",
+            )
             return
 
         # Show a scrolling list if needed, but simple list for now
@@ -257,9 +264,23 @@ class MainMenuUI(UIElement):
         optional_arcade.arcade.draw_text("SETTINGS", self.window.width / 2, start_y + 60, optional_arcade.arcade.color.WHITE, 30, anchor_x="center")
 
         vol_percent = int(self.behaviour.volume_options[self.behaviour.current_volume_index] * 100)
-        optional_arcade.arcade.draw_text(f"Master Volume: < {vol_percent}% >", self.window.width / 2, start_y, optional_arcade.arcade.color.YELLOW, 20, anchor_x="center")
+        optional_arcade.arcade.draw_text(
+            f"Master Volume: < {vol_percent}% >",
+            self.window.width / 2,
+            start_y,
+            optional_arcade.arcade.color.YELLOW,
+            20,
+            anchor_x="center",
+        )
 
-        optional_arcade.arcade.draw_text("Use LEFT/RIGHT to adjust", self.window.width / 2, start_y - 40, optional_arcade.arcade.color.GRAY, 14, anchor_x="center")
+        optional_arcade.arcade.draw_text(
+            "Use LEFT/RIGHT to adjust",
+            self.window.width / 2,
+            start_y - 40,
+            optional_arcade.arcade.color.GRAY,
+            14,
+            anchor_x="center",
+        )
         optional_arcade.arcade.draw_text("Controls:", self.window.width / 2, start_y - 90, optional_arcade.arcade.color.WHITE, 16, anchor_x="center")
         lines = self._controls_lines()
         for idx, line in enumerate(lines):
@@ -271,7 +292,14 @@ class MainMenuUI(UIElement):
                 14,
                 anchor_x="center",
             )
-        optional_arcade.arcade.draw_text("Press ESC to return", self.window.width / 2, start_y - 140 - len(lines) * 18, optional_arcade.arcade.color.WHITE, 14, anchor_x="center")
+        optional_arcade.arcade.draw_text(
+            "Press ESC to return",
+            self.window.width / 2,
+            start_y - 140 - len(lines) * 18,
+            optional_arcade.arcade.color.WHITE,
+            14,
+            anchor_x="center",
+        )
 
     def _draw_credits(self) -> None:
 

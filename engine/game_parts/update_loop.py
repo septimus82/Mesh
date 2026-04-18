@@ -178,7 +178,15 @@ def _draw_debug_output(self, lines: list[str]) -> None:
         enc_lines = _get_encounter_debug_lines(self.scene_controller)
         start_y = self.height - 20
         for line in enc_lines:
-            draw_text_cached(line, self.width - 10, start_y, color=engine.optional_arcade.arcade.color.CYAN, font_size=12, anchor_x="right", cache=self.text_cache)
+            draw_text_cached(
+                line,
+                self.width - 10,
+                start_y,
+                color=engine.optional_arcade.arcade.color.CYAN,
+                font_size=12,
+                anchor_x="right",
+                cache=self.text_cache,
+            )
             start_y -= 16
 
 

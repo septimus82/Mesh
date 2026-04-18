@@ -273,7 +273,12 @@ def _dispatch_table() -> dict[str, Handler]:
         stats = getter() if callable(getter) else {}
         mode = stats.get("shadows_mode", getattr(lighting, "shadows_mode", "none"))
         c.log(
-            "[Lighting] scene=%s tilemap_present=%s collision_layer_id=%s shadows_mode=%s static_light_count=%s dynamic_light_count=%s selected_shadow_light_type=%s selected_shadow_light_pos=%s selected_shadow_light_radius=%s nearest_occluder_distance_est=%s cull_square_intersects_any_occluder=%s occluder_count=%s culled_occluder_count=%s shadow_poly_count=%s mask_rendered=%s mask_backend=%s composite_ok=%s fallback_drawn=%s"
+            "[Lighting] scene=%s tilemap_present=%s collision_layer_id=%s shadows_mode=%s "
+            "static_light_count=%s dynamic_light_count=%s selected_shadow_light_type=%s "
+            "selected_shadow_light_pos=%s selected_shadow_light_radius=%s "
+            "nearest_occluder_distance_est=%s cull_square_intersects_any_occluder=%s "
+            "occluder_count=%s culled_occluder_count=%s shadow_poly_count=%s "
+            "mask_rendered=%s mask_backend=%s composite_ok=%s fallback_drawn=%s"
             % (
                 scene_path,
                 tilemap_present,

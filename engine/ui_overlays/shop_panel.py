@@ -165,13 +165,38 @@ class ShopPanel(UIElement):
         _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.GOLD, 2)
 
         currency = self._currency_amount()
-        draw_text_cached(f"Shop [{self._mode.upper()}]", left + 16, top - 24, color=optional_arcade.arcade.color.WHITE, font_size=18, anchor_y="top", cache=self._text_cache)
-        draw_text_cached(f"Gold: {currency}", right - 16, top - 24, color=optional_arcade.arcade.color.GOLD, font_size=14, anchor_y="top", anchor_x="right", cache=self._text_cache)
+        draw_text_cached(
+            f"Shop [{self._mode.upper()}]",
+            left + 16,
+            top - 24,
+            color=optional_arcade.arcade.color.WHITE,
+            font_size=18,
+            anchor_y="top",
+            cache=self._text_cache,
+        )
+        draw_text_cached(
+            f"Gold: {currency}",
+            right - 16,
+            top - 24,
+            color=optional_arcade.arcade.color.GOLD,
+            font_size=14,
+            anchor_y="top",
+            anchor_x="right",
+            cache=self._text_cache,
+        )
 
         y = top - 56
         line_height = 22
         if not self._items:
-            draw_text_cached("No items for sale.", left + 16, y, color=optional_arcade.arcade.color.LIGHT_GRAY, font_size=14, anchor_y="top", cache=self._text_cache)
+            draw_text_cached(
+                "No items for sale.",
+                left + 16,
+                y,
+                color=optional_arcade.arcade.color.LIGHT_GRAY,
+                font_size=14,
+                anchor_y="top",
+                cache=self._text_cache,
+            )
             return
         for idx, entry in enumerate(self._items):
             if y < bottom + 32:

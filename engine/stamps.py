@@ -201,7 +201,13 @@ def validate_stamp(
                 if not isinstance(tiles, list) or any(not isinstance(v, int) for v in tiles):
                     issues.append(StampIssue(rel_path_norm, "stamp.tile_layers.invalid_tiles", f"tile_layers[{idx}].tiles must be int array"))
                 elif expected is not None and len(tiles) != expected:
-                    issues.append(StampIssue(rel_path_norm, "stamp.tile_layers.tiles_length", f"tile_layers[{idx}].tiles expected {expected}, got {len(tiles)}"))
+                    issues.append(
+                        StampIssue(
+                            rel_path_norm,
+                            "stamp.tile_layers.tiles_length",
+                            f"tile_layers[{idx}].tiles expected {expected}, got {len(tiles)}",
+                        )
+                    )
 
     # Entity prefab + id uniqueness (use id_suffix as required stamp identity).
     entities_value = stamp.get("entities", [])
