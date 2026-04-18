@@ -10,12 +10,7 @@ from engine.services import (
     build_persistence_service,
     build_replay_service,
 )
-
-
-def _log_swallow(tag: str, context: str) -> None:
-    from engine.game import _log_swallow as game_log_swallow  # noqa: PLC0415
-
-    game_log_swallow(tag, context)
+from engine.swallowed_exceptions import _log_swallow
 
 
 def resolve_input_service(window: Any) -> InputService:

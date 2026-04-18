@@ -70,11 +70,7 @@ See Also:
 
 from __future__ import annotations
 
-import copy
 import json
-import os
-from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Sequence
 
 import engine.optional_arcade
@@ -96,11 +92,16 @@ from .constants import (
 from .cutscene_controller import CutsceneController
 from .day_night import DayNightCycle
 from .editor_controller import EditorModeController
-from .encounter_report import compute_current_scene_encounter_report
 from .events import MeshEvent, MeshEventBus
-from .event_runtime.emit import emit_event as emit_event_normalized
-from .game_state_controller import GameState, GameStateController
 from .fx_presets import build_fx_preset_registry
+from .game_parts.audio_coordinator import init_audio_coordinator as _init_audio_coordinator
+from .game_parts.input_router import bind_input_router_methods as _bind_input_router_methods
+from .game_parts.state_facade import bind_state_facade_methods as _bind_state_facade_methods
+from .game_parts.ui_dispatcher import bind_ui_dispatcher_methods as _bind_ui_dispatcher_methods
+from .game_parts.ui_dispatcher import init_ui_dispatcher as _init_ui_dispatcher
+from .game_parts.update_loop import bind_update_loop_methods as _bind_update_loop_methods
+from .game_runtime.undo import UndoFrame
+from .game_state_controller import GameState, GameStateController
 from .input import InputManager
 from .input_controller import InputController
 from .lighting import LightManager
@@ -109,12 +110,21 @@ from .migrations import migrate_payload
 from .particles import ParticleManager
 from .paths import resolve_path
 from .perf import PerfStats
+from .quests import QuestManager
 from .render_queue import SpriteRenderQueue
 from .render_queue_arcade import ArcadeSpriteBatcher
-from .quests import QuestManager
 from .save_manager import SaveManager
 from .scene_controller import SceneController
 from .scene_loader import SceneLoader
+from .services import (
+    InputService,
+    PersistenceService,
+    ReplayService,
+    build_input_service,
+    build_persistence_service,
+    build_replay_service,
+)
+from .swallowed_exceptions import _log_swallow
 from .tilemap import TilemapManager
 from .ui import (
     DevBrowserOverlay,
@@ -129,35 +139,6 @@ from .ui import (
 )
 from .ui_controller import UIController
 from .world_controller import WorldController
-from .game_runtime import tick as game_tick
-from .game_runtime import events as game_events
-from .game_runtime.undo import UndoFrame
-from .game_parts.audio_coordinator import init_audio_coordinator as _init_audio_coordinator
-from .game_parts._shared import resolve_persistence_service as _resolve_persistence_service
-from .game_parts._shared import resolve_replay_service as _resolve_replay_service
-from .game_parts.input_router import bind_input_router_methods as _bind_input_router_methods
-from .game_parts.state_facade import bind_state_facade_methods as _bind_state_facade_methods
-from .game_parts.update_loop import bind_update_loop_methods as _bind_update_loop_methods
-from .game_parts.ui_dispatcher import bind_ui_dispatcher_methods as _bind_ui_dispatcher_methods
-from .game_parts.ui_dispatcher import init_ui_dispatcher as _init_ui_dispatcher
-from .services import (
-    InputService,
-    PersistenceService,
-    ReplayService,
-    build_input_service,
-    build_persistence_service,
-    build_replay_service,
-)
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 _BEHAVIOUR_META_EXPLICIT = "__explicit_behaviour_keys__"
 _OPTIONAL_BEHAVIOUR_DEFAULTS: tuple[tuple[str, str], ...] = ()
@@ -469,7 +450,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.engine_config.title = title
         self.engine_config.fullscreen = fullscreen
         self.engine_config.vsync = vsync
-        
+
         # Text cache for overlays to avoid PerformanceWarning
         from engine.text_draw import TextCache
         self.text_cache = TextCache()

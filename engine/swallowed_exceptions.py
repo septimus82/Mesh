@@ -4,6 +4,8 @@ import threading
 import time
 from dataclasses import dataclass
 
+from engine.logging_tools import get_logger
+
 _LOCK = threading.Lock()
 
 
@@ -17,6 +19,17 @@ class SwallowedSiteStats:
 _SITES: dict[str, SwallowedSiteStats] = {}
 _LAST_LOG_TS: dict[str, float] = {}
 _LOG_SAMPLE_SECONDS = 60.0
+_SWALLOW_ONCE_TAGS: set[str] = set()
+_LOGGER = get_logger(__name__)
+
+
+def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    if once:
+        with _LOCK:
+            if tag in _SWALLOW_ONCE_TAGS:
+                return
+            _SWALLOW_ONCE_TAGS.add(tag)
+    _LOGGER.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def record_swallowed(site: str, exc: Exception) -> None:
@@ -68,6 +81,7 @@ def reset() -> None:
     with _LOCK:
         _SITES.clear()
         _LAST_LOG_TS.clear()
+        _SWALLOW_ONCE_TAGS.clear()
 
 
 def format_swallowed_summary(limit: int = 20) -> str:

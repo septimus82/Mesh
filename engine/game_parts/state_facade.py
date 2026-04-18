@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator
 
 import engine.optional_arcade
-
 from engine.camera_controller import CameraArea
 from engine.event_runtime.emit import emit_event as emit_event_normalized
 from engine.events import MeshEvent
 from engine.game_runtime import events as game_events
 from engine.game_state_controller import GameState
 from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 from engine.ui import maybe_trigger_demo_complete_endcap
 
 from ._shared import resolve_persistence_service as _resolve_persistence_service
@@ -20,12 +20,6 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
-
-
-def _log_swallow(tag: str, context: str, *, once: bool = False) -> None:
-    from engine.game import _log_swallow as game_log_swallow  # noqa: PLC0415
-
-    game_log_swallow(tag, context, once=once)
 
 
 # --- Persistence & reload ---

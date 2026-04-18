@@ -4,14 +4,16 @@ import os
 from typing import TYPE_CHECKING, Sequence
 
 from engine.game_runtime import ui_wiring as game_ui_wiring
+from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 from engine.ui import (
-    CommandPaletteOverlay,
     CaptureOverlay,
+    CommandPaletteOverlay,
     DemoCompleteOverlay,
     DevBrowserOverlay,
+    EncounterDebugOverlay,
     EntityPaintOverlay,
     EntitySelectOverlay,
-    EncounterDebugOverlay,
     GameOverScreen,
     GoldenSliceDemoHUDStripOverlay,
     GoldenSliceVariantPickerOverlay,
@@ -48,6 +50,8 @@ from engine.ui_overlays.scene_browser_overlay import SceneBrowserOverlay
 from engine.ui_overlays.scene_switcher_overlay import SceneSwitcherOverlay
 from engine.ui_overlays.transition_fade import TransitionFadeOverlay
 from engine.ui_overlays.undo_history_overlay import UndoHistoryOverlay
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from engine.game import GameWindow
@@ -181,10 +185,10 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
     window.light_occluder_overlay = LightOccluderEditorOverlay(window)
     window.register_ui_element(window.light_occluder_overlay)
 
-    from engine.editor.editor_gizmo_overlay import EditorGizmoOverlay  # noqa: PLC0415
     from engine.editor.editor_cursor_hint_overlay import EditorCursorHintOverlay  # noqa: PLC0415
-    from engine.editor.selection_outline_overlay import SelectionOutlineOverlay  # noqa: PLC0415
+    from engine.editor.editor_gizmo_overlay import EditorGizmoOverlay  # noqa: PLC0415
     from engine.editor.marquee_select_overlay import MarqueeSelectOverlay  # noqa: PLC0415
+    from engine.editor.selection_outline_overlay import SelectionOutlineOverlay  # noqa: PLC0415
     from engine.editor_hover_highlight_overlay import EditorHoverHighlightOverlay  # noqa: PLC0415
     from engine.editor_tooltip_overlay import EditorTooltipOverlay  # noqa: PLC0415
 
@@ -260,8 +264,6 @@ def toggle_quest_log(self: "GameWindow") -> bool:
         try:
             self.set_flag("auto_opened_quest_log", True)
         except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
-            from engine.game import _log_swallow, logger  # noqa: PLC0415
-
             _log_swallow("GAME-005", "engine/game.py blanket swallow", once=True)
             logger.warning(
                 "[Mesh][GameWindow] WARNING: Failed to set flag 'auto_opened_quest_log': %r",
