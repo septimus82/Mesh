@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "engine/schemas/entity.schema.json",
+  "title": "Mesh Entity",
+  "description": "Shared authored entity shape used by scenes and prefab entity payloads.",
+  "type": "object",
+  "properties": {
+    "animations": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/animation"
+      }
+    },
+    "animation_blend": {
+      "type": "number"
+    },
+    "animation_frame_rate": {
+      "type": "number"
+    },
+    "animation_root_motion": {
+      "$ref": "#/$defs/animationRootMotion"
+    },
+    "animation_state": {
+      "type": "string"
+    },
+    "behaviour_config": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "behaviours": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/behaviourEntry"
+      }
+    },
+    "collision_poly": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/point"
+      }
+    },
+    "dialogue": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "dialogue_lines": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "encounter_cost": {
+      "type": "number"
+    },
+    "encounter_group": {
+      "type": "string",
+      "minLength": 1
+    },
+    "follow_speed": {
+      "type": "number"
+    },
+    "follow_target": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "forbid_flags": {
+      "$ref": "#/$defs/nonEmptyStringArray"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "layer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mesh_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "occluder_poly": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/point"
+      }
+    },
+    "on_trigger": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "patrol_points": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/point"
+      }
+    },
+    "patrol_speed": {
+      "type": "number"
+    },
+    "prefab_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "prefab_overrides": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "require_flags": {
+      "$ref": "#/$defs/nonEmptyStringArray"
+    },
+    "rotation": {
+      "type": "number"
+    },
+    "scale": {
+      "type": "number"
+    },
+    "solid": {
+      "type": "boolean"
+    },
+    "spawn_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sprite": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sprite_sheet": {
+      "$ref": "#/$defs/spriteSheet"
+    },
+    "tag": {
+      "type": "string"
+    },
+    "tags": {
+      "$ref": "#/$defs/nonEmptyStringArray"
+    },
+    "trigger_radius": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "trigger_target": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "variant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "x": {
+      "type": "number"
+    },
+    "y": {
+      "type": "number"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "animation": {
+      "type": "object",
+      "properties": {
+        "fps": {
+          "type": "number"
+        },
+        "frames": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "loop": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "fps",
+        "frames",
+        "loop"
+      ],
+      "additionalProperties": false
+    },
+    "animationRootMotion": {
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "scale": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "behaviourEntry": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "properties": {
+            "params": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "type": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": true
+        }
+      ]
+    },
+    "nonEmptyStringArray": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "point": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "spriteSheet": {
+      "type": "object",
+      "properties": {
+        "columns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "frame_height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "frame_width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "margin": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rows": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "spacing": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
