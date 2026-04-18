@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "engine/schemas/cutscene.schema.json",
+  "title": "Mesh Cutscene Store",
+  "type": "object",
+  "properties": {
+    "cutscenes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cutsceneEntry"
+      }
+    }
+  },
+  "required": [
+    "cutscenes"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "addCounterStep": {
+      "type": "object",
+      "properties": {
+        "counter": {
+          "type": "string",
+          "minLength": 1
+        },
+        "delta": {
+          "type": "number"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "add_counter"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "counter"
+          ]
+        },
+        {
+          "required": [
+            "name"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "cameraFocusStep": {
+      "type": "object",
+      "properties": {
+        "entity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "camera_focus"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "entity"
+          ]
+        },
+        {
+          "required": [
+            "target"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "cameraPanStep": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number"
+        },
+        "type": {
+          "const": "camera_pan"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "type",
+        "x",
+        "y"
+      ],
+      "additionalProperties": false
+    },
+    "cutsceneEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/cutsceneStep"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "steps"
+      ],
+      "additionalProperties": false
+    },
+    "cutsceneStep": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/waitStep"
+        },
+        {
+          "$ref": "#/$defs/startDialogueStep"
+        },
+        {
+          "$ref": "#/$defs/waitDialogueEndStep"
+        },
+        {
+          "$ref": "#/$defs/moveEntityStep"
+        },
+        {
+          "$ref": "#/$defs/cameraFocusStep"
+        },
+        {
+          "$ref": "#/$defs/cameraPanStep"
+        },
+        {
+          "$ref": "#/$defs/setFlagStep"
+        },
+        {
+          "$ref": "#/$defs/addCounterStep"
+        },
+        {
+          "$ref": "#/$defs/emitEventStep"
+        }
+      ]
+    },
+    "dialogueEntry": {
+      "type": "object",
+      "properties": {
+        "speaker": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "emitEventStep": {
+      "type": "object",
+      "properties": {
+        "event": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "emit_event"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "event"
+          ]
+        },
+        {
+          "required": [
+            "name"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "moveEntityStep": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number"
+        },
+        "entity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "move_entity"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "entity"
+          ]
+        },
+        {
+          "required": [
+            "target"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "setFlagStep": {
+      "type": "object",
+      "properties": {
+        "flag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "set_flag"
+        },
+        "value": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "flag"
+          ]
+        },
+        {
+          "required": [
+            "name"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "startDialogueStep": {
+      "type": "object",
+      "properties": {
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dialogueEntry"
+          },
+          "minItems": 1
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dialogueEntry"
+          },
+          "minItems": 1
+        },
+        "speaker": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "start_dialogue"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "entries"
+          ]
+        },
+        {
+          "required": [
+            "lines"
+          ]
+        },
+        {
+          "required": [
+            "text"
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "waitDialogueEndStep": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "wait_dialogue_end"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "waitStep": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "type": "number"
+        },
+        "type": {
+          "const": "wait"
+        }
+      },
+      "required": [
+        "duration",
+        "type"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
