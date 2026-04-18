@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, patch
+from engine.config import EngineConfig
 from engine.content_lock import compute_strict_fingerprint
 from engine.tooling.replay_goldens_command import handle_replay_goldens
 from argparse import Namespace
@@ -25,13 +26,13 @@ def test_strict_fingerprint_determinism():
 
 @patch("engine.tooling.replay_goldens_command.build_lock")
 @patch("engine.tooling.replay_goldens_command.compute_strict_fingerprint")
+@patch("engine.tooling.replay_goldens_command.load_config")
 @patch("pathlib.Path.exists")
 @patch("pathlib.Path.glob")
-@patch("pathlib.Path.read_text")
 @patch("engine.tooling.trace_command.read_event_jsonl")
 @patch("engine.tooling.trace_command.HeadlessGame")
 @patch("engine.tooling.trace_command.verify_assertions")
-def test_strict_golden_failure(mock_verify, mock_game, mock_read_events, mock_read_text, mock_glob, mock_exists, mock_compute_fp, mock_build_lock):
+def test_strict_golden_failure(mock_verify, mock_game, mock_read_events, mock_glob, mock_exists, mock_load_config, mock_compute_fp, mock_build_lock):
     # Setup mocks
     mock_exists.return_value = True
     mock_path = MagicMock()
@@ -40,6 +41,7 @@ def test_strict_golden_failure(mock_verify, mock_game, mock_read_events, mock_re
     mock_glob.return_value = [mock_path]
     mock_read_events.return_value = []
     mock_verify.return_value = True
+    mock_load_config.return_value = EngineConfig()
     
     # Mock meta file read
     mock_path.read_text.return_value = '{"content_fingerprint": "expected_hash"}'
@@ -54,13 +56,13 @@ def test_strict_golden_failure(mock_verify, mock_game, mock_read_events, mock_re
 
 @patch("engine.tooling.replay_goldens_command.build_lock")
 @patch("engine.tooling.replay_goldens_command.compute_strict_fingerprint")
+@patch("engine.tooling.replay_goldens_command.load_config")
 @patch("pathlib.Path.exists")
 @patch("pathlib.Path.glob")
-@patch("pathlib.Path.read_text")
 @patch("engine.tooling.trace_command.read_event_jsonl")
 @patch("engine.tooling.trace_command.HeadlessGame")
 @patch("engine.tooling.trace_command.verify_assertions")
-def test_strict_golden_success(mock_verify, mock_game, mock_read_events, mock_read_text, mock_glob, mock_exists, mock_compute_fp, mock_build_lock):
+def test_strict_golden_success(mock_verify, mock_game, mock_read_events, mock_glob, mock_exists, mock_load_config, mock_compute_fp, mock_build_lock):
     # Setup mocks
     mock_exists.return_value = True
     mock_path = MagicMock()
@@ -69,6 +71,7 @@ def test_strict_golden_success(mock_verify, mock_game, mock_read_events, mock_re
     mock_glob.return_value = [mock_path]
     mock_read_events.return_value = []
     mock_verify.return_value = True
+    mock_load_config.return_value = EngineConfig()
     
     # Mock meta file read
     mock_path.read_text.return_value = '{"content_fingerprint": "expected_hash"}'
