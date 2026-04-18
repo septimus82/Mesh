@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "engine/schemas/config.schema.json",
+  "title": "Mesh Engine Config",
+  "type": "object",
+  "properties": {
+    "ambient_darkness_alpha": {
+      "type": "integer"
+    },
+    "ambient_light_rgba": {
+      "$ref": "#/$defs/rgbaArray"
+    },
+    "audit_policy": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "content_roots": {
+      "$ref": "#/$defs/nonEmptyStringArray"
+    },
+    "day_length_seconds": {
+      "type": "number"
+    },
+    "day_night_cycle_length_seconds": {
+      "type": "number"
+    },
+    "day_night_enabled": {
+      "type": "boolean"
+    },
+    "day_night_start_hour": {
+      "type": "number"
+    },
+    "day_start_hour": {
+      "type": "number"
+    },
+    "debug_mode": {
+      "type": "boolean"
+    },
+    "debug_on_start": {
+      "type": "boolean"
+    },
+    "debug_page": {
+      "type": "integer"
+    },
+    "encounter_budget_profiles": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "fog_density": {
+      "type": "number"
+    },
+    "fog_enabled": {
+      "type": "boolean"
+    },
+    "fog_noise_amount": {
+      "type": "number"
+    },
+    "fog_noise_speed": {
+      "type": "number"
+    },
+    "fog_rgba": {
+      "$ref": "#/$defs/rgbaArray"
+    },
+    "fullscreen": {
+      "type": "boolean"
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "hud_show_objective": {
+      "type": "boolean"
+    },
+    "hud_show_xp_bar": {
+      "type": "boolean"
+    },
+    "input": {
+      "type": "object",
+      "properties": {
+        "rumble_enabled": {
+          "type": "boolean"
+        },
+        "rumble_strength": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": true
+    },
+    "input_bindings": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/nonEmptyStringArray"
+      }
+    },
+    "lighting_ambient_color": {
+      "$ref": "#/$defs/rgbaArray"
+    },
+    "lighting_debug_shadows": {
+      "type": "boolean"
+    },
+    "lighting_enabled": {
+      "type": "boolean"
+    },
+    "lighting_max_dynamic_lights": {
+      "type": "integer"
+    },
+    "lighting_max_static_lights": {
+      "type": "integer"
+    },
+    "lighting_shadows_mode": {
+      "type": "string",
+      "minLength": 1
+    },
+    "main_menu_scene": {
+      "$ref": "#/$defs/jsonPathOrNull"
+    },
+    "master_volume": {
+      "type": "number"
+    },
+    "music_crossfade_enabled": {
+      "type": "boolean"
+    },
+    "music_crossfade_in_s": {
+      "type": "number"
+    },
+    "music_crossfade_out_s": {
+      "type": "number"
+    },
+    "music_volume": {
+      "type": "number"
+    },
+    "plan_test_policy": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "player_attack_per_level": {
+      "type": "integer"
+    },
+    "player_base_attack": {
+      "type": "integer"
+    },
+    "player_base_defense": {
+      "type": "integer"
+    },
+    "player_base_max_hp": {
+      "type": "integer"
+    },
+    "player_base_speed": {
+      "type": "number"
+    },
+    "player_defense_per_level": {
+      "type": "integer"
+    },
+    "player_hp_per_level": {
+      "type": "integer"
+    },
+    "player_speed_per_level": {
+      "type": "number"
+    },
+    "player_stats_enabled": {
+      "type": "boolean"
+    },
+    "presets": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "profile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profiles": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "scene_fade_enabled": {
+      "type": "boolean"
+    },
+    "scene_fade_in_s": {
+      "type": "number"
+    },
+    "scene_fade_out_s": {
+      "type": "number"
+    },
+    "scene_fade_show_loading_text": {
+      "type": "boolean"
+    },
+    "sfx_volume": {
+      "type": "number"
+    },
+    "show_fps": {
+      "type": "boolean"
+    },
+    "soft_shadows_alpha_scale": {
+      "type": "number"
+    },
+    "soft_shadows_enabled": {
+      "type": "boolean"
+    },
+    "soft_shadows_expand_px": {
+      "type": "number"
+    },
+    "start_scene": {
+      "$ref": "#/$defs/jsonPath"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "vsync": {
+      "type": "boolean"
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "wizard_macros": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "wizard_presets": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "world_file": {
+      "$ref": "#/$defs/jsonPathOrNull"
+    },
+    "xp_base": {
+      "type": "integer"
+    },
+    "xp_per_level": {
+      "type": "integer"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "jsonPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\.json$"
+    },
+    "jsonPathOrNull": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/jsonPath"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "nonEmptyStringArray": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "rgbaArray": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "minItems": 4,
+      "maxItems": 4
+    }
+  }
+}
