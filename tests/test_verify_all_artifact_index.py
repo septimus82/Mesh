@@ -37,7 +37,17 @@ def _make_minimal_artifacts(d: Path) -> None:
     )
     _write(d / "exception_budget.json", {"schema_version": 1, "ok": True, "current_count": 5, "baseline_count": 5, "files_scanned": [], "per_file_counts": {}})
     _write(d / "verify_step_durations.json", {"schema_version": 1, "total_ms": 100, "steps": [{"name": "verify-demo", "ms": 100, "ok": True}]})
-    _write(d / "verify_step_budget_check.json", {"schema_version": 2, "ok": True, "tolerance_ms": 50, "candidates_used": [], "checked_steps": [], "offenders": []})
+    _write(
+        d / "verify_step_budget_check.json",
+        {
+            "schema_version": 2,
+            "ok": True,
+            "tolerance_ms": 50,
+            "candidates_used": [],
+            "checked_steps": [],
+            "offenders": [],
+        },
+    )
     _write(d / "swallowed_exceptions.json", {"schema_version": 1, "ok": True, "total": 0, "distinct": 0, "per_site": []})
     _write(d / "shadow_backend.json", {"schema_version": 1, "selected": "none", "reason": "uninitialized", "fallbacks": []})
 

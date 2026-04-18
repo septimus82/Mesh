@@ -84,7 +84,9 @@ def test_golden_slice_lighting_showcase_intent():
         
         if is_content_showcase:
             # If content qualifies as showcase, flag should ideally be True or unset (defaulting to True? No, default is False usually).
-            # Actually, the rule is: If it IS a showcase content-wise, we don't strictly require the flag to be True unless we want to enforce metadata accuracy.
+            # Actually, the rule is: If it IS a showcase content-wise, we don't
+            # strictly require the flag to be True unless we want to enforce
+            # metadata accuracy.
             # But the prompt says: "it must either A) reference a world whose dungeon scene contains occluders >= 3, OR B) have "lighting_showcase": false"
             # This implies: If occluders < 3, THEN lighting_showcase MUST be False.
             pass 

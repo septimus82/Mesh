@@ -32,7 +32,12 @@ def test_entity_select_duplicate_uses_next_available_k(capsys) -> None:
 
         sc = SceneController(as_game_window(window))
         sc.current_scene_path = "scenes/foo.json"
-        sc._loaded_scene_source_data = {"entities": [{"id": "a", "prefab_id": "slime_blob", "x": 0.0, "y": 0.0}, {"id": "a__dup1", "prefab_id": "slime_blob", "x": 0.0, "y": 0.0}]}
+        sc._loaded_scene_source_data = {
+            "entities": [
+                {"id": "a", "prefab_id": "slime_blob", "x": 0.0, "y": 0.0},
+                {"id": "a__dup1", "prefab_id": "slime_blob", "x": 0.0, "y": 0.0},
+            ]
+        }
         window.scene_controller = sc
 
         window.entity_select_state = EntitySelectState(selected_ids=["a"], primary_id="a")

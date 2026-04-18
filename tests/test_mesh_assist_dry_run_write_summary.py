@@ -76,7 +76,9 @@ def test_mesh_assist_dry_run_write_summary(tmp_path, monkeypatch):
         
         # For "identical", we need an action that writes the SAME content.
         # add_npc adds to the list, so it WILL change the file.
-        # To simulate identical, we can use a custom action or just accept that we can't easily simulate identical with standard actions unless we pre-populate the file with the result.
+        # To simulate identical, we can use a custom action or just accept that
+        # we can't easily simulate identical with standard actions unless we
+        # pre-populate the file with the result.
         
         # Let's pre-populate identical_file with the result of add_npc
         # But add_npc appends.

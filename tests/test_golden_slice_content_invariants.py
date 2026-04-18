@@ -96,7 +96,16 @@ class TestGoldenSliceContentInvariants(unittest.TestCase):
                 self.assertTrue(name, f"Boss in {scene_path} missing name/mesh_name for toast clarity")
                 
                 # 4. Exit behind boss
-                exits = [e for e in entities if e.get("name") == "Exit" or "door" in (e.get("tags", []) if isinstance(e.get("tags"), list) else [e.get("tag", "")])]
+                exits = [
+                    e
+                    for e in entities
+                    if e.get("name") == "Exit"
+                    or "door" in (
+                        e.get("tags", [])
+                        if isinstance(e.get("tags"), list)
+                        else [e.get("tag", "")]
+                    )
+                ]
                 # Filter for the actual exit to hub, usually named "Exit" or having SceneTransition to hub
                 # In these scenes, it's named "Exit"
                 main_exit = next((e for e in exits if e.get("name") == "Exit"), None)

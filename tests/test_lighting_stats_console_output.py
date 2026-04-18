@@ -68,5 +68,10 @@ def test_console_lighting_stats_includes_context_and_counts() -> None:
     ok = dispatch["lighting_stats"](console, [])
     assert ok is True
     assert console.lines == [
-        "[Lighting] scene=scenes/test_scene.json tilemap_present=True collision_layer_id=platforms shadows_mode=hard static_light_count=2 dynamic_light_count=1 selected_shadow_light_type=dynamic selected_shadow_light_pos=[10.0, 20.0] selected_shadow_light_radius=123.0 nearest_occluder_distance_est=5.5 cull_square_intersects_any_occluder=True occluder_count=3 culled_occluder_count=1 shadow_poly_count=5 mask_rendered=True mask_backend=fbo.use composite_ok=True fallback_drawn=False"
+        "[Lighting] scene=scenes/test_scene.json tilemap_present=True collision_layer_id=platforms shadows_mode=hard "
+        "static_light_count=2 dynamic_light_count=1 selected_shadow_light_type=dynamic "
+        "selected_shadow_light_pos=[10.0, 20.0] selected_shadow_light_radius=123.0 "
+        "nearest_occluder_distance_est=5.5 cull_square_intersects_any_occluder=True occluder_count=3 "
+        "culled_occluder_count=1 shadow_poly_count=5 mask_rendered=True mask_backend=fbo.use composite_ok=True "
+        "fallback_drawn=False"
     ]

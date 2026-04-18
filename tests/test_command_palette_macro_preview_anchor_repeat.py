@@ -185,7 +185,17 @@ def test_command_palette_overlay_renders_preview_line() -> None:
         "active_mode": "none",
         "prompt_active": False,
         "preview_line": "PREVIEW create=2 update=0 (first ids: a,b,c)",
-        "rows": [{"kind": "section", "title": "Authoring / Macros"}, {"kind": "command", "id": "m", "title": "Macro", "hotkey_hint": "", "enabled": True, "disabled_reason": ""}],
+        "rows": [
+            {"kind": "section", "title": "Authoring / Macros"},
+            {
+                "kind": "command",
+                "id": "m",
+                "title": "Macro",
+                "hotkey_hint": "",
+                "enabled": True,
+                "disabled_reason": "",
+            },
+        ],
         "selected_row": 0,
     }
     lines = format_command_palette_overlay_lines(payload)
