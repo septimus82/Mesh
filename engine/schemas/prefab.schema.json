@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "engine/schemas/prefab.schema.json",
+  "title": "Mesh Prefabs",
+  "description": "Validates runtime prefab list files such as assets/prefabs.json. Legacy object-map fixtures such as prefabs.golden.json are intentionally excluded.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/prefabEntry"
+  },
+  "$defs": {
+    "prefabEntry": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "type": "string",
+          "minLength": 1
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entity": {
+          "$ref": "entity.schema.json"
+        },
+        "forbid_flags": {
+          "$ref": "entity.schema.json#/$defs/nonEmptyStringArray"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "require_flags": {
+          "$ref": "entity.schema.json#/$defs/nonEmptyStringArray"
+        },
+        "tags": {
+          "$ref": "entity.schema.json#/$defs/nonEmptyStringArray"
+        }
+      },
+      "required": [
+        "display_name",
+        "entity",
+        "id",
+        "tags"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
