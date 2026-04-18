@@ -31,11 +31,33 @@ def test_doctor_assets_pack_scope(tmp_path, monkeypatch, capsys) -> None:
 
     _write_json(
         tmp_path / "packs" / "alpha" / "data" / "prefabs.json",
-        [{"id": "p_alpha_missing", "entity": {"sprite": "assets/sprites/alpha.png"}}],
+        [
+            {
+                "display_name": "Alpha Missing",
+                "id": "p_alpha_missing",
+                "tags": [
+                    "test",
+                ],
+                "entity": {
+                    "sprite": "assets/sprites/alpha.png",
+                },
+            }
+        ],
     )
     _write_json(
         tmp_path / "packs" / "beta" / "data" / "prefabs.json",
-        [{"id": "p_beta_missing", "entity": {"sprite": "assets/sprites/beta.png"}}],
+        [
+            {
+                "display_name": "Beta Missing",
+                "id": "p_beta_missing",
+                "tags": [
+                    "test",
+                ],
+                "entity": {
+                    "sprite": "assets/sprites/beta.png",
+                },
+            }
+        ],
     )
 
     _patch_repo_paths(monkeypatch, tmp_path)
@@ -80,7 +102,11 @@ def test_doctor_assets_image_cache(tmp_path, monkeypatch, capsys) -> None:
         tmp_path / "packs" / "alpha" / "data" / "prefabs.json",
         [
             {
+                "display_name": "Sheet Warn",
                 "id": "p_sheet_warn",
+                "tags": [
+                    "test",
+                ],
                 "entity": {
                     "sprite_sheet": {
                         "image": "assets/sprites/sheet.png",
@@ -136,7 +162,11 @@ def test_doctor_assets_cache_corruption(tmp_path, monkeypatch, capsys) -> None:
         tmp_path / "packs" / "alpha" / "data" / "prefabs.json",
         [
             {
+                "display_name": "Sheet Cache",
                 "id": "p_sheet_cache",
+                "tags": [
+                    "test",
+                ],
                 "entity": {
                     "sprite_sheet": {
                         "image": "assets/sprites/sheet.png",

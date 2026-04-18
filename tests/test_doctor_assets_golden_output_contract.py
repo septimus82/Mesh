@@ -49,9 +49,22 @@ def test_doctor_assets_golden_output(tmp_path: Path, monkeypatch, capsys) -> Non
     _write_json(
         tmp_path / "packs" / "alpha" / "data" / "prefabs.json",
         [
-            {"id": "p_missing", "entity": {"sprite": "assets/sprites/missing.png"}},
             {
+                "display_name": "Missing",
+                "id": "p_missing",
+                "tags": [
+                    "test",
+                ],
+                "entity": {
+                    "sprite": "assets/sprites/missing.png",
+                },
+            },
+            {
+                "display_name": "Warn",
                 "id": "p_warn",
+                "tags": [
+                    "test",
+                ],
                 "entity": {
                     "sprite_sheet": {
                         "image": "assets/sprites/sheet.png",

@@ -23,11 +23,33 @@ def test_doctor_assets_prefab_paths(tmp_path, monkeypatch, capsys) -> None:
 
     _write_json(
         tmp_path / "assets" / "prefabs.json",
-        [{"id": "p_ok", "entity": {"sprite": "assets/sprites/ok.png"}}],
+        [
+            {
+                "display_name": "OK",
+                "id": "p_ok",
+                "tags": [
+                    "test",
+                ],
+                "entity": {
+                    "sprite": "assets/sprites/ok.png",
+                },
+            }
+        ],
     )
     _write_json(
         tmp_path / "packs" / "alpha" / "data" / "prefabs.json",
-        [{"id": "p_missing", "entity": {"sprite": "assets/sprites/missing.png"}}],
+        [
+            {
+                "display_name": "Missing",
+                "id": "p_missing",
+                "tags": [
+                    "test",
+                ],
+                "entity": {
+                    "sprite": "assets/sprites/missing.png",
+                },
+            }
+        ],
     )
 
     def fake_resolve_path(path: str) -> Path:
@@ -71,7 +93,11 @@ def test_doctor_assets_prefab_paths(tmp_path, monkeypatch, capsys) -> None:
         tmp_path / "packs" / "alpha" / "data" / "prefabs.json",
         [
             {
+                "display_name": "Warn",
                 "id": "p_warn",
+                "tags": [
+                    "test",
+                ],
                 "entity": {
                     "sprite_sheet": {
                         "image": "assets/sprites/sheet.png",

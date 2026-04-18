@@ -271,6 +271,14 @@
           "type": "integer",
           "minimum": 1
         },
+        "frame_h": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "frame_w": {
+          "type": "integer",
+          "minimum": 1
+        },
         "frame_height": {
           "type": "integer",
           "minimum": 1
@@ -279,9 +287,21 @@
           "type": "integer",
           "minimum": 1
         },
+        "frames": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "image": {
+          "type": "string",
+          "minLength": 1
+        },
         "margin": {
           "type": "integer",
           "minimum": 0
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
         },
         "rows": {
           "type": "integer",
