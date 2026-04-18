@@ -37,11 +37,10 @@ include = ["engine*", "mesh_cli*"]
 # See MANIFEST.in for the complete list of included assets
 
 [tool.ruff]
-line-length = 120
+line-length = 140
 select = ["E", "F", "I", "W"]
-ignore = ["E501", "E701", "E741"]
+ignore = ["E701", "E741"]
 exclude = [
-    "tests",
     "build",
     "dist",
     ".git",
@@ -71,49 +70,7 @@ exclude = [
 
 [[tool.mypy.overrides]]
 module = [
-    "engine.behaviours.time_of_day_gate",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.cutscene_trigger",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.grant_experience",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
     "engine.behaviours.quest_giver",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.scene_exit",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.toggle_scene_lights",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.event_logger",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.message_on_zone_enter",
 ]
 ignore_errors = false
 
@@ -126,84 +83,6 @@ ignore_errors = false
 [[tool.mypy.overrides]]
 module = [
     "engine.behaviours.collectible",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.damage_on_touch",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.follow",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.patrol",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.toggle_switch",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.increment_counter_on_event",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.trigger_zone",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.drop_table",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.conditional_activator",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.auto_animation_by_movement",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.listen_for_event",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.timer",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.quest_progress",
-]
-ignore_errors = false
-
-[[tool.mypy.overrides]]
-module = [
-    "engine.behaviours.set_game_state_on_event",
 ]
 ignore_errors = false
 
