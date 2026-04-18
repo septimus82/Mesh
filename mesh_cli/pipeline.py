@@ -83,7 +83,7 @@ def _handle_pipeline(args: argparse.Namespace) -> int:
         print("[PIPELINE] Missing required --plan and --world/path.")
         return 1
 
-    return pipeline_runner.run_pipeline(
+    result = pipeline_runner.run_pipeline(
         plan_path=plan_path,
         path=target_path,
         ai_safe=bool(args.ai_safe),
@@ -96,16 +96,17 @@ def _handle_pipeline(args: argparse.Namespace) -> int:
         demo=bool(getattr(args, "demo", False)),
         preset=getattr(args, "preset", None),
     )
+    return int(result) if isinstance(result, int) else 0
 
 
 def _handle_recipes(args: argparse.Namespace) -> int:
-    result = recipes_command.recipes_command(args)
-    return int(result) if isinstance(result, int) else 0
+    recipes_command.recipes_command(args)
+    return 0
 
 
 def _handle_run_preset(args: argparse.Namespace) -> int:
-    result = preset_commands.run_preset_command(args)
-    return int(result) if isinstance(result, int) else 0
+    preset_commands.run_preset_command(args)
+    return 0
 
 
 def _handle_preset(args: argparse.Namespace) -> int:

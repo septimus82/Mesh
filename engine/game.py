@@ -117,6 +117,7 @@ from .scene_controller import SceneController
 from .scene_loader import SceneLoader
 from .tilemap import TilemapManager
 from .ui import (
+    DevBrowserOverlay,
     GameOverScreen,
     GoldenSliceDemoHUDStripOverlay,
     GoldenSliceVariantPickerOverlay,

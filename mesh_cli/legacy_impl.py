@@ -21,6 +21,7 @@ from engine.logging_tools import get_logger
 if TYPE_CHECKING:
     from engine.config import load_config as load_config
     from engine.encounter_report import generate_encounter_report as generate_encounter_report
+    from engine.tooling_runtime.macro_apply_report import MacroReportPayload
     from engine.tooling import (
         plan_linter as plan_linter,
         replay_script as replay_script,
@@ -873,8 +874,10 @@ def _compute_scene_macro_apply(
     anchor_override: str | None,
     primary_entity_id: str | None = None,
     cursor_world_pos: tuple[float, float] | None = None,
-) -> tuple[dict[str, Any], dict[str, Any]]:
+) -> tuple[dict[str, Any], MacroReportPayload]:
     from engine.tooling_runtime.macro_apply_report import compute_scene_macro_report
+
+    typed_result: tuple[dict[str, Any], MacroReportPayload]
 
     result = compute_scene_macro_report(
         scene_payload=scene_payload,
@@ -885,7 +888,8 @@ def _compute_scene_macro_apply(
         cursor_world_pos=cursor_world_pos,
         primary_entity_id=primary_entity_id,
     )
-    return result.after_payload, result.report
+    typed_result = (result.after_payload, result.report)
+    return typed_result
 
 
 def _handle_scene_macro_apply(args: argparse.Namespace) -> int:

@@ -154,24 +154,24 @@ def handle_explain(args: argparse.Namespace) -> int:
             print(f"Prefab '{prefab_id}' not found.")
         return 2
 
-    source_raw = manager.prefab_sources.get(prefab_id, "")
+    prefab_source_raw = manager.prefab_sources.get(prefab_id, "")
     source: str | None
-    if isinstance(source_raw, str) and source_raw.strip():
-        source = source_raw
+    if isinstance(prefab_source_raw, str) and prefab_source_raw.strip():
+        source = prefab_source_raw
     else:
         source = None
     chain_raw = manager.prefab_source_chain.get(prefab_id, [])
     chain = [entry for entry in chain_raw if isinstance(entry, str) and entry.strip()]
     resolved = manager.get_prefab(prefab_id)
     if getattr(args, "json", False):
-        payload: dict[str, Any] = {
+        response_payload: dict[str, Any] = {
             "prefab_id": prefab_id,
             "source": source,
             "chain": chain,
             "prefab": resolved or {},
             "ok": True,
         }
-        print(json.dumps(payload, separators=(",", ":")))
+        print(json.dumps(response_payload, separators=(",", ":")))
         return 0
     print(f"prefab_id: {prefab_id}")
     print(f"source: {source or ''}")

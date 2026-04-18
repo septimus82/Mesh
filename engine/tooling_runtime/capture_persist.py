@@ -4,7 +4,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from engine.brushes import validate_brush as validate_brush_codes
 from engine.persistence_io import write_json_atomic
@@ -52,7 +52,7 @@ def validate_brush_payload(payload: dict[str, Any]) -> list[str]:
 
 
 def _inject_capture_metadata(payload: dict[str, Any]) -> dict[str, Any]:
-    out = json.loads(json.dumps(payload))
+    out = cast(dict[str, Any], json.loads(json.dumps(payload)))
     metadata = out.get("metadata")
     if not isinstance(metadata, dict):
         metadata = {}

@@ -102,12 +102,12 @@ def build_behaviour_config_map(
                 field_name = field.get("name")
                 if not field_name:
                     continue
-                target = merged.get(behaviour_type)
-                if isinstance(target, dict) and field_name in target:
+                field_target = merged.get(behaviour_type)
+                if isinstance(field_target, dict) and field_name in field_target:
                     continue
                 if field_name in entity_data:
-                    target = merged.setdefault(behaviour_type, {})
-                    target[field_name] = entity_data[field_name]
+                    field_target = merged.setdefault(behaviour_type, {})
+                    field_target[field_name] = entity_data[field_name]
 
     return merged
 

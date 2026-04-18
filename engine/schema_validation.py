@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from jsonschema import Draft202012Validator, ValidationError
 from jsonschema.exceptions import best_match
-from referencing import Registry, Resource
+from referencing import Registry as ReferencingRegistry, Resource
 
 
 _SCHEMA_DIR = Path(__file__).with_name("schemas")
@@ -64,7 +64,8 @@ def _get_validator(schema_name: str) -> Draft202012Validator:
 
     schema_path = _schema_path(schema_name)
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
-    validator = Draft202012Validator(schema, registry=Registry(retrieve=_retrieve_schema))
+    registry_factory = cast(Any, ReferencingRegistry)
+    validator = Draft202012Validator(schema, registry=registry_factory(retrieve=_retrieve_schema))
     _SCHEMA_CACHE[schema_name] = validator
     return validator
 

@@ -4,12 +4,22 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, cast
 
 from .events import MeshEvent
 from .paths import resolve_path
 from .quest_runtime import normalize as quest_normalize
 from .quest_runtime import progress as quest_progress
+
+
+def _lookup_stage(quest: dict[str, Any], stage_id: object) -> dict[str, Any] | None:
+    if not isinstance(stage_id, str) or not stage_id:
+        return None
+    stage_lookup = quest.get("stage_lookup")
+    if not isinstance(stage_lookup, dict):
+        return None
+    stage = stage_lookup.get(stage_id)
+    return cast(dict[str, Any] | None, stage if isinstance(stage, dict) else None)
 
 
 class QuestManager:
@@ -159,7 +169,7 @@ class QuestManager:
         current_id = state.get("current_stage")
         if not current_id:
             return None
-        return quest["stage_lookup"].get(current_id)
+        return _lookup_stage(quest, current_id)
 
     def get_pending_stage(self, quest_id: str) -> dict[str, Any] | None:
         """Return the next stage waiting for its start trigger (if any)."""
@@ -173,7 +183,7 @@ class QuestManager:
         pending_id = state.get("awaiting_stage")
         if not pending_id:
             return None
-        return quest["stage_lookup"].get(pending_id)
+        return _lookup_stage(quest, pending_id)
 
     def get_state_snapshot(self, quest_id: str | None = None) -> dict[str, Any] | None:
         """Return a copy of the quest state for debugging/UI purposes."""

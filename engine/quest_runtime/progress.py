@@ -1,9 +1,21 @@
 from __future__ import annotations
 
+
 from typing import Any
+from typing import Any, cast
 
 from ..events import MeshEvent
 from .gating import can_activate_quest
+
+
+def _lookup_stage(quest: dict[str, Any], stage_id: object) -> dict[str, Any] | None:
+    if not isinstance(stage_id, str) or not stage_id:
+        return None
+    stage_lookup = quest.get("stage_lookup")
+    if not isinstance(stage_lookup, dict):
+        return None
+    stage = stage_lookup.get(stage_id)
+    return cast(dict[str, Any] | None, stage if isinstance(stage, dict) else None)
 
 
 def handle_event(manager: Any, event: MeshEvent) -> None:
@@ -99,7 +111,7 @@ def request_stage_completion(manager: Any, quest: dict[str, Any], state: dict[st
 def force_stage(manager: Any, quest: dict[str, Any], state: dict[str, Any], stage_id: str | None) -> bool:
     if not stage_id:
         return False
-    stage = quest["stage_lookup"].get(stage_id)
+    stage = _lookup_stage(quest, stage_id)
     if stage is None:
         return False
     completed = state.get("completed_stages", [])
@@ -118,9 +130,12 @@ def force_stage(manager: Any, quest: dict[str, Any], state: dict[str, Any], stag
 def stage_is_next(quest: dict[str, Any], state: dict[str, Any], stage_id: str) -> bool:
     completed = set(state.get("completed_stages", []))
     for stage in quest["stages"]:
-        if stage["id"] in completed:
+        candidate_id = stage.get("id") if isinstance(stage, dict) else None
+        if not isinstance(candidate_id, str):
             continue
-        return stage["id"] == stage_id
+        if candidate_id in completed:
+            continue
+        return candidate_id == stage_id
     return False
 
 
@@ -231,9 +246,12 @@ def complete_quest(manager: Any, quest: dict[str, Any], state: dict[str, Any], *
 def find_next_stage(quest: dict[str, Any], completed: Any) -> dict[str, Any] | None:
     completed_set = set(completed or [])
     for stage in quest.get("stages", []):
-        if stage["id"] in completed_set:
+        if not isinstance(stage, dict):
             continue
-        return stage
+        stage_id = stage.get("id")
+        if isinstance(stage_id, str) and stage_id in completed_set:
+            continue
+        return cast(dict[str, Any], stage)
     return None
 
 
@@ -241,7 +259,7 @@ def maybe_start_pending(manager: Any, quest: dict[str, Any], state: dict[str, An
     pending_id = state.get("awaiting_stage")
     if not pending_id:
         return
-    pending_stage = quest["stage_lookup"].get(pending_id)
+    pending_stage = _lookup_stage(quest, pending_id)
     if pending_stage is None:
         state["awaiting_stage"] = None
         return
@@ -253,10 +271,10 @@ def maybe_start_pending(manager: Any, quest: dict[str, Any], state: dict[str, An
 def current_or_pending_stage(quest: dict[str, Any], state: dict[str, Any]) -> dict[str, Any] | None:
     current_id = state.get("current_stage")
     if current_id:
-        return quest["stage_lookup"].get(current_id)
+        return _lookup_stage(quest, current_id)
     pending_id = state.get("awaiting_stage")
     if pending_id:
-        return quest["stage_lookup"].get(pending_id)
+        return _lookup_stage(quest, pending_id)
     return None
 
 

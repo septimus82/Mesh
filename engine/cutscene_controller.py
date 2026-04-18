@@ -14,6 +14,12 @@ from engine.schema_validation import validate
 logger = get_logger(__name__)
 
 
+def _log_swallow(tag: str, context: str, *, once: bool = False) -> None:
+    from engine.game import _log_swallow as game_log_swallow  # noqa: PLC0415
+
+    game_log_swallow(tag, context, once=once)
+
+
 @dataclass(slots=True)
 class CutsceneStep:
     type: str

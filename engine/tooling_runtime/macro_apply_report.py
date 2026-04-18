@@ -14,7 +14,7 @@ from engine.tooling_runtime.macro_assets import load_macro_asset, parse_macro_as
 @dataclass(frozen=True, slots=True)
 class MacroReportResult:
     after_payload: dict[str, Any]
-    report: dict[str, Any]
+    report: MacroReportPayload
 
 
 class MacroReportPayload(TypedDict):

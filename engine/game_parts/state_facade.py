@@ -195,13 +195,11 @@ def _on_any_event(self: "GameWindow", event: MeshEvent) -> None:
 
 
 # --- Game state (flags, counters, vars, chapter, quest, playtime) ---
-@property
-def game_state(self: "GameWindow") -> GameState:
+def _get_game_state(self: "GameWindow") -> GameState:
     return self.game_state_controller.state
 
 
-@game_state.setter
-def game_state(self: "GameWindow", value: GameState) -> None:
+def _set_game_state(self: "GameWindow", value: GameState) -> None:
     self.game_state_controller.state = value
 
 
@@ -279,8 +277,7 @@ def _consume_next_spawn_point(self: "GameWindow") -> str | None:
 
 
 # --- Camera & scene convenience ---
-@property
-def all_sprites(self: "GameWindow") -> Iterator[engine.optional_arcade.arcade.Sprite]:
+def _get_all_sprites(self: "GameWindow") -> Iterator[engine.optional_arcade.arcade.Sprite]:
     return self.scene_controller.all_sprites
 
 
@@ -444,8 +441,7 @@ def move_entity_with_collision(
     self.scene_controller.move_entity_with_collision(sprite, dx, dy, friction)
 
 
-@property
-def camera(self: "GameWindow") -> Any:
+def _get_camera(self: "GameWindow") -> Any:
     return self.camera_controller.camera
 
 
@@ -486,7 +482,7 @@ def bind_state_facade_methods(cls: type["GameWindow"]) -> None:
     cls._on_level_up = _on_level_up
     cls._on_any_event = _on_any_event
 
-    cls.game_state = game_state
+    setattr(cls, "game_state", property(_get_game_state, _set_game_state))
     cls.set_flag = set_flag
     cls.get_flag = get_flag
     cls.toggle_flag = toggle_flag
@@ -505,7 +501,7 @@ def bind_state_facade_methods(cls: type["GameWindow"]) -> None:
     cls.get_next_spawn_point = get_next_spawn_point
     cls._consume_next_spawn_point = _consume_next_spawn_point
 
-    cls.all_sprites = all_sprites
+    setattr(cls, "all_sprites", property(_get_all_sprites))
     cls.find_entity = find_entity
     cls.get_all_entities = get_all_entities
     cls.find_sprite_by_name = find_sprite_by_name
@@ -524,4 +520,4 @@ def bind_state_facade_methods(cls: type["GameWindow"]) -> None:
     cls.on_collectible_picked = on_collectible_picked
     cls.on_damage = on_damage
     cls.move_entity_with_collision = move_entity_with_collision
-    cls.camera = camera
+    setattr(cls, "camera", property(_get_camera))

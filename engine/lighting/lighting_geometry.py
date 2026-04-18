@@ -203,7 +203,7 @@ def compute_scene_geometry(
     total_hulls = 0
 
     for i, light in enumerate(lights):
-        geom = compute_light_geometry(i, light, polygons, shadow_params)
+        geom = compute_light_geometry(i, light, occluder_polygons, shadow_params)
         light_geometries.append(geom)
         total_hulls += len(geom.shadow_hulls)
 
