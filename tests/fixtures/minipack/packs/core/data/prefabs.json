@@ -1,5 +1,9 @@
 [
   {
+    "display_name": "torch_wisp",
+    "tags": [
+      "fixture"
+    ],
     "id": "torch_wisp",
     "entity": {}
   }
