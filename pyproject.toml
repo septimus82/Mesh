@@ -69,6 +69,10 @@ exclude = [
     "examples",
 ]
 
+# Keep these data-model modules stricter than the repo default because they are
+# stable typing islands with clear return types and generic usage.
+# Remove this override only after the same strict settings are enforced
+# globally, or after these modules are moved under a stricter shared section.
 [[tool.mypy.overrides]]
 module = [
     "engine.physics_model",
@@ -101,6 +105,18 @@ no_implicit_optional = true
 disallow_incomplete_defs = true
 disallow_untyped_defs = true
 check_untyped_defs = true
+
+# GameWindow decomposition intentionally binds facade functions onto the class
+# at startup; mypy reports one method-assign error per binder entry even though
+# the pattern is deliberate and exercised by tests.
+# Remove this override only if bind_state_facade_methods is refactored to a
+# mypy-friendly shape such as explicit methods, descriptors, or a Protocol-based
+# facade that avoids class attribute monkey-patching.
+[[tool.mypy.overrides]]
+module = [
+    "engine.game_parts.state_facade",
+]
+disable_error_code = ["method-assign"]
 
 # pytest config is in pytest.ini (single source of truth).
 # Do not add [tool.pytest.ini_options] here to avoid drift.
