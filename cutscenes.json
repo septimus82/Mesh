@@ -43,26 +43,7 @@
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.3,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep01_intro_cutscene_done",
-          "type": "emit_event"
-        },
-        {
-          "dialogue_id": "ep01_dialogue_intro",
-          "target": "Episode01Mentor",
-          "type": "start_dialogue"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep01_intro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.3,
@@ -71,25 +52,16 @@
         {
           "event": "ep01_intro_cutscene_done",
           "type": "emit_event"
+        },
+        {
+          "dialogue_id": "ep01_dialogue_intro",
+          "target": "Episode01Mentor",
+          "type": "start_dialogue"
         }
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.2,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep01_complete",
-          "type": "emit_event"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep01_outro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.2,
@@ -102,26 +74,7 @@
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.35,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep02_intro_done",
-          "type": "emit_event"
-        },
-        {
-          "dialogue_id": "ep02_dialogue_intro",
-          "target": "Episode02Mentor",
-          "type": "start_dialogue"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep02_intro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.35,
@@ -130,25 +83,16 @@
         {
           "event": "ep02_intro_done",
           "type": "emit_event"
+        },
+        {
+          "dialogue_id": "ep02_dialogue_intro",
+          "target": "Episode02Mentor",
+          "type": "start_dialogue"
         }
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.25,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep02_complete",
-          "type": "emit_event"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep02_outro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.25,
@@ -161,26 +105,7 @@
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.3,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep03_intro_done",
-          "type": "emit_event"
-        },
-        {
-          "dialogue_id": "ep03_dialogue_intro",
-          "target": "Episode03Mentor",
-          "type": "start_dialogue"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep03_intro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.3,
@@ -189,25 +114,16 @@
         {
           "event": "ep03_intro_done",
           "type": "emit_event"
+        },
+        {
+          "dialogue_id": "ep03_dialogue_intro",
+          "target": "Episode03Mentor",
+          "type": "start_dialogue"
         }
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.2,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep03_reset_done",
-          "type": "emit_event"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep03_reset_wrong",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.2,
@@ -220,21 +136,7 @@
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.2,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep03_complete",
-          "type": "emit_event"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep03_outro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.2,
@@ -247,26 +149,7 @@
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.3,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep04_intro_done",
-          "type": "emit_event"
-        },
-        {
-          "dialogue_id": "ep04_dialogue_intro",
-          "target": "Episode04Mentor",
-          "type": "start_dialogue"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep04_intro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.3,
@@ -275,25 +158,16 @@
         {
           "event": "ep04_intro_done",
           "type": "emit_event"
+        },
+        {
+          "dialogue_id": "ep04_dialogue_intro",
+          "target": "Episode04Mentor",
+          "type": "start_dialogue"
         }
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.25,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep04_complete",
-          "type": "emit_event"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep04_outro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.25,
@@ -306,26 +180,7 @@
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.3,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep05_intro_done",
-          "type": "emit_event"
-        },
-        {
-          "dialogue_id": "ep05_dialogue_intro",
-          "target": "Episode05Mentor",
-          "type": "start_dialogue"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep05_intro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.3,
@@ -334,25 +189,16 @@
         {
           "event": "ep05_intro_done",
           "type": "emit_event"
+        },
+        {
+          "dialogue_id": "ep05_dialogue_intro",
+          "target": "Episode05Mentor",
+          "type": "start_dialogue"
         }
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.2,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep05_complete",
-          "type": "emit_event"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep05_outro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.2,
@@ -365,26 +211,7 @@
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.3,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep06_intro_done",
-          "type": "emit_event"
-        },
-        {
-          "dialogue_id": "ep06_dialogue_intro",
-          "target": "Episode06Mentor",
-          "type": "start_dialogue"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep06_intro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.3,
@@ -393,25 +220,16 @@
         {
           "event": "ep06_intro_done",
           "type": "emit_event"
+        },
+        {
+          "dialogue_id": "ep06_dialogue_intro",
+          "target": "Episode06Mentor",
+          "type": "start_dialogue"
         }
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.2,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep06_reset_done",
-          "type": "emit_event"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep06_reset_wrong",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.2,
@@ -424,21 +242,7 @@
       ]
     },
     {
-      "commands": [
-        {
-          "duration": 0.25,
-          "type": "wait"
-        },
-        {
-          "event_type": "ep06_complete",
-          "type": "emit_event"
-        },
-        {
-          "type": "stop"
-        }
-      ],
       "id": "ep06_outro",
-      "schema_version": 1,
       "steps": [
         {
           "duration": 0.25,
