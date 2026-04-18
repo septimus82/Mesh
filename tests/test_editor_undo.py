@@ -33,8 +33,10 @@ class TestEditorUndo(unittest.TestCase):
         
         # Mock mutation
         def apply_mutation(sprite, x=None, y=None):
-            if x is not None: sprite.center_x = x
-            if y is not None: sprite.center_y = y
+            if x is not None:
+                sprite.center_x = x
+            if y is not None:
+                sprite.center_y = y
         self.window.scene_controller._apply_entity_mutation = apply_mutation
         
         self.controller = EditorModeController(self.window)

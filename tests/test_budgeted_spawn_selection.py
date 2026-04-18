@@ -40,8 +40,10 @@ def test_budgeted_spawn_selection(mock_scene_controller):
         mock_pm_get.return_value = pm
         
         def get_prefab_side_effect(pid):
-            if pid == "cheap": return {"encounter_cost": 2}
-            if pid == "expensive": return {"encounter_cost": 5}
+            if pid == "cheap":
+                return {"encounter_cost": 2}
+            if pid == "expensive":
+                return {"encounter_cost": 5}
             return {}
         
         pm.get_prefab.side_effect = get_prefab_side_effect

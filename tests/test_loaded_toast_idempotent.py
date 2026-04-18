@@ -57,8 +57,10 @@ class TestLoadedToastIdempotent(unittest.TestCase):
         path1 = self.save_manager.get_save_path(slot1)
         path2 = self.save_manager.get_save_path(slot2)
         
-        with open(path1, "w") as f: json.dump({}, f)
-        with open(path2, "w") as f: json.dump({}, f)
+        with open(path1, "w") as f:
+            json.dump({}, f)
+        with open(path2, "w") as f:
+            json.dump({}, f)
         
         # 2. Load Slot 1 -> Toast
         self.save_manager.load_game(slot1)
@@ -78,7 +80,8 @@ class TestLoadedToastIdempotent(unittest.TestCase):
         # 1. Create save
         slot = "slot_fail"
         path = self.save_manager.get_save_path(slot)
-        with open(path, "w") as f: json.dump({}, f)
+        with open(path, "w") as f:
+            json.dump({}, f)
         
         # 2. Load successfully
         self.save_manager.load_game(slot)

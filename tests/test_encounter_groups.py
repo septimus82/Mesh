@@ -46,8 +46,10 @@ def test_encounter_groups_budget_separation(mock_scene_controller):
         mock_pm_get.return_value = pm
         
         def get_prefab_side_effect(pid):
-            if pid == "cheap_elite": return {"encounter_cost": 10, "is_elite": True}
-            if pid == "expensive_normal": return {"encounter_cost": 100, "is_elite": False}
+            if pid == "cheap_elite":
+                return {"encounter_cost": 10, "is_elite": True}
+            if pid == "expensive_normal":
+                return {"encounter_cost": 100, "is_elite": False}
             return {}
         
         pm.get_prefab.side_effect = get_prefab_side_effect
@@ -93,8 +95,10 @@ def test_boss_guard_heuristic(mock_scene_controller):
         mock_pm_get.return_value = pm
         
         def get_prefab_side_effect(pid):
-            if pid == "elite_mob": return {"encounter_cost": 10, "is_elite": True}
-            if pid == "normal_mob": return {"encounter_cost": 10, "is_elite": False}
+            if pid == "elite_mob":
+                return {"encounter_cost": 10, "is_elite": True}
+            if pid == "normal_mob":
+                return {"encounter_cost": 10, "is_elite": False}
             return {}
         
         pm.get_prefab.side_effect = get_prefab_side_effect
@@ -135,8 +139,10 @@ def test_boss_reserve_logic(mock_scene_controller):
         mock_pm_get.return_value = pm
         
         def get_prefab_side_effect(pid):
-            if pid == "cost_10": return {"encounter_cost": 10}
-            if pid == "cost_5": return {"encounter_cost": 5}
+            if pid == "cost_10":
+                return {"encounter_cost": 10}
+            if pid == "cost_5":
+                return {"encounter_cost": 5}
             return {}
         
         pm.get_prefab.side_effect = get_prefab_side_effect
