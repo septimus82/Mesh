@@ -9,6 +9,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 EVENTS_CATALOG_PATH = ROOT / "assets" / "data" / "events.json"
 KNOWN_EVENT_CONSTANT_MODULES = {"engine.combat_constants", "engine.constants"}
+MESH_EVENT_BUS_IMPORT_SYMBOL = "MeshEventBus"
 
 # Legacy emit sites intentionally tolerated for compatibility-only paths.
 LEGACY_EVENT_BUS_EMIT_ALLOWLIST: dict[str, str] = {
@@ -18,19 +19,19 @@ LEGACY_EVENT_BUS_EMIT_ALLOWLIST: dict[str, str] = {
     "tooling/campaign_replay.py:233": "legacy SceneExit bridge in campaign tooling",
 }
 
-# Existing MeshEventBus imports tolerated only in legacy gameplay/bridge modules.
-MESH_EVENT_BUS_IMPORT_ALLOWLIST: dict[str, str] = {
-    "engine/behaviours/cutscene_trigger.py:7": "legacy trigger wiring",
-    "engine/behaviours/grant_experience.py:7": "legacy experience wiring",
-    "engine/behaviours/quest_giver.py:5": "legacy quest giver integration",
-    "engine/behaviours/scene_exit.py:5": "legacy scene exit integration",
-    "engine/behaviours/time_of_day_gate.py:5": "legacy day/night integration",
-    "engine/behaviours/toggle_scene_lights.py:7": "legacy lighting integration",
-    "engine/behaviours/vendor.py:6": "legacy vendor integration",
-    "engine/game.py:101": "core engine legacy bus owner",
-    "engine/public_api/runtime.py:69": "stable public API re-export",
-    "engine/tooling/trace_command.py:8": "legacy tracing harness",
-    "tooling/campaign_replay.py:17": "legacy replay harness bridge",
+# Schema: path -> (allowed imported symbols from engine.events, rationale); line numbers are
+# intentionally excluded so grandfathered imports survive unrelated formatting/extraction churn.
+MESH_EVENT_BUS_IMPORT_ALLOWLIST: dict[str, tuple[tuple[str, ...], str]] = {
+    "engine/behaviours/cutscene_trigger.py": (("MeshEventBus",), "legacy trigger wiring"),
+    "engine/behaviours/grant_experience.py": (("MeshEventBus",), "legacy experience wiring"),
+    "engine/behaviours/quest_giver.py": (("MeshEventBus",), "legacy quest giver integration"),
+    "engine/behaviours/scene_exit.py": (("MeshEventBus",), "legacy scene exit integration"),
+    "engine/behaviours/time_of_day_gate.py": (("MeshEventBus",), "legacy day/night integration"),
+    "engine/behaviours/toggle_scene_lights.py": (("MeshEventBus",), "legacy lighting integration"),
+    "engine/behaviours/vendor.py": (("MeshEventBus",), "legacy vendor integration"),
+    "engine/game.py": (("MeshEvent", "MeshEventBus"), "core engine legacy bus owner"),
+    "engine/tooling/trace_command.py": (("MeshEvent", "MeshEventBus"), "legacy tracing harness"),
+    "tooling/campaign_replay.py": (("MeshEventBus",), "legacy replay harness bridge"),
 }
 
 
@@ -152,19 +153,37 @@ def _find_legacy_emit_tokens(path: Path, tree: ast.AST) -> list[tuple[str, str |
     return tokens
 
 
-def _find_mesh_event_bus_import_tokens(path: Path, tree: ast.AST) -> list[str]:
+def _normalize_import_symbols(node: ast.ImportFrom) -> tuple[str, ...]:
+    return tuple(sorted({alias.name for alias in node.names}))
+
+
+def _format_mesh_event_bus_import_token(path: str, symbols: tuple[str, ...]) -> str:
+    return f"{path} [{', '.join(symbols)}]"
+
+
+def _find_mesh_event_bus_import_tokens(path: Path, tree: ast.AST) -> list[tuple[str, tuple[str, ...]]]:
     rel_path = _rel(path)
-    tokens: list[str] = []
+    tokens: list[tuple[str, tuple[str, ...]]] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.ImportFrom):
             continue
         resolved = _resolve_import_module(path, node)
         if resolved != "engine.events":
             continue
-        for alias in node.names:
-            if alias.name == "MeshEventBus":
-                tokens.append(f"{rel_path}:{node.lineno}")
+        imported_symbols = _normalize_import_symbols(node)
+        if MESH_EVENT_BUS_IMPORT_SYMBOL not in imported_symbols:
+            continue
+        tokens.append((rel_path, imported_symbols))
     return tokens
+
+
+def _find_unallowlisted_mesh_event_bus_imports(path: Path, tree: ast.AST) -> list[str]:
+    violations: list[str] = []
+    for rel_path, symbols in _find_mesh_event_bus_import_tokens(path, tree):
+        allowlisted = MESH_EVENT_BUS_IMPORT_ALLOWLIST.get(rel_path)
+        if allowlisted is None or allowlisted[0] != symbols:
+            violations.append(_format_mesh_event_bus_import_token(rel_path, symbols))
+    return violations
 
 
 def test_no_new_legacy_event_bus_emits_in_gameplay_scopes() -> None:
@@ -193,9 +212,7 @@ def test_no_new_mesh_event_bus_imports_in_gameplay_scopes() -> None:
     violations: list[str] = []
     for path in _iter_scoped_files():
         tree = ast.parse(_read_source(path), filename=_rel(path))
-        for token in _find_mesh_event_bus_import_tokens(path, tree):
-            if token not in MESH_EVENT_BUS_IMPORT_ALLOWLIST:
-                violations.append(token)
+        violations.extend(_find_unallowlisted_mesh_event_bus_imports(path, tree))
     assert not sorted(violations), (
         "Gameplay import policy violation. New gameplay modules must route via GameplayEventBus/"
         "engine.event_emit instead of importing MeshEventBus directly. "
@@ -216,3 +233,27 @@ def test_policy_detector_catches_synthetic_legacy_emit_violation() -> None:
     assert tokens == [
         ("synthetic_policy_sample.py:4", "combat_attack", "self.window.event_bus.emit")
     ], "Synthetic legacy emit violation was not detected; policy scanner is broken."
+
+
+def test_mesh_event_bus_import_allowlist_tolerates_line_drift_for_game_window_owner() -> None:
+    path = ROOT / "engine" / "game.py"
+    source = "from .events import MeshEvent, MeshEventBus\n"
+    shifted_source = "\n\n\n" + source
+
+    tree = ast.parse(source, filename="engine/game.py")
+    shifted_tree = ast.parse(shifted_source, filename="engine/game.py")
+
+    expected = [("engine/game.py", ("MeshEvent", "MeshEventBus"))]
+    assert _find_mesh_event_bus_import_tokens(path, tree) == expected
+    assert _find_mesh_event_bus_import_tokens(path, shifted_tree) == expected
+    assert _find_unallowlisted_mesh_event_bus_imports(path, shifted_tree) == []
+
+
+def test_mesh_event_bus_import_allowlist_rejects_symbol_set_drift() -> None:
+    source = "from .events import MeshEvent, MeshEventBus, UnexpectedSymbol\n"
+    path = ROOT / "engine" / "game.py"
+    tree = ast.parse(source, filename="engine/game.py")
+
+    assert _find_unallowlisted_mesh_event_bus_imports(path, tree) == [
+        "engine/game.py [MeshEvent, MeshEventBus, UnexpectedSymbol]"
+    ]
