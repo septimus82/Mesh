@@ -39,7 +39,7 @@ include = ["engine*", "mesh_cli*"]
 [tool.ruff]
 line-length = 160
 select = ["E", "F", "I", "W"]
-ignore = ["E741"]
+ignore = []
 exclude = [
     "build",
     "dist",
@@ -49,6 +49,7 @@ exclude = [
 
 [tool.ruff.per-file-ignores]
 "__init__.py" = ["F401"]
+"engine/arcade_fallback.py" = ["E741"]
 
 [tool.mypy]
 python_version = "3.11"

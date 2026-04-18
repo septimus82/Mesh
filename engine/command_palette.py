@@ -173,11 +173,11 @@ def filter_options(options: Iterable[tuple[str, str]], query: str) -> list[tuple
 
         rank = 999
         pos = 999
-        if l_l.startswith(q) or v_l.startswith(q):
+        if label_lower.startswith(q) or v_l.startswith(q):
             rank = 0
             pos = 0
         else:
-            p = l_l.find(q)
+            p = label_lower.find(q)
             if p >= 0:
                 rank = 1
                 pos = p
@@ -187,7 +187,7 @@ def filter_options(options: Iterable[tuple[str, str]], query: str) -> list[tuple
                     rank = 1
                     pos = p2
         if rank != 999:
-            scored.append(((int(rank), int(pos), l_l, v_l), (v, l or v)))
+            scored.append(((int(rank), int(pos), label_lower, v_l), (v, label_text or v)))
 
     scored.sort(key=lambda pair: pair[0])
     return [opt for _score, opt in scored]
