@@ -530,7 +530,6 @@ class SettingsOverlay(UIElement):
             self.apply()
             self._dirty = True
             return True
-
         if key == optional_arcade.arcade.key.ESCAPE:
             self.close()
             return True
@@ -543,12 +542,8 @@ class SettingsOverlay(UIElement):
             return True
 
         _, row_key = self._rows[self._selection_index]
-        if row_key in ("sfx_volume", "music_volume", "rumble_strength") and key in (
-            optional_arcade.arcade.key.LEFT,
-            optional_arcade.arcade.key.RIGHT,
-            optional_arcade.arcade.key.MINUS,
-            optional_arcade.arcade.key.EQUAL,
-        ):
+        arcade_key = optional_arcade.arcade.key
+        if row_key in ("sfx_volume", "music_volume", "rumble_strength") and key in (arcade_key.LEFT, arcade_key.RIGHT, arcade_key.MINUS, arcade_key.EQUAL):
             delta = 0.05 if key in (optional_arcade.arcade.key.RIGHT, optional_arcade.arcade.key.EQUAL) else -0.05
             if row_key == "sfx_volume":
                 self.settings.sfx_volume = max(0.0, min(1.0, float(self.settings.sfx_volume) + delta))
