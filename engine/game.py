@@ -75,7 +75,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, Sequence
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterator, Sequence
 
 import engine.optional_arcade
 
@@ -173,6 +173,9 @@ from .game_runtime import tick as game_tick
 from .game_runtime import ui_wiring as game_ui_wiring
 from .game_runtime import events as game_events
 from .game_runtime.undo import UndoFrame
+from .game_parts._shared import resolve_persistence_service as _resolve_persistence_service
+from .game_parts._shared import resolve_replay_service as _resolve_replay_service
+from .game_parts.input_router import bind_input_router_methods as _bind_input_router_methods
 from .services import (
     InputService,
     PersistenceService,
@@ -199,46 +202,6 @@ _BEHAVIOUR_META_EXPLICIT = "__explicit_behaviour_keys__"
 _OPTIONAL_BEHAVIOUR_DEFAULTS: tuple[tuple[str, str], ...] = ()
 _MISSING = object()
 logger = get_logger(__name__)
-
-
-def _resolve_input_service(window: Any) -> InputService:
-    service = getattr(window, "input_service", None)
-    if isinstance(service, InputService):
-        return service
-    service = build_input_service()
-    try:
-        setattr(window, "input_service", service)
-    except Exception:
-        _log_swallow("GAME-001", "engine/game.py pass-only blanket swallow")
-        pass
-    return service
-
-
-def _resolve_persistence_service(window: Any) -> PersistenceService:
-    service = getattr(window, "persistence_service", None)
-    if isinstance(service, PersistenceService):
-        return service
-    service = build_persistence_service()
-    try:
-        setattr(window, "persistence_service", service)
-    except Exception:
-        _log_swallow("GAME-002", "engine/game.py pass-only blanket swallow")
-        pass
-    return service
-
-
-def _resolve_replay_service(window: Any) -> ReplayService:
-    service = getattr(window, "replay_service", None)
-    if isinstance(service, ReplayService):
-        return service
-    service = build_replay_service()
-    try:
-        setattr(window, "replay_service", service)
-    except Exception:
-        _log_swallow("GAME-003", "engine/game.py pass-only blanket swallow")
-        pass
-    return service
-
 
 class GameWindow(engine.optional_arcade.arcade.Window):
     """Main game window and central facade for the Mesh Engine.
@@ -304,6 +267,31 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     input_service: InputService
     persistence_service: PersistenceService
     replay_service: ReplayService
+
+    if TYPE_CHECKING:
+        def clear_input_locks(self) -> None: ...
+        def get_pressed_keys(self) -> set[int]: ...
+        def is_input_locked(self) -> bool: ...
+        def lock_player_input(self, *, owner: str | None = None) -> None: ...
+        def on_key_press(self, key: int, modifiers: int) -> None: ...
+        def on_key_release(self, key: int, modifiers: int) -> None: ...
+        def on_mouse_drag(
+            self,
+            x: float,
+            y: float,
+            dx: float,
+            dy: float,
+            buttons: int,
+            modifiers: int,
+        ) -> None: ...
+        def on_mouse_motion(self, x: float, y: float, dx: float, dy: float) -> None: ...
+        def on_mouse_press(self, x: float, y: float, button: int, modifiers: int) -> None: ...
+        def on_mouse_release(self, x: float, y: float, button: int, modifiers: int) -> None: ...
+        def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> None: ...
+        def on_text(self, text: str) -> None: ...
+        def on_text_motion(self, motion: int) -> None: ...
+        def player_input_blocked(self) -> bool: ...
+        def unlock_player_input(self, *, owner: str | None = None) -> None: ...
 
     def __init__(
         self,
@@ -955,21 +943,6 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def close_dialogue(self, *, owner: str | None = None) -> None:
         self.ui_controller.close_dialogue(owner=owner)
 
-    def lock_player_input(self, *, owner: str | None = None) -> None:
-        self.input_controller.lock_player_input(owner=owner)
-
-    def unlock_player_input(self, *, owner: str | None = None) -> None:
-        self.input_controller.unlock_player_input(owner=owner)
-
-    def clear_input_locks(self) -> None:
-        self.input_controller.clear_input_locks()
-
-    def is_input_locked(self) -> bool:
-        return self.input_controller.is_input_locked()
-
-    def player_input_blocked(self) -> bool:
-        return self.input_controller.player_input_blocked()
-
     def is_dialogue_active(self, *, owner: str | None = None) -> bool:
         return self.ui_controller.is_dialogue_active(owner=owner)
 
@@ -1047,45 +1020,6 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         lighting = getattr(self, "lighting", None)
         if lighting is not None:
             lighting.resize(int(width), int(height))
-
-    def on_key_press(self, key: int, modifiers: int) -> None:  # noqa: D401 ARG002
-        _resolve_input_service(self).on_key_press(self, key, modifiers)
-
-    def on_key_release(self, key: int, modifiers: int) -> None:  # noqa: ARG002
-        _resolve_input_service(self).on_key_release(self, key, modifiers)
-
-    def on_mouse_motion(self, x: float, y: float, dx: float, dy: float) -> None:
-        _resolve_input_service(self).on_mouse_motion(self, x, y, dx, dy)
-
-    def on_mouse_drag(
-        self,
-        x: float,
-        y: float,
-        dx: float,
-        dy: float,
-        buttons: int,
-        modifiers: int,
-    ) -> None:
-        _resolve_input_service(self).on_mouse_drag(self, x, y, dx, dy, buttons, modifiers)
-
-    def on_mouse_release(self, x: float, y: float, button: int, modifiers: int) -> None:
-        _resolve_input_service(self).on_mouse_release(self, x, y, button, modifiers)
-
-    def on_mouse_press(self, x: float, y: float, button: int, modifiers: int) -> None:
-        _resolve_input_service(self).on_mouse_press(self, x, y, button, modifiers)
-
-    def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> None:
-        _resolve_input_service(self).on_mouse_scroll(self, x, y, scroll_x, scroll_y)
-
-    def on_text(self, text: str) -> None:
-        # logger.debug("GameWindow on_text: %r", text)
-        _resolve_input_service(self).on_text(self, text)
-
-    def on_text_motion(self, motion: int) -> None:
-        return
-
-    def get_pressed_keys(self) -> set[int]:
-        return self.input_controller.get_keys_down()
 
     def get_sprites_in_layer(self, layer_name: str) -> engine.optional_arcade.arcade.SpriteList | None:
         return self.scene_controller.get_sprites_in_layer(layer_name)
@@ -1441,3 +1375,6 @@ class GameWindow(engine.optional_arcade.arcade.Window):
 
     def _on_any_event(self, event: MeshEvent) -> None:
         game_events.on_any_event(self, event)
+
+
+_bind_input_router_methods(GameWindow)
