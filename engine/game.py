@@ -96,7 +96,6 @@ from .constants import (
 from .cutscene_controller import CutsceneController
 from .day_night import DayNightCycle
 from .editor_controller import EditorModeController
-from .encounter_debug import get_encounter_debug_lines
 from .encounter_report import compute_current_scene_encounter_report
 from .events import MeshEvent, MeshEventBus
 from .event_runtime.emit import emit_event as emit_event_normalized
@@ -138,6 +137,7 @@ from .game_runtime.undo import UndoFrame
 from .game_parts._shared import resolve_persistence_service as _resolve_persistence_service
 from .game_parts._shared import resolve_replay_service as _resolve_replay_service
 from .game_parts.input_router import bind_input_router_methods as _bind_input_router_methods
+from .game_parts.update_loop import bind_update_loop_methods as _bind_update_loop_methods
 from .game_parts.ui_dispatcher import bind_ui_dispatcher_methods as _bind_ui_dispatcher_methods
 from .game_parts.ui_dispatcher import init_ui_dispatcher as _init_ui_dispatcher
 from .services import (
@@ -230,9 +230,15 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     replay_service: ReplayService
 
     if TYPE_CHECKING:
+        def _draw_debug_output(self, lines: list[str]) -> None: ...
+        def _draw_debug_overlay(self) -> None: ...
+        def _draw_shadowcast_debug(self) -> None: ...
+        def _resolve_collisions_stage(self, delta_time: float) -> None: ...
+        def _toggle_paused_state(self) -> bool: ...
         def advance_dialogue(self, *, owner: str | None = None) -> bool: ...
         def clear_ui_elements(self) -> None: ...
         def close_dialogue(self, *, owner: str | None = None) -> None: ...
+        def draw_debug_overlay(self) -> None: ...
         def dialogue_blocks_input(self) -> bool: ...
         def clear_input_locks(self) -> None: ...
         def get_pressed_keys(self) -> set[int]: ...
@@ -262,6 +268,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> None: ...
         def on_text(self, text: str) -> None: ...
         def on_text_motion(self, motion: int) -> None: ...
+        def on_draw(self) -> None: ...
+        def on_update(self, delta_time: float) -> None: ...
         def player_input_blocked(self) -> bool: ...
         def quest_log_blocks_input(self) -> bool: ...
         def register_ui_element(self, element: object) -> None: ...
@@ -648,88 +656,6 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.scene_controller.track_scene_subscription(unsubscribe)
 
 
-
-
-
-    def _draw_debug_overlay(self) -> None:
-        """Draw debug information on the screen."""
-        fps = engine.optional_arcade.arcade.get_fps()
-        cam_x, cam_y = self.camera_controller.get_camera_center()
-        mx, my = self.mouse_x, self.mouse_y
-        wx, wy = self.screen_to_world(mx, my)
-
-        debug_info = [
-            f"FPS: {fps:.1f}",
-            f"Camera: ({cam_x:.1f}, {cam_y:.1f})",
-            f"Mouse Screen: ({mx:.1f}, {my:.1f})",
-            f"Mouse World: ({wx:.1f}, {wy:.1f})",
-            f"Zoom: {self.camera_controller.zoom:.2f}",
-            f"Entities: {len(self.scene_controller.get_all_entities())}",
-        ]
-        lighting = getattr(self, "lighting", None)
-        if lighting is not None:
-            stats = lighting.get_stats()
-            status = "avail" if stats["available"] else "no-api"
-            state = "on" if stats["enabled"] else "off"
-            s_info = str(stats["static_count"])
-            if stats["max_static"] is not None:
-                s_info += f"/{stats['max_static']}"
-            d_info = str(stats["dynamic_count"])
-            if stats["max_dynamic"] is not None:
-                d_info += f"/{stats['max_dynamic']}"
-            debug_info.append(f"Lighting: {state} ({status}) S:{s_info} D:{d_info}")
-
-        debug_info.extend(get_encounter_debug_lines(self.scene_controller))
-
-        self._debug_text.text = "\n".join(debug_info)
-        self._debug_text.draw()
-
-    def on_draw(self) -> None:
-        self.perf_stats.mark_draw_start()
-        game_tick.on_draw(self)
-        self.perf_stats.mark_draw_end()
-
-    def _draw_shadowcast_debug(self) -> None:
-        """Draw shadowcast rays if enabled."""
-        lighting = getattr(self, "lighting", None)
-        if lighting is None:
-            return
-            
-        # We need to draw in world space
-        self.camera.use()
-        
-        snapshot = lighting.get_lighting_snapshot()
-        shadowcast = snapshot.get("shadowcast", {})
-        
-        for light_id, rays in shadowcast.items():
-            # Find light position from snapshot or config
-            # The snapshot has "lights" list, but we need to match ID or index.
-            # The shadowcast keys are "light_{i}".
-            try:
-                idx = int(light_id.split("_")[1])
-                if idx < len(snapshot["lights"]):
-                    light = snapshot["lights"][idx]
-                    lx = light.get("x", 0)
-                    ly = light.get("y", 0)
-                    
-                    for ray in rays:
-                        hit = ray["hit"]
-                        # Draw line from light to hit
-                        engine.optional_arcade.arcade.draw_line(lx, ly, hit[0], hit[1], engine.optional_arcade.arcade.color.YELLOW, 1)
-                        # Draw hit point
-                        engine.optional_arcade.arcade.draw_circle_filled(hit[0], hit[1], 2, engine.optional_arcade.arcade.color.RED)
-            except (ValueError, IndexError):
-                continue
-        
-        # Switch back to GUI camera if needed (though on_draw ends soon)
-        self.camera_controller.gui_camera.use()
-
-    def on_update(self, delta_time: float) -> None:
-        self.perf_stats.enter_frame()
-        self.perf_stats.mark_update_start()
-        game_tick.on_update(self, delta_time)
-        self.perf_stats.mark_update_end()
-
     def run(self) -> None:
         """Start Arcade's main loop."""
         logger.info("[Mesh][GameWindow] Starting Arcade loop...")
@@ -768,15 +694,6 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def find_sprite_by_name(self, name: str | None) -> engine.optional_arcade.arcade.Sprite | None:
         """Return the first sprite whose mesh_name matches the provided value."""
         return self.scene_controller.find_sprite_by_name(name)
-
-    
-    def _resolve_collisions_stage(self, delta_time: float) -> None:  # noqa: ARG002
-        """Reserved hook for deterministic collision processing."""
-        # Intentionally empty: projects can subclass GameWindow and override
-        # this method to run deterministic collision or physics steps between
-        # behaviour updates and late updates without touching the main loop.
-
-
 
     def on_resize(self, width: int, height: int) -> None:
         super().on_resize(width, height)
@@ -1014,12 +931,6 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def on_damage(self, source: engine.optional_arcade.arcade.Sprite, target: engine.optional_arcade.arcade.Sprite, amount: float) -> None:
         self.scene_controller.on_damage(source, target, amount)
 
-    def _toggle_paused_state(self) -> bool:
-        """Flip the paused flag and report the new state."""
-        self.paused = not getattr(self, "paused", False)
-        logger.info("[Mesh][Debug] paused = %s", self.paused)
-        return self.paused
-
     # ------------------------------------------------------------------
     # Console: delegated to ConsoleController
     # ------------------------------------------------------------------
@@ -1060,99 +971,10 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def _on_level_up(self, event: MeshEvent) -> None:
         game_events.on_level_up(self, event)
 
-    def draw_debug_overlay(self) -> None:
-        """Draw a lightweight developer HUD."""
-        if not self.engine_config.debug_mode:
-            return
-
-        page = self.engine_config.debug_page
-        lines = [f"DEBUG MODE (F3) - Page {page+1}/3 (F4)"]
-
-        if page == 0:
-            # Page 1: Scene + Player + Events
-            scene_id = self.scene_controller.current_scene_path if self.scene_controller else "N/A"
-            player_pos = "N/A"
-            if self.scene_controller:
-                p = self.scene_controller._find_player_sprite()
-                if p:
-                    player_pos = f"{int(p.center_x)}, {int(p.center_y)}"
-
-            lines.append(f"Scene: {scene_id}")
-            lines.append(f"Player: {player_pos}")
-            lines.append("Recent Events:")
-
-            # Use centralized history
-            if hasattr(self.event_bus, "get_recent_event_names"):
-                for name in self.event_bus.get_recent_event_names(5):
-                    lines.append(f"  {name}")
-            elif hasattr(self.event_bus, "get_recent_events"):
-                # Fallback for older bus versions if any
-                for e in self.event_bus.get_recent_events(5):
-                    lines.append(f"  {getattr(e, 'type', str(e))}")
-
-        elif page == 1:
-            # Page 2: Active Quests
-            lines.append("Active Quests:")
-            # Use self.quest_manager if available, else try controller
-            qm = getattr(self, "quest_manager", None)
-            if not qm and self.game_state_controller:
-                qm = getattr(self.game_state_controller, "quests", None)
-
-            if qm:
-                for q_id, q in qm._quests.items():
-                    if q.state == "active":
-                        lines.append(f"  {q.title}: {q.state}")
-                        # Show stages/requirements if possible
-                        for req, val in q.requirements.items():
-                            lines.append(f"    req: {req}={val}")
-
-        elif page == 2:
-            # Page 3: Counters/Flags
-            lines.append("Counters:")
-            if self.game_state_controller:
-                # Sort counters, prioritize quest scoped
-                counters = self.game_state_controller.state.counters
-                quest_counters = {k: v for k, v in counters.items() if "quest:" in k}
-                other_counters = {k: v for k, v in counters.items() if "quest:" not in k}
-
-                for k, v in quest_counters.items():
-                    lines.append(f"  [Q] {k}: {v}")
-                for k, v in other_counters.items():
-                    lines.append(f"  {k}: {v}")
-
-                lines.append("Flags:")
-                for k, v in self.game_state_controller.state.flags.items():
-                    lines.append(f"  {k}: {v}")
-
-        self._draw_debug_output(lines)
-
-    def _draw_debug_output(self, lines: list[str]) -> None:
-        """Draw debug text lines and legacy overlays."""
-        # Draw text
-        from engine.text_draw import TextCache, draw_text_cached
-
-        if getattr(self, "text_cache", None) is None:
-            self.text_cache = TextCache()
-
-        start_y = self.height - 20
-        for line in lines:
-            draw_text_cached(line, 10, start_y, color=engine.optional_arcade.arcade.color.YELLOW, font_size=12, cache=self.text_cache)
-            start_y -= 16
-
-        # Legacy encounter debug lines integration (opt-in boolean flag).
-        # The EncounterDebugOverlay UI element is controlled separately.
-        if getattr(self, "encounter_debug_overlay", False) is True:
-            from .encounter_debug import get_encounter_debug_lines as _get_encounter_debug_lines
-
-            enc_lines = _get_encounter_debug_lines(self.scene_controller)
-            start_y = self.height - 20
-            for line in enc_lines:
-                draw_text_cached(line, self.width - 10, start_y, color=engine.optional_arcade.arcade.color.CYAN, font_size=12, anchor_x="right", cache=self.text_cache)
-                start_y -= 16
-
     def _on_any_event(self, event: MeshEvent) -> None:
         game_events.on_any_event(self, event)
 
 
 _bind_input_router_methods(GameWindow)
+_bind_update_loop_methods(GameWindow)
 _bind_ui_dispatcher_methods(GameWindow)
