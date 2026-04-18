@@ -74,7 +74,8 @@ def build_keybind_rows(
     for action in actions:
         scope = getattr(action, "shortcut_scope", "global")
         aid = getattr(action, "id", "")
-        if not aid: continue
+        if not aid:
+            continue
         
         default_sc = getattr(action, "shortcut", "") or ""
         override = staged_overrides.get((scope, aid))
@@ -87,8 +88,10 @@ def build_keybind_rows(
             has_override = True
             
         if effective:
-            if scope not in usage_map: usage_map[scope] = {}
-            if effective not in usage_map[scope]: usage_map[scope][effective] = []
+            if scope not in usage_map:
+                usage_map[scope] = {}
+            if effective not in usage_map[scope]:
+                usage_map[scope][effective] = []
             usage_map[scope][effective].append(aid)
             
         raw_items.append({

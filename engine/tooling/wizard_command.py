@@ -261,10 +261,14 @@ def _plan_new_region(ctx: WizardContext) -> None:
         # Determine scaffold template
         kind = scene_kinds.get(key, "empty")
         scaffold_template = "empty"
-        if kind == "hub": scaffold_template = "overworld"
-        elif kind == "interior": scaffold_template = "interior"
-        elif kind == "dungeon": scaffold_template = "dungeon"
-        elif kind == "overworld": scaffold_template = "overworld"
+        if kind == "hub":
+            scaffold_template = "overworld"
+        elif kind == "interior":
+            scaffold_template = "interior"
+        elif kind == "dungeon":
+            scaffold_template = "dungeon"
+        elif kind == "overworld":
+            scaffold_template = "overworld"
 
         # Special handling for ruins/deep-dungeon specific scaffold templates if we wanted,
         # but reusing generic ones with metadata is cleaner for now,

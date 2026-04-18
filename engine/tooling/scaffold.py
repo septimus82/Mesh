@@ -741,8 +741,10 @@ def extract_prefab(prefab_id: str, scene_path: str, entity_name: str, remove_sou
         # Prepare prefab data
         # We should strip x, y from the prefab definition usually, as they are instance specific
         prefab_entity = target_entity.copy()
-        if "x" in prefab_entity: del prefab_entity["x"]
-        if "y" in prefab_entity: del prefab_entity["y"]
+        if "x" in prefab_entity:
+            del prefab_entity["x"]
+        if "y" in prefab_entity:
+            del prefab_entity["y"]
 
         new_prefab = {
             "id": prefab_id,

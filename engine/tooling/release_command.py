@@ -148,7 +148,8 @@ def release_check_command(args: argparse.Namespace) -> None:
             for h in recent_plans:
                 # Load full history record
                 record = plan_history.get_history(h["id"])
-                if not record: continue
+                if not record:
+                    continue
 
                 result = record.get("result", {})
                 tests = result.get("tests")

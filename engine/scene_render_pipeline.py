@@ -573,8 +573,10 @@ def _submit_to_queue(sprite: Any, render_queue: Any, camera_rect: Optional[Rect]
 
 def _restore_sprite_state(sprite, x, y, color, alpha):
     try:
-        if x is not None: sprite.center_x = x
-        if y is not None: sprite.center_y = y
+        if x is not None:
+            sprite.center_x = x
+        if y is not None:
+            sprite.center_y = y
         if color is None:
             sprite.color = (255, 255, 255, 255)
         else:

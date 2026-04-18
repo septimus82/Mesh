@@ -448,13 +448,15 @@ class PlanExecutor:
         scene_path = args["scene_path"]
 
         # Add scene
-        if "scenes" not in world: world["scenes"] = {}
+        if "scenes" not in world:
+            world["scenes"] = {}
         world["scenes"][scene_id] = {"path": scene_path}
 
         # Link
         link_from = args.get("link_from")
         if link_from and link_from in world["scenes"]:
-            if "links" not in world: world["links"] = []
+            if "links" not in world:
+                world["links"] = []
             # Check if link exists
             exists = any((l["from"] == link_from and l["to"] == scene_id) for l in world["links"])
             if not exists:

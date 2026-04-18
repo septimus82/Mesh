@@ -281,7 +281,8 @@ def _enabled_safe_move_refactor(controller: Any, window: Any) -> bool:
     """Enabled if we can move file (legacy) or folder/multi (v2)."""
     # Base check for project explorer focus/selection
     editor = _get_editor(window)
-    if not editor: return False
+    if not editor:
+        return False
     
     from engine.editor.project_explorer_power_tools_model import should_handle_project_explorer_shortcut  # noqa: PLC0415
     if not should_handle_project_explorer_shortcut(editor):
@@ -294,7 +295,8 @@ def _enabled_safe_move_refactor(controller: Any, window: Any) -> bool:
 def _safe_move_refactor_wrapper(window: Any) -> None:
     """Dispatch to Legacy or V2 move depending on selection."""
     editor = _get_editor(window)
-    if not editor: return
+    if not editor:
+        return
     
     ops = editor.file_ops
     use_v2 = ops.can_safe_move_selected_assets_folder()

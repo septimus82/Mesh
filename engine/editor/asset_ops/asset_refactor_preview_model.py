@@ -60,8 +60,10 @@ def flatten_examples(modifications: Dict[str, List[Replacement]], limit: int = 5
             # Smart truncation for long paths
             old_s = r.old_value
             new_s = r.new_value
-            if len(old_s) > 30: old_s = "..." + old_s[-27:]
-            if len(new_s) > 30: new_s = "..." + new_s[-27:]
+            if len(old_s) > 30:
+                old_s = "..." + old_s[-27:]
+            if len(new_s) > 30:
+                new_s = "..." + new_s[-27:]
             
             examples.append(f"{old_s} -> {new_s}")
             count += 1

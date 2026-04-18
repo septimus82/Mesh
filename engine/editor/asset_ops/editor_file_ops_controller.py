@@ -1000,26 +1000,32 @@ class EditorFileOpsController:
         """Request V2 safe rename."""
         # 1. Selection
         row = self._get_selected_project_row()
-        if not row: return False
+        if not row:
+            return False
         entry = getattr(row, "entry", None)
         path_str = getattr(entry, "path", None)
-        if not path_str: return False
+        if not path_str:
+            return False
         
         repo_root = getattr(self.controller.window, "repo_root", None)
-        if not repo_root: return False
+        if not repo_root:
+            return False
         
         old_full = Path(path_str)
         try:
             old_rel = old_full.relative_to(repo_root).as_posix()
-        except ValueError: return False
+        except ValueError:
+            return False
         
         # 2. Paths
         parent_dir = old_full.parent
         new_full = parent_dir / new_name
         try:
             new_rel = new_full.relative_to(repo_root).as_posix()
-        except ValueError: return False
-        if old_rel == new_rel: return False
+        except ValueError:
+            return False
+        if old_rel == new_rel:
+            return False
         
         # 3. Plan Data
         mapping = compute_rename_mapping(old_rel, new_rel)
@@ -1174,9 +1180,11 @@ class EditorFileOpsController:
 
     def request_safe_delete_refactor(self, paths: List[str]) -> bool:
         """Request V2 safe batch delete."""
-        if not paths: return False
+        if not paths:
+            return False
         repo_root = getattr(self.controller.window, "repo_root", None)
-        if not repo_root: return False
+        if not repo_root:
+            return False
         
         # Build mapping for all paths -> delete (None)
         # Note: compute_move_mapping handles singular paths.
@@ -1202,7 +1210,8 @@ class EditorFileOpsController:
         modifications, all_replacements = self._scan_and_compute_replacements(mapping)
         
         fs_summary = f"Delete {len(sorted_paths)} items:\n" + "\n".join([f"  - {p}" for p in sorted_paths[:5]])
-        if len(sorted_paths) > 5: fs_summary += f"\n  ...and {len(sorted_paths)-5} more."
+        if len(sorted_paths) > 5:
+            fs_summary += f"\n  ...and {len(sorted_paths)-5} more."
         fs_summary += "\n(Staged to .mesh_trash)"
         
         preview_lines = format_refactor_preview(
@@ -1249,7 +1258,8 @@ class EditorFileOpsController:
         
         for c_rel in candidates:
             c_full = repo_root / c_rel
-            if not c_full.exists(): continue
+            if not c_full.exists():
+                continue
             try:
                 with open(c_full, "r", encoding="utf-8") as f:
                     payload = json.load(f)
@@ -1267,7 +1277,8 @@ class EditorFileOpsController:
     def _compute_active_scene_update(self, mapping: Dict[str, str]) -> Optional[Dict[str, Any]]:
         """Compute updated payload for the currently active scene."""
         current_scene = self._get_current_scene_payload()
-        if not current_scene: return None
+        if not current_scene:
+            return None
         refs = scan_scene_references(current_scene)
         reps = compute_replacements(refs, mapping)
         if reps:

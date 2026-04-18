@@ -127,14 +127,16 @@ class EditorKeybindsController:
 
     def start_recording_selected(self) -> None:
         rows = self.visible_rows
-        if not rows: return
+        if not rows:
+            return
         
         row = rows[self.state.selected_index]
         self.state = begin_recording(self.state, row.scope, row.action_id)
 
     def unbind_selected(self) -> None:
         rows = self.visible_rows
-        if not rows: return
+        if not rows:
+            return
         row = rows[self.state.selected_index]
         
         # Unbind means set override to empty string
@@ -148,7 +150,8 @@ class EditorKeybindsController:
 
     def reset_selected(self) -> None:
         rows = self.visible_rows
-        if not rows: return
+        if not rows:
+            return
         row = rows[self.state.selected_index]
         
         # Reset means remove override (None)
@@ -181,9 +184,12 @@ class EditorKeybindsController:
             
             mod_str = ""
             parts = []
-            if modifiers & optional_arcade.arcade.key.MOD_CTRL: parts.append("Ctrl")
-            if modifiers & optional_arcade.arcade.key.MOD_ALT: parts.append("Alt")
-            if modifiers & optional_arcade.arcade.key.MOD_SHIFT: parts.append("Shift")
+            if modifiers & optional_arcade.arcade.key.MOD_CTRL:
+                parts.append("Ctrl")
+            if modifiers & optional_arcade.arcade.key.MOD_ALT:
+                parts.append("Alt")
+            if modifiers & optional_arcade.arcade.key.MOD_SHIFT:
+                parts.append("Shift")
             mod_str = "+".join(parts)
             
             # Construct preview string
@@ -332,14 +338,16 @@ class EditorKeybindsController:
 
         # 2. Write to Disk
         repo_root = get_repo_root()
-        if not repo_root: return
+        if not repo_root:
+            return
         
         path = repo_root / KEYMAP_FILENAME
         
         data = []
         # Sort for determinism
         for (scope, aid), sc in sorted(self.state.staged_overrides.items()):
-            if sc is None: continue 
+            if sc is None:
+                continue
             data.append({
                 "scope": scope,
                 "action_id": aid,
