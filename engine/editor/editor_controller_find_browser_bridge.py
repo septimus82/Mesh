@@ -6,49 +6,52 @@ Every function takes ``self`` (an ``EditorModeController``) as first arg.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
+
+if TYPE_CHECKING:
+    from engine.editor_controller import EditorModeController
 
 
 # -- Search shims -----------------------------------------------------------
 
-def set_find_query(self, text: str) -> None:
+def set_find_query(self: "EditorModeController", text: str) -> None:
     self.search.set_find_query(text)
 
 
-def append_find_query_text(self, text: str) -> bool:
+def append_find_query_text(self: "EditorModeController", text: str) -> bool:
     return self.search.append_find_query_text(text)
 
 
-def backspace_find_query(self) -> bool:
+def backspace_find_query(self: "EditorModeController") -> bool:
     return self.search.backspace_find_query()
 
 
-def move_find_selection(self, delta: int) -> None:
+def move_find_selection(self: "EditorModeController", delta: int) -> None:
     self.search.move_find_selection(delta)
 
 
-def activate_find_selection(self) -> bool:
+def activate_find_selection(self: "EditorModeController") -> bool:
     return self.search.activate_find_selection()
 
 
-def _refresh_find_everything_results(self) -> None:
+def _refresh_find_everything_results(self: "EditorModeController") -> None:
     """DEPRECATED: delegated to EditorUIFlowController."""
     self.search.refresh_find_everything_results()
 
 
-def _build_find_everything_items(self) -> list[Any]:
+def _build_find_everything_items(self: "EditorModeController") -> list[Any]:
     """DEPRECATED: delegated to EditorUIFlowController."""
     return self.search.build_find_everything_items()
 
 
-def _get_find_everything_problems(self) -> list[Any]:
+def _get_find_everything_problems(self: "EditorModeController") -> list[Any]:
     """DEPRECATED: delegated to EditorUIFlowController."""
     return self.search.get_find_everything_problems()
 
 
 # -- Find-Actions dispatch shims -------------------------------------------
 
-def _activate_find_command(self, command_id: str) -> bool:
+def _activate_find_command(self: "EditorModeController", command_id: str) -> bool:
     """Activate a command from find-everything or command palette.
 
     DELEGATED to EditorFindActionsController.
@@ -56,7 +59,7 @@ def _activate_find_command(self, command_id: str) -> bool:
     return self.find_actions.activate_find_command(command_id)
 
 
-def _activate_find_scene(self, scene_id: str) -> bool:
+def _activate_find_scene(self: "EditorModeController", scene_id: str) -> bool:
     """Activate a scene from find-everything.
 
     DELEGATED to EditorFindActionsController.
@@ -64,7 +67,7 @@ def _activate_find_scene(self, scene_id: str) -> bool:
     return self.find_actions.activate_find_scene(scene_id)
 
 
-def _activate_find_entity(self, entity_id: str) -> bool:
+def _activate_find_entity(self: "EditorModeController", entity_id: str) -> bool:
     """Activate an entity from find-everything.
 
     DELEGATED to EditorFindActionsController.
@@ -72,7 +75,7 @@ def _activate_find_entity(self, entity_id: str) -> bool:
     return self.find_actions.activate_find_entity(entity_id)
 
 
-def _activate_find_asset(self, asset_path: str) -> bool:
+def _activate_find_asset(self: "EditorModeController", asset_path: str) -> bool:
     """Activate an asset from find-everything.
 
     DELEGATED to EditorFindActionsController.
@@ -80,7 +83,7 @@ def _activate_find_asset(self, asset_path: str) -> bool:
     return self.find_actions.activate_find_asset(asset_path)
 
 
-def _spawn_find_asset(self, asset_path: str) -> bool:
+def _spawn_find_asset(self: "EditorModeController", asset_path: str) -> bool:
     """Spawn an asset from find-everything.
 
     DELEGATED to EditorFindActionsController.
@@ -88,7 +91,7 @@ def _spawn_find_asset(self, asset_path: str) -> bool:
     return self.find_actions.spawn_find_asset(asset_path)
 
 
-def _copy_find_asset_path(self, asset_path: str) -> bool:
+def _copy_find_asset_path(self: "EditorModeController", asset_path: str) -> bool:
     """Copy asset path to clipboard from find-everything.
 
     DELEGATED to EditorFindActionsController.
@@ -96,7 +99,7 @@ def _copy_find_asset_path(self, asset_path: str) -> bool:
     return self.find_actions.copy_find_asset_path(asset_path)
 
 
-def _activate_find_problem(self, issue_id: str) -> bool:
+def _activate_find_problem(self: "EditorModeController", issue_id: str) -> bool:
     """Activate a problem from find-everything.
 
     DELEGATED to EditorFindActionsController.
@@ -106,31 +109,31 @@ def _activate_find_problem(self, issue_id: str) -> bool:
 
 # -- Asset browser shims ---------------------------------------------------
 
-def refresh_asset_browser(self) -> None:
+def refresh_asset_browser(self: "EditorModeController") -> None:
     self.asset_browser.refresh_asset_browser()
 
 
-def set_asset_browser_filter(self, text: str) -> None:
+def set_asset_browser_filter(self: "EditorModeController", text: str) -> None:
     self.asset_browser.set_asset_browser_filter(text)
 
 
-def cycle_asset_browser_kind(self) -> None:
+def cycle_asset_browser_kind(self: "EditorModeController") -> None:
     self.asset_browser.cycle_asset_browser_kind()
 
 
-def _filter_asset_browser(self) -> None:
+def _filter_asset_browser(self: "EditorModeController") -> None:
     self.asset_browser._filter_asset_browser()
 
 
-def asset_browser_move_selection(self, delta: int) -> None:
+def asset_browser_move_selection(self: "EditorModeController", delta: int) -> None:
     self.asset_browser.asset_browser_move_selection(delta)
 
 
-def _activate_selected_asset(self) -> None:
+def _activate_selected_asset(self: "EditorModeController") -> None:
     self.asset_browser._activate_selected_asset()
 
 
-def place_asset_at(self, x: float, y: float) -> None:
+def place_asset_at(self: "EditorModeController", x: float, y: float) -> None:
     self.asset_browser.place_asset_at(x, y)
 
 

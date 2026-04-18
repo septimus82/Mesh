@@ -12,56 +12,57 @@ import engine.optional_arcade as optional_arcade
 
 if TYPE_CHECKING:
     from arcade import Sprite
+    from engine.editor_controller import EditorModeController
 
 
 # -- Dialogue / Quest shims ------------------------------------------------
 
-def _entity_has_dialogue(self, sprite: "Optional[Sprite]") -> bool:
+def _entity_has_dialogue(self: "EditorModeController", sprite: "Optional[Sprite]") -> bool:
     return self.dialogue.entity_has_dialogue(sprite)
 
 
-def _refresh_dialogue_cache(self) -> None:
+def _refresh_dialogue_cache(self: "EditorModeController") -> None:
     self.dialogue.refresh_dialogue_cache()
 
 
-def _get_entity_dialogue_config(self, sprite: "Sprite") -> Dict[str, Any]:
+def _get_entity_dialogue_config(self: "EditorModeController", sprite: "Sprite") -> Dict[str, Any]:
     return self.dialogue.get_entity_dialogue_config(sprite)
 
 
-def _set_entity_dialogue_config(self, sprite: "Sprite", dialogue_root: Dict[str, Any]) -> None:
+def _set_entity_dialogue_config(self: "EditorModeController", sprite: "Sprite", dialogue_root: Dict[str, Any]) -> None:
     self.dialogue.set_entity_dialogue_config(sprite, dialogue_root)
 
 
-def _dialogue_nodes(self) -> List[Dict[str, Any]]:
+def _dialogue_nodes(self: "EditorModeController") -> List[Dict[str, Any]]:
     return self.dialogue.dialogue_nodes()
 
 
-def _get_selected_node(self) -> Optional[Dict[str, Any]]:
+def _get_selected_node(self: "EditorModeController") -> Optional[Dict[str, Any]]:
     return self.dialogue.get_selected_node()
 
 
-def _get_selected_choice(self, node: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def _get_selected_choice(self: "EditorModeController", node: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     return self.dialogue.get_selected_choice(node)
 
 
-def _next_dialogue_field(self, current: str, *, has_choice: bool) -> str:
+def _next_dialogue_field(self: "EditorModeController", current: str, *, has_choice: bool) -> str:
     return self.dialogue.next_dialogue_field(current, has_choice=has_choice)
 
 
-def _prev_dialogue_field(self, current: str, *, has_choice: bool) -> str:
+def _prev_dialogue_field(self: "EditorModeController", current: str, *, has_choice: bool) -> str:
     return self.dialogue.prev_dialogue_field(current, has_choice=has_choice)
 
 
-def _begin_dialogue_edit(self) -> None:
+def _begin_dialogue_edit(self: "EditorModeController") -> None:
     self.dialogue.begin_dialogue_edit()
 
 
-def _commit_dialogue_edit(self) -> None:
+def _commit_dialogue_edit(self: "EditorModeController") -> None:
     self.dialogue.commit_dialogue_edit()
 
 
 def _apply_dialogue_edit(
-    self,
+    self: "EditorModeController",
     node: Dict[str, Any],
     choice: Optional[Dict[str, Any]],
     focus: str,
@@ -70,58 +71,58 @@ def _apply_dialogue_edit(
     return self.dialogue.apply_dialogue_edit(node, choice, focus, new_text)
 
 
-def _collect_dialogue_warnings(self, dialogue_root: Dict[str, Any]) -> List[str]:
+def _collect_dialogue_warnings(self: "EditorModeController", dialogue_root: Dict[str, Any]) -> List[str]:
     return self.dialogue.collect_dialogue_warnings(dialogue_root)
 
 
-def _quest_definitions(self) -> Dict[str, Dict[str, Any]]:
+def _quest_definitions(self: "EditorModeController") -> Dict[str, Dict[str, Any]]:
     return self.dialogue._quest_definitions()
 
 
-def _related_quest_ids(self, sprite: "Optional[Sprite]") -> set[str]:
+def _related_quest_ids(self: "EditorModeController", sprite: "Optional[Sprite]") -> set[str]:
     return self.dialogue._related_quest_ids(sprite)
 
 
 # -- Animation shims -------------------------------------------------------
 
-def _entity_has_animator(self, sprite: "Optional[Sprite]") -> bool:
+def _entity_has_animator(self: "EditorModeController", sprite: "Optional[Sprite]") -> bool:
     return self.animation.entity_has_animator(sprite)
 
 
-def _refresh_animation_cache(self) -> None:
+def _refresh_animation_cache(self: "EditorModeController") -> None:
     self.animation.refresh_animation_cache()
 
 
-def _get_animator_config(self, sprite: "Optional[Sprite]") -> Dict[str, Any]:
+def _get_animator_config(self: "EditorModeController", sprite: "Optional[Sprite]") -> Dict[str, Any]:
     return self.animation.get_animator_config(sprite)
 
 
-def _set_animator_config(self, sprite: "Sprite", animator_cfg: Dict[str, Any]) -> None:
+def _set_animator_config(self: "EditorModeController", sprite: "Sprite", animator_cfg: Dict[str, Any]) -> None:
     self.animation.set_animator_config(sprite, animator_cfg)
 
 
-def _apply_animator_runtime(self, sprite: "Sprite", animator_cfg: Dict[str, Any]) -> None:
+def _apply_animator_runtime(self: "EditorModeController", sprite: "Sprite", animator_cfg: Dict[str, Any]) -> None:
     self.animation.apply_animator_runtime(sprite, animator_cfg)
 
 
-def _next_animation_field(self, current: str) -> str:
+def _next_animation_field(self: "EditorModeController", current: str) -> str:
     return self.animation.next_animation_field(current)
 
 
-def _prev_animation_field(self, current: str) -> str:
+def _prev_animation_field(self: "EditorModeController", current: str) -> str:
     return self.animation.prev_animation_field(current)
 
 
-def _cycle_mode(self, current: str, forward: bool) -> str:
+def _cycle_mode(self: "EditorModeController", current: str, forward: bool) -> str:
     return self.animation.cycle_mode(current, forward)
 
 
-def _commit_animation_edit(self) -> None:
+def _commit_animation_edit(self: "EditorModeController") -> None:
     self.animation.commit_animation_edit()
 
 
 def _apply_animation_change(
-    self,
+    self: "EditorModeController",
     names: List[str],
     animations: Dict[str, Any],
     clip_name: str,
@@ -133,27 +134,27 @@ def _apply_animation_change(
 
 # -- Tile shims ------------------------------------------------------------
 
-def _tilemap_available(self) -> bool:
+def _tilemap_available(self: "EditorModeController") -> bool:
     return self.tile.tilemap_available()
 
 
-def _set_tile_panel_active(self, value: bool) -> None:
+def _set_tile_panel_active(self: "EditorModeController", value: bool) -> None:
     self.tile.set_tile_panel_active(value)
 
 
-def _refresh_tile_palette(self) -> None:
+def _refresh_tile_palette(self: "EditorModeController") -> None:
     self.tile.refresh_tile_palette()
 
 
-def _current_tile_gid(self) -> int:
+def _current_tile_gid(self: "EditorModeController") -> int:
     return self.tile.current_tile_gid()
 
 
-def _paint_tile_at(self, world_x: float, world_y: float, gid: int) -> None:
+def _paint_tile_at(self: "EditorModeController", world_x: float, world_y: float, gid: int) -> None:
     self.tile.paint_tile_at(world_x, world_y, gid)
 
 
-def _current_tile_layer(self) -> str:
+def _current_tile_layer(self: "EditorModeController") -> str:
     return self.tile.current_tile_layer()
 
 

@@ -26,16 +26,23 @@ from .editor_runtime import ops as editor_ops
 from .import_tools import repair_package_submodule_attr
 
 if TYPE_CHECKING:
+    from engine.editor.editor_animation_controller import EditorAnimationController
+    from engine.editor.editor_asset_browser_controller import EditorAssetBrowserController
     from engine.editor.editor_command_dispatch_controller import (
         EditorCommandDispatchController,
     )
     from engine.editor.editor_cursor_controller import EditorCursorController
+    from engine.editor.editor_dialogue_controller import EditorDialogueController
     from engine.editor.editor_dock_controller import EditorDockController
     from engine.editor.editor_draw_controller import EditorDrawController
+    from engine.editor.editor_entity_panels_controller import EditorEntityPanelsController
+    from engine.editor.editor_find_actions_controller import EditorFindActionsController
     from engine.workspace_settings import WorkspaceSettings
     from .editor.editor_gizmo_feedback import GizmoFeedbackState
     from .editor.editor_hd2d_controller import EditorHd2dController
+    from .editor.editor_history_controller import EditorHistoryController
     from .editor.editor_hierarchy_controller import EditorHierarchyController
+    from .editor.editor_inspector_controller import EditorInspectorController
     from .editor.editor_keymap_controller import EditorKeymapController
     from .editor.editor_lights_controller import EditorLightsController
     from .editor.editor_marquee_controller import EditorMarqueeController
@@ -43,7 +50,13 @@ if TYPE_CHECKING:
     from .editor.editor_palette_controller import EditorPaletteController
     from .editor.editor_play_controller import EditorPlayController
     from .editor.editor_prefab_controller import EditorPrefabController
+    from .editor.editor_problems_actions_controller import EditorProblemsActionsController
+    from .editor.editor_problems_controller import ProblemsController
+    from .editor.editor_project_explorer_actions_controller import EditorProjectExplorerActionsController
+    from .editor.editor_project_explorer_controller import ProjectExplorerController
+    from .editor.editor_search_controller import EditorSearchController
     from .editor.editor_shape_controller import EditorShapeController
+    from .editor.editor_tile_controller import EditorTileController
     from .editor.editor_undo_controller import EditorUndoController
     from .editor.editor_entity_ops_controller import EditorEntityOpsController
     from .editor.editor_duplicate_controller import EditorDuplicateController
@@ -217,6 +230,19 @@ class EditorModeController:
     _selection_ctl: EditorSelectionController
     _scene_ops: EditorSceneOpsController
     _workspace_ctl: EditorWorkspaceController
+    search: EditorSearchController
+    find_actions: EditorFindActionsController
+    asset_browser: EditorAssetBrowserController
+    project_explorer: ProjectExplorerController
+    project_explorer_actions: EditorProjectExplorerActionsController
+    history: EditorHistoryController
+    problems: ProblemsController
+    problems_actions: EditorProblemsActionsController
+    dialogue: EditorDialogueController
+    animation: EditorAnimationController
+    tile: EditorTileController
+    inspector: EditorInspectorController
+    entity_panels_controller: EditorEntityPanelsController
     undo: EditorUndoController
     lights: EditorLightsController
     play: EditorPlayController

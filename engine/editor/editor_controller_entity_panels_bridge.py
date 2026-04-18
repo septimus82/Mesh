@@ -12,101 +12,102 @@ import engine.optional_arcade as optional_arcade
 
 if TYPE_CHECKING:
     from arcade import Sprite
+    from engine.editor_controller import EditorModeController
     from engine.editor_entity_ops import EntitySummary
     from engine.editor_prefab_variant_ops import DiffRow
 
 
 # -- Lights tool shims ------------------------------------------------------
 
-def _hit_test_light(self, world_x: float, world_y: float, pick_radius: float = 16.0) -> "Optional[int]":
+def _hit_test_light(self: "EditorModeController", world_x: float, world_y: float, pick_radius: float = 16.0) -> "Optional[int]":
     return self.lights.hit_test_light(world_x, world_y, pick_radius=pick_radius)
 
 
-def _add_light(self, x: float, y: float) -> None:
+def _add_light(self: "EditorModeController", x: float, y: float) -> None:
     self.lights.add_light(x, y)
 
 
-def _delete_selected_light(self) -> None:
+def _delete_selected_light(self: "EditorModeController") -> None:
     self.lights.delete_selected_light()
 
 
-def _draw_lights_overlay(self) -> None:
+def _draw_lights_overlay(self: "EditorModeController") -> None:
     self.lights.draw_lights_overlay()
 
 
 # -- Inspector shims -------------------------------------------------------
 
-def _update_param(self, behaviour_name: str, param_name: str, value: Any) -> None:
+def _update_param(self: "EditorModeController", behaviour_name: str, param_name: str, value: Any) -> None:
     self.inspector.update_param(behaviour_name, param_name, value)
 
 
-def _update_param_internal(self, behaviour_name: str, param_name: str, value: Any, entity_name: str) -> None:
+def _update_param_internal(self: "EditorModeController", behaviour_name: str, param_name: str, value: Any, entity_name: str) -> None:
     self.inspector.update_param_internal(behaviour_name, param_name, value, entity_name)
 
 
-def _remove_param_internal(self, behaviour_name: str, param_name: str, entity_name: str) -> None:
+def _remove_param_internal(self: "EditorModeController", behaviour_name: str, param_name: str, entity_name: str) -> None:
     self.inspector.remove_param_internal(behaviour_name, param_name, entity_name)
 
 
-def _apply_behaviour_config_map(self, entity: "Sprite", config_map: dict[str, Any]) -> None:
+def _apply_behaviour_config_map(self: "EditorModeController", entity: "Sprite", config_map: dict[str, Any]) -> None:
     self.inspector.apply_behaviour_config_map(entity, config_map)
 
 
-def _get_prefab_base_entity(self, entity_data: dict[str, Any]) -> dict[str, Any] | None:
+def _get_prefab_base_entity(self: "EditorModeController", entity_data: dict[str, Any]) -> dict[str, Any] | None:
     return self.inspector.get_prefab_base_entity(entity_data)
 
 
-def _refresh_inspector_items(self) -> None:
+def _refresh_inspector_items(self: "EditorModeController") -> None:
     self.inspector.refresh_inspector_items()
 
 
-def _get_inspector_items(self) -> List[Dict[str, Any]]:
+def _get_inspector_items(self: "EditorModeController") -> List[Dict[str, Any]]:
     return self.inspector.get_inspector_items()
 
 
-def _build_inspector_items(self) -> List[Dict[str, Any]]:
+def _build_inspector_items(self: "EditorModeController") -> List[Dict[str, Any]]:
     return self.inspector.build_inspector_items()
 
 
-def _get_selected_entity_json_for_inspector(self) -> dict[str, Any] | None:
+def _get_selected_entity_json_for_inspector(self: "EditorModeController") -> dict[str, Any] | None:
     return self.inspector.get_selected_entity_json_for_inspector()
 
 
-def _inspector_begin_text_edit(self, initial: str) -> None:
+def _inspector_begin_text_edit(self: "EditorModeController", initial: str) -> None:
     self.inspector.inspector_begin_text_edit(initial)
 
 
-def _inspector_cancel_text_edit(self) -> None:
+def _inspector_cancel_text_edit(self: "EditorModeController") -> None:
     self.inspector.inspector_cancel_text_edit()
 
 
-def _inspector_commit_text_edit(self) -> bool:
+def _inspector_commit_text_edit(self: "EditorModeController") -> bool:
     return self.inspector.inspector_commit_text_edit()
 
 
-def _apply_inspector_entity_update(self, new_entity_json: dict[str, Any], field_key: str) -> None:
+def _apply_inspector_entity_update(self: "EditorModeController", new_entity_json: dict[str, Any], field_key: str) -> None:
     self.inspector.apply_inspector_entity_update(new_entity_json, field_key)
 
 
-def _get_entity_id_for_inspector(self) -> str | None:
+def _get_entity_id_for_inspector(self: "EditorModeController") -> str | None:
     return self.inspector.get_entity_id_for_inspector()
 
 
-def _apply_inspector_to_sprite(self, field_key: str, value: Any) -> None:
+def _apply_inspector_to_sprite(self: "EditorModeController", field_key: str, value: Any) -> None:
     self.inspector.apply_inspector_to_sprite(field_key, value)
 
 
 def _component_inspector_commit_text_edit(
-    self, entity_json: Dict[str, Any], selection: Optional[Dict[str, Any]]
+    self: "EditorModeController", entity_json: Dict[str, Any], selection: Optional[Dict[str, Any]]
 ) -> bool:
     return self.inspector.component_inspector_commit_text_edit(entity_json, selection)
 
 
-def _apply_component_entity_update(self, new_entity_json: Dict[str, Any]) -> None:
+def _apply_component_entity_update(self: "EditorModeController", new_entity_json: Dict[str, Any]) -> None:
     self.inspector.apply_component_entity_update(new_entity_json)
 
 
-def _sync_sprite_from_component_json(self, entity_json: Dict[str, Any]) -> None:
+def _sync_sprite_from_component_json(self: "EditorModeController", entity_json: Dict[str, Any]) -> None:
     """Sync runtime sprite state from component JSON."""
     if not self.selected_entity:
         return
@@ -136,41 +137,41 @@ def _sync_sprite_from_component_json(self, entity_json: Dict[str, Any]) -> None:
 # -- Prefab shims -----------------------------------------------------------
 
 def _prefab_override_info(
-    self, entity_data: dict[str, Any]
+    self: "EditorModeController", entity_data: dict[str, Any]
 ) -> tuple[dict[str, Any] | None, set[str]]:
     return self.prefab.prefab_override_info(entity_data)
 
 
-def _reset_selected_prefab_override(self, selected_item: dict[str, Any]) -> bool:
+def _reset_selected_prefab_override(self: "EditorModeController", selected_item: dict[str, Any]) -> bool:
     return self.prefab.reset_selected_prefab_override(selected_item)
 
 
-def _reset_all_prefab_overrides(self) -> bool:
+def _reset_all_prefab_overrides(self: "EditorModeController") -> bool:
     return self.prefab.reset_all_prefab_overrides()
 
 
-def _prefab_variant_label(self, entity_data: dict[str, Any]) -> str | None:
+def _prefab_variant_label(self: "EditorModeController", entity_data: dict[str, Any]) -> str | None:
     return self.prefab.prefab_variant_label(entity_data)
 
 
-def _prefab_variant_override_rows(self, entity_data: dict[str, Any]) -> "list[DiffRow]":
+def _prefab_variant_override_rows(self: "EditorModeController", entity_data: dict[str, Any]) -> "list[DiffRow]":
     return self.prefab.prefab_variant_override_rows(entity_data)
 
 
-def _entity_panels_prefab_override_rows(self) -> "list[DiffRow]":
+def _entity_panels_prefab_override_rows(self: "EditorModeController") -> "list[DiffRow]":
     return self.prefab.entity_panels_prefab_override_rows()
 
 
-def _prefab_override_base_value(self, base_entity: dict[str, Any], key: str) -> tuple[bool, Any]:
+def _prefab_override_base_value(self: "EditorModeController", base_entity: dict[str, Any], key: str) -> tuple[bool, Any]:
     return self.prefab.prefab_override_base_value(base_entity, key)
 
 
-def _apply_prefab_override_payload(self, entity_data: dict[str, Any], updated: dict[str, Any]) -> None:
+def _apply_prefab_override_payload(self: "EditorModeController", entity_data: dict[str, Any], updated: dict[str, Any]) -> None:
     self.prefab.apply_prefab_override_payload(entity_data, updated)
 
 
 def _apply_prefab_override_entity_value(
-    self,
+    self: "EditorModeController",
     sprite: "Sprite",
     key: str,
     value: Any,
@@ -180,74 +181,74 @@ def _apply_prefab_override_entity_value(
     self.prefab.apply_prefab_override_entity_value(sprite, key, value, present=present)
 
 
-def _apply_prefab_override_command(self, cmd: Dict[str, Any], *, use_before: bool) -> None:
+def _apply_prefab_override_command(self: "EditorModeController", cmd: Dict[str, Any], *, use_before: bool) -> None:
     self.prefab.apply_prefab_override_command(cmd, use_before=use_before)
 
 
-def _apply_prefab_override_bulk_command(self, cmd: Dict[str, Any], *, use_before: bool) -> None:
+def _apply_prefab_override_bulk_command(self: "EditorModeController", cmd: Dict[str, Any], *, use_before: bool) -> None:
     self.prefab.apply_prefab_override_bulk_command(cmd, use_before=use_before)
 
 
-def _entity_panels_apply_prefab_override(self, key: str, value: Any) -> bool:
+def _entity_panels_apply_prefab_override(self: "EditorModeController", key: str, value: Any) -> bool:
     return self.prefab.entity_panels_apply_prefab_override(key, value)
 
 
-def _entity_panels_revert_prefab_override(self, row: "DiffRow") -> bool:
+def _entity_panels_revert_prefab_override(self: "EditorModeController", row: "DiffRow") -> bool:
     return self.prefab.entity_panels_revert_prefab_override(row)
 
 
-def _entity_panels_clear_prefab_overrides(self) -> bool:
+def _entity_panels_clear_prefab_overrides(self: "EditorModeController") -> bool:
     return self.prefab.entity_panels_clear_prefab_overrides()
 
 
 # -- Entity Panels Controller shims ----------------------------------------
 
-def _entity_panels_scene_data(self) -> Dict[str, Any]:
+def _entity_panels_scene_data(self: "EditorModeController") -> Dict[str, Any]:
     return self.entity_panels_controller.entity_panels_scene_data()
 
 
-def _resolve_entity_panels_id(self, entity: Dict[str, Any], fallback_index: Optional[int] = None) -> str:
+def _resolve_entity_panels_id(self: "EditorModeController", entity: Dict[str, Any], fallback_index: Optional[int] = None) -> str:
     return self.entity_panels_controller.resolve_entity_panels_id(entity, fallback_index)
 
 
-def _entity_panels_selected_id_value(self) -> str | None:
+def _entity_panels_selected_id_value(self: "EditorModeController") -> str | None:
     return self.entity_panels_controller.entity_panels_selected_id_value()
 
 
-def _filter_entity_panels_items(self, items: "list[EntitySummary]") -> "list[EntitySummary]":
+def _filter_entity_panels_items(self: "EditorModeController", items: "list[EntitySummary]") -> "list[EntitySummary]":
     return self.entity_panels_controller.filter_entity_panels_items(items)
 
 
-def _refresh_entity_panels_list(self, *, sync_selected: bool = False) -> None:
+def _refresh_entity_panels_list(self: "EditorModeController", *, sync_selected: bool = False) -> None:
     self.entity_panels_controller.refresh_entity_panels_list(sync_selected=sync_selected)
 
 
-def _get_entity_panels_list(self) -> "list[EntitySummary]":
+def _get_entity_panels_list(self: "EditorModeController") -> "list[EntitySummary]":
     return self.entity_panels_controller.get_entity_panels_list()
 
 
-def _resolve_display_name(self, sprite: "Sprite", fallback_index: Optional[int] = None) -> str:
+def _resolve_display_name(self: "EditorModeController", sprite: "Sprite", fallback_index: Optional[int] = None) -> str:
     return self.entity_panels_controller.resolve_display_name(sprite, fallback_index)
 
 
-def _get_sprite_index(self, sprite: "Sprite") -> Optional[int]:
+def _get_sprite_index(self: "EditorModeController", sprite: "Sprite") -> Optional[int]:
     return self.entity_panels_controller.get_sprite_index(sprite)
 
 
-def _get_display_name_for_sprite(self, sprite: "Sprite") -> str:
+def _get_display_name_for_sprite(self: "EditorModeController", sprite: "Sprite") -> str:
     return self.entity_panels_controller.get_display_name_for_sprite(sprite)
 
 
-def _entity_panels_outliner_lines(self) -> list[str]:
+def _entity_panels_outliner_lines(self: "EditorModeController") -> list[str]:
     return self.entity_panels_controller.entity_panels_outliner_lines()
 
 
-def _entity_panels_inspector_lines(self) -> list[str]:
+def _entity_panels_inspector_lines(self: "EditorModeController") -> list[str]:
     return self.entity_panels_controller.entity_panels_inspector_lines()
 
 
 def _entity_panels_format_field_value(
-    self,
+    self: "EditorModeController",
     entity_data: Dict[str, Any],
     sprite: "Sprite",
     key: str,
@@ -257,7 +258,7 @@ def _entity_panels_format_field_value(
 
 
 def _entity_panels_numeric_value(
-    self,
+    self: "EditorModeController",
     entity_data: Dict[str, Any],
     sprite: "Sprite",
     key: str,
@@ -265,27 +266,27 @@ def _entity_panels_numeric_value(
     return self.entity_panels_controller.entity_panels_numeric_value(entity_data, sprite, key)
 
 
-def _entity_panels_select_current(self) -> bool:
+def _entity_panels_select_current(self: "EditorModeController") -> bool:
     return self.entity_panels_controller.entity_panels_select_current()
 
 
-def _entity_panels_find_sprite(self, summary: "EntitySummary") -> "Optional[Sprite]":
+def _entity_panels_find_sprite(self: "EditorModeController", summary: "EntitySummary") -> "Optional[Sprite]":
     return self.entity_panels_controller.entity_panels_find_sprite(summary)
 
 
-def _entity_panels_begin_text_edit(self, field: str, initial: str) -> None:
+def _entity_panels_begin_text_edit(self: "EditorModeController", field: str, initial: str) -> None:
     self.entity_panels_controller.entity_panels_begin_text_edit(field, initial)
 
 
-def _entity_panels_cancel_text_edit(self) -> None:
+def _entity_panels_cancel_text_edit(self: "EditorModeController") -> None:
     self.entity_panels_controller.entity_panels_cancel_text_edit()
 
 
-def _entity_panels_commit_text_edit(self) -> bool:
+def _entity_panels_commit_text_edit(self: "EditorModeController") -> bool:
     return self.entity_panels_controller.entity_panels_commit_text_edit()
 
 
-def _entity_panels_apply_field_update(self, field: str, value: Any) -> bool:
+def _entity_panels_apply_field_update(self: "EditorModeController", field: str, value: Any) -> bool:
     return self.entity_panels_controller.entity_panels_apply_field_update(field, value)
 
 
