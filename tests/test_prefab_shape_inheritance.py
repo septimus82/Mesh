@@ -19,7 +19,11 @@ def test_prefab_shape_inheritance(tmp_path: Path, monkeypatch) -> None:
     prefabs_path = assets_dir / "prefabs.json"
     prefabs_payload = [
         {
+            "display_name": "Wall",
             "id": "p_wall",
+            "tags": [
+                "test",
+            ],
             "entity": {
                 "sprite": "assets/placeholder.png",
                 "collision_poly": [[0, 0], [8, 0], [0, 8]],
