@@ -51,12 +51,6 @@ def _load_cutscene_script(cutscene_id: str) -> dict[str, Any]:
     for entry in entries:
         if not isinstance(entry, dict) or entry.get("id") != cutscene_id:
             continue
-        if isinstance(entry.get("commands"), list):
-            return {
-                "schema_version": int(entry.get("schema_version", 1)),
-                "id": str(entry.get("id", "")),
-                "commands": list(entry["commands"]),
-            }
         commands: list[dict[str, Any]] = []
         for step in entry.get("steps", []):
             if not isinstance(step, dict):
@@ -80,7 +74,7 @@ def _load_cutscene_script(cutscene_id: str) -> dict[str, Any]:
             else:
                 commands.append(dict(step))
         return {
-            "schema_version": int(entry.get("schema_version", 1)),
+            "schema_version": 1,
             "id": str(entry.get("id", "")),
             "commands": commands,
         }

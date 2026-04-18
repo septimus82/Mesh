@@ -52,12 +52,33 @@ def _load_cutscene_script(cutscene_id: str) -> dict[str, Any]:
     for entry in entries:
         if not isinstance(entry, dict) or entry.get("id") != cutscene_id:
             continue
-        if isinstance(entry.get("commands"), list):
-            return {
-                "schema_version": int(entry.get("schema_version", 1)),
-                "id": str(entry.get("id", "")),
-                "commands": list(entry["commands"]),
-            }
+        commands: list[dict[str, Any]] = []
+        for step in entry.get("steps", []):
+            if not isinstance(step, dict):
+                continue
+            step_type = str(step.get("type", "")).strip()
+            if not step_type:
+                continue
+            if step_type == "emit_event":
+                cmd: dict[str, Any] = {
+                    "type": "emit_event",
+                    "event_type": str(step.get("event", "")),
+                }
+                payload_data = {
+                    key: value
+                    for key, value in step.items()
+                    if key not in {"type", "event"}
+                }
+                if payload_data:
+                    cmd["payload"] = payload_data
+                commands.append(cmd)
+            else:
+                commands.append(dict(step))
+        return {
+            "schema_version": 1,
+            "id": str(entry.get("id", "")),
+            "commands": commands,
+        }
     raise AssertionError(f"Cutscene '{cutscene_id}' not found")
 
 
