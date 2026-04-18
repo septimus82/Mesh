@@ -37,7 +37,7 @@ include = ["engine*", "mesh_cli*"]
 # See MANIFEST.in for the complete list of included assets
 
 [tool.ruff]
-line-length = 140
+line-length = 160
 select = ["E", "F", "I", "W"]
 ignore = ["E701", "E741"]
 exclude = [
