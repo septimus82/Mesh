@@ -17,7 +17,11 @@ def _write_prefab_scene(tmp_path: Path) -> Path:
     prefabs_path = assets_dir / "prefabs.json"
     prefabs_payload = [
         {
+            "display_name": "Wall",
             "id": "p_wall",
+            "tags": [
+                "wall",
+            ],
             "entity": {
                 "sprite": "base.png",
                 "tag": "wall",
