@@ -1,8 +1,9 @@
 import pytest
 import json
+import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from engine.tooling import scaffold
 
@@ -24,36 +25,33 @@ class TestRegionThemes(unittest.TestCase):
     @patch("engine.tooling.scaffold.Path")
     @patch("engine.tooling.scaffold.SceneLoader")
     def test_create_scene_with_theme(self, MockLoader, MockPath):
-        # Setup Mocks
-        mock_path_obj = MagicMock()
-        mock_path_obj.exists.return_value = False # Target scene doesn't exist
-        mock_path_obj.stem = "test_scene" # Fix for json serialization
-        
-        # Mock themes.json read
-        mock_themes_path = MagicMock()
-        mock_themes_path.exists.return_value = True
-        mock_themes_path.read_text.return_value = json.dumps(self.mock_themes)
-        
-        def path_side_effect(arg):
-            if str(arg).endswith("themes.json"):
-                return mock_themes_path
-            return mock_path_obj
-            
-        MockPath.side_effect = path_side_effect
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_root = Path(tmpdir)
+            target_path = temp_root / "scenes" / "test_scene.json"
+            themes_path = temp_root / "assets" / "data" / "themes.json"
+            themes_path.parent.mkdir(parents=True, exist_ok=True)
+            themes_path.write_text(json.dumps(self.mock_themes), encoding="utf-8")
 
-        # Mock Loader
-        mock_loader_instance = MockLoader.return_value
-        mock_loader_instance.apply_scene_defaults.side_effect = lambda x: x # Identity
+            def path_side_effect(arg):
+                if str(arg).endswith("themes.json"):
+                    return themes_path
+                return target_path
 
-        # Call create_scene
-        scaffold.create_scene("scenes/test_scene.json", "empty", extra_args={"region_theme": "moss"})
+            MockPath.side_effect = path_side_effect
 
-        call_args = mock_loader_instance.apply_scene_defaults.call_args
-        scene_data = call_args[0][0]
-        
-        self.assertEqual(scene_data["settings"]["region_theme"], "moss")
-        self.assertEqual(scene_data["settings"]["lighting_hint"], "green_dim")
-        self.assertEqual(scene_data["settings"]["ambient_audio"], "forest_ambience")
+            # Mock Loader
+            mock_loader_instance = MockLoader.return_value
+            mock_loader_instance.apply_scene_defaults.side_effect = lambda x: x  # Identity
+
+            # Call create_scene
+            scaffold.create_scene("scenes/test_scene.json", "empty", extra_args={"region_theme": "moss"})
+
+            call_args = mock_loader_instance.apply_scene_defaults.call_args
+            scene_data = call_args[0][0]
+
+            self.assertEqual(scene_data["settings"]["region_theme"], "moss")
+            self.assertEqual(scene_data["settings"]["lighting_hint"], "green_dim")
+            self.assertEqual(scene_data["settings"]["ambient_audio"], "forest_ambience")
 
 if __name__ == "__main__":
     unittest.main()
