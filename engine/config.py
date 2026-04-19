@@ -12,8 +12,13 @@ from . import json_io
 from .diagnostics import add_exception as diag_add_exception
 from .diagnostics import error as diag_error
 from .diagnostics import warn as diag_warn
+from .logging_tools import get_logger
 from .repo_root import find_repo_root
 from .schema_validation import validate
+from .swallowed_exceptions import record_swallowed, should_log
+
+
+_log = get_logger(__name__)
 
 
 @dataclass
@@ -135,10 +140,16 @@ def _coerce_type(value: Any, target_type: Any) -> Any:
         return target_type(value)
     except (TypeError, ValueError):
         return value
-    except Exception as exc:  # noqa: BLE001  # REASON: unexpected coercion failures should log once and preserve the original config value
-        if not getattr(_coerce_type, "_mesh_error_logged", False):
-            print(f"[Mesh][Config] ERROR coercing config value: {exc}")
-            setattr(_coerce_type, "_mesh_error_logged", True)
+    except Exception as exc:  # noqa: BLE001  # REASON: unexpected coercion failures should remain visible without spamming and preserve the original config value
+        record_swallowed("engine.config._coerce_type", exc)
+        if should_log("engine.config._coerce_type"):
+            _log.error(
+                "[Mesh][Config] ERROR coercing config value target_type=%s value_type=%s: %s",
+                getattr(target_type, "__name__", str(target_type)),
+                type(value).__name__,
+                exc,
+                exc_info=True,
+            )
         diag_add_exception(
             "config.coerce_type_failed",
             exc,
