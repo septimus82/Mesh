@@ -59,6 +59,60 @@ class TestVariantPackResolution(unittest.TestCase):
                     self.assertIsNotNone(v2)
                     self.assertEqual(v2["overrides"]["hp"], 20)
 
+    def test_variant_loader_rejects_missing_id_without_breaking_valid_siblings(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            pack = root / "packs" / "pack_a"
+            (pack / "data").mkdir(parents=True)
+            (pack / "data" / "variant_patches.json").write_text(
+                json.dumps(
+                    [
+                        {"base_prefab_id": "p1", "tags_add": ["elite"]},
+                        {"id": "valid_variant", "base_prefab_id": "p1", "tags_add": ["ok"]},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with patch("engine.prefabs.get_content_roots", return_value=[root]), patch(
+                "engine.prefabs.discover_packs",
+                return_value=[Pack(id="pack_a", root=pack)],
+            ), patch("builtins.print") as mock_print:
+                manager = PrefabManager()
+                manager.load()
+
+            self.assertNotIn("", manager._variants)
+            self.assertIn("valid_variant", manager._variants)
+            printed = "\n".join(str(call.args[0]) for call in mock_print.call_args_list if call.args)
+            self.assertIn("missing string 'id'", printed)
+
+    def test_variant_loader_rejects_wrong_type_override_block(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            pack = root / "packs" / "pack_a"
+            (pack / "data").mkdir(parents=True)
+            (pack / "data" / "variant_patches.json").write_text(
+                json.dumps(
+                    [
+                        {"id": "bad_variant", "base_prefab_id": "p1", "overrides": "bad"},
+                        {"id": "good_variant", "base_prefab_id": "p1", "tags_add": ["elite"]},
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with patch("engine.prefabs.get_content_roots", return_value=[root]), patch(
+                "engine.prefabs.discover_packs",
+                return_value=[Pack(id="pack_a", root=pack)],
+            ), patch("builtins.print") as mock_print:
+                manager = PrefabManager()
+                manager.load()
+
+            self.assertNotIn("bad_variant", manager._variants)
+            self.assertIn("good_variant", manager._variants)
+            printed = "\n".join(str(call.args[0]) for call in mock_print.call_args_list if call.args)
+            self.assertIn("invalid 'overrides'", printed)
+
     def test_variant_discovery_integration(self):
         """Test that discover_packs actually finds the packs."""
         from engine.content_packs import discover_packs

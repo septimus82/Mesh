@@ -95,3 +95,38 @@ def test_resolve_with_variant_caching(prefab_manager):
     
     r2 = prefab_manager.resolve_with_variant("p1", "v1")
     assert r2["name"] == "Cached"
+
+
+def test_valid_existing_style_variant_still_loads_and_merges(prefab_manager):
+    prefab_manager._prefabs = {
+        "p1": {
+            "id": "p1",
+            "entity": {
+                "name": "Base",
+                "Health": {"max_health": 100},
+                "Movement": {"speed": 5.0},
+            },
+            "tags": ["base"],
+        }
+    }
+    prefab_manager._variants = {
+        "elite": {
+            "id": "elite",
+            "base_prefab_id": "p1",
+            "hp_mult": 1.5,
+            "speed_mult": 1.2,
+            "tags_add": ["elite"],
+            "tags_remove": ["base"],
+            "sprite_override": "elite.png",
+        }
+    }
+    prefab_manager._loaded = True
+
+    resolved = prefab_manager.resolve_with_variant("p1", "elite")
+
+    assert resolved is not None
+    assert resolved["entity"]["sprite"] == "elite.png"
+    assert resolved["entity"]["Health"]["max_health"] == 150
+    assert resolved["entity"]["Movement"]["speed"] == 6.0
+    assert "elite" in resolved["tags"]
+    assert "base" not in resolved["tags"]
