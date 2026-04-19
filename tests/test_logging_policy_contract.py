@@ -37,7 +37,6 @@ GETLOGGER_ALLOWLIST = {
 
 WARNED_ONCE_ALLOWLIST = {
     "engine/content_audit.py:_MESH_AUDIT_LOGGED_ONCE",
-    "engine/content_lock.py:_MESH_LOCK_LOGGED_ONCE",
 }
 
 

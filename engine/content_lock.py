@@ -8,19 +8,21 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from engine import json_io
+from engine.logging_tools import get_logger
 from engine.paths import get_content_index, resolve_path
+from engine.swallowed_exceptions import record_swallowed, should_log
 from engine.version import ENGINE_VERSION
 
 
-_MESH_LOCK_LOGGED_ONCE: set[str] = set()
+_log = get_logger(__name__)
 
-
-def _mesh_lock_log_once(key: str, exc: Exception, *, context: str = "") -> None:
-    if key in _MESH_LOCK_LOGGED_ONCE:
+def _mesh_lock_log_sampled(key: str, exc: Exception, *, context: str = "") -> None:
+    site = f"engine.content_lock.{key}"
+    record_swallowed(site, exc)
+    if not should_log(site):
         return
-    _MESH_LOCK_LOGGED_ONCE.add(key)
     suffix = f" ({context})" if context else ""
-    print(f"[Mesh][Lock] ERROR {key}{suffix}: {exc}")
+    _log.error("[Mesh][Lock] ERROR %s%s: %s", key, suffix, exc, exc_info=True)
 
 
 def _hash_file(path: Path) -> Optional[str]:
@@ -31,8 +33,8 @@ def _hash_file(path: Path) -> Optional[str]:
         return hashlib.sha256(path.read_bytes()).hexdigest()
     except OSError:
         return None
-    except Exception as exc:  # noqa: BLE001  # REASON: unexpected file hash failures should log once and degrade to a missing hash entry
-        _mesh_lock_log_once("hash_file", exc, context=str(path))
+    except Exception as exc:  # noqa: BLE001  # REASON: unexpected file hash failures should remain visible without spamming and degrade to a missing hash entry
+        _mesh_lock_log_sampled("hash_file", exc, context=str(path))
         return None
 
 def _get_referenced_scenes(world_path: Path) -> List[str]:
@@ -57,8 +59,8 @@ def _get_referenced_scenes(world_path: Path) -> List[str]:
         for s_def in world_data.get("scenes", {}).values():
             if "path" in s_def:
                 scenes.add(s_def["path"])
-    except Exception as exc:  # noqa: BLE001  # REASON: malformed world files should log once and degrade to an empty scene reference list
-        _mesh_lock_log_once("referenced_scenes", exc, context=str(world_path))
+    except Exception as exc:  # noqa: BLE001  # REASON: malformed world files should remain visible without spamming and degrade to an empty scene reference list
+        _mesh_lock_log_sampled("referenced_scenes", exc, context=str(world_path))
 
     return sorted(list(scenes))
 
@@ -133,8 +135,8 @@ def build_lock(world_path: str = "worlds/main_world.json") -> Dict[str, Any]:
         # We suppress output and just get stats.
         report = audit_world(world_path)
         audit_snapshot = report["stats"]
-    except Exception as exc:  # noqa: BLE001  # REASON: audit snapshot failures should log once and preserve lock generation with an empty snapshot
-        _mesh_lock_log_once("audit_snapshot", exc, context=str(world_path))
+    except Exception as exc:  # noqa: BLE001  # REASON: audit snapshot failures should remain visible without spamming and preserve lock generation with an empty snapshot
+        _mesh_lock_log_sampled("audit_snapshot", exc, context=str(world_path))
         audit_snapshot = {}
 
     return {

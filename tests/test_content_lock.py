@@ -5,6 +5,8 @@ from unittest.mock import patch, MagicMock
 from engine.content_lock import build_lock, write_lock, read_lock, compute_content_fingerprint
 from engine.content_packs import Pack
 
+pytestmark = [pytest.mark.fast]
+
 @pytest.fixture
 def mock_index():
     with patch("engine.content_lock.get_content_index") as mock:
@@ -46,3 +48,24 @@ def test_fingerprint_determinism():
     fp2 = compute_content_fingerprint(lock_data)
     assert fp1 == fp2
     assert len(fp1) == 64 # SHA-256 hex digest length
+
+
+def test_content_lock_sampled_logging_logs_first_and_later_failures(monkeypatch, caplog):
+    from engine import content_lock
+
+    calls = iter([True, False, True])
+    monkeypatch.setattr(content_lock, "should_log", lambda _site: next(calls))
+    logged: list[str] = []
+
+    def _capture(message: str, *args, **kwargs) -> None:
+        logged.append(message % args)
+
+    monkeypatch.setattr(content_lock._log, "error", _capture)
+
+    exc = RuntimeError("boom")
+    content_lock._mesh_lock_log_sampled("hash_file", exc, context="a.json")
+    content_lock._mesh_lock_log_sampled("hash_file", exc, context="a.json")
+    content_lock._mesh_lock_log_sampled("hash_file", exc, context="a.json")
+
+    assert len(logged) == 2
+    assert all("[Mesh][Lock] ERROR hash_file (a.json): boom" in message for message in logged)
