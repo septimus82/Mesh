@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import record_swallowed, should_log
 
 
 _SWALLOW_ONCE_TAGS: set[str] = set()
@@ -22,6 +23,12 @@ logger = get_logger(__name__)
 _SHADER_EXTENSIONS: tuple[str, ...] = (".glsl", ".vert", ".frag")
 _IMAGE_EXTENSIONS: tuple[str, ...] = (".png", ".jpg", ".jpeg", ".webp")
 _AUDIO_EXTENSIONS: tuple[str, ...] = (".wav", ".ogg", ".mp3")
+
+
+def _log_sampled_warning(site: str, message: str, *args: Any, exc: Exception) -> None:
+    record_swallowed(site, exc)
+    if should_log(site):
+        logger.warning(message, *args, exc_info=(type(exc), exc, exc.__traceback__))
 
 
 def _has_shader_changes(changed_paths: tuple[str, ...] | None) -> bool:
@@ -81,8 +88,14 @@ def _reload_changed_asset_textures(window: Any, image_paths: tuple[str, ...]) ->
     for image_path in image_paths:
         try:
             cache_key = str(resolver(image_path))
-        except Exception:
-            _log_swallow("ASSE-002", "texture cache key resolve fallback", once=True)
+        except Exception as exc:
+            _log_sampled_warning(
+                "engine.assets_reload.ASSE-002",
+                "[Mesh][HotReload] texture cache key resolve fallback for '%s': %s",
+                image_path,
+                exc,
+                exc=exc,
+            )
             cache_key = str(image_path)
 
         had_previous = cache_key in cache
@@ -210,8 +223,13 @@ def reload_render_assets(
 
             window.fx_presets = build_fx_preset_registry()
             counts["fx_presets_reloaded"] = 1
-        except Exception:
-            _log_swallow("ASSE-006", "fx presets rebuild fallback", once=True)
+        except Exception as exc:
+            _log_sampled_warning(
+                "engine.assets_reload.ASSE-006",
+                "[Mesh][HotReload] fx presets rebuild fallback: %s",
+                exc,
+                exc=exc,
+            )
             counts["fx_presets_reloaded"] = 0
 
     if _has_shader_changes(changed_paths):
