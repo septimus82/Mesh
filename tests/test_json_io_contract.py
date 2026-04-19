@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from engine import json_io
@@ -90,3 +92,15 @@ def test_write_json_atomic_failed_write_cleans_temp_and_preserves_destination(
 
     assert path.read_text(encoding="utf-8") == '{"sentinel": 1}\n'
     assert not path.with_suffix(path.suffix + ".tmp").exists()
+
+
+def test_coerce_path_rejects_non_pathlike() -> None:
+    with pytest.raises(TypeError, match="expected str or Path"):
+        json_io._coerce_path(MagicMock())
+    with pytest.raises(TypeError, match="expected str or Path"):
+        json_io._coerce_path(object())
+
+
+def test_write_json_atomic_rejects_non_pathlike() -> None:
+    with pytest.raises(TypeError, match="expected str or Path"):
+        json_io.write_json_atomic(MagicMock(), {"any": "payload"})

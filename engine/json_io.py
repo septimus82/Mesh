@@ -10,7 +10,13 @@ _log = logging.getLogger(__name__)
 
 
 def _coerce_path(path: str | Path) -> Path:
-    return path if isinstance(path, Path) else Path(path)
+    if isinstance(path, Path):
+        return path
+    if isinstance(path, str):
+        return Path(path)
+    raise TypeError(
+        f"json_io._coerce_path: expected str or Path, got {type(path).__name__}"
+    )
 
 
 def _strip_bom(text: str, *, source: str = "") -> str:
@@ -64,14 +70,20 @@ def write_text_atomic(
     target = _coerce_path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = target.with_suffix(target.suffix + ".tmp")
-    with open(tmp_path, "w", encoding=encoding, newline="\n") as handle:
-        handle.write(text)
+    try:
+        with open(tmp_path, "w", encoding=encoding, newline="\n") as handle:
+            handle.write(text)
+            if durable:
+                handle.flush()
+                os.fsync(handle.fileno())
+        os.replace(tmp_path, target)
         if durable:
-            handle.flush()
-            os.fsync(handle.fileno())
-    os.replace(tmp_path, target)
-    if durable:
-        _fsync_parent_directory(target)
+            _fsync_parent_directory(target)
+    finally:
+        try:
+            tmp_path.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def write_json_atomic(
