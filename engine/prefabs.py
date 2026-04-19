@@ -25,6 +25,60 @@ def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
     get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
+def _validate_variant_entry(entry: Any, *, source_path: Path, index: int) -> Dict[str, Any] | None:
+    label = source_path.as_posix()
+    if not isinstance(entry, dict):
+        print(f"[Mesh][Prefabs] ERROR: {label} variant item {index} must be an object; skipping")
+        return None
+
+    variant_id = entry.get("id")
+    if not isinstance(variant_id, str) or not variant_id.strip():
+        print(f"[Mesh][Prefabs] ERROR: {label} variant item {index} missing string 'id'; skipping")
+        return None
+
+    for field in ("base", "base_prefab_id"):
+        raw = entry.get(field)
+        if raw is None:
+            continue
+        if not isinstance(raw, str) or not raw.strip():
+            print(f"[Mesh][Prefabs] ERROR: {label} variant '{variant_id}' has invalid '{field}'; skipping")
+            return None
+
+    for field in ("tags_add", "tags_remove"):
+        raw = entry.get(field)
+        if raw is None:
+            continue
+        if not isinstance(raw, list) or any(not isinstance(tag, str) or not tag.strip() for tag in raw):
+            print(f"[Mesh][Prefabs] ERROR: {label} variant '{variant_id}' has invalid '{field}'; skipping")
+            return None
+
+    for field in ("entity", "overrides"):
+        raw = entry.get(field)
+        if raw is None:
+            continue
+        if not isinstance(raw, dict):
+            print(f"[Mesh][Prefabs] ERROR: {label} variant '{variant_id}' has invalid '{field}'; skipping")
+            return None
+
+    for field in ("sprite_override",):
+        raw = entry.get(field)
+        if raw is None:
+            continue
+        if not isinstance(raw, str) or not raw.strip():
+            print(f"[Mesh][Prefabs] ERROR: {label} variant '{variant_id}' has invalid '{field}'; skipping")
+            return None
+
+    for field in ("hp_mult", "damage_mult", "speed_mult", "cost_mult", "cost_add"):
+        raw = entry.get(field)
+        if raw is None:
+            continue
+        if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+            print(f"[Mesh][Prefabs] ERROR: {label} variant '{variant_id}' has invalid '{field}'; skipping")
+            return None
+
+    return cast(Dict[str, Any], entry)
+
+
 def _load_prefab_entries(source_path: Path) -> list[Dict[str, Any]]:
     data = json.loads(source_path.read_text(encoding="utf-8"))
     validate(data, "prefab.schema.json", source_path)
@@ -171,9 +225,15 @@ class PrefabManager:
             if variant_path.exists():
                 try:
                     v_data = json.loads(variant_path.read_text(encoding="utf-8"))
+                    if not isinstance(v_data, list):
+                        print(f"[Mesh][Prefabs] WARNING: {variant_path} must contain a list")
+                        continue
                     # Merge variants (later packs override earlier ones)
-                    for v in v_data:
-                        self._variants[v["id"]] = v
+                    for index, entry in enumerate(v_data):
+                        validated = _validate_variant_entry(entry, source_path=variant_path, index=index)
+                        if validated is None:
+                            continue
+                        self._variants[str(validated["id"])] = validated
                     print(f"[Mesh][Prefabs] Loaded {len(v_data)} variants from pack '{pack.id}'")
                 except Exception as e:  # noqa: BLE001  # REASON: prefabs fallback isolation
                     _log_swallow("PREF-007", "variants load", once=True)
