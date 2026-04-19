@@ -13,6 +13,12 @@ __pycache__/
 dist/
 build/
 
+*.log
+*_out.txt
+verify_*.txt
+mypy_gate.log
+MagicMock/
+
 artifacts/
 traces/
 saves/
