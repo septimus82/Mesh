@@ -131,7 +131,6 @@ tests/test_hud_model_contract.py
 tests/test_input_service_contract.py
 tests/test_inspector_component_lines_contract.py
 tests/test_inspector_components_contract.py
-tests/test_json_io_contract.py
 tests/test_json_io_durable_atomic_contract.py
 tests/test_keybind_contract.py
 tests/test_keybinds_provider_contract.py

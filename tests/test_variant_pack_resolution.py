@@ -3,8 +3,12 @@ import json
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 from engine.prefabs import PrefabManager
 from engine.content_packs import Pack
+
+pytestmark = [pytest.mark.fast]
 
 class TestVariantPackResolution(unittest.TestCase):
     def test_variant_override_order(self):

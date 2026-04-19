@@ -2,6 +2,8 @@ import pytest
 from unittest.mock import patch, MagicMock
 from engine.prefabs import PrefabManager
 
+pytestmark = [pytest.mark.fast]
+
 @pytest.fixture
 def prefab_manager():
     return PrefabManager()

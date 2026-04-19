@@ -5,11 +5,14 @@ import importlib
 import json
 from pathlib import Path
 
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 EVENTS_CATALOG_PATH = ROOT / "assets" / "data" / "events.json"
 KNOWN_EVENT_CONSTANT_MODULES = {"engine.combat_constants", "engine.constants"}
 MESH_EVENT_BUS_IMPORT_SYMBOL = "MeshEventBus"
+
+pytestmark = [pytest.mark.fast]
 
 # Legacy emit sites intentionally tolerated for compatibility-only paths.
 LEGACY_EVENT_BUS_EMIT_ALLOWLIST: dict[str, str] = {

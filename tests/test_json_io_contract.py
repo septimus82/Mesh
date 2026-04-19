@@ -6,6 +6,8 @@ import pytest
 
 from engine import json_io
 
+pytestmark = [pytest.mark.fast]
+
 
 def test_dumps_stable_is_deterministic_and_sorted() -> None:
     payload = {"b": 1, "a": 2}
