@@ -219,3 +219,17 @@ def debug_scatter_selection(
         name_mode=name_mode,
     )
 
+
+def bind_selection_methods(cls) -> None:
+    cls.debug_align_selection = debug_align_selection
+    cls.debug_distribute_selection = debug_distribute_selection
+    cls.debug_snap_to_grid = debug_snap_to_grid
+    cls.debug_nudge_selection = debug_nudge_selection
+    cls.debug_rotate_selection = debug_rotate_selection
+    cls.debug_mirror_selection = debug_mirror_selection
+    cls.debug_group_selection = debug_group_selection
+    cls.debug_ungroup_selection = debug_ungroup_selection
+    cls.debug_duplicate_to_grid = debug_duplicate_to_grid
+    cls.debug_duplicate_along_path = debug_duplicate_along_path
+    cls.debug_scatter_selection = debug_scatter_selection
+
