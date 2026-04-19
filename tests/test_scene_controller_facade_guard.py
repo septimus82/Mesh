@@ -62,9 +62,12 @@ class TestSceneControllerFacadeGuard(unittest.TestCase):
             mock_restore.assert_called_once_with(self.controller, snap)
 
     def test_authoring_methods_are_thin_delegates(self):
-        moved = {
-            "get_authored_scene_payload",
-            "debug_apply_authored_scene_payload",
+        authoring_part_methods = {
+            "_call_authoring",
+            "enable_authoring_trace",
+            "reset_authoring_trace",
+            "get_authoring_trace_snapshot",
+            "refresh_tilemap_layers",
             "debug_find_sprite_by_entity_id",
             "_debug_iter_authoring_payloads",
             "_debug_remove_sprite",
@@ -80,14 +83,12 @@ class TestSceneControllerFacadeGuard(unittest.TestCase):
             "debug_remove_behaviour",
             "debug_set_name",
             "debug_add_tag",
+            "debug_remove_tag",
+            "debug_toggle_tag",
+            "debug_batch_rename",
+            "debug_set_names",
             "debug_config_triggerzone_set_zone_id",
             "debug_config_triggerzone_set_radius",
-            "debug_config_set_game_state_set_toast",
-            "debug_config_set_game_state_add_require_flag",
-            "debug_config_set_game_state_add_forbid_flag",
-            "debug_config_set_game_state_set_flag_true",
-            "debug_config_scene_transition_set_target_scene",
-            "debug_config_scene_transition_set_spawn_id",
             "_debug_config_entity_has_behaviour",
             "_debug_config_mutate_for_behaviour",
             "_debug_config_set_field_for_behaviour",
@@ -99,37 +100,42 @@ class TestSceneControllerFacadeGuard(unittest.TestCase):
             "debug_preview_macro_door_transition",
             "debug_preview_macro_dialogue_choice_flag",
         }
+        quests_flags_methods = {
+            "debug_config_set_game_state_set_toast",
+            "debug_config_set_game_state_add_require_flag",
+            "debug_config_set_game_state_add_forbid_flag",
+            "debug_config_set_game_state_set_flag_true",
+            "debug_config_scene_transition_set_target_scene",
+            "debug_config_scene_transition_set_spawn_id",
+        }
+        selection_methods = {
+            "debug_align_selection",
+            "debug_distribute_selection",
+            "debug_snap_to_grid",
+            "debug_nudge_selection",
+            "debug_rotate_selection",
+            "debug_mirror_selection",
+            "debug_group_selection",
+            "debug_ungroup_selection",
+            "debug_duplicate_to_grid",
+            "debug_duplicate_along_path",
+            "debug_scatter_selection",
+        }
 
-        source_path = pathlib.Path(scene_controller_module.__file__)
-        src = source_path.read_text(encoding="utf-8")
-        tree = ast.parse(src)
+        for name in sorted(authoring_part_methods):
+            method = getattr(SceneController, name, None)
+            self.assertTrue(callable(method), msg=f"{name} missing or not callable")
+            self.assertEqual(method.__module__, "engine.scene_controller_parts.authoring")
 
-        class_node = None
-        for node in tree.body:
-            if isinstance(node, ast.ClassDef) and node.name == "SceneController":
-                class_node = node
-                break
-        self.assertIsNotNone(class_node)
+        for name in sorted(quests_flags_methods):
+            method = getattr(SceneController, name, None)
+            self.assertTrue(callable(method), msg=f"{name} missing or not callable")
+            self.assertEqual(method.__module__, "engine.scene_controller_parts.quests_flags")
 
-        by_name = {n.name: n for n in class_node.body if isinstance(n, ast.FunctionDef)}
-        missing = sorted(moved - set(by_name.keys()))
-        self.assertEqual(missing, [])
+        for name in sorted(selection_methods):
+            method = getattr(SceneController, name, None)
+            self.assertTrue(callable(method), msg=f"{name} missing or not callable")
+            self.assertEqual(method.__module__, "engine.scene_controller_selection")
 
-        for name in sorted(moved):
-            fn = by_name[name]
-            body = list(fn.body)
-            if body and isinstance(body[0], ast.Expr) and isinstance(getattr(body[0], "value", None), ast.Constant):
-                if isinstance(body[0].value.value, str):
-                    body = body[1:]
-            self.assertEqual(len(body), 1, msg=f"{name} should be 1-statement delegate")
-            stmt = body[0]
-            if isinstance(stmt, ast.Return):
-                call = stmt.value
-            elif isinstance(stmt, ast.Expr):
-                call = stmt.value
-            else:
-                self.fail(f"{name} body should be return/expr")
-            self.assertIsInstance(call, ast.Call, msg=f"{name} should call authoring module")
-            self.assertIsInstance(call.func, ast.Attribute, msg=f"{name} should call _authoring_runtime.*")
-            self.assertIsInstance(call.func.value, ast.Name, msg=f"{name} should call _authoring_runtime.*")
-            self.assertEqual(call.func.value.id, "_authoring_runtime", msg=f"{name} should call _authoring_runtime.*")
+        self.assertEqual(SceneController.get_authored_scene_payload.__module__, "engine.scene_controller_core")
+        self.assertEqual(SceneController.debug_apply_authored_scene_payload.__module__, "engine.scene_controller_core")

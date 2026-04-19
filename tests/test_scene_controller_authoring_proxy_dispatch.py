@@ -249,16 +249,22 @@ def _auto_args(method: Any) -> tuple[tuple[Any, ...], dict[str, Any]]:
 # Exhaustiveness guard — make sure _PROXY_PAIRS covers every _call_authoring site
 # ---------------------------------------------------------------------------
 def test_proxy_pairs_exhaustive() -> None:
-    """Every _call_authoring call-site in scene_controller.py is listed in _PROXY_PAIRS."""
+    """Every authoring proxy call-site remains listed in _PROXY_PAIRS."""
     import re
     from pathlib import Path
 
-    src = Path(__file__).resolve().parent.parent / "engine" / "scene_controller.py"
-    text = src.read_text(encoding="utf-8")
-
-    # Extract all fn_name strings passed to _call_authoring
     pattern = re.compile(r'self\._call_authoring\(\s*"([^"]+)"')
-    found = set(pattern.findall(text))
+    engine_dir = Path(__file__).resolve().parent.parent / "engine"
+    source_files = [
+        engine_dir / "scene_controller_core.py",
+        engine_dir / "scene_controller_selection.py",
+        engine_dir / "scene_controller_parts" / "authoring.py",
+        engine_dir / "scene_controller_parts" / "quests_flags.py",
+    ]
+
+    found: set[str] = set()
+    for src in source_files:
+        found.update(pattern.findall(src.read_text(encoding="utf-8")))
 
     listed = {fn_name for _, fn_name in _PROXY_PAIRS}
     missing = found - listed
