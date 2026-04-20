@@ -240,8 +240,8 @@ class CutsceneController:
                             continue
                         behaviour.start(node_id if isinstance(node_id, str) and node_id else None)
                         return True
-            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
-                print(f"[Mesh][Cutscene] start_dialogue failed: {exc}")
+            except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("CUTS-001", "engine/cutscene_controller.py start_dialogue behaviour.start", once=True)
             return True
         owner = "cutscene"
         ui = getattr(self.window, "ui_controller", None)
@@ -250,8 +250,8 @@ class CutsceneController:
         if ui is not None and entries:
             try:
                 ui.show_dialogue(entries, owner=owner)
-            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
-                print(f"[Mesh][Cutscene] start_dialogue failed: {exc}")
+            except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
+                _log_swallow("CUTS-002", "engine/cutscene_controller.py start_dialogue ui.show_dialogue", once=True)
         return True
 
     def _step_wait_dialogue_end(self, data: dict[str, Any]) -> bool:  # noqa: ARG002
