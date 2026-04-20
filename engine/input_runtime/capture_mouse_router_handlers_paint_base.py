@@ -9,18 +9,7 @@ from typing import Any, Callable
 import engine.optional_arcade as optional_arcade
 
 from engine.input_runtime.capture_mouse_router_model import MouseEvent
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 def get_tilemap_context(window: Any) -> tuple[Any, Any, tuple[int, int], tuple[int, int]] | None:
