@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -24,6 +25,12 @@ _LOGGER = get_logger(__name__)
 
 
 def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
+    # Bridge: record every call inside an active except into the telemetry
+    # counter. This runs before the once-gate so count tracking is not
+    # suppressed by log-once behavior.
+    exc = sys.exc_info()[1]
+    if exc is not None:
+        record_swallowed(tag, exc)
     if once:
         with _LOCK:
             if tag in _SWALLOW_ONCE_TAGS:
