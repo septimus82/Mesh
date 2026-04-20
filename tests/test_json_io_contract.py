@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pathlib
 from unittest.mock import MagicMock
 
 import pytest
@@ -58,7 +59,7 @@ def test_write_json_atomic_failed_write_cleans_temp_and_preserves_destination(
 ) -> None:
     path = tmp_path / "payload.json"
     path.write_text('{"sentinel": 1}\n', encoding="utf-8")
-    real_open = open
+    real_path_open = pathlib.Path.open
     tmp_path_expected = path.with_suffix(path.suffix + ".tmp")
 
     class _ExplodingWriter:
@@ -81,13 +82,13 @@ def test_write_json_atomic_failed_write_cleans_temp_and_preserves_destination(
         def fileno(self) -> int:
             return self._handle.fileno()
 
-    def _open_with_failing_write(file, mode="r", *args, **kwargs):
-        handle = real_open(file, mode, *args, **kwargs)
-        if file == tmp_path_expected and "w" in mode:
+    def _path_open_with_failing_write(self, mode="r", *args, **kwargs):
+        handle = real_path_open(self, mode, *args, **kwargs)
+        if self == tmp_path_expected and "w" in mode:
             return _ExplodingWriter(handle)
         return handle
 
-    monkeypatch.setattr(json_io, "open", _open_with_failing_write, raising=False)
+    monkeypatch.setattr(pathlib.Path, "open", _path_open_with_failing_write, raising=False)
 
     with pytest.raises(OSError, match="boom"):
         json_io.write_json_atomic(path, {"updated": True})

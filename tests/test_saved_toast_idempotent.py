@@ -74,7 +74,7 @@ class TestSavedToastIdempotent(unittest.TestCase):
         self.mock_window.player_hud.enqueue_toast.reset_mock()
         
         # 2. Force failure (e.g. by making directory read-only or mocking open)
-        with patch("builtins.open", side_effect=PermissionError("Mock error")):
+        with patch("pathlib.Path.open", side_effect=PermissionError("Mock error")):
             result = self.save_manager.save_game(slot)
             self.assertFalse(result)
             self.mock_window.player_hud.enqueue_toast.assert_not_called() # SaveManager doesn't toast failure
