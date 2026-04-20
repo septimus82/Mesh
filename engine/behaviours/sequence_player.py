@@ -8,21 +8,11 @@ from typing import TYPE_CHECKING, Any, Iterable
 if TYPE_CHECKING:
     from arcade import Sprite
 
+from engine.swallowed_exceptions import _log_swallow
+
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 @register_behaviour(

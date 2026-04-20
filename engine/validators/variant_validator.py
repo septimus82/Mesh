@@ -5,18 +5,7 @@ from typing import Any, Dict, List
 
 from engine.content_packs import discover_packs
 from engine.paths import get_content_roots, resolve_path
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 class VariantValidator:

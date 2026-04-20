@@ -5,18 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Set
 
 from engine.paths import resolve_path
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 class TransitionValidator:
