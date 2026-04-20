@@ -271,15 +271,9 @@ class CutsceneController:
             try:
                 mover((x, y))
                 return
-            except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+            except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
                 _log_swallow("CUTS-004", "engine/cutscene_controller.py blanket swallow", once=True)
-                if not getattr(self, "_mesh_camera_move_error_logged", False):
-                    print(f"[Mesh][Cutscene] ERROR moving camera: {exc}")
-                    setattr(self, "_mesh_camera_move_error_logged", True)
         try:
             camera.position = (x, y)
-        except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
+        except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
             _log_swallow("CUTS-005", "engine/cutscene_controller.py blanket swallow", once=True)
-            if not getattr(self, "_mesh_camera_position_error_logged", False):
-                print(f"[Mesh][Cutscene] ERROR setting camera position: {exc}")
-                setattr(self, "_mesh_camera_position_error_logged", True)
