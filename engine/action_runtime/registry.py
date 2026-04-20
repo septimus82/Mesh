@@ -9,20 +9,9 @@ from engine.constants import (
     EVENT_QUEST_LOG_CLOSED,
     EVENT_QUEST_LOG_OPENED,
 )
+from engine.swallowed_exceptions import _log_swallow
 from engine.ui import maybe_enqueue_lighting_toggle_tip
 from engine import savegame
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def _noop(_window: object) -> None:
