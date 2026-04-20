@@ -16,18 +16,7 @@ from .migrations import migrate_payload
 from .paths import resolve_path
 from .prefabs import get_prefab_manager
 from .schema_validation import validate
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 DEFAULT_LAYERS = [
     {"name": "background"},
