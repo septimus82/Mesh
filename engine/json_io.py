@@ -71,7 +71,7 @@ def write_text_atomic(
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = target.with_suffix(target.suffix + ".tmp")
     try:
-        with open(tmp_path, "w", encoding=encoding, newline="\n") as handle:
+        with tmp_path.open("w", encoding=encoding, newline="\n") as handle:
             handle.write(text)
             if durable:
                 handle.flush()

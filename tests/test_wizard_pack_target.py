@@ -12,7 +12,8 @@ class TestWizardPackTarget:
              patch("pathlib.Path.mkdir"), \
              patch("pathlib.Path.exists") as mock_exists, \
              patch("pathlib.Path.open", new_callable=MagicMock), \
-             patch("pathlib.Path.write_text"):
+             patch("pathlib.Path.write_text"), \
+             patch("os.replace"):
             
             yield {"exists": mock_exists}
 

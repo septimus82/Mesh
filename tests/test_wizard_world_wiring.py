@@ -12,7 +12,8 @@ class TestWizardWorldWiring:
              patch("pathlib.Path.mkdir"), \
              patch("pathlib.Path.exists") as mock_exists, \
              patch("pathlib.Path.open", new_callable=MagicMock) as mock_file_open, \
-             patch("pathlib.Path.write_text"):
+             patch("pathlib.Path.write_text"), \
+             patch("os.replace"):
             
             mock_exists.return_value = True
             yield {
