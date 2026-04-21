@@ -4,13 +4,13 @@ from typing import Any, Sequence, Dict, List, Tuple, cast
 import engine.optional_arcade as optional_arcade
 from engine.asset_hot_reload_watcher import is_hot_reload_enabled
 from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 
 _OVERLAY_PERF_LOCK = Lock()
 _OVERLAY_PERF_REQUIRED_KEYS = ("providers_total", "command_palette_provider")
 _OVERLAY_PERF: dict[str, dict[str, float]] = {}
 
 logger = get_logger(__name__)
-_SWALLOW_ONCE_TAGS: set[str] = set()
 _PROVIDER_FALLBACK_EXCEPTIONS: tuple[type[Exception], ...] = (
     AttributeError,
     ImportError,
@@ -19,13 +19,6 @@ _PROVIDER_FALLBACK_EXCEPTIONS: tuple[type[Exception], ...] = (
     TypeError,
     ValueError,
 )
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    logger.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 
