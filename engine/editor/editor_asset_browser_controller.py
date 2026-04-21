@@ -14,6 +14,7 @@ from engine.editor.asset_browser_panel import (
     move_asset_selection as _move_asset_selection_impl,
     resolve_asset_activation as _resolve_asset_activation_impl,
 )
+from engine.swallowed_exceptions import _log_swallow
 from engine.editor_light_occluder_ops import snap_world_point
 from engine.ui_overlays.widget_overlay_helpers import (
     apply_backspace,
@@ -24,18 +25,6 @@ from engine.ui_overlays.widget_overlay_helpers import (
     apply_text_input,
     resolve_preserved_selection_index,
 )
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 logger = get_logger(__name__)
