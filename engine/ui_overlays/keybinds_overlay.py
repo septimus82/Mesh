@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
 
 from ..text_draw import TextCache
 from ..ui_text_cache import UiTextCache, draw_text
@@ -17,18 +18,6 @@ from .common import (
 from .keybinds_provider import get_keybinds_ui_data
 from .widget_overlay_helpers import OverlayFocusModel, build_empty_row, build_status_row, compose_list_rows
 from .widgets import Rect, ScrollList, TextInput
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow

@@ -17,20 +17,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
 from .common import UIElement
 from ..text_draw import draw_text_cached, TextCache
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:
     from engine.game import GameWindow
