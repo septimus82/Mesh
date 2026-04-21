@@ -20,18 +20,7 @@ from engine.editor.prefab_palette_panel import (
     normalize_entity_panel_tags,
 )
 from engine.editor.state import ENTITY_PANEL_FIELDS, ENTITY_PANEL_FOCUS_INSPECTOR, ENTITY_PANEL_FOCUS_OUTLINER
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 class EditorEntityPanelsController:

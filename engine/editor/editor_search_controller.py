@@ -8,6 +8,7 @@ from engine.editor.find_everything_model import build_find_items
 from engine.editor_commands import get_all_commands
 from engine.editor_entity_ops import list_entities
 from engine.scene_index import build_scene_rows
+from engine.swallowed_exceptions import _log_swallow
 from engine.ui_overlays.widget_overlay_helpers import (
     apply_backspace,
     apply_enter,
@@ -16,18 +17,6 @@ from engine.ui_overlays.widget_overlay_helpers import (
     apply_nav_key,
     apply_text_input,
 )
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 class EditorSearchController:

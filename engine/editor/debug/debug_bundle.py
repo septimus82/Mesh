@@ -15,6 +15,7 @@ from engine.hud_model import build_hud_view_model, merge_event_histories
 from engine.persistence_io import dumps_json_deterministic
 from engine.save_runtime.io import get_save_runtime_diagnostics_snapshot
 from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 
 from engine.editor.behaviour_inspector import build_entity_behaviour_summary
 from .cutscene_debug_model import CutsceneDebugViewModel, build_cutscene_debug_view_model
@@ -26,16 +27,6 @@ from .debug_panels_state import (
 )
 from .event_monitor_model import build_event_log_view_model_from_settings
 from .quest_debug_model import QuestDebugViewModel, build_quest_debug_view_model
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 @dataclass(frozen=True, slots=True)
