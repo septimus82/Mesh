@@ -7,6 +7,8 @@ import pytest
 from engine.prefabs import PrefabManager
 from engine.schema_validation import SchemaValidationError
 
+pytestmark = [pytest.mark.fast]
+
 
 def _write_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
