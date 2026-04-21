@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 
 from .common import (
     UIElement,
@@ -18,18 +19,6 @@ from .common import (
 from ..input_hints import get_action_hint, set_keyboard_hints
 from ..text_draw import TextCache, draw_text_cached
 from ._settings_data import SETTINGS_ROWS
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
