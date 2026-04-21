@@ -34,19 +34,9 @@ from engine.logging_tools import get_logger
 from engine.projects import add_recent_project, get_recent_projects, remove_recent_project, set_last_project
 from engine.runtime_settings import ensure_runtime_settings
 from engine.runtime_settings_storage import load_runtime_settings, resolve_runtime_settings_path, save_runtime_settings
+from engine.swallowed_exceptions import _log_swallow
 from engine.workspace_settings import WorkspaceSettings, load_workspace, save_workspace
 
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController
