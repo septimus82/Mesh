@@ -1,0 +1,32 @@
+{
+  "budgets": {
+    "exception_budget": {
+      "baseline_count": 0,
+      "current_count": 0,
+      "ok": true
+    },
+    "verify_step_budget": {
+      "ok": true,
+      "worst_offender": null
+    }
+  },
+  "runtime_diagnostics": {
+    "shadow_backend": {
+      "reason": "preferred",
+      "selected": "opengl"
+    },
+    "swallowed_exceptions": {
+      "distinct": 0,
+      "ok": true,
+      "total": 1
+    }
+  },
+  "schema_version": 1,
+  "timing": {
+    "top5": [],
+    "total_ms": 100
+  },
+  "verify_summary": {
+    "ok": true
+  }
+}

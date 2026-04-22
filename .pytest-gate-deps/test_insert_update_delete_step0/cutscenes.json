@@ -1,0 +1,13 @@
+{
+  "cutscenes": [
+    {
+      "id": "intro",
+      "steps": [
+        {
+          "duration": 1,
+          "type": "wait"
+        }
+      ]
+    }
+  ]
+}

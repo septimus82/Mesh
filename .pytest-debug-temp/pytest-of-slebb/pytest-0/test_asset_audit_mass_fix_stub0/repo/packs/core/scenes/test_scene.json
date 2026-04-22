@@ -1,0 +1,25 @@
+{
+  "entities": [
+    {
+      "behaviour_config": {
+        "ParticleEmitter": {
+          "preset": "core:spark_hit"
+        }
+      },
+      "behaviours": [
+        "ParticleEmitter"
+      ],
+      "name": "fx",
+      "sprite": "assets/sprites/missing_test_guard.png",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "behaviours": [
+        "PlayerController"
+      ],
+      "name": "prefab_entity",
+      "prefab_id": "torch_wisp"
+    }
+  ]
+}

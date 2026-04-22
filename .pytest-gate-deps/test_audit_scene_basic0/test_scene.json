@@ -1,0 +1,1 @@
+{"entities": [{"name": "NPC1", "dialogue": {"id": "d1"}, "tags": ["friendly"]}, {"name": "NPC2"}, {"behaviours": [{"type": "SceneTransition", "params": {"target_scene": "scenes/target.json"}}]}]}

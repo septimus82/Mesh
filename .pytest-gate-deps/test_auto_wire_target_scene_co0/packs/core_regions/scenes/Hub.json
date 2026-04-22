@@ -1,0 +1,27 @@
+{
+  "entities": [
+    {
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_point": "default",
+          "target_scene": ".pytest-gate-deps/test_auto_wire_target_scene_co0/packs/core_regions/scenes/Interior.json"
+        }
+      },
+      "behaviours": [
+        "SceneTransition"
+      ],
+      "tags": [
+        "auto_wired"
+      ],
+      "type": "prop",
+      "x": 300,
+      "y": 0
+    }
+  ],
+  "name": "Hub",
+  "settings": {
+    "region_template": "hub-interior-dungeon",
+    "scene_kind": "hub"
+  },
+  "version": 1
+}

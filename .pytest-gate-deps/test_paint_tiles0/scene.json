@@ -1,0 +1,15 @@
+{
+  "tilemap": {
+    "overrides": {
+      "layers": {
+        "ground": [
+          0,
+          5,
+          0,
+          0
+        ]
+      }
+    },
+    "path": "D:\\Games\\Mesh\\.pytest-gate-deps\\test_paint_tiles0\\map.json"
+  }
+}

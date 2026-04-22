@@ -1,0 +1,18 @@
+{
+  "bundle_schema_version": 1,
+  "generated_files": [
+    "artifacts/verify_report.json"
+  ],
+  "ok": true,
+  "readable": {
+    "verify_report": true
+  },
+  "schema_version": 1,
+  "schemas": {
+    "exception_budget": 1
+  },
+  "verify_all": "artifacts/verify_report.json",
+  "written": {
+    "verify_report": "artifacts/verify_report.json"
+  }
+}

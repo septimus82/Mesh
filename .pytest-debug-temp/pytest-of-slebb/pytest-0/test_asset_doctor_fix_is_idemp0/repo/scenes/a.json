@@ -1,0 +1,15 @@
+{
+  "entities": [
+    {
+      "behaviour_config": {
+        "TriggerZone": {
+          "zone_id": "E1"
+        }
+      },
+      "behaviours": [
+        "TriggerZone"
+      ],
+      "id": "E1"
+    }
+  ]
+}

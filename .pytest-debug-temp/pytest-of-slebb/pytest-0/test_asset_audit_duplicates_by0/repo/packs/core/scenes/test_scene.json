@@ -1,0 +1,20 @@
+{
+  "entities": [
+    {
+      "name": "fx",
+      "x": 0,
+      "y": 0,
+      "behaviours": ["ParticleEmitter"],
+      "behaviour_config": {
+        "ParticleEmitter": {
+          "preset": "core:spark_hit"
+        }
+      }
+    },
+    {
+      "name": "prefab_entity",
+      "prefab_id": "torch_wisp",
+      "behaviours": ["PlayerController"]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "cutscenes": [
+    {
+      "id": "outro",
+      "steps": [
+        {
+          "event": "done",
+          "type": "emit_event"
+        }
+      ]
+    }
+  ]
+}

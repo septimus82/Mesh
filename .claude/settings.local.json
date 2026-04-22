@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep \"\\\\.py$\")",
+      "Bash(find \"D:\\\\Games\\\\Mesh\\\\engine\" -maxdepth 1 -name \"*.py\" -exec wc -l {} +)",
+      "Bash(ls -la hd2d_*.py)",
+      "Bash(grep -iE \"^\\(check_|inspect_|parse_rathena|test_light_layer\\).*\\\\.py$\")",
+      "Bash(grep -iE \"^\\(check_|inspect_|parse_rathena|test_light_layer|hd2d_|sprite_outline|editor_hd2d\\).*\\\\.py$\")",
+      "Bash(git stash *)",
+      "Read(//d/tmp/mesh-head-new/**)",
+      "Read(//tmp/mesh-head-new/.mesh/**)",
+      "Bash(git check-ignore *)",
+      "Bash(git -C /d/tmp/mesh-head-new status --short)",
+      "Bash(git diff *)",
+      "Bash(powershell -Command \"Get-Item 'C:\\\\Users\\\\slebb\\\\.claude\\\\projects\\\\D--Games-Mesh\\\\bff3a484-a7b8-4c6b-bf14-a015c42db67e.jsonl' | Select-Object Length\")",
+      "Bash(powershell -Command \"\\(Get-Content 'C:\\\\Users\\\\slebb\\\\.claude\\\\projects\\\\D--Games-Mesh\\\\bff3a484-a7b8-4c6b-bf14-a015c42db67e.jsonl'\\).Count\")",
+      "Bash(powershell -Command \"Get-Content 'C:\\\\Users\\\\slebb\\\\.claude\\\\projects\\\\D--Games-Mesh\\\\bff3a484-a7b8-4c6b-bf14-a015c42db67e.jsonl' -Tail 20\")",
+      "Bash(powershell -Command \"Get-Content 'C:\\\\Users\\\\slebb\\\\.claude\\\\projects\\\\D--Games-Mesh\\\\bff3a484-a7b8-4c6b-bf14-a015c42db67e.jsonl' -TotalCount 3\")"
+    ]
+  }
+}

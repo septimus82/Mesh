@@ -1,0 +1,1 @@
+{"entities": [{"behaviours": [{"type": "SceneTransition", "params": {"target_scene": "scenes/missing.json"}}]}]}

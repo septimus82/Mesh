@@ -1,0 +1,16 @@
+{
+  "dialogues": [
+    {
+      "id": "d1",
+      "schema_version": 1,
+      "script": {
+        "start": {
+          "choices": [],
+          "speaker": "n",
+          "text": "t"
+        }
+      },
+      "start_node": "start"
+    }
+  ]
+}

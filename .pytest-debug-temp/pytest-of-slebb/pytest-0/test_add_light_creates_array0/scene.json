@@ -1,0 +1,11 @@
+{
+  "lights": [
+    {
+      "color": "#ffddaa",
+      "mode": "soft",
+      "radius": 160.0,
+      "x": 10.0,
+      "y": 20.0
+    }
+  ]
+}

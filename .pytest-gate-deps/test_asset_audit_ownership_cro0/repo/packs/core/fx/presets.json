@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "presets": {
+    "spark_hit": {
+      "mode": "burst",
+      "count": 4,
+      "sprite": "packs/core/fx/spark.png"
+    },
+    "spark_collect": {
+      "mode": "burst",
+      "count": 2,
+      "sprite": "packs/core/fx/spark.png"
+    }
+  }
+}

@@ -1,0 +1,1 @@
+{"wizard": "test", "version": 1, "inputs": {"meta": {"touches": []}}, "actions": [{"type": "create_scene", "args": {"path": "scenes/test.json", "template": "basic"}, "description": "test"}]}

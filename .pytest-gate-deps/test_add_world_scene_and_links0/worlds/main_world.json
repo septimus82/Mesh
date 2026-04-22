@@ -1,0 +1,21 @@
+{
+  "id": "main",
+  "links": [
+    {
+      "from": "village",
+      "to": "forest",
+      "via": "Door"
+    }
+  ],
+  "scenes": {
+    "village": {
+      "label": "Village",
+      "path": "scenes/village.json",
+      "tags": [
+        "hub"
+      ]
+    }
+  },
+  "start_scene": "village",
+  "start_spawn": "gate"
+}

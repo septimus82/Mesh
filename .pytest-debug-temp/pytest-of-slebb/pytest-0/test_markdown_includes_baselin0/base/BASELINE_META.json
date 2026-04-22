@@ -1,0 +1,8 @@
+{
+  "created_utc": "2026-02-17T00:00:00Z",
+  "package_version": "0.4.1",
+  "public_api_semver": "1.0.1",
+  "schema_version": 1,
+  "source_commit": "deadbeef",
+  "source_workflow_run_id": null
+}
