@@ -9,19 +9,10 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Literal, Tuple
 
 from engine.persistence_io import dumps_json_deterministic, write_json_atomic
+from engine.swallowed_exceptions import _log_swallow
 
 log = logging.getLogger(__name__)
 logger = log
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    logger.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 @dataclass(frozen=True)
