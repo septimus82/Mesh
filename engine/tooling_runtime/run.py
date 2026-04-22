@@ -22,15 +22,7 @@ from engine.validators.transition_validator import TransitionValidator
 from engine.validators.variant_validator import VariantValidator
 from engine.validators.theme_spawn_variant_override_validator import validate_theme_spawn_variant_override_settings
 from engine.logging_tools import get_logger
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 
