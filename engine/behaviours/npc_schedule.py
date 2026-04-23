@@ -2,20 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Callable, List, cast
 
+from engine.swallowed_exceptions import _log_swallow
+
 from ..event_emit import emit_gameplay_event
 from .base import Behaviour, ParamDef
 from .patrol import PatrolBehaviour
 from .registry import register_behaviour
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-
-def _log_swallow(tag: str, context: str) -> None:
-    if tag in _SWALLOW_ONCE_TAGS:
-        return
-    _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def _norm_hour(value: float) -> float:
