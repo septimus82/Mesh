@@ -11,21 +11,13 @@ from engine.content_diff import diff_locks
 from engine.content_lock import build_lock, read_lock
 from engine.paths import get_content_index, resolve_path
 from engine.paths import reset_path_caches, set_content_roots
+from engine.swallowed_exceptions import _log_swallow
 from engine.tooling.content_contract import (
     collect_contract_files,
     run_content_contract,
 )
 from engine.validators.reference_validator import ReferenceValidator
 from engine.logging_tools import get_logger
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 

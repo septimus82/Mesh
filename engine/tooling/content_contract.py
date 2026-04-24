@@ -8,17 +8,9 @@ from typing import Any, Iterable
 
 from engine.fx_presets import FxPresetRegistry
 from engine.paths import resolve_path
+from engine.swallowed_exceptions import _log_swallow
 from engine.tooling_runtime.pack_manifest import load_all_manifests, resolve_pack_order
 from engine.logging_tools import get_logger
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 
