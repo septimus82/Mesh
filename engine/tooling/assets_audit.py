@@ -10,17 +10,7 @@ from engine.behaviours.particle_emitter import validate_particle_emitter_config
 from engine.fx_presets import FxPresetRegistry, collect_presets_and_errors
 from engine.paths import reset_path_caches, resolve_path, set_content_roots
 from engine.prefabs import get_prefab_manager
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 from engine.tooling.content_contract import (
     find_particle_emitters,
     _build_prefab_index,
