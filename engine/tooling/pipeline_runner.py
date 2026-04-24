@@ -4,21 +4,10 @@ import argparse
 import json
 
 from engine.config import load_config
+from engine.swallowed_exceptions import _log_swallow
 from engine.tooling import preset_commands, validate_all
 from engine.tooling.plan_apply import apply_plan
 from engine.tooling.tool_result import Issue, ToolResult
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def launch_demo(start_scene: str | None = None, world_path: str | None = None) -> int:
