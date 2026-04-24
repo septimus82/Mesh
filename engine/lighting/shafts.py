@@ -6,18 +6,9 @@ from typing import Any
 
 import engine.optional_arcade
 from engine.arcade_compat import activate_framebuffer, close_framebuffer_activation
+from engine.swallowed_exceptions import _log_swallow
 
 from .flicker import FlickerNoise, apply_light_flicker
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-
-def _log_swallow(tag: str, context: str) -> None:
-    if tag in _SWALLOW_ONCE_TAGS:
-        return
-    _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def collect_shafts_draw_specs(manager: Any, offset: tuple[float, float]) -> list[dict[str, Any]]:
