@@ -17,15 +17,7 @@ from engine.save_runtime.restore_policy import (
 from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from engine.save_runtime.schema import SaveValidationError, migrate_save, validate_save
 from engine.logging_tools import get_logger
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 

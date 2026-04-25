@@ -12,15 +12,7 @@ from engine.tooling_runtime.brush_report import compute_scene_brush_report
 from engine.tilemap_edit import TilemapDims, ensure_tiles_array, set_tile, get_layer_by_id
 from engine.paths import resolve_path
 from engine.logging_tools import get_logger
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 logger = logging.getLogger(__name__)
