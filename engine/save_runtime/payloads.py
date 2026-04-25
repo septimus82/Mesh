@@ -17,19 +17,8 @@ from engine.save_runtime.quest_state import serialize_quests, apply_quests
 from engine.save_runtime.restore_policy import RestorePolicy, SLOT_POLICY, SNAPSHOT_POLICY
 from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from engine.save_runtime.schema import SAVE_SCHEMA_VERSION
+from engine.swallowed_exceptions import _log_swallow
 from engine.world_controller import WorldController
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 def _diagnostic(
     *,

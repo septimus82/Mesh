@@ -4,23 +4,10 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from engine.command_palette_preview import build_arg_suggestions
+from engine.swallowed_exceptions import _log_swallow
 
 if TYPE_CHECKING:
     from engine.input_runtime.capture_runtime_focus_model import CaptureFocusSnapshot
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 @dataclass
 class CommandPalettePromptHistory:
