@@ -5,6 +5,7 @@ import os
 from typing import Any, Callable
 
 from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 from engine.console_runtime.models import ParsedCommand
 from engine.console_runtime.parse import parse_command_line
 from engine.console_runtime import handlers
@@ -18,17 +19,6 @@ from engine.console_runtime import handlers_scene
 
 
 Handler = Callable[[Any, list[str]], bool]
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 def _dispatch_table() -> dict[str, Handler]:
     entries: list[tuple[str, Handler]] = []
