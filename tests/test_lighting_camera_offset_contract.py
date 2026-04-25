@@ -3,6 +3,7 @@ import logging
 import pytest
 
 import engine.lighting as lighting
+import engine.swallowed_exceptions as swallowed_exceptions
 from engine.lighting import LightManager
 
 
@@ -31,14 +32,14 @@ def test_end_uses_zero_camera_offset_for_bad_position_shape(caplog: pytest.LogCa
     manager._apply_light_cookies = lambda *, target_fbo, offset: seen_offsets.append(offset)
     manager._apply_light_shafts = lambda *, target_fbo, offset: seen_offsets.append(offset)
 
-    lighting._SWALLOW_ONCE_TAGS.clear()
+    swallowed_exceptions._SWALLOW_ONCE_TAGS.clear()
     try:
         with caplog.at_level(logging.DEBUG, logger="engine.lighting"):
             manager.end()
             manager.end()
-        swallow_tags = set(lighting._SWALLOW_ONCE_TAGS)
+        swallow_tags = set(swallowed_exceptions._SWALLOW_ONCE_TAGS)
     finally:
-        lighting._SWALLOW_ONCE_TAGS.clear()
+        swallowed_exceptions._SWALLOW_ONCE_TAGS.clear()
 
     assert seen_offsets == [(0.0, 0.0), (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)]
     assert swallow_tags == {"LGIN-008"}
