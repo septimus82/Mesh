@@ -15,23 +15,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
 
 from engine.input_runtime import capture_key_router as router
 from engine.input_runtime import capture_mouse_router as mouse_router
 from engine.input_runtime.capture_focus_query import get_capture_focus_snapshot
 from engine.input_runtime.capture_mouse_router_model import MouseEvent
 
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:
     from engine.input_controller import InputController
