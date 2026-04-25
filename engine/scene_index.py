@@ -7,16 +7,7 @@ from typing import Any, Dict, Iterable, List
 
 from engine.path_norm import normalize_scene_path
 from engine.paths import resolve_path
-from engine.logging_tools import get_logger
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 
