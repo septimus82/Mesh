@@ -2,22 +2,12 @@ import os
 import sys
 from pathlib import Path
 from typing import List, Optional
+from engine.swallowed_exceptions import _log_swallow
 
 from .config import EngineConfig, load_config
 from .content_index import ContentIndex
 from .repo_root import find_repo_root
 
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 _CACHED_CONFIG: Optional[EngineConfig] = None
 _CONTENT_ROOTS: Optional[List[Path]] = None
