@@ -65,6 +65,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Iterable, Set
 import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
 
 from .actions import dispatch_action
 from .input_runtime import capture as input_capture
@@ -78,17 +79,6 @@ _LOG_ONCE: set[str] = set()
 from .input import InputManager
 from .input_bindings import ACTION_SHOW_CHARACTER, apply_config_bindings, known_actions, snapshot_bindings
 
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:
     from .game import GameWindow
