@@ -4,21 +4,10 @@ import copy
 from typing import TYPE_CHECKING, Any, Dict
 
 import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
 
 from ..index_build import build_scene_index_from_sprites
 from .entity_ops import _debug_iter_authoring_payloads, debug_find_sprite_by_entity_id, get_authored_scene_payload
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:
     from ...scene_controller import SceneController
