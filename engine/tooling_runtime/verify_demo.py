@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Iterable, List, Optional
 
 from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 
 
 # Keep logger name stable (historically this lived in engine.tooling.verify_demo)
@@ -19,15 +20,6 @@ _VERIFY_DEMO_FAILURE_LINE_LIMIT = 40
 _VERIFY_DEMO_RUN_COUNTER = itertools.count(1)
 _VERIFY_DEMO_IGNORE_GLOBS: tuple[str, ...] = ("tests/temp_*",)
 _MISSING_PATH_RE = re.compile(r"FileNotFoundError:.*['\"]([^'\"]+)['\"]")
-
-
-def _log_swallow(tag: str, purpose: str) -> None:
-    _LOG.debug(
-        "SWALLOWED_EXCEPTION SWALLOW[%s] %s",
-        tag,
-        purpose,
-        exc_info=True,
-    )
 
 # Curated, deterministic test list for fast dev verification.
 # Keep this list stable and explicitly ordered to avoid nondeterministic discovery.
@@ -309,7 +301,7 @@ def run_verify_demo(
                 stderr=stderr,
             )
         except Exception as exc:  # noqa: BLE001  # REASON: verify-demo should preserve the original test failure while tolerating secondary artifact-write errors
-            _log_swallow("VDEMO-001", "verify-demo failure artifact write fallback")
+            _log_swallow("VDEMO-001", "verify-demo failure artifact write fallback", once=False)
             _LOG.error("VDEMO-001 verify-demo failure artifact write error: %s", exc, exc_info=True)
 
     if log_path is not None:
@@ -318,7 +310,7 @@ def run_verify_demo(
             if not quiet:
                 _LOG.error("verify-demo failed; log written to %s", log_path)
         except Exception as exc:  # noqa: BLE001  # REASON: verify-demo should preserve the original test failure while tolerating secondary log-write errors
-            _log_swallow("VDEMO-001", "verify-demo log write fallback")
+            _log_swallow("VDEMO-001", "verify-demo log write fallback", once=False)
             _LOG.error("VDEMO-001 verify-demo log write error: %s", exc, exc_info=True)
     elif not quiet and capture_output:
         if stderr:
