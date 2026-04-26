@@ -16,7 +16,7 @@ from .legacy.dispatch import build_parser as _build_parser
 from .legacy.dispatch import dispatch as _dispatch
 from .legacy.dispatch import main as _dispatch_main
 from .legacy.registry import TOOLING_EXPORT_NAMES, get_tooling_export
-from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 
 if TYPE_CHECKING:
     from engine.config import load_config as load_config
@@ -51,17 +51,7 @@ from .headless_arcade import install_arcade_stub_if_missing as _install_arcade_s
 
 _install_arcade_stub_if_missing()
 
-logger = get_logger(__name__)
-
 _SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    logger.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 GameWindow = None
 
