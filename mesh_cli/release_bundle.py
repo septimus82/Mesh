@@ -43,24 +43,13 @@ from engine.persistence_io import (
     write_json_atomic as _base_write_json_atomic,
     write_text_atomic as _base_write_text_atomic,
 )
+from engine.swallowed_exceptions import _log_swallow
 from mesh_cli.release_notes import (
     format_release_notes_text,
     generate_release_notes,
     release_notes_to_dict,
 )
 from mesh_cli.version_info import get_tool_version
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 # Fixed timestamp for deterministic ZIPs: 1980-01-01 00:00:00
 _ZIP_FIXED_DATE = (1980, 1, 1, 0, 0, 0)
