@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import ast
-from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 import json
 import os
 from pathlib import Path
@@ -11,19 +11,6 @@ from typing import Any, Callable, TypedDict
 from mesh_cli.verify_steps import STEP_ORDER as VERIFY_ALL_STEPS
 from mesh_cli.verify_steps import VerifyStepContext, run_verify_steps
 from mesh_cli.shipping_policy import build_verify_summary_key_artifacts
-
-logger = get_logger(__name__)
-
-
-def _log_swallow(tag: str, where: str, purpose: str) -> None:
-    logger.debug(
-        "SWALLOWED_EXCEPTION SWALLOW[%s] %s %s",
-        tag,
-        where,
-        purpose,
-        exc_info=True,
-    )
-
 
 class _VerifyStepDurationRow(TypedDict):
     name: str
@@ -286,7 +273,7 @@ def _archive_verify_step_durations_artifact(artifacts_dir: Path) -> Path | None:
     try:
         payload = _read_verify_step_durations_payload(source)
     except (OSError, json.JSONDecodeError, ValueError):
-        _log_swallow("VFYC-023", "mesh_cli.verify", "verify-step-durations history archive fallback")
+        _log_swallow("VFYC-023", "verify-step-durations history archive fallback", once=False)
         return None
 
     from engine.persistence_io import write_json_atomic
@@ -468,7 +455,7 @@ def _load_mypy_gate_run_diagnostics() -> dict[str, object]:
             if isinstance(payload, dict):
                 return payload
     except Exception:  # noqa: BLE001  # REASON: verify step isolation
-        _log_swallow("VFYC-001", "mesh_cli.verify", "blanket exception fallback")
+        _log_swallow("VFYC-001", "blanket exception fallback", once=False)
         pass
     return {}
 
@@ -773,7 +760,7 @@ def _evaluate_authoring_trace_budget_guard(
     try:
         baseline_raw = json.loads(baseline_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        _log_swallow("VFYC-002", "mesh_cli.verify", "authoring-trace-budget baseline parse fallback")
+        _log_swallow("VFYC-002", "authoring-trace-budget baseline parse fallback", once=False)
         payload = _build_authoring_trace_budget_check_payload(
             ok=False,
             tolerance_ms=_AUTHORING_TRACE_BUDGET_DEFAULT_TOLERANCE_MS,
@@ -920,7 +907,7 @@ def _fetch_swallowed_exceptions_snapshot() -> dict[str, object]:
         TypeError,
         ValueError,
     ):
-        _log_swallow("VFYC-003", "mesh_cli.verify", "swallowed-exceptions snapshot fallback")
+        _log_swallow("VFYC-003", "swallowed-exceptions snapshot fallback", once=False)
         return {
             "schema_version": 1,
             "ok": False,
@@ -952,7 +939,7 @@ def _fetch_authoring_trace_snapshot() -> dict[str, object] | None:
         if isinstance(snap, dict) and "schema_version" in snap:
             return snap
     except Exception:  # noqa: BLE001  # REASON: verify step isolation
-        _log_swallow("VFYC-004", "mesh_cli.verify", "blanket exception fallback")
+        _log_swallow("VFYC-004", "blanket exception fallback", once=False)
         pass
     return {
         "schema_version": 1,
@@ -991,7 +978,7 @@ def _fetch_shadow_backend_diagnostics() -> dict[str, object]:
         TypeError,
         ValueError,
     ):
-        _log_swallow("VFYC-005", "mesh_cli.verify", "shadow-backend diagnostics fallback")
+        _log_swallow("VFYC-005", "shadow-backend diagnostics fallback", once=False)
         return {
             "schema_version": 1,
             "selected": "?",
@@ -1042,7 +1029,7 @@ def _fetch_overlay_perf_snapshot() -> dict[str, object]:
         TypeError,
         ValueError,
     ):
-        _log_swallow("VFYC-006", "mesh_cli.verify", "overlay-perf snapshot fallback")
+        _log_swallow("VFYC-006", "overlay-perf snapshot fallback", once=False)
         return {
             "schema_version": 1,
             "metrics": empty_metrics,
@@ -1111,7 +1098,7 @@ def _collect_recent_step_durations(
             payload = _read_verify_step_durations_payload(path)
             _extract_step_duration_ms(payload)
         except Exception:
-            _log_swallow("VFYC-007", "mesh_cli.verify", "blanket exception fallback")
+            _log_swallow("VFYC-007", "blanket exception fallback", once=False)
             continue
         payloads.append(payload)
         candidates_used.append(str(rel_path))
@@ -1149,7 +1136,7 @@ def _evaluate_verify_step_budget_guard(
     try:
         baseline_raw = json.loads(baseline_path.read_text(encoding="utf-8"))
     except Exception as exc:
-        _log_swallow("VFYC-008", "mesh_cli.verify", "blanket exception fallback")
+        _log_swallow("VFYC-008", "blanket exception fallback", once=False)
         payload = _build_verify_step_budget_check_payload(
             ok=False,
             tolerance_ms=_VERIFY_STEP_BUDGET_DEFAULT_TOLERANCE_MS,
@@ -1318,7 +1305,7 @@ def _evaluate_pytest_fast_duration_guard(metrics_path, total_baseline_path, top1
         try:
             baseline_total = float(total_baseline_path.read_text(encoding="utf-8").strip() or "0")
         except (OSError, ValueError):
-            _log_swallow("VFYC-009", "mesh_cli.verify", "pytest-fast total baseline parse fallback")
+            _log_swallow("VFYC-009", "pytest-fast total baseline parse fallback", once=False)
             baseline_total = total_seconds
     else:
         baseline_total = total_seconds
@@ -1327,7 +1314,7 @@ def _evaluate_pytest_fast_duration_guard(metrics_path, total_baseline_path, top1
         try:
             baseline_top10 = float(top10_baseline_path.read_text(encoding="utf-8").strip() or "0")
         except (OSError, ValueError):
-            _log_swallow("VFYC-010", "mesh_cli.verify", "pytest-fast top10 baseline parse fallback")
+            _log_swallow("VFYC-010", "pytest-fast top10 baseline parse fallback", once=False)
             baseline_top10 = top10_seconds
     else:
         baseline_top10 = top10_seconds
@@ -1448,7 +1435,7 @@ def _evaluate_exception_budget_guard(repo_root: Path, baseline_path: Path) -> tu
         try:
             baseline = int(baseline_path.read_text(encoding="utf-8").strip() or "0")
         except (OSError, ValueError):
-            _log_swallow("VFYC-011", "mesh_cli.verify", "exception-budget baseline parse fallback")
+            _log_swallow("VFYC-011", "exception-budget baseline parse fallback", once=False)
             baseline = current
     else:
         baseline = current
@@ -1505,7 +1492,7 @@ def _run_verify_replays_summary(folder_path):
 
         return (0 if failed_int == 0 else 1), summary if isinstance(summary, dict) else {"ok": False, "code": 1}
     except (AttributeError, OSError, RuntimeError, TypeError, ValueError):
-        _log_swallow("VFYC-012", "mesh_cli.verify", "verify-replays summary fallback")
+        _log_swallow("VFYC-012", "verify-replays summary fallback", once=False)
         return 1, {"ok": False, "code": 1, "error": "replays.failed"}
 
 
@@ -1538,7 +1525,7 @@ def _build_artifact_index_payload(
             raw = abs_path.read_text(encoding="utf-8")
             data = _json.loads(raw)
         except (OSError, json.JSONDecodeError):
-            _log_swallow("VFYC-013", "mesh_cli.verify", "artifact-index read fallback")
+            _log_swallow("VFYC-013", "artifact-index read fallback", once=False)
             readable[key] = False
             continue
         if not isinstance(data, dict):
@@ -1601,7 +1588,7 @@ def _handle_verify_all(args: argparse.Namespace) -> int:
                     sys.stdout.write(build_report_text(_artifacts))
                     sys.stdout.write("\n")
             except Exception:  # noqa: BLE001  # REASON: verify step isolation
-                _log_swallow("VFYC-014", "mesh_cli.verify", "blanket exception fallback")
+                _log_swallow("VFYC-014", "blanket exception fallback", once=False)
                 pass  # best-effort; keep original exit code
 
     # --report-json: append machine-readable JSON diagnostics
@@ -1625,7 +1612,7 @@ def _handle_verify_all(args: argparse.Namespace) -> int:
                     sys.stdout.write(_json.dumps(build_report_payload(_artifacts), indent=2, sort_keys=True))
                     sys.stdout.write("\n")
             except Exception:  # noqa: BLE001  # REASON: verify step isolation
-                _log_swallow("VFYC-015", "mesh_cli.verify", "blanket exception fallback")
+                _log_swallow("VFYC-015", "blanket exception fallback", once=False)
                 pass  # best-effort; keep original exit code
 
     return int(exit_code)
@@ -1650,7 +1637,7 @@ def _handle_verify_local(args: argparse.Namespace) -> int:
 
         repo_root = get_repo_root(start=Path.cwd(), strict=True)
     except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
-        _log_swallow("VFYC-026", "mesh_cli.verify", "blanket exception fallback")
+        _log_swallow("VFYC-026", "blanket exception fallback", once=False)
         payload = {
             "ok": False,
             "steps": [
@@ -1700,7 +1687,7 @@ def _handle_verify_local(args: argparse.Namespace) -> int:
                     code = int(legacy_mod.validate_all.main([world_path, "--strict", "--schema-strict"]))
                 _add_step("verify-strict", code, error="" if code == 0 else f"failed with code {code}", artifact=None)
             except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
-                _log_swallow("VFYC-027", "mesh_cli.verify", "blanket exception fallback")
+                _log_swallow("VFYC-027", "blanket exception fallback", once=False)
                 _add_step("verify-strict", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
 
             try:
@@ -1715,7 +1702,7 @@ def _handle_verify_local(args: argparse.Namespace) -> int:
                 else:
                     raise
             except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
-                _log_swallow("VFYC-028", "mesh_cli.verify", "blanket exception fallback")
+                _log_swallow("VFYC-028", "blanket exception fallback", once=False)
                 _add_step("mypy-island", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
 
             try:
@@ -1740,7 +1727,7 @@ def _handle_verify_local(args: argparse.Namespace) -> int:
                     artifact=artifact,
                 )
             except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
-                _log_swallow("VFYC-029", "mesh_cli.verify", "blanket exception fallback")
+                _log_swallow("VFYC-029", "blanket exception fallback", once=False)
                 _add_step("swallow-scan-gate", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
 
             try:
@@ -1759,7 +1746,7 @@ def _handle_verify_local(args: argparse.Namespace) -> int:
                     artifacts_written["exception_policy_scan"] = artifact
                 _add_step("exception-policy-scan", 0, error="", artifact=artifact)
             except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
-                _log_swallow("VFYC-030", "mesh_cli.verify", "blanket exception fallback")
+                _log_swallow("VFYC-030", "blanket exception fallback", once=False)
                 _add_step("exception-policy-scan", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
 
             try:
@@ -1772,7 +1759,7 @@ def _handle_verify_local(args: argparse.Namespace) -> int:
                     code = int(result.returncode)
                     _add_step("pytest-fast", code, error="" if code == 0 else f"failed with code {code}", artifact=None)
             except _VERIFY_LOCAL_STEP_EXCEPTIONS as exc:
-                _log_swallow("VFYC-031", "mesh_cli.verify", "blanket exception fallback")
+                _log_swallow("VFYC-031", "blanket exception fallback", once=False)
                 _add_step("pytest-fast", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
 
     overall_ok = all(bool(step.get("ok")) for step in steps)
@@ -1817,7 +1804,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
 
         repo_root = get_repo_root(start=Path.cwd(), strict=True)
     except Exception as exc:  # noqa: BLE001  # REASON: verify step isolation
-        _log_swallow("VFYC-016", "mesh_cli.verify", "blanket exception fallback")
+        _log_swallow("VFYC-016", "blanket exception fallback", once=False)
         error_steps: list[dict[str, Any]] = []
         is_first_step = True
         for name in VERIFY_ALL_STEPS:
@@ -2042,7 +2029,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
                 artifacts_dir=artifacts_dir,
             )
         except Exception as exc:
-            _log_swallow("VFYC-017", "mesh_cli.verify", "blanket exception fallback")
+            _log_swallow("VFYC-017", "blanket exception fallback", once=False)
             budget_code = 1
             budget_error = f"verify-step-budget guard failed: {type(exc).__name__}: {exc}"
             verify_step_budget_payload = _build_verify_step_budget_check_payload(
@@ -2090,7 +2077,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
                             encoding="utf-8",
                         )
                 except Exception:  # noqa: BLE001  # REASON: verify step isolation
-                    _log_swallow("VFYC-018", "mesh_cli.verify", "blanket exception fallback")
+                    _log_swallow("VFYC-018", "blanket exception fallback", once=False)
                     pass
             if _is_pytest_fast_budget_offender(verify_step_budget_payload):
                 try:
@@ -2101,7 +2088,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
                             verify_step_budget_payload=verify_step_budget_payload,
                         )
                 except Exception:  # noqa: BLE001  # REASON: verify step isolation
-                    _log_swallow("VFYC-019", "mesh_cli.verify", "blanket exception fallback")
+                    _log_swallow("VFYC-019", "blanket exception fallback", once=False)
                     pass
 
         # Shadow backend diagnostics artifact
@@ -2170,7 +2157,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
                         update_command=trace_budget_update_cmd,
                     )
                 except Exception as exc:
-                    _log_swallow("VFYC-020", "mesh_cli.verify", "blanket exception fallback")
+                    _log_swallow("VFYC-020", "blanket exception fallback", once=False)
                     trace_budget_code = 1
                     trace_budget_error = f"authoring-trace-budget guard failed: {type(exc).__name__}: {exc}"
                     trace_budget_payload = _build_authoring_trace_budget_check_payload(
@@ -2217,7 +2204,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
                 artifacts_dir / "verify_report.json", repo_root=repo_root
             )
         except Exception:  # noqa: BLE001  # REASON: verify step isolation
-            _log_swallow("VFYC-021", "mesh_cli.verify", "blanket exception fallback")
+            _log_swallow("VFYC-021", "blanket exception fallback", once=False)
             pass  # best-effort; keep exit code unchanged
 
     # --release-notes-artifact: write release_notes.json + release_notes.md to artifacts dir
@@ -2259,7 +2246,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
                 artifacts_dir / "release_notes.md", repo_root=repo_root
             )
         except Exception:  # noqa: BLE001  # REASON: verify step isolation
-            _log_swallow("VFYC-022", "mesh_cli.verify", "blanket exception fallback")
+            _log_swallow("VFYC-022", "blanket exception fallback", once=False)
             pass  # best-effort; keep exit code unchanged
 
     # Always write compact verify summary artifacts when --artifacts is enabled.
@@ -2279,7 +2266,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
                 artifacts_dir / "verify_summary.txt", repo_root=repo_root
             )
         except Exception:  # noqa: BLE001  # REASON: verify step isolation
-            _log_swallow("VFYC-025", "mesh_cli.verify", "blanket exception fallback")
+            _log_swallow("VFYC-025", "blanket exception fallback", once=False)
             pass  # best-effort; keep exit code unchanged
 
     # --artifact-index: write artifacts/index.json manifest
@@ -2304,7 +2291,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
                 artifacts_dir / "index.json", repo_root=repo_root
             )
         except Exception:  # noqa: BLE001  # REASON: verify step isolation
-            _log_swallow("VFYC-023", "mesh_cli.verify", "blanket exception fallback")
+            _log_swallow("VFYC-023", "blanket exception fallback", once=False)
             pass  # best-effort; keep exit code unchanged
 
     if artifacts_dir is not None:
@@ -2502,7 +2489,7 @@ def handle(args: argparse.Namespace) -> int:
                 code = int(legacy_mod.validate_all.main([world_path, "--strict", "--schema-strict"]))
             error = "" if code == 0 else f"failed with code {code}"
         except Exception as exc:  # noqa: BLE001  # REASON: verify step isolation
-            _log_swallow("VFYC-024", "mesh_cli.verify", "blanket exception fallback")
+            _log_swallow("VFYC-024", "blanket exception fallback", once=False)
             code = 1
             error = f"{type(exc).__name__}: {exc}"
 
