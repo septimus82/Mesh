@@ -10,18 +10,7 @@ from engine.persistence_io import dumps_json_deterministic
 from engine.persistence_io import write_json_atomic
 from engine.runtime_only import DEFAULT_SMOKE_SCENE
 from engine.runtime_only import FORBIDDEN_EDITOR_PREFIXES
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 DEFAULT_RUNTIME_ENTRY = "python -m mesh_cli play-runtime --headless-smoke"
