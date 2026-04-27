@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from engine.swallowed_exceptions import _log_swallow
+
 
 def find_entity(self, identifier: str | int):
     return self.entities.find_entity(self, identifier)
@@ -32,8 +34,6 @@ def get_spawn(self, spawn_id: str | None):
 
 
 def apply_spawn(self, spawn_id: str | None) -> None:
-    import engine.scene_controller_core as scene_controller_module
-
     player = self._find_player_sprite()
     if player is None:
         return
@@ -52,14 +52,8 @@ def apply_spawn(self, spawn_id: str | None) -> None:
     if facing is not None:
         try:
             setattr(player, "facing", facing)
-        except Exception as exc:
-            if "scene_set_facing" not in scene_controller_module._LOG_ONCE:
-                scene_controller_module.logger.warning(
-                    "Failed to set player facing: %s",
-                    exc,
-                    exc_info=True,
-                )
-                scene_controller_module._LOG_ONCE.add("scene_set_facing")
+        except Exception:
+            _log_swallow("scene_set_facing", "Failed to set player facing")
         entity_data = getattr(player, "mesh_entity_data", None)
         if isinstance(entity_data, dict):
             entity_data["facing"] = facing

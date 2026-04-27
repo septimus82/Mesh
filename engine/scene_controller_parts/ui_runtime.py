@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from engine.swallowed_exceptions import _log_swallow
+
 
 def _rebuild_ui_for_scene(self) -> None:
     import engine.scene_controller_core as scene_controller_module
@@ -37,14 +39,8 @@ def _rebuild_ui_for_scene(self) -> None:
         from engine.behaviours.health import Health  # noqa: PLC0415
     except ImportError:
         return
-    except Exception as exc:
-        if "scene_import_health" not in scene_controller_module._LOG_ONCE:
-            scene_controller_module.logger.error(
-                "Unexpected error importing Health behaviour: %s",
-                exc,
-                exc_info=True,
-            )
-            scene_controller_module._LOG_ONCE.add("scene_import_health")
+    except Exception:
+        _log_swallow("scene_import_health", "Unexpected error importing Health behaviour")
         return
 
     for sprite in self.all_sprites:

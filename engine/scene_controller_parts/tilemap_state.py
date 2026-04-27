@@ -55,8 +55,6 @@ def _load_tilemap_layers(self, scene: Dict[str, Any], scene_dir: Path) -> None:
         self,
         scene,
         scene_dir,
-        logger=scene_controller_module.logger,
-        log_once=scene_controller_module._LOG_ONCE,
         load_tilemap_func=lambda *args, **kwargs: self.window.tilemap_manager.load_map(*args, **kwargs),
     )
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+from engine.swallowed_exceptions import _log_swallow
+
 
 def _apply_collision_poly(self, sprite: Any, poly: Any) -> None:
     import os
@@ -124,12 +126,10 @@ def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
                 seconds=3.0,
             )
         return sprite
-    except Exception as exc:
+    except Exception:
         if getattr(self.window, "strict_mode", False):
             raise
-        if "scene_create_sprite" not in scene_controller_module._LOG_ONCE:
-            scene_controller_module.logger.error("Failed to create sprite: %s", exc, exc_info=True)
-            scene_controller_module._LOG_ONCE.add("scene_create_sprite")
+        _log_swallow("scene_create_sprite", "Failed to create sprite")
         return None
 
 
