@@ -16,7 +16,7 @@ def test_read_json_dict_artifact_logs_stable_parse_tag(
     target = tmp_path / "package_check.json"
     target.write_text("{bad json\n", encoding="utf-8")
 
-    logging.getLogger("mesh_cli.verify_steps.pipeline").setLevel(logging.DEBUG)
+    logging.getLogger("engine.swallowed_exceptions").setLevel(logging.DEBUG)
     payload = verify_pipeline._read_json_dict_artifact(
         target,
         tag="VSTP-049",
@@ -37,7 +37,7 @@ def test_coerce_int_field_logs_stable_baseline_tag(
     baseline_path = tmp_path / "exception_policy_baseline.json"
     payload = {"ble001_count_total": "bad"}
 
-    logging.getLogger("mesh_cli.verify_steps.pipeline").setLevel(logging.DEBUG)
+    logging.getLogger("engine.swallowed_exceptions").setLevel(logging.DEBUG)
     value = verify_pipeline._coerce_int_field(
         payload,
         "ble001_count_total",
@@ -60,7 +60,7 @@ def test_coerce_int_logs_stable_origin_tag(
 ) -> None:
     world_path = tmp_path / "world.json"
 
-    logging.getLogger("mesh_cli.verify_steps.pipeline").setLevel(logging.DEBUG)
+    logging.getLogger("engine.swallowed_exceptions").setLevel(logging.DEBUG)
     value = verify_pipeline._coerce_int(
         "bad",
         "origin_x",
@@ -84,7 +84,7 @@ def test_read_json_dict_artifact_logs_stable_root_shape_tag(
     target = tmp_path / "room_scene.json"
     target.write_text("[1, 2, 3]\n", encoding="utf-8")
 
-    logging.getLogger("mesh_cli.verify_steps.pipeline").setLevel(logging.DEBUG)
+    logging.getLogger("engine.swallowed_exceptions").setLevel(logging.DEBUG)
     payload = verify_pipeline._read_json_dict_artifact(
         target,
         tag="VSTP-030",
@@ -105,7 +105,7 @@ def test_read_json_dict_artifact_logs_stamp_scene_parse_tag(
     target = tmp_path / "stamp_scene.json"
     target.write_text("{bad json\n", encoding="utf-8")
 
-    logging.getLogger("mesh_cli.verify_steps.pipeline").setLevel(logging.DEBUG)
+    logging.getLogger("engine.swallowed_exceptions").setLevel(logging.DEBUG)
     payload = verify_pipeline._read_json_dict_artifact(
         target,
         tag="VSTP-019",
@@ -126,7 +126,7 @@ def test_read_json_dict_artifact_logs_macro_scene_root_shape_tag(
     target = tmp_path / "macro_scene.json"
     target.write_text("[{\"entities\": []}]\n", encoding="utf-8")
 
-    logging.getLogger("mesh_cli.verify_steps.pipeline").setLevel(logging.DEBUG)
+    logging.getLogger("engine.swallowed_exceptions").setLevel(logging.DEBUG)
     payload = verify_pipeline._read_json_dict_artifact(
         target,
         tag="VSTP-050",
@@ -146,7 +146,7 @@ def test_coerce_xy_pair_logs_stable_macro_position_tag(
 ) -> None:
     scene_path = tmp_path / "macro_scene.json"
 
-    logging.getLogger("mesh_cli.verify_steps.pipeline").setLevel(logging.DEBUG)
+    logging.getLogger("engine.swallowed_exceptions").setLevel(logging.DEBUG)
     value = verify_pipeline._coerce_xy_pair(
         {"x": "bad", "y": 12},
         default=(0.0, 0.0),
@@ -169,7 +169,7 @@ def test_coerce_xy_pair_logs_stable_spawn_position_tag(
 ) -> None:
     scene_path = tmp_path / "room_scene.json"
 
-    logging.getLogger("mesh_cli.verify_steps.pipeline").setLevel(logging.DEBUG)
+    logging.getLogger("engine.swallowed_exceptions").setLevel(logging.DEBUG)
     value = verify_pipeline._coerce_xy_pair(
         {"x": 4, "y": object()},
         default=(0.0, 0.0),
@@ -192,7 +192,7 @@ def test_coerce_float_logs_stable_macro_preview_tag(
 ) -> None:
     macro_path = tmp_path / "objective_zone.macro.json"
 
-    logging.getLogger("mesh_cli.verify_steps.pipeline").setLevel(logging.DEBUG)
+    logging.getLogger("engine.swallowed_exceptions").setLevel(logging.DEBUG)
     value = verify_pipeline._coerce_float(
         "bad",
         "radius",
