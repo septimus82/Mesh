@@ -4,6 +4,7 @@ import os
 from typing import TYPE_CHECKING, Callable
 
 from engine.input_runtime import capture
+from engine.swallowed_exceptions import _log_swallow
 
 
 if TYPE_CHECKING:
@@ -16,19 +17,13 @@ def update(
     *,
     dispatch_action: Callable[[object, str], bool],
     log_once_with_counter: Callable[[str, str], None],
-    logger: object,
-    log_once_set: set[str],
 ) -> None:
     updater = getattr(controller.manager, "update", None)
     if callable(updater):
         try:
             updater(delta_time)
-        except Exception as exc:  # noqa: BLE001  # REASON: manager update failures should log once and keep later input dispatch checks running
-            if "input_update" not in log_once_set:
-                error = getattr(logger, "error", None)
-                if callable(error):
-                    error("Input update failed: %s", exc, exc_info=True)
-                log_once_set.add("input_update")
+        except Exception:  # noqa: BLE001  # REASON: manager update failures should log once and keep later input dispatch checks running
+            _log_swallow("input_update", "Input update failed")
 
     pressed = getattr(controller.manager, "was_action_pressed", None)
     if not callable(pressed):

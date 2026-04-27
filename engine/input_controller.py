@@ -75,7 +75,6 @@ from engine.log_once import log_once_with_counter
 
 logger = logging.getLogger(__name__)
 _stderr_logger = get_logger(__name__)
-_LOG_ONCE: set[str] = set()
 from .input import InputManager
 from .input_bindings import ACTION_SHOW_CHARACTER, apply_config_bindings, known_actions, snapshot_bindings
 
@@ -281,8 +280,6 @@ class InputController:
             delta_time,
             dispatch_action=dispatch_action,
             log_once_with_counter=log_once_with_counter,
-            logger=_stderr_logger,
-            log_once_set=_LOG_ONCE,
         )
 
     def _poll_gamepad_state(self) -> None:
@@ -468,10 +465,8 @@ class InputController:
                     from .config import save_config
 
                     save_config(cfg)
-                except Exception as exc:
-                    if "input_save_bindings" not in _LOG_ONCE:
-                        _stderr_logger.warning("Failed to save bindings: %s", exc, exc_info=True)
-                        _LOG_ONCE.add("input_save_bindings")
+                except Exception:
+                    _log_swallow("input_save_bindings", "Failed to save bindings")
         return snapshot
 
     def get_bindings_as_names(self) -> dict[str, list[str]]:
