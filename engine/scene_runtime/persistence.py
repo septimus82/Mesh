@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING, Any, Dict
+
+from engine.swallowed_exceptions import _log_swallow
 
 if TYPE_CHECKING:
     from ..scene_controller import SceneController
-
-logger = logging.getLogger(__name__)
-_LOG_ONCE: set[str] = set()
 
 
 def build_scene_snapshot(controller: SceneController, compact: bool = False) -> Dict[str, Any]:
@@ -48,10 +46,8 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
     def _coerce_scene_float(value: Any, default: float = 0.0) -> float:
         try:
             return float(value)
-        except Exception as exc:
-            if "scene_snapshot_float" not in _LOG_ONCE:
-                logger.error("Error coercing scene float: %s", exc, exc_info=True)
-                _LOG_ONCE.add("scene_snapshot_float")
+        except Exception:
+            _log_swallow("scene_snapshot_float", "Error coercing scene float")
             return float(default)
 
     for sprite in controller.all_sprites:

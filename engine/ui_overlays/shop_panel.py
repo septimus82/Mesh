@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
-from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 
 from .common import (
     UIElement,
@@ -16,9 +16,6 @@ from ..text_draw import TextCache, draw_text_cached
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
-
-logger = get_logger(__name__)
-_LOG_ONCE: set[str] = set()
 
 
 class ShopPanel(UIElement):
@@ -139,10 +136,8 @@ class ShopPanel(UIElement):
             return 0
         try:
             return int(gs.get_counter("gold", 0))
-        except Exception as exc:
-            if "ui_currency_amount" not in _LOG_ONCE:
-                logger.error("Error reading currency counter: %s", exc, exc_info=True)
-                _LOG_ONCE.add("ui_currency_amount")
+        except Exception:
+            _log_swallow("ui_currency_amount", "Error reading currency counter")
             return 0
 
     def draw(self) -> None:
@@ -206,10 +201,8 @@ class ShopPanel(UIElement):
             if self._mode == "buy" and self.vendor is not None and hasattr(self.vendor, "get_buy_price"):
                 try:
                     price = self.vendor.get_buy_price(entry)
-                except Exception as exc:
-                    if "ui_vendor_price" not in _LOG_ONCE:
-                        logger.warning("Vendor get_buy_price failed: %s", exc, exc_info=True)
-                        _LOG_ONCE.add("ui_vendor_price")
+                except Exception:
+                    _log_swallow("ui_vendor_price", "Vendor get_buy_price failed")
                     price = entry.get("price", 0)
             qty = entry.get("quantity", -1)
             qty_label = "∞" if qty is None or int(qty) < 0 else str(int(qty))

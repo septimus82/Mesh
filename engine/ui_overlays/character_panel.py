@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
-from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 
 from .common import (
     UIElement,
@@ -16,9 +16,6 @@ from ..text_draw import TextCache, draw_text_cached
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
-
-logger = get_logger(__name__)
-_LOG_ONCE: set[str] = set()
 
 
 class CharacterPanel(UIElement):
@@ -86,10 +83,8 @@ class CharacterPanel(UIElement):
         stats["xp_needed"] = xp_needed
         try:
             stats["gold"] = getattr(self.window, "get_counter", lambda *a, **k: 0)("gold", 0)
-        except Exception as exc:
-            if "ui_stats_gold" not in _LOG_ONCE:
-                logger.warning("Failed to get gold counter: %s", exc, exc_info=True)
-                _LOG_ONCE.add("ui_stats_gold")
+        except Exception:
+            _log_swallow("ui_stats_gold", "Failed to get gold counter")
             stats["gold"] = 0
         equipment = stats.get("equipment", {}) or {}
         stats["equipment_labels"] = self._resolve_equipment_labels(equipment)
@@ -101,10 +96,8 @@ class CharacterPanel(UIElement):
             from ..inventory import load_item_database
 
             db = load_item_database()
-        except Exception as exc:
-            if "ui_inventory_db" not in _LOG_ONCE:
-                logger.warning("Failed to load item database: %s", exc, exc_info=True)
-                _LOG_ONCE.add("ui_inventory_db")
+        except Exception:
+            _log_swallow("ui_inventory_db", "Failed to load item database")
             db = None
         for slot in ("weapon", "armor", "accessory"):
             item_id = equipment.get(slot) if isinstance(equipment, dict) else None
