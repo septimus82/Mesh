@@ -82,7 +82,7 @@ def _tilemap_validate_scene_payload(
                     width = width_val
                     height = height_val
             except Exception:
-                _log_swallow("TILE-001", "mesh_cli/scene/tilemap.py pass-only blanket swallow")
+                _log_swallow("TILE-015", "mesh_cli/scene/tilemap.py pass-only blanket swallow")
                 pass
 
     if width is None or height is None or width <= 0 or height <= 0:

@@ -2291,7 +2291,7 @@ def _build_verify_all_payload(args: argparse.Namespace):
                 artifacts_dir / "index.json", repo_root=repo_root
             )
         except Exception:  # noqa: BLE001  # REASON: verify step isolation
-            _log_swallow("VFYC-023", "blanket exception fallback", once=False)
+            _log_swallow("VFYC-032", "blanket exception fallback", once=False)
             pass  # best-effort; keep exit code unchanged
 
     if artifacts_dir is not None:

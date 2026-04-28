@@ -150,7 +150,7 @@ def _run_debug_bundle(repo_root: Path, out_path: Path, *, deterministic: bool = 
         try:
             window.close()
         except Exception:  # noqa: BLE001  # REASON: release debug bundle teardown
-            _log_swallow("RELE-001", "mesh_cli/release_check_pipeline.py pass-only blanket swallow")
+            _log_swallow("RELE-004", "mesh_cli/release_check_pipeline.py pass-only blanket swallow")
 
 
 def _step_record(
