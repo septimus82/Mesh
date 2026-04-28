@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 import os
-import logging
 from dataclasses import dataclass
 from typing import Any, Sequence, Iterable
 import engine.optional_arcade as optional_arcade
@@ -26,8 +25,6 @@ Point = tuple[float, float]
 Polygon = list[Point]
 
 MAX_SHADOW_POLYS_PER_LIGHT = 512
-_LOG_ONCE: set[str] = set()
-logger = logging.getLogger(__name__)
 _LAST_SHADOW_BACKEND_DIAGNOSTICS: dict[str, object] = {
     "schema_version": 1,
     "selected": "none",
@@ -372,9 +369,8 @@ def render_shadow_mask(
                     # but expose the failure when tracing is enabled.
                     record_swallowed("engine.lighting.shadows.render_shadow_mask.draw_polygons", exc)
                     mask_error = repr(exc)
-                    if os.environ.get("MESH_SHADOWS_TRACE") == "1" and "render_shadow_mask_trace" not in _LOG_ONCE:
-                        logger.exception("[Mesh][Lighting] render_shadow_mask draw failed backend=%s", backend)
-                        _LOG_ONCE.add("render_shadow_mask_trace")
+                    if os.environ.get("MESH_SHADOWS_TRACE") == "1":
+                        _log_swallow("render_shadow_mask_trace", f"render_shadow_mask draw failed backend={backend}")
                     else:
                         print(f"Shadow Exception: {exc}")
 
@@ -387,9 +383,8 @@ def render_shadow_mask(
         except Exception as exc:  # noqa: BLE001  # REASON: lighting fallback isolation
             record_swallowed("engine.lighting.shadows.render_shadow_mask.fbo_path", exc)
             mask_error = repr(exc)
-            if os.environ.get("MESH_SHADOWS_TRACE") == "1" and "render_shadow_mask_trace" not in _LOG_ONCE:
-                logger.exception("[Mesh][Lighting] render_shadow_mask failed backend=%s", backend)
-                _LOG_ONCE.add("render_shadow_mask_trace")
+            if os.environ.get("MESH_SHADOWS_TRACE") == "1":
+                _log_swallow("render_shadow_mask_trace", f"render_shadow_mask failed backend={backend}")
             try:
                 setattr(renderer, "_mesh_shadow_mask_backend", backend)
             except Exception:  # noqa: BLE001  # REASON: lighting fallback isolation
