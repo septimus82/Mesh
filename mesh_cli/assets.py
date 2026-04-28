@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from engine.logging_tools import get_logger, is_json_mode, suppress_stdout
+from engine.logging_tools import is_json_mode, suppress_stdout
 from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 from engine.paths import reset_path_caches, set_content_roots
 from engine.repo_root import get_repo_root
@@ -24,9 +24,7 @@ from engine.sprite_sheet_math import (
     iter_sprite_sheet_frame_boxes,
     parse_anim_spec,
 )
-
-
-logger = get_logger(__name__)
+from engine.swallowed_exceptions import _log_swallow
 
 
 _SWALLOW_ONCE_TAGS: set[str] = set()
@@ -43,14 +41,6 @@ _ASSETS_NUMERIC_PARSE_EXCEPTIONS: tuple[type[Exception], ...] = (
     TypeError,
     ValueError,
 )
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    logger.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 def _single_line_error(text: str) -> str:
     raw = str(text or "")

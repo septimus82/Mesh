@@ -65,6 +65,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Iterable, Set
 import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
 
 from .actions import dispatch_action
 from .input_runtime import capture as input_capture
@@ -74,21 +75,9 @@ from engine.log_once import log_once_with_counter
 
 logger = logging.getLogger(__name__)
 _stderr_logger = get_logger(__name__)
-_LOG_ONCE: set[str] = set()
 from .input import InputManager
 from .input_bindings import ACTION_SHOW_CHARACTER, apply_config_bindings, known_actions, snapshot_bindings
 
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:
     from .game import GameWindow
@@ -291,8 +280,6 @@ class InputController:
             delta_time,
             dispatch_action=dispatch_action,
             log_once_with_counter=log_once_with_counter,
-            logger=_stderr_logger,
-            log_once_set=_LOG_ONCE,
         )
 
     def _poll_gamepad_state(self) -> None:
@@ -478,10 +465,8 @@ class InputController:
                     from .config import save_config
 
                     save_config(cfg)
-                except Exception as exc:
-                    if "input_save_bindings" not in _LOG_ONCE:
-                        _stderr_logger.warning("Failed to save bindings: %s", exc, exc_info=True)
-                        _LOG_ONCE.add("input_save_bindings")
+                except Exception:
+                    _log_swallow("input_save_bindings", "Failed to save bindings")
         return snapshot
 
     def get_bindings_as_names(self) -> dict[str, list[str]]:

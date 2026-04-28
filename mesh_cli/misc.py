@@ -11,19 +11,8 @@ from engine.config import load_config
 from engine.persistence_io import write_json_atomic, dumps_json_deterministic
 from engine.logging_tools import suppress_stdout
 from engine.tooling import wizard_command, state_dump
+from engine.swallowed_exceptions import _log_swallow
 from mesh_cli import scene as scene_commands
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 def handle(args: argparse.Namespace) -> int:
     if args.command == "play":

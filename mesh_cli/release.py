@@ -18,6 +18,7 @@ from engine.provenance import (
     get_provenance,
     provenance_to_dict,
 )
+from engine.swallowed_exceptions import _log_swallow
 from mesh_cli.release_check_pipeline import (
     _normalize_outputs,
     _resolve_path,
@@ -77,18 +78,6 @@ _build_rc_report = _release_rc_reporting._build_rc_report
 _set_rc_version_bump = _release_rc_reporting._set_rc_version_bump
 _set_rc_version_bump_rolled_back = _release_rc_reporting._set_rc_version_bump_rolled_back
 _update_rc_bundle_report = _release_rc_reporting._update_rc_bundle_report
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 def register(subparsers: argparse._SubParsersAction) -> None:
     release_parser = subparsers.add_parser(

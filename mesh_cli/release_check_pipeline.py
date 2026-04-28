@@ -6,18 +6,7 @@ from typing import Any
 
 from engine.persistence_io import write_json_atomic, write_text_atomic
 from engine.provenance import get_provenance, provenance_to_dict
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 def _run_step(runner) -> tuple[int, dict[str, Any], str | None]:
@@ -161,7 +150,7 @@ def _run_debug_bundle(repo_root: Path, out_path: Path, *, deterministic: bool = 
         try:
             window.close()
         except Exception:  # noqa: BLE001  # REASON: release debug bundle teardown
-            _log_swallow("RELE-001", "mesh_cli/release_check_pipeline.py pass-only blanket swallow")
+            _log_swallow("RELE-004", "mesh_cli/release_check_pipeline.py pass-only blanket swallow")
 
 
 def _step_record(

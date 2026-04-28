@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, TYPE_CHECKING
+from engine.swallowed_exceptions import _log_swallow
 
 from engine.editor.editor_actions import get_editor_actions, run_editor_action
 from engine.editor.shortcut_resolver_model import (
@@ -14,17 +15,6 @@ from engine.editor.editor_focus_model import (
     is_text_input_active_for_controller,
 )
 
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController as EditorController

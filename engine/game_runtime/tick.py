@@ -6,17 +6,8 @@ import engine.optional_arcade as optional_arcade
 
 from engine.swallowed_exceptions import record_swallowed
 from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 from engine.ui import maybe_auto_open_quest_log, maybe_enqueue_demo_interior_hint, maybe_enqueue_quest_progress_toast
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
-
 
 if TYPE_CHECKING:
     from engine.events import MeshEvent

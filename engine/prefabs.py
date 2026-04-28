@@ -10,20 +10,9 @@ from typing import Any, Dict, Optional, cast
 from engine.content_packs import discover_packs
 from engine.paths import get_content_roots, resolve_path
 from engine.schema_validation import validate
+from engine.swallowed_exceptions import _log_swallow
 
 log = logging.getLogger(__name__)
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 def _validate_variant_entry(entry: Any, *, source_path: Path, index: int) -> Dict[str, Any] | None:
     label = source_path.as_posix()

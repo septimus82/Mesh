@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 
 from .command_palette_registry_selection import (
     get_authored_payload as _get_authored_payload,
@@ -14,17 +15,6 @@ from .command_palette_registry_selection import (
 from .command_palette_registry_selection import (
     selection_non_player_ids as _selection_non_player_ids,
 )
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 def enabled_always(_w: Any) -> tuple[bool, str]:
     return True, ""

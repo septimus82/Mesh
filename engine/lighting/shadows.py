@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import math
 import os
-import logging
 from dataclasses import dataclass
 from typing import Any, Sequence, Iterable
 import engine.optional_arcade as optional_arcade
 from .occluders import Rect
 from engine.geometry_tools import sanitize_poly
-from engine.swallowed_exceptions import record_swallowed
+from engine.swallowed_exceptions import _log_swallow, record_swallowed
 from engine.arcade_compat import (
     capture_active_framebuffer,
     clear_framebuffer,
@@ -22,24 +21,10 @@ from .shadow_backend import (
     decision_to_diagnostics,
 )
 
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 Point = tuple[float, float]
 Polygon = list[Point]
 
 MAX_SHADOW_POLYS_PER_LIGHT = 512
-_LOG_ONCE: set[str] = set()
-logger = logging.getLogger(__name__)
 _LAST_SHADOW_BACKEND_DIAGNOSTICS: dict[str, object] = {
     "schema_version": 1,
     "selected": "none",
@@ -384,9 +369,8 @@ def render_shadow_mask(
                     # but expose the failure when tracing is enabled.
                     record_swallowed("engine.lighting.shadows.render_shadow_mask.draw_polygons", exc)
                     mask_error = repr(exc)
-                    if os.environ.get("MESH_SHADOWS_TRACE") == "1" and "render_shadow_mask_trace" not in _LOG_ONCE:
-                        logger.exception("[Mesh][Lighting] render_shadow_mask draw failed backend=%s", backend)
-                        _LOG_ONCE.add("render_shadow_mask_trace")
+                    if os.environ.get("MESH_SHADOWS_TRACE") == "1":
+                        _log_swallow("render_shadow_mask_trace", f"render_shadow_mask draw failed backend={backend}")
                     else:
                         print(f"Shadow Exception: {exc}")
 
@@ -399,9 +383,8 @@ def render_shadow_mask(
         except Exception as exc:  # noqa: BLE001  # REASON: lighting fallback isolation
             record_swallowed("engine.lighting.shadows.render_shadow_mask.fbo_path", exc)
             mask_error = repr(exc)
-            if os.environ.get("MESH_SHADOWS_TRACE") == "1" and "render_shadow_mask_trace" not in _LOG_ONCE:
-                logger.exception("[Mesh][Lighting] render_shadow_mask failed backend=%s", backend)
-                _LOG_ONCE.add("render_shadow_mask_trace")
+            if os.environ.get("MESH_SHADOWS_TRACE") == "1":
+                _log_swallow("render_shadow_mask_trace", f"render_shadow_mask failed backend={backend}")
             try:
                 setattr(renderer, "_mesh_shadow_mask_backend", backend)
             except Exception:  # noqa: BLE001  # REASON: lighting fallback isolation

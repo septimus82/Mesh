@@ -7,21 +7,12 @@ from math import hypot
 from pathlib import Path
 from typing import Any, Dict, Optional
 import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
 
 from .logging_tools import get_logger
 from .paths import resolve_path
 
 logger = get_logger(__name__)
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    logger.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 WORLD_SFX_PROFILES: Dict[str, Dict[str, float | bool]] = {
     "melee": {"max_dist": 650.0},

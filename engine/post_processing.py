@@ -23,18 +23,8 @@ from typing import Any, Dict, List, Optional
 
 from engine.arcade_compat import activate_framebuffer, clear_framebuffer, close_framebuffer_activation
 from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 logger = get_logger(__name__)
 

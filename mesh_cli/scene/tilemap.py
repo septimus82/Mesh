@@ -11,18 +11,7 @@ from engine.scene_serializer import compact_scene_payload
 from engine.path_norm import normalize_scene_path
 from engine.tilemap_brush import apply_brush, validate_brush
 from engine.tilemap_flood_fill import FloodFillMaxTilesExceeded, apply_flood_fill, flood_fill_indices
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 class BrushLoader:
@@ -93,7 +82,7 @@ def _tilemap_validate_scene_payload(
                     width = width_val
                     height = height_val
             except Exception:
-                _log_swallow("TILE-001", "mesh_cli/scene/tilemap.py pass-only blanket swallow")
+                _log_swallow("TILE-015", "mesh_cli/scene/tilemap.py pass-only blanket swallow")
                 pass
 
     if width is None or height is None or width <= 0 or height <= 0:

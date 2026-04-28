@@ -5,6 +5,7 @@ from typing import Any, Callable, Dict, cast
 
 from engine import optional_arcade
 from engine.scene_runtime import authoring as _authoring_runtime
+from engine.swallowed_exceptions import _log_swallow
 from engine.tilemap import TilemapInstance
 
 
@@ -30,8 +31,6 @@ def load_tilemap_layers(
     scene: Dict[str, Any],
     scene_dir: Path,
     *,
-    logger: Any,
-    log_once: set[str],
     load_tilemap_func: Callable[..., TilemapInstance | None],
 ) -> None:
     tilemap_data = scene.get("tilemap")
@@ -116,10 +115,8 @@ def load_tilemap_layers(
         overrides["layers"] = tile_override_layers
     try:
         instance = load_tilemap_func(tilemap_path, layer_configs, overrides=overrides)
-    except Exception as exc:
-        if "scene_load_tilemap" not in log_once:
-            logger.error("Failed to load tilemap '%s': %s", tilemap_path, exc, exc_info=True)
-            log_once.add("scene_load_tilemap")
+    except Exception:
+        _log_swallow("scene_load_tilemap", f"Failed to load tilemap path={tilemap_path}")
         return
 
     if instance is None:

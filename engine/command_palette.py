@@ -18,17 +18,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, TypedDict
 import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from engine.swallowed_exceptions import _log_swallow
 
 
 @functools.lru_cache(maxsize=1)

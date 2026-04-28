@@ -12,21 +12,10 @@ from engine.scene_serializer import compact_scene_payload
 from engine.tooling.content_inventory import list_scenes
 from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 from engine.logging_tools import suppress_stdout
-from engine.logging_tools import get_logger
 from engine.repo_root import get_repo_root
+from engine.swallowed_exceptions import _log_swallow
 
 from mesh_cli.scene.common import _single_line_error
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 def _emit_inventory(payload: dict, out_path: str | None) -> int:
     text = dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True)

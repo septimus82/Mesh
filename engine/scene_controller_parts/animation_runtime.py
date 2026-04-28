@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from engine.swallowed_exceptions import _log_swallow
+
 
 def _update_animation_stage(self, delta_time: float) -> None:
     import engine.scene_controller_core as scene_controller_module
@@ -21,12 +23,10 @@ def _update_animation_stage(self, delta_time: float) -> None:
             if desired_state:
                 animator.set_state(desired_state)
             animator.update(delta_time)
-        except Exception as exc:
+        except Exception:
             if getattr(self.window, "strict_mode", False):
                 raise
-            if "animator_update" not in scene_controller_module._LOG_ONCE:
-                scene_controller_module.logger.error("Animator update failed: %s", exc, exc_info=True)
-                scene_controller_module._LOG_ONCE.add("animator_update")
+            _log_swallow("animator_update", "Animator update failed")
 
 
 def bind_animation_runtime_methods(cls) -> None:

@@ -49,13 +49,13 @@ import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
 
 if TYPE_CHECKING:
 
     from .game import GameWindow
 
 logger = logging.getLogger(__name__)
-_LOG_ONCE: set[str] = set()
 
 _CAMERA_NEEDS_DIMENSIONS = False
 ArcadeCamera: Any = None
@@ -525,10 +525,8 @@ class CameraController:
                 pos_value = get_pos()
                 if isinstance(pos_value, (tuple, list)) and len(pos_value) == 2:
                     return (float(pos_value[0]), float(pos_value[1]))
-            except Exception as exc:
-                if "camera_get_position" not in _LOG_ONCE:
-                    logger.warning("get_position() failed: %s", exc, exc_info=True)
-                    _LOG_ONCE.add("camera_get_position")
+            except Exception:
+                _log_swallow("camera_get_position", "get_position() failed")
 
         return (self.window.width / 2.0, self.window.height / 2.0)
 
@@ -608,10 +606,8 @@ class CameraController:
                 # unproject returns a 3 component tuple/vector
                 world_pos = unproject((x, y))
                 return float(world_pos[0]), float(world_pos[1])
-            except Exception as exc:
-                if "camera_unproject" not in _LOG_ONCE:
-                    logger.warning("unproject() failed: %s", exc, exc_info=True)
-                    _LOG_ONCE.add("camera_unproject")
+            except Exception:
+                _log_swallow("camera_unproject", "unproject() failed")
 
         # Fallback to older screen_to_world if available
         transformer = getattr(camera, "screen_to_world", None)
@@ -619,10 +615,8 @@ class CameraController:
             try:
                 world_x, world_y = transformer(x, y)
                 return float(world_x), float(world_y)
-            except Exception as exc:
-                if "camera_screen_to_world" not in _LOG_ONCE:
-                    logger.warning("screen_to_world() failed: %s", exc, exc_info=True)
-                    _LOG_ONCE.add("camera_screen_to_world")
+            except Exception:
+                _log_swallow("camera_screen_to_world", "screen_to_world() failed")
         return (float(x), float(y))
 
     def set_zoom_target(self, zoom: float, *, speed: float | None = None) -> None:
@@ -730,10 +724,8 @@ class CameraController:
             if callable(setter):
                 try:
                     setter(zoom_value)
-                except Exception as exc:
-                    if "camera_set_zoom" not in _LOG_ONCE:
-                        logger.warning("set_zoom() failed: %s", exc, exc_info=True)
-                        _LOG_ONCE.add("camera_set_zoom")
+                except Exception:
+                    _log_swallow("camera_set_zoom", "set_zoom() failed")
 
     def build_camera_areas(self, entries: list[Any]) -> None:
         areas: list[CameraArea] = []
@@ -875,10 +867,8 @@ class CameraController:
             try:
                 self.camera.resize(width, height)
                 self.gui_camera.resize(width, height)
-            except Exception as exc:
-                if "camera_resize" not in _LOG_ONCE:
-                    logger.warning("resize() failed: %s", exc, exc_info=True)
-                    _LOG_ONCE.add("camera_resize")
+            except Exception:
+                _log_swallow("camera_resize", "resize() failed")
 
     def start_camera_shake(
         self,

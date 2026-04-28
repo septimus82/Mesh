@@ -115,7 +115,7 @@ from .scene_runtime.spawn import find_spawn_marker as _find_spawn_marker_runtime
 from .scene_runtime.spawn import get_spawn as _get_spawn_runtime
 from .scene_update_controller import SceneUpdateController
 from .sensors_runtime import SensorRuntime
-from .swallowed_exceptions import record_swallowed
+from engine.swallowed_exceptions import _log_swallow, record_swallowed
 from .tilemap import TilemapDrawLayer, TilemapInstance, compute_parallax_camera_position
 from .tilemap_batch import TilemapBatchState, TilemapBatchStats
 from .tilemap_batch_arcade import TilemapBatcher
@@ -134,7 +134,6 @@ from .ui import (
 )
 
 logger = logging.getLogger(__name__)
-_LOG_ONCE: set[str] = set()
 
 _EXTRACTION_SEAMS = (
     _perform_scene_change_runtime,
@@ -410,10 +409,8 @@ class SceneController:
         for unsub in self._scene_event_unsubscribes:
             try:
                 unsub()
-            except Exception as exc:
-                if "scene_unsub_failed" not in _LOG_ONCE:
-                    logger.warning("Scene unsubscribe failed: %s", exc, exc_info=True)
-                    _LOG_ONCE.add("scene_unsub_failed")
+            except Exception:
+                _log_swallow("scene_unsub_failed", "Scene unsubscribe failed")
         self._scene_event_unsubscribes.clear()
 
     def track_scene_subscription(self, unsubscribe: Callable[[], None]) -> None:

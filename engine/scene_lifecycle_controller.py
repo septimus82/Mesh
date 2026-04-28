@@ -11,23 +11,12 @@ from engine.depth_tint_model import parse_depth_tint_settings
 from engine.editor.sprite_outline_model import parse_outline_settings
 from engine.scene_runtime.index_build import build_scene_index_from_sprites
 from engine.scene_lifecycle_model import SceneLoadInputs, build_scene_load_plan
+from engine.swallowed_exceptions import _log_swallow
 from engine.ui import (
     maybe_enqueue_controls_hint_toast,
     maybe_enqueue_preset_mode_toast,
     maybe_enqueue_shadowmask_enabled_toast,
 )
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 def _restore_camera(window: Any, pos: tuple[float, float], zoom: float | None) -> None:

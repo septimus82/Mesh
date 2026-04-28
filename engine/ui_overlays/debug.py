@@ -1,33 +1,22 @@
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING, Any, Callable
 import engine.optional_arcade as optional_arcade
 
 from ..animation_state import get_animation_state_snapshot
+from engine.swallowed_exceptions import _log_swallow
 from ..ui_text_cache import UiTextCache, draw_text
 from ..text_draw import TextCache
 from .common import (
-    _LOG_ONCE,
     UIElement,
     _draw_lrtb_rectangle_outline,
     _draw_rectangle_filled,
     _sprite_under_cursor,
-    logger,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
     from arcade import Sprite
-
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _LOG_ONCE:
-        return
-    if once:
-        _LOG_ONCE.add(tag)
-    logger.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 def format_encounter_debug_text(payload: dict[str, Any] | None) -> str:
     if not isinstance(payload, dict):
@@ -99,7 +88,7 @@ def _encounter_report_to_debug_payload(report: Any) -> dict[str, Any] | None:
         try:
             out[key] = getattr(report, key)
         except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
-            _log_swallow("DBGO-001", "encounter report attribute extraction fallback", once=True)
+            _log_swallow("DBGO-001", "encounter report attribute extraction fallback")
             out[key] = None
     return out
 
@@ -123,7 +112,7 @@ class EncounterDebugOverlay(UIElement):
             try:
                 value = self.provider(self.window)
             except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
-                _log_swallow("DBGO-002", "encounter debug provider fallback", once=True)
+                _log_swallow("DBGO-002", "encounter debug provider fallback")
                 value = None
         else:
             value = None
@@ -269,7 +258,7 @@ class SceneInspectorOverlay(UIElement):
             try:
                 value = self.provider(self.window)
             except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
-                _log_swallow("DBGO-003", "scene inspector provider fallback", once=True)
+                _log_swallow("DBGO-003", "scene inspector provider fallback")
                 value = None
         else:
             value = None
@@ -356,7 +345,7 @@ class SceneDirtyOverlay(UIElement):
             try:
                 payload = self.provider(self.window)
             except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
-                _log_swallow("DBGO-004", "scene dirty provider fallback", once=True)
+                _log_swallow("DBGO-004", "scene dirty provider fallback")
                 payload = None
         return format_scene_dirty_overlay_lines(payload if isinstance(payload, dict) else None)
 
@@ -394,7 +383,7 @@ class PhysicsBroadphaseOverlay(UIElement):
                 result = self.provider(self.window)
                 payload = result if isinstance(result, dict) else None
             except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
-                _log_swallow("DBGO-005", "physics broadphase provider fallback", once=True)
+                _log_swallow("DBGO-005", "physics broadphase provider fallback")
                 payload = None
 
         lines = format_physics_broadphase_lines(payload if isinstance(payload, dict) else None)
@@ -469,7 +458,7 @@ class HD2DDepthDebugOverlay(UIElement):
             try:
                 value = self.provider(self.window)
             except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
-                _log_swallow("DBGO-006", "hd2d depth provider fallback", once=True)
+                _log_swallow("DBGO-006", "hd2d depth provider fallback")
                 value = None
         else:
             value = None
@@ -645,10 +634,8 @@ class EntityInspector(UIElement):
                 health_cls = Health
             except ImportError:
                 health_cls = None
-            except Exception as exc:
-                if "ui_health_import" not in _LOG_ONCE:
-                    logger.warning("Failed to import Health behaviour: %s", exc, exc_info=True)
-                    _LOG_ONCE.add("ui_health_import")
+            except Exception:
+                _log_swallow("ui_health_import", "Failed to import Health behaviour")
                 health_cls = None
 
             if health_cls is not None:
@@ -993,7 +980,7 @@ class PaletteOverlay(UIElement):
                     target_layer = pick_brush_layer_id(payload, None)
                     preview_lines = render_brush_layer_ascii(payload, layer_id=target_layer, tile_filter=None)
             except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
-                _log_swallow("DBGO-007", "palette preview render fallback", once=True)
+                _log_swallow("DBGO-007", "palette preview render fallback")
                 preview_lines = ["(preview error)"]
             
             if preview_lines:
@@ -1041,7 +1028,7 @@ class HD2DPreviewIndicatorOverlay(UIElement):
                 result = self.provider(self.window)
                 payload = result if isinstance(result, dict) else None
             except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
-                _log_swallow("DBGO-008", "hd2d preview indicator provider fallback", once=True)
+                _log_swallow("DBGO-008", "hd2d preview indicator provider fallback")
                 payload = None
 
         if not isinstance(payload, dict) or not payload.get("visible"):

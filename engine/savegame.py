@@ -29,21 +29,10 @@ from .save_runtime.ux_codes import (
     SAVE_SERIALIZE_FAILED,
     SAVE_WRITE_FAILED,
 )
+from engine.swallowed_exceptions import _log_swallow
 
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
 _DIAG_SOURCE = "engine.savegame"
 _SLOT_RE = re.compile(r"(\d+)")
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 def _classify_save_exception(exc: Exception) -> tuple[str, str]:
     if isinstance(exc, PermissionError):

@@ -3,12 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 import importlib.util
-from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 from pathlib import Path
 import time
 from typing import Any, Callable, cast
-
-logger = get_logger(__name__)
 
 _VERIFY_WEB_GATE_EXCEPTIONS: tuple[type[Exception], ...] = (
     AttributeError,
@@ -19,15 +17,6 @@ _VERIFY_WEB_GATE_EXCEPTIONS: tuple[type[Exception], ...] = (
     TypeError,
     ValueError,
 )
-
-def _log_swallow(tag: str, where: str, purpose: str) -> None:
-    logger.debug(
-        "SWALLOWED_EXCEPTION SWALLOW[%s] %s %s",
-        tag,
-        where,
-        purpose,
-        exc_info=True,
-    )
 
 
 def _normalize_diag_path(value: str | Path) -> str:
@@ -62,14 +51,14 @@ def _read_mypy_baseline_count(metrics_path: Path, *, current_count: int) -> int:
     except OSError:  # REASON: mypy-baseline-guard metrics file fallback
         _log_swallow(
             "VSTP-005",
-            "mesh_cli.verify_steps.pipeline",
             f"mypy-baseline-guard metrics read fallback path={_normalize_diag_path(metrics_path)}",
+            once=False,
         )
     except ValueError:  # REASON: mypy-baseline-guard metrics coercion fallback
         _log_swallow(
             "VSTP-005",
-            "mesh_cli.verify_steps.pipeline",
             f"mypy-baseline-guard metrics coercion fallback path={_normalize_diag_path(metrics_path)}",
+            once=False,
         )
     return current_count
 
@@ -80,8 +69,8 @@ def _read_swallow_scan_total_matches(scan_path: Path) -> int | None:
     except (OSError, json.JSONDecodeError):  # REASON: swallow-scan-gate artifact parsing fallback
         _log_swallow(
             "VSTP-043",
-            "mesh_cli.verify_steps.pipeline",
             f"swallow-scan-gate artifact parse fallback path={_normalize_diag_path(scan_path)}",
+            once=False,
         )
         return None
     try:
@@ -89,8 +78,8 @@ def _read_swallow_scan_total_matches(scan_path: Path) -> int | None:
     except (TypeError, ValueError):  # REASON: swallow-scan-gate total_matches coercion fallback
         _log_swallow(
             "VSTP-043",
-            "mesh_cli.verify_steps.pipeline",
             f"swallow-scan-gate total_matches fallback path={_normalize_diag_path(scan_path)}",
+            once=False,
         )
         return None
 
@@ -101,15 +90,15 @@ def _read_json_dict_artifact(path: Path, *, tag: str, purpose: str) -> dict[str,
     except (OSError, json.JSONDecodeError):  # REASON: artifact read/parse fallback
         _log_swallow(
             tag,
-            "mesh_cli.verify_steps.pipeline",
             f"{purpose} parse fallback path={_normalize_diag_path(path)}",
+            once=False,
         )
         return None
     if not isinstance(payload, dict):
         _log_swallow(
             tag,
-            "mesh_cli.verify_steps.pipeline",
             f"{purpose} root fallback path={_normalize_diag_path(path)}",
+            once=False,
         )
         return None
     return payload
@@ -129,8 +118,8 @@ def _coerce_int_field(
     except (TypeError, ValueError):  # REASON: artifact numeric coercion fallback
         _log_swallow(
             tag,
-            "mesh_cli.verify_steps.pipeline",
             f"{purpose} field={field} path={_normalize_diag_path(path)}",
+            once=False,
         )
         return None
 
@@ -148,8 +137,8 @@ def _coerce_int(
     except (TypeError, ValueError):  # REASON: artifact integer coercion fallback
         _log_swallow(
             tag,
-            "mesh_cli.verify_steps.pipeline",
             f"{purpose} field={field} path={_normalize_diag_path(path)}",
+            once=False,
         )
         return None
 
@@ -167,8 +156,8 @@ def _coerce_float(
     except (TypeError, ValueError):  # REASON: artifact numeric coercion fallback
         _log_swallow(
             tag,
-            "mesh_cli.verify_steps.pipeline",
             f"{purpose} field={field} path={_normalize_diag_path(path)}",
+            once=False,
         )
         return None
 
@@ -348,7 +337,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             )
                     error = "" if code == 0 else f"VDEMO-001 failed with code {code}"
                 except Exception as exc:  # noqa: BLE001  # REASON: verify-demo step isolation
-                    _log_swallow("VSTP-001", "mesh_cli.verify_steps.pipeline", "verify-demo step isolation fallback")
+                    _log_swallow("VSTP-001", "verify-demo step isolation fallback", once=False)
                     code = 1
                     error = f"{type(exc).__name__}: {exc}"
                 _add_step("verify-demo", code, error=error, artifact=None)
@@ -388,7 +377,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     failure_seen = True
                     exit_code = 1 if code != 2 else 2
             except Exception as exc:  # noqa: BLE001  # REASON: verify-replays step isolation
-                _log_swallow("VSTP-002", "mesh_cli.verify_steps.pipeline", "verify-replays step isolation fallback")
+                _log_swallow("VSTP-002", "verify-replays step isolation fallback", once=False)
                 _add_step("verify-replays", 1, error=f"{type(exc).__name__}: {exc}", artifact=None)
                 failure_seen = True
                 exit_code = 1
@@ -408,7 +397,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     code = int(validate_all.main([world_path, "--strict", "--schema-strict"]))
                 error = "" if code == 0 else f"failed with code {code}"
             except Exception as exc:  # noqa: BLE001  # REASON: verify-strict step isolation
-                _log_swallow("VSTP-003", "mesh_cli.verify_steps.pipeline", "verify-strict step isolation fallback")
+                _log_swallow("VSTP-003", "verify-strict step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
             _add_step("verify-strict", code, error=error, artifact=None)
@@ -433,7 +422,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 else:
                     raise
             except Exception as exc:  # noqa: BLE001  # REASON: mypy-gate step isolation
-                _log_swallow("VSTP-004", "mesh_cli.verify_steps.pipeline", "mypy-gate step isolation fallback")
+                _log_swallow("VSTP-004", "mypy-gate step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -477,7 +466,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 else:
                     raise
             except Exception as exc:  # noqa: BLE001  # REASON: mypy-baseline-guard step isolation
-                _log_swallow("VSTP-006", "mesh_cli.verify_steps.pipeline", "mypy-baseline-guard step isolation fallback")
+                _log_swallow("VSTP-006", "mypy-baseline-guard step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -503,7 +492,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 else:
                     raise
             except Exception as exc:  # noqa: BLE001  # REASON: mypy-island step isolation
-                _log_swallow("VSTP-007", "mesh_cli.verify_steps.pipeline", "mypy-island step isolation fallback")
+                _log_swallow("VSTP-007", "mypy-island step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -542,7 +531,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         )
                     artifacts_written["exception_budget"] = _normalize_path_for_json(target, repo_root=repo_root)
             except Exception as exc:  # noqa: BLE001  # REASON: exception-budget-guard step isolation
-                _log_swallow("VSTP-008", "mesh_cli.verify_steps.pipeline", "exception-budget-guard step isolation fallback")
+                _log_swallow("VSTP-008", "exception-budget-guard step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -582,7 +571,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 else:
                     raise
             except Exception as exc:  # noqa: BLE001  # REASON: swallow-scan-gate step isolation
-                _log_swallow("VSTP-044", "mesh_cli.verify_steps.pipeline", "swallow-scan-gate step isolation fallback")
+                _log_swallow("VSTP-044", "swallow-scan-gate step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -710,7 +699,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 else:
                     raise
             except Exception as exc:  # noqa: BLE001  # REASON: exception-policy-scan step isolation
-                _log_swallow("VSTP-045", "mesh_cli.verify_steps.pipeline", "exception-policy-scan step isolation fallback")
+                _log_swallow("VSTP-045", "exception-policy-scan step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -761,7 +750,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     error = "" if code == 0 else f"failed with code {code}"
                     pytest_fast_ran = True
             except Exception as exc:  # noqa: BLE001  # REASON: pytest-fast step isolation
-                _log_swallow("VSTP-009", "mesh_cli.verify_steps.pipeline", "pytest-fast step isolation fallback")
+                _log_swallow("VSTP-009", "pytest-fast step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -789,7 +778,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 pytest_fast_metrics["top10"] = top10_seconds
                 pytest_fast_metrics["ok"] = ok
             except Exception as exc:  # noqa: BLE001  # REASON: pytest-fast-duration-guard step isolation
-                _log_swallow("VSTP-010", "mesh_cli.verify_steps.pipeline", "pytest-fast-duration-guard step isolation fallback")
+                _log_swallow("VSTP-010", "pytest-fast-duration-guard step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 pytest_fast_metrics["ok"] = False
@@ -817,8 +806,8 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 except (AttributeError, OSError):  # REASON: runtime-player-smoke config fallback
                     _log_swallow(
                         "VSTP-011",
-                        "mesh_cli.verify_steps.pipeline",
                         "runtime-player-smoke config/start_scene fallback",
+                        once=False,
                     )
                 seen_candidates: set[str] = set()
                 for candidate in smoke_candidates:
@@ -852,7 +841,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     code = 0
                     error = ""
             except Exception as exc:  # noqa: BLE001  # REASON: runtime-player-smoke step isolation
-                _log_swallow("VSTP-012", "mesh_cli.verify_steps.pipeline", "runtime-player-smoke step isolation fallback")
+                _log_swallow("VSTP-012", "runtime-player-smoke step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 runtime_smoke_artifact = None
@@ -931,7 +920,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                             repo_root=repo_root,
                         )
             except Exception as exc:  # noqa: BLE001  # REASON: player-package-gate step isolation
-                _log_swallow("VSTP-013", "mesh_cli.verify_steps.pipeline", "player-package-gate step isolation fallback")
+                _log_swallow("VSTP-013", "player-package-gate step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -999,7 +988,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         code = 0
                         error = ""
             except _VERIFY_WEB_GATE_EXCEPTIONS as exc:
-                _log_swallow("VSTP-046", "mesh_cli.verify_steps.pipeline", "web gate fallback")
+                _log_swallow("VSTP-046", "web gate fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 artifact = artifacts_written.get("web_smoke")
@@ -1068,7 +1057,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     code = 0
                     error = ""
             except Exception as exc:  # noqa: BLE001  # REASON: perf-baseline-compare step isolation
-                _log_swallow("VSTP-014", "mesh_cli.verify_steps.pipeline", "perf-baseline-compare step isolation fallback")
+                _log_swallow("VSTP-014", "perf-baseline-compare step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -1126,7 +1115,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     missing_text = ", ".join(str(x) for x in missing) if isinstance(missing, list) else str(missing)
                     error = f"missing required reachable scenes: {missing_text}"
             except Exception as exc:  # noqa: BLE001  # REASON: world-progression-check step isolation
-                _log_swallow("VSTP-016", "mesh_cli.verify_steps.pipeline", "world-progression-check step isolation fallback")
+                _log_swallow("VSTP-016", "world-progression-check step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -1170,7 +1159,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     else:
                         error = "spawn-placeholder-safety found errors"
             except Exception as exc:  # noqa: BLE001  # REASON: spawn-placeholder-safety step isolation
-                _log_swallow("VSTP-017", "mesh_cli.verify_steps.pipeline", "spawn-placeholder-safety step isolation fallback")
+                _log_swallow("VSTP-017", "spawn-placeholder-safety step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -1363,7 +1352,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 error = exc.message
                 artifact = None
             except Exception as exc:  # noqa: BLE001  # REASON: stamp-audit step isolation
-                _log_swallow("VSTP-021", "mesh_cli.verify_steps.pipeline", "stamp-audit step isolation fallback")
+                _log_swallow("VSTP-021", "stamp-audit step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 artifact = None
@@ -1568,7 +1557,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 error = exc.message
                 artifact = None
             except Exception as exc:  # noqa: BLE001  # REASON: brush-audit step isolation
-                _log_swallow("VSTP-025", "mesh_cli.verify_steps.pipeline", "brush-audit step isolation fallback")
+                _log_swallow("VSTP-025", "brush-audit step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 artifact = None
@@ -1718,12 +1707,12 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         elif toast_seconds_raw is not None:
                             _log_swallow(
                                 "VSTP-026",
-                                "mesh_cli.verify_steps.pipeline",
                                 (
                                     "macro-audit preview arg coercion fallback "
                                     f"macro_id={macro_id} scene_path={scene_path_raw} "
                                     f"field=toast_seconds path={_normalize_diag_path(macro_path_raw)}"
                                 ),
+                                once=False,
                             )
                         radius_value = _coerce_float(
                             merged_args.get("radius") or 0.0,
@@ -1801,7 +1790,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 code = 0
                 error = ""
             except Exception as exc:  # noqa: BLE001  # REASON: macro-audit step isolation
-                _log_swallow("VSTP-028", "mesh_cli.verify_steps.pipeline", "macro-audit step isolation fallback")
+                _log_swallow("VSTP-028", "macro-audit step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 artifact = None
@@ -2067,7 +2056,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 code = 0
                 error = ""
             except Exception as exc:  # noqa: BLE001  # REASON: room-audit step isolation
-                _log_swallow("VSTP-032", "mesh_cli.verify_steps.pipeline", "room-audit step isolation fallback")
+                _log_swallow("VSTP-032", "room-audit step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
                 artifact = None
@@ -2100,7 +2089,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     else:
                         error = "encounter-set-uniqueness found errors"
             except Exception as exc:  # noqa: BLE001  # REASON: encounter-set-uniqueness step isolation
-                _log_swallow("VSTP-033", "mesh_cli.verify_steps.pipeline", "encounter-set-uniqueness step isolation fallback")
+                _log_swallow("VSTP-033", "encounter-set-uniqueness step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -2132,7 +2121,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     else:
                         error = "encounter-set-variety found errors"
             except Exception as exc:  # noqa: BLE001  # REASON: encounter-set-variety step isolation
-                _log_swallow("VSTP-034", "mesh_cli.verify_steps.pipeline", "encounter-set-variety step isolation fallback")
+                _log_swallow("VSTP-034", "encounter-set-variety step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -2166,7 +2155,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                         else:
                             error = "prefab-lint-overrides found unexpected overrides"
             except Exception as exc:  # noqa: BLE001  # REASON: prefab-lint-overrides step isolation
-                _log_swallow("VSTP-035", "mesh_cli.verify_steps.pipeline", "prefab-lint-overrides step isolation fallback")
+                _log_swallow("VSTP-035", "prefab-lint-overrides step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -2189,7 +2178,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 code = 0 if bool(coverage_payload.get("ok")) else 1
                 error = "" if code == 0 else "encounter-coverage found errors"
             except Exception as exc:  # noqa: BLE001  # REASON: encounter-coverage step isolation
-                _log_swallow("VSTP-036", "mesh_cli.verify_steps.pipeline", "encounter-coverage step isolation fallback")
+                _log_swallow("VSTP-036", "encounter-coverage step isolation fallback", once=False)
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
 
@@ -2215,7 +2204,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 code = 0
                 error = ""
             except Exception as exc:  # noqa: BLE001  # REASON: encounter-coverage-matrix step isolation
-                _log_swallow("VSTP-037", "mesh_cli.verify_steps.pipeline", "encounter-coverage-matrix step isolation fallback")
+                _log_swallow("VSTP-037", "encounter-coverage-matrix step isolation fallback", once=False)
                 matrix_payload = None
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
@@ -2251,7 +2240,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 code = 0 if bool(doctor_payload.get("ok")) else 1
                 error = "" if code == 0 else "doctor-assets found errors"
             except Exception as exc:  # noqa: BLE001  # REASON: doctor-assets step isolation
-                _log_swallow("VSTP-038", "mesh_cli.verify_steps.pipeline", "doctor-assets step isolation fallback")
+                _log_swallow("VSTP-038", "doctor-assets step isolation fallback", once=False)
                 doctor_payload = {
                     "ok": False,
                     "errors": [
@@ -2308,7 +2297,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     error = ""
 
             except Exception as exc:  # noqa: BLE001  # REASON: content-audit step isolation
-                _log_swallow("VSTP-039", "mesh_cli.verify_steps.pipeline", "content-audit step isolation fallback")
+                _log_swallow("VSTP-039", "content-audit step isolation fallback", once=False)
                 content_audit_report = None
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
@@ -2373,7 +2362,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 code = 0
                 error = ""
             except Exception as exc:  # noqa: BLE001  # REASON: encounter-audit step isolation
-                _log_swallow("VSTP-040", "mesh_cli.verify_steps.pipeline", "encounter-audit step isolation fallback")
+                _log_swallow("VSTP-040", "encounter-audit step isolation fallback", once=False)
                 audit_payload = None
                 compact_payload = None
                 headroom_payload = None
@@ -2427,7 +2416,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 code = 0
                 error = ""
             except Exception as exc:  # noqa: BLE001  # REASON: list-scenes step isolation
-                _log_swallow("VSTP-041", "mesh_cli.verify_steps.pipeline", "list-scenes step isolation fallback")
+                _log_swallow("VSTP-041", "list-scenes step isolation fallback", once=False)
                 scenes_payload = None
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"
@@ -2463,7 +2452,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 code = 0
                 error = ""
             except Exception as exc:  # noqa: BLE001  # REASON: list-worlds step isolation
-                _log_swallow("VSTP-042", "mesh_cli.verify_steps.pipeline", "list-worlds step isolation fallback")
+                _log_swallow("VSTP-042", "list-worlds step isolation fallback", once=False)
                 worlds_payload = None
                 code = 1
                 error = f"{type(exc).__name__}: {exc}"

@@ -9,18 +9,7 @@ from .particles_core import ParticleData, ParticleSystem, appearance_key
 from .culling import is_sprite_visible, sprite_bounds
 from .paths import resolve_path
 from .render_queue import DrawSpriteCmd
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
+from .swallowed_exceptions import _log_swallow
 
 if TYPE_CHECKING:
     # Use TYPE_CHECKING import to allow type hints without runtime dependency

@@ -5,6 +5,9 @@ from __future__ import annotations
 import math
 from typing import Any
 
+import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
+
 from ..player_actions import (
     PlayerActionState,
     build_player_input_snapshot,
@@ -14,19 +17,6 @@ from ..player_actions import (
 from ..animation_state import request_animation_state
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
-import engine.optional_arcade as optional_arcade
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 @register_behaviour(
     "PlayerController",

@@ -3,18 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 
-from engine.logging_tools import get_logger
-
-logger = get_logger(__name__)
-
-def _log_swallow(tag: str, where: str, purpose: str) -> None:
-    logger.debug(
-        "SWALLOWED_EXCEPTION SWALLOW[%s] %s %s",
-        tag,
-        where,
-        purpose,
-        exc_info=True,
-    )
+from ..swallowed_exceptions import _log_swallow
 
 
 def _registry() -> Any:
@@ -113,8 +102,8 @@ def _run_editor_action(w: Any, action_id: str) -> bool:
     except Exception:
         _log_swallow(
             "CPRA-001",
-            "engine.command_palette_registry_actions_impl._run_editor_action",
-            "import_run_editor_action",
+            "engine.command_palette_registry_actions_impl._run_editor_action import_run_editor_action",
+            once=False,
         )
         return False
     controller = getattr(w, "editor_controller", None)
@@ -123,8 +112,8 @@ def _run_editor_action(w: Any, action_id: str) -> bool:
     except Exception:
         _log_swallow(
             "CPRA-002",
-            "engine.command_palette_registry_actions_impl._run_editor_action",
-            "invoke_run_editor_action",
+            "engine.command_palette_registry_actions_impl._run_editor_action invoke_run_editor_action",
+            once=False,
         )
         return False
 
@@ -138,8 +127,8 @@ def _set_selected_plane_id(w: Any, plane_id: str) -> bool:
         except Exception:
             _log_swallow(
                 "CPRA-003",
-                "engine.command_palette_registry_actions_impl._set_selected_plane_id",
-                "set_background_plane_editor_state",
+                "engine.command_palette_registry_actions_impl._set_selected_plane_id set_background_plane_editor_state",
+                once=False,
             )
             return False
     try:
@@ -147,8 +136,8 @@ def _set_selected_plane_id(w: Any, plane_id: str) -> bool:
     except Exception:
         _log_swallow(
             "CPRA-004",
-            "engine.command_palette_registry_actions_impl._set_selected_plane_id",
-            "set_selected_plane_id",
+            "engine.command_palette_registry_actions_impl._set_selected_plane_id set_selected_plane_id",
+            once=False,
         )
         return False
     return True

@@ -10,21 +10,10 @@ from typing import Any, Dict, List, Optional, Callable, TypedDict
 from engine import json_io
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
+from engine.swallowed_exceptions import _log_swallow
 from engine.tooling import plan_history, polish, scaffold
 from engine.tooling.plan_types import Action, Plan
 from engine.tooling.validate_all import UnifiedValidator
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 BACKUP_DIR = Path(".mesh/plan_backups")
 

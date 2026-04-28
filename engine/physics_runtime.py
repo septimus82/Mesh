@@ -19,20 +19,11 @@ from engine.physics_model import (
     circle_circle_overlap,
     sweep_axis_separate,
 )
+from engine.swallowed_exceptions import _log_swallow
 from engine.spatial_hash_model import SpatialHashConfig, SpatialHashIndex, build_spatial_hash, query_aabb
 from engine.physics_broadphase_key_model import BroadphaseKeyInputs, compute_broadphase_cache_key
 
 logger = get_logger(__name__)
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    logger.debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 class PhysicsProxySprite:

@@ -10,6 +10,7 @@ from engine.scene_serializer import compact_scene_payload
 from engine.tilemap_edit import TilemapDims, ensure_tiles_array, fill_rect, get_layer_by_id
 from engine.tooling_runtime.stamp_report import StampReportError, compute_scene_stamp_report
 from engine.path_norm import normalize_scene_path
+from engine.swallowed_exceptions import _log_swallow
 
 from mesh_cli.scene.common import _sanitize_entity_id_token
 from mesh_cli.scene.tilemap import (
@@ -18,18 +19,6 @@ from mesh_cli.scene.tilemap import (
     _tilemap_try_resolve_tile_size_for_stamp,
     _tilemap_validate_scene_payload,
 )
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
 
 def _default_stamp_entity_id(
     scene_path: str,

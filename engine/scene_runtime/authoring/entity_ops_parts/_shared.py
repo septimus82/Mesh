@@ -8,6 +8,7 @@ import sys
 from typing import TYPE_CHECKING, Any, Callable, Dict
 
 import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
 
 from ....background_layers import parse_background_layers
 from ...index_build import build_scene_index_from_sprites
@@ -16,16 +17,6 @@ from .. import entity_ops_geometry as _geometry_helpers
 if TYPE_CHECKING:
     from ....scene_controller import SceneController
 
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__ + "._swallow").debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 def _sorted_dedup_ids(raw_ids: list[str] | None) -> list[str]:
     """Return sorted, deduplicated, stripped, non-empty entity IDs."""
     return sorted(

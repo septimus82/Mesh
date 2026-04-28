@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import subprocess
 
+from engine.swallowed_exceptions import _log_swallow
+
 
 def _git_run(args: list[str]) -> subprocess.CompletedProcess[str] | None:
     try:
@@ -12,9 +14,7 @@ def _git_run(args: list[str]) -> subprocess.CompletedProcess[str] | None:
             timeout=8,
         )
     except (FileNotFoundError, OSError, subprocess.SubprocessError):
-        from mesh_cli import release as release_mod
-
-        release_mod._log_swallow("RELS-001", "git unavailable")
+        _log_swallow("RELS-001", "git unavailable")
         return None
 
 

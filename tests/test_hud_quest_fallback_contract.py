@@ -2,8 +2,8 @@ import logging
 
 import pytest
 
+import engine.swallowed_exceptions as swallowed_exceptions
 from engine.ui import PlayerHUD
-from engine.ui_overlays import common as ui_common
 
 
 pytestmark = [pytest.mark.fast]
@@ -25,22 +25,22 @@ class _Window:
         self._flags[str(name)] = bool(value)
 
 
-def test_hud_quest_read_fallback_uses_stable_once_keys(caplog: pytest.LogCaptureFixture) -> None:
+def test_hud_quest_read_fallback_uses_stable_once_keys(capsys: pytest.CaptureFixture[str]) -> None:
     qm = _BrokenQuestManager()
     window = _Window()
-    ui_common._LOG_ONCE.clear()
+    swallowed_exceptions._SWALLOW_ONCE_TAGS.clear()
+    logging.getLogger("engine.swallowed_exceptions").setLevel(logging.DEBUG)
 
     try:
-        with caplog.at_level(logging.ERROR, logger="engine.ui_overlays.common"):
-            assert PlayerHUD.build_pinned_objective_text(qm) is None
-            assert PlayerHUD.build_pinned_objective_text(qm) is None
-            assert PlayerHUD.maybe_show_quest_log_hint(window, quest_manager=qm) is None
-            assert PlayerHUD.maybe_show_quest_log_hint(window, quest_manager=qm) is None
+        assert PlayerHUD.build_pinned_objective_text(qm) is None
+        assert PlayerHUD.build_pinned_objective_text(qm) is None
+        assert PlayerHUD.maybe_show_quest_log_hint(window, quest_manager=qm) is None
+        assert PlayerHUD.maybe_show_quest_log_hint(window, quest_manager=qm) is None
     finally:
-        seen_keys = set(ui_common._LOG_ONCE)
-        ui_common._LOG_ONCE.clear()
+        seen_keys = set(swallowed_exceptions._SWALLOW_ONCE_TAGS)
+        swallowed_exceptions._SWALLOW_ONCE_TAGS.clear()
 
-    messages = [record.getMessage() for record in caplog.records]
+    stderr = capsys.readouterr().err
     assert seen_keys == {"ui_pinned_objective", "ui_quest_log_hint"}
-    assert sum("Error reading active quests for pinned objective" in message for message in messages) == 1
-    assert sum("Error reading active quests for quest log hint" in message for message in messages) == 1
+    assert stderr.count("Error reading active quests for pinned objective") == 1
+    assert stderr.count("Error reading active quests for quest log hint") == 1

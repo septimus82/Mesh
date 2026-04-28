@@ -10,19 +10,8 @@ from engine import json_io
 from engine.game_state_controller import GameStateController
 from engine.paths import get_content_roots, set_content_roots
 from engine.scene_loader import SceneLoader
+from engine.swallowed_exceptions import _log_swallow
 from engine.tooling.plan_types import Plan
-
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    from engine.logging_tools import get_logger
-
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
 
 
 @dataclass

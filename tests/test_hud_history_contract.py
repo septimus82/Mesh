@@ -2,8 +2,8 @@ import logging
 
 import pytest
 
+import engine.swallowed_exceptions as swallowed_exceptions
 from engine.ui import PlayerHUD
-from engine.ui_overlays import common as ui_common
 
 
 pytestmark = [pytest.mark.fast]
@@ -27,18 +27,18 @@ class _Window:
     event_bus = _EventBus()
 
 
-def test_collect_hud_history_logs_typed_failures_once(caplog: pytest.LogCaptureFixture) -> None:
+def test_collect_hud_history_logs_typed_failures_once(capsys: pytest.CaptureFixture[str]) -> None:
     hud = object.__new__(PlayerHUD)
     hud.window = _Window()
-    ui_common._LOG_ONCE.clear()
+    swallowed_exceptions._SWALLOW_ONCE_TAGS.clear()
+    logging.getLogger("engine.swallowed_exceptions").setLevel(logging.DEBUG)
 
     try:
-        with caplog.at_level(logging.DEBUG, logger="engine.ui_overlays.common"):
-            assert hud._collect_hud_history(limit=5) == ()
-            assert hud._collect_hud_history(limit=5) == ()
+        assert hud._collect_hud_history(limit=5) == ()
+        assert hud._collect_hud_history(limit=5) == ()
     finally:
-        ui_common._LOG_ONCE.clear()
+        swallowed_exceptions._SWALLOW_ONCE_TAGS.clear()
 
-    messages = [record.getMessage() for record in caplog.records]
-    assert sum("SWALLOW[HUD-003]" in message for message in messages) == 1
-    assert sum("SWALLOW[HUD-004]" in message for message in messages) == 1
+    stderr = capsys.readouterr().err
+    assert stderr.count("SWALLOW[HUD-003]") == 1
+    assert stderr.count("SWALLOW[HUD-004]") == 1

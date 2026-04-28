@@ -7,24 +7,13 @@ from engine.paths import resolve_path
 from engine.persistence_io import write_json_atomic
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
+from engine.swallowed_exceptions import _log_swallow
 
 from mesh_cli.scene.common import (
     _sanitize_entity_id_token,
     _format_placeholder_id_number,
     _dict_diffs,
 )
-from engine.logging_tools import get_logger
-
-_SWALLOW_ONCE_TAGS: set[str] = set()
-
-def _log_swallow(tag: str, context: str, *, once: bool = True) -> None:
-    if once and tag in _SWALLOW_ONCE_TAGS:
-        return
-    if once:
-        _SWALLOW_ONCE_TAGS.add(tag)
-    get_logger(__name__).debug("SWALLOW[%s] %s", tag, context, exc_info=True)
-
-
 
 def _default_spawn_entity_id(scene_path: str, spawn_id: str, x: float, y: float) -> str:
     stem = Path(str(scene_path)).stem

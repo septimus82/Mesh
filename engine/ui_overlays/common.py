@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib
 import json
-import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -12,10 +11,6 @@ if TYPE_CHECKING:
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
     from ..game import GameWindow
-
-logger = logging.getLogger(__name__)
-_LOG_ONCE: set[str] = set()
-
 
 def _get_arcade() -> Any:
     return importlib.import_module("engine.optional_arcade").arcade
@@ -190,4 +185,3 @@ def draw_outline_centered(cx: float, cy: float, width: float, height: float, col
         color,
         border,
     )
-
