@@ -28,7 +28,7 @@ _BASELINE_EXCEPTION_ENVELOPES = {
         416, 424, 433, 441, 450, 469, 478, 488, 813, 953,
         982, 1019,
     ),
-    "engine/ui_overlays/hud.py": (68, 169),
+    "engine/ui_overlays/hud.py": (62, 156),
 }
 
 

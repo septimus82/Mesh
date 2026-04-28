@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-import logging
 from collections import deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence
 import engine.optional_arcade as optional_arcade
 
 from ..hud_model import HudViewModel, build_hud_view_model, merge_event_histories
+from engine.swallowed_exceptions import _log_swallow
 from .common import (
-    _LOG_ONCE,
     UIElement,
     _draw_lrtb_rectangle_outline,
     _draw_rectangle_filled,
-    logger,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -33,9 +31,7 @@ def _collect_hud_history_entries(
     try:
         return list(getter(limit))
     except (TypeError, ValueError):  # REASON: HUD history adapters should only fail on bad limit/coercion inputs
-        if tag not in _LOG_ONCE:
-            logger.debug("SWALLOW[%s] %s", tag, source, exc_info=True)
-            _LOG_ONCE.add(tag)
+        _log_swallow(tag, source)
         return []
 
 
@@ -47,10 +43,8 @@ def _read_active_quest_entries(
 ) -> list[Any] | None:
     try:
         entries = quest_manager.list_active_quests()
-    except (AttributeError, KeyError, TypeError, ValueError) as exc:  # REASON: quest overlay fallbacks only expect quest state shape/coercion failures
-        if once_key not in _LOG_ONCE:
-            logger.error("%s: %s", context, exc, exc_info=True)
-            _LOG_ONCE.add(once_key)
+    except (AttributeError, KeyError, TypeError, ValueError):  # REASON: quest overlay fallbacks only expect quest state shape/coercion failures
+        _log_swallow(once_key, context)
         return None
     return entries if isinstance(entries, list) else None
 
@@ -66,14 +60,7 @@ class InteractPromptOverlay(UIElement):
             try:
                 payload = self.provider(self.window)
             except Exception:  # noqa: BLE001  # REASON: interact prompt overlay should keep drawing even if an optional provider callback fails
-                if "HUD-001" not in _LOG_ONCE:
-                    logger.debug(
-                        "SWALLOW[%s] %s",
-                        "HUD-001",
-                        "engine.ui_overlays.hud.InteractPromptOverlay.draw provider",
-                        exc_info=True,
-                    )
-                    _LOG_ONCE.add("HUD-001")
+                _log_swallow("HUD-001", "engine.ui_overlays.hud.InteractPromptOverlay.draw provider")
                 payload = None
 
         from ..interaction import get_interact_prompt  # noqa: PLC0415
@@ -167,14 +154,7 @@ class ObjectiveTrackerOverlay(UIElement):
             try:
                 value = self.provider(self.window)
             except Exception:  # noqa: BLE001  # REASON: objective tracker overlay should keep drawing even if an optional provider callback fails
-                if "HUD-002" not in _LOG_ONCE:
-                    logger.debug(
-                        "SWALLOW[%s] %s",
-                        "HUD-002",
-                        "engine.ui_overlays.hud.ObjectiveTrackerOverlay.draw provider",
-                        exc_info=True,
-                    )
-                    _LOG_ONCE.add("HUD-002")
+                _log_swallow("HUD-002", "engine.ui_overlays.hud.ObjectiveTrackerOverlay.draw provider")
                 value = None
             if isinstance(value, (list, tuple)):
                 lines = [str(line) for line in value if str(line)]
