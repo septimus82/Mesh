@@ -159,6 +159,41 @@ def _coerce_type(value: Any, target_type: Any) -> Any:
         return value
 
 
+def _validate_config_value(key: str, value: Any) -> str | None:
+    if key in {"width", "height"}:
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            return "must be a positive integer"
+        return None
+
+    if key == "title":
+        if not isinstance(value, str) or not value.strip():
+            return "must be a non-empty string"
+        return None
+
+    if key == "start_scene":
+        if not isinstance(value, str) or not value.strip():
+            return "must be a non-empty string path"
+        if not value.strip().endswith(".json"):
+            return "must point to a .json file"
+        return None
+
+    if key in {"main_menu_scene", "world_file"}:
+        if value is None:
+            return None
+        if not isinstance(value, str) or not value.strip():
+            return "must be null or a non-empty string path"
+        if not value.strip().endswith(".json"):
+            return "must point to a .json file"
+        return None
+
+    if key == "content_roots":
+        if not isinstance(value, list) or any(not isinstance(item, str) or not item.strip() for item in value):
+            return "must be a list of non-empty strings"
+        return None
+
+    return None
+
+
 _PRESETS_DIR_NAME = "presets"
 _PRESETS_COMPAT_MIRROR_NAME = "config_presets.json"
 _PRESET_FILE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*\.json$")
@@ -233,6 +268,17 @@ def load_config(path: str | None = None) -> EngineConfig:
             diag_warn(
                 "config.unknown_key",
                 f"Unknown config key '{key}' ignored",
+                "engine.config",
+                location=str(cfg_path),
+                context={"key": str(key)},
+            )
+            continue
+        validation_error = _validate_config_value(key, value)
+        if validation_error is not None:
+            print(f"[Mesh][Config] ERROR: Invalid config key '{key}': {validation_error}; using default")
+            diag_error(
+                "config.invalid_value",
+                f"Invalid config key '{key}': {validation_error}; using default",
                 "engine.config",
                 location=str(cfg_path),
                 context={"key": str(key)},
