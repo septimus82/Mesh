@@ -21,6 +21,7 @@ from .editor_dock_controller import EditorDockController
 from .editor_draw_controller import EditorDrawController
 from .editor_duplicate_controller import EditorDuplicateController
 from .editor_entity_ops_controller import EditorEntityOpsController
+from .editor_feedback_controller import EditorFeedbackController
 from .editor_entity_panels_controller import EditorEntityPanelsController
 from .editor_file_ops_controller import EditorFileOpsController
 from .editor_find_actions_controller import EditorFindActionsController
@@ -71,6 +72,7 @@ def bootstrap_dependencies(controller: Any) -> None:
     controller._selection_ctl = EditorSelectionController(controller)
     controller._scene_ops = EditorSceneOpsController(controller)
     controller.undo = EditorUndoController(controller, max_history=50)
+    controller.feedback = EditorFeedbackController(controller)
     controller._ui_flow_ctl = EditorUIFlowController(controller)
     controller.search = EditorSearchController(controller, controller._ui_flow_ctl)
     controller._file_ops_ctl = EditorFileOpsController(controller)

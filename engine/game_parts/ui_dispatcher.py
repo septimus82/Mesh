@@ -143,6 +143,18 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
     window.register_ui_element(window.hd2d_settings_panel_overlay)
     window.editor_status_bar_overlay = EditorStatusBarOverlay(window)
     window.register_ui_element(window.editor_status_bar_overlay)
+    from engine.ui_overlays.editor_feedback_overlay import EditorFeedbackOverlay  # noqa: PLC0415
+
+    window.editor_feedback_overlay = EditorFeedbackOverlay(window)
+    editor_ui_layers = getattr(getattr(window, "editor_controller", None), "ui_layers", None)
+    if editor_ui_layers is not None and callable(getattr(editor_ui_layers, "register_layer", None)):
+        editor_ui_layers.register_layer(
+            "feedback",
+            "overlay",
+            z=700,
+            visible=True,
+            draw_handler=lambda _ctx: window.editor_feedback_overlay.draw(),
+        )
     window.scene_switcher_overlay = SceneSwitcherOverlay(window)
     window.register_ui_element(window.scene_switcher_overlay)
     window.scene_browser_overlay = SceneBrowserOverlay(window)
