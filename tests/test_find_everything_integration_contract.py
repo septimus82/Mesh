@@ -110,8 +110,6 @@ class StubController:
             self.dock.right_tab = "Problems" 
             return True
         return False
-        
-    def ui_toast(self, msg: str) -> None: pass
     
     def ui_hd2d_preview(self, preset_id: str) -> None:
         self._hd2d_preview_active = True
