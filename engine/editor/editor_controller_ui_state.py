@@ -30,11 +30,6 @@ def _ui_get_problems(self, scene_data: Any, window: Any):
     """Helper for palette items."""
     return self.search._ui_get_problems(scene_data, window)
 
-
-def ui_toast(self, msg: str):
-    self._show_toast(msg)
-
-
 def ui_hd2d_preview(self, preset_id: str):
     self.preview_hd2d_preset(preset_id)
 
@@ -54,7 +49,6 @@ def bind_ui_state_methods(cls: Any) -> None:
     cls.ui_activate_problem = ui_activate_problem
     cls.ui_get_palette_items = ui_get_palette_items
     cls._ui_get_problems = _ui_get_problems
-    cls.ui_toast = ui_toast
     cls.ui_hd2d_preview = ui_hd2d_preview
     cls.ui_hd2d_cancel_preview = ui_hd2d_cancel_preview
     cls.ui_hd2d_commit = ui_hd2d_commit

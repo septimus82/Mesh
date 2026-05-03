@@ -70,7 +70,9 @@ class EditorUndoController:
         return can_redo(self._state)
 
     def undo(self) -> bool:
+        editor = self._controller
         if not self._undo_commands:
+            if getattr(editor, "feedback", None) is not None: editor.feedback.info("Nothing to undo")
             logger.info("[Editor] Nothing to undo.")
             return False
         cmd = self._undo_commands.pop()
@@ -79,12 +81,15 @@ class EditorUndoController:
         self._state = undo_cursor(self._state)
         self._snapshot = self._state
         self._revert_command(cmd)
+        if getattr(editor, "feedback", None) is not None: editor.feedback.info(f"Undid: {self._resolve_label(cmd, None)}")
         logger.info("[Editor] Undid %s", cmd.get("type"))
         self._mark_dirty()
         return True
 
     def redo(self) -> bool:
+        editor = self._controller
         if not self._redo_commands:
+            if getattr(editor, "feedback", None) is not None: editor.feedback.info("Nothing to redo")
             logger.info("[Editor] Nothing to redo.")
             return False
         cmd = self._redo_commands.pop()
@@ -93,6 +98,7 @@ class EditorUndoController:
         self._state = redo_cursor(self._state)
         self._snapshot = self._state
         self._apply_command(cmd)
+        if getattr(editor, "feedback", None) is not None: editor.feedback.info(f"Redid: {self._resolve_label(cmd, None)}")
         logger.info("[Editor] Redid %s", cmd.get("type"))
         self._mark_dirty()
         return True

@@ -12,6 +12,9 @@ __all__ = [
     "_action_debug_copy_quest_diagnostic",
     "_action_debug_copy_filtered_events",
     "_action_debug_copy_cutscene_summary",
+    "_action_debug_emit_feedback_info",
+    "_action_debug_emit_feedback_warning",
+    "_action_debug_emit_feedback_error_sticky",
     "_debug_toast",
 ]
 
@@ -114,6 +117,27 @@ def _action_debug_copy_cutscene_summary(window: Any) -> None:
         _debug_toast(window, "Cutscene summary copied")
     else:
         _debug_toast(window, "Clipboard unavailable (headless/web)")
+
+
+def _action_debug_emit_feedback_info(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is None or getattr(editor, "feedback", None) is None:
+        return
+    editor.feedback.info("Test info feedback")
+
+
+def _action_debug_emit_feedback_warning(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is None or getattr(editor, "feedback", None) is None:
+        return
+    editor.feedback.warning("Test warning feedback")
+
+
+def _action_debug_emit_feedback_error_sticky(window: Any) -> None:
+    editor = _get_editor(window)
+    if editor is None or getattr(editor, "feedback", None) is None:
+        return
+    editor.feedback.error("Test error feedback (sticky)", sticky=True)
 
 
 def _debug_toast(window: Any, message: str, *, seconds: float = 2.5) -> None:

@@ -59,8 +59,6 @@ class StubEditorController:
             return list(self._find_items_override)
         return []
 
-    def ui_toast(self, msg: str) -> None: pass
-
     def preview_hd2d_preset(self, preset_id: str) -> None:
         self.preview_called_with = preset_id
 
