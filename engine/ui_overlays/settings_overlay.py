@@ -655,6 +655,9 @@ class SettingsOverlay(UIElement):
         keybinds_layout = self._layout_keybinds_section()
         audio_layout = self._layout_audio_section()
         input_layout = self._layout_input_section()
+        _diagnostic_instruction_ids = {
+            id(instr) for instr in (*overview_layout.instructions, *options_layout.instructions)
+        }
         for instruction in (
             *overview_layout.instructions,
             *options_layout.instructions,
@@ -664,6 +667,8 @@ class SettingsOverlay(UIElement):
         ):
             kind = str(instruction.kind or "")
             payload = instruction.payload if isinstance(instruction.payload, dict) else {}
+            if kind == "text" and id(instruction) in _diagnostic_instruction_ids:
+                continue
             if kind == "panel_bg":
                 if str(payload.get("style_token", "")) in ("settings_overview", "settings_options"):
                     continue
