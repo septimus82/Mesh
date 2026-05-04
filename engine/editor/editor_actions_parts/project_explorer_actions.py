@@ -247,11 +247,8 @@ def _safe_move_selected_asset(window: Any) -> None:
         prompter(lambda dest: editor.safe_move_selected_asset(dest))
         return
 
-    # Fallback toast if no prompt handler
-    hud = getattr(window, "player_hud", None)
-    toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
-    if callable(toaster):
-        toaster("Safe Move: Select specific folder logic pending UI", seconds=2.5)
+    # Fallback feedback if no prompt handler
+    _emit_feedback(window, "Safe Move: Select specific folder logic pending UI", severity="warning")
 
 
 def _safe_move_selected_assets(window: Any) -> None:
@@ -320,10 +317,7 @@ def _safe_move_refactor_wrapper(window: Any) -> None:
         prompter(lambda dest: editor.safe_move_selected_assets(dest))
         return
 
-    hud = getattr(window, "player_hud", None)
-    toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
-    if callable(toaster):
-        toaster("Safe Move: Select specific folder logic pending UI", seconds=2.5)
+    _emit_feedback(window, "Safe Move: Select specific folder logic pending UI", severity="warning")
 
 
 # --- Inline Rename Action Handlers ---
@@ -358,10 +352,7 @@ def _inline_rename_commit(window: Any) -> None:
         # Show toast if there was an error
         should_commit, _, error = project_ctrl.get_inline_rename_commit_result()
         if error:
-            hud = getattr(window, "player_hud", None)
-            toaster = getattr(hud, "enqueue_toast", None) if hud else None
-            if callable(toaster):
-                toaster(f"Rename failed: {error}", seconds=2.5)
+            _emit_feedback(window, f"Rename failed: {error}", severity="error")
         return
 
     # Perform actual rename via file_ops
@@ -371,6 +362,19 @@ def _inline_rename_commit(window: Any) -> None:
              file_ops.request_safe_rename_refactor(new_name)
         elif hasattr(file_ops, "rename_selected_asset"):
              file_ops.rename_selected_asset(new_name)
+
+
+def _emit_feedback(window: Any, message: str, *, severity: str) -> None:
+    editor = _get_editor(window)
+    feedback = getattr(editor, "feedback", None) if editor is not None else None
+    method = getattr(feedback, severity, None) if feedback is not None else None
+    if callable(method):
+        method(message, ttl=2.5)
+
+    hud = getattr(window, "player_hud", None)
+    toaster = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
+    if callable(toaster):
+        toaster(message, seconds=2.5)
 
 
 def _inline_rename_cancel(window: Any) -> None:

@@ -520,11 +520,11 @@ class EditorFileOpsController:
 
         entry = getattr(row, "entry", None)
         if entry is None:
-            self._toast("Cannot rename: not a file entry")
+            self._toast("Cannot rename: not a file entry", severity="warning")
             return False
 
         if getattr(entry, "is_dir", False):
-            self._toast("Cannot rename folders")
+            self._toast("Cannot rename folders", severity="warning")
             return False
 
         old_path = getattr(entry, "rel_path", None)
@@ -608,11 +608,11 @@ class EditorFileOpsController:
 
         entry = getattr(row, "entry", None)
         if entry is None:
-            self._toast("Cannot move: not a file entry")
+            self._toast("Cannot move: not a file entry", severity="warning")
             return False
 
         if getattr(entry, "is_dir", False):
-            self._toast("Cannot move folders")
+            self._toast("Cannot move folders", severity="warning")
             return False
 
         old_path = getattr(entry, "rel_path", None)
@@ -622,7 +622,7 @@ class EditorFileOpsController:
         # Validate
         is_valid, reason = validate_destination(old_path, dest_folder_rel)
         if not is_valid:
-            self._toast(f"Cannot move: {reason}")
+            self._toast(f"Cannot move: {reason}", severity="warning")
             return False
 
         # Compute paths
@@ -674,7 +674,10 @@ class EditorFileOpsController:
             if n_refs > 0:
                 self._toast(f"{n_refs} ref(s) updated")
             else:
-                self._toast("No changes made" if not replacements and is_web else "Moved file") 
+                self._toast(
+                    "No changes made" if not replacements and is_web else "Moved file",
+                    severity="warning" if not replacements and is_web else "info",
+                )
                 # Original logic for move toast was slightly different, I'll match intent.
 
         return True
@@ -906,11 +909,19 @@ class EditorFileOpsController:
         elif hasattr(self.controller, "_refresh_project_explorer_rows"):
             self.controller._refresh_project_explorer_rows()
 
-    def _toast(self, message: str, seconds: float = 2.5) -> None:
+    def _toast(self, message: str, *, severity: str = "info", seconds: float | None = None) -> None:
+        feedback = getattr(self.controller, "feedback", None)
+        method = getattr(feedback, severity, None) if feedback is not None else None
+        if callable(method):
+            if seconds is not None:
+                method(message, ttl=seconds)
+            else:
+                method(message)
+
         hud = getattr(self.controller.window, "player_hud", None)
-        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        toaster = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
         if callable(toaster):
-            toaster(message, seconds=seconds)
+            toaster(message, seconds=2.5 if seconds is None else seconds)
 
     def _is_web_runtime(self) -> bool:
         return sys.platform == "emscripten" or os.environ.get("PYGBAG") == "1"

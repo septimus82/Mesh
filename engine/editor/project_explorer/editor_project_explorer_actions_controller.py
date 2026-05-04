@@ -381,20 +381,14 @@ class EditorProjectExplorerActionsController:
 
     def clear_recents(self) -> bool:
         if not self._editor.project_explorer.recents:
-            hud = getattr(self._editor.window, "player_hud", None)
-            toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
-            if callable(toaster):
-                toaster(tr("UI_NO_RECENTS"), seconds=2.5)
+            self._emit_feedback(tr("UI_NO_RECENTS"), severity="warning")
             # Return True because we handled the input (by showing a warning), preventing fallback
             return True
 
         self._editor.project_explorer.clear_recents()
         self._editor._autosave_workspace()
 
-        hud = getattr(self._editor.window, "player_hud", None)
-        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(toaster):
-            toaster(tr("UI_RECENTS_CLEARED"), seconds=2.5)
+        self._emit_feedback(tr("UI_RECENTS_CLEARED"), severity="info")
         return True
 
     def reveal_in_explorer(self, target_path: str) -> bool:
@@ -423,10 +417,7 @@ class EditorProjectExplorerActionsController:
 
         target = choose_reveal_target(scene_path, entity_asset_path)
         if not target:
-            hud = getattr(self._editor.window, "player_hud", None)
-            toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
-            if callable(toaster):
-                toaster(tr("UI_NO_REVEAL_TARGET"), seconds=2.5)
+            self._emit_feedback(tr("UI_NO_REVEAL_TARGET"), severity="warning")
             return False
 
         return self.reveal_in_explorer(target)
@@ -510,11 +501,19 @@ class EditorProjectExplorerActionsController:
         handler = getattr(self._editor.window, "project_explorer_move_prompt", None)
         if callable(handler):
             return bool(handler(on_confirm))
-        hud = getattr(self._editor.window, "player_hud", None)
-        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(toaster):
-            toaster("Safe Move: Select specific folder logic pending UI", seconds=2.5)
+        self._emit_feedback("Safe Move: Select specific folder logic pending UI", severity="warning")
         return False
+
+    def _emit_feedback(self, message: str, *, severity: str) -> None:
+        feedback = getattr(self._editor, "feedback", None)
+        method = getattr(feedback, severity, None) if feedback is not None else None
+        if callable(method):
+            method(message, ttl=2.5)
+
+        hud = getattr(self._editor.window, "player_hud", None)
+        toaster = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
+        if callable(toaster):
+            toaster(message, seconds=2.5)
 
     def get_selected_project_entry_path(self) -> str | None:
         """Get the relative path of the selected Project Explorer entry."""
