@@ -24,10 +24,15 @@ def scan_scene_problems(self):
                 return False
 
     issues = self.problems.scan_scene(scene, repo_root, resolver)
-    hud = getattr(self.window, "player_hud", None)
-    toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
-    if callable(toaster):
-        toaster(tr("UI_PROBLEMS_SCANNED"), seconds=2.5)
+    message = tr("UI_PROBLEMS_SCANNED")
+    feedback = getattr(self, "feedback", None)
+    if feedback is not None:
+        feedback.info(message, ttl=2.5)
+    else:
+        hud = getattr(self.window, "player_hud", None)
+        toaster = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
+        if callable(toaster):
+            toaster(message, seconds=2.5)
     return len(issues)
 
 

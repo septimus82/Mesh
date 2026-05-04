@@ -537,26 +537,44 @@ class ProblemsController:
     def _toast_problem_fixed(self, editor: Any) -> None:
         from engine.i18n import tr  # noqa: PLC0415
 
+        message = tr("UI_PROBLEM_FIXED")
+        feedback = getattr(editor, "feedback", None)
+        if feedback is not None:
+            feedback.info(message, ttl=2.5)
+            return
+
         hud = getattr(getattr(editor, "window", None), "player_hud", None)
-        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        toaster = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
         if callable(toaster):
-            toaster(tr("UI_PROBLEM_FIXED"), seconds=2.5)
+            toaster(message, seconds=2.5)
 
     def _toast_safe_summary(self, editor: Any, applied: int, skipped: int) -> None:
         from engine.i18n import tr  # noqa: PLC0415
 
+        message = tr("UI_PROBLEMS_APPLIED_SAFE_SUMMARY").format(applied=applied, skipped=skipped)
+        feedback = getattr(editor, "feedback", None)
+        if feedback is not None:
+            if applied > 0:
+                feedback.info(message, ttl=2.5)
+            else:
+                feedback.warning(message, ttl=2.5)
+            return
+
         hud = getattr(getattr(editor, "window", None), "player_hud", None)
-        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        toaster = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
         if callable(toaster):
-            toaster(
-                tr("UI_PROBLEMS_APPLIED_SAFE_SUMMARY").format(applied=applied, skipped=skipped),
-                seconds=2.5,
-            )
+            toaster(message, seconds=2.5)
 
     def _toast_no_fix(self, editor: Any) -> None:
         from engine.i18n import tr  # noqa: PLC0415
 
+        message = tr("UI_NO_FIX_AVAILABLE")
+        feedback = getattr(editor, "feedback", None)
+        if feedback is not None:
+            feedback.warning(message, ttl=2.5)
+            return
+
         hud = getattr(getattr(editor, "window", None), "player_hud", None)
-        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        toaster = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
         if callable(toaster):
-            toaster(tr("UI_NO_FIX_AVAILABLE"), seconds=2.5)
+            toaster(message, seconds=2.5)
