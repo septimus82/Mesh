@@ -123,10 +123,7 @@ class EditorLightsController:
         self.sync_lighting_settings()
         self._editor.lighting_preset_label = tr("UI_APPLIED_PRESET", slot=preset_id)
         self._editor.lighting_preset_until = time.time() + 1.5
-        hud = getattr(self._editor.window, "player_hud", None)
-        enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(enqueue) and self._editor.lighting_preset_label:
-            enqueue(self._editor.lighting_preset_label, seconds=2.5)
+        self._emit_lighting_feedback()
         self._editor._mark_dirty()
         return True
 
@@ -153,12 +150,23 @@ class EditorLightsController:
             self._editor.window.scene_controller.scene_settings = settings
         self._editor.lighting_preset_label = tr("UI_SAVED_PRESET", slot=slot)
         self._editor.lighting_preset_until = time.time() + 1.5
-        hud = getattr(self._editor.window, "player_hud", None)
-        enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(enqueue) and self._editor.lighting_preset_label:
-            enqueue(self._editor.lighting_preset_label, seconds=2.5)
+        self._emit_lighting_feedback()
         self._editor._mark_dirty()
         return True
+
+    def _emit_lighting_feedback(self) -> None:
+        label = self._editor.lighting_preset_label
+        if not label:
+            return
+        feedback = getattr(self._editor, "feedback", None)
+        if feedback is not None:
+            feedback.info(label, ttl=2.5)
+            return
+
+        hud = getattr(self._editor.window, "player_hud", None)
+        enqueue = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
+        if callable(enqueue):
+            enqueue(label, seconds=2.5)
 
     def get_active_lighting_preset_label(self) -> str | None:
         label = cast(Optional[str], self._editor.lighting_preset_label)
