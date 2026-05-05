@@ -69,7 +69,11 @@ def activate(editor: Any) -> bool:
     if commands:
         max_items = min(len(commands), 8)
         use_idx = max(0, min(int(idx or 0), max_items - 1))
-        commands[use_idx].run(getattr(editor, "window", None))
+        command = commands[use_idx]
+        command.run(getattr(editor, "window", None))
+        from engine.editor import command_palette_rank_model as rank_model  # noqa: PLC0415
+
+        rank_model.record_command_executed(command.id)
     panels = getattr(editor, "panels", None)
     if panels and hasattr(panels, "close_command_palette"):
         panels.close_command_palette()
