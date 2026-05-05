@@ -21,6 +21,10 @@ if TYPE_CHECKING:
     from .components_model import InspectorComponent, InspectorField
 
 
+ENTITY_OUTLINER_EMPTY_SCENE_PLACEHOLDER = "No entities in this scene."
+ENTITY_INSPECTOR_NO_SELECTION_PLACEHOLDER = "Select an entity to inspect."
+
+
 def filter_entity_panels_items(
     items: List["EntitySummary"],
     filter_text: str,
@@ -128,7 +132,7 @@ def build_outliner_lines(
     lines.append("-------------")
 
     if not items:
-        lines.append("  (No entities)")
+        lines.append(f"  {ENTITY_OUTLINER_EMPTY_SCENE_PLACEHOLDER}")
         return lines
 
     max_visible = 19
@@ -197,7 +201,7 @@ def build_inspector_lines(
         lines.append("Editing: ENTER apply | ESC cancel")
 
     if sprite_name is None:
-        lines.append("No selection")
+        lines.append(ENTITY_INSPECTOR_NO_SELECTION_PLACEHOLDER)
         return lines
 
     lines.append(f"Selected: {sprite_name}")
