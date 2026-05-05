@@ -19,6 +19,33 @@ class Command:
     title: str
     keywords: tuple[str, ...]
     run: Callable[[Any], None]
+    shortcut: str | None = None
+
+
+_COMMAND_SHORTCUT_BADGE_IDS: frozenset[str] = frozenset(
+    {
+        "editor.scene.save",
+        "editor.scene_browser.open",
+        "editor.scene_switcher.toggle",
+        "editor.history.undo",
+        "editor.history.redo",
+        "editor.keybinds.open",
+        "editor.light_tool.toggle",
+        "editor.occluder_tool.toggle",
+        "editor.entity_panels.toggle",
+        "editor.panel.project_explorer.toggle",
+        "editor.panel.problems.toggle",
+        "editor.play.start",
+    }
+)
+
+
+def _shortcut_badge_for_action(action: Any) -> str | None:
+    action_id = str(getattr(action, "id", "") or "")
+    if action_id not in _COMMAND_SHORTCUT_BADGE_IDS:
+        return None
+    shortcut = str(getattr(action, "shortcut", "") or "").strip()
+    return shortcut or None
 
 
 def build_commands_from_actions(actions: Iterable[Any]) -> list[Command]:
@@ -28,6 +55,7 @@ def build_commands_from_actions(actions: Iterable[Any]) -> list[Command]:
             title=action.title,
             keywords=action.keywords,
             run=action.run,
+            shortcut=_shortcut_badge_for_action(action),
         )
         for action in actions
     ]
