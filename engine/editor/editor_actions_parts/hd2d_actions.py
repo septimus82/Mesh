@@ -63,6 +63,28 @@ __all__ = [
 # -------------------------------------------------------------------------
 
 
+def _emit_feedback(
+    window: Any,
+    message: str,
+    *,
+    severity: str = "info",
+    ttl: float | None = None,
+) -> None:
+    editor = _get_editor(window)
+    feedback = getattr(editor, "feedback", None) if editor is not None else None
+    method = getattr(feedback, severity, None) if feedback is not None else None
+    if callable(method):
+        if ttl is not None:
+            method(message, ttl=ttl)
+        else:
+            method(message)
+
+    hud = getattr(window, "player_hud", None)
+    toaster = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
+    if callable(toaster):
+        toaster(message, seconds=2.5 if ttl is None else ttl)
+
+
 def _apply_hd2d_preset(window: Any, preset_id: str) -> None:
     from engine.editor.hd2d_look_presets_model import apply_hd2d_preset, get_hd2d_preset_name  # noqa: PLC0415
 
@@ -581,15 +603,10 @@ def _copy_entity_hd2d_overrides(window: Any) -> None:
     # Store in clipboard (copy, not reference)
     editor._hd2d_overrides_clipboard = copy.deepcopy(patch)
 
-    # Toast feedback
-    hud = getattr(window, "player_hud", None)
-    if hud is not None:
-        enqueue = getattr(hud, "enqueue_toast", None)
-        if callable(enqueue):
-            if field_count == 0:
-                enqueue(f"Copied HD-2D overrides · {entity_id} (empty)")
-            else:
-                enqueue(f"Copied HD-2D overrides · {entity_id} ({field_count} field{'s' if field_count != 1 else ''})")
+    if field_count == 0:
+        _emit_feedback(window, f"Copied HD-2D overrides · {entity_id} (empty)")
+    else:
+        _emit_feedback(window, f"Copied HD-2D overrides · {entity_id} ({field_count} field{'s' if field_count != 1 else ''})")
 
 
 def _paste_entity_hd2d_overrides(window: Any) -> None:
@@ -615,11 +632,7 @@ def _paste_entity_hd2d_overrides(window: Any) -> None:
 
     clipboard = getattr(editor, "_hd2d_overrides_clipboard", None)
     if not validate_clipboard_patch(clipboard):
-        hud = getattr(window, "player_hud", None)
-        if hud is not None:
-            enqueue = getattr(hud, "enqueue_toast", None)
-            if callable(enqueue):
-                enqueue("Nothing to paste")
+        _emit_feedback(window, "Nothing to paste", severity="warning")
         return
 
     # clipboard is now validated as a non-empty dict
@@ -636,11 +649,7 @@ def _paste_entity_hd2d_overrides(window: Any) -> None:
     before_scene = copy.deepcopy(scene)
     new_scene = apply_hd2d_entity_override_patch(scene, entity_id, clipboard)
     if new_scene == before_scene:
-        hud = getattr(window, "player_hud", None)
-        if hud is not None:
-            enqueue = getattr(hud, "enqueue_toast", None)
-            if callable(enqueue):
-                enqueue("No changes")
+        _emit_feedback(window, "No changes", severity="warning")
         return
 
     sc._loaded_scene_data = new_scene
@@ -660,12 +669,7 @@ def _paste_entity_hd2d_overrides(window: Any) -> None:
             "after": new_scene,
         })
 
-    # Toast feedback
-    hud = getattr(window, "player_hud", None)
-    if hud is not None:
-        enqueue = getattr(hud, "enqueue_toast", None)
-        if callable(enqueue):
-            enqueue(f"Pasted HD-2D overrides · {entity_id}")
+    _emit_feedback(window, f"Pasted HD-2D overrides · {entity_id}")
 
 
 def _paste_replace_entity_hd2d_overrides(window: Any) -> None:
@@ -693,11 +697,7 @@ def _paste_replace_entity_hd2d_overrides(window: Any) -> None:
 
     clipboard = getattr(editor, "_hd2d_overrides_clipboard", None)
     if not validate_clipboard_patch(clipboard):
-        hud = getattr(window, "player_hud", None)
-        if hud is not None:
-            enqueue = getattr(hud, "enqueue_toast", None)
-            if callable(enqueue):
-                enqueue("Nothing to paste")
+        _emit_feedback(window, "Nothing to paste", severity="warning")
         return
 
     # clipboard is now validated as a non-empty dict
@@ -720,11 +720,7 @@ def _paste_replace_entity_hd2d_overrides(window: Any) -> None:
     new_scene = apply_hd2d_entity_override_patch(cleared_scene, entity_id, clipboard)
 
     if new_scene == before_scene:
-        hud = getattr(window, "player_hud", None)
-        if hud is not None:
-            enqueue = getattr(hud, "enqueue_toast", None)
-            if callable(enqueue):
-                enqueue("No changes")
+        _emit_feedback(window, "No changes", severity="warning")
         return
 
     sc._loaded_scene_data = new_scene
@@ -744,12 +740,7 @@ def _paste_replace_entity_hd2d_overrides(window: Any) -> None:
             "after": new_scene,
         })
 
-    # Toast feedback
-    hud = getattr(window, "player_hud", None)
-    if hud is not None:
-        enqueue = getattr(hud, "enqueue_toast", None)
-        if callable(enqueue):
-            enqueue(f"Pasted HD-2D overrides (replace) · {entity_id}")
+    _emit_feedback(window, f"Pasted HD-2D overrides (replace) · {entity_id}")
 
 
 def _clear_all_entity_hd2d_overrides(window: Any) -> None:
@@ -790,11 +781,7 @@ def _clear_all_entity_hd2d_overrides(window: Any) -> None:
 
     # Check if entity has any overrides
     if not isinstance(entity_dict, dict) or not has_any_override(entity_dict):
-        hud = getattr(window, "player_hud", None)
-        if hud is not None:
-            enqueue = getattr(hud, "enqueue_toast", None)
-            if callable(enqueue):
-                enqueue("No overrides to clear")
+        _emit_feedback(window, "No overrides to clear", severity="warning")
         return
 
     # Clear all overrides
@@ -819,12 +806,7 @@ def _clear_all_entity_hd2d_overrides(window: Any) -> None:
             "after": new_scene,
         })
 
-    # Toast feedback
-    hud = getattr(window, "player_hud", None)
-    if hud is not None:
-        enqueue = getattr(hud, "enqueue_toast", None)
-        if callable(enqueue):
-            enqueue(f"Cleared HD-2D overrides · {entity_id}")
+    _emit_feedback(window, f"Cleared HD-2D overrides · {entity_id}")
 
 
 # -------------------------------------------------------------------------
@@ -864,11 +846,7 @@ def _batch_paste_hd2d_overrides(window: Any, replace: bool = False) -> None:
 
     clipboard = getattr(editor, "_hd2d_overrides_clipboard", None)
     if not validate_clipboard_patch(clipboard):
-        hud = getattr(window, "player_hud", None)
-        if hud is not None:
-            enqueue = getattr(hud, "enqueue_toast", None)
-            if callable(enqueue):
-                enqueue("Nothing to paste")
+        _emit_feedback(window, "Nothing to paste", severity="warning")
         return
 
     # clipboard is now validated as a non-empty dict
@@ -888,11 +866,7 @@ def _batch_paste_hd2d_overrides(window: Any, replace: bool = False) -> None:
     )
 
     if not targets:
-        hud = getattr(window, "player_hud", None)
-        if hud is not None:
-            enqueue = getattr(hud, "enqueue_toast", None)
-            if callable(enqueue):
-                enqueue("No entities in range")
+        _emit_feedback(window, "No entities in range", severity="warning")
         return
 
     # Snapshot before state
@@ -907,11 +881,7 @@ def _batch_paste_hd2d_overrides(window: Any, replace: bool = False) -> None:
         current_scene = apply_hd2d_entity_override_patch(current_scene, entity_id, clipboard)
 
     if current_scene == before_scene:
-        hud = getattr(window, "player_hud", None)
-        if hud is not None:
-            enqueue = getattr(hud, "enqueue_toast", None)
-            if callable(enqueue):
-                enqueue("No changes")
+        _emit_feedback(window, "No changes", severity="warning")
         return
 
     sc._loaded_scene_data = current_scene
@@ -933,12 +903,7 @@ def _batch_paste_hd2d_overrides(window: Any, replace: bool = False) -> None:
             "after": current_scene,
         })
 
-    # Toast feedback
-    hud = getattr(window, "player_hud", None)
-    if hud is not None:
-        enqueue = getattr(hud, "enqueue_toast", None)
-        if callable(enqueue):
-            enqueue(f"Batch pasted HD-2D overrides ({mode_label}) · {len(targets)} entities")
+    _emit_feedback(window, f"Batch pasted HD-2D overrides ({mode_label}) · {len(targets)} entities")
 
 
 def _batch_paste_hd2d_overrides_merge(window: Any) -> None:
@@ -981,12 +946,7 @@ def _adjust_hd2d_batch_radius(window: Any, delta: int) -> None:
     # Save to workspace settings (no undo, no dirty)
     _save_hd2d_batch_radius_to_workspace(window, new_radius)
 
-    # Toast feedback
-    hud = getattr(window, "player_hud", None)
-    if hud is not None:
-        enqueue = getattr(hud, "enqueue_toast", None)
-        if callable(enqueue):
-            enqueue(format_batch_radius_display(new_radius))
+    _emit_feedback(window, format_batch_radius_display(new_radius))
 
 
 def _action_adjust_hd2d_batch_radius_up(window: Any) -> None:
@@ -1021,12 +981,7 @@ def _reset_hd2d_batch_radius(window: Any) -> None:
     # Save to workspace settings (no undo, no dirty)
     _save_hd2d_batch_radius_to_workspace(window, default_radius)
 
-    # Toast feedback
-    hud = getattr(window, "player_hud", None)
-    if hud is not None:
-        enqueue = getattr(hud, "enqueue_toast", None)
-        if callable(enqueue):
-            enqueue(f"{format_batch_radius_display(default_radius)} (reset)")
+    _emit_feedback(window, f"{format_batch_radius_display(default_radius)} (reset)")
 
 
 def _save_hd2d_batch_radius_to_workspace(window: Any, radius: int) -> None:

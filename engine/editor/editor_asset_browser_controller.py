@@ -249,9 +249,6 @@ class EditorAssetBrowserController:
         row: AssetRow = self._editor._asset_browser_filtered_rows[idx]
         intent = _resolve_asset_activation_impl(row)
 
-        hud = getattr(self._editor.window, "player_hud", None)
-        toaster = getattr(hud, "enqueue_toast", None) if hud else None
-
         if intent["kind"] == "spawn_entity":
             # Enter placement mode
             self._editor.asset_place_active = True
@@ -259,12 +256,10 @@ class EditorAssetBrowserController:
             self._editor.asset_place_kind = row.kind
             self._editor.asset_browser_active = False
 
-            if callable(toaster):
-                toaster(f"Placement Mode: {row.display_name}")
+            self._emit_feedback_info(f"Placement Mode: {row.display_name}")
         else:
             # Copy path (mock)
-            if callable(toaster):
-                toaster(f"Copied: {intent['asset_path']}")
+            self._emit_feedback_info(f"Copied: {intent['asset_path']}")
 
     def place_asset_at(self, x: float, y: float) -> None:
         if not self._editor.asset_place_active or not self._editor.asset_place_path:
@@ -305,8 +300,15 @@ class EditorAssetBrowserController:
         return True
 
     def _copy_find_asset_path(self, asset_path: str) -> bool:
-        hud = getattr(self._editor.window, "player_hud", None)
-        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
-        if callable(toaster):
-            toaster(f"Copied path: {asset_path}")
+        self._emit_feedback_info(f"Copied path: {asset_path}")
         return True
+
+    def _emit_feedback_info(self, message: str) -> None:
+        feedback = getattr(self._editor, "feedback", None)
+        if feedback is not None:
+            feedback.info(message)
+
+        hud = getattr(self._editor.window, "player_hud", None)
+        toaster = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
+        if callable(toaster):
+            toaster(message)

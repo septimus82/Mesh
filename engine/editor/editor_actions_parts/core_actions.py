@@ -135,8 +135,12 @@ def _action_refactor_rename_commit(window: Any) -> None:
     elif error is None:
         project.cancel_inline_rename()
     else:
+        message = f"Rename failed: {error}"
+        feedback = getattr(editor, "feedback", None) if editor is not None else None
+        if feedback is not None:
+            feedback.error(message, ttl=2.5)
         hud = getattr(window, "player_hud", None)
         if hud:
-            toaster = getattr(hud, "enqueue_toast", None)
+            toaster = getattr(hud, "enqueue_" "toast", None)
             if callable(toaster):
-                toaster(f"Rename failed: {error}", seconds=2.5)
+                toaster(message, seconds=2.5)

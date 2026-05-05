@@ -34,15 +34,15 @@ class EditorProblemsActionsController:
         # Jump to scene (and optionally select entity)
         if kind in ("scene", "entity") and scene_path:
             if not editor._open_scene_by_id(scene_path):
-                self._toast(f"Failed to load scene: {scene_path}")
+                self._toast(f"Failed to load scene: {scene_path}", severity="error")
                 return False
 
             # If entity jump, select the entity
             if kind == "entity" and entity_id:
                 editor._selection_ctl.primary_selected_id = entity_id
-                self._toast(f"Jumped to entity: {entity_id}")
+                self._toast(f"Jumped to entity: {entity_id}", severity="info")
             else:
-                self._toast(f"Opened scene: {scene_path}")
+                self._toast(f"Opened scene: {scene_path}", severity="info")
 
             # Reveal in Project Explorer if path available
             if path:
@@ -54,7 +54,7 @@ class EditorProblemsActionsController:
         if kind == "file" and path:
             if self._reveal_in_project_explorer(path):
                 loc_text = format_location_text(target)
-                self._toast(f"Revealed: {loc_text}")
+                self._toast(f"Revealed: {loc_text}", severity="info")
                 return True
 
         return False
@@ -75,9 +75,9 @@ class EditorProblemsActionsController:
 
         success = try_copy_to_clipboard(loc_text)
         if success:
-            self._toast(f"Copied: {loc_text}")
+            self._toast(f"Copied: {loc_text}", severity="info")
         else:
-            self._toast("Clipboard unavailable (headless/web)")
+            self._toast("Clipboard unavailable (headless/web)", severity="warning")
 
         return success
 
@@ -86,9 +86,18 @@ class EditorProblemsActionsController:
         # Use project explorer actions controller to reveal.
         return bool(self._editor.project_explorer_actions.reveal_path(path))
 
-    def _toast(self, message: str, seconds: float = 2.5) -> None:
+    def _toast(self, message: str, *, severity: str = "info", seconds: float | None = None) -> None:
         """Show a toast notification for problems panel actions."""
+        feedback = getattr(self._editor, "feedback", None)
+        method = getattr(feedback, severity, None) if feedback is not None else None
+        if callable(method):
+            if seconds is not None:
+                method(message, ttl=seconds)
+            else:
+                method(message)
+            return
+
         hud = getattr(self._editor.window, "player_hud", None)
-        toaster = getattr(hud, "enqueue_toast", None) if hud is not None else None
+        toaster = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
         if callable(toaster):
-            toaster(message, seconds=seconds)
+            toaster(message, seconds=2.5 if seconds is None else seconds)

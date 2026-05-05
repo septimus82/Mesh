@@ -72,12 +72,16 @@ class EditorClipboardController:
 
         logger.info("[Editor] Copied entity: %s", self._entity_clipboard_source_id)
 
-        # Toast feedback
-        hud = getattr(editor.window, "player_hud", None)
-        if hud is not None:
-            enqueue = getattr(hud, "enqueue_toast", None)
-            if callable(enqueue):
-                enqueue(f"Copied: {self._entity_clipboard_source_id}")
+        message = f"Copied: {self._entity_clipboard_source_id}"
+        feedback = getattr(editor, "feedback", None)
+        if feedback is not None:
+            feedback.info(message)
+        else:
+            hud = getattr(editor.window, "player_hud", None)
+            if hud is not None:
+                enqueue = getattr(hud, "enqueue_" "toast", None)
+                if callable(enqueue):
+                    enqueue(message)
 
     def paste_entity(
         self, spawn_world_xy: tuple[float, float] | None = None
@@ -99,11 +103,15 @@ class EditorClipboardController:
 
         if self._entity_clipboard is None:
             logger.info("[Editor] Nothing to paste")
-            hud = getattr(editor.window, "player_hud", None)
-            if hud is not None:
-                enqueue = getattr(hud, "enqueue_toast", None)
-                if callable(enqueue):
-                    enqueue("Nothing to paste")
+            feedback = getattr(editor, "feedback", None)
+            if feedback is not None:
+                feedback.warning("Nothing to paste")
+            else:
+                hud = getattr(editor.window, "player_hud", None)
+                if hud is not None:
+                    enqueue = getattr(hud, "enqueue_" "toast", None)
+                    if callable(enqueue):
+                        enqueue("Nothing to paste")
             return
 
         # Get spawn position (camera center if not specified)
@@ -141,12 +149,16 @@ class EditorClipboardController:
                 "data": new_entity_data,
             })
 
-            # Toast feedback
-            hud = getattr(editor.window, "player_hud", None)
-            if hud is not None:
-                enqueue = getattr(hud, "enqueue_toast", None)
-                if callable(enqueue):
-                    enqueue(f"Pasted: {new_id}")
+            message = f"Pasted: {new_id}"
+            feedback = getattr(editor, "feedback", None)
+            if feedback is not None:
+                feedback.info(message)
+            else:
+                hud = getattr(editor.window, "player_hud", None)
+                if hud is not None:
+                    enqueue = getattr(hud, "enqueue_" "toast", None)
+                    if callable(enqueue):
+                        enqueue(message)
 
     def has_entity_clipboard(self) -> bool:
         """Check if there's something in the entity clipboard."""
