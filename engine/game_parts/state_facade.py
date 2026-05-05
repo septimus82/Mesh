@@ -207,7 +207,10 @@ def set_flag(self: "GameWindow", name: str, value: bool = True) -> None:
 
 
 def get_flag(self: "GameWindow", name: str, default: bool = False) -> bool:
-    return self.game_state_controller.get_flag(name, default)
+    controller = getattr(self, "game_state_controller", None)
+    if controller is None:
+        return bool(default)
+    return controller.get_flag(name, default)
 
 
 def toggle_flag(self: "GameWindow", name: str) -> bool:

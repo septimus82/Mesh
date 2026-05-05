@@ -148,6 +148,37 @@ def test_compute_draw_plan_sorting():
     assert plan.sprite_ops[1].sprite == s1
     assert plan.sprite_ops[2].sprite == s3
 
+
+def test_compute_draw_plan_culling_accepts_tuple_sprite_scale():
+    """Arcade may expose non-uniform sprite scale as a tuple."""
+    sprite = MockSprite(x=0, y=0)
+    sprite.width = None
+    sprite.height = None
+    sprite.texture.width = 32
+    sprite.texture.height = 64
+    sprite.scale = (2.0, 0.5)
+
+    ctx = build_render_context(
+        sprites=[sprite],
+        background_planes=[],
+        camera_pos=(0, 0),
+        viewport_size=(800, 600),
+        zoom=1.0,
+        sort_mode="y_sort",
+        shadows_enabled=False,
+        shadows_ao_enabled=False,
+        shadows_contact_enabled=False,
+        depth_tint_settings=MockDepthTintSettings(),
+        outline_settings=MockOutlineSettings(),
+        use_culling=True,
+        camera_rect=(-100, -100, 100, 100),
+    )
+
+    plan = compute_draw_plan(ctx)
+
+    assert [op.sprite for op in plan.sprite_ops] == [sprite]
+
+
 def test_execution_emits_commands():
     """Verify execute_scene_plan submits DrawSpriteCmds to the queue."""
     sprite = MockSprite(x=10, y=20)
