@@ -396,22 +396,24 @@ class Slider:
     def layout(self, bounds: Rect) -> LayoutResult:
         self._last_rect = bounds
         self.value = self._quantize(self.value)
-        fill_width = float(bounds.width) * float(self.value)
-        knob_center_x = float(bounds.left + fill_width)
         track_h = max(4.0, bounds.height * 0.25)
+        knob_w = max(6.0, bounds.height * 0.18)
+        track_left = float(bounds.left + (knob_w / 2.0))
+        track_width = max(0.0, float(bounds.width - knob_w))
+        fill_width = track_width * float(self.value)
+        knob_center_x = float(track_left + fill_width)
         track_rect = Rect(
-            x=bounds.left,
+            x=track_left,
             y=(bounds.center_y - (track_h / 2.0)),
-            width=max(0.0, bounds.width),
+            width=track_width,
             height=track_h,
         )
         fill_rect = Rect(
-            x=bounds.left,
+            x=track_left,
             y=track_rect.y,
-            width=max(0.0, min(bounds.width, fill_width)),
+            width=max(0.0, min(track_width, fill_width)),
             height=track_h,
         )
-        knob_w = max(6.0, bounds.height * 0.18)
         knob_rect = Rect(
             x=(knob_center_x - (knob_w / 2.0)),
             y=(bounds.center_y - (bounds.height * 0.3)),

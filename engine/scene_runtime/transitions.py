@@ -3,10 +3,35 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from engine.paths import resolve_path
+
 if TYPE_CHECKING:
     from ..scene_controller import SceneController
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_scene_path(controller: Any, scene_path: str) -> str:
+    """Resolve world scene keys before queueing a runtime scene load."""
+    candidate = str(scene_path or "").strip()
+    if not candidate:
+        return candidate
+
+    wc = getattr(getattr(controller, "window", None), "world_controller", None)
+    getter = getattr(wc, "get_scene_path", None)
+    if callable(getter):
+        mapped = getter(candidate)
+        if mapped:
+            return str(mapped)
+
+    # Some authored content historically used bare scene stems. Keep that
+    # compatibility local to runtime scene switching, where the intent is clear.
+    if "/" not in candidate and "\\" not in candidate and not candidate.endswith(".json"):
+        fallback = f"scenes/{candidate}.json"
+        if resolve_path(fallback).exists():
+            return fallback
+
+    return candidate
 
 
 def request_scene_reload(controller: Any, *, clear_assets: bool = False) -> None:
@@ -30,6 +55,9 @@ def request_scene_reload(controller: Any, *, clear_assets: bool = False) -> None
 
 def request_scene_change(controller: Any, scene_path: str) -> None:
     """Request that a different scene load on the next frame."""
+    scene_path = _resolve_scene_path(controller, scene_path)
+    if not scene_path:
+        return
     if _try_fade_scene_change(controller, scene_path, spawn_id=None):
         return
     controller._pending_scene_path = scene_path
@@ -39,7 +67,7 @@ def request_scene_change(controller: Any, scene_path: str) -> None:
 
 def queue_scene_change(controller: Any, scene_path: str, *, spawn_id: str | None = None) -> None:
     """Request that the game switches to another scene at the end of the frame."""
-    scene_path = str(scene_path or "").strip()
+    scene_path = _resolve_scene_path(controller, scene_path)
     if not scene_path:
         return
     if _try_fade_scene_change(controller, scene_path, spawn_id=spawn_id):
