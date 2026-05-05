@@ -1,13 +1,33 @@
 """Pure ranking helpers for editor command palette."""
 from __future__ import annotations
 
+from collections import deque
 from typing import Iterable, Optional, Tuple
 
 from engine.editor.editor_focus_model import FOCUS_PROJECT_EXPLORER
 
+_RECENT_COMMAND_LIMIT = 5
+_RECENT_COMMAND_IDS: deque[str] = deque(maxlen=_RECENT_COMMAND_LIMIT)
+_RECENCY_SCORE_BONUS = -0.5
+
 
 def normalize_query(query: str) -> str:
     return " ".join(str(query or "").strip().lower().split())
+
+
+def record_command_executed(command_id: str) -> None:
+    cmd_id = str(command_id or "").strip()
+    if not cmd_id:
+        return
+    try:
+        _RECENT_COMMAND_IDS.remove(cmd_id)
+    except ValueError:
+        pass
+    _RECENT_COMMAND_IDS.appendleft(cmd_id)
+
+
+def recency_bonus(command_id: str) -> float:
+    return _RECENCY_SCORE_BONUS if str(command_id or "").strip() in _RECENT_COMMAND_IDS else 0.0
 
 
 def score_command(
@@ -16,19 +36,20 @@ def score_command(
     keywords: Iterable[str],
     query: str,
     focus_target: str | None = None,
-) -> Optional[Tuple[int, int, int, int, str, str]]:
+) -> Optional[Tuple[float, int, int, int, str, str]]:
     q = normalize_query(query)
     title = str(title or "").strip()
     if not title:
         return None
     title_l = title.lower()
 
-    focus_bonus = 0
+    command_id_text = str(command_id)
+    score_bonus = recency_bonus(command_id_text)
     if focus_target == FOCUS_PROJECT_EXPLORER and str(command_id or "").startswith("editor.project_explorer."):
-        focus_bonus = -1
+        score_bonus -= 1.0
 
     if not q:
-        return (focus_bonus, 0, 0, len(title_l), title_l, str(command_id))
+        return (score_bonus, 0, 0, len(title_l), title_l, command_id_text)
 
     rank = 999
     pos = 999
@@ -56,4 +77,4 @@ def score_command(
 
     if rank == 999:
         return None
-    return (focus_bonus, int(rank), int(pos), len(title_l), title_l, str(command_id))
+    return (score_bonus, int(rank), int(pos), len(title_l), title_l, command_id_text)
