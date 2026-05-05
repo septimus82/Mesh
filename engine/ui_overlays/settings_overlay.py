@@ -13,7 +13,7 @@ from .common import (
     _draw_rectangle_filled,
 )
 from ..text_draw import TextCache, draw_text_cached
-from .widgets import Label, LayoutResult, Padding, Panel, Rect, Slider, Toggle, VStack, Widget
+from .widgets import DrawInstruction, Label, LayoutResult, Padding, Panel, Rect, Slider, Toggle, VStack, Widget
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -35,6 +35,9 @@ class SettingsOverlay(UIElement):
         "interact",
         "attack",
     )
+    _SLIDER_LABEL_FONT_SIZE = 12.0
+    _SLIDER_LABEL_BAR_GAP = 2.0
+    _SLIDER_KNOB_HEIGHT = 10.0
 
     def __init__(self, window: "GameWindow") -> None:
         super().__init__(window)
@@ -216,13 +219,15 @@ class SettingsOverlay(UIElement):
         self._master_slider.value = self._current_master_volume()
         self._music_slider.value = float(self.settings.music_volume)
         self._sfx_slider.value = float(self.settings.sfx_volume)
-        return self._layout_labeled_section(
-            self._audio_panel,
-            bounds,
-            title="Audio",
-            rows=(self._master_slider, self._music_slider, self._sfx_slider),
-            title_height=20.0,
-            spacing=6.0,
+        return self._separate_slider_label_bars(
+            self._layout_labeled_section(
+                self._audio_panel,
+                bounds,
+                title="Audio",
+                rows=(self._master_slider, self._music_slider, self._sfx_slider),
+                title_height=20.0,
+                spacing=6.0,
+            )
         )
 
     def _layout_master_slider(self) -> Rect:
@@ -281,13 +286,33 @@ class SettingsOverlay(UIElement):
         bounds = self._input_panel_bounds(panel_rect)
         self._rumble_toggle.value = self._current_rumble_enabled()
         self._rumble_slider.value = self._current_rumble_strength()
-        return self._layout_labeled_section(
-            self._input_panel,
-            bounds,
-            title="",
-            rows=(self._rumble_toggle, self._rumble_slider),
-            spacing=6.0,
+        return self._separate_slider_label_bars(
+            self._layout_labeled_section(
+                self._input_panel,
+                bounds,
+                title="",
+                rows=(self._rumble_toggle, self._rumble_slider),
+                spacing=6.0,
+            )
         )
+
+    def _separate_slider_label_bars(self, layout: LayoutResult) -> LayoutResult:
+        instructions: list[DrawInstruction] = []
+        label_bottom: float | None = None
+        for instruction in layout.instructions:
+            kind = str(instruction.kind or "")
+            payload = instruction.payload if isinstance(instruction.payload, dict) else {}
+            if kind == "slider_label_text":
+                label_bottom = float(payload.get("y", 0.0)) - self._SLIDER_LABEL_FONT_SIZE
+            if kind in ("slider_track", "slider_fill", "slider_knob") and label_bottom is not None:
+                rect = payload.get("rect")
+                if isinstance(rect, Rect):
+                    height = min(rect.height, self._SLIDER_KNOB_HEIGHT) if kind == "slider_knob" else rect.height
+                    top = label_bottom - self._SLIDER_LABEL_BAR_GAP
+                    payload = {**payload, "rect": Rect(rect.x, min(rect.y, top - height), rect.width, height)}
+                    instruction = DrawInstruction(kind=kind, payload=payload)
+            instructions.append(instruction)
+        return LayoutResult(rect=layout.rect, instructions=instructions, children=layout.children)
 
     def _layout_labeled_section(
         self,
