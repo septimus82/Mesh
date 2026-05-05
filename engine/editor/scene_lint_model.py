@@ -329,8 +329,9 @@ def build_problems_panel_lines(
         return lines
     for idx, issue in enumerate(issues):
         prefix = "> " if idx == selected_index else "  "
+        severity_tag = format_issue_severity_tag(issue)
         tag = format_issue_risk_tag(issue)
-        lines.append(f"{prefix}{tag} {issue.kind}: {issue.message}")
+        lines.append(f"{prefix}{severity_tag} {tag} {issue.kind}: {issue.message}")
     return lines
 
 
@@ -348,6 +349,19 @@ def format_issue_risk_tag(issue: SceneLintIssue) -> str:
     if risk == "risky":
         return "[RISKY]"
     return "[SAFE]"
+
+
+def format_issue_severity_tag(issue: SceneLintIssue) -> str:
+    """Return an ASCII severity badge for list rendering."""
+    severity = str(getattr(issue, "severity", "") or "").strip().lower()
+    labels = {
+        "error": "ERROR",
+        "err": "ERROR",
+        "warning": "WARN",
+        "warn": "WARN",
+        "info": "INFO",
+    }
+    return f"[{labels.get(severity, 'INFO')}]"
 
 
 def _resolve_scene_id(scene_json: dict[str, Any]) -> str | None:
