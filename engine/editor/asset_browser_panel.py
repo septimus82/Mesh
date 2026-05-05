@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 
 # Asset browser kind options
 ASSET_BROWSER_KINDS = ("All", "Image", "Audio", "JSON")
+ASSET_BROWSER_EMPTY_FOLDER_PLACEHOLDER = "No assets in this folder."
+ASSET_BROWSER_NO_RESULTS_PLACEHOLDER_PREFIX = "No results for '"
+ASSET_BROWSER_NO_RESULTS_PLACEHOLDER_SUFFIX = "'."
 
 
 def filter_assets_for_browser(
@@ -126,7 +129,7 @@ def build_asset_browser_lines(
     lines.append("-------------")
 
     if not rows:
-        lines.append("  (No assets)")
+        lines.append(f"  {_format_asset_browser_empty_placeholder(search_text)}")
         return lines
 
     max_visible = 19
@@ -138,6 +141,21 @@ def build_asset_browser_lines(
         lines.append(f"{prefix}{row.display_name} [{row.kind}]")
 
     return lines
+
+
+def _format_asset_browser_empty_placeholder(search_text: str) -> str:
+    query = str(search_text or "").strip()
+    if not query:
+        return ASSET_BROWSER_EMPTY_FOLDER_PLACEHOLDER
+    return (
+        ASSET_BROWSER_NO_RESULTS_PLACEHOLDER_PREFIX
+        + _escape_asset_browser_query(query)
+        + ASSET_BROWSER_NO_RESULTS_PLACEHOLDER_SUFFIX
+    )
+
+
+def _escape_asset_browser_query(query: str) -> str:
+    return query.replace("\\", "\\\\").replace("'", "\\'")
 
 
 def cycle_asset_browser_kind(current_kind: str) -> str:
