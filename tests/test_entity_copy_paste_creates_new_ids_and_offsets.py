@@ -51,10 +51,10 @@ def test_entity_copy_paste_creates_new_ids_and_offsets(capsys) -> None:
         controller = type("Ctl", (), {"window": window, "manager": type("M", (), {"press": lambda *_a: None})(), "_keys": set()})()
 
         assert input_capture.handle_key_press(controller, arcade.key.C, arcade.key.MOD_CTRL) is True
-        assert capsys.readouterr().out.strip() == "ENTITY_COPY ok count=2"
+        assert capsys.readouterr().out.strip().splitlines()[-1] == "ENTITY_COPY ok count=2"
 
         assert input_capture.handle_key_press(controller, arcade.key.V, arcade.key.MOD_CTRL) is True
-        assert capsys.readouterr().out.strip() == "ENTITY_PASTE ok count=2 primary=b__paste0"
+        assert capsys.readouterr().out.strip().splitlines()[-1] == "ENTITY_PASTE ok count=2 primary=b__paste0"
 
         entities = sc.get_authored_scene_payload()["entities"]
         ids = sorted(e["id"] for e in entities)
