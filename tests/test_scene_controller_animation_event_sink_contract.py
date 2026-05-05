@@ -287,6 +287,29 @@ def test_attach_animator_passes_event_sink_that_routes_to_handle_animation_event
     assert entity_data["default_animation"] == "idle"
 
 
+def test_attach_animator_defaults_debug_false_when_window_not_fully_initialized() -> None:
+    sc, _emitted = _make_controller()
+    delattr(sc.window, "show_debug")
+    sprite = _make_sprite()
+    entity_data: dict[str, Any] = {}
+
+    class FakeFactory:
+        def __init__(self) -> None:
+            self.debug_values: list[bool] = []
+
+        def build_for_entity(self, _sprite: Any, _entity_data: dict[str, Any], *, debug: bool, event_sink: Any) -> Any:  # noqa: ARG002
+            self.debug_values.append(debug)
+            return SimpleNamespace(current_state="idle")
+
+    factory = FakeFactory()
+    sc.window.animation_factory = factory
+
+    sc._attach_animator(sprite, entity_data)
+
+    assert factory.debug_values == [False]
+    assert entity_data["default_animation"] == "idle"
+
+
 def test_update_animation_stage_applies_event_sink_motion_during_stage() -> None:
     sc, _emitted = _make_controller()
     sprite = _make_sprite(entity_data={"animation_root_motion": {"collision": False}, "animation_state": "walk"})

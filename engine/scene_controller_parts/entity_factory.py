@@ -177,7 +177,7 @@ def _attach_animator(self, sprite: Any, entity_data: dict[str, Any]) -> None:
         animator = factory.build_for_entity(
             sprite,
             entity_data,
-            debug=self.window.show_debug,
+            debug=bool(getattr(self.window, "show_debug", False)),
             event_sink=lambda payload, spr=sprite: self._handle_animation_event(spr, payload),
         )
     except Exception as exc:

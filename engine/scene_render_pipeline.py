@@ -188,6 +188,23 @@ def _compute_background_ops(ctx: RenderContext) -> List[BackgroundDrawOp]:
     return ops
 
 
+def _coerce_sprite_scale_for_bounds(scale: Any) -> float:
+    if isinstance(scale, (tuple, list)):
+        values: list[float] = []
+        for item in scale[:2]:
+            try:
+                values.append(abs(float(item)))
+            except (TypeError, ValueError):
+                continue
+        if values:
+            return max(values) or 1.0
+        return 1.0
+    try:
+        return float(scale) or 1.0
+    except (TypeError, ValueError):
+        return 1.0
+
+
 def _compute_shadow_ops(ctx: RenderContext, sorted_sprites: List[Any]) -> List[ShadowDrawOp]:
     ops = []
     shadow_base_color = (20, 20, 20)
@@ -269,7 +286,7 @@ def _compute_sprite_ops(ctx: RenderContext, sorted_sprites: List[Any]) -> List[S
                 texture = getattr(sprite, "texture", None)
                 tex_w = getattr(texture, "width", None)
                 tex_h = getattr(texture, "height", None)
-                scale = float(getattr(sprite, "scale", 1.0) or 1.0) 
+                scale = _coerce_sprite_scale_for_bounds(getattr(sprite, "scale", 1.0))
                 if isinstance(tex_w, (int, float)) and isinstance(tex_h, (int, float)):
                     if float(tex_w) > 0.0 and float(tex_h) > 0.0:
                          sprite_rect = sprite_bounds(center_x, center_y, float(tex_w), float(tex_h), scale=scale)
