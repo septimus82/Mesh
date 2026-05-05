@@ -36,6 +36,22 @@ def test_slider_layout_deterministic() -> None:
     assert first == second
 
 
+def test_slider_visuals_stay_inside_row_bounds_at_extremes() -> None:
+    bounds = Rect(x=20.0, y=30.0, width=240.0, height=28.0)
+    for value in (0.0, 1.0):
+        slider = Slider(label="SFX Volume", value=value, step=0.01)
+        layout = slider.layout(bounds)
+        rects = [
+            instruction.payload["rect"]
+            for instruction in layout.instructions
+            if instruction.kind in {"slider_track", "slider_fill", "slider_knob"}
+        ]
+
+        assert rects
+        for rect in rects:
+            assert bounds.left <= rect.left <= rect.right <= bounds.right
+
+
 def test_slider_click_sets_value() -> None:
     slider = Slider(label="SFX", value=0.0, step=0.01)
     bounds = Rect(x=0.0, y=0.0, width=100.0, height=20.0)
