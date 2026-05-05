@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -7,7 +8,12 @@ import pytest
 from engine.diagnostics import clear_diagnostics, error as diag_error, get_diagnostics, sort_diagnostics, warn as diag_warn
 from engine.editor.editor_actions import run_editor_action
 from engine.editor.editor_problems_controller import ProblemsController
-from engine.ui_overlays.problems_panel_overlay import ProblemsPanelOverlay
+from engine.editor.scene_lint_model import (
+    SceneLintIssue,
+    build_scene_lint_issues,
+    format_issue_severity_tag,
+)
+from engine.ui_overlays.problems_panel_overlay import ProblemsPanelOverlay, format_problem_row_label
 from tests._dock_stub import make_dock_stub
 
 
@@ -73,3 +79,59 @@ def test_structured_diagnostics_order_matches_sort_diagnostics() -> None:
         assert counts == {"error": 2, "warning": 2, "info": 0}
     finally:
         clear_diagnostics()
+
+
+def test_problem_list_includes_severity_badge_with_risk_tag() -> None:
+    issue = SceneLintIssue(
+        issue_id="warn",
+        kind="MISSING_ASSET",
+        message="Missing asset",
+        entity_id="item",
+        scene_id=None,
+        severity="WARN",
+        risk="safe",
+        fix_kind="clear_asset",
+        fixable=True,
+        meta={},
+    )
+
+    assert format_problem_row_label(issue).startswith("[WARN] [SAFE] MISSING_ASSET:")
+
+
+def test_diagnostic_problem_list_normalizes_warning_badge() -> None:
+    issue = SceneLintIssue(
+        issue_id="diag",
+        kind="DIAG001",
+        message="Diagnostic message",
+        entity_id=None,
+        scene_id="source.py",
+        severity="warning",
+        risk="safe",
+        fix_kind=None,
+        fixable=False,
+        meta={"diagnostic_code": "DIAG001"},
+    )
+
+    assert format_problem_row_label(issue) == "[WARN] DIAG001: Diagnostic message"
+
+
+def test_provider_payload_counts_warn_as_warning() -> None:
+    ctrl = ProblemsController()
+    warn_issue = SceneLintIssue("id1", "K", "Warn", "e1", "s1", "WARN", "safe", None, False)
+    error_issue = SceneLintIssue("id2", "K", "Error", "e1", "s1", "ERROR", "safe", None, False)
+    info_issue = SceneLintIssue("id3", "K", "Info", "e1", "s1", "INFO", "safe", None, False)
+
+    ctrl.set_issues([warn_issue, error_issue, info_issue])
+
+    payload = ctrl.get_provider_payload(90, 18)
+    assert payload["severity_counts"] == {"error": 1, "warning": 1, "info": 1}
+
+
+def test_format_issue_severity_tag_normalizes_warning_alias() -> None:
+    issue = build_scene_lint_issues(
+        {"entities": [{"id": "item", "sprite": "assets/missing.png"}]},
+        Path("."),
+        prefab_resolver=lambda _: True,
+    )[0]
+    assert issue.severity == "WARN"
+    assert format_issue_severity_tag(issue) == "[WARN]"

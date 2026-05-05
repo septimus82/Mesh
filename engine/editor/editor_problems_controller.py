@@ -21,6 +21,7 @@ from engine.editor_tooltips_model import _is_modal_open_state, _is_text_input_ac
 SEVERITY_RANK = {
     "error": 3,
     "warning": 2,
+    "warn": 2,
     "info": 1,
 }
 
@@ -122,8 +123,8 @@ class ProblemsController:
         self.refresh_structured_diagnostics()
         counts = {"error": 0, "warning": 0, "info": 0}
         for issue in self._all_issues():
-            sev = str(getattr(issue, "severity", "") or "").strip().lower()
-            if sev in counts:
+            sev = _severity_count_key(getattr(issue, "severity", ""))
+            if sev is not None:
                 counts[sev] += 1
         return counts
 
@@ -578,3 +579,14 @@ class ProblemsController:
         toaster = getattr(hud, "enqueue_" "toast", None) if hud is not None else None
         if callable(toaster):
             toaster(message, seconds=2.5)
+
+
+def _severity_count_key(severity: Any) -> str | None:
+    normalized = str(severity or "").strip().lower()
+    if normalized in {"error", "err"}:
+        return "error"
+    if normalized in {"warning", "warn"}:
+        return "warning"
+    if normalized == "info":
+        return "info"
+    return None

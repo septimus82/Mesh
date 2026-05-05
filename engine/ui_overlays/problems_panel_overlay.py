@@ -306,15 +306,15 @@ def _format_fix_desc(issue: Any) -> str:
 
 
 def format_problem_row_label(issue: Any) -> str:
-    from ..editor.scene_lint_model import format_issue_risk_tag
+    from ..editor.scene_lint_model import format_issue_risk_tag, format_issue_severity_tag
 
     diag_code = str(getattr(issue, "meta", {}).get("diagnostic_code", "") or "")
-    severity = str(getattr(issue, "severity", "") or "").strip().upper()
+    severity_tag = format_issue_severity_tag(issue)
     if diag_code:
-        tag = f"[{severity or 'INFO'}]"
         kind = diag_code
+        return f"{severity_tag} {kind}: {getattr(issue, 'message', '')}"
     else:
-        tag = format_issue_risk_tag(issue)
+        tag = f"{severity_tag} {format_issue_risk_tag(issue)}"
         kind = getattr(issue, "kind", "")
     message = getattr(issue, "message", "")
     return f"{tag} {kind}: {message}"

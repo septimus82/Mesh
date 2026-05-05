@@ -68,4 +68,5 @@ def test_build_problems_panel_lines_ascii() -> None:
     lines = build_problems_panel_lines(True, "dup", issues, 0)
     assert lines
     assert all(line.isascii() for line in lines)
+    assert any("[ERROR] [SAFE]" in line for line in lines)
     assert any("[SAFE]" in line for line in lines)
