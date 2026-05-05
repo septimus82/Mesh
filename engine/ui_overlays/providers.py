@@ -1184,7 +1184,7 @@ def editor_command_palette_provider(window: Any) -> dict[str, Any]:
             "kind": "command",
             "id": c.id,
             "title": c.title,
-            "hotkey_hint": "",
+            "hotkey_hint": c.shortcut or "",
             "enabled": True,
             "disabled_reason": "",
         }
