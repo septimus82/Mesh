@@ -396,7 +396,7 @@ class LightManager:
 
     # ------------------------------------------------------------------ public API
     def begin(self):
-        if not (self.enabled and self._layer):
+        if not self.enabled or self._layer is None:
             return nullcontext()
         layer = self._layer
         enter = getattr(layer, "__enter__", None)
@@ -408,7 +408,7 @@ class LightManager:
         return nullcontext()
 
     def end(self) -> None:
-        if not (self.enabled and self._layer):
+        if not self.enabled or self._layer is None:
             return
         if self.shadows_mode == "hard":
             try:
@@ -755,7 +755,7 @@ class LightManager:
         return handle
 
     def update(self, dt: float) -> None:  # noqa: ARG002
-        if not (self.enabled and self._layer):
+        if not self.enabled or self._layer is None:
             return
         dt = max(0.0, float(dt))
         self._flicker_time += dt
@@ -931,7 +931,7 @@ class LightManager:
             self.ambient_darkness_alpha = None
 
     def _add_light(self, light: Any) -> None:
-        if not self._layer:
+        if self._layer is None:
             return
         for attr in ("add_light", "add"):
             adder = getattr(self._layer, attr, None)
@@ -958,7 +958,7 @@ class LightManager:
                 )
 
     def _add_occluder(self, occluder: Any) -> None:
-        if not self._layer:
+        if self._layer is None:
             return
         # Try common methods for adding walls/occluders
         for attr in ("add_wall", "add_occluder"):
@@ -987,7 +987,7 @@ class LightManager:
                 )
 
     def _add_polygon_light(self, points: list[tuple[float, float]], light_config: dict[str, Any]) -> bool:
-        if not self._layer:
+        if self._layer is None:
             return False
         # Try methods for adding polygon lights
         for attr in ("add_light_polygon", "add_polygon_light", "add_hole_polygon"):
