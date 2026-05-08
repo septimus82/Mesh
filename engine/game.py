@@ -484,6 +484,13 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.scene_controller = SceneController(self)
         self.input_controller = InputController(self)
         self.ui_controller = UIController(self)
+        self.event_bus = MeshEventBus()
+        self._mesh_event_queue: list[MeshEvent] = []
+        self._scene_event_unsubscribes: list[Callable[[], None]] = []
+        self.game_state_controller = GameStateController(self)
+        self.save_manager = SaveManager(self)
+        self.quest_manager = QuestManager(self)
+        self.particle_manager = ParticleManager(self)
         self.editor_controller = EditorModeController(self)
         self.ai_debug_overlay = AIDebugOverlay()
         self.ai_debug_overlay_enabled = False
@@ -597,13 +604,6 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             font_size=12,
             anchor_y="top",
         )
-        self.event_bus = MeshEventBus()
-        self._mesh_event_queue: list[MeshEvent] = []
-        self._scene_event_unsubscribes: list[Callable[[], None]] = []
-        self.game_state_controller = GameStateController(self)
-        self.save_manager = SaveManager(self)
-        self.quest_manager = QuestManager(self)
-        self.particle_manager = ParticleManager(self)
         self.render_batching_enabled = True
         self.render_culling_enabled = True
         self.tilemap_batching_enabled = True

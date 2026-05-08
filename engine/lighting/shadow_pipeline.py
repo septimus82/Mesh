@@ -117,7 +117,6 @@ def end_hard_shadows_overlay(manager: Any) -> bool:
         build_shadow_polygons,
         cull_occluders_for_light,
         cull_polygons_for_light,
-        render_shadow_mask,
     )
     from .shadows_v1 import build_shadow_polygons_v1  # noqa: PLC0415
 
@@ -212,16 +211,23 @@ def end_hard_shadows_overlay(manager: Any) -> bool:
         )
 
     drawn = 0
-    try:
-        render_shadow_mask(window, polys, viewport, target_texture=None, target_fbo=None)
-        drawn = int(len(polys))
-    except Exception:  # pragma: no cover - best-effort  # noqa: BLE001  # REASON: shadow pipeline fallback
-        _log_swallow(
-            "SHDW-004",
-            "engine.lighting.shadow_pipeline.end_hard_shadows_overlay render_shadow_mask_overlay",
-            once=True,
-        )
-        drawn = 0
+    draw_poly = getattr(engine.optional_arcade.arcade, "draw_polygon_filled", None)
+    if callable(draw_poly):
+        vx = float(viewport.x)
+        vy = float(viewport.y)
+        for poly in polys:
+            if not isinstance(poly, list) or len(poly) < 3:
+                continue
+            pts = [(float(x - vx), float(y - vy)) for x, y in poly]
+            try:
+                draw_poly(pts, (0, 0, 0, 180))
+                drawn += 1
+            except Exception:  # pragma: no cover  # noqa: BLE001  # REASON: shadow pipeline fallback
+                _log_swallow(
+                    "SHDW-004",
+                    "engine.lighting.shadow_pipeline.end_hard_shadows_overlay draw_polygon_filled",
+                    once=True,
+                )
 
     manager._last_lighting_stats = {
         "shadows_mode": manager.shadows_mode,

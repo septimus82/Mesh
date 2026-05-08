@@ -7,6 +7,40 @@
     "lighting_enabled": true,
     "lighting_ambient_color": [40, 40, 50, 255]
   },
+  "occluders": [
+    {
+      "id": "hub_pillar_center_left",
+      "type": "rect",
+      "x": 500,
+      "y": 300,
+      "width": 36,
+      "height": 120
+    },
+    {
+      "id": "hub_pillar_center_right",
+      "type": "rect",
+      "x": 744,
+      "y": 300,
+      "width": 36,
+      "height": 120
+    },
+    {
+      "id": "hub_pillar_top_center",
+      "type": "rect",
+      "x": 622,
+      "y": 520,
+      "width": 36,
+      "height": 100
+    },
+    {
+      "id": "hub_pillar_bottom_center",
+      "type": "rect",
+      "x": 622,
+      "y": 100,
+      "width": 36,
+      "height": 100
+    }
+  ],
   "entities": [
     {
       "id": "hub_spawn_default",
