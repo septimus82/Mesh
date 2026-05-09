@@ -130,7 +130,7 @@ def test_play_from_here_dirty_guard_blocks_until_confirm(monkeypatch) -> None:
 
     assert controller.play_session.is_playing is True
     assert controller.confirm_open is False
-    assert controller.dirty_state.is_dirty is False
+    assert controller.dirty_state.is_dirty is True
 
 
 def test_stop_requests_scene_restore_when_changed(monkeypatch) -> None:

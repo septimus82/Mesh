@@ -22,6 +22,7 @@ __all__ = [
     "_enabled_can_undo",
     "_enabled_can_redo",
     "_enabled_scene_dirty",
+    "_enabled_play_session_active",
     "_enabled_not_web",
     "_enabled_multiselect",
     "_enabled_multiselect_3",
@@ -77,6 +78,11 @@ def _enabled_can_redo(controller: Any, _window: Any) -> bool:
 
 def _enabled_scene_dirty(controller: Any, _window: Any) -> bool:
     return bool(getattr(controller, "scene_dirty", False))
+
+
+def _enabled_play_session_active(controller: Any, _window: Any) -> bool:
+    session = getattr(controller, "play_session", None)
+    return bool(session is not None and getattr(session, "is_playing", False))
 
 
 def _enabled_not_web(_controller: Any, _window: Any) -> bool:

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
+import engine.optional_arcade as optional_arcade
+from engine.ui_overlays.common import _draw_rectangle_filled
+
 
 class EditorOverlayController:
     """Orchestrates editor overlay drawing in screen space."""
@@ -11,6 +14,10 @@ class EditorOverlayController:
 
     def draw_overlay(self) -> None:
         editor = self._editor
+        if getattr(getattr(editor, "play_session", None), "is_playing", False):
+            self._draw_playtesting_overlay()
+            return
+
         if not editor.active:
             return
 
@@ -40,3 +47,32 @@ class EditorOverlayController:
             panels.draw_panels()
         elif hasattr(editor, "ui_layers"):
             editor.ui_layers.draw_all()
+
+    def _draw_playtesting_overlay(self) -> None:
+        window = getattr(self._editor, "window", None)
+        if window is None:
+            return
+
+        center_x = float(getattr(window, "width", 1280)) / 2.0
+        center_y = float(getattr(window, "height", 720)) / 2.0
+        _draw_rectangle_filled(center_x, center_y, 360.0, 72.0, (0, 0, 0, 180))
+        optional_arcade.arcade.draw_text(
+            "Playtesting...",
+            center_x,
+            center_y + 8.0,
+            optional_arcade.arcade.color.WHITE,
+            22,
+            anchor_x="center",
+            anchor_y="center",
+            font_name=("Consolas", "Courier New", "Courier"),
+        )
+        optional_arcade.arcade.draw_text(
+            "Press Esc to return to editor",
+            center_x,
+            center_y - 20.0,
+            optional_arcade.arcade.color.LIGHT_GRAY,
+            12,
+            anchor_x="center",
+            anchor_y="center",
+            font_name=("Consolas", "Courier New", "Courier"),
+        )

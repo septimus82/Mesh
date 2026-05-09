@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Callable
 
 import engine.optional_arcade as optional_arcade
-
 from engine.i18n import tr
 from engine.ui_overlays.common import _draw_rectangle_filled, draw_outline_centered, draw_panel_bg
 
@@ -17,12 +16,21 @@ class EditorUnsavedChangesController:
         self.reason: str = ""
         self.selection_index: int = 0
         self.pending_action: Callable[[], None] | None = None
+        self.labels: tuple[str, str, str] | None = None
+        self.choice_actions: tuple[Callable[[], None] | None, Callable[[], None] | None, Callable[[], None] | None] | None = None
         self._confirm_bypass: bool = False
 
     def set_open(self, value: bool) -> None:
         self.is_open = bool(value)
 
-    def confirm_unsaved_changes(self, reason: str, action: Callable[[], None]) -> bool:
+    def confirm_unsaved_changes(
+        self,
+        reason: str,
+        action: Callable[[], None],
+        *,
+        labels: tuple[str, str, str] | None = None,
+        choice_actions: tuple[Callable[[], None] | None, Callable[[], None] | None, Callable[[], None] | None] | None = None,
+    ) -> bool:
         """Return True if the action is blocked by the confirm dialog."""
         if not getattr(self._editor, "active", False):
             return False
@@ -37,12 +45,16 @@ class EditorUnsavedChangesController:
         self.reason = str(reason or "").strip()
         self.selection_index = 0
         self.pending_action = action
+        self.labels = labels
+        self.choice_actions = choice_actions
         return True
 
     def close(self, *, clear_pending: bool = False) -> None:
         self.is_open = False
         self.reason = ""
         self.selection_index = 0
+        self.labels = None
+        self.choice_actions = None
         if clear_pending:
             self.pending_action = None
 
@@ -58,6 +70,17 @@ class EditorUnsavedChangesController:
             self._confirm_bypass = False
 
     def apply_choice(self, choice_index: int) -> None:
+        custom_actions = self.choice_actions
+        if custom_actions is not None:
+            if 0 <= choice_index < len(custom_actions):
+                action = custom_actions[choice_index]
+                self.close(clear_pending=action is None)
+                if action is not None:
+                    action()
+                return
+            self.close(clear_pending=True)
+            return
+
         if choice_index == 0:
             saver = getattr(self._editor, "save_current_scene", None)
             if callable(saver):
@@ -112,7 +135,7 @@ class EditorUnsavedChangesController:
 
         title = tr("UI_UNSAVED_CHANGES")
         reason = self.reason
-        labels = [tr("UI_SAVE"), tr("UI_DISCARD"), tr("UI_CANCEL")]
+        labels = list(self.labels or (tr("UI_SAVE"), tr("UI_DISCARD"), tr("UI_CANCEL")))
         rendered: list[str] = []
         for idx, label in enumerate(labels):
             if idx == self.selection_index:

@@ -4,13 +4,13 @@ from dataclasses import dataclass
 from typing import Any, Callable, Iterable
 
 from engine.editor.command_palette_rank_model import score_command
+from engine.editor.editor_actions import get_palette_actions
+from engine.editor.editor_dock_query import get_dock_snapshot
 from engine.editor.editor_focus_model import (
     FOCUS_COMMAND_PALETTE,
     FOCUS_PROJECT_EXPLORER,
     derive_focus_target_for_controller,
 )
-from engine.editor.editor_dock_query import get_dock_snapshot
-from engine.editor.editor_actions import get_palette_actions
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,6 +36,7 @@ _COMMAND_SHORTCUT_BADGE_IDS: frozenset[str] = frozenset(
         "editor.panel.project_explorer.toggle",
         "editor.panel.problems.toggle",
         "editor.play.start",
+        "editor.play.stop",
     }
 )
 
