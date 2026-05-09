@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-import engine.optional_arcade as optional_arcade
 
+import engine.optional_arcade as optional_arcade
 
 if TYPE_CHECKING:
     from engine.game import GameWindow
@@ -26,9 +26,25 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
         if callable(process_key) and process_key(int(key), int(modifiers)):
             return
 
+    editor = getattr(window, "editor_controller", None)
+    session = getattr(editor, "play_session", None) if editor is not None else None
+    if key == optional_arcade.arcade.key.ESCAPE and session is not None and getattr(session, "is_playing", False):
+        stopper = getattr(editor, "stop_playing", None)
+        if callable(stopper):
+            stopper()
+        return
+
     # UI has priority
     if window.ui_controller.on_key_press(key, modifiers):
         return
+
+    if key == optional_arcade.arcade.key.F6:
+        editor = getattr(window, "editor_controller", None)
+        if editor is not None and getattr(editor, "active", False):
+            play_from_here = getattr(editor, "play_from_here", None)
+            if callable(play_from_here):
+                play_from_here()
+            return
 
     if key == optional_arcade.arcade.key.ESCAPE:
         overlay = getattr(window, "settings_overlay", None)
@@ -62,22 +78,6 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
             f"Sprite batching {'enabled' if next_enabled else 'disabled'}"
         )
         return
-
-    if key == optional_arcade.arcade.key.F6:
-        editor = getattr(window, "editor_controller", None)
-        if editor is not None and getattr(editor, "active", False):
-            try:
-                from engine.assets_reload import reload_render_assets  # noqa: PLC0415
-
-                counts = reload_render_assets(window)
-                window.console_log(
-                    "[Assets] Reloaded (textures: "
-                    f"{counts.get('asset_textures_cleared', 0) + counts.get('render_queue_textures_cleared', 0) + counts.get('particle_textures_cleared', 0)}"
-                    ")"
-                )
-            except Exception as exc:  # noqa: BLE001  # REASON: asset reload failures should report to the runtime console without aborting input dispatch
-                window.console_log(f"[Assets] Reload failed: {exc}")
-            return
 
     # Toggle debug overlay
     if key == optional_arcade.arcade.key.F3:

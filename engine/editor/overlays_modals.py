@@ -6,7 +6,8 @@ import time
 from typing import Any, Callable
 
 from engine.logging_tools import get_logger
-from engine.swallowed_exceptions import format_swallowed_summary, read_counts, reset as reset_swallowed_exceptions
+from engine.swallowed_exceptions import format_swallowed_summary, read_counts
+from engine.swallowed_exceptions import reset as reset_swallowed_exceptions
 
 _EDITOR_LOGGER = get_logger("engine.editor_controller")
 _SWALLOWED_OVERLAY_REFRESH_SECONDS = 0.5
@@ -133,11 +134,23 @@ def _update_status(self: Any) -> None:
         self._status_until = 0.0
 
 
-def confirm_unsaved_changes(self: Any, reason: str, action: Callable[[], None]) -> bool:
+def confirm_unsaved_changes(
+    self: Any,
+    reason: str,
+    action: Callable[[], None],
+    *,
+    labels: tuple[str, str, str] | None = None,
+    choice_actions: tuple[Callable[[], None] | None, Callable[[], None] | None, Callable[[], None] | None] | None = None,
+) -> bool:
     confirm = getattr(self, "unsaved_confirm", None)
     if confirm is None:
         return False
-    return confirm.confirm_unsaved_changes(reason, action)
+    return confirm.confirm_unsaved_changes(
+        reason,
+        action,
+        labels=labels,
+        choice_actions=choice_actions,
+    )
 
 
 def _close_unsaved_confirm(self: Any, *, clear_pending: bool = False) -> None:

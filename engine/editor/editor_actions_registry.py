@@ -6,6 +6,7 @@ SHORTCUT_SCOPE_GLOBAL = "global"
 SHORTCUT_SCOPE_INLINE_RENAME = "text_input.inline_rename"
 SHORTCUT_SCOPE_PROJECT_EXPLORER = "project_explorer"
 SHORTCUT_SCOPE_PROJECT_EXPLORER_CONTEXT_MENU = "project_explorer.context_menu"
+SHORTCUT_SCOPE_PLAYTEST = "playtest"
 
 
 @dataclass(frozen=True, slots=True)
@@ -735,11 +736,12 @@ DEFAULT_ACTION_DEFS: tuple[ActionDef, ...] = (
             title="Stop Playing",
             keywords=("stop", "play", "return"),
             group=None,
-            shortcut="F7",
-            enabled="_enabled_always",
+            shortcut="Esc",
+            enabled="_enabled_play_session_active",
             run="_stop_playing",
             in_palette=True,
             in_menu=False,
+            shortcut_scope=SHORTCUT_SCOPE_PLAYTEST,
         ),
         ActionDef(
             id="editor.lighting_preset.1",

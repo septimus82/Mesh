@@ -6,11 +6,10 @@ start, stop, camera handling, and player spawning.
 
 from __future__ import annotations
 
-from typing import Any, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Tuple
 
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
-
 
 if TYPE_CHECKING:
     pass
@@ -37,7 +36,18 @@ class EditorPlayController:
         def _apply() -> None:
             self.start_session()
 
-        if editor.confirm_unsaved_changes("Play From Here", _apply):
+        def _save_and_play() -> None:
+            saver = getattr(editor, "save_current_scene", None)
+            if callable(saver):
+                saver()
+            self.start_session()
+
+        if editor.confirm_unsaved_changes(
+            "Play From Here",
+            _apply,
+            labels=("Save and Playtest", "Playtest Without Saving", "Cancel"),
+            choice_actions=(_save_and_play, _apply, None),
+        ):
             return False
         _apply()
         return True
