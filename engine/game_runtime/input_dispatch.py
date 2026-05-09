@@ -26,13 +26,32 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
         if callable(process_key) and process_key(int(key), int(modifiers)):
             return
 
+    # Block all input while an editor build is in progress.
     editor = getattr(window, "editor_controller", None)
+    if editor is not None and getattr(getattr(editor, "build_session", None), "is_running", False):
+        return
+
     session = getattr(editor, "play_session", None) if editor is not None else None
     if key == optional_arcade.arcade.key.ESCAPE and session is not None and getattr(session, "is_playing", False):
         stopper = getattr(editor, "stop_playing", None)
         if callable(stopper):
             stopper()
         return
+
+    # Find-everything: Ctrl+K (tracked-key modifier) or F1 (function-key, no MOD_CTRL dependency)
+    if editor is not None and getattr(editor, "active", False):
+        _build = getattr(editor, "build_session", None)
+        _play = getattr(editor, "play_session", None)
+        if not getattr(_build, "is_running", False) and not getattr(_play, "is_playing", False):
+            _toggle_fe = getattr(editor, "toggle_find_everything", None)
+            if callable(_toggle_fe):
+                _input_ctrl = getattr(window, "input_controller", None)
+                _keys_down = getattr(_input_ctrl, "get_keys_down", lambda: set())() if _input_ctrl is not None else set()
+                _is_ctrl_k = key == optional_arcade.arcade.key.K and optional_arcade.arcade.key.LCTRL in _keys_down
+                _is_f1 = key == optional_arcade.arcade.key.F1
+                if _is_ctrl_k or _is_f1:
+                    _toggle_fe()
+                    return
 
     # UI has priority
     if window.ui_controller.on_key_press(key, modifiers):
@@ -51,6 +70,12 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
         toggle = getattr(overlay, "toggle", None) if overlay is not None else None
         if callable(toggle):
             toggle()
+            return
+
+    # When the editor is active, give it first chance at general key input.
+    _editor_handle = getattr(editor, "handle_input", None) if editor is not None and getattr(editor, "active", False) else None
+    if callable(_editor_handle):
+        if _editor_handle(key, modifiers):
             return
 
     window.input_controller.on_key_press(key, modifiers)
@@ -109,6 +134,9 @@ def on_mouse_release(window: "GameWindow", x: float, y: float, button: int, modi
 
 
 def on_mouse_press(window: "GameWindow", x: float, y: float, button: int, modifiers: int) -> None:
+    _editor = getattr(window, "editor_controller", None)
+    if _editor is not None and getattr(getattr(_editor, "build_session", None), "is_running", False):
+        return
     window.input_controller.on_mouse_press(x, y, button, modifiers)
 
 
