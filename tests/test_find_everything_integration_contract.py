@@ -9,6 +9,8 @@ from typing import Any
 
 import pytest
 
+pytestmark = [pytest.mark.fast]
+
 from engine.editor.find_everything_model import FindItem, FindResult, filter_find_items, build_find_display_rows
 from engine.editor.scene_lint_model import SceneLintIssue
 from engine.editor_controller import EditorModeController

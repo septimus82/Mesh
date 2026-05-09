@@ -307,6 +307,10 @@ def dispatch(
         from .. import new_game as new_game_commands
 
         return int(new_game_commands.handle(args))
+    if args.command == "new":
+        from .. import new_project as new_project_commands
+
+        return int(new_project_commands.handle(args))
     if args.command == "content":
         from .. import content as content_commands
 

@@ -105,7 +105,6 @@ tests/test_episode_replay_digest_projection_contract.py
 tests/test_event_dispatch_contract.py
 tests/test_event_emit_contract.py
 tests/test_event_monitor_model_contract.py
-tests/test_find_everything_integration_contract.py
 tests/test_find_everything_model_contract.py
 tests/test_gameplay_emit_migration_contract.py
 tests/test_ghost_originals_persistence_cache_contract.py
