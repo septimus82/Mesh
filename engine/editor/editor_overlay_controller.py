@@ -14,6 +14,14 @@ class EditorOverlayController:
 
     def draw_overlay(self) -> None:
         editor = self._editor
+        build = getattr(editor, "build", None)
+        if build is not None and callable(getattr(build, "tick", None)):
+            build.tick()
+
+        if getattr(getattr(editor, "build_session", None), "is_running", False):
+            self._draw_building_overlay()
+            return
+
         if getattr(getattr(editor, "play_session", None), "is_playing", False):
             self._draw_playtesting_overlay()
             return
@@ -68,6 +76,35 @@ class EditorOverlayController:
         )
         optional_arcade.arcade.draw_text(
             "Press Esc to return to editor",
+            center_x,
+            center_y - 20.0,
+            optional_arcade.arcade.color.LIGHT_GRAY,
+            12,
+            anchor_x="center",
+            anchor_y="center",
+            font_name=("Consolas", "Courier New", "Courier"),
+        )
+
+    def _draw_building_overlay(self) -> None:
+        window = getattr(self._editor, "window", None)
+        if window is None:
+            return
+
+        center_x = float(getattr(window, "width", 1280)) / 2.0
+        center_y = float(getattr(window, "height", 720)) / 2.0
+        _draw_rectangle_filled(center_x, center_y, 460.0, 72.0, (0, 0, 0, 180))
+        optional_arcade.arcade.draw_text(
+            "Building...",
+            center_x,
+            center_y + 8.0,
+            optional_arcade.arcade.color.WHITE,
+            22,
+            anchor_x="center",
+            anchor_y="center",
+            font_name=("Consolas", "Courier New", "Courier"),
+        )
+        optional_arcade.arcade.draw_text(
+            "This may take about 30 seconds",
             center_x,
             center_y - 20.0,
             optional_arcade.arcade.color.LIGHT_GRAY,

@@ -357,3 +357,62 @@ def test_find_everything_hint_line_by_input_source(monkeypatch: pytest.MonkeyPat
     ctrl.window.input = SimpleNamespace(input_source="gamepad")
     overlay.draw()
     assert "A: Open   B: Close   D-pad: Navigate" in captured
+
+
+def test_runtime_ctrl_k_opens_find_everything_from_tracked_ctrl_key() -> None:
+    import engine.optional_arcade as optional_arcade
+    from engine.game_runtime import input_dispatch
+
+    calls: list[str] = []
+    window = SimpleNamespace(
+        editor_controller=SimpleNamespace(
+            active=True,
+            build_session=SimpleNamespace(is_running=False),
+            play_session=SimpleNamespace(is_playing=False),
+            toggle_find_everything=lambda: calls.append("find"),
+            handle_input=lambda *_args: calls.append("input") or True,
+        ),
+        console_controller=SimpleNamespace(active=False),
+        ui_controller=SimpleNamespace(on_key_press=lambda *_args: False),
+        input_controller=SimpleNamespace(get_keys_down=lambda: {optional_arcade.arcade.key.LCTRL}),
+        game_over=False,
+    )
+
+    input_dispatch.on_key_press(as_any(window), optional_arcade.arcade.key.K, 0)
+
+    assert calls == ["find"]
+
+
+def test_runtime_ctrl_f1_opens_find_everything_when_editor_is_active() -> None:
+    import engine.optional_arcade as optional_arcade
+    from engine.game_runtime import input_dispatch
+
+    calls: list[str] = []
+    window = SimpleNamespace(
+        editor_controller=SimpleNamespace(
+            active=True,
+            build_session=SimpleNamespace(is_running=False),
+            play_session=SimpleNamespace(is_playing=False),
+            toggle_find_everything=lambda: calls.append("find"),
+            handle_input=lambda *_args: calls.append("input") or True,
+        ),
+        console_controller=SimpleNamespace(active=False),
+        ui_controller=SimpleNamespace(on_key_press=lambda *_args: False),
+        input_controller=SimpleNamespace(get_keys_down=lambda: {optional_arcade.arcade.key.LCTRL}),
+        game_over=False,
+    )
+
+    input_dispatch.on_key_press(as_any(window), optional_arcade.arcade.key.F1, 0)
+
+    assert calls == ["find"]
+
+
+def test_editor_bootstrap_initializes_find_items_override() -> None:
+    from engine.editor.editor_controller_bootstrap import bootstrap_browser_state
+
+    controller = SimpleNamespace()
+
+    bootstrap_browser_state(controller)
+
+    assert hasattr(controller, "_find_items_override")
+    assert controller._find_items_override is None

@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List
+from typing import List
 
 import engine.optional_arcade as optional_arcade
-
 
 # Tool modes
 TOOL_MODE_MOVE = "MOVE"
@@ -50,3 +49,11 @@ class EditorPlaySession:
     return_camera_pos: tuple[float, float] | None = None
     return_selection: optional_arcade.arcade.Sprite | None = None
     spawn_mode: str = "camera_center"
+
+
+@dataclass(slots=True)
+class EditorBuildSession:
+    """Tracks an editor-launched build process."""
+    is_running: bool = False
+    output_path: str | None = None
+    stderr_log_path: str | None = None
