@@ -13,6 +13,7 @@ __all__ = [
     "_save_scene",
     "_play_from_here",
     "_stop_playing",
+    "_build_windows",
     "_undo",
     "_redo",
     "_duplicate",
@@ -46,6 +47,14 @@ def _stop_playing(window: Any) -> None:
     stopper = getattr(editor, "stop_playing", None) if editor is not None else None
     if callable(stopper):
         stopper()
+
+
+def _build_windows(window: Any) -> None:
+    editor = _get_editor(window)
+    build = getattr(editor, "build", None) if editor is not None else None
+    starter = getattr(build, "build_windows", None) if build is not None else None
+    if callable(starter):
+        starter()
 
 
 def _undo(window: Any) -> None:
@@ -84,7 +93,7 @@ def _action_refactor_delete_selected(window: Any) -> None:
     editor = _get_editor(window)
     project = getattr(editor, "project_explorer", None)
     file_ops = getattr(editor, "file_ops", None)
-    
+
     if project and file_ops and hasattr(file_ops, "request_safe_delete_refactor"):
         if hasattr(project, "ensure_rows"):
             project.ensure_rows()
@@ -97,7 +106,7 @@ def _action_refactor_move_selected(window: Any) -> None:
     editor = _get_editor(window)
     project = getattr(editor, "project_explorer", None)
     file_ops = getattr(editor, "file_ops", None)
-    
+
     if project and file_ops and hasattr(file_ops, "request_safe_move_refactor"):
         # Ensure V2 capability check?
         can_move = getattr(file_ops, "can_safe_move_selected_assets_folder", lambda: True)()
@@ -118,20 +127,20 @@ def _action_refactor_rename_commit(window: Any) -> None:
         return
 
     should_commit, new_name, error = project.get_inline_rename_commit_result()
-    
+
     if should_commit and new_name:
         state = getattr(project, "inline_rename_state", None)
         original_path = getattr(state, "original_path", "")
-        
+
         parent = os.path.dirname(original_path)
         new_path = os.path.join(parent, new_name).replace("\\", "/")
-        
+
         project.cancel_inline_rename()
-        
+
         file_ops = getattr(editor, "file_ops", None)
         if file_ops and hasattr(file_ops, "request_safe_rename_refactor"):
             file_ops.request_safe_rename_refactor(original_path, new_path)
-            
+
     elif error is None:
         project.cancel_inline_rename()
     else:

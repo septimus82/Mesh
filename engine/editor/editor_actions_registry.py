@@ -744,6 +744,17 @@ DEFAULT_ACTION_DEFS: tuple[ActionDef, ...] = (
             shortcut_scope=SHORTCUT_SCOPE_PLAYTEST,
         ),
         ActionDef(
+            id="editor.build.windows",
+            title="Build for Windows",
+            keywords=("build", "windows", "deploy", "package", "player", "release"),
+            group="File",
+            shortcut="",
+            enabled="_enabled_always",
+            run="_build_windows",
+            in_palette=True,
+            in_menu=True,
+        ),
+        ActionDef(
             id="editor.lighting_preset.1",
             title="Apply Lighting Preset 1",
             keywords=("lighting", "preset", "1"),

@@ -3,14 +3,13 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-from engine.asset_index import AssetRow
 
 from ..behaviours.utils import ZONE_TARGET_TRIGGER
-from ..editor_entity_ops import EntitySummary
 from ..editor_light_occluder_ops import COOKIE_PRESETS, LIGHT_COLOR_PRESETS
 from .editor_align_controller import EditorAlignController
 from .editor_animation_controller import EditorAnimationController
 from .editor_asset_browser_controller import EditorAssetBrowserController
+from .editor_build_controller import EditorBuildController
 from .editor_clipboard_controller import EditorClipboardController
 from .editor_command_dispatch_controller import EditorCommandDispatchController
 from .editor_cursor_controller import EditorCursorController
@@ -21,8 +20,8 @@ from .editor_dock_controller import EditorDockController
 from .editor_draw_controller import EditorDrawController
 from .editor_duplicate_controller import EditorDuplicateController
 from .editor_entity_ops_controller import EditorEntityOpsController
-from .editor_feedback_controller import EditorFeedbackController
 from .editor_entity_panels_controller import EditorEntityPanelsController
+from .editor_feedback_controller import EditorFeedbackController
 from .editor_file_ops_controller import EditorFileOpsController
 from .editor_find_actions_controller import EditorFindActionsController
 from .editor_hd2d_controller import EditorHd2dController
@@ -62,6 +61,7 @@ from .state import (
     ENTITY_PANEL_FOCUS_OUTLINER,
     TOOL_MODE_MOVE,
     TRANSFORM_MODE_MOVE,
+    EditorBuildSession,
     EditorDirtyState,
     EditorPlaySession,
 )
@@ -106,6 +106,7 @@ def bootstrap_dependencies(controller: Any) -> None:
     controller.duplicate = EditorDuplicateController(controller)
     controller.marquee = EditorMarqueeController(controller)
     controller.play = EditorPlayController(controller)
+    controller.build = EditorBuildController(controller)
     controller.keymap = EditorKeymapController(controller)
     controller.entity_panels_controller = EditorEntityPanelsController(controller)
     controller.hierarchy = EditorHierarchyController(controller)
@@ -121,6 +122,7 @@ def bootstrap_dependencies(controller: Any) -> None:
 
 def bootstrap_browser_state(controller: Any) -> None:
     controller._multiselect_drag_starts = {}
+    controller._find_items_override = None
 
     controller.inspector_active = False
     controller.inspector_selection_index = 0
@@ -200,6 +202,7 @@ def bootstrap_runtime_state(controller: Any) -> None:
 
     controller.dirty_state = EditorDirtyState()
     controller.play_session = EditorPlaySession()
+    controller.build_session = EditorBuildSession()
 
     controller.hierarchy_active = False
     controller.hierarchy_filter = ""
