@@ -79,6 +79,9 @@ def register_commands(subparsers: argparse._SubParsersAction[argparse.ArgumentPa
     from .. import fx as fx_commands
     fx_commands.register(subparsers)
 
+    from .. import new_project as new_project_commands
+    new_project_commands.register(subparsers)
+
     from .. import release_contract as release_contract_commands
     release_contract_commands.register(subparsers)
 
