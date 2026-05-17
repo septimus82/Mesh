@@ -1,0 +1,2 @@
+{"code":"entity.id.required","path":"entities[0].id","message":"Scene scenes\\door_field.json: entities[0].id must be a non-empty string (strict)"}
+6913 passed, 5 skipped, 164 deselected, 53 subtests passed in 295.29s

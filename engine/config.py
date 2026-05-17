@@ -46,6 +46,7 @@ class EngineConfig:
     show_fps: bool = True
     debug_mode: bool = False
     debug_page: int = 0
+    tour_completed: bool = False
 
     # Scene transition FX
     scene_fade_enabled: bool = False

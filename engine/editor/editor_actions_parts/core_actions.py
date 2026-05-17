@@ -23,6 +23,7 @@ __all__ = [
     "_action_refactor_delete_selected",
     "_action_refactor_move_selected",
     "_action_refactor_rename_commit",
+    "_start_tour",
 ]
 
 
@@ -153,3 +154,11 @@ def _action_refactor_rename_commit(window: Any) -> None:
             toaster = getattr(hud, "enqueue_" "toast", None)
             if callable(toaster):
                 toaster(message, seconds=2.5)
+
+
+def _start_tour(window: Any) -> None:
+    editor = _get_editor(window)
+    tour = getattr(editor, "tour", None) if editor is not None else None
+    start = getattr(tour, "start", None) if tour is not None else None
+    if callable(start):
+        start()
