@@ -38,6 +38,21 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
             stopper()
         return
 
+    # First-launch tour: intercept Enter (advance) and Esc (skip) when the tour is active.
+    # Guard with editor.active so keys are not swallowed during main-menu / project-browser.
+    tour = getattr(editor, "tour", None) if editor is not None and getattr(editor, "active", False) else None
+    if tour is not None and getattr(tour, "is_active", False):
+        if key in (optional_arcade.arcade.key.RETURN, optional_arcade.arcade.key.ENTER,
+                   optional_arcade.arcade.key.NUM_ENTER):
+            advance = getattr(tour, "advance", None)
+            if callable(advance):
+                advance()
+        elif key == optional_arcade.arcade.key.ESCAPE:
+            skip = getattr(tour, "skip", None)
+            if callable(skip):
+                skip()
+        return
+
     # Find-everything: Ctrl+K (tracked-key modifier) or F1 (function-key, no MOD_CTRL dependency)
     if editor is not None and getattr(editor, "active", False):
         _build = getattr(editor, "build_session", None)

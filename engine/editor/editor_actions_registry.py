@@ -1621,4 +1621,15 @@ DEFAULT_ACTION_DEFS: tuple[ActionDef, ...] = (
             in_palette=True,
             in_menu=True,
         ),
+        ActionDef(
+            id="editor.tour.start",
+            title="Start Editor Tour",
+            keywords=("tour", "help", "welcome", "intro", "guide", "walkthrough"),
+            group="Help",
+            shortcut="",
+            enabled="_enabled_always",
+            run="_start_tour",
+            in_palette=True,
+            in_menu=False,
+        ),
 )

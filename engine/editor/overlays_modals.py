@@ -88,6 +88,9 @@ def _enable_editor_mode(self: Any) -> None:
     self.inspector.set_inspector_active(False)
     self.palette_active = False
     self.palette_filter_active = False
+    tour = getattr(self, "tour", None)
+    if tour is not None and callable(getattr(tour, "maybe_start", None)):
+        tour.maybe_start()
 
 
 def _disable_editor_mode(self: Any) -> None:

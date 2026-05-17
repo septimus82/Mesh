@@ -57,3 +57,10 @@ class EditorBuildSession:
     is_running: bool = False
     output_path: str | None = None
     stderr_log_path: str | None = None
+
+
+@dataclass(slots=True)
+class EditorTourSession:
+    """Tracks the first-launch tour modal state."""
+    is_active: bool = False
+    current_step: int = 0

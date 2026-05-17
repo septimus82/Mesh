@@ -41,6 +41,9 @@
     "debug_page": {
       "type": "integer"
     },
+    "tour_completed": {
+      "type": "boolean"
+    },
     "encounter_budget_profiles": {
       "type": "object",
       "additionalProperties": {

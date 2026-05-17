@@ -10,6 +10,7 @@ from .editor_align_controller import EditorAlignController
 from .editor_animation_controller import EditorAnimationController
 from .editor_asset_browser_controller import EditorAssetBrowserController
 from .editor_build_controller import EditorBuildController
+from .editor_first_launch_tour_controller import EditorTourController
 from .editor_clipboard_controller import EditorClipboardController
 from .editor_command_dispatch_controller import EditorCommandDispatchController
 from .editor_cursor_controller import EditorCursorController
@@ -64,6 +65,7 @@ from .state import (
     EditorBuildSession,
     EditorDirtyState,
     EditorPlaySession,
+    EditorTourSession,
 )
 
 
@@ -107,6 +109,7 @@ def bootstrap_dependencies(controller: Any) -> None:
     controller.marquee = EditorMarqueeController(controller)
     controller.play = EditorPlayController(controller)
     controller.build = EditorBuildController(controller)
+    controller.tour = EditorTourController(controller)
     controller.keymap = EditorKeymapController(controller)
     controller.entity_panels_controller = EditorEntityPanelsController(controller)
     controller.hierarchy = EditorHierarchyController(controller)
@@ -203,6 +206,7 @@ def bootstrap_runtime_state(controller: Any) -> None:
     controller.dirty_state = EditorDirtyState()
     controller.play_session = EditorPlaySession()
     controller.build_session = EditorBuildSession()
+    controller.tour_session = EditorTourSession()
 
     controller.hierarchy_active = False
     controller.hierarchy_filter = ""
