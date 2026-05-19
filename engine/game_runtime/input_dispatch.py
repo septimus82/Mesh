@@ -9,6 +9,9 @@ if TYPE_CHECKING:
 
 
 def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noqa: ARG001
+    editor = getattr(window, "editor_controller", None)
+    editor_active = editor is not None and getattr(editor, "active", False)
+
     # Console toggle should work even when menus/UI are capturing input.
     if key in (optional_arcade.arcade.key.GRAVE, optional_arcade.arcade.key.INSERT):
         console = getattr(window, "console_controller", None)
@@ -27,7 +30,6 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
             return
 
     # Block all input while an editor build is in progress.
-    editor = getattr(window, "editor_controller", None)
     if editor is not None and getattr(getattr(editor, "build_session", None), "is_running", False):
         return
 
@@ -40,21 +42,22 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
 
     # First-launch tour: intercept Enter (advance) and Esc (skip) when the tour is active.
     # Guard with editor.active so keys are not swallowed during main-menu / project-browser.
-    tour = getattr(editor, "tour", None) if editor is not None and getattr(editor, "active", False) else None
+    tour = getattr(editor, "tour", None) if editor_active else None
     if tour is not None and getattr(tour, "is_active", False):
         if key in (optional_arcade.arcade.key.RETURN, optional_arcade.arcade.key.ENTER,
                    optional_arcade.arcade.key.NUM_ENTER):
             advance = getattr(tour, "advance", None)
             if callable(advance):
                 advance()
+            return
         elif key == optional_arcade.arcade.key.ESCAPE:
             skip = getattr(tour, "skip", None)
             if callable(skip):
                 skip()
-        return
+            return
 
     # Find-everything: Ctrl+K (tracked-key modifier) or F1 (function-key, no MOD_CTRL dependency)
-    if editor is not None and getattr(editor, "active", False):
+    if editor_active:
         _build = getattr(editor, "build_session", None)
         _play = getattr(editor, "play_session", None)
         if not getattr(_build, "is_running", False) and not getattr(_play, "is_playing", False):
@@ -68,29 +71,31 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
                     _toggle_fe()
                     return
 
-    # UI has priority
-    if window.ui_controller.on_key_press(key, modifiers):
-        return
-
     if key == optional_arcade.arcade.key.F6:
-        editor = getattr(window, "editor_controller", None)
-        if editor is not None and getattr(editor, "active", False):
+        if editor_active:
             play_from_here = getattr(editor, "play_from_here", None)
             if callable(play_from_here):
                 play_from_here()
             return
+
+    # When the editor is active, give it first chance at general key input.
+    _editor_handle = getattr(editor, "handle_input", None) if editor_active else None
+    if callable(_editor_handle):
+        if _editor_handle(key, modifiers):
+            return
+    if editor_active:
+        if key == optional_arcade.arcade.key.ESCAPE:
+            return
+
+    # UI has priority outside editor mode.
+    if not editor_active and window.ui_controller.on_key_press(key, modifiers):
+        return
 
     if key == optional_arcade.arcade.key.ESCAPE:
         overlay = getattr(window, "settings_overlay", None)
         toggle = getattr(overlay, "toggle", None) if overlay is not None else None
         if callable(toggle):
             toggle()
-            return
-
-    # When the editor is active, give it first chance at general key input.
-    _editor_handle = getattr(editor, "handle_input", None) if editor is not None and getattr(editor, "active", False) else None
-    if callable(_editor_handle):
-        if _editor_handle(key, modifiers):
             return
 
     window.input_controller.on_key_press(key, modifiers)
