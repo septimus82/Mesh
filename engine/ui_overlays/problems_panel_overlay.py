@@ -168,21 +168,26 @@ class ProblemsPanelOverlay(UIElement):
                 row_height=PROBLEMS_LINE_HEIGHT,
             )
             left_pad = 6
-            right_pad = 6
             right_gutter = 120
             approx_char_w = max(1.0, 11 * 0.6)
-            for row_index, label, row_rect, _is_selected in scroll_list.visible_rows:
+            from ..editor.widgets.panel_primitives import EditorPanelBase, PanelField, PanelRow
+
+            rows_panel = EditorPanelBase(
+                Rect(
+                    x=float(panel.list_rect.left),
+                    y=float(panel.list_rect.bottom),
+                    width=float(panel.list_rect.right - panel.list_rect.left),
+                    height=float(panel.list_rect.top - panel.list_rect.bottom),
+                ),
+                panel_bg=(0, 0, 0, 0),
+                panel_border=(0, 0, 0, 0),
+                item_spacing=0.0,
+                inner_padding_x=0.0,
+                inner_padding_y=0.0,
+            )
+            for row_index, label, _row_rect, _is_selected in scroll_list.visible_rows:
                 issue = rows[row_index]
                 idx = start_idx + int(row_index)
-
-                if idx == int(selected_index):
-                    _draw_rectangle_filled(
-                        panel.list_rect.left,
-                        panel.list_rect.right,
-                        row_rect.bottom,
-                        row_rect.top,
-                        PROBLEMS_SELECTED_BG,
-                    )
 
                 max_label_w = max(0.0, (panel.list_rect.right - right_gutter) - (panel.list_rect.left + left_pad))
                 max_label_chars = int(max_label_w / approx_char_w) if max_label_w > 0 else 0
@@ -191,14 +196,7 @@ class ProblemsPanelOverlay(UIElement):
                         label = label[: max(0, max_label_chars - 3)] + "..."
                     else:
                         label = label[:max_label_chars]
-                draw_text_cached(
-                    label,
-                    panel.list_rect.left + left_pad,
-                    row_rect.bottom + 2,
-                    color=PROBLEMS_TEXT_COLOR if issue.fixable else PROBLEMS_DIM_COLOR,
-                    font_size=11,
-                    cache=self._text_cache,
-                )
+
                 # Right-side metadata (severity / location)
                 severity = str(getattr(issue, "severity", "") or "")
                 entity_id = str(getattr(issue, "entity_id", "") or "")
@@ -207,16 +205,20 @@ class ProblemsPanelOverlay(UIElement):
                 meta = severity
                 if entity_id:
                     meta = f"{severity} | {entity_id}" if severity else entity_id
-                if meta:
-                    draw_text_cached(
-                        meta,
-                        panel.list_rect.right - right_pad,
-                        row_rect.bottom + 2,
-                        color=PROBLEMS_DIM_COLOR,
-                        font_size=10,
-                        anchor_x="right",
-                        cache=self._text_cache,
-                    )
+                row = PanelRow(
+                    PanelField(
+                        label,
+                        meta if meta else None,
+                        label_color=PROBLEMS_TEXT_COLOR if issue.fixable else PROBLEMS_DIM_COLOR,
+                        value_color=PROBLEMS_DIM_COLOR,
+                    ),
+                    height=18.0,
+                    padding_x=6.0,
+                    selected_bg=PROBLEMS_SELECTED_BG,
+                )
+                row.set_selected(idx == int(selected_index))
+                rows_panel.add_row(row)
+            rows_panel.draw()
 
             # Scrollbar (render-only, if payload provides scroll context)
             visible_count = len(rows)
