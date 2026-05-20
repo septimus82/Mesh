@@ -142,23 +142,3 @@ class EntityPanelsOverlay(UIElement):
             rows_panel.add_row(PanelRow(content=field, height=line_height, padding_x=0.0))
         rows_panel.draw()
 
-    def _draw_panel(self, lines: list[str], start_x: float, start_y: float, width: float) -> None:
-        if not lines:
-            return
-        line_height = 18.0
-        height = max(60.0, 20.0 + line_height * float(len(lines)))
-        draw_panel_bg(
-            start_x - 10.0,
-            start_x + width,
-            start_y - height,
-            start_y + 20.0,
-        )
-        for i, line in enumerate(lines):
-            optional_arcade.arcade.draw_text(
-                line,
-                start_x,
-                start_y - (i * line_height),
-                _line_color(line),
-                12,
-                font_name="Consolas",
-            )
