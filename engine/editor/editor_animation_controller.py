@@ -277,6 +277,8 @@ class EditorAnimationController:
         config = self.get_animator_config(self._editor.selected_entity)
         animations = config.get("animations", {}) if isinstance(config, dict) else {}
         names = sorted(animations.keys()) if isinstance(animations, dict) else []
+        animation_row_start = -1
+        animation_row_count = 0
         if not names:
             lines.append("No animations configured on this entity.")
         else:
@@ -284,6 +286,7 @@ class EditorAnimationController:
                 0,
                 min(self._editor.animation_selected_index, len(names) - 1),
             )
+            animation_row_start = len(lines)
             for idx, name in enumerate(names):
                 clip_cfg = animations.get(name, {})
                 prefix = "> " if idx == self._editor.animation_selected_index else "  "
@@ -292,6 +295,7 @@ class EditorAnimationController:
                 frames = clip_cfg.get("frames")
                 frame_desc = ", ".join(str(f) for f in frames) if isinstance(frames, list) else "<frames?>"
                 lines.append(f"{prefix}{name} | mode={mode} fps={fps} frames={frame_desc}")
+            animation_row_count = len(names)
             lines.append("Fields: mode / fps / frames (TAB/LEFT/RIGHT to change focus)")
             lines.append(f"Active field: {self._editor.animation_field_focus}")
             lines.append("ENTER edits field; ESC closes panel")
@@ -305,7 +309,10 @@ class EditorAnimationController:
             start_y - len(lines) * 18 - 12,
             start_y + 20,
         )
+        animation_row_stop = animation_row_start + animation_row_count
         for i, line in enumerate(lines):
+            if animation_row_start <= i < animation_row_stop:
+                continue
             color = (
                 optional_arcade.arcade.color.CYAN
                 if line.startswith(">") or "Active field" in line
@@ -319,6 +326,57 @@ class EditorAnimationController:
                 12,
                 font_name="Consolas",
             )
+        if animation_row_count:
+            self._draw_animation_row_list(
+                lines[animation_row_start:animation_row_stop],
+                start_x,
+                start_y,
+                panel_width,
+                animation_row_start,
+            )
+
+    def _draw_animation_row_list(
+        self,
+        lines: List[str],
+        start_x: float,
+        start_y: float,
+        width: float,
+        first_row_index: int,
+    ) -> None:
+        # Animation rows are preformatted above; keep those strings intact
+        # and migrate only the row-list render composition.
+        from engine.editor.widgets.panel_primitives import EditorPanelBase, PanelField, PanelRow
+        from engine.ui.widgets import Rect
+
+        line_height = 18.0
+        top = float(start_y) - (float(first_row_index) * line_height) + (line_height / 2.0)
+        rows_panel = EditorPanelBase(
+            Rect(
+                x=float(start_x),
+                y=top - (line_height * float(len(lines))),
+                width=float(width),
+                height=line_height * float(len(lines)),
+            ),
+            panel_bg=(0, 0, 0, 0),
+            panel_border=(0, 0, 0, 0),
+            item_spacing=0.0,
+            inner_padding_x=0.0,
+            inner_padding_y=0.0,
+        )
+        for line in lines:
+            field = PanelField(
+                label=line,
+                value=None,
+                label_color=self._animation_row_color(line),
+                label_font_size=12,
+            )
+            rows_panel.add_row(PanelRow(content=field, height=line_height, padding_x=0.0))
+        rows_panel.draw()
+
+    def _animation_row_color(self, line: str) -> Any:
+        if line.startswith(">"):
+            return optional_arcade.arcade.color.CYAN
+        return optional_arcade.arcade.color.WHITE
 
     def draw_animation_panel_if_active(self) -> None:
         if self._editor.animation_active:
