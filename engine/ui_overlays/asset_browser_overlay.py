@@ -317,41 +317,7 @@ class AssetBrowserOverlay(UIElement):
             show_status=True,
         )
 
-        for instruction in list_layout.instructions:
-            kind = str(instruction.kind or "")
-            payload = instruction.payload if isinstance(instruction.payload, dict) else {}
-            row_index = payload.get("row_index")
-            rect = payload.get("rect")
-            if not isinstance(row_index, int) or not isinstance(rect, Rect):
-                continue
-            if row_index < 0 or row_index >= len(rows):
-                continue
-            row = rows[row_index]
-            if kind == "scroll_row_bg":
-                if bool(payload.get("selected", False)):
-                    _draw_rectangle_filled(left + 10, split_x - 10, rect.bottom, rect.top, (255, 255, 255, 40))
-                continue
-            if kind != "scroll_row_text":
-                continue
-            is_selected = bool(payload.get("selected", False))
-            color = (255, 255, 255) if is_selected else (180, 180, 180)
-            draw_text_cached(
-                str(getattr(row, "display_name", "")),
-                left + 15,
-                rect.bottom + 4,
-                color=color,
-                font_size=12,
-                cache=self._text_cache,
-            )
-            draw_text_cached(
-                str(getattr(row, "kind", "")),
-                split_x - 50,
-                rect.bottom + 4,
-                color=(100, 100, 100),
-                font_size=10,
-                align="right",
-                cache=self._text_cache,
-            )
+        self._draw_asset_browser_row_list(list_layout.instructions, rows)
 
         if not rows:
             draw_text_cached(
@@ -399,3 +365,70 @@ class AssetBrowserOverlay(UIElement):
 
         draw_text_cached(status_row, left + 15, bottom + 16, color=(170, 170, 180), font_size=10, cache=self._text_cache)
         draw_text_cached(hints_row, left + 15, bottom + 4, color=(170, 170, 180), font_size=10, cache=self._text_cache)
+
+    def _draw_asset_browser_row_list(self, instructions: list[Any], rows: list[Any]) -> None:
+        bounds = self._list_rect
+        if bounds is None or not rows:
+            return
+
+        # Asset rows keep ScrollList's geometry/selection model; this helper
+        # only migrates the visible row render composition.
+        from ..editor.widgets.panel_primitives import EditorPanelBase, PanelField, PanelRow
+
+        rows_panel = EditorPanelBase(
+            Rect(
+                x=float(bounds.left),
+                y=float(bounds.bottom),
+                width=float(bounds.width),
+                height=float(bounds.height),
+            ),
+            panel_bg=(0, 0, 0, 0),
+            panel_border=(0, 0, 0, 0),
+            item_spacing=0.0,
+            inner_padding_x=0.0,
+            inner_padding_y=0.0,
+        )
+        selected_row_indices: set[int] = set()
+        for instruction in instructions:
+            kind = str(getattr(instruction, "kind", "") or "")
+            if kind != "scroll_row_bg":
+                continue
+            payload = instruction.payload if isinstance(instruction.payload, dict) else {}
+            row_index = payload.get("row_index")
+            rect = payload.get("rect")
+            if not isinstance(row_index, int) or not isinstance(rect, Rect):
+                continue
+            if row_index < 0 or row_index >= len(rows):
+                continue
+            if bool(payload.get("selected", False)):
+                selected_row_indices.add(row_index)
+
+        for instruction in instructions:
+            kind = str(getattr(instruction, "kind", "") or "")
+            if kind != "scroll_row_text":
+                continue
+            payload = instruction.payload if isinstance(instruction.payload, dict) else {}
+            row_index = payload.get("row_index")
+            rect = payload.get("rect")
+            if not isinstance(row_index, int) or not isinstance(rect, Rect):
+                continue
+            if row_index < 0 or row_index >= len(rows):
+                continue
+            row_data = rows[row_index]
+            is_selected = row_index in selected_row_indices
+            row = PanelRow(
+                PanelField(
+                    str(getattr(row_data, "display_name", "")),
+                    str(getattr(row_data, "kind", "")),
+                    label_color=(255, 255, 255) if is_selected else (180, 180, 180),
+                    value_color=(100, 100, 100),
+                    label_font_size=12,
+                    value_font_size=10,
+                ),
+                height=24.0,
+                padding_x=5.0,
+                selected_bg=(255, 255, 255, 40),
+            )
+            row.set_selected(is_selected)
+            rows_panel.add_row(row)
+        rows_panel.draw()
