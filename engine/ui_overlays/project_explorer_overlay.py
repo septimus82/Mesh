@@ -157,79 +157,121 @@ class ProjectExplorerOverlay(UIElement):
             format_project_row_label=format_project_row_label,
         )
 
+        self._draw_project_explorer_row_list(
+            rows=list(rows),
+            scroll_list=scroll_list,
+            panel_list_rect=panel.list_rect,
+            selected_row_id=selected_row_id,
+            selected_row_ids=selected_row_ids,
+            has_multi=has_multi,
+            rename_active=rename_active,
+            rename_path=rename_path,
+            rename_text=rename_text or "",
+            rename_cursor=rename_cursor,
+            rename_sel_start=rename_sel_start,
+            rename_sel_end=rename_sel_end,
+            format_project_action_label=format_project_action_label,
+            format_project_recent_label=format_project_recent_label,
+            format_project_row_label=format_project_row_label,
+        )
+
+    def _draw_project_explorer_row_list(
+        self,
+        *,
+        rows: list[Any],
+        scroll_list: ScrollList,
+        panel_list_rect: Any,
+        selected_row_id: Any,
+        selected_row_ids: set[Any],
+        has_multi: bool,
+        rename_active: bool,
+        rename_path: str | None,
+        rename_text: str,
+        rename_cursor: int,
+        rename_sel_start: int,
+        rename_sel_end: int,
+        format_project_action_label: Any,
+        format_project_recent_label: Any,
+        format_project_row_label: Any,
+    ) -> None:
+        from ..editor.widgets.panel_primitives import EditorPanelBase, PanelField, PanelRow
+
         for row_index, _row_text, row_rect, _is_selected in scroll_list.visible_rows:
-            row = rows[row_index]
+            row_data = rows[row_index]
             row_top = row_rect.top
             row_bottom = row_rect.bottom
 
-            # Check if this row is being renamed
             is_rename_row = False
-            if rename_active and rename_path and row.entry is not None:
-                row_path = str(getattr(row.entry, "rel_path", ""))
+            if rename_active and rename_path and row_data.entry is not None:
+                row_path = str(getattr(row_data.entry, "rel_path", ""))
                 if row_path == rename_path:
                     is_rename_row = True
 
             if is_rename_row:
-                # Draw inline rename editor
                 self._draw_inline_rename(
-                    panel.list_rect.left,
-                    panel.list_rect.right,
+                    panel_list_rect.left,
+                    panel_list_rect.right,
                     row_bottom,
                     row_top,
-                    rename_text or "",
+                    rename_text,
                     rename_cursor,
                     rename_sel_start,
                     rename_sel_end,
                 )
                 continue
 
-            if selected_row_ids and id(row) in selected_row_ids:
-                _draw_rectangle_filled(
-                    panel.list_rect.left,
-                    panel.list_rect.right,
-                    row_bottom,
-                    row_top,
-                    PROJECT_SELECTED_BG,
-                )
-                if has_multi and selected_row_id is not None and id(row) == selected_row_id:
-                    _draw_lrtb_rectangle_outline(
-                        panel.list_rect.left,
-                        panel.list_rect.right,
-                        row_top,
-                        row_bottom,
-                        PROJECT_RENAME_BORDER,
-                        1,
-                    )
-            elif selected_row_id is not None and id(row) == selected_row_id:
-                _draw_rectangle_filled(
-                    panel.list_rect.left,
-                    panel.list_rect.right,
-                    row_bottom,
-                    row_top,
-                    PROJECT_SELECTED_BG,
-                )
+            is_primary_selected = selected_row_id is not None and id(row_data) == selected_row_id
+            is_selected = bool(selected_row_ids and id(row_data) in selected_row_ids) or is_primary_selected
 
-            if row.kind == "header":
-                label = str(row.header or "")
+            if row_data.kind == "header":
+                label = str(row_data.header or "")
                 color = PROJECT_DIM_COLOR
-            elif row.kind == "action":
-                label = format_project_action_label(row)
-                color = PROJECT_TEXT_COLOR if getattr(row, "enabled", True) else PROJECT_DIM_COLOR
-            elif row.recent is not None:
-                label = format_project_recent_label(row.recent)
+            elif row_data.kind == "action":
+                label = format_project_action_label(row_data)
+                color = PROJECT_TEXT_COLOR if getattr(row_data, "enabled", True) else PROJECT_DIM_COLOR
+            elif row_data.recent is not None:
+                label = format_project_recent_label(row_data.recent)
                 color = PROJECT_TEXT_COLOR
             else:
-                label = format_project_row_label(row.entry)
-                color = PROJECT_TEXT_COLOR # format_project_row_label already handles some formatting?
-            
-            draw_text_cached(
-                label,
-                panel.list_rect.left + 2,
-                row_bottom + 2,
-                color=color,
-                font_size=11,
-                cache=self._text_cache,
+                label = format_project_row_label(row_data.entry)
+                color = PROJECT_TEXT_COLOR
+
+            row = PanelRow(
+                PanelField(
+                    label,
+                    None,
+                    label_color=color,
+                    label_font_size=11,
+                ),
+                height=PROJECT_LINE_HEIGHT,
+                padding_x=2.0,
+                selected_bg=PROJECT_SELECTED_BG,
             )
+            row.set_selected(is_selected)
+            rows_panel = EditorPanelBase(
+                Rect(
+                    x=float(panel_list_rect.left),
+                    y=float(row_bottom),
+                    width=float(panel_list_rect.right - panel_list_rect.left),
+                    height=float(row_top - row_bottom),
+                ),
+                panel_bg=(0, 0, 0, 0),
+                panel_border=(0, 0, 0, 0),
+                item_spacing=0.0,
+                inner_padding_x=0.0,
+                inner_padding_y=0.0,
+            )
+            rows_panel.add_row(row)
+            rows_panel.draw()
+            if has_multi and is_primary_selected:
+                _draw_lrtb_rectangle_outline(
+                    panel_list_rect.left,
+                    panel_list_rect.right,
+                    row_top,
+                    row_bottom,
+                    PROJECT_RENAME_BORDER,
+                    1,
+                )
 
     def _draw_inline_rename(
         self,
