@@ -124,6 +124,12 @@ class TestComputeTooltipTextForTarget:
         assert text == DOCK_TAB_TOOLTIPS["Assets"]
         assert "Assets" in text
 
+    @pytest.mark.integration
+    def test_dock_tab_items(self) -> None:
+        text = compute_tooltip_text_for_target("dock_tab", "Items")
+        assert text == DOCK_TAB_TOOLTIPS["Items"]
+        assert text == "Items -- Edit item definitions"
+
     def test_dock_tab_history(self) -> None:
         text = compute_tooltip_text_for_target("dock_tab", "History")
         assert text == DOCK_TAB_TOOLTIPS["History"]

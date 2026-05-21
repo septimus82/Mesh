@@ -43,6 +43,7 @@ from engine.ui_overlays.entity_panels_overlay import EntityPanelsOverlay
 from engine.ui_overlays.find_everything_overlay import FindEverythingOverlay
 from engine.ui_overlays.fog_overlay import FogOverlay
 from engine.ui_overlays.hd2d_settings_panel_overlay import Hd2dSettingsPanelOverlay
+from engine.ui_overlays.item_editor_overlay import ItemEditorOverlay
 from engine.ui_overlays.light_occluder_editor import LightOccluderEditorOverlay
 from engine.ui_overlays.problems_panel_overlay import ProblemsPanelOverlay
 from engine.ui_overlays.project_explorer_overlay import ProjectExplorerOverlay
@@ -163,6 +164,8 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
     window.register_ui_element(window.project_explorer_overlay)
     window.asset_browser_overlay = AssetBrowserOverlay(window)
     window.register_ui_element(window.asset_browser_overlay)
+    window.item_editor_overlay = ItemEditorOverlay(window)
+    window.register_ui_element(window.item_editor_overlay)
     window.undo_history_overlay = UndoHistoryOverlay(window)
     window.register_ui_element(window.undo_history_overlay)
     window.problems_panel_overlay = ProblemsPanelOverlay(window)
