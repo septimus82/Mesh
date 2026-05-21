@@ -1,5 +1,8 @@
+import json
+
 import pytest
-from engine.inventory import Inventory, ItemDatabase, ItemDefinition
+import engine.inventory as inventory_module
+from engine.inventory import Inventory, ItemDatabase, ItemDefinition, clear_item_database_cache, load_item_database
 
 # Mock the item database to avoid file I/O and dependency on assets
 @pytest.fixture
@@ -76,3 +79,23 @@ def test_inventory_non_stackable(mock_item_db):
     # If bucket is 1 and max_stack is 1, new_total is 1. 1 > 1 is False.
     assert not inv.add_item("sword", 1)
     assert inv.get_count("sword") == 1
+
+
+@pytest.mark.integration
+def test_clear_item_database_cache_forces_fresh_load(tmp_path, monkeypatch):
+    data_dir = tmp_path / "assets" / "data"
+    data_dir.mkdir(parents=True)
+    items_path = data_dir / "items.json"
+    items_path.write_text(json.dumps({"items": [{"id": "old", "name": "Old"}]}), encoding="utf-8")
+    monkeypatch.setattr(inventory_module, "_ITEM_DB_CACHE", None)
+
+    first = load_item_database(tmp_path)
+    items_path.write_text(json.dumps({"items": [{"id": "new", "name": "New"}]}), encoding="utf-8")
+
+    assert load_item_database(tmp_path) is first
+    clear_item_database_cache()
+    second = load_item_database(tmp_path)
+
+    assert second is not first
+    assert list(second.items) == ["new"]
+    assert inventory_module._ITEM_DB_CACHE is second
