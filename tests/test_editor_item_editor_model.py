@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from engine.editor.item_editor_model import ItemEditorModel
+from engine.editor.item_editor_model import ItemEditorModel, validate_item
 
 pytestmark = [pytest.mark.fast]
 
@@ -82,3 +82,35 @@ def test_item_editor_model_detail_rows_skip_empty_default_fields(tmp_path) -> No
         ("ID", "plain_key"),
         ("Name", "Plain Key"),
     ]
+
+
+def test_validate_item_rejects_empty_id() -> None:
+    errors = validate_item({"id": "", "max_stack": 1}, [{"id": "", "max_stack": 1}])
+
+    assert "id is required" in errors
+
+
+def test_validate_item_rejects_duplicate_id() -> None:
+    items = [{"id": "potion", "max_stack": 1}, {"id": "potion", "max_stack": 1}]
+
+    errors = validate_item(items[0], items)
+
+    assert "id 'potion' is already used" in errors
+
+
+def test_validate_item_rejects_non_numeric_max_stack() -> None:
+    errors = validate_item({"id": "potion", "max_stack": "many"}, [{"id": "potion", "max_stack": "many"}])
+
+    assert "max_stack must be a positive integer" in errors
+
+
+def test_validate_item_rejects_zero_max_stack() -> None:
+    errors = validate_item({"id": "potion", "max_stack": 0}, [{"id": "potion", "max_stack": 0}])
+
+    assert "max_stack must be a positive integer" in errors
+
+
+def test_validate_item_accepts_valid_item() -> None:
+    item = {"id": "potion", "max_stack": 1}
+
+    assert validate_item(item, [item]) == []

@@ -8,6 +8,17 @@ from typing import Any
 
 from engine.inventory import ItemDatabase, ItemDefinition
 
+ITEM_FIELD_ORDER = (
+    "id",
+    "name",
+    "description",
+    "icon",
+    "stackable",
+    "max_stack",
+    "tags",
+    "effects",
+)
+
 
 @dataclass
 class ItemEditorModel:
@@ -79,3 +90,67 @@ class ItemEditorModel:
 
 def _format_effects(effects: dict[str, Any]) -> str:
     return ", ".join(f"{key}={effects[key]}" for key in sorted(effects))
+
+
+def validate_item(item: dict[str, Any], all_items: list[dict[str, Any]]) -> list[str]:
+    """Return validation errors for one editable item payload."""
+    errors: list[str] = []
+    item_id = str(item.get("id", "") or "").strip()
+    if not item_id:
+        errors.append("id is required")
+    elif _id_count(item_id, all_items) > 1:
+        errors.append(f"id '{item_id}' is already used")
+
+    try:
+        if int(item.get("max_stack", 1)) < 1:
+            errors.append("max_stack must be a positive integer")
+    except (TypeError, ValueError):
+        errors.append("max_stack must be a positive integer")
+    return errors
+
+
+def save_items(items: list[dict[str, Any]], target_path: str | Path) -> None:
+    """Persist normalized item dictionaries and invalidate runtime item cache."""
+    normalized = [_normalize_item_dict(item) for item in items]
+    errors: list[str] = []
+    for item in normalized:
+        errors.extend(validate_item(item, normalized))
+    if errors:
+        raise ValueError("; ".join(errors))
+
+    from engine import persistence_io
+    from engine.inventory import clear_item_database_cache
+
+    persistence_io.write_json_atomic(
+        Path(target_path),
+        {"items": normalized},
+        indent=2,
+        sort_keys=False,
+        trailing_newline=True,
+    )
+    clear_item_database_cache()
+
+
+def _id_count(item_id: str, items: list[dict[str, Any]]) -> int:
+    return sum(1 for item in items if str(item.get("id", "") or "").strip() == item_id)
+
+
+def _normalize_item_dict(item: dict[str, Any]) -> dict[str, Any]:
+    stackable = bool(item.get("stackable", False))
+    try:
+        max_stack = int(item.get("max_stack", 99 if stackable else 1))
+    except (TypeError, ValueError):
+        max_stack = item.get("max_stack", 1)
+    tags_raw = item.get("tags", [])
+    effects_raw = item.get("effects", {})
+    normalized = {
+        "id": str(item.get("id", "") or "").strip(),
+        "name": str(item.get("name") or item.get("id") or ""),
+        "description": str(item.get("description") or ""),
+        "icon": str(item.get("icon")) if item.get("icon") else None,
+        "stackable": stackable,
+        "max_stack": max_stack,
+        "tags": [str(tag) for tag in tags_raw if str(tag).strip()] if isinstance(tags_raw, list) else [],
+        "effects": dict(effects_raw) if isinstance(effects_raw, dict) else {},
+    }
+    return {key: normalized[key] for key in ITEM_FIELD_ORDER}

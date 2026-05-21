@@ -19,6 +19,12 @@ def load_item_database(root: str | Path | None = None) -> "ItemDatabase":
     return db
 
 
+def clear_item_database_cache() -> None:
+    """Clear cached item definitions; existing Vendor instances keep stored references until rebuilt."""
+    global _ITEM_DB_CACHE
+    _ITEM_DB_CACHE = None
+
+
 @dataclass(slots=True)
 class ItemDefinition:
     id: str
