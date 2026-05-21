@@ -41,6 +41,12 @@ def handle_text_input(controller: EditorController, text: str) -> None:
         if callable(handler) and handler(text):
             return
 
+    item_editor = getattr(controller, "item_editor", None)
+    if item_editor is not None and _item_editor_should_route(controller, item_editor):
+        handler = getattr(item_editor, "handle_item_editor_text_input", None)
+        if callable(handler) and handler(text):
+            return
+
     if is_scene_browser_active(controller):
         handler = getattr(controller, "_handle_scene_browser_text_input", None)
         if callable(handler) and handler(text):
@@ -102,3 +108,11 @@ def handle_text_input(controller: EditorController, text: str) -> None:
         if text.isprintable():
             controller.hierarchy_filter += text
             controller._refresh_hierarchy_list()
+
+
+def _item_editor_should_route(controller: EditorController, item_editor: object) -> bool:
+    if not bool(getattr(item_editor, "is_edit_mode_active", lambda: False)()):
+        return False
+    dock = getattr(controller, "dock", None)
+    snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+    return (getattr(snapshot, "right_tab", "Inspector") or "Inspector") == "Items"

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from engine.ui_overlays.common import UIElement
-from engine.ui_overlays.widgets import Rect
+from engine.ui_overlays.widgets import Rect, TextInput
 
 if TYPE_CHECKING:  # pragma: no cover
     from engine.game import GameWindow
@@ -14,6 +14,8 @@ if TYPE_CHECKING:  # pragma: no cover
 ITEM_EDITOR_TEXT_COLOR = (220, 220, 230, 255)
 ITEM_EDITOR_DIM_COLOR = (150, 150, 160, 255)
 ITEM_EDITOR_SELECTED_BG = (90, 140, 200, 140)
+ITEM_EDITOR_ERROR_COLOR = (255, 120, 120, 255)
+ITEM_EDITOR_BUTTON_COLOR = (100, 200, 255, 255)
 ITEM_EDITOR_ROW_HEIGHT = 18.0
 ITEM_EDITOR_ROW_PADDING_X = 6.0
 ITEM_EDITOR_PANEL_GAP = 8.0
@@ -51,6 +53,26 @@ class ItemEditorOverlay(UIElement):
             self._load_error = str(exc)
         return self._model
 
+    def reload_model(self) -> None:
+        self._model = None
+        self._get_model()
+
+    def selected_item_dict(self) -> dict[str, object] | None:
+        model = self._get_model()
+        item = getattr(model, "selected_item", None) if model is not None else None
+        if item is None:
+            return None
+        from engine.editor.editor_item_editor_controller import item_definition_to_dict
+
+        return item_definition_to_dict(item)
+
+    def all_item_dicts(self) -> list[dict[str, object]]:
+        model = self._get_model()
+        items = list(getattr(model, "items", []) or []) if model is not None else []
+        from engine.editor.editor_item_editor_controller import item_definition_to_dict
+
+        return [item_definition_to_dict(item) for item in items]
+
     def draw(self) -> None:
         controller = self._get_controller()
         if not self._is_visible_for_controller(controller):
@@ -86,6 +108,9 @@ class ItemEditorOverlay(UIElement):
         )
 
         model = self._get_model()
+        item_editor = getattr(controller, "item_editor", None)
+        edit_mode = bool(item_editor is not None and item_editor.is_edit_mode_active())
+        dirty_marker = " *" if item_editor is not None and item_editor.is_dirty() else ""
         list_panel = EditorPanelBase(
             list_rect,
             panel_bg=(0, 0, 0, 0),
@@ -134,11 +159,30 @@ class ItemEditorOverlay(UIElement):
             inner_padding_y=0.0,
         )
         item = model.selected_item if model is not None else None
+        button_rows: dict[str, object] = {}
+        id_row: object | None = None
         if item is None:
-            detail_panel.add_header(PanelHeader("No item", None))
+            detail_panel.add_header(PanelHeader(f"Items{dirty_marker}", "No item"))
         else:
-            detail_panel.add_header(PanelHeader(item.name, item.id))
+            detail_panel.add_header(PanelHeader(f"Items{dirty_marker}", item.id))
+            if item_editor is not None and item_editor.last_error_message():
+                detail_panel.add_row(
+                    PanelRow(
+                        PanelField("Error", item_editor.last_error_message(), label_color=ITEM_EDITOR_ERROR_COLOR),
+                        height=ITEM_EDITOR_ROW_HEIGHT,
+                        padding_x=ITEM_EDITOR_ROW_PADDING_X,
+                    )
+                )
             for label, value in model.selected_detail_rows():
+                if edit_mode and label == "ID":
+                    id_row = detail_panel.add_row(
+                        PanelRow(
+                            PanelField("ID", "", label_color=ITEM_EDITOR_TEXT_COLOR, value_color=ITEM_EDITOR_DIM_COLOR),
+                            height=ITEM_EDITOR_ROW_HEIGHT,
+                            padding_x=ITEM_EDITOR_ROW_PADDING_X,
+                        )
+                    )
+                    continue
                 detail_panel.add_row(
                     PanelRow(
                         PanelField(label, value, label_color=ITEM_EDITOR_TEXT_COLOR, value_color=ITEM_EDITOR_DIM_COLOR),
@@ -146,4 +190,90 @@ class ItemEditorOverlay(UIElement):
                         padding_x=ITEM_EDITOR_ROW_PADDING_X,
                     )
                 )
+            if edit_mode:
+                button_rows["save"] = detail_panel.add_row(
+                    PanelRow(
+                        PanelField("Save", None, label_color=ITEM_EDITOR_BUTTON_COLOR),
+                        height=ITEM_EDITOR_ROW_HEIGHT,
+                        padding_x=ITEM_EDITOR_ROW_PADDING_X,
+                    )
+                )
+                button_rows["cancel"] = detail_panel.add_row(
+                    PanelRow(
+                        PanelField("Cancel", None, label_color=ITEM_EDITOR_BUTTON_COLOR),
+                        height=ITEM_EDITOR_ROW_HEIGHT,
+                        padding_x=ITEM_EDITOR_ROW_PADDING_X,
+                    )
+                )
+            else:
+                button_rows["edit"] = detail_panel.add_row(
+                    PanelRow(
+                        PanelField("Edit", None, label_color=ITEM_EDITOR_BUTTON_COLOR),
+                        height=ITEM_EDITOR_ROW_HEIGHT,
+                        padding_x=ITEM_EDITOR_ROW_PADDING_X,
+                    )
+                )
         detail_panel.draw()
+        if item_editor is not None:
+            rects: dict[str, Rect] = {}
+            for action, row in button_rows.items():
+                rect = getattr(row, "last_rect", None)
+                if _is_rect_like(rect):
+                    rects[action] = rect
+            item_editor.set_button_rects(rects)
+        if edit_mode and item_editor is not None and id_row is not None:
+            row_rect = getattr(id_row, "last_rect", None)
+            if _is_rect_like(row_rect):
+                field_rect = Rect(
+                    x=float(row_rect.left + 42.0),
+                    y=float(row_rect.bottom + 1.0),
+                    width=max(0.0, float(row_rect.width - 48.0)),
+                    height=max(0.0, float(row_rect.height - 2.0)),
+                )
+                self._draw_text_input(item_editor.id_input(), field_rect)
+
+    def _draw_text_input(self, text_input: TextInput, rect: Rect) -> None:
+        from engine.editor.widgets import panel_primitives
+
+        layout = text_input.layout(rect)
+        for instruction in layout.instructions:
+            payload = instruction.payload
+            instr_rect = payload.get("rect")
+            if instruction.kind == "text_input_bg" and _is_rect_like(instr_rect):
+                bg = (30, 30, 36, 220) if payload.get("focused") else (22, 22, 28, 190)
+                border = (100, 200, 255, 180) if payload.get("focused") else (90, 90, 100, 140)
+                panel_primitives.draw_panel_bg(instr_rect.left, instr_rect.right, instr_rect.bottom, instr_rect.top, color=bg)
+                panel_primitives._draw_lrtb_rectangle_outline(
+                    instr_rect.left,
+                    instr_rect.right,
+                    instr_rect.top,
+                    instr_rect.bottom,
+                    border,
+                    1,
+                )
+            elif instruction.kind == "text_input_text":
+                color = ITEM_EDITOR_DIM_COLOR if payload.get("is_placeholder") else ITEM_EDITOR_TEXT_COLOR
+                panel_primitives.draw_text_cached(
+                    str(payload.get("text", "")),
+                    float(payload.get("x", 0.0)),
+                    float(payload.get("y", 0.0)),
+                    color=color,
+                    font_size=int(payload.get("font_size", 12)),
+                    anchor_x="left",
+                    anchor_y="center",
+                )
+            elif instruction.kind == "text_input_caret":
+                text = str(payload.get("text", ""))
+                panel_primitives.draw_text_cached(
+                    "|",
+                    float(payload.get("x", 0.0)) + (len(text) * 7.0),
+                    float(payload.get("y", 0.0)),
+                    color=ITEM_EDITOR_TEXT_COLOR,
+                    font_size=int(payload.get("font_size", 12)),
+                    anchor_x="left",
+                    anchor_y="center",
+                )
+
+
+def _is_rect_like(value: object) -> bool:
+    return all(hasattr(value, attr) for attr in ("left", "right", "bottom", "top", "width", "height"))

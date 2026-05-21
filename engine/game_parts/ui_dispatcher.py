@@ -164,6 +164,11 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
     window.register_ui_element(window.project_explorer_overlay)
     window.asset_browser_overlay = AssetBrowserOverlay(window)
     window.register_ui_element(window.asset_browser_overlay)
+    from engine.editor.editor_item_editor_controller import EditorItemEditorController  # noqa: PLC0415
+
+    editor_controller = getattr(window, "editor_controller", None)
+    if editor_controller is not None and not hasattr(editor_controller, "item_editor"):
+        editor_controller.item_editor = EditorItemEditorController(editor_controller)
     window.item_editor_overlay = ItemEditorOverlay(window)
     window.register_ui_element(window.item_editor_overlay)
     window.undo_history_overlay = UndoHistoryOverlay(window)
