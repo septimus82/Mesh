@@ -8,13 +8,38 @@ import engine.editor.widgets.panel_primitives as panel_primitives
 from engine.inventory import ItemDefinition
 from engine.editor.item_editor_model import ItemEditorModel
 from engine.ui_overlays.item_editor_overlay import ItemEditorOverlay
+from engine.ui_overlays.widgets import TextInput
 from tests._dock_stub import make_dock_stub
 
 pytestmark = [pytest.mark.fast]
 
 
-def _window_for_tab(right_tab: str) -> SimpleNamespace:
-    controller = SimpleNamespace(active=True, dock=make_dock_stub(right_tab=right_tab))
+class _ItemEditorStub:
+    def __init__(self, *, edit_mode: bool = False, dirty: bool = False, error: str | None = None) -> None:
+        self._edit_mode = edit_mode
+        self._dirty = dirty
+        self._error = error
+        self._id_input = TextInput(text="healing_potion", focused=edit_mode, font_size=12, height=18.0)
+        self.button_rects: dict[str, object] = {}
+
+    def is_edit_mode_active(self) -> bool:
+        return self._edit_mode
+
+    def is_dirty(self) -> bool:
+        return self._dirty
+
+    def last_error_message(self) -> str | None:
+        return self._error
+
+    def id_input(self) -> TextInput:
+        return self._id_input
+
+    def set_button_rects(self, rects: dict[str, object]) -> None:
+        self.button_rects = dict(rects)
+
+
+def _window_for_tab(right_tab: str, item_editor: object | None = None) -> SimpleNamespace:
+    controller = SimpleNamespace(active=True, dock=make_dock_stub(right_tab=right_tab), item_editor=item_editor)
     return SimpleNamespace(width=1280, height=720, editor_controller=controller)
 
 
@@ -96,6 +121,48 @@ def test_item_editor_overlay_renders_selected_item_fields(monkeypatch: pytest.Mo
     assert "true" in captured
     assert "Effects" in captured
     assert "heal=25" in captured
+
+
+def test_item_editor_overlay_view_mode_shows_edit_button(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=False)
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    assert "Edit" in captured
+    assert "Save" not in captured
+    assert "Cancel" not in captured
+    assert "edit" in item_editor.button_rects
+
+
+def test_item_editor_overlay_edit_mode_shows_save_cancel_and_id_input(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=True)
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    assert "Save" in captured
+    assert "Cancel" in captured
+    assert "Edit" not in captured
+    assert "healing_potion" in captured
+    assert {"save", "cancel"} <= set(item_editor.button_rects)
+
+
+def test_item_editor_overlay_dirty_marker_and_error_row(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=True, dirty=True, error="id is required")
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    assert "Items *" in captured
+    assert "Error" in captured
+    assert "id is required" in captured
 
 
 def test_item_editor_overlay_renders_empty_database(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -101,6 +101,13 @@ def handle_pre_routed_keys(controller: EditorController, key: int, modifiers: in
             return True
         return True
 
+    item_editor = getattr(controller, "item_editor", None)
+    if item_editor is not None and _item_editor_should_route(controller, item_editor):
+        handler = getattr(item_editor, "handle_item_editor_key", None)
+        if callable(handler):
+            return bool(handler(key, modifiers))
+        return True
+
     # Menu bar handles Escape to close
     if handle_menu_bar_key(controller, key, modifiers):
         return True
@@ -122,3 +129,12 @@ def handle_pre_routed_keys(controller: EditorController, key: int, modifiers: in
             return True
 
     return False
+
+
+def _item_editor_should_route(controller: EditorController, item_editor: object) -> bool:
+    is_active = getattr(item_editor, "is_edit_mode_active", None)
+    if not callable(is_active) or not bool(is_active()):
+        return False
+    dock = getattr(controller, "dock", None)
+    snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+    return (getattr(snapshot, "right_tab", "Inspector") or "Inspector") == "Items"
