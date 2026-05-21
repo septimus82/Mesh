@@ -71,6 +71,7 @@ DOCK_TAB_TOOLTIPS: Dict[str, str] = {
     "Outliner": "Outliner -- Entities in the scene",
     "Inspector": "Inspector -- Edit selected entity",
     "Assets": "Assets -- Search + spawn assets",
+    "Items": "Items -- Edit item definitions",
     "History": "History -- Undo/redo stack",
     "Problems": "Problems -- Scan + fix common issues",
     "Debug": "Debug -- Quests, cutscenes, events",

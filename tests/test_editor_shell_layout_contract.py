@@ -181,6 +181,7 @@ class TestGetDockTabOptions:
         assert "Outliner" in left_tabs
         assert "Inspector" in right_tabs
         assert "Assets" in right_tabs
+        assert "Items" in right_tabs
         assert "History" in right_tabs
         assert "Problems" in right_tabs
         assert "Debug" in right_tabs
