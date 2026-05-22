@@ -8,7 +8,32 @@ import engine.optional_arcade as optional_arcade
 
 from engine.ui_overlays.widgets import Rect, TextInput
 
-_FOCUS_CYCLE = ("id",)
+_FOCUS_CYCLE = ("id", "display_name", "entity.sprite", "entity.encounter_cost")
+
+
+def _get_path(payload: dict[str, Any], field_path: str) -> Any:
+    if not field_path:
+        return None
+    current: Any = payload
+    for part in field_path.split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+    return current
+
+
+def _set_path(payload: dict[str, Any], field_path: str, value: Any) -> None:
+    if not field_path:
+        return
+    parts = field_path.split(".")
+    current: dict[str, Any] = payload
+    for part in parts[:-1]:
+        child = current.get(part)
+        if not isinstance(child, dict):
+            child = {}
+            current[part] = child
+        current = child
+    current[parts[-1]] = value
 
 
 class EditorPrefabEditorController:
@@ -24,6 +49,9 @@ class EditorPrefabEditorController:
         self._original_prefab_id: str | None = None
         self._text_inputs: dict[str, TextInput] = {
             "id": TextInput(text="", placeholder="prefab_id", focused=False, font_size=12, height=18.0),
+            "display_name": TextInput(text="", placeholder="Display name", focused=False, font_size=12, height=18.0),
+            "entity.sprite": TextInput(text="", placeholder="assets/...", focused=False, font_size=12, height=18.0),
+            "entity.encounter_cost": TextInput(text="", placeholder="1", focused=False, font_size=12, height=18.0),
         }
         self._button_rects: dict[str, Rect] = {}
 
@@ -54,6 +82,8 @@ class EditorPrefabEditorController:
 
         self.sync_widgets_to_buffer()
         candidate = copy.deepcopy(self.edit_buffer)
+        if not self._coerce_encounter_cost(candidate):
+            return False
         original_id = str(self._original_prefab_id or candidate.get("id", "") or "")
         next_prefabs = [copy.deepcopy(prefab) for prefab in all_prefabs]
         replaced = False
@@ -86,7 +116,9 @@ class EditorPrefabEditorController:
         if not self.edit_mode_active or self.edit_buffer is None or self._original_prefab is None:
             return False
         self.sync_widgets_to_buffer()
-        return self.edit_buffer != self._original_prefab
+        candidate = copy.deepcopy(self.edit_buffer)
+        self._coerce_encounter_cost_for_compare(candidate)
+        return candidate != self._original_prefab
 
     def focused_field(self) -> str | None:
         return self._focused_field
@@ -188,12 +220,49 @@ class EditorPrefabEditorController:
     def sync_widgets_to_buffer(self) -> None:
         if self.edit_buffer is None:
             return
-        self.edit_buffer["id"] = str(self._text_inputs["id"].text or "").strip()
+        for field_path, widget in self._text_inputs.items():
+            value = str(widget.text or "")
+            if field_path == "id":
+                value = value.strip()
+            _set_path(self.edit_buffer, field_path, value)
 
     def _sync_widgets_from_buffer(self) -> None:
         if self.edit_buffer is None:
             return
-        self._text_inputs["id"].text = str(self.edit_buffer.get("id", "") or "")
+        for field_path, widget in self._text_inputs.items():
+            value = _get_path(self.edit_buffer, field_path)
+            widget.text = "" if value is None else str(value)
+
+    def _coerce_encounter_cost(self, candidate: dict[str, Any]) -> bool:
+        value = _get_path(candidate, "entity.encounter_cost")
+        if isinstance(value, str):
+            stripped = value.strip()
+            entity = candidate.get("entity")
+            if stripped == "":
+                if isinstance(entity, dict):
+                    entity.pop("encounter_cost", None)
+                return True
+            try:
+                _set_path(candidate, "entity.encounter_cost", int(stripped))
+            except ValueError:
+                self._set_save_error("entity.encounter_cost must be an integer")
+                return False
+        return True
+
+    def _coerce_encounter_cost_for_compare(self, candidate: dict[str, Any]) -> None:
+        value = _get_path(candidate, "entity.encounter_cost")
+        if not isinstance(value, str):
+            return
+        stripped = value.strip()
+        entity = candidate.get("entity")
+        if stripped == "":
+            if isinstance(entity, dict):
+                entity.pop("encounter_cost", None)
+            return
+        try:
+            _set_path(candidate, "entity.encounter_cost", int(stripped))
+        except ValueError:
+            return
 
     def _cycle_focus(self, delta: int) -> None:
         if not self.edit_mode_active or self._focused_field not in _FOCUS_CYCLE:

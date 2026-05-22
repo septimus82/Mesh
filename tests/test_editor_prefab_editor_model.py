@@ -72,10 +72,10 @@ def test_prefab_editor_model_selection_mutation() -> None:
 def test_prefab_editor_model_detail_rows_split_scalar_and_complex_fields() -> None:
     model = PrefabEditorModel.load(_manager())
 
-    assert ("ID", "torch_wisp") in model.scalar_detail_rows()
-    assert ("Display name", "Torch Wisp") in model.scalar_detail_rows()
-    assert ("Sprite", "assets/placeholder.png") in model.scalar_detail_rows()
-    assert ("Encounter cost", "2") in model.scalar_detail_rows()
+    assert ("ID", "torch_wisp", "id") in model.scalar_detail_rows()
+    assert ("Display name", "Torch Wisp", "display_name") in model.scalar_detail_rows()
+    assert ("Sprite", "assets/placeholder.png", "entity.sprite") in model.scalar_detail_rows()
+    assert ("Encounter cost", "2", "entity.encounter_cost") in model.scalar_detail_rows()
     assert ("Tags", "enemy, fire") in model.complex_detail_rows()
     assert ("Behaviours", "EnemyAI") in model.complex_detail_rows()
     assert ("Behaviour config", '{"Health":{"max":8}}') in model.complex_detail_rows()

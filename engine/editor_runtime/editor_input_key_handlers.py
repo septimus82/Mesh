@@ -118,6 +118,7 @@ def handle_pre_routed_keys(controller: EditorController, key: int, modifiers: in
 
     prefab_editor = getattr(controller, "prefab_editor", None)
     if prefab_editor is not None and _prefab_editor_should_route(controller, prefab_editor):
+        # Prefab Tab cycling mirrors the Item Editor branch above.
         if key == optional_arcade.arcade.key.TAB:
             if modifiers & optional_arcade.arcade.key.MOD_SHIFT:
                 cycler = getattr(prefab_editor, "cycle_focus_backward", None)

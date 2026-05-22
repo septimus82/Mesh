@@ -38,6 +38,9 @@ class _PrefabEditorStub:
         self._focused_field = "id" if edit_mode else None
         self._text_inputs = {
             "id": TextInput(text="torch_wisp", focused=edit_mode, font_size=12, height=18.0),
+            "display_name": TextInput(text="Torch Wisp", focused=False, font_size=12, height=18.0),
+            "entity.sprite": TextInput(text="assets/placeholder.png", focused=False, font_size=12, height=18.0),
+            "entity.encounter_cost": TextInput(text="2", focused=False, font_size=12, height=18.0),
         }
         self.button_rects: dict[str, object] = {}
 
@@ -180,7 +183,7 @@ def test_prefab_editor_overlay_view_mode_shows_edit_button(monkeypatch: pytest.M
     assert "edit" in prefab_editor.button_rects
 
 
-def test_prefab_editor_overlay_edit_mode_shows_save_cancel_and_id_widget(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_prefab_editor_overlay_edit_mode_shows_save_cancel_and_scalar_widgets(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = _capture_panel_text(monkeypatch)
     prefab_editor = _PrefabEditorStub(edit_mode=True)
     overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
@@ -191,15 +194,25 @@ def test_prefab_editor_overlay_edit_mode_shows_save_cancel_and_id_widget(monkeyp
     assert "Save" in captured
     assert "Cancel" in captured
     assert "Edit" not in captured
-    assert "torch_wisp" in captured
+    assert {"id", "display_name", "entity.sprite", "entity.encounter_cost"} <= set(overlay._widget_rows)
     assert {"save", "cancel"} <= set(prefab_editor.button_rects)
-    assert "Display name" in captured
-    assert "Torch Wisp" in captured
-    assert "Sprite" in captured
-    assert "assets/placeholder.png" in captured
-    assert "Encounter cost" in captured
-    assert "2" in captured
     assert "Complex fields (read-only)" in captured
+
+
+def test_prefab_editor_overlay_syncs_scalar_widget_values_from_nested_buffer(monkeypatch: pytest.MonkeyPatch) -> None:
+    _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer["entity"]["sprite"] = "assets/changed.png"
+    prefab_editor.edit_buffer["entity"]["encounter_cost"] = 9
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    assert prefab_editor.text_input("id").text == "torch_wisp"
+    assert prefab_editor.text_input("display_name").text == "Torch Wisp"
+    assert prefab_editor.text_input("entity.sprite").text == "assets/changed.png"
+    assert prefab_editor.text_input("entity.encounter_cost").text == "9"
 
 
 def test_prefab_editor_overlay_dirty_marker_and_error_row(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -215,18 +228,19 @@ def test_prefab_editor_overlay_dirty_marker_and_error_row(monkeypatch: pytest.Mo
     assert "id is required" in captured
 
 
-def test_prefab_editor_overlay_click_text_widget_returns_id(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_prefab_editor_overlay_click_text_widget_returns_field_path(monkeypatch: pytest.MonkeyPatch) -> None:
     _capture_panel_text(monkeypatch)
     prefab_editor = _PrefabEditorStub(edit_mode=True)
     overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
     overlay._model = _model()
     overlay.draw()
 
-    row = overlay._widget_rows["id"]
-    rect = row.last_rect
-    assert rect is not None
+    for field_path in ("id", "display_name", "entity.sprite", "entity.encounter_cost"):
+        row = overlay._widget_rows[field_path]
+        rect = row.last_rect
+        assert rect is not None
 
-    assert overlay.try_click_widget(rect.left + 100.0, rect.center_y) == "id"
+        assert overlay.try_click_widget(rect.left + 100.0, rect.center_y) == field_path
 
 
 def test_prefab_editor_overlay_documents_read_only_complex_fields() -> None:

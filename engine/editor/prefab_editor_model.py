@@ -90,16 +90,16 @@ class PrefabEditorModel:
             rows.append((label, prefab_id))
         return rows
 
-    def scalar_detail_rows(self) -> list[tuple[str, str]]:
+    def scalar_detail_rows(self) -> list[tuple[str, str, str]]:
         prefab = self.selected_prefab()
         if prefab is None:
             return []
-        rows: list[tuple[str, str]] = []
+        rows: list[tuple[str, str, str]] = []
         for field_path in PREFAB_SCALAR_FIELD_ORDER:
             value = _get_path(prefab, field_path)
             if value is None or value == "":
                 continue
-            rows.append((_label_for_field(field_path), _format_value(value)))
+            rows.append((_label_for_field(field_path), _format_value(value), field_path))
         return rows
 
     def complex_detail_rows(self) -> list[tuple[str, str]]:
