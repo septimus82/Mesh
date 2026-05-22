@@ -287,7 +287,9 @@ class EditorShellOverlay(UIElement):
         draw_panel_bg(dock.left, dock.right, tab_y, dock.top, SHELL_HEADER_COLOR)
 
         # Tab buttons
-        tabs = ("Inspector", "Assets", "Items", "Prefabs", "History", "Problems", "Debug")
+        from engine.editor.dock_tab_registry import RIGHT_DOCK_TABS
+
+        tabs = RIGHT_DOCK_TABS
         tab_width = dock.width / len(tabs)
         active_tab = tab_state.right_tab
 

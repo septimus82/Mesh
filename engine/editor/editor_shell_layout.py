@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Tuple
 
+from engine.editor.dock_tab_registry import LEFT_DOCK_TABS, RIGHT_DOCK_TABS
+
 
 # Layout constants
 TOP_BAR_HEIGHT = 48
@@ -77,7 +79,7 @@ class EditorShellLayout:
 class DockTabState:
     """Tracks which tabs are active in each dock."""
     left_tab: str = "Scene"      # "Project", "Scene", or "Outliner"
-    right_tab: str = "Inspector"  # "Inspector", "Assets", "Items", "Prefabs", "History", "Problems", or "Debug"
+    right_tab: str = "Inspector"  # Allowed values from engine.editor.dock_tab_registry.RIGHT_DOCK_TABS.
 
 
 def clamp_dock_width(width: int, window_width: int, other_dock_width: int) -> int:
@@ -244,9 +246,7 @@ def get_dock_tab_options() -> Tuple[Tuple[str, ...], Tuple[str, ...]]:
     Returns:
         Tuple of (left_tabs, right_tabs) where each is a tuple of tab names.
     """
-    left_tabs = ("Project", "Scene", "Outliner")
-    right_tabs = ("Inspector", "Assets", "Items", "Prefabs", "History", "Problems", "Debug")
-    return left_tabs, right_tabs
+    return LEFT_DOCK_TABS, RIGHT_DOCK_TABS
 
 
 # Tab header constants
