@@ -43,7 +43,7 @@ class WorkspaceSettings:
     last_scene_id: str | None = None
     last_camera_center: list[float] | None = None
     left_dock_tab: str = "Outliner"  # "Project", "Scene", or "Outliner"
-    right_dock_tab: str = "Inspector"  # "Inspector", "Assets", "Items", "History", "Problems", or "Debug"
+    right_dock_tab: str = "Inspector"  # "Inspector", "Assets", "Items", "Prefabs", "History", "Problems", or "Debug"
     dock_left_w: int = 320  # Left dock width
     dock_right_w: int = 320  # Right dock width
     # Dock collapse / maximize state

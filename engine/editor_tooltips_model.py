@@ -72,6 +72,7 @@ DOCK_TAB_TOOLTIPS: Dict[str, str] = {
     "Inspector": "Inspector -- Edit selected entity",
     "Assets": "Assets -- Search + spawn assets",
     "Items": "Items -- Edit item definitions",
+    "Prefabs": "Prefabs -- Edit prefab definitions",
     "History": "History -- Undo/redo stack",
     "Problems": "Problems -- Scan + fix common issues",
     "Debug": "Debug -- Quests, cutscenes, events",

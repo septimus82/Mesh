@@ -18,7 +18,7 @@ _STATE_ENV = "MESH_EDITOR_UI_STATE_PATH"
 _DEFAULT_STATE_DIR = ".mesh"
 _DEFAULT_STATE_FILENAME = "editor_ui_state.json"
 _LEFT_DOCK_TABS = {"Project", "Scene", "Outliner"}
-_RIGHT_DOCK_TABS = {"Inspector", "Assets", "Items", "History", "Problems", "Debug"}
+_RIGHT_DOCK_TABS = {"Inspector", "Assets", "Items", "Prefabs", "History", "Problems", "Debug"}
 
 
 @dataclass(frozen=True, slots=True)
