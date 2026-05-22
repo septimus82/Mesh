@@ -130,6 +130,12 @@ class TestComputeTooltipTextForTarget:
         assert text == DOCK_TAB_TOOLTIPS["Items"]
         assert text == "Items -- Edit item definitions"
 
+    @pytest.mark.integration
+    def test_dock_tab_prefabs(self) -> None:
+        text = compute_tooltip_text_for_target("dock_tab", "Prefabs")
+        assert text == DOCK_TAB_TOOLTIPS["Prefabs"]
+        assert text == "Prefabs -- Edit prefab definitions"
+
     def test_dock_tab_history(self) -> None:
         text = compute_tooltip_text_for_target("dock_tab", "History")
         assert text == DOCK_TAB_TOOLTIPS["History"]

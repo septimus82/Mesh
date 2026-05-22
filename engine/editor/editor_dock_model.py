@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 LEFT_DOCK_TABS: tuple[str, ...] = ("Project", "Scene", "Outliner")
-RIGHT_DOCK_TABS: tuple[str, ...] = ("Inspector", "Assets", "Items", "History", "Problems", "Debug")
+RIGHT_DOCK_TABS: tuple[str, ...] = ("Inspector", "Assets", "Items", "Prefabs", "History", "Problems", "Debug")
 
 
 @dataclass(frozen=True, slots=True)
