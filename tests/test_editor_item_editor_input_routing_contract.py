@@ -31,6 +31,12 @@ class _ItemEditorStub:
         self.calls.append(("key", (key, modifiers)))
         return True
 
+    def cycle_focus_forward(self) -> None:
+        self.calls.append(("cycle", "forward"))
+
+    def cycle_focus_backward(self) -> None:
+        self.calls.append(("cycle", "backward"))
+
     def handle_item_editor_mouse_click(self, x: float, y: float) -> bool:
         self.calls.append(("click", (x, y)))
         return True
@@ -72,6 +78,21 @@ def test_item_editor_key_routes_only_when_items_tab_and_edit_mode() -> None:
     assert editor_input_key_handlers._item_editor_should_route(wrong_tab, wrong_tab.item_editor) is False
     inactive = _controller(edit_mode=False)
     assert editor_input_key_handlers._item_editor_should_route(inactive, inactive.item_editor) is False
+
+
+def test_item_editor_tab_cycles_focus_when_items_tab_and_edit_mode() -> None:
+    controller = _controller()
+
+    handled = editor_input_key_handlers.handle_pre_routed_keys(controller, optional_arcade.arcade.key.TAB, 0)
+    shifted = editor_input_key_handlers.handle_pre_routed_keys(
+        controller,
+        optional_arcade.arcade.key.TAB,
+        optional_arcade.arcade.key.MOD_SHIFT,
+    )
+
+    assert handled is True
+    assert shifted is True
+    assert controller.item_editor.calls == [("cycle", "forward"), ("cycle", "backward")]
 
 
 def test_item_editor_click_routes_only_when_items_tab_and_edit_mode(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from engine.ui_overlays.common import UIElement
-from engine.ui_overlays.widgets import Rect, TextInput
+from engine.ui_overlays.widgets import Rect, TextInput, Toggle
 
 if TYPE_CHECKING:  # pragma: no cover
     from engine.game import GameWindow
@@ -19,6 +19,8 @@ ITEM_EDITOR_BUTTON_COLOR = (100, 200, 255, 255)
 ITEM_EDITOR_ROW_HEIGHT = 18.0
 ITEM_EDITOR_ROW_PADDING_X = 6.0
 ITEM_EDITOR_PANEL_GAP = 8.0
+ITEM_EDITOR_EDITABLE_SCALAR_FIELDS = {"id", "name", "description", "icon", "stackable", "max_stack"}
+ITEM_EDITOR_READ_ONLY_COMPLEX_FIELDS = {"tags", "effects"}
 
 
 class ItemEditorOverlay(UIElement):
@@ -28,6 +30,8 @@ class ItemEditorOverlay(UIElement):
         super().__init__(window)
         self._model: object | None = None
         self._load_error: str | None = None
+        self._stackable_toggle = Toggle(label="stackable", value=False, height=ITEM_EDITOR_ROW_HEIGHT)
+        self._widget_rows: dict[str, object] = {}
 
     def _get_controller(self) -> object | None:
         return getattr(self.window, "editor_controller", None)
@@ -160,10 +164,12 @@ class ItemEditorOverlay(UIElement):
         )
         item = model.selected_item if model is not None else None
         button_rows: dict[str, object] = {}
-        id_row: object | None = None
+        self._widget_rows = {}
         if item is None:
             detail_panel.add_header(PanelHeader(f"Items{dirty_marker}", "No item"))
         else:
+            if edit_mode and item_editor is not None:
+                self._sync_edit_widgets(item_editor)
             detail_panel.add_header(PanelHeader(f"Items{dirty_marker}", item.id))
             if item_editor is not None and item_editor.last_error_message():
                 detail_panel.add_row(
@@ -174,10 +180,11 @@ class ItemEditorOverlay(UIElement):
                     )
                 )
             for label, value in model.selected_detail_rows():
-                if edit_mode and label == "ID":
-                    id_row = detail_panel.add_row(
+                field_name = _field_name_for_label(label)
+                if edit_mode and field_name in ITEM_EDITOR_EDITABLE_SCALAR_FIELDS:
+                    self._widget_rows[field_name] = detail_panel.add_row(
                         PanelRow(
-                            PanelField("ID", "", label_color=ITEM_EDITOR_TEXT_COLOR, value_color=ITEM_EDITOR_DIM_COLOR),
+                            PanelField(label, "", label_color=ITEM_EDITOR_TEXT_COLOR, value_color=ITEM_EDITOR_DIM_COLOR),
                             height=ITEM_EDITOR_ROW_HEIGHT,
                             padding_x=ITEM_EDITOR_ROW_PADDING_X,
                         )
@@ -221,16 +228,8 @@ class ItemEditorOverlay(UIElement):
                 if _is_rect_like(rect):
                     rects[action] = rect
             item_editor.set_button_rects(rects)
-        if edit_mode and item_editor is not None and id_row is not None:
-            row_rect = getattr(id_row, "last_rect", None)
-            if _is_rect_like(row_rect):
-                field_rect = Rect(
-                    x=float(row_rect.left + 42.0),
-                    y=float(row_rect.bottom + 1.0),
-                    width=max(0.0, float(row_rect.width - 48.0)),
-                    height=max(0.0, float(row_rect.height - 2.0)),
-                )
-                self._draw_text_input(item_editor.id_input(), field_rect)
+        if edit_mode and item_editor is not None:
+            self._draw_edit_widgets(item_editor)
 
     def _draw_text_input(self, text_input: TextInput, rect: Rect) -> None:
         from engine.editor.widgets import panel_primitives
@@ -274,6 +273,91 @@ class ItemEditorOverlay(UIElement):
                     anchor_y="center",
                 )
 
+    def _sync_edit_widgets(self, item_editor: object) -> None:
+        edit_buffer = getattr(item_editor, "edit_buffer", None)
+        if not isinstance(edit_buffer, dict):
+            return
+        focused = getattr(item_editor, "focused_field", lambda: None)
+        focused_field = focused() if callable(focused) else None
+        text_inputs = getattr(item_editor, "text_inputs", lambda: {})()
+        if isinstance(text_inputs, dict):
+            for field, widget in text_inputs.items():
+                if isinstance(widget, TextInput):
+                    widget.text = "" if edit_buffer.get(field) is None else str(edit_buffer.get(field, ""))
+                    widget.focused = field == focused_field
+        self._stackable_toggle.value = bool(edit_buffer.get("stackable", False))
+
+    def _draw_edit_widgets(self, item_editor: object) -> None:
+        text_inputs = getattr(item_editor, "text_inputs", lambda: {})()
+        for field, row in self._widget_rows.items():
+            row_rect = getattr(row, "last_rect", None)
+            if not _is_rect_like(row_rect):
+                continue
+            field_rect = Rect(
+                x=float(row_rect.left + 92.0),
+                y=float(row_rect.bottom + 1.0),
+                width=max(0.0, float(row_rect.width - 98.0)),
+                height=max(0.0, float(row_rect.height - 2.0)),
+            )
+            if field == "stackable":
+                self._draw_toggle(self._stackable_toggle, field_rect)
+                continue
+            widget = text_inputs.get(field) if isinstance(text_inputs, dict) else None
+            if isinstance(widget, TextInput):
+                self._draw_text_input(widget, field_rect)
+
+    def _draw_toggle(self, toggle: Toggle, rect: Rect) -> None:
+        from engine.editor.widgets import panel_primitives
+
+        layout = toggle.layout(rect)
+        for instruction in layout.instructions:
+            if instruction.kind != "toggle_text":
+                continue
+            payload = instruction.payload
+            panel_primitives.draw_text_cached(
+                str(payload.get("text", "")),
+                float(payload.get("x", rect.left)),
+                float(payload.get("y", rect.center_y)),
+                color=ITEM_EDITOR_TEXT_COLOR,
+                font_size=12,
+                anchor_x=str(payload.get("anchor_x", "left")),
+                anchor_y=str(payload.get("anchor_y", "center")),
+            )
+
+    def try_click_widget(self, x: float, y: float) -> str | None:
+        for field, row in self._widget_rows.items():
+            row_rect = getattr(row, "last_rect", None)
+            if not _is_rect_like(row_rect):
+                continue
+            field_rect = Rect(
+                x=float(row_rect.left + 92.0),
+                y=float(row_rect.bottom + 1.0),
+                width=max(0.0, float(row_rect.width - 98.0)),
+                height=max(0.0, float(row_rect.height - 2.0)),
+            )
+            if not field_rect.contains(float(x), float(y)):
+                continue
+            if field == "stackable":
+                if self._stackable_toggle.on_mouse_press(float(x), float(y)):
+                    controller = self._get_controller()
+                    item_editor = getattr(controller, "item_editor", None) if controller is not None else None
+                    edit_buffer = getattr(item_editor, "edit_buffer", None) if item_editor is not None else None
+                    if isinstance(edit_buffer, dict):
+                        edit_buffer["stackable"] = bool(self._stackable_toggle.value)
+                    return "stackable"
+                return None
+            controller = self._get_controller()
+            item_editor = getattr(controller, "item_editor", None) if controller is not None else None
+            text_input = getattr(item_editor, "text_input", lambda _field: None)(field) if item_editor is not None else None
+            if isinstance(text_input, TextInput):
+                text_input.on_mouse_press(float(x), float(y))
+                return field
+        return None
+
 
 def _is_rect_like(value: object) -> bool:
     return all(hasattr(value, attr) for attr in ("left", "right", "bottom", "top", "width", "height"))
+
+
+def _field_name_for_label(label: str) -> str:
+    return str(label).strip().lower().replace(" ", "_")

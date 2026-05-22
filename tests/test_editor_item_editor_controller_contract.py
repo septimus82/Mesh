@@ -127,3 +127,54 @@ def test_item_editor_controller_tab_switch_keeps_edit_buffer(tmp_path: Path) -> 
     assert controller.is_edit_mode_active() is True
     assert controller.edit_buffer is not None
     assert controller.edit_buffer["id"] == "healing_potion_draft"
+
+
+def test_item_editor_controller_focus_cycle_forward_wraps(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_item())
+
+    assert controller.focused_field() == "id"
+    for expected in ("name", "description", "icon", "max_stack", "id"):
+        controller.cycle_focus_forward()
+        assert controller.focused_field() == expected
+        assert controller.text_input(expected).focused is True
+
+
+def test_item_editor_controller_focus_cycle_backward_wraps(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_item())
+
+    controller.cycle_focus_backward()
+
+    assert controller.focused_field() == "max_stack"
+    assert controller.text_input("max_stack").focused is True
+
+
+def test_item_editor_controller_focus_cycle_noops_when_not_editing(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+
+    controller.cycle_focus_forward()
+    controller.cycle_focus_backward()
+
+    assert controller.focused_field() is None
+
+
+def test_item_editor_controller_focus_cycle_noops_for_non_cycle_focus(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_item())
+    controller._focused_field = "stackable"
+
+    controller.cycle_focus_forward()
+
+    assert controller.focused_field() == "stackable"
+
+
+def test_item_editor_controller_text_input_updates_current_focused_field(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_item())
+    controller.cycle_focus_forward()
+
+    assert controller.handle_item_editor_text_input(" X") is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["name"] == "Healing Potion X"

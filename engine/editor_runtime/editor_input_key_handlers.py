@@ -103,6 +103,14 @@ def handle_pre_routed_keys(controller: EditorController, key: int, modifiers: in
 
     item_editor = getattr(controller, "item_editor", None)
     if item_editor is not None and _item_editor_should_route(controller, item_editor):
+        if key == optional_arcade.arcade.key.TAB:
+            if modifiers & optional_arcade.arcade.key.MOD_SHIFT:
+                cycler = getattr(item_editor, "cycle_focus_backward", None)
+            else:
+                cycler = getattr(item_editor, "cycle_focus_forward", None)
+            if callable(cycler):
+                cycler()
+            return True
         handler = getattr(item_editor, "handle_item_editor_key", None)
         if callable(handler):
             return bool(handler(key, modifiers))
