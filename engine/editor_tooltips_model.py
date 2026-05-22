@@ -21,6 +21,7 @@ from engine.editor.editor_modal_state_query import (
     is_unsaved_changes_pending,
 )
 from engine.editor.editor_session_query import get_session_snapshot
+from engine.editor.dock_tab_registry import DOCK_TAB_TOOLTIPS
 
 
 # Layout constants
@@ -63,20 +64,6 @@ class TooltipLayout:
     w: float
     h: float
 
-
-# Tooltip text definitions
-DOCK_TAB_TOOLTIPS: Dict[str, str] = {
-    "Project": "Project Explorer -- Files in the project",
-    "Scene": "Scene Browser -- Search + open scenes",
-    "Outliner": "Outliner -- Entities in the scene",
-    "Inspector": "Inspector -- Edit selected entity",
-    "Assets": "Assets -- Search + spawn assets",
-    "Items": "Items -- Edit item definitions",
-    "Prefabs": "Prefabs -- Edit prefab definitions",
-    "History": "History -- Undo/redo stack",
-    "Problems": "Problems -- Scan + fix common issues",
-    "Debug": "Debug -- Quests, cutscenes, events",
-}
 
 TOP_BAR_CONTROL_TOOLTIPS: Dict[str, str] = {
     "L": "Toggle left dock (Ctrl+L)",
