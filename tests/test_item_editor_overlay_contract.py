@@ -19,7 +19,24 @@ class _ItemEditorStub:
         self._edit_mode = edit_mode
         self._dirty = dirty
         self._error = error
-        self._id_input = TextInput(text="healing_potion", focused=edit_mode, font_size=12, height=18.0)
+        self.edit_buffer = {
+            "id": "healing_potion",
+            "name": "Healing Potion",
+            "description": "Restores HP.",
+            "icon": "assets/items/healing_potion.png",
+            "stackable": True,
+            "max_stack": 5,
+            "tags": ["consumable", "potion"],
+            "effects": {"heal": 25},
+        }
+        self._focused_field = "id" if edit_mode else None
+        self._text_inputs = {
+            "id": TextInput(text="healing_potion", focused=edit_mode, font_size=12, height=18.0),
+            "name": TextInput(text="Healing Potion", focused=False, font_size=12, height=18.0),
+            "description": TextInput(text="Restores HP.", focused=False, font_size=12, height=18.0),
+            "icon": TextInput(text="assets/items/healing_potion.png", focused=False, font_size=12, height=18.0),
+            "max_stack": TextInput(text="5", focused=False, font_size=12, height=18.0),
+        }
         self.button_rects: dict[str, object] = {}
 
     def is_edit_mode_active(self) -> bool:
@@ -32,7 +49,16 @@ class _ItemEditorStub:
         return self._error
 
     def id_input(self) -> TextInput:
-        return self._id_input
+        return self._text_inputs["id"]
+
+    def text_input(self, field: str) -> TextInput:
+        return self._text_inputs[field]
+
+    def text_inputs(self) -> dict[str, TextInput]:
+        return dict(self._text_inputs)
+
+    def focused_field(self) -> str | None:
+        return self._focused_field
 
     def set_button_rects(self, rects: dict[str, object]) -> None:
         self.button_rects = dict(rects)
@@ -137,7 +163,7 @@ def test_item_editor_overlay_view_mode_shows_edit_button(monkeypatch: pytest.Mon
     assert "edit" in item_editor.button_rects
 
 
-def test_item_editor_overlay_edit_mode_shows_save_cancel_and_id_input(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_item_editor_overlay_edit_mode_shows_save_cancel_and_scalar_widgets(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = _capture_panel_text(monkeypatch)
     item_editor = _ItemEditorStub(edit_mode=True)
     overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
@@ -149,7 +175,16 @@ def test_item_editor_overlay_edit_mode_shows_save_cancel_and_id_input(monkeypatc
     assert "Cancel" in captured
     assert "Edit" not in captured
     assert "healing_potion" in captured
+    assert "Healing Potion" in captured
+    assert "Restores HP." in captured
+    assert "assets/items/healing_potion.png" in captured
+    assert "5" in captured
+    assert "[x] stackable" in captured
     assert {"save", "cancel"} <= set(item_editor.button_rects)
+    assert "Tags" in captured
+    assert "consumable, potion" in captured
+    assert "Effects" in captured
+    assert "heal=25" in captured
 
 
 def test_item_editor_overlay_dirty_marker_and_error_row(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -163,6 +198,35 @@ def test_item_editor_overlay_dirty_marker_and_error_row(monkeypatch: pytest.Monk
     assert "Items *" in captured
     assert "Error" in captured
     assert "id is required" in captured
+
+
+def test_item_editor_overlay_click_text_widget_returns_field(monkeypatch: pytest.MonkeyPatch) -> None:
+    _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=True)
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+    overlay.draw()
+
+    row = overlay._widget_rows["name"]
+    rect = row.last_rect
+    assert rect is not None
+
+    assert overlay.try_click_widget(rect.left + 100.0, rect.center_y) == "name"
+
+
+def test_item_editor_overlay_click_stackable_toggle_updates_buffer(monkeypatch: pytest.MonkeyPatch) -> None:
+    _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=True)
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+    overlay.draw()
+
+    row = overlay._widget_rows["stackable"]
+    rect = row.last_rect
+    assert rect is not None
+
+    assert overlay.try_click_widget(rect.left + 100.0, rect.center_y) == "stackable"
+    assert item_editor.edit_buffer["stackable"] is False
 
 
 def test_item_editor_overlay_renders_empty_database(monkeypatch: pytest.MonkeyPatch) -> None:
