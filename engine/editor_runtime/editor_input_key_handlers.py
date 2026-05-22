@@ -116,6 +116,21 @@ def handle_pre_routed_keys(controller: EditorController, key: int, modifiers: in
             return bool(handler(key, modifiers))
         return True
 
+    prefab_editor = getattr(controller, "prefab_editor", None)
+    if prefab_editor is not None and _prefab_editor_should_route(controller, prefab_editor):
+        if key == optional_arcade.arcade.key.TAB:
+            if modifiers & optional_arcade.arcade.key.MOD_SHIFT:
+                cycler = getattr(prefab_editor, "cycle_focus_backward", None)
+            else:
+                cycler = getattr(prefab_editor, "cycle_focus_forward", None)
+            if callable(cycler):
+                cycler()
+            return True
+        handler = getattr(prefab_editor, "handle_prefab_editor_key", None)
+        if callable(handler):
+            return bool(handler(key, modifiers))
+        return True
+
     # Menu bar handles Escape to close
     if handle_menu_bar_key(controller, key, modifiers):
         return True
@@ -146,3 +161,12 @@ def _item_editor_should_route(controller: EditorController, item_editor: object)
     dock = getattr(controller, "dock", None)
     snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
     return (getattr(snapshot, "right_tab", "Inspector") or "Inspector") == "Items"
+
+
+def _prefab_editor_should_route(controller: EditorController, prefab_editor: object) -> bool:
+    is_active = getattr(prefab_editor, "is_edit_mode_active", None)
+    if not callable(is_active) or not bool(is_active()):
+        return False
+    dock = getattr(controller, "dock", None)
+    snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+    return (getattr(snapshot, "right_tab", "Inspector") or "Inspector") == "Prefabs"

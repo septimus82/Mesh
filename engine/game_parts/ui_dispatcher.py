@@ -172,6 +172,10 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
         editor_controller.item_editor = EditorItemEditorController(editor_controller)
     window.item_editor_overlay = ItemEditorOverlay(window)
     window.register_ui_element(window.item_editor_overlay)
+    from engine.editor.editor_prefab_editor_controller import EditorPrefabEditorController  # noqa: PLC0415
+
+    if editor_controller is not None and not hasattr(editor_controller, "prefab_editor"):
+        editor_controller.prefab_editor = EditorPrefabEditorController(editor_controller)
     window.prefab_editor_overlay = PrefabEditorOverlay(window)
     window.register_ui_element(window.prefab_editor_overlay)
     window.undo_history_overlay = UndoHistoryOverlay(window)
