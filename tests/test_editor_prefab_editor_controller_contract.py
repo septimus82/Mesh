@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 import engine.optional_arcade as optional_arcade
-from engine.editor.editor_prefab_editor_controller import EditorPrefabEditorController
+from engine.editor.editor_prefab_editor_controller import EditorPrefabEditorController, _get_path, _set_path
 
 pytestmark = [pytest.mark.fast]
 
@@ -66,7 +66,31 @@ def test_prefab_editor_controller_deep_copies_edit_buffer(tmp_path: Path) -> Non
     controller.edit_buffer["entity"]["sprite"] = "assets/changed.png"
 
     assert source["entity"]["sprite"] == "assets/placeholder.png"
-    assert controller.is_dirty() is True
+
+
+def test_prefab_editor_path_helpers_handle_nested_and_missing_paths() -> None:
+    payload: dict[str, object] = {"id": "torch_wisp", "entity": {"sprite": "old.png"}}
+
+    assert _get_path(payload, "id") == "torch_wisp"
+    assert _get_path(payload, "entity.sprite") == "old.png"
+    assert _get_path(payload, "entity.missing") is None
+    assert _get_path({"entity": "not a dict"}, "entity.sprite") is None
+    assert _get_path(payload, "") is None
+
+
+def test_prefab_editor_path_helpers_create_and_replace_intermediate_dicts() -> None:
+    payload: dict[str, object] = {}
+
+    _set_path(payload, "id", "torch_wisp")
+    _set_path(payload, "entity.sprite", "assets/placeholder.png")
+    assert payload == {"id": "torch_wisp", "entity": {"sprite": "assets/placeholder.png"}}
+
+    payload["entity"] = "not a dict"
+    _set_path(payload, "entity.encounter_cost", "2")
+    assert payload["entity"] == {"encounter_cost": "2"}
+
+    _set_path(payload, "", "ignored")
+    assert "" not in payload
 
 
 def test_prefab_editor_controller_enter_unfocuses_without_saving(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -152,15 +176,99 @@ def test_prefab_editor_controller_tab_switch_keeps_edit_buffer(tmp_path: Path) -
     assert controller.edit_buffer["id"] == "torch_wisp_draft"
 
 
-def test_prefab_editor_controller_focus_cycle_single_field_noops(tmp_path: Path) -> None:
+def test_prefab_editor_controller_focus_cycle_forward_backward_wraps(tmp_path: Path) -> None:
     controller = EditorPrefabEditorController(_editor(tmp_path))
     controller.enter_edit_mode(_prefab())
 
-    controller.cycle_focus_forward()
     assert controller.focused_field() == "id"
+    for expected in ("display_name", "entity.sprite", "entity.encounter_cost", "id"):
+        controller.cycle_focus_forward()
+        assert controller.focused_field() == expected
+        assert controller.text_input(expected).focused is True
+
     controller.cycle_focus_backward()
-    assert controller.focused_field() == "id"
-    assert controller.text_input("id").focused is True
+    assert controller.focused_field() == "entity.encounter_cost"
+    assert controller.text_input("entity.encounter_cost").focused is True
+
+
+def test_prefab_editor_controller_focus_cycle_noops_when_not_editing(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+
+    controller.cycle_focus_forward()
+    controller.cycle_focus_backward()
+
+    assert controller.focused_field() is None
+
+
+def test_prefab_editor_controller_text_input_updates_nested_focused_field(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+    controller.cycle_focus_forward()
+    controller.cycle_focus_forward()
+
+    assert controller.focused_field() == "entity.sprite"
+    assert controller.handle_prefab_editor_text_input("_x") is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["entity"]["sprite"] == "assets/placeholder.png_x"
+
+
+def test_prefab_editor_controller_commit_save_coerces_encounter_cost_int(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[list[dict[str, object]]] = []
+    from engine.editor import prefab_editor_model
+
+    monkeypatch.setattr(prefab_editor_model, "validate_prefab_entries", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(prefab_editor_model, "save_prefabs", lambda prefabs, _target: saved.append(prefabs))
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab("old_id"))
+    controller.text_input("entity.encounter_cost").text = "7"
+
+    assert controller.commit_save([_prefab("old_id")], tmp_path / "assets" / "prefabs.json") is True
+
+    assert saved[0][0]["entity"]["encounter_cost"] == 7
+
+
+def test_prefab_editor_controller_commit_save_removes_empty_encounter_cost(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[list[dict[str, object]]] = []
+    from engine.editor import prefab_editor_model
+
+    monkeypatch.setattr(prefab_editor_model, "validate_prefab_entries", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(prefab_editor_model, "save_prefabs", lambda prefabs, _target: saved.append(prefabs))
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab("old_id"))
+    controller.text_input("entity.encounter_cost").text = " "
+
+    assert controller.commit_save([_prefab("old_id")], tmp_path / "assets" / "prefabs.json") is True
+
+    assert "encounter_cost" not in saved[0][0]["entity"]
+
+
+def test_prefab_editor_controller_commit_save_rejects_invalid_encounter_cost(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[object] = []
+    from engine.editor import prefab_editor_model
+
+    monkeypatch.setattr(prefab_editor_model, "validate_prefab_entries", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(prefab_editor_model, "save_prefabs", lambda *args, **kwargs: saved.append((args, kwargs)))
+    editor = _editor(tmp_path)
+    controller = EditorPrefabEditorController(editor)
+    controller.enter_edit_mode(_prefab("old_id"))
+    controller.text_input("entity.encounter_cost").text = "abc"
+
+    ok = controller.commit_save([_prefab("old_id")], tmp_path / "assets" / "prefabs.json")
+
+    assert ok is False
+    assert controller.last_error_message() == "entity.encounter_cost must be an integer"
+    assert editor.feedback_calls[-1] == ("error", "entity.encounter_cost must be an integer")
+    assert saved == []
 
 
 def test_prefab_editor_controller_uses_model_default_path_for_button_save(

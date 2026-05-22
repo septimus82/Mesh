@@ -19,7 +19,7 @@ PREFAB_EDITOR_BUTTON_COLOR = (100, 200, 255, 255)
 PREFAB_EDITOR_ROW_HEIGHT = 18.0
 PREFAB_EDITOR_ROW_PADDING_X = 6.0
 PREFAB_EDITOR_PANEL_GAP = 8.0
-PREFAB_EDITOR_EDITABLE_SCALAR_FIELDS = {"id"}
+PREFAB_EDITOR_EDITABLE_SCALAR_FIELDS = {"id", "display_name", "entity.sprite", "entity.encounter_cost"}
 PREFAB_EDITOR_READ_ONLY_COMPLEX_FIELDS = {
     "tags",
     "require_flags",
@@ -182,10 +182,9 @@ class PrefabEditorOverlay(UIElement):
                         padding_x=PREFAB_EDITOR_ROW_PADDING_X,
                     )
                 )
-            for label, value in model.scalar_detail_rows():
-                field_name = _field_name_for_label(label)
-                if edit_mode and field_name in PREFAB_EDITOR_EDITABLE_SCALAR_FIELDS:
-                    self._widget_rows[field_name] = detail_panel.add_row(
+            for label, value, field_path in model.scalar_detail_rows():
+                if edit_mode and field_path in PREFAB_EDITOR_EDITABLE_SCALAR_FIELDS:
+                    self._widget_rows[field_path] = detail_panel.add_row(
                         PanelRow(
                             PanelField(label, "", label_color=PREFAB_EDITOR_TEXT_COLOR, value_color=PREFAB_EDITOR_DIM_COLOR),
                             height=PREFAB_EDITOR_ROW_HEIGHT,
@@ -288,6 +287,8 @@ class PrefabEditorOverlay(UIElement):
                 )
 
     def _sync_edit_widgets(self, prefab_editor: object) -> None:
+        from engine.editor.editor_prefab_editor_controller import _get_path
+
         edit_buffer = getattr(prefab_editor, "edit_buffer", None)
         if not isinstance(edit_buffer, dict):
             return
@@ -297,7 +298,8 @@ class PrefabEditorOverlay(UIElement):
         if isinstance(text_inputs, dict):
             for field, widget in text_inputs.items():
                 if isinstance(widget, TextInput):
-                    widget.text = "" if edit_buffer.get(field) is None else str(edit_buffer.get(field, ""))
+                    value = _get_path(edit_buffer, str(field))
+                    widget.text = "" if value is None else str(value)
                     widget.focused = field == focused_field
 
     def _draw_edit_widgets(self, prefab_editor: object) -> None:
@@ -341,6 +343,3 @@ class PrefabEditorOverlay(UIElement):
 def _is_rect_like(value: object) -> bool:
     return all(hasattr(value, attr) for attr in ("left", "right", "bottom", "top", "width", "height"))
 
-
-def _field_name_for_label(label: str) -> str:
-    return str(label).strip().lower().replace(" ", "_")
