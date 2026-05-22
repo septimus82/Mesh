@@ -47,6 +47,12 @@ def handle_text_input(controller: EditorController, text: str) -> None:
         if callable(handler) and handler(text):
             return
 
+    prefab_editor = getattr(controller, "prefab_editor", None)
+    if prefab_editor is not None and _prefab_editor_should_route(controller, prefab_editor):
+        handler = getattr(prefab_editor, "handle_prefab_editor_text_input", None)
+        if callable(handler) and handler(text):
+            return
+
     if is_scene_browser_active(controller):
         handler = getattr(controller, "_handle_scene_browser_text_input", None)
         if callable(handler) and handler(text):
@@ -116,3 +122,11 @@ def _item_editor_should_route(controller: EditorController, item_editor: object)
     dock = getattr(controller, "dock", None)
     snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
     return (getattr(snapshot, "right_tab", "Inspector") or "Inspector") == "Items"
+
+
+def _prefab_editor_should_route(controller: EditorController, prefab_editor: object) -> bool:
+    if not bool(getattr(prefab_editor, "is_edit_mode_active", lambda: False)()):
+        return False
+    dock = getattr(controller, "dock", None)
+    snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+    return (getattr(snapshot, "right_tab", "Inspector") or "Inspector") == "Prefabs"

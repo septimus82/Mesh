@@ -93,6 +93,13 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
             return bool(handler(x, y))
         return True
 
+    prefab_editor = getattr(controller, "prefab_editor", None)
+    if prefab_editor is not None and _prefab_editor_should_route(controller, prefab_editor):
+        handler = getattr(prefab_editor, "handle_prefab_editor_mouse_click", None)
+        if callable(handler):
+            return bool(handler(x, y))
+        return True
+
     if is_scene_browser_active(controller):
         handler = getattr(controller, "_scene_browser_handle_mouse_click", None)
         if callable(handler):
@@ -311,6 +318,15 @@ def _item_editor_should_route(controller: EditorController, item_editor: object)
     dock = getattr(controller, "dock", None)
     snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
     return (getattr(snapshot, "right_tab", "Inspector") or "Inspector") == "Items"
+
+
+def _prefab_editor_should_route(controller: EditorController, prefab_editor: object) -> bool:
+    is_active = getattr(prefab_editor, "is_edit_mode_active", None)
+    if not callable(is_active) or not bool(is_active()):
+        return False
+    dock = getattr(controller, "dock", None)
+    snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+    return (getattr(snapshot, "right_tab", "Inspector") or "Inspector") == "Prefabs"
 
 
 # ------------------------------------------------------------------------------

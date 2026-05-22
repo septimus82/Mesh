@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 
+DEFAULT_PREFAB_FILE_PATH = Path("assets") / "prefabs.json"
+
 PREFAB_SCALAR_FIELD_ORDER = (
     "id",
     "display_name",
