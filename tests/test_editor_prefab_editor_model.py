@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from engine.editor.prefab_editor_model import PrefabEditorModel
+from engine.editor.prefab_editor_model import PrefabEditorModel, validate_prefab_entries
 
 pytestmark = [pytest.mark.fast]
 
@@ -90,3 +90,24 @@ def test_prefab_editor_model_empty_manager_has_no_selection() -> None:
     assert model.selected_prefab() is None
     assert model.scalar_detail_rows() == []
     assert model.complex_detail_rows() == []
+
+
+def test_validate_prefab_entries_reports_duplicate_ids(tmp_path) -> None:
+    errors = validate_prefab_entries(
+        [
+            {"id": "same_id", "entity": {}},
+            {"id": "same_id", "entity": {}},
+        ],
+        tmp_path / "assets" / "prefabs.json",
+    )
+
+    assert any("duplicate prefab id 'same_id'" in error for error in errors)
+
+
+def test_validate_prefab_entries_reports_single_prefab_schema_errors(tmp_path) -> None:
+    errors = validate_prefab_entries(
+        [{"id": "", "entity": {}}],
+        tmp_path / "assets" / "prefabs.json",
+    )
+
+    assert any("'id' must be a non-empty string" in error for error in errors)

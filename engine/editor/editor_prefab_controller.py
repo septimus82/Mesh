@@ -22,6 +22,20 @@ from engine.swallowed_exceptions import _log_swallow
 logger = get_logger(__name__)
 
 
+def invalidate_prefab_editor_caches() -> None:
+    from engine.prefabs import get_prefab_manager  # noqa: PLC0415
+    from engine.command_palette import _list_prefab_ids_from_assets  # noqa: PLC0415
+    from engine import editor_controller  # noqa: PLC0415
+
+    get_prefab_manager().load(force=True)
+    _list_prefab_ids_from_assets.cache_clear()
+    editor_controller.PREFAB_PALETTE = None
+
+
+def write_prefabs(path: "Path", entries: list[dict[str, Any]]) -> None:
+    EditorPrefabController(None).write_prefab_entries(path, entries)
+
+
 class EditorPrefabController:
     """Encapsulates prefab overrides + prefab shape management."""
 
@@ -517,6 +531,7 @@ class EditorPrefabController:
 
         ordered = sorted(entries, key=lambda e: str(e.get("id") or ""))
         write_json_atomic(path, ordered, indent=2, sort_keys=False, trailing_newline=True)
+        invalidate_prefab_editor_caches()
 
     def update_prefab_entry(
         self,

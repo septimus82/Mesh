@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from json import dumps as _format_structured_value
+from pathlib import Path
 from typing import Any
 
 
@@ -115,6 +116,25 @@ class PrefabEditorModel:
         if not self._prefabs:
             return 0
         return max(0, min(int(index), len(self._prefabs) - 1))
+
+
+def validate_prefab_entries(entries: list[dict[str, Any]], target_path: str | Path) -> list[str]:
+    """Return validation error messages for editable prefab payloads."""
+    from engine.validators.schema_validation import validate_prefab_file
+
+    errors = validate_prefab_file(Path(target_path), entries)
+    return [error.message for error in errors]
+
+
+def save_prefabs(entries: list[dict[str, Any]], target_path: str | Path) -> None:
+    """Persist prefab dictionaries through the editor prefab write path."""
+    errors = validate_prefab_entries(entries, target_path)
+    if errors:
+        raise ValueError("; ".join(errors))
+
+    from engine.editor.editor_prefab_controller import write_prefabs
+
+    write_prefabs(Path(target_path), entries)
 
 
 def _get_path(payload: dict[str, Any], field_path: str) -> Any:
