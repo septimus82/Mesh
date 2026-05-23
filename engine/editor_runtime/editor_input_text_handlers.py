@@ -41,17 +41,10 @@ def handle_text_input(controller: EditorController, text: str) -> None:
         if callable(handler) and handler(text):
             return
 
-    item_editor = getattr(controller, "item_editor", None)
-    if item_editor is not None and _item_editor_should_route(controller, item_editor):
-        handler = getattr(item_editor, "handle_item_editor_text_input", None)
-        if callable(handler) and handler(text):
-            return
+    from engine.editor_runtime.editor_database_form_input import dispatch_database_form_text  # noqa: PLC0415
 
-    prefab_editor = getattr(controller, "prefab_editor", None)
-    if prefab_editor is not None and _prefab_editor_should_route(controller, prefab_editor):
-        handler = getattr(prefab_editor, "handle_prefab_editor_text_input", None)
-        if callable(handler) and handler(text):
-            return
+    if dispatch_database_form_text(controller, text):
+        return
 
     if is_scene_browser_active(controller):
         handler = getattr(controller, "_handle_scene_browser_text_input", None)
@@ -117,16 +110,12 @@ def handle_text_input(controller: EditorController, text: str) -> None:
 
 
 def _item_editor_should_route(controller: EditorController, item_editor: object) -> bool:
-    if not bool(getattr(item_editor, "is_edit_mode_active", lambda: False)()):
-        return False
-    dock = getattr(controller, "dock", None)
-    snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
-    return (getattr(snapshot, "right_tab", "Inspector") or "Inspector") == "Items"
+    from engine.editor_runtime.editor_database_form_input import _form_should_route  # noqa: PLC0415
+
+    return _form_should_route(controller, item_editor, "Items")
 
 
 def _prefab_editor_should_route(controller: EditorController, prefab_editor: object) -> bool:
-    if not bool(getattr(prefab_editor, "is_edit_mode_active", lambda: False)()):
-        return False
-    dock = getattr(controller, "dock", None)
-    snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
-    return (getattr(snapshot, "right_tab", "Inspector") or "Inspector") == "Prefabs"
+    from engine.editor_runtime.editor_database_form_input import _form_should_route  # noqa: PLC0415
+
+    return _form_should_route(controller, prefab_editor, "Prefabs")
