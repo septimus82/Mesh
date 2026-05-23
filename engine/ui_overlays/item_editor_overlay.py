@@ -5,6 +5,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from engine.ui_overlays.common import UIElement
+from engine.ui_overlays.editor_database_form_helpers import (
+    FormColors,
+    add_form_buttons,
+    collect_button_rects,
+    compute_database_form_layout,
+    draw_text_input,
+    draw_text_input_rows,
+    sync_text_inputs,
+    try_click_text_widget,
+)
 from engine.ui_overlays.widgets import Rect, TextInput, Toggle
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -21,6 +31,11 @@ ITEM_EDITOR_ROW_PADDING_X = 6.0
 ITEM_EDITOR_PANEL_GAP = 8.0
 ITEM_EDITOR_EDITABLE_SCALAR_FIELDS = {"id", "name", "description", "icon", "stackable", "max_stack"}
 ITEM_EDITOR_READ_ONLY_COMPLEX_FIELDS = {"tags", "effects"}
+_ITEM_FORM_COLORS = FormColors(
+    text=ITEM_EDITOR_TEXT_COLOR,
+    dim=ITEM_EDITOR_DIM_COLOR,
+    button=ITEM_EDITOR_BUTTON_COLOR,
+)
 
 
 class ItemEditorOverlay(UIElement):
@@ -82,34 +97,9 @@ class ItemEditorOverlay(UIElement):
         if not self._is_visible_for_controller(controller):
             return
 
-        from engine.editor.editor_dock_query import get_effective_dock_widths
-        from engine.editor.editor_shell_layout import compute_editor_shell_layout
         from engine.editor.widgets.panel_primitives import EditorPanelBase, PanelField, PanelHeader, PanelRow
 
-        window_w = int(getattr(self.window, "width", 1280) or 1280)
-        window_h = int(getattr(self.window, "height", 720) or 720)
-        left_w, right_w = get_effective_dock_widths(controller, window_w)
-        layout = compute_editor_shell_layout(window_w, window_h, left_w, right_w)
-
-        dock = layout.right_dock
-        content_top = dock.top - 38.0
-        content_bottom = dock.bottom + 10.0
-        content_left = dock.left + 8.0
-        content_right = dock.right - 8.0
-        content_width = max(0.0, content_right - content_left)
-        split_x = content_left + max(112.0, content_width * 0.44)
-        list_rect = Rect(
-            x=float(content_left),
-            y=float(content_bottom),
-            width=max(0.0, float(split_x - content_left - (ITEM_EDITOR_PANEL_GAP * 0.5))),
-            height=max(0.0, float(content_top - content_bottom)),
-        )
-        detail_rect = Rect(
-            x=float(split_x + (ITEM_EDITOR_PANEL_GAP * 0.5)),
-            y=float(content_bottom),
-            width=max(0.0, float(content_right - split_x - (ITEM_EDITOR_PANEL_GAP * 0.5))),
-            height=max(0.0, float(content_top - content_bottom)),
-        )
+        list_rect, detail_rect = compute_database_form_layout(self.window, controller, ITEM_EDITOR_PANEL_GAP)
 
         model = self._get_model()
         item_editor = getattr(controller, "item_editor", None)
@@ -197,81 +187,21 @@ class ItemEditorOverlay(UIElement):
                         padding_x=ITEM_EDITOR_ROW_PADDING_X,
                     )
                 )
-            if edit_mode:
-                button_rows["save"] = detail_panel.add_row(
-                    PanelRow(
-                        PanelField("Save", None, label_color=ITEM_EDITOR_BUTTON_COLOR),
-                        height=ITEM_EDITOR_ROW_HEIGHT,
-                        padding_x=ITEM_EDITOR_ROW_PADDING_X,
-                    )
-                )
-                button_rows["cancel"] = detail_panel.add_row(
-                    PanelRow(
-                        PanelField("Cancel", None, label_color=ITEM_EDITOR_BUTTON_COLOR),
-                        height=ITEM_EDITOR_ROW_HEIGHT,
-                        padding_x=ITEM_EDITOR_ROW_PADDING_X,
-                    )
-                )
-            else:
-                button_rows["edit"] = detail_panel.add_row(
-                    PanelRow(
-                        PanelField("Edit", None, label_color=ITEM_EDITOR_BUTTON_COLOR),
-                        height=ITEM_EDITOR_ROW_HEIGHT,
-                        padding_x=ITEM_EDITOR_ROW_PADDING_X,
-                    )
-                )
+            button_rows = add_form_buttons(
+                detail_panel,
+                edit_mode=edit_mode,
+                button_color=ITEM_EDITOR_BUTTON_COLOR,
+                row_height=ITEM_EDITOR_ROW_HEIGHT,
+                padding_x=ITEM_EDITOR_ROW_PADDING_X,
+            )
         detail_panel.draw()
         if item_editor is not None:
-            rects: dict[str, Rect] = {}
-            for action, row in button_rows.items():
-                rect = getattr(row, "last_rect", None)
-                if _is_rect_like(rect):
-                    rects[action] = rect
-            item_editor.set_button_rects(rects)
+            item_editor.set_button_rects(collect_button_rects(button_rows))
         if edit_mode and item_editor is not None:
             self._draw_edit_widgets(item_editor)
 
     def _draw_text_input(self, text_input: TextInput, rect: Rect) -> None:
-        from engine.editor.widgets import panel_primitives
-
-        layout = text_input.layout(rect)
-        for instruction in layout.instructions:
-            payload = instruction.payload
-            instr_rect = payload.get("rect")
-            if instruction.kind == "text_input_bg" and _is_rect_like(instr_rect):
-                bg = (30, 30, 36, 220) if payload.get("focused") else (22, 22, 28, 190)
-                border = (100, 200, 255, 180) if payload.get("focused") else (90, 90, 100, 140)
-                panel_primitives.draw_panel_bg(instr_rect.left, instr_rect.right, instr_rect.bottom, instr_rect.top, color=bg)
-                panel_primitives._draw_lrtb_rectangle_outline(
-                    instr_rect.left,
-                    instr_rect.right,
-                    instr_rect.top,
-                    instr_rect.bottom,
-                    border,
-                    1,
-                )
-            elif instruction.kind == "text_input_text":
-                color = ITEM_EDITOR_DIM_COLOR if payload.get("is_placeholder") else ITEM_EDITOR_TEXT_COLOR
-                panel_primitives.draw_text_cached(
-                    str(payload.get("text", "")),
-                    float(payload.get("x", 0.0)),
-                    float(payload.get("y", 0.0)),
-                    color=color,
-                    font_size=int(payload.get("font_size", 12)),
-                    anchor_x="left",
-                    anchor_y="center",
-                )
-            elif instruction.kind == "text_input_caret":
-                text = str(payload.get("text", ""))
-                panel_primitives.draw_text_cached(
-                    "|",
-                    float(payload.get("x", 0.0)) + (len(text) * 7.0),
-                    float(payload.get("y", 0.0)),
-                    color=ITEM_EDITOR_TEXT_COLOR,
-                    font_size=int(payload.get("font_size", 12)),
-                    anchor_x="left",
-                    anchor_y="center",
-                )
+        draw_text_input(text_input, rect, _ITEM_FORM_COLORS)
 
     def _sync_edit_widgets(self, item_editor: object) -> None:
         edit_buffer = getattr(item_editor, "edit_buffer", None)
@@ -281,30 +211,32 @@ class ItemEditorOverlay(UIElement):
         focused_field = focused() if callable(focused) else None
         text_inputs = getattr(item_editor, "text_inputs", lambda: {})()
         if isinstance(text_inputs, dict):
-            for field, widget in text_inputs.items():
-                if isinstance(widget, TextInput):
-                    widget.text = "" if edit_buffer.get(field) is None else str(edit_buffer.get(field, ""))
-                    widget.focused = field == focused_field
+            sync_text_inputs(
+                text_inputs,
+                focused_field,
+                lambda field: edit_buffer.get(field),
+            )
         self._stackable_toggle.value = bool(edit_buffer.get("stackable", False))
 
     def _draw_edit_widgets(self, item_editor: object) -> None:
         text_inputs = getattr(item_editor, "text_inputs", lambda: {})()
-        for field, row in self._widget_rows.items():
-            row_rect = getattr(row, "last_rect", None)
-            if not _is_rect_like(row_rect):
-                continue
+        if isinstance(text_inputs, dict):
+            draw_text_input_rows(
+                self._widget_rows,
+                text_inputs,
+                self._draw_text_input,
+                skip_fields=("stackable",),
+            )
+        row = self._widget_rows.get("stackable")
+        row_rect = getattr(row, "last_rect", None)
+        if _is_rect_like(row_rect):
             field_rect = Rect(
                 x=float(row_rect.left + 92.0),
                 y=float(row_rect.bottom + 1.0),
                 width=max(0.0, float(row_rect.width - 98.0)),
                 height=max(0.0, float(row_rect.height - 2.0)),
             )
-            if field == "stackable":
-                self._draw_toggle(self._stackable_toggle, field_rect)
-                continue
-            widget = text_inputs.get(field) if isinstance(text_inputs, dict) else None
-            if isinstance(widget, TextInput):
-                self._draw_text_input(widget, field_rect)
+            self._draw_toggle(self._stackable_toggle, field_rect)
 
     def _draw_toggle(self, toggle: Toggle, rect: Rect) -> None:
         from engine.editor.widgets import panel_primitives
@@ -325,7 +257,21 @@ class ItemEditorOverlay(UIElement):
             )
 
     def try_click_widget(self, x: float, y: float) -> str | None:
+        controller = self._get_controller()
+        item_editor = getattr(controller, "item_editor", None) if controller is not None else None
+        if item_editor is not None:
+            clicked_field = try_click_text_widget(
+                self._widget_rows,
+                item_editor,
+                x,
+                y,
+                skip_fields=("stackable",),
+            )
+            if clicked_field is not None:
+                return clicked_field
         for field, row in self._widget_rows.items():
+            if field != "stackable":
+                continue
             row_rect = getattr(row, "last_rect", None)
             if not _is_rect_like(row_rect):
                 continue
@@ -337,21 +283,12 @@ class ItemEditorOverlay(UIElement):
             )
             if not field_rect.contains(float(x), float(y)):
                 continue
-            if field == "stackable":
-                if self._stackable_toggle.on_mouse_press(float(x), float(y)):
-                    controller = self._get_controller()
-                    item_editor = getattr(controller, "item_editor", None) if controller is not None else None
-                    edit_buffer = getattr(item_editor, "edit_buffer", None) if item_editor is not None else None
-                    if isinstance(edit_buffer, dict):
-                        edit_buffer["stackable"] = bool(self._stackable_toggle.value)
-                    return "stackable"
-                return None
-            controller = self._get_controller()
-            item_editor = getattr(controller, "item_editor", None) if controller is not None else None
-            text_input = getattr(item_editor, "text_input", lambda _field: None)(field) if item_editor is not None else None
-            if isinstance(text_input, TextInput):
-                text_input.on_mouse_press(float(x), float(y))
-                return field
+            if self._stackable_toggle.on_mouse_press(float(x), float(y)):
+                edit_buffer = getattr(item_editor, "edit_buffer", None) if item_editor is not None else None
+                if isinstance(edit_buffer, dict):
+                    edit_buffer["stackable"] = bool(self._stackable_toggle.value)
+                return "stackable"
+            return None
         return None
 
 
