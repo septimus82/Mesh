@@ -8,6 +8,8 @@ from typing import Any
 
 from engine.inventory import ItemDatabase, ItemDefinition
 
+DEFAULT_ITEMS_FILE_PATH = Path("assets") / "data" / "items.json"
+
 ITEM_FIELD_ORDER = (
     "id",
     "name",
