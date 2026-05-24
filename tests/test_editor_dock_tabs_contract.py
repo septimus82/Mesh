@@ -57,6 +57,7 @@ class TestDockTabRects:
         assert "Assets" in tab_rects.right_tab_rects
         assert "Items" in tab_rects.right_tab_rects
         assert "Prefabs" in tab_rects.right_tab_rects
+        assert "Quests" in tab_rects.right_tab_rects
         assert "History" in tab_rects.right_tab_rects
         assert "Problems" in tab_rects.right_tab_rects
         assert "Debug" in tab_rects.right_tab_rects
@@ -528,7 +529,7 @@ class TestDockTabIntegration:
 
         # Should still have all tabs
         assert len(tab_rects.left_tab_rects) == 3
-        assert len(tab_rects.right_tab_rects) == 7
+        assert len(tab_rects.right_tab_rects) == 8
 
         # Tabs should still be clickable (have positive area)
         for rect in tab_rects.left_tab_rects.values():

@@ -178,6 +178,11 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
         editor_controller.prefab_editor = EditorPrefabEditorController(editor_controller)
     window.prefab_editor_overlay = PrefabEditorOverlay(window)
     window.register_ui_element(window.prefab_editor_overlay)
+    from engine.ui_overlays.quest_editor_overlay import QuestEditorOverlay  # noqa: PLC0415
+
+    # Quests dock tab overlay; controller lands with edit mode in Tier 2.3b.
+    window.quest_editor_overlay = QuestEditorOverlay(window)
+    window.register_ui_element(window.quest_editor_overlay)
     window.undo_history_overlay = UndoHistoryOverlay(window)
     window.register_ui_element(window.undo_history_overlay)
     window.problems_panel_overlay = ProblemsPanelOverlay(window)

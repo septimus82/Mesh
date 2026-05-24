@@ -183,6 +183,7 @@ class TestGetDockTabOptions:
         assert "Assets" in right_tabs
         assert "Items" in right_tabs
         assert "Prefabs" in right_tabs
+        assert "Quests" in right_tabs
         assert "History" in right_tabs
         assert "Problems" in right_tabs
         assert "Debug" in right_tabs
