@@ -33,6 +33,30 @@ SHELL_TAB_ACTIVE_COLOR = (70, 130, 180, 255)
 SHELL_TAB_INACTIVE_COLOR = (50, 50, 55, 255)
 SHELL_BUTTON_BG_COLOR = (50, 50, 55, 255)
 SHELL_BUTTON_ACTIVE_COLOR = (80, 140, 200, 255)
+_GLYPH_WIDTH_RATIO = 0.58
+
+
+def truncate_tab_label(label: str, available_width: float, *, font_size: float = 11.0) -> str:
+    """Return label truncated to fit available_width with ASCII '...' suffix.
+
+    Width estimated via len * font_size * 0.58 (~6.4px/char at font 11).
+    Returns "" if available width cannot fit even the ellipsis.
+    """
+    if available_width <= 0:
+        return ""
+    text = str(label)
+    char_width = float(font_size) * _GLYPH_WIDTH_RATIO
+    full_width = len(text) * char_width
+    if full_width <= available_width:
+        return text
+    ellipsis = "..."
+    ellipsis_width = len(ellipsis) * char_width
+    if available_width < ellipsis_width:
+        return ""
+    max_chars = int((available_width - ellipsis_width) / char_width)
+    if max_chars < 1:
+        return ellipsis
+    return text[:max_chars] + ellipsis
 
 
 class EditorShellOverlay(UIElement):
@@ -255,8 +279,9 @@ class EditorShellOverlay(UIElement):
             draw_panel_bg(tab_left + 2, tab_right - 2, tab_y + 2, dock.top - 2, tab_color)
 
             # Tab label
+            display_label = truncate_tab_label(tab_name, tab_right - tab_left - 4.0, font_size=11)
             draw_text_cached(
-                tab_name,
+                display_label,
                 (tab_left + tab_right) / 2,
                 (tab_y + dock.top) / 2,
                 color=SHELL_TEXT_COLOR if is_active else SHELL_TEXT_DIM_COLOR,
@@ -303,8 +328,9 @@ class EditorShellOverlay(UIElement):
             draw_panel_bg(tab_left + 2, tab_right - 2, tab_y + 2, dock.top - 2, tab_color)
 
             # Tab label
+            display_label = truncate_tab_label(tab_name, tab_right - tab_left - 4.0, font_size=11)
             draw_text_cached(
-                tab_name,
+                display_label,
                 (tab_left + tab_right) / 2,
                 (tab_y + dock.top) / 2,
                 color=SHELL_TEXT_COLOR if is_active else SHELL_TEXT_DIM_COLOR,
