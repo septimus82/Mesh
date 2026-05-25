@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from ..text_draw import TextCache, draw_text_cached
-from .common import UIElement, _draw_rectangle_filled, _draw_lrtb_rectangle_outline
+from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -57,7 +57,7 @@ class DebugPanelsOverlay(UIElement):
             dock.top,
             (18, 18, 22, 220),
         )
-        _draw_lrtb_rectangle_outline(
+        _draw_tb_rectangle_outline(
             dock.left,
             dock.right,
             dock.top,

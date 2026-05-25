@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from ..text_draw import TextCache, draw_text_cached
-from .common import UIElement, _draw_lrtb_rectangle_outline, draw_panel_bg
+from .common import UIElement, _draw_tb_rectangle_outline, draw_panel_bg
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..editor.editor_feedback_model import FeedbackEntry, FeedbackSeverity
@@ -169,7 +169,7 @@ class EditorFeedbackOverlay(UIElement):
         cache = getattr(self.window, "text_cache", None) or self._text_cache
         for item in items:
             draw_panel_bg(item.left, item.right, item.bottom, item.top, color=item.bg_color)
-            _draw_lrtb_rectangle_outline(item.left, item.right, item.top, item.bottom, item.border_color, 2)
+            _draw_tb_rectangle_outline(item.left, item.right, item.top, item.bottom, item.border_color, 2)
             draw_text_cached(
                 item.text,
                 item.left + PADDING_X,

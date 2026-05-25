@@ -70,8 +70,8 @@ def _stub_draw(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(optional_arcade, "arcade", arcade_stub)
     monkeypatch.setattr(overlay_module, "draw_text", lambda *args, **kwargs: None)
-    monkeypatch.setattr(overlay_module, "_draw_lrtb_rectangle_filled", lambda *args, **kwargs: None)
-    monkeypatch.setattr(overlay_module, "_draw_lrtb_rectangle_outline", lambda *args, **kwargs: None)
+    monkeypatch.setattr(overlay_module, "_draw_tb_rectangle_filled", lambda *args, **kwargs: None)
+    monkeypatch.setattr(overlay_module, "_draw_tb_rectangle_outline", lambda *args, **kwargs: None)
     monkeypatch.setattr(overlay_module, "_draw_rectangle_outline", lambda *args, **kwargs: None)
 
 

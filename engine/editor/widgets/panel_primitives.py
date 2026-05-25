@@ -12,7 +12,7 @@ from typing import Callable, Sequence
 
 from engine.text_draw import TextCache, draw_text_cached
 from engine.ui.widgets import DrawInstruction, LayoutResult, Rect
-from engine.ui_overlays.common import _draw_lrtb_rectangle_outline, draw_panel_bg
+from engine.ui_overlays.common import _draw_tb_rectangle_outline, draw_panel_bg
 
 Color = tuple[int, int, int, int]
 
@@ -292,7 +292,7 @@ class EditorPanelBase:
             if instruction.kind == "editor_panel_bg" and isinstance(rect, Rect):
                 draw_panel_bg(rect.left, rect.right, rect.bottom, rect.top, color=payload.get("color", self.panel_bg))
             elif instruction.kind == "editor_panel_border" and isinstance(rect, Rect):
-                _draw_lrtb_rectangle_outline(
+                _draw_tb_rectangle_outline(
                     rect.left,
                     rect.right,
                     rect.top,

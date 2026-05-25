@@ -487,21 +487,6 @@ def draw_lrbt_rectangle_outline(
     pass
 
 
-def draw_lrtb_rectangle_filled(left: float, right: float, top: float, bottom: float, color_value: Tuple[int, int, int]) -> None:
-    pass
-
-
-def draw_lrtb_rectangle_outline(
-    left: float,
-    right: float,
-    top: float,
-    bottom: float,
-    color_value: Tuple[int, int, int],
-    border_width: float = 1,
-) -> None:
-    pass
-
-
 def draw_lbwh_rectangle_outline(
     left: float,
     bottom: float,

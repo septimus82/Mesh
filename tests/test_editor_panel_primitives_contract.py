@@ -53,7 +53,7 @@ def test_editor_panel_base_draw_is_safe_with_monkeypatched_draw_functions(monkey
 
     monkeypatch.setattr("engine.editor.widgets.panel_primitives.draw_panel_bg", lambda *args, **kwargs: calls.append("bg"))
     monkeypatch.setattr(
-        "engine.editor.widgets.panel_primitives._draw_lrtb_rectangle_outline",
+        "engine.editor.widgets.panel_primitives._draw_tb_rectangle_outline",
         lambda *args, **kwargs: calls.append("border"),
     )
     monkeypatch.setattr("engine.editor.widgets.panel_primitives.draw_text_cached", lambda *args, **kwargs: calls.append("text"))

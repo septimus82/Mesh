@@ -9,7 +9,7 @@ from ..hud_model import HudViewModel, build_hud_view_model, merge_event_historie
 from engine.swallowed_exceptions import _log_swallow
 from .common import (
     UIElement,
-    _draw_lrtb_rectangle_outline,
+    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
 )
 
@@ -83,7 +83,7 @@ class InteractPromptOverlay(UIElement):
             height=height,
             color=(0, 0, 0, 170),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
         optional_arcade.arcade.draw_text(
             text,
@@ -181,7 +181,7 @@ class ObjectiveTrackerOverlay(UIElement):
             height=height,
             color=(0, 0, 0, 170),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
         y = top - 12.0
         for line in lines:
@@ -364,7 +364,7 @@ class QuestLog(UIElement):
             height=height,
             color=(8, 12, 22, 220),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
         self._title_text.x = left + 20.0
         self._title_text.y = top - 20.0
@@ -815,7 +815,7 @@ class PlayerHUD(UIElement):
                     height=height,
                     color=(0, 0, 0, bg_alpha),
                 )
-                _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+                _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
                 draw_text_cached(
                     toast_text,
                     left + padding_x,

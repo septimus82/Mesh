@@ -110,7 +110,7 @@ def draw_text_input(
             bg = (30, 30, 36, 220) if payload.get("focused") else (22, 22, 28, 190)
             border = (100, 200, 255, 180) if payload.get("focused") else (90, 90, 100, 140)
             panel_primitives.draw_panel_bg(instr_rect.left, instr_rect.right, instr_rect.bottom, instr_rect.top, color=bg)
-            panel_primitives._draw_lrtb_rectangle_outline(
+            panel_primitives._draw_tb_rectangle_outline(
                 instr_rect.left, instr_rect.right, instr_rect.top, instr_rect.bottom, border, 1
             )
         elif instruction.kind == "text_input_text":

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Optional
 
 from ..text_draw import TextCache, draw_text_cached
-from .common import UIElement, _draw_rectangle_filled, _draw_lrtb_rectangle_outline
+from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline
 from .providers import project_explorer_provider
 from .widgets import Rect, ScrollList
 
@@ -264,7 +264,7 @@ class ProjectExplorerOverlay(UIElement):
             rows_panel.add_row(row)
             rows_panel.draw()
             if has_multi and is_primary_selected:
-                _draw_lrtb_rectangle_outline(
+                _draw_tb_rectangle_outline(
                     panel_list_rect.left,
                     panel_list_rect.right,
                     row_top,
@@ -300,7 +300,7 @@ class ProjectExplorerOverlay(UIElement):
         _draw_rectangle_filled(left, right, bottom, top, PROJECT_RENAME_BG)
         
         # Border
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, PROJECT_RENAME_BORDER, 1)
+        _draw_tb_rectangle_outline(left, right, top, bottom, PROJECT_RENAME_BORDER, 1)
         
         # Approximate character width for monospace font at size 11
         CHAR_WIDTH = 7.0
@@ -328,7 +328,7 @@ class ProjectExplorerOverlay(UIElement):
         if blink:
             cursor_x = left + TEXT_OFFSET + cursor_pos * CHAR_WIDTH
             # Draw cursor line
-            _draw_lrtb_rectangle_outline(
+            _draw_tb_rectangle_outline(
                 cursor_x - 0.5,
                 cursor_x + 0.5,
                 top - 2,

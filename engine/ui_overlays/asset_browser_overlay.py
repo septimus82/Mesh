@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
-from .common import UIElement, _draw_lrtb_rectangle_outline, _draw_rectangle_filled, draw_panel_bg
+from .common import UIElement, _draw_tb_rectangle_outline, _draw_rectangle_filled, draw_panel_bg
 from .widget_overlay_helpers import OverlayFocusModel, build_empty_row, build_status_row, compose_list_rows
 from .widgets import Rect, ScrollList, TextInput
 
@@ -286,12 +286,12 @@ class AssetBrowserOverlay(UIElement):
             font_size=14,
             cache=self._text_cache,
         )
-        _draw_lrtb_rectangle_outline(search_rect_l - 5, search_rect_r + 5, search_rect_t, search_rect_b, (255, 255, 255, 50), 1)
+        _draw_tb_rectangle_outline(search_rect_l - 5, search_rect_r + 5, search_rect_t, search_rect_b, (255, 255, 255, 50), 1)
 
         split_x = left + (right - left) * 0.6
         content_top = top - header_h - 10
         content_bottom = bottom + 10
-        _draw_lrtb_rectangle_outline(split_x, split_x + 1, content_top, content_bottom, (255, 255, 255, 30), 1)
+        _draw_tb_rectangle_outline(split_x, split_x + 1, content_top, content_bottom, (255, 255, 255, 30), 1)
 
         rows = list(getattr(controller, "_asset_browser_filtered_rows", []) or [])
         self._rows = rows

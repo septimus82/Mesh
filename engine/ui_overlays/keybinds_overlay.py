@@ -11,8 +11,8 @@ from ..text_draw import TextCache
 from ..ui_text_cache import UiTextCache, draw_text
 from .common import (
     UIElement,
-    _draw_lrtb_rectangle_filled,
-    _draw_lrtb_rectangle_outline,
+    _draw_tb_rectangle_filled,
+    _draw_tb_rectangle_outline,
     _draw_rectangle_outline,
 )
 from .keybinds_provider import get_keybinds_ui_data
@@ -257,8 +257,8 @@ class KeybindsOverlay(UIElement):
         top = cy + (KEYBINDS_PALETTE_HEIGHT / 2.0)
         bottom = cy - (KEYBINDS_PALETTE_HEIGHT / 2.0)
 
-        _draw_lrtb_rectangle_filled(left + 2.0, right + 2.0, top - 2.0, bottom - 2.0, (0, 0, 0, 120))
-        _draw_lrtb_rectangle_filled(left, right, top, bottom, optional_arcade.arcade.color.BLACK + (245,))
+        _draw_tb_rectangle_filled(left + 2.0, right + 2.0, top - 2.0, bottom - 2.0, (0, 0, 0, 120))
+        _draw_tb_rectangle_filled(left, right, top, bottom, optional_arcade.arcade.color.BLACK + (245,))
         _draw_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.GRAY, 2)
 
         LIST_AREA_HEIGHT = KEYBINDS_PALETTE_HEIGHT - HEADER_HEIGHT - FOOTER_HEIGHT
@@ -293,7 +293,7 @@ class KeybindsOverlay(UIElement):
             height=float(search_box_top - search_box_bottom),
         )
         input_layout = self._text_input.layout(input_rect)
-        _draw_lrtb_rectangle_filled(
+        _draw_tb_rectangle_filled(
             search_box_left,
             search_box_right,
             search_box_top,
@@ -304,8 +304,8 @@ class KeybindsOverlay(UIElement):
         if data.get("recording"):
             pending_conflicts = data.get("pending_conflicts", ())
             banner_color = optional_arcade.arcade.color.RED if pending_conflicts else optional_arcade.arcade.color.DARK_RED
-            _draw_lrtb_rectangle_filled(search_box_left, search_box_right, search_box_top, search_box_bottom, banner_color)
-            _draw_lrtb_rectangle_outline(
+            _draw_tb_rectangle_filled(search_box_left, search_box_right, search_box_top, search_box_bottom, banner_color)
+            _draw_tb_rectangle_outline(
                 search_box_left,
                 search_box_right,
                 search_box_top,
@@ -398,7 +398,7 @@ class KeybindsOverlay(UIElement):
                         bg_color = optional_arcade.arcade.color.DARK_RED
                     elif bool(getattr(row, "has_override", False)):
                         bg_color = optional_arcade.arcade.color.TEAL
-                    _draw_lrtb_rectangle_filled(list_left, list_right, rect.top, rect.bottom, bg_color)
+                    _draw_tb_rectangle_filled(list_left, list_right, rect.top, rect.bottom, bg_color)
                 continue
 
             if kind != "scroll_row_text":
@@ -479,7 +479,7 @@ class KeybindsOverlay(UIElement):
             track_right = list_right - 1.0
             track_top = list_top
             track_bottom = list_bottom
-            _draw_lrtb_rectangle_filled(
+            _draw_tb_rectangle_filled(
                 track_left,
                 track_right,
                 track_top,
@@ -491,7 +491,7 @@ class KeybindsOverlay(UIElement):
             usable_h = max(1.0, viewport_h - thumb_h)
             thumb_top = track_top - (ratio * usable_h)
             thumb_bottom = thumb_top - thumb_h
-            _draw_lrtb_rectangle_filled(
+            _draw_tb_rectangle_filled(
                 track_left,
                 track_right,
                 thumb_top,
@@ -502,7 +502,7 @@ class KeybindsOverlay(UIElement):
         detail_left = list_right + 10.0
         detail_right = right - PANEL_PAD
         detail_top = list_top
-        _draw_lrtb_rectangle_outline(list_right, list_right, detail_top, list_bottom, optional_arcade.arcade.color.GRAY, 1)
+        _draw_tb_rectangle_outline(list_right, list_right, detail_top, list_bottom, optional_arcade.arcade.color.GRAY, 1)
 
         selected_item = data.get("selected_item")
         if isinstance(selected_item, dict):

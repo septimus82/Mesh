@@ -135,7 +135,7 @@ def _stub_scene_draw(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(optional_arcade, "arcade", arcade_stub)
     monkeypatch.setattr(scene_overlay_module, "draw_panel_bg", lambda *args, **kwargs: None)
-    monkeypatch.setattr(scene_overlay_module, "_draw_lrtb_rectangle_outline", lambda *args, **kwargs: None)
+    monkeypatch.setattr(scene_overlay_module, "_draw_tb_rectangle_outline", lambda *args, **kwargs: None)
     monkeypatch.setattr(scene_overlay_module, "_draw_rectangle_filled", lambda *args, **kwargs: None)
     monkeypatch.setattr(scene_overlay_module, "draw_text_cached", lambda *args, **kwargs: None)
 

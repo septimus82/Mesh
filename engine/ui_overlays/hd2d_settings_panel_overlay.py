@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import _log_swallow
-from .common import UIElement
+from .common import UIElement, _draw_tb_rectangle_filled
 from ..text_draw import draw_text_cached, TextCache
 
 if TYPE_CHECKING:
@@ -249,7 +249,7 @@ class Hd2dSettingsPanelOverlay(UIElement):
     ) -> float:
         """Draw a section header row. Returns new Y position."""
         bg_color = CURSOR_BG if is_cursor else SECTION_HEADER_BG
-        optional_arcade.arcade.draw_lrtb_rectangle_filled(
+        _draw_tb_rectangle_filled(
             left, left + width, top, top - ROW_HEIGHT, bg_color
         )
 
@@ -277,7 +277,7 @@ class Hd2dSettingsPanelOverlay(UIElement):
     ) -> float:
         """Draw a toggle row. Returns new Y position."""
         if is_cursor:
-            optional_arcade.arcade.draw_lrtb_rectangle_filled(
+            _draw_tb_rectangle_filled(
                 left, left + width, top, top - ROW_HEIGHT, CURSOR_BG
             )
 
@@ -318,7 +318,7 @@ class Hd2dSettingsPanelOverlay(UIElement):
     ) -> float:
         """Draw a slider row. Returns new Y position."""
         if is_cursor:
-            optional_arcade.arcade.draw_lrtb_rectangle_filled(
+            _draw_tb_rectangle_filled(
                 left, left + width, top, top - ROW_HEIGHT, CURSOR_BG
             )
 
@@ -353,7 +353,7 @@ class Hd2dSettingsPanelOverlay(UIElement):
         slider_y = top - ROW_HEIGHT / 2
 
         # Background
-        optional_arcade.arcade.draw_lrtb_rectangle_filled(
+        _draw_tb_rectangle_filled(
             slider_left,
             slider_left + slider_width,
             slider_y + slider_height / 2,
@@ -366,7 +366,7 @@ class Hd2dSettingsPanelOverlay(UIElement):
             fill_ratio = (float(row.value) - row.min_value) / (row.max_value - row.min_value)
             fill_ratio = max(0.0, min(1.0, fill_ratio))
             fill_width = slider_width * fill_ratio
-            optional_arcade.arcade.draw_lrtb_rectangle_filled(
+            _draw_tb_rectangle_filled(
                 slider_left,
                 slider_left + fill_width,
                 slider_y + slider_height / 2,
@@ -387,7 +387,7 @@ class Hd2dSettingsPanelOverlay(UIElement):
     ) -> float:
         """Draw preset buttons row. Returns new Y position."""
         if is_cursor:
-            optional_arcade.arcade.draw_lrtb_rectangle_filled(
+            _draw_tb_rectangle_filled(
                 left, left + width, top, top - ROW_HEIGHT, CURSOR_BG
             )
 
@@ -403,7 +403,7 @@ class Hd2dSettingsPanelOverlay(UIElement):
             is_active = (preset_id == active_preset)
             bg_color = PRESET_BTN_ACTIVE if is_active else PRESET_BTN_BG
 
-            optional_arcade.arcade.draw_lrtb_rectangle_filled(
+            _draw_tb_rectangle_filled(
                 x,
                 x + btn_width,
                 btn_y + btn_height / 2,
@@ -634,7 +634,7 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
             bg_color = TOOLBAR_BTN_BG if enabled else TOOLBAR_BTN_DISABLED
             text_color = TOOLBAR_BTN_TEXT if enabled else TOOLBAR_BTN_TEXT_DISABLED
 
-            optional_arcade.arcade.draw_lrtb_rectangle_filled(
+            _draw_tb_rectangle_filled(
                 x,
                 x + btn_width,
                 btn_y + btn_height / 2,
@@ -668,7 +668,7 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
     ) -> float:
         """Draw a section header row. Returns new Y position."""
         bg_color = CURSOR_BG if is_cursor else SECTION_HEADER_BG
-        optional_arcade.arcade.draw_lrtb_rectangle_filled(
+        _draw_tb_rectangle_filled(
             left, left + width, top, top - ROW_HEIGHT, bg_color
         )
 
@@ -696,7 +696,7 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
     ) -> float:
         """Draw an override toggle row. Returns new Y position."""
         if is_cursor:
-            optional_arcade.arcade.draw_lrtb_rectangle_filled(
+            _draw_tb_rectangle_filled(
                 left, left + width, top, top - ROW_HEIGHT, CURSOR_BG
             )
 
@@ -743,7 +743,7 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
     ) -> float:
         """Draw an override slider row. Returns new Y position."""
         if is_cursor:
-            optional_arcade.arcade.draw_lrtb_rectangle_filled(
+            _draw_tb_rectangle_filled(
                 left, left + width, top, top - ROW_HEIGHT, CURSOR_BG
             )
 
@@ -781,7 +781,7 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
         slider_y = top - ROW_HEIGHT / 2
 
         # Background
-        optional_arcade.arcade.draw_lrtb_rectangle_filled(
+        _draw_tb_rectangle_filled(
             slider_left,
             slider_left + slider_width,
             slider_y + slider_height / 2,
@@ -794,7 +794,7 @@ class Hd2dEntityOverridesPanelOverlay(UIElement):
             fill_ratio = (float(value) - row.min_value) / (row.max_value - row.min_value)
             fill_ratio = max(0.0, min(1.0, fill_ratio))
             fill_width = slider_width * fill_ratio
-            optional_arcade.arcade.draw_lrtb_rectangle_filled(
+            _draw_tb_rectangle_filled(
                 slider_left,
                 slider_left + fill_width,
                 slider_y + slider_height / 2,

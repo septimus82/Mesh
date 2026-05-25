@@ -34,7 +34,7 @@ def _make_overlay(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> SettingsOv
 def _drawn_texts(monkeypatch: pytest.MonkeyPatch, overlay: SettingsOverlay) -> list[str]:
     captured: list[str] = []
     monkeypatch.setattr(overlay_module, "draw_text_cached", lambda text, *args, **kwargs: captured.append(str(text)))
-    monkeypatch.setattr(overlay_module, "_draw_lrtb_rectangle_outline", lambda *args, **kwargs: None)
+    monkeypatch.setattr(overlay_module, "_draw_tb_rectangle_outline", lambda *args, **kwargs: None)
     monkeypatch.setattr(overlay_module, "_draw_rectangle_filled", lambda *args, **kwargs: None)
 
     overlay.draw()

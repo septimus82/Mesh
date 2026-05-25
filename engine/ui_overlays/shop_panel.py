@@ -9,7 +9,7 @@ from engine.swallowed_exceptions import _log_swallow
 
 from .common import (
     UIElement,
-    _draw_lrtb_rectangle_outline,
+    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
 )
 from ..text_draw import TextCache, draw_text_cached
@@ -157,7 +157,7 @@ class ShopPanel(UIElement):
             height=height,
             color=(10, 10, 10, 230),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.GOLD, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.GOLD, 2)
 
         currency = self._currency_amount()
         draw_text_cached(
