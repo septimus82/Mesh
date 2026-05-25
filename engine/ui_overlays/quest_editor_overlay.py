@@ -12,6 +12,7 @@ from engine.ui_overlays.editor_database_form_helpers import (
     compute_database_form_layout,
     draw_text_input,
     draw_text_input_rows,
+    scalar_rows_for_mode,
     sync_text_inputs,
     try_click_text_widget,
 )
@@ -166,7 +167,16 @@ class QuestEditorOverlay(UIElement):
                         padding_x=QUEST_EDITOR_ROW_PADDING_X,
                     )
                 )
-            for label, value, field_path in _scalar_rows_for_mode(model, edit_mode):
+            from engine.editor.quest_editor_model import QUEST_SCALAR_FIELD_ORDER  # noqa: PLC0415
+
+            for label, value, field_path in scalar_rows_for_mode(
+                model=model,
+                edit_mode=edit_mode,
+                scalar_field_order=QUEST_SCALAR_FIELD_ORDER,
+                selected_record=model.selected_quest,
+                value_for_field=lambda record, field: record.get(field) if isinstance(record, dict) else None,
+                label_for_field=_label_for_field,
+            ):
                 if edit_mode and field_path in QUEST_EDITOR_EDITABLE_SCALAR_FIELDS:
                     self._widget_rows[field_path] = detail_panel.add_row(
                         PanelRow(
@@ -235,22 +245,6 @@ class QuestEditorOverlay(UIElement):
         if quest_editor is None:
             return None
         return try_click_text_widget(self._widget_rows, quest_editor, x, y)
-
-
-def _scalar_rows_for_mode(model: object, edit_mode: bool) -> list[tuple[str, str, str]]:
-    if not edit_mode:
-        rows = model.scalar_detail_rows() if hasattr(model, "scalar_detail_rows") else []
-        return list(rows)
-    quest = model.selected_quest() if hasattr(model, "selected_quest") else None
-    if not isinstance(quest, dict):
-        return []
-    from engine.editor.quest_editor_model import QUEST_SCALAR_FIELD_ORDER  # noqa: PLC0415
-
-    rows: list[tuple[str, str, str]] = []
-    for field_path in QUEST_SCALAR_FIELD_ORDER:
-        value = quest.get(field_path)
-        rows.append((_label_for_field(field_path), "" if value is None else str(value), field_path))
-    return rows
 
 
 def _label_for_field(field_path: str) -> str:

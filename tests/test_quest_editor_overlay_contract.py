@@ -211,6 +211,25 @@ def test_quest_editor_overlay_edit_mode_shows_save_cancel_and_scalar_widgets(
     assert "Complex fields (read-only)" in captured
 
 
+def test_quest_editor_overlay_edit_mode_shows_optional_fields_when_missing(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    quest_editor = _QuestEditorStub(edit_mode=True)
+    quest_editor.edit_buffer = {"id": "minimal_quest", "title": "Minimal Quest"}
+    overlay = QuestEditorOverlay(_window_for_tab("Quests", quest_editor))
+    overlay._model = _model(tmp_path, [{"id": "minimal_quest", "title": "Minimal Quest"}])
+
+    overlay.draw()
+
+    assert {"id", "title", "description", "type", "start_toast", "complete_toast"} <= set(overlay._widget_rows)
+    assert quest_editor.text_input("description").text == ""
+    assert quest_editor.text_input("type").text == ""
+    assert quest_editor.text_input("start_toast").text == ""
+    assert quest_editor.text_input("complete_toast").text == ""
+
+
 def test_quest_editor_overlay_syncs_scalar_widget_values_from_buffer(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

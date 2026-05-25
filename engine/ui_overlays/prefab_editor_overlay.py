@@ -12,6 +12,7 @@ from engine.ui_overlays.editor_database_form_helpers import (
     compute_database_form_layout,
     draw_text_input,
     draw_text_input_rows,
+    scalar_rows_for_mode,
     sync_text_inputs,
     try_click_text_widget,
 )
@@ -172,7 +173,17 @@ class PrefabEditorOverlay(UIElement):
                         padding_x=PREFAB_EDITOR_ROW_PADDING_X,
                     )
                 )
-            for label, value, field_path in model.scalar_detail_rows():
+            from engine.editor.editor_prefab_editor_controller import _get_path  # noqa: PLC0415
+            from engine.editor.prefab_editor_model import PREFAB_SCALAR_FIELD_ORDER  # noqa: PLC0415
+
+            for label, value, field_path in scalar_rows_for_mode(
+                model=model,
+                edit_mode=edit_mode,
+                scalar_field_order=PREFAB_SCALAR_FIELD_ORDER,
+                selected_record=model.selected_prefab,
+                value_for_field=lambda record, field: _get_path(record, field) if isinstance(record, dict) else None,
+                label_for_field=_label_for_field,
+            ):
                 if edit_mode and field_path in PREFAB_EDITOR_EDITABLE_SCALAR_FIELDS:
                     self._widget_rows[field_path] = detail_panel.add_row(
                         PanelRow(
@@ -243,4 +254,13 @@ class PrefabEditorOverlay(UIElement):
         if prefab_editor is None:
             return None
         return try_click_text_widget(self._widget_rows, prefab_editor, x, y)
+
+
+def _label_for_field(field_path: str) -> str:
+    return {
+        "id": "ID",
+        "display_name": "Display name",
+        "entity.sprite": "Entity sprite",
+        "entity.encounter_cost": "Entity encounter cost",
+    }.get(field_path, field_path)
 

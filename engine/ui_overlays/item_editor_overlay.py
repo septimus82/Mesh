@@ -12,6 +12,7 @@ from engine.ui_overlays.editor_database_form_helpers import (
     compute_database_form_layout,
     draw_text_input,
     draw_text_input_rows,
+    scalar_rows_for_mode,
     sync_text_inputs,
     try_click_text_widget,
 )
@@ -169,8 +170,23 @@ class ItemEditorOverlay(UIElement):
                         padding_x=ITEM_EDITOR_ROW_PADDING_X,
                     )
                 )
-            for label, value in model.selected_detail_rows():
-                field_name = _field_name_for_label(label)
+            if edit_mode:
+                from engine.editor.item_editor_model import ITEM_SCALAR_FIELD_ORDER  # noqa: PLC0415
+
+                scalar_rows = scalar_rows_for_mode(
+                    model=model,
+                    edit_mode=True,
+                    scalar_field_order=ITEM_SCALAR_FIELD_ORDER,
+                    selected_record=lambda: item,
+                    value_for_field=lambda record, field: getattr(record, field, None),
+                    label_for_field=_label_for_field,
+                )
+            else:
+                scalar_rows = [
+                    (label, value, _field_name_for_label(label))
+                    for label, value in model.selected_detail_rows()
+                ]
+            for label, value, field_name in scalar_rows:
                 if edit_mode and field_name in ITEM_EDITOR_EDITABLE_SCALAR_FIELDS:
                     self._widget_rows[field_name] = detail_panel.add_row(
                         PanelRow(
@@ -187,6 +203,18 @@ class ItemEditorOverlay(UIElement):
                         padding_x=ITEM_EDITOR_ROW_PADDING_X,
                     )
                 )
+            if edit_mode:
+                for label, value in model.selected_detail_rows():
+                    field_name = _field_name_for_label(label)
+                    if field_name in ITEM_EDITOR_EDITABLE_SCALAR_FIELDS:
+                        continue
+                    detail_panel.add_row(
+                        PanelRow(
+                            PanelField(label, value, label_color=ITEM_EDITOR_TEXT_COLOR, value_color=ITEM_EDITOR_DIM_COLOR),
+                            height=ITEM_EDITOR_ROW_HEIGHT,
+                            padding_x=ITEM_EDITOR_ROW_PADDING_X,
+                        )
+                    )
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,
@@ -298,3 +326,14 @@ def _is_rect_like(value: object) -> bool:
 
 def _field_name_for_label(label: str) -> str:
     return str(label).strip().lower().replace(" ", "_")
+
+
+def _label_for_field(field_path: str) -> str:
+    return {
+        "id": "ID",
+        "name": "Name",
+        "description": "Description",
+        "icon": "Icon",
+        "stackable": "Stackable",
+        "max_stack": "Max stack",
+    }.get(field_path, field_path)

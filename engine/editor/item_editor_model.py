@@ -21,6 +21,8 @@ ITEM_FIELD_ORDER = (
     "effects",
 )
 
+ITEM_SCALAR_FIELD_ORDER: tuple[str, ...] = ("id", "name", "description", "icon", "stackable", "max_stack")
+
 
 @dataclass
 class ItemEditorModel:

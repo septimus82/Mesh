@@ -199,6 +199,34 @@ def test_prefab_editor_overlay_edit_mode_shows_save_cancel_and_scalar_widgets(mo
     assert "Complex fields (read-only)" in captured
 
 
+def test_prefab_editor_overlay_edit_mode_shows_sprite_when_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = {"id": "controller", "display_name": "Controller", "entity": {}}
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _model()
+    overlay._model.set_selected_index(1)
+
+    overlay.draw()
+
+    assert "entity.sprite" in overlay._widget_rows
+    assert prefab_editor.text_input("entity.sprite").text == ""
+
+
+def test_prefab_editor_overlay_edit_mode_shows_encounter_cost_when_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = {"id": "controller", "display_name": "Controller", "entity": {}}
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _model()
+    overlay._model.set_selected_index(1)
+
+    overlay.draw()
+
+    assert "entity.encounter_cost" in overlay._widget_rows
+    assert prefab_editor.text_input("entity.encounter_cost").text == ""
+
+
 def test_prefab_editor_overlay_syncs_scalar_widget_values_from_nested_buffer(monkeypatch: pytest.MonkeyPatch) -> None:
     _capture_panel_text(monkeypatch)
     prefab_editor = _PrefabEditorStub(edit_mode=True)
