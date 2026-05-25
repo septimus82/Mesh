@@ -187,6 +187,34 @@ def test_item_editor_overlay_edit_mode_shows_save_cancel_and_scalar_widgets(monk
     assert "heal=25" in captured
 
 
+def test_item_editor_overlay_edit_mode_shows_stackable_toggle_when_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=True)
+    item_editor.edit_buffer["stackable"] = False
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+    overlay._model.select_index(1)
+
+    overlay.draw()
+
+    assert "stackable" in overlay._widget_rows
+    assert "[ ] stackable" in captured
+
+
+def test_item_editor_overlay_edit_mode_shows_max_stack_when_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=True)
+    item_editor.edit_buffer["max_stack"] = 1
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+    overlay._model.select_index(1)
+
+    overlay.draw()
+
+    assert "max_stack" in overlay._widget_rows
+    assert item_editor.text_input("max_stack").text == "1"
+
+
 def test_item_editor_overlay_dirty_marker_and_error_row(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = _capture_panel_text(monkeypatch)
     item_editor = _ItemEditorStub(edit_mode=True, dirty=True, error="id is required")

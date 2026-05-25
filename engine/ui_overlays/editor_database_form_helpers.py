@@ -72,6 +72,29 @@ def collect_button_rects(button_rows: dict[str, Any]) -> dict[str, Rect]:
     }
 
 
+def scalar_rows_for_mode(
+    *,
+    model: Any,
+    edit_mode: bool,
+    scalar_field_order: tuple[str, ...],
+    selected_record: Callable[[], Any],
+    value_for_field: Callable[[Any, str], Any],
+    label_for_field: Callable[[str], str],
+) -> list[tuple[str, str, str]]:
+    """Yield scalar rows, expanding all editable fields in edit mode."""
+    if not edit_mode:
+        rows = model.scalar_detail_rows() if hasattr(model, "scalar_detail_rows") else []
+        return list(rows)
+    record = selected_record()
+    if record is None:
+        return []
+    rows: list[tuple[str, str, str]] = []
+    for field_path in scalar_field_order:
+        value = value_for_field(record, field_path)
+        rows.append((label_for_field(field_path), "" if value is None else str(value), field_path))
+    return rows
+
+
 def draw_text_input(
     text_input: TextInput,
     rect: Rect,
