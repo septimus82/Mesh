@@ -7,8 +7,15 @@ from typing import TYPE_CHECKING
 from engine.ui_overlays.common import UIElement
 from engine.ui_overlays.editor_database_form_helpers import (
     FormColors,
+    add_form_buttons,
+    collect_button_rects,
     compute_database_form_layout,
+    draw_text_input,
+    draw_text_input_rows,
+    sync_text_inputs,
+    try_click_text_widget,
 )
+from engine.ui_overlays.widgets import Rect, TextInput
 
 if TYPE_CHECKING:  # pragma: no cover
     from engine.game import GameWindow
@@ -21,6 +28,8 @@ QUEST_EDITOR_BUTTON_COLOR = (100, 200, 255, 255)
 QUEST_EDITOR_ROW_HEIGHT = 18.0
 QUEST_EDITOR_ROW_PADDING_X = 6.0
 QUEST_EDITOR_PANEL_GAP = 8.0
+QUEST_EDITOR_ERROR_COLOR = (255, 120, 120, 255)
+QUEST_EDITOR_EDITABLE_SCALAR_FIELDS = {"id", "title", "description", "type", "start_toast", "complete_toast"}
 _QUEST_FORM_COLORS = FormColors(
     text=QUEST_EDITOR_TEXT_COLOR,
     dim=QUEST_EDITOR_DIM_COLOR,
@@ -38,6 +47,7 @@ class QuestEditorOverlay(UIElement):
         super().__init__(window)
         self._model: object | None = None
         self._load_error: str | None = None
+        self._widget_rows: dict[str, object] = {}
 
     def _get_controller(self) -> object | None:
         return getattr(self.window, "editor_controller", None)
@@ -87,6 +97,9 @@ class QuestEditorOverlay(UIElement):
         list_rect, detail_rect = compute_database_form_layout(self.window, controller, QUEST_EDITOR_PANEL_GAP)
 
         model = self._get_model()
+        quest_editor = getattr(controller, "quest_editor", None)
+        edit_mode = bool(quest_editor is not None and quest_editor.is_edit_mode_active())
+        dirty_marker = " *" if quest_editor is not None and quest_editor.is_dirty() else ""
         list_panel = EditorPanelBase(
             list_rect,
             panel_bg=(0, 0, 0, 0),
@@ -135,13 +148,34 @@ class QuestEditorOverlay(UIElement):
             inner_padding_y=0.0,
         )
         quest = model.selected_quest() if model is not None else None
+        button_rows: dict[str, object] = {}
+        self._widget_rows = {}
         if quest is None:
-            detail_panel.add_header(PanelHeader("Quests", "No quest"))
+            detail_panel.add_header(PanelHeader(f"Quests{dirty_marker}", "No quest"))
         else:
+            if edit_mode and quest_editor is not None:
+                self._sync_edit_widgets(quest_editor)
             quest_id = str(quest.get("id", "") or "")
             title = str(quest.get("title", "") or quest_id)
-            detail_panel.add_header(PanelHeader(title, quest_id))
-            for label, value, _field_path in model.scalar_detail_rows():
+            detail_panel.add_header(PanelHeader(f"{title}{dirty_marker}", quest_id))
+            if quest_editor is not None and quest_editor.last_error_message():
+                detail_panel.add_row(
+                    PanelRow(
+                        PanelField("Error", quest_editor.last_error_message(), label_color=QUEST_EDITOR_ERROR_COLOR),
+                        height=QUEST_EDITOR_ROW_HEIGHT,
+                        padding_x=QUEST_EDITOR_ROW_PADDING_X,
+                    )
+                )
+            for label, value, field_path in _scalar_rows_for_mode(model, edit_mode):
+                if edit_mode and field_path in QUEST_EDITOR_EDITABLE_SCALAR_FIELDS:
+                    self._widget_rows[field_path] = detail_panel.add_row(
+                        PanelRow(
+                            PanelField(label, "", label_color=QUEST_EDITOR_TEXT_COLOR, value_color=QUEST_EDITOR_DIM_COLOR),
+                            height=QUEST_EDITOR_ROW_HEIGHT,
+                            padding_x=QUEST_EDITOR_ROW_PADDING_X,
+                        )
+                    )
+                    continue
                 detail_panel.add_row(
                     PanelRow(
                         PanelField(label, value, label_color=QUEST_EDITOR_TEXT_COLOR, value_color=QUEST_EDITOR_DIM_COLOR),
@@ -160,4 +194,71 @@ class QuestEditorOverlay(UIElement):
                             padding_x=QUEST_EDITOR_ROW_PADDING_X,
                         )
                     )
+            button_rows = add_form_buttons(
+                detail_panel,
+                edit_mode=edit_mode,
+                button_color=QUEST_EDITOR_BUTTON_COLOR,
+                row_height=QUEST_EDITOR_ROW_HEIGHT,
+                padding_x=QUEST_EDITOR_ROW_PADDING_X,
+            )
         detail_panel.draw()
+        if quest_editor is not None:
+            quest_editor.set_button_rects(collect_button_rects(button_rows))
+        if edit_mode and quest_editor is not None:
+            self._draw_edit_widgets(quest_editor)
+
+    def _draw_text_input(self, text_input: TextInput, rect: Rect) -> None:
+        draw_text_input(text_input, rect, _QUEST_FORM_COLORS)
+
+    def _sync_edit_widgets(self, quest_editor: object) -> None:
+        edit_buffer = getattr(quest_editor, "edit_buffer", None)
+        if not isinstance(edit_buffer, dict):
+            return
+        focused = getattr(quest_editor, "focused_field", lambda: None)
+        focused_field = focused() if callable(focused) else None
+        text_inputs = getattr(quest_editor, "text_inputs", lambda: {})()
+        if isinstance(text_inputs, dict):
+            sync_text_inputs(
+                text_inputs,
+                focused_field,
+                lambda field: edit_buffer.get(str(field)),
+            )
+
+    def _draw_edit_widgets(self, quest_editor: object) -> None:
+        text_inputs = getattr(quest_editor, "text_inputs", lambda: {})()
+        if isinstance(text_inputs, dict):
+            draw_text_input_rows(self._widget_rows, text_inputs, self._draw_text_input)
+
+    def try_click_widget(self, x: float, y: float) -> str | None:
+        controller = self._get_controller()
+        quest_editor = getattr(controller, "quest_editor", None) if controller is not None else None
+        if quest_editor is None:
+            return None
+        return try_click_text_widget(self._widget_rows, quest_editor, x, y)
+
+
+def _scalar_rows_for_mode(model: object, edit_mode: bool) -> list[tuple[str, str, str]]:
+    if not edit_mode:
+        rows = model.scalar_detail_rows() if hasattr(model, "scalar_detail_rows") else []
+        return list(rows)
+    quest = model.selected_quest() if hasattr(model, "selected_quest") else None
+    if not isinstance(quest, dict):
+        return []
+    from engine.editor.quest_editor_model import QUEST_SCALAR_FIELD_ORDER  # noqa: PLC0415
+
+    rows: list[tuple[str, str, str]] = []
+    for field_path in QUEST_SCALAR_FIELD_ORDER:
+        value = quest.get(field_path)
+        rows.append((_label_for_field(field_path), "" if value is None else str(value), field_path))
+    return rows
+
+
+def _label_for_field(field_path: str) -> str:
+    return {
+        "id": "ID",
+        "title": "Title",
+        "description": "Description",
+        "type": "Type",
+        "start_toast": "Start toast",
+        "complete_toast": "Complete toast",
+    }.get(field_path, field_path)
