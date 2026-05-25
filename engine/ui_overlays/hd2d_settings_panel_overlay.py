@@ -118,6 +118,12 @@ class Hd2dSettingsPanelOverlay(UIElement):
         # _hd2d_panel_cursor_index: index into flat row list
         # _hd2d_panel_sections_expanded: dict of section_key -> bool
 
+    def _dock_shell_active(self) -> bool:
+        controller = getattr(self.window, "editor_controller", None)
+        if controller is None or not getattr(controller, "active", False):
+            return False
+        return getattr(self.window, "editor_shell_overlay", None) is not None
+
     def _get_dock_widths(self) -> Tuple[int, int]:
         """Get current dock widths from controller."""
         controller = getattr(self.window, "editor_controller", None)
@@ -139,6 +145,8 @@ class Hd2dSettingsPanelOverlay(UIElement):
 
     def draw(self) -> None:
         """Draw the HD-2D settings panel."""
+        if self._dock_shell_active():
+            return
         controller = getattr(self.window, "editor_controller", None)
         if controller is None or not getattr(controller, "active", False):
             return
