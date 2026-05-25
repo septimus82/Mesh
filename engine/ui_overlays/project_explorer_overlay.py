@@ -194,6 +194,7 @@ class ProjectExplorerOverlay(UIElement):
         format_project_recent_label: Any,
         format_project_row_label: Any,
     ) -> None:
+        from ..editor.project_explorer.project_explorer_model import PROJECT_LINE_HEIGHT  # noqa: PLC0415
         from ..editor.widgets.panel_primitives import EditorPanelBase, PanelField, PanelRow
 
         for row_index, _row_text, row_rect, _is_selected in scroll_list.visible_rows:
