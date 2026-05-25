@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
-from .common import UIElement, _draw_lrtb_rectangle_outline, _draw_rectangle_filled, draw_panel_bg
+from .common import UIElement, _draw_tb_rectangle_outline, _draw_rectangle_filled, draw_panel_bg
 from .widget_overlay_helpers import (
     OverlayFocusModel,
     build_empty_row,
@@ -298,7 +298,7 @@ class SceneBrowserOverlay(UIElement):
             height=18.0,
         )
         input_layout = self._text_input.layout(input_rect)
-        _draw_lrtb_rectangle_outline(
+        _draw_tb_rectangle_outline(
             input_rect.left - 2.0,
             input_rect.right + 2.0,
             input_rect.top + 2.0,

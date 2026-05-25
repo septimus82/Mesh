@@ -13,7 +13,7 @@ from engine.swallowed_exceptions import _log_swallow
 
 from .common import (
     UIElement,
-    _draw_lrtb_rectangle_outline,
+    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
 )
 from ..input_hints import get_action_hint, set_keyboard_hints
@@ -633,7 +633,7 @@ class MainMenuOverlay(UIElement):
             height=height,
             color=(0, 0, 0, 220),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
         if self.state == "settings":
             self._draw_settings_menu()

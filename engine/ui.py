@@ -53,7 +53,7 @@ def _sprite_under_cursor(window: "GameWindow") -> "Sprite | None":
 
 from .ui_overlays.common import (
     UIElement,
-    _draw_lrtb_rectangle_outline,
+    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
     _sprite_under_cursor,
 )

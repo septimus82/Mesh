@@ -1,7 +1,7 @@
 from typing import List, Optional
 import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import _log_swallow
-from engine.ui_overlays.common import draw_panel_bg, draw_outline_centered
+from engine.ui_overlays.common import _draw_tb_rectangle_filled, draw_panel_bg, draw_outline_centered
 from engine.ui_text_cache import UiTextCache, draw_text
 from engine.text_draw import TextCache
 
@@ -75,14 +75,14 @@ class ConfirmModalOverlay:
                 track_right = track_left + 3
                 track_top = list_top
                 track_bottom = list_bottom
-                optional_arcade.arcade.draw_lrtb_rectangle_filled(track_left, track_right, track_top, track_bottom, (90, 90, 100, 140))
+                _draw_tb_rectangle_filled(track_left, track_right, track_top, track_bottom, (90, 90, 100, 140))
                 track_h = max(1.0, track_top - track_bottom)
                 ratio = max(0.0, min(1.0, start_index / max(1, (total_lines - visible_count))))
                 thumb_h = max(10.0, track_h * (visible_count / total_lines))
                 usable_h = max(1.0, track_h - thumb_h)
                 thumb_top = track_top - (ratio * usable_h)
                 thumb_bottom = thumb_top - thumb_h
-                optional_arcade.arcade.draw_lrtb_rectangle_filled(track_left, track_right, thumb_top, thumb_bottom, (150, 150, 160, 200))
+                _draw_tb_rectangle_filled(track_left, track_right, thumb_top, thumb_bottom, (150, 150, 160, 200))
         except Exception:
             _log_swallow("CONF-001", "engine/ui_overlays/confirm_modal_overlay.py pass-only blanket swallow")
             pass

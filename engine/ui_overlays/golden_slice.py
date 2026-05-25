@@ -9,7 +9,7 @@ from engine.swallowed_exceptions import _log_swallow
 
 from .common import (
     UIElement,
-    _draw_lrtb_rectangle_outline,
+    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
     _safe_truncate,
     load_config_json,
@@ -679,7 +679,7 @@ class GoldenSliceVariantPickerOverlay(UIElement):
             height=height,
             color=(0, 0, 0, 210),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
         text_left = left + 40.0
         title_y = top - 20.0

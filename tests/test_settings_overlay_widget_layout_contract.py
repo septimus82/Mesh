@@ -102,7 +102,7 @@ def test_settings_overlay_overview_options_panel_bg_suppressed_in_draw(
     filled_calls: list[tuple[float, float, float, float, object]] = []
 
     monkeypatch.setattr(overlay_module, "draw_text_cached", lambda *args, **kwargs: None)
-    monkeypatch.setattr(overlay_module, "_draw_lrtb_rectangle_outline", lambda *args, **kwargs: None)
+    monkeypatch.setattr(overlay_module, "_draw_tb_rectangle_outline", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         overlay_module,
         "_draw_rectangle_filled",

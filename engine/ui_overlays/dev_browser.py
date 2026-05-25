@@ -10,7 +10,7 @@ from engine.swallowed_exceptions import _log_swallow
 from .common import (
     INSPECTOR_MAX_LINE_CHARS,
     UIElement,
-    _draw_lrtb_rectangle_outline,
+    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
     _safe_truncate,
     load_config_json,
@@ -869,7 +869,7 @@ class DevBrowserOverlay(UIElement):
             height=height,
             color=(0, 0, 0, 220),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
         text_left = left + 40.0
         title_y = top - 20.0
@@ -969,7 +969,7 @@ class DevBrowserOverlay(UIElement):
                 height=(panel_top - panel_bottom),
                 color=(10, 10, 10, 230),
             )
-            _draw_lrtb_rectangle_outline(panel_left, panel_right, panel_top, panel_bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+            _draw_tb_rectangle_outline(panel_left, panel_right, panel_top, panel_bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
             y = panel_top - 12.0
             for line in lines[:14]:
@@ -998,7 +998,7 @@ class DevBrowserOverlay(UIElement):
                 height=panel_height,
                 color=(12, 12, 12, 230),
             )
-            _draw_lrtb_rectangle_outline(panel_left, panel_right, panel_top, panel_bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+            _draw_tb_rectangle_outline(panel_left, panel_right, panel_top, panel_bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
             optional_arcade.arcade.draw_text(
                 "Jump Targets",

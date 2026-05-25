@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Tuple
 
 import engine.optional_arcade as optional_arcade
-from .common import UIElement, _draw_rectangle_filled, _draw_lrtb_rectangle_outline
+from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_filled, _draw_tb_rectangle_outline
 from ..text_draw import TextCache
 from ..ui_text_cache import UiTextCache, draw_text
 from .providers import project_explorer_context_menu_provider
@@ -92,9 +92,9 @@ class ProjectExplorerContextMenuOverlay(UIElement):
         t = my + h
         
         # Subtle shadow + panel
-        optional_arcade.arcade.draw_lrtb_rectangle_filled(left + 1, right + 1, t - 1, b - 1, (0, 0, 0, 120))
-        optional_arcade.arcade.draw_lrtb_rectangle_filled(left, right, t, b, CONTEXT_MENU_BG_COLOR)
-        optional_arcade.arcade.draw_lrtb_rectangle_outline(left, right, t, b, CONTEXT_MENU_BORDER_COLOR, 1)
+        _draw_tb_rectangle_filled(left + 1, right + 1, t - 1, b - 1, (0, 0, 0, 120))
+        _draw_tb_rectangle_filled(left, right, t, b, CONTEXT_MENU_BG_COLOR)
+        _draw_tb_rectangle_outline(left, right, t, b, CONTEXT_MENU_BORDER_COLOR, 1)
         
         # 2. Items
         # Render top to bottom
@@ -115,7 +115,7 @@ class ProjectExplorerContextMenuOverlay(UIElement):
             
             # Hover
             if item.kind != "separator" and (i == hover_idx or (hover_idx is None and i == selected_idx)):
-                optional_arcade.arcade.draw_lrtb_rectangle_filled(
+                _draw_tb_rectangle_filled(
                     left + 1, right - 1, item_top, item_bottom, CONTEXT_MENU_HOVER_COLOR
                 )
                 
@@ -199,7 +199,7 @@ class ProjectExplorerContextMenuOverlay(UIElement):
                 track_right = right - 1
                 track_top = t - CONTEXT_MENU_PADDING_Y
                 track_bottom = b + CONTEXT_MENU_PADDING_Y
-                optional_arcade.arcade.draw_lrtb_rectangle_filled(
+                _draw_tb_rectangle_filled(
                     track_left, track_right, track_top, track_bottom, (90, 90, 100, 140)
                 )
                 track_h = max(1.0, track_top - track_bottom)
@@ -208,6 +208,6 @@ class ProjectExplorerContextMenuOverlay(UIElement):
                 usable_h = max(1.0, track_h - thumb_h)
                 thumb_top = track_top - (ratio * usable_h)
                 thumb_bottom = thumb_top - thumb_h
-                optional_arcade.arcade.draw_lrtb_rectangle_filled(
+                _draw_tb_rectangle_filled(
                     track_left, track_right, thumb_top, thumb_bottom, (150, 150, 160, 200)
                 )

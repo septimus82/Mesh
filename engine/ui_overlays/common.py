@@ -77,7 +77,7 @@ def _draw_rectangle_filled(
     if callable(fn):
         fn(center_x, center_y, width, height, color)
     else:
-        # Fallback for newer arcade that might only have lrtb
+        # Fallback for newer arcade that might only have lrbt bounds drawing.
         half_w = width / 2
         half_h = height / 2
         arcade.draw_lrbt_rectangle_filled(
@@ -88,7 +88,7 @@ def _draw_rectangle_filled(
             color
         )
 
-def _draw_lrtb_rectangle_filled(
+def _draw_tb_rectangle_filled(
     left: float,
     right: float,
     top: float,
@@ -107,7 +107,7 @@ def _draw_rectangle_outline(
     border_width: float = 1,
 ) -> None:
     arcade = _get_arcade()
-    arcade.draw_lrtb_rectangle_outline(left, right, top, bottom, color, border_width)
+    arcade.draw_lrbt_rectangle_outline(left, right, bottom, top, color, border_width)
 
 def _draw_rectangle_filled_centered(
     center_x: float,
@@ -131,7 +131,7 @@ def _draw_rectangle_filled_centered(
 
 
 
-def _draw_lrtb_rectangle_outline(
+def _draw_tb_rectangle_outline(
     left: float,
     right: float,
     top: float,
@@ -140,10 +140,6 @@ def _draw_lrtb_rectangle_outline(
     border_width: float = 1.0,
 ) -> None:
     arcade = _get_arcade()
-    fn = getattr(arcade, "draw_lrtb_rectangle_outline", None)
-    if callable(fn):
-        fn(left, right, top, bottom, color, border_width)
-        return
     arcade.draw_lrbt_rectangle_outline(left, right, bottom, top, color, border_width)
 
 

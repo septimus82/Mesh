@@ -110,7 +110,7 @@ def _model(tmp_path: Path, quests: list[dict[str, object]] | None = None) -> Que
 def _capture_panel_text(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     captured: list[str] = []
     monkeypatch.setattr(panel_primitives, "draw_panel_bg", lambda *args, **kwargs: None)
-    monkeypatch.setattr(panel_primitives, "_draw_lrtb_rectangle_outline", lambda *args, **kwargs: None)
+    monkeypatch.setattr(panel_primitives, "_draw_tb_rectangle_outline", lambda *args, **kwargs: None)
     monkeypatch.setattr(panel_primitives, "draw_text_cached", lambda text, *args, **kwargs: captured.append(str(text)))
     return captured
 

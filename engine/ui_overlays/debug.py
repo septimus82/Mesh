@@ -9,7 +9,7 @@ from ..ui_text_cache import UiTextCache, draw_text
 from ..text_draw import TextCache
 from .common import (
     UIElement,
-    _draw_lrtb_rectangle_outline,
+    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
     _sprite_under_cursor,
 )
@@ -140,7 +140,7 @@ class EncounterDebugOverlay(UIElement):
             height=height,
             color=(0, 0, 0, 170),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
         optional_arcade.arcade.draw_text(
             text,
@@ -284,7 +284,7 @@ class SceneInspectorOverlay(UIElement):
             height=height,
             color=(0, 0, 0, 170),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
         optional_arcade.arcade.draw_text(
             text,
@@ -407,7 +407,7 @@ class PhysicsBroadphaseOverlay(UIElement):
             height=height,
             color=(0, 0, 0, 170),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
         y = top - padding
         for line in lines:
@@ -507,7 +507,7 @@ class HD2DDepthDebugOverlay(UIElement):
             height=height,
             color=(0, 0, 0, 180),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.CYAN, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.CYAN, 2)
 
         optional_arcade.arcade.draw_text(
             text,
@@ -570,7 +570,7 @@ class HotReloadOverlay(UIElement):
             height=height,
             color=(0, 0, 0, 200),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.ORANGE, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.ORANGE, 2)
 
         optional_arcade.arcade.draw_text(
             "\n".join(lines),
@@ -950,7 +950,7 @@ class PaletteOverlay(UIElement):
             height=height,
             color=(0, 0, 0, 220),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.MAGENTA, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.MAGENTA, 2)
 
         optional_arcade.arcade.draw_text(
             "\n".join(lines),

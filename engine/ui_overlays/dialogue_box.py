@@ -8,7 +8,7 @@ import engine.optional_arcade as optional_arcade
 
 from .common import (
     UIElement,
-    _draw_lrtb_rectangle_outline,
+    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
 )
 from ..text_draw import TextCache, draw_text_cached
@@ -253,7 +253,7 @@ class DialogueBox(UIElement):
             height=height,
             color=(10, 12, 20, 220),
         )
-        _draw_lrtb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
         padding = 24.0
         self._speaker_text.x = left + padding

@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, List, Tuple
 
 import engine.optional_arcade as optional_arcade
-from engine.ui_overlays.common import draw_outline_centered
+from engine.ui_overlays.common import _draw_tb_rectangle_filled, draw_outline_centered
 from engine.editor.state import (
     TOOL_MODE_PATH,
     TOOL_MODE_ZONE,
@@ -23,7 +23,7 @@ def _draw_rectangle_filled(
     cx: float, cy: float, width: float, height: float, color: Tuple[int, ...]
 ) -> None:
     """Draw a filled rectangle (arcade shim)."""
-    optional_arcade.arcade.draw_lrtb_rectangle_filled(
+    _draw_tb_rectangle_filled(
         left=cx - width / 2,
         right=cx + width / 2,
         top=cy + height / 2,

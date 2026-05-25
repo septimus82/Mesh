@@ -47,7 +47,7 @@ def test_find_everything_overlay_textinput_updates_query(monkeypatch: pytest.Mon
 
     monkeypatch.setattr(optional_arcade, "arcade", arcade_stub)
     monkeypatch.setattr(overlay_module, "draw_panel_bg", lambda *args, **kwargs: None)
-    monkeypatch.setattr(overlay_module, "_draw_lrtb_rectangle_outline", lambda *args, **kwargs: None)
+    monkeypatch.setattr(overlay_module, "_draw_tb_rectangle_outline", lambda *args, **kwargs: None)
     monkeypatch.setattr(overlay_module, "_draw_rectangle_filled", lambda *args, **kwargs: None)
     monkeypatch.setattr(overlay_module, "draw_text_cached", lambda *args, **kwargs: None)
     overlay, controller = _make_overlay()
@@ -70,7 +70,7 @@ def test_find_everything_overlay_textinput_focus_gate(monkeypatch: pytest.Monkey
 
     monkeypatch.setattr(optional_arcade, "arcade", arcade_stub)
     monkeypatch.setattr(overlay_module, "draw_panel_bg", lambda *args, **kwargs: None)
-    monkeypatch.setattr(overlay_module, "_draw_lrtb_rectangle_outline", lambda *args, **kwargs: None)
+    monkeypatch.setattr(overlay_module, "_draw_tb_rectangle_outline", lambda *args, **kwargs: None)
     monkeypatch.setattr(overlay_module, "_draw_rectangle_filled", lambda *args, **kwargs: None)
     monkeypatch.setattr(overlay_module, "draw_text_cached", lambda *args, **kwargs: None)
     overlay, controller = _make_overlay()

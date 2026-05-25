@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 
 from ..text_draw import draw_text_cached, TextCache
-from .common import UIElement, _draw_rectangle_filled, _draw_lrtb_rectangle_outline
+from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline
 from .widgets import Rect, ScrollList
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -91,7 +91,7 @@ class UndoHistoryOverlay(UIElement):
             dock.top,
             (18, 18, 22, 220),
         )
-        _draw_lrtb_rectangle_outline(
+        _draw_tb_rectangle_outline(
             dock.left,
             dock.right,
             dock.top,
