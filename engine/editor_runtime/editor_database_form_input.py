@@ -28,6 +28,12 @@ DATABASE_FORM_ROUTES: tuple[DatabaseFormRoute, ...] = (
         key_handler="handle_prefab_editor_key",
         click_handler="handle_prefab_editor_mouse_click",
     ),
+    DatabaseFormRoute(controller_attr="quest_editor",
+        tab_name="Quests",
+        text_handler="handle_quest_editor_text_input",
+        key_handler="handle_quest_editor_key",
+        click_handler="handle_quest_editor_mouse_click",
+    ),
 )
 
 

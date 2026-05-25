@@ -156,3 +156,21 @@ def _string_value(value: Any) -> str:
 
 def _is_empty_complex_value(value: Any) -> bool:
     return value is None or value == [] or value == {}
+
+
+def validate_quest_entries(entries: list[dict[str, Any]], target_path: str | Path) -> list[str]:
+    """Return validation error messages for editable quest payloads."""
+    from engine.quest_runtime.validation import validate_quest_file  # noqa: PLC0415
+
+    errors = validate_quest_file(Path(target_path), {"quests": entries})
+    return [error.message for error in errors]
+
+
+def save_quests(entries: list[dict[str, Any]], target_path: str | Path) -> None:
+    """Persist quest dictionaries to assets/data/quests.json shape."""
+    from engine.persistence_io import write_json_atomic  # noqa: PLC0415
+
+    errors = validate_quest_entries(entries, target_path)
+    if errors:
+        raise ValueError("; ".join(errors))
+    write_json_atomic(Path(target_path), {"quests": entries}, sort_keys=False, trailing_newline=True)
