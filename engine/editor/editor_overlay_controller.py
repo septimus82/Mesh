@@ -12,6 +12,15 @@ class EditorOverlayController:
     def __init__(self, editor: Any) -> None:
         self._editor = editor
 
+    def _dock_shell_active(self) -> bool:
+        editor = getattr(self, "_editor", None)
+        if editor is None or not getattr(editor, "active", False):
+            return False
+        window = getattr(editor, "window", None) or getattr(self, "_window", None)
+        if window is None:
+            return False
+        return getattr(window, "editor_shell_overlay", None) is not None
+
     def draw_overlay(self) -> None:
         editor = self._editor
         build = getattr(editor, "build", None)
@@ -32,12 +41,15 @@ class EditorOverlayController:
         editor._tick_workspace_autosave()
         editor._update_status()
 
-        editor.debug_overlay.draw_debug_overlay(editor._overlay_text_obj)
+        dock_shell_active = self._dock_shell_active()
+        if not dock_shell_active:
+            editor.debug_overlay.draw_debug_overlay(editor._overlay_text_obj)
 
         if editor.palette_active:
             editor.palette.draw_palette(editor._palette_text_obj)
 
-        editor.hierarchy.draw_hierarchy_panel()
+        if not dock_shell_active:
+            editor.hierarchy.draw_hierarchy_panel()
 
         if editor.dialogue_panel_active:
             editor.dialogue.draw_dialogue_panel()
