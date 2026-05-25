@@ -17,6 +17,12 @@ class LightOccluderEditorOverlay(UIElement):
         super().__init__(window)
         self._text_cache = TextCache(max_size=64)
 
+    def _dock_shell_active(self) -> bool:
+        controller = getattr(self.window, "editor_controller", None)
+        if controller is None or not getattr(controller, "active", False):
+            return False
+        return getattr(self.window, "editor_shell_overlay", None) is not None
+
     def draw_world(self) -> None:
         if optional_arcade.arcade is None:
             return
@@ -30,6 +36,8 @@ class LightOccluderEditorOverlay(UIElement):
 
     def draw(self) -> None:
         if optional_arcade.arcade is None:
+            return
+        if self._dock_shell_active():
             return
         controller = getattr(self.window, "editor_controller", None)
         if controller is None or not getattr(controller, "active", False):
