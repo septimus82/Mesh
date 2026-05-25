@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Iterable, List, TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .editor_shell_layout import Rect
+    from ..editor_shell_layout import Rect
 
 
 PROJECT_LINE_HEIGHT = 18.0
@@ -334,7 +334,7 @@ def format_project_row_label(row: ProjectRow) -> str:
 
 def compute_project_explorer_layout(dock: "Rect") -> ProjectExplorerLayout:
     """Compute layout rects for the Project Explorer panel."""
-    from .editor_shell_layout import TAB_HEADER_HEIGHT, Rect
+    from ..editor_shell_layout import TAB_HEADER_HEIGHT, Rect
 
     content_top = dock.top - TAB_HEADER_HEIGHT
     search_top = content_top - PROJECT_PADDING
