@@ -67,6 +67,12 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
             if handled:
                 return True
 
+        inspector_result = getattr(controller, "_inspector_handle_mouse_click", None)
+        if callable(inspector_result):
+            handled = inspector_result(x, y, button)
+            if handled:
+                return True
+
     project_result = getattr(controller, "_project_explorer_handle_mouse_click", None)
     if callable(project_result):
         handled = project_result(x, y, button, modifiers)
@@ -95,6 +101,9 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
         handler = getattr(controller, "_scene_browser_handle_mouse_click", None)
         if callable(handler):
             return bool(handler(x, y, button))
+        return True
+
+    if _is_inside_right_dock(controller, x, y):
         return True
 
     if controller.shape_edit_mode:
@@ -234,6 +243,21 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
         if controller.occluder_tool_active:
             return bool(controller._remove_occluder_point())
     return False
+
+
+def _is_inside_right_dock(controller: EditorController, x: float, y: float) -> bool:
+    from engine.editor.editor_dock_query import get_effective_dock_widths  # noqa: PLC0415
+    from engine.editor.editor_shell_layout import compute_editor_shell_layout  # noqa: PLC0415
+
+    try:
+        window = getattr(controller, "window", None)
+        window_w = int(getattr(window, "width", 1280) or 1280)
+        window_h = int(getattr(window, "height", 720) or 720)
+        left_w, right_w = get_effective_dock_widths(controller, window_w)
+        layout = compute_editor_shell_layout(window_w, window_h, left_w, right_w)
+        return bool(layout.right_dock.contains_point(x, y))
+    except Exception:  # noqa: BLE001  # REASON: dock guard must not break existing world-space click handling if shell layout state is unavailable
+        return False
 
 
 def _handle_menu_bar_click(controller: EditorController, x: float, y: float) -> bool | None:

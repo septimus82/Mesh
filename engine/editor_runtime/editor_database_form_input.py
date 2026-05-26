@@ -54,6 +54,17 @@ def active_database_form(controller: Any) -> tuple[DatabaseFormRoute, Any] | Non
     return None
 
 
+def active_database_form_for_click(controller: Any) -> tuple[DatabaseFormRoute, Any] | None:
+    dock = getattr(controller, "dock", None)
+    snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+    right_tab = getattr(snapshot, "right_tab", "Inspector") or "Inspector"
+    for route in DATABASE_FORM_ROUTES:
+        form = getattr(controller, route.controller_attr, None)
+        if form is not None and right_tab == route.tab_name:
+            return route, form
+    return None
+
+
 def dispatch_database_form_text(controller: Any, text: str) -> bool:
     active = active_database_form(controller)
     if active is None:
@@ -87,7 +98,7 @@ def dispatch_database_form_key(controller: Any, key: int, modifiers: int) -> boo
 
 
 def dispatch_database_form_click(controller: Any, x: float, y: float) -> bool:
-    active = active_database_form(controller)
+    active = active_database_form_for_click(controller)
     if active is None:
         return False
     route, form = active

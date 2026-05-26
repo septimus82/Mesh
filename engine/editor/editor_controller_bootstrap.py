@@ -30,6 +30,7 @@ from .editor_hierarchy_controller import EditorHierarchyController
 from .editor_history_controller import EditorHistoryController
 from .editor_hover_state_controller import EditorHoverStateController
 from .editor_inspector_controller import EditorInspectorController
+from .editor_inspector_input_controller import EditorInspectorInputController
 from .editor_keymap_controller import EditorKeymapController
 from .editor_lights_controller import EditorLightsController
 from .editor_marquee_controller import EditorMarqueeController
@@ -103,6 +104,7 @@ def bootstrap_dependencies(controller: Any) -> None:
     controller.palette = EditorPaletteController(controller)
     controller.prefab = EditorPrefabController(controller)
     controller.inspector = EditorInspectorController(controller)
+    controller.inspector_input = EditorInspectorInputController(controller)
     controller.clipboard = EditorClipboardController(controller)
     controller.hd2d = EditorHd2dController(controller)
     controller.duplicate = EditorDuplicateController(controller)

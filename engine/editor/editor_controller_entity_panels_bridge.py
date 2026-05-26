@@ -103,6 +103,10 @@ def _component_inspector_commit_text_edit(
     return self.inspector.component_inspector_commit_text_edit(entity_json, selection)
 
 
+def _inspector_handle_mouse_click(self: "EditorModeController", x: float, y: float, button: int) -> bool:
+    return self.inspector_input.handle_mouse_click(x, y, button)
+
+
 def _apply_component_entity_update(self: "EditorModeController", new_entity_json: Dict[str, Any]) -> None:
     self.inspector.apply_component_entity_update(new_entity_json)
 
@@ -317,6 +321,7 @@ def bind_entity_panels_bridge_methods(cls: Any) -> None:
     cls._get_entity_id_for_inspector = _get_entity_id_for_inspector
     cls._apply_inspector_to_sprite = _apply_inspector_to_sprite
     cls._component_inspector_commit_text_edit = _component_inspector_commit_text_edit
+    cls._inspector_handle_mouse_click = _inspector_handle_mouse_click
     cls._apply_component_entity_update = _apply_component_entity_update
     cls._sync_sprite_from_component_json = _sync_sprite_from_component_json
     # Prefab
