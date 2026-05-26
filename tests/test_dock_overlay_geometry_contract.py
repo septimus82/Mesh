@@ -11,12 +11,15 @@ from engine.editor.project_explorer.project_explorer_model import (
     format_project_recent_label,
     format_project_row_label,
 )
+from engine.ui_overlays import asset_browser_overlay as asset_overlay_module
+from engine.ui_overlays.asset_browser_overlay import AssetBrowserOverlay
 from engine.ui_overlays.entity_panels_overlay import EntityPanelsOverlay
 from engine.ui_overlays.project_explorer_overlay import (
     ProjectExplorerOverlay,
     _build_project_explorer_scrolllist,
 )
 from engine.ui_overlays.widgets import Rect
+from engine.workspace_settings import WorkspaceSettings
 from tests._dock_stub import DockStub
 
 
@@ -135,3 +138,85 @@ def test_project_explorer_row_list_imports_project_line_height(monkeypatch: pyte
         rename_sel_end=0,
         **formatter_args,
     )
+
+
+def _window_for_asset_browser(
+    *,
+    width: int = 1280,
+    height: int = 720,
+    right_tab: str = "Assets",
+    left_w: int = 320,
+    right_w: int = 320,
+) -> SimpleNamespace:
+    dock = DockStub(left_tab="Outliner", right_tab=right_tab, left_w=left_w, right_w=right_w)
+    search = SimpleNamespace(get_assets_search=lambda: "", set_assets_search=lambda _text: None)
+    controller = SimpleNamespace(
+        active=True,
+        asset_browser_active=True,
+        dock=dock,
+        search=search,
+        asset_browser_kind="All",
+        asset_browser_selection_index=0,
+        _asset_browser_filtered_rows=[],
+    )
+    return SimpleNamespace(width=width, height=height, editor_controller=controller)
+
+
+def _stub_asset_draw(monkeypatch: pytest.MonkeyPatch) -> list[tuple[float, float, float, float]]:
+    panel_calls: list[tuple[float, float, float, float]] = []
+    monkeypatch.setattr(asset_overlay_module, "draw_panel_bg", lambda left, right, bottom, top, *args, **kwargs: panel_calls.append((left, right, bottom, top)))
+    monkeypatch.setattr(asset_overlay_module, "_draw_tb_rectangle_outline", lambda *args, **kwargs: None)
+    monkeypatch.setattr(asset_overlay_module, "draw_text_cached", lambda *args, **kwargs: None)
+    return panel_calls
+
+
+@pytest.mark.parametrize(
+    ("width", "height", "right_w"),
+    [(1280, 720, 320), (1600, 900, 420), (1024, 768, 280)],
+)
+def test_asset_browser_overlay_uses_right_dock_bounds(
+    monkeypatch: pytest.MonkeyPatch,
+    width: int,
+    height: int,
+    right_w: int,
+) -> None:
+    window = _window_for_asset_browser(width=width, height=height, right_w=right_w)
+    panel_calls = _stub_asset_draw(monkeypatch)
+    overlay = AssetBrowserOverlay(window)
+
+    overlay.draw()
+
+    controller = window.editor_controller
+    effective_left_w, effective_right_w = get_effective_dock_widths(controller, width)
+    expected_dock = compute_editor_shell_layout(width, height, effective_left_w, effective_right_w).right_dock
+    assert panel_calls[0] == pytest.approx((expected_dock.left, expected_dock.right, expected_dock.bottom, expected_dock.top))
+    assert overlay._text_input.last_rect is not None
+    assert overlay._list_rect is not None
+    for rect in (overlay._text_input.last_rect, overlay._list_rect):
+        assert rect.left >= expected_dock.left
+        assert rect.right <= expected_dock.right
+        assert rect.bottom >= expected_dock.bottom
+        assert rect.top <= expected_dock.top
+
+
+def test_asset_browser_filter_defaults_to_empty_and_sanitizes_persisted_garbage() -> None:
+    overlay = AssetBrowserOverlay(_window_for_asset_browser())
+    assert overlay._text_input.text == ""
+    settings = WorkspaceSettings.from_dict(
+        {
+            "asset_browser_filter": "jjkjkj \u00a3\u00a3\u00a3",
+            "assets_search": "ssdf\u0001bad",
+        }
+    )
+    assert settings.asset_browser_filter == ""
+    assert settings.assets_search == ""
+
+
+def test_asset_browser_overlay_draws_only_on_assets_tab(monkeypatch: pytest.MonkeyPatch) -> None:
+    window = _window_for_asset_browser(right_tab="Inspector")
+    panel_calls = _stub_asset_draw(monkeypatch)
+    overlay = AssetBrowserOverlay(window)
+
+    overlay.draw()
+
+    assert panel_calls == []
