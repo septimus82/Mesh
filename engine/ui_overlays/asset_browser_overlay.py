@@ -223,30 +223,30 @@ class AssetBrowserOverlay(UIElement):
             self._set_focus("input")
             self._was_open = True
 
-        win_w, win_h = self.window.width, self.window.height
-        panel_w, panel_h = 900, 600
+        from ..editor.editor_dock_query import get_effective_dock_widths
+        from ..editor.editor_shell_layout import TAB_HEADER_HEIGHT, compute_editor_shell_layout
 
-        left = (win_w - panel_w) // 2
-        right = left + panel_w
-        top = (win_h + panel_h) // 2
-        bottom = top - panel_h
+        window_w = int(getattr(self.window, "width", 1280) or 1280)
+        window_h = int(getattr(self.window, "height", 720) or 720)
+        left_w, right_w = get_effective_dock_widths(controller, window_w)
+        layout = compute_editor_shell_layout(window_w, window_h, left_w, right_w)
+        dock = layout.right_dock
 
-        if top > win_h - 20:
-            top = win_h - 20
-        if bottom < 20:
-            bottom = 20
-        if left < 20:
-            left = 20
-        if right > win_w - 20:
-            right = win_w - 20
+        left = dock.left
+        right = dock.right
+        top = dock.top
+        bottom = dock.bottom
 
         draw_panel_bg(left, right, bottom, top)
 
-        header_h = 40
-        search_rect_l = left + 20
-        search_rect_r = right - 20
-        search_rect_t = top - 5
-        search_rect_b = top - header_h
+        padding = 8.0
+        filter_h = 24.0
+        footer_h = 28.0
+        content_top = top - TAB_HEADER_HEIGHT - padding
+        search_rect_l = left + padding
+        search_rect_r = right - padding
+        search_rect_t = content_top
+        search_rect_b = search_rect_t - filter_h
 
         search = getattr(controller, "search", None)
         filter_text = search.get_assets_search() if search is not None else ""
@@ -263,35 +263,36 @@ class AssetBrowserOverlay(UIElement):
         draw_text_cached(
             f"Filter: {self._text_input.text or 'Search assets...'}",
             search_rect_l,
-            search_rect_b + 8,
+            search_rect_b + 6,
             color=(255, 255, 255),
-            font_size=14,
+            font_size=11,
             cache=self._text_cache,
         )
         if self._text_input.focused:
             draw_text_cached(
                 "|",
-                search_rect_l + 55 + (len(str(self._text_input.text)) * 7),
-                search_rect_b + 8,
+                search_rect_l + 46 + (len(str(self._text_input.text)) * 6),
+                search_rect_b + 6,
                 color=(255, 255, 255),
-                font_size=14,
+                font_size=11,
                 cache=self._text_cache,
             )
         _ = input_layout
         draw_text_cached(
             f"Kind: {kind_text}",
-            search_rect_r - 150,
-            search_rect_b + 8,
+            search_rect_r,
+            search_rect_b + 6,
             color=(100, 200, 255),
-            font_size=14,
+            font_size=11,
+            anchor_x="right",
             cache=self._text_cache,
         )
-        _draw_tb_rectangle_outline(search_rect_l - 5, search_rect_r + 5, search_rect_t, search_rect_b, (255, 255, 255, 50), 1)
+        _draw_tb_rectangle_outline(search_rect_l, search_rect_r, search_rect_t, search_rect_b, (255, 255, 255, 50), 1)
 
-        split_x = left + (right - left) * 0.6
-        content_top = top - header_h - 10
-        content_bottom = bottom + 10
-        _draw_tb_rectangle_outline(split_x, split_x + 1, content_top, content_bottom, (255, 255, 255, 30), 1)
+        list_top = search_rect_b - padding
+        detail_h = 92.0
+        detail_top = bottom + footer_h + detail_h
+        list_bottom = detail_top + padding
 
         rows = list(getattr(controller, "_asset_browser_filtered_rows", []) or [])
         self._rows = rows
@@ -301,10 +302,10 @@ class AssetBrowserOverlay(UIElement):
         self._results_scroll.selected_index = selected_index
 
         self._list_rect = Rect(
-            x=float(left + 10),
-            y=float(content_bottom),
-            width=float((split_x - 10) - (left + 10)),
-            height=float(content_top - content_bottom),
+            x=float(search_rect_l),
+            y=float(list_bottom),
+            width=float(search_rect_r - search_rect_l),
+            height=max(0.0, float(list_top - list_bottom)),
         )
 
         self._sync_scroll_selection_from_controller(controller)
@@ -322,8 +323,8 @@ class AssetBrowserOverlay(UIElement):
         if not rows:
             draw_text_cached(
                 composed_rows[0] if composed_rows else _asset_browser_empty_state_text(),
-                left + 15,
-                content_top - 24,
+                search_rect_l,
+                list_top - 18,
                 color=(170, 170, 180),
                 font_size=12,
                 cache=self._text_cache,
@@ -332,24 +333,21 @@ class AssetBrowserOverlay(UIElement):
         sel_idx = int(getattr(controller, "asset_browser_selection_index", 0) or 0)
         if 0 <= sel_idx < len(rows):
             sel_row = rows[sel_idx]
-            detail_x = split_x + 20
-            detail_y = content_top - 20
-            draw_text_cached("DETAILS", detail_x, detail_y, color=(255, 200, 100), font_size=14, bold=True, cache=self._text_cache)
-            detail_y -= 30
-            draw_text_cached("Name:", detail_x, detail_y, color=(150, 150, 150), font_size=10, cache=self._text_cache)
-            draw_text_cached(str(sel_row.display_name), detail_x, detail_y - 15, color=(255, 255, 255), font_size=12, cache=self._text_cache)
-            detail_y -= 40
-            draw_text_cached("Kind:", detail_x, detail_y, color=(150, 150, 150), font_size=10, cache=self._text_cache)
-            draw_text_cached(str(sel_row.kind), detail_x, detail_y - 15, color=(255, 255, 255), font_size=12, cache=self._text_cache)
-            detail_y -= 40
-            draw_text_cached("Path:", detail_x, detail_y, color=(150, 150, 150), font_size=10, cache=self._text_cache)
-            draw_text_cached(str(sel_row.rel_path), detail_x, detail_y - 15, color=(100, 255, 100), font_size=10, cache=self._text_cache)
+            detail_x = search_rect_l
+            detail_y = detail_top - 16
+            draw_text_cached("DETAILS", detail_x, detail_y, color=(255, 200, 100), font_size=11, bold=True, cache=self._text_cache)
+            detail_y -= 18
+            draw_text_cached(f"Name: {sel_row.display_name}", detail_x, detail_y, color=(255, 255, 255), font_size=10, cache=self._text_cache)
+            detail_y -= 16
+            draw_text_cached(f"Kind: {sel_row.kind}", detail_x, detail_y, color=(255, 255, 255), font_size=10, cache=self._text_cache)
+            detail_y -= 16
+            draw_text_cached(f"Path: {sel_row.rel_path}", detail_x, detail_y, color=(100, 255, 100), font_size=10, cache=self._text_cache)
         else:
             if not rows and str(filter_text or ""):
                 draw_text_cached(
                     "No matches found.",
-                    split_x + 20,
-                    content_top - 20,
+                    search_rect_l,
+                    detail_top - 16,
                     color=(255, 100, 100),
                     font_size=12,
                     cache=self._text_cache,
@@ -363,8 +361,8 @@ class AssetBrowserOverlay(UIElement):
         elif composed_rows:
             status_row = composed_rows[-1]
 
-        draw_text_cached(status_row, left + 15, bottom + 16, color=(170, 170, 180), font_size=10, cache=self._text_cache)
-        draw_text_cached(hints_row, left + 15, bottom + 4, color=(170, 170, 180), font_size=10, cache=self._text_cache)
+        draw_text_cached(status_row, search_rect_l, bottom + 16, color=(170, 170, 180), font_size=10, cache=self._text_cache)
+        draw_text_cached(hints_row, search_rect_l, bottom + 4, color=(170, 170, 180), font_size=10, cache=self._text_cache)
 
     def _draw_asset_browser_row_list(self, instructions: list[Any], rows: list[Any]) -> None:
         bounds = self._list_rect

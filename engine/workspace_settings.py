@@ -79,10 +79,10 @@ class WorkspaceSettings:
             scene_switcher_open=bool(data.get("scene_switcher_open", False)),
             scene_browser_open=bool(data.get("scene_browser_open", False)),
             asset_browser_open=bool(data.get("asset_browser_open", False)),
-            asset_browser_filter=str(data.get("asset_browser_filter", "")),
+            asset_browser_filter=_coerce_filter_text(data.get("asset_browser_filter", "")),
             asset_browser_kind=str(data.get("asset_browser_kind", "All")),
             outliner_search=str(data.get("outliner_search", "")),
-            assets_search=str(data.get("assets_search", data.get("asset_browser_filter", ""))),
+            assets_search=_coerce_filter_text(data.get("assets_search", data.get("asset_browser_filter", ""))),
             history_search=str(data.get("history_search", "")),
             problems_search=str(data.get("problems_search", "")),
             project_search=str(data.get("project_search", "")),
@@ -159,6 +159,15 @@ def _coerce_recent_payloads(raw: Any, *, limit: int = 8) -> list[dict[str, str]]
         if len(result) >= limit:
             break
     return result
+
+
+def _coerce_filter_text(raw: Any) -> str:
+    text = str(raw or "")
+    if not text:
+        return ""
+    if any((ord(ch) < 32 or ord(ch) > 126) for ch in text):
+        return ""
+    return text
 
 
 def _coerce_hd2d_default_preset_id(raw: Any) -> str | None:
