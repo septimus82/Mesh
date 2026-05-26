@@ -80,11 +80,33 @@ def _outliner_editor(*, left_tab: str = "Outliner") -> SimpleNamespace:
         entity_panels_selection_index=0,
         _cached_entity_panels_list=items,
         selected_ids=[],
+        entity_dragging=False,
+        entity_drag_start_pos=None,
+        _multiselect_drag_starts={},
+        _move_preview_delta_xy=None,
+        _transform_snap_active=False,
+        _rotate_drag_active=False,
+        _scale_drag_active=False,
+        _transform_drag_pivot=None,
+        _transform_drag_mouse_start=None,
+        _transform_drag_start_rots={},
+        _transform_drag_start_scales={},
     )
 
     def _select_current() -> bool:
         index = int(editor.entity_panels_selection_index)
         editor.selected_ids.append(editor._cached_entity_panels_list[index].id)
+        editor.entity_dragging = True
+        editor.entity_drag_start_pos = (10.0, 20.0)
+        editor._multiselect_drag_starts = {"crate": (10.0, 20.0)}
+        editor._move_preview_delta_xy = (1.0, 1.0)
+        editor._transform_snap_active = True
+        editor._rotate_drag_active = True
+        editor._scale_drag_active = True
+        editor._transform_drag_pivot = (10.0, 20.0)
+        editor._transform_drag_mouse_start = (11.0, 21.0)
+        editor._transform_drag_start_rots = {"crate": 15.0}
+        editor._transform_drag_start_scales = {"crate": 1.5}
         return True
 
     editor._refresh_entity_panels_list = lambda: None
@@ -150,6 +172,13 @@ def test_click_inside_outliner_row_selects_that_entity() -> None:
 
     assert editor.entity_panels_selection_index == 1
     assert editor.selected_ids == ["crate"]
+    assert editor.entity_dragging is False
+    assert editor.entity_drag_start_pos is None
+    assert editor._multiselect_drag_starts == {}
+    assert editor._move_preview_delta_xy is None
+    assert editor._transform_snap_active is False
+    assert editor._rotate_drag_active is False
+    assert editor._scale_drag_active is False
 
 
 def test_click_inside_outliner_rect_with_project_tab_does_not_select() -> None:

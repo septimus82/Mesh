@@ -34,6 +34,7 @@ class EditorOutlinerInputController:
         selector = getattr(editor, "_entity_panels_select_current", None)
         if callable(selector):
             selector()
+            self._clear_panel_selection_drag_state()
         return True
 
     def _is_outliner_tab(self) -> bool:
@@ -89,3 +90,17 @@ class EditorOutlinerInputController:
             if row_bottom <= y <= row_top:
                 return start_idx + local_index
         return None
+
+    def _clear_panel_selection_drag_state(self) -> None:
+        editor = self._editor
+        editor.entity_dragging = False
+        editor.entity_drag_start_pos = None
+        editor._multiselect_drag_starts = {}
+        editor._move_preview_delta_xy = None
+        editor._transform_snap_active = False
+        editor._rotate_drag_active = False
+        editor._scale_drag_active = False
+        editor._transform_drag_pivot = None
+        editor._transform_drag_mouse_start = None
+        editor._transform_drag_start_rots = {}
+        editor._transform_drag_start_scales = {}
