@@ -18,6 +18,8 @@ from engine.ui_overlays.project_explorer_overlay import (
     ProjectExplorerOverlay,
     _build_project_explorer_scrolllist,
 )
+from engine.ui_overlays import scene_browser_overlay as scene_overlay_module
+from engine.ui_overlays.scene_browser_overlay import SceneBrowserOverlay
 from engine.ui_overlays.widgets import Rect
 from engine.workspace_settings import WorkspaceSettings
 from tests._dock_stub import DockStub
@@ -216,6 +218,84 @@ def test_asset_browser_overlay_draws_only_on_assets_tab(monkeypatch: pytest.Monk
     window = _window_for_asset_browser(right_tab="Inspector")
     panel_calls = _stub_asset_draw(monkeypatch)
     overlay = AssetBrowserOverlay(window)
+
+    overlay.draw()
+
+    assert panel_calls == []
+
+
+def _window_for_scene_browser(
+    *,
+    width: int = 1280,
+    height: int = 720,
+    left_tab: str = "Scene",
+    active: bool = True,
+    left_w: int = 320,
+    right_w: int = 320,
+) -> SimpleNamespace:
+    dock = DockStub(left_tab=left_tab, right_tab="Inspector", left_w=left_w, right_w=right_w)
+    controller = SimpleNamespace(
+        active=True,
+        scene_browser_active=active,
+        dock=dock,
+        scene_browser_query="",
+        scene_browser_index=0,
+        _scene_browser_rows=lambda: [],
+    )
+    return SimpleNamespace(width=width, height=height, editor_controller=controller)
+
+
+def _stub_scene_draw(monkeypatch: pytest.MonkeyPatch) -> list[tuple[float, float, float, float]]:
+    panel_calls: list[tuple[float, float, float, float]] = []
+    monkeypatch.setattr(scene_overlay_module, "draw_panel_bg", lambda left, right, bottom, top, *args, **kwargs: panel_calls.append((left, right, bottom, top)))
+    monkeypatch.setattr(scene_overlay_module, "_draw_tb_rectangle_outline", lambda *args, **kwargs: None)
+    monkeypatch.setattr(scene_overlay_module, "draw_text_cached", lambda *args, **kwargs: None)
+    return panel_calls
+
+
+@pytest.mark.parametrize(
+    ("width", "height", "left_w"),
+    [(1280, 720, 320), (1600, 900, 420), (1024, 768, 280)],
+)
+def test_scene_browser_overlay_uses_left_dock_bounds(
+    monkeypatch: pytest.MonkeyPatch,
+    width: int,
+    height: int,
+    left_w: int,
+) -> None:
+    window = _window_for_scene_browser(width=width, height=height, left_w=left_w)
+    panel_calls = _stub_scene_draw(monkeypatch)
+    overlay = SceneBrowserOverlay(window)
+
+    overlay.draw()
+
+    controller = window.editor_controller
+    effective_left_w, effective_right_w = get_effective_dock_widths(controller, width)
+    expected_dock = compute_editor_shell_layout(width, height, effective_left_w, effective_right_w).left_dock
+    assert panel_calls[0] == pytest.approx((expected_dock.left, expected_dock.right, expected_dock.bottom, expected_dock.top))
+    assert overlay._text_input.last_rect is not None
+    assert overlay._results_rect is not None
+    for rect in (overlay._text_input.last_rect, overlay._results_rect):
+        assert rect.left >= expected_dock.left
+        assert rect.right <= expected_dock.right
+        assert rect.bottom >= expected_dock.bottom
+        assert rect.top <= expected_dock.top
+
+
+def test_scene_browser_overlay_draws_only_on_scene_tab(monkeypatch: pytest.MonkeyPatch) -> None:
+    window = _window_for_scene_browser(left_tab="Project")
+    panel_calls = _stub_scene_draw(monkeypatch)
+    overlay = SceneBrowserOverlay(window)
+
+    overlay.draw()
+
+    assert panel_calls == []
+
+
+def test_scene_browser_overlay_respects_active_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    window = _window_for_scene_browser(active=False)
+    panel_calls = _stub_scene_draw(monkeypatch)
+    overlay = SceneBrowserOverlay(window)
 
     overlay.draw()
 
