@@ -101,7 +101,14 @@ def handle_pre_routed_keys(controller: EditorController, key: int, modifiers: in
             return True
         return True
 
-    from engine.editor_runtime.editor_database_form_input import dispatch_database_form_key  # noqa: PLC0415
+    from engine.editor_runtime.editor_database_form_input import (  # noqa: PLC0415
+        active_database_form,
+        dispatch_database_form_key,
+    )
+
+    if key == optional_arcade.arcade.key.TAB and active_database_form(controller) is None:
+        if not _has_text_input_focus_or_edit_mode(controller):
+            return _cycle_right_dock_tab(controller, -1 if (modifiers & optional_arcade.arcade.key.MOD_SHIFT) else 1)
 
     if dispatch_database_form_key(controller, key, modifiers):
         return True
@@ -139,3 +146,50 @@ def _prefab_editor_should_route(controller: EditorController, prefab_editor: obj
     from engine.editor_runtime.editor_database_form_input import _form_should_route  # noqa: PLC0415
 
     return _form_should_route(controller, prefab_editor, "Prefabs")
+
+
+def _has_text_input_focus_or_edit_mode(controller: EditorController) -> bool:
+    if bool(getattr(controller, "_inspector_text_edit_active", False)):
+        return True
+    if bool(getattr(controller, "entity_panels_text_edit_active", False)):
+        return True
+    if bool(getattr(controller, "dialogue_panel_active", False)) and bool(getattr(controller, "dialogue_editing", False)):
+        return True
+    if bool(getattr(controller, "animation_active", False)) and bool(getattr(controller, "animation_editing", False)):
+        return True
+    search = getattr(controller, "search", None)
+    if search is not None and getattr(search, "is_search_focused", lambda: False)():
+        return True
+    return False
+
+
+def _cycle_right_dock_tab(controller: EditorController, delta: int) -> bool:
+    from engine.editor.dock_tab_registry import RIGHT_DOCK_TABS  # noqa: PLC0415
+
+    tabs = tuple(RIGHT_DOCK_TABS)
+    if not tabs:
+        return False
+
+    dock = getattr(controller, "dock", None)
+    snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock
+    current = getattr(snapshot, "right_tab", "Inspector") or "Inspector"
+    try:
+        index = tabs.index(str(current))
+    except ValueError:
+        index = 0
+    next_tab = tabs[(index + int(delta)) % len(tabs)]
+
+    inspector = getattr(controller, "inspector", None)
+    toggle_inspector = getattr(inspector, "toggle_inspector_focus", None) if inspector is not None else None
+    if callable(toggle_inspector) and getattr(controller, "selected_entity", None) is not None:
+        toggle_inspector()
+
+    apply_tab_change = getattr(dock, "apply_tab_change", None) if dock is not None else None
+    if callable(apply_tab_change):
+        apply_tab_change(controller, "right", next_tab)
+        return True
+    setter = getattr(dock, "set_right_tab", None) if dock is not None else None
+    if callable(setter):
+        setter(next_tab, force=True)
+        return True
+    return False

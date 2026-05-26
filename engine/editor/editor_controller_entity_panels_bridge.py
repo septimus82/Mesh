@@ -107,6 +107,10 @@ def _inspector_handle_mouse_click(self: "EditorModeController", x: float, y: flo
     return self.inspector_input.handle_mouse_click(x, y, button)
 
 
+def _outliner_handle_mouse_click(self: "EditorModeController", x: float, y: float, button: int) -> bool:
+    return self.outliner_input.handle_mouse_click(x, y, button)
+
+
 def _apply_component_entity_update(self: "EditorModeController", new_entity_json: Dict[str, Any]) -> None:
     self.inspector.apply_component_entity_update(new_entity_json)
 
@@ -322,6 +326,7 @@ def bind_entity_panels_bridge_methods(cls: Any) -> None:
     cls._apply_inspector_to_sprite = _apply_inspector_to_sprite
     cls._component_inspector_commit_text_edit = _component_inspector_commit_text_edit
     cls._inspector_handle_mouse_click = _inspector_handle_mouse_click
+    cls._outliner_handle_mouse_click = _outliner_handle_mouse_click
     cls._apply_component_entity_update = _apply_component_entity_update
     cls._sync_sprite_from_component_json = _sync_sprite_from_component_json
     # Prefab
