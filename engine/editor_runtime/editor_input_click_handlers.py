@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterable
 
 import engine.optional_arcade as optional_arcade
 from engine.editor.editor_modal_state_query import is_scene_browser_active
@@ -12,6 +12,61 @@ if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController as EditorController
 
 logger = get_logger(__name__)
+
+
+def _iter_entity_sprite_sources(scene_controller: Any) -> Iterable[Iterable[Any]]:
+    get_sprites_in_layer = getattr(scene_controller, "get_sprites_in_layer", None)
+    if callable(get_sprites_in_layer):
+        layer = get_sprites_in_layer("entities")
+        if layer is not None:
+            yield layer
+
+    layers = getattr(scene_controller, "layers", None)
+    if isinstance(layers, dict):
+        layer = layers.get("entities")
+        if layer is not None:
+            yield layer
+
+    entity_sprites = getattr(scene_controller, "entity_sprites", None)
+    if entity_sprites is not None:
+        yield entity_sprites
+
+    entities = getattr(scene_controller, "entities", None)
+    iter_entities = getattr(entities, "iter_entities", None) if entities is not None else None
+    if callable(iter_entities):
+        try:
+            yield iter_entities(scene_controller)
+        except TypeError:
+            yield iter_entities()
+
+    all_sprites = getattr(scene_controller, "all_sprites", None)
+    if all_sprites is not None:
+        yield all_sprites
+
+
+def _pick_entity_sprite_at_world(controller: EditorController, world_x: float, world_y: float) -> Any | None:
+    """Return the topmost entity sprite at world coordinates, or None."""
+    scene_controller = getattr(getattr(controller, "window", None), "scene_controller", None)
+    if scene_controller is None:
+        return None
+
+    from ..editor.editor_transform_ops import resolve_entity_id_for_sprite  # noqa: PLC0415
+
+    point = (world_x, world_y)
+    seen: set[int] = set()
+    candidates: list[Any] = []
+    for source in _iter_entity_sprite_sources(scene_controller):
+        for sprite in list(source or []):
+            marker = id(sprite)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            if resolve_entity_id_for_sprite(sprite) is None:
+                continue
+            collides = getattr(sprite, "collides_with_point", None)
+            if callable(collides) and collides(point):
+                candidates.append(sprite)
+    return candidates[-1] if candidates else None
 
 
 def handle_mouse_click(controller: EditorController, x: float, y: float, button: int, modifiers: int) -> bool:
@@ -190,17 +245,10 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
                     controller.selected_waypoint_index = len(points) - 1  # Select new one
                     return True
 
-        # Default Selection Logic
-        candidates = []
-        for sprite in controller.window.scene_controller.all_sprites:
-            if sprite.collides_with_point((world_x, world_y)):
-                candidates.append(sprite)
-
         shift_held = bool(modifiers & optional_arcade.arcade.key.MOD_SHIFT)
         alt_held = bool(modifiers & optional_arcade.arcade.key.MOD_ALT)
-        if candidates:
-            # Pick the one drawn last (on top)
-            clicked_sprite = candidates[-1]
+        clicked_sprite = _pick_entity_sprite_at_world(controller, world_x, world_y)
+        if clicked_sprite is not None:
             clicked_entity_data = getattr(clicked_sprite, "mesh_entity_data", None)
             clicked_entity_id = None
             if isinstance(clicked_entity_data, dict):
