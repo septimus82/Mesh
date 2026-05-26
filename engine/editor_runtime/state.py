@@ -56,8 +56,8 @@ def apply_selection(
         controller.selected_entity = None
 
     if selected_entity:
-        # Start dragging if in MOVE mode and entity is in selection
-        if controller.tool_mode == "MOVE" and clicked_id and clicked_id in controller._selected_entity_ids:
+        # Plain MOVE-tool clicks select and immediately prepare viewport drag.
+        if controller.tool_mode == "MOVE" and clicked_id and not shift:
             transform_mode = getattr(controller, "transform_mode", TRANSFORM_MODE_MOVE)
             if transform_mode == TRANSFORM_MODE_MOVE:
                 controller.entity_dragging = True
