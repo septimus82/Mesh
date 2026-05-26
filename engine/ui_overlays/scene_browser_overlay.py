@@ -261,13 +261,31 @@ class SceneBrowserOverlay(UIElement):
             self._was_open = True
 
         rows_getter = getattr(controller, "_scene_browser_rows", None)
-        layout_getter = getattr(controller, "_scene_browser_layout", None)
-        if not callable(rows_getter) or not callable(layout_getter):
+        if not callable(rows_getter):
             return
         rows = list(rows_getter())
-        layout = layout_getter(len(rows))
-        if not isinstance(layout, dict):
-            return
+        from ..editor.editor_dock_query import get_effective_dock_widths
+        from ..editor.editor_shell_layout import TAB_HEADER_HEIGHT, compute_editor_shell_layout
+
+        window_w = int(getattr(self.window, "width", 1280) or 1280)
+        window_h = int(getattr(self.window, "height", 720) or 720)
+        left_w, right_w = get_effective_dock_widths(controller, window_w)
+        shell_layout = compute_editor_shell_layout(window_w, window_h, left_w, right_w)
+        dock = shell_layout.left_dock
+        padding = 8.0
+        start_x = dock.left + padding
+        start_y = dock.top - TAB_HEADER_HEIGHT - padding
+        row_start_y = start_y - (LINE_HEIGHT * 3.0)
+        layout = {
+            "left": dock.left,
+            "right": dock.right,
+            "top": dock.top,
+            "bottom": dock.bottom,
+            "start_x": start_x,
+            "start_y": start_y,
+            "row_start_y": row_start_y,
+            "line_height": LINE_HEIGHT,
+        }
 
         query = str(getattr(controller, "scene_browser_query", "") or "")
         self._text_input.text = query
@@ -339,11 +357,12 @@ class SceneBrowserOverlay(UIElement):
         )
 
         results_top = float(layout["row_start_y"]) + (LINE_HEIGHT * 0.6)
-        results_bottom = float(layout["bottom"]) + 12.0
+        max_results_h = float(ROW_HEIGHT * 16)
+        results_bottom = max(float(layout["bottom"]) + 20.0, results_top - max_results_h)
         self._results_rect = Rect(
-            x=float(layout["left"]) + 10.0,
+            x=float(layout["left"]) + 8.0,
             y=results_bottom,
-            width=max(0.0, float(layout["right"] - layout["left"]) - 20.0),
+            width=max(0.0, float(layout["right"] - layout["left"]) - 16.0),
             height=max(float(ROW_HEIGHT), results_top - results_bottom),
         )
         composed_rows = compose_list_rows(
