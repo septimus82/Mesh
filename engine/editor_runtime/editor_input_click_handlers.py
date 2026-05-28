@@ -51,6 +51,7 @@ def _pick_entity_sprite_at_world(controller: EditorController, world_x: float, w
         return None
 
     from ..editor.editor_transform_ops import resolve_entity_id_for_sprite  # noqa: PLC0415
+    from ..editor.selection_outline import resolve_entity_bounds  # noqa: PLC0415
 
     point = (world_x, world_y)
     seen: set[int] = set()
@@ -64,7 +65,11 @@ def _pick_entity_sprite_at_world(controller: EditorController, world_x: float, w
             if resolve_entity_id_for_sprite(sprite) is None:
                 continue
             collides = getattr(sprite, "collides_with_point", None)
-            if callable(collides) and collides(point):
+            hit_sprite = callable(collides) and collides(point)
+            entity_data = getattr(sprite, "mesh_entity_data", None)
+            bounds = resolve_entity_bounds(entity_data, sprite) if isinstance(entity_data, dict) else None
+            hit_bounds = bounds is not None and bounds.contains_point(world_x, world_y)
+            if hit_sprite or hit_bounds:
                 candidates.append(sprite)
     return candidates[-1] if candidates else None
 
