@@ -235,7 +235,7 @@ def apply_editor_ui_state(editor: Any, state: EditorUiState) -> None:
 
     setattr(editor, "scene_switcher_active", bool(state.scene_switcher_open))
     setattr(editor, "scene_browser_active", bool(state.scene_browser_open))
-    setattr(editor, "asset_browser_active", bool(state.asset_browser_open))
+    setattr(editor, "asset_browser_active", False)
 
     dock = getattr(editor, "dock", None)
     if dock is not None:

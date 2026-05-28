@@ -204,7 +204,7 @@ class EditorWorkspaceController:
             editor.panels.close_command_palette()
         editor.scene_switcher_active = settings.scene_switcher_open
         editor.scene_browser_active = settings.scene_browser_open
-        editor.asset_browser_active = settings.asset_browser_open
+        editor.asset_browser_active = False
         editor.project_explorer.set_query(getattr(settings, "project_search", ""))
         editor.search.set_outliner_search(settings.outliner_search, autosave=False)
         editor.search.set_assets_search(settings.assets_search)

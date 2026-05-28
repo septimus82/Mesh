@@ -17,6 +17,9 @@ from engine.editor.editor_ui_state import (
     resolve_editor_ui_state_path,
     save_editor_ui_state,
 )
+from engine.editor.editor_workspace_controller import EditorWorkspaceController
+from engine.workspace_settings import WorkspaceSettings, save_workspace
+from tests.test_editor_workspace_controller_integration_contract import _StubEditor
 
 pytestmark = pytest.mark.fast
 
@@ -143,3 +146,16 @@ def test_editor_ui_state_toggle_integration_roundtrip(tmp_path: Path, monkeypatc
     assert editor2.dock.get_viewport_maximized() is True
     assert editor2.dock.get_left_collapsed() is True
     assert editor2.dock.get_right_collapsed() is False
+
+
+def test_persisted_asset_browser_open_restores_closed(tmp_path: Path) -> None:
+    save_workspace(tmp_path, WorkspaceSettings(asset_browser_open=True))
+
+    workspace_editor = _StubEditor(tmp_path)
+    EditorWorkspaceController(workspace_editor).load_workspace()
+    assert workspace_editor.asset_browser_active is False
+    assert workspace_editor.refresh_asset_browser_calls == 0
+
+    ui_state_editor = _make_editor(tmp_path)
+    apply_editor_ui_state(ui_state_editor, EditorUiState(asset_browser_open=True))
+    assert ui_state_editor.asset_browser_active is False
