@@ -199,12 +199,34 @@ def test_picker_dedupes_multiple_sources_and_selects_topmost_layer_sprite() -> N
     assert top.collide_calls == 1
 
 
+def test_picker_accepts_rendered_bounds_when_sprite_hitbox_misses() -> None:
+    sprite = _Sprite("entity-a", collides=False)
+    controller = _controller_for_scene(_SceneController([sprite]))
+
+    assert controller.handle_mouse_click(400, 300, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+
+    assert controller.selected_entity is sprite
+    assert controller.entity_dragging is True
+    assert sprite.collide_calls == 1
+
+
+def test_bounds_fallback_preserves_topmost_ordering() -> None:
+    bottom = _Sprite("entity-bottom", collides=False)
+    top = _Sprite("entity-top", collides=False)
+    controller = _controller_for_scene(_SceneController([bottom, top]))
+
+    assert controller.handle_mouse_click(400, 300, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+
+    assert controller.selected_entity is top
+    assert controller._selected_entity_ids == ["entity-top"]
+
+
 def test_empty_position_across_all_sprite_sources_starts_marquee_not_drag() -> None:
     miss = _Sprite("entity-a", collides=False)
     scene = _SceneController([miss], all_sprites=[miss], entity_sprites=[miss], layers={"entities": [miss]})
     controller = _controller_for_scene(scene)
 
-    assert controller.handle_mouse_click(400, 300, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+    assert controller.handle_mouse_click(500, 300, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
 
     assert controller.selected_entity is None
     assert controller.entity_dragging is False
