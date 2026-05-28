@@ -77,6 +77,10 @@ def _pick_entity_sprite_at_world(controller: EditorController, world_x: float, w
 def handle_mouse_click(controller: EditorController, x: float, y: float, button: int, modifiers: int) -> bool:
     if not controller.active:
         return False
+    logger.info(
+        "[CLICKTRACE] enter screen=(%s,%s) button=%s win=(%s,%s)",
+        x, y, button, getattr(controller.window, "width", None), getattr(controller.window, "height", None),
+    )
 
     # Project Explorer context menu (modal)
     project_explorer = getattr(controller, "project_explorer", None)
@@ -92,45 +96,53 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
     if button == optional_arcade.arcade.MOUSE_BUTTON_LEFT:
         menu_result = _handle_menu_bar_click(controller, x, y)
         if menu_result is not None:
+            logger.info("[CLICKTRACE] consumed=menu_bar")
             return menu_result
 
         # Top bar dock/maximize controls (before dock splitter/tabs)
         topbar_result = _handle_top_bar_controls_click(controller, x, y)
         if topbar_result is not None:
+            logger.info("[CLICKTRACE] consumed=top_bar_controls")
             return topbar_result
 
         # Dock splitter handling (before dock tabs)
         splitter_result = _handle_splitter_click(controller, x, y)
         if splitter_result is not None:
+            logger.info("[CLICKTRACE] consumed=splitter")
             return splitter_result
 
         # Dock tab handling
         dock_tab_result = _handle_dock_tab_click(controller, x, y)
         if dock_tab_result is not None:
+            logger.info("[CLICKTRACE] consumed=dock_tab")
             return dock_tab_result
 
         history_result = getattr(controller, "_history_handle_mouse_click", None)
         if callable(history_result):
             handled = history_result(x, y, button)
             if handled:
+                logger.info("[CLICKTRACE] consumed=history")
                 return True
 
         problems_result = getattr(controller, "_problems_handle_mouse_click", None)
         if callable(problems_result):
             handled = problems_result(x, y, button)
             if handled:
+                logger.info("[CLICKTRACE] consumed=problems")
                 return True
 
         debug_result = getattr(controller, "_debug_handle_mouse_click", None)
         if callable(debug_result):
             handled = debug_result(x, y, button)
             if handled:
+                logger.info("[CLICKTRACE] consumed=debug")
                 return True
 
         inspector_result = getattr(controller, "_inspector_handle_mouse_click", None)
         if callable(inspector_result):
             handled = inspector_result(x, y, button)
             if handled:
+                logger.info("[CLICKTRACE] consumed=inspector")
                 return True
 
     project_result = getattr(controller, "_project_explorer_handle_mouse_click", None)
@@ -161,18 +173,27 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
     from engine.editor_runtime.editor_database_form_input import dispatch_database_form_click  # noqa: PLC0415
 
     if dispatch_database_form_click(controller, x, y):
+        logger.info("[CLICKTRACE] consumed=database_form")
         return True
 
     if is_scene_browser_active(controller):
         handler = getattr(controller, "_scene_browser_handle_mouse_click", None)
         if callable(handler):
-            return bool(handler(x, y, button))
+            handled = bool(handler(x, y, button))
+            if handled:
+                logger.info("[CLICKTRACE] consumed=scene_browser")
+            return handled
+        logger.info("[CLICKTRACE] consumed=scene_browser")
         return True
 
-    if _is_inside_active_left_dock_content(controller, x, y):
+    left_dock_hit = _is_inside_active_left_dock_content(controller, x, y)
+    if left_dock_hit:
+        _log_dock_trace(controller, "left_dock", x, y)
         return True
 
-    if _is_inside_right_dock(controller, x, y):
+    right_dock_hit = _is_inside_right_dock(controller, x, y)
+    if right_dock_hit:
+        _log_dock_trace(controller, "right_dock", x, y)
         return True
 
     if controller.shape_edit_mode:
@@ -183,19 +204,24 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
                 controller.shape_drag_index = nearest
             else:
                 controller.shape.add_shape_point(world_x, world_y)
+            logger.info("[CLICKTRACE] consumed=shape_edit_mode")
             return True
         if button == optional_arcade.arcade.MOUSE_BUTTON_RIGHT:
             controller.shape.remove_shape_point()
+            logger.info("[CLICKTRACE] consumed=shape_edit_mode")
             return True
+        logger.info("[CLICKTRACE] consumed=shape_edit_mode")
         return True
 
     if controller.tile_panel_active:
         world_x, world_y = controller.window.screen_to_world(x, y)
         if button == optional_arcade.arcade.MOUSE_BUTTON_LEFT:
             controller._paint_tile_at(world_x, world_y, controller._current_tile_gid())
+            logger.info("[CLICKTRACE] consumed=tile_panel_active")
             return True
         if button == optional_arcade.arcade.MOUSE_BUTTON_RIGHT:
             controller._paint_tile_at(world_x, world_y, 0)
+            logger.info("[CLICKTRACE] consumed=tile_panel_active")
             return True
 
     world_x, world_y = controller.window.screen_to_world(x, y)
@@ -358,6 +384,22 @@ def _is_inside_right_dock(controller: EditorController, x: float, y: float) -> b
         return bool(layout.right_dock.contains_point(x, y))
     except Exception:  # noqa: BLE001  # REASON: dock guard must not break existing world-space click handling if shell layout state is unavailable
         return False
+
+
+def _log_dock_trace(controller: EditorController, dock_name: str, x: float, y: float) -> None:
+    from engine.editor.editor_dock_query import get_effective_dock_widths  # noqa: PLC0415
+    from engine.editor.editor_shell_layout import compute_editor_shell_layout  # noqa: PLC0415
+
+    try:
+        window = getattr(controller, "window", None)
+        window_w = int(getattr(window, "width", 1280) or 1280)
+        window_h = int(getattr(window, "height", 720) or 720)
+        left_w, right_w = get_effective_dock_widths(controller, window_w)
+        layout = compute_editor_shell_layout(window_w, window_h, left_w, right_w)
+        rect = getattr(layout, dock_name)
+        logger.info("[CLICKTRACE] consumed=%s rect=(%s,%s,%s,%s) click=(%s,%s)", dock_name, rect.left, rect.right, rect.bottom, rect.top, x, y)
+    except Exception:  # noqa: BLE001  # REASON: temporary click tracing must not break existing click handling if shell layout state is unavailable
+        logger.info("[CLICKTRACE] consumed=%s rect=None click=(%s,%s)", dock_name, x, y)
 
 
 def _handle_menu_bar_click(controller: EditorController, x: float, y: float) -> bool | None:
