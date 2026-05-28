@@ -199,6 +199,24 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
             return True
 
     world_x, world_y = controller.window.screen_to_world(x, y)
+    if button == optional_arcade.arcade.MOUSE_BUTTON_LEFT:
+        try:
+            camera_controller = getattr(controller.window, "camera_controller", None)
+            camera_position = getattr(getattr(camera_controller, "camera", None), "position", None)
+            camera_zoom = getattr(camera_controller, "zoom", None)
+        except Exception:
+            camera_position = camera_zoom = None
+        selected = getattr(controller, "selected_entity", None)
+        selected_center = (getattr(selected, "center_x", None), getattr(selected, "center_y", None)) if selected is not None else None
+        selected_delta = (
+            (world_x - selected_center[0], world_y - selected_center[1])
+            if selected_center is not None and selected_center[0] is not None and selected_center[1] is not None
+            else None
+        )
+        logger.info(
+            "[PICKPROBE] screen=(%s,%s) world=(%s,%s) window=(%s,%s) camera_position=%s camera_zoom=%s selected_center=%s selected_delta=%s",
+            x, y, world_x, world_y, controller.window.width, controller.window.height, camera_position, camera_zoom, selected_center, selected_delta,
+        )
 
     if getattr(controller, "asset_place_active", False):
         if button == optional_arcade.arcade.MOUSE_BUTTON_LEFT:
