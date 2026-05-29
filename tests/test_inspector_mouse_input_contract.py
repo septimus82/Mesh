@@ -135,6 +135,42 @@ def test_viewport_click_still_reaches_world_space(monkeypatch: pytest.MonkeyPatc
     assert editor.window.world_clicks == [(640.0, 360.0)]
 
 
+def test_asset_browser_open_viewport_click_falls_through_to_world(monkeypatch: pytest.MonkeyPatch) -> None:
+    editor = _editor(right_tab="Assets")
+    calls: list[tuple[float, float, int, int]] = []
+    editor.asset_browser_active = True
+    editor.asset_browser = SimpleNamespace(handle_asset_browser_mouse_click=lambda x, y, button, modifiers: calls.append((x, y, button, modifiers)) or True)
+    editor.shape_edit_mode = False
+    editor.tile_panel_active = False
+    editor.asset_place_active = False
+    editor.occluder_tool_active = False
+    editor.lights_tool_active = False
+    editor.palette_active = False
+    editor.tool_mode = "SELECT"
+    editor.selected_entity = None
+    editor.begin_marquee = lambda *_args: None
+    for name in ("_handle_menu_bar_click", "_handle_top_bar_controls_click", "_handle_splitter_click", "_handle_dock_tab_click"):
+        monkeypatch.setattr(editor_input_click_handlers, name, lambda *_args: None)
+
+    assert editor_input_click_handlers.handle_mouse_click(editor, 640.0, 360.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+    assert calls == []
+    assert editor.window.world_clicks == [(640.0, 360.0)]
+
+
+def test_asset_browser_open_right_dock_click_delegates(monkeypatch: pytest.MonkeyPatch) -> None:
+    editor = _editor(right_tab="Assets")
+    calls: list[tuple[float, float, int, int]] = []
+    editor.asset_browser_active = True
+    editor.asset_browser = SimpleNamespace(handle_asset_browser_mouse_click=lambda x, y, button, modifiers: calls.append((x, y, button, modifiers)) or True)
+    for name in ("_handle_menu_bar_click", "_handle_top_bar_controls_click", "_handle_splitter_click", "_handle_dock_tab_click"):
+        monkeypatch.setattr(editor_input_click_handlers, name, lambda *_args: None)
+    x, y = _right_dock_point()
+
+    assert editor_input_click_handlers.handle_mouse_click(editor, x, y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+    assert calls == [(x, y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0)]
+    assert editor.window.world_clicks == []
+
+
 class _ItemOverlay:
     def selected_item_dict(self) -> dict[str, Any]:
         return {"id": "potion", "name": "Potion", "description": "", "icon": None, "max_stack": 1, "stackable": False}
