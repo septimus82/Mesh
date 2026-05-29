@@ -64,7 +64,10 @@ def main() -> None:
     scene_data: Dict[str, Any] = window.load_scene(initial_scene)
     _ = scene_data  # Placeholder until we expose scene metadata to other systems.
 
-    window.run()
+    try:
+        window.run()
+    except KeyboardInterrupt:
+        print("[Mesh] Shutdown requested — exiting cleanly.")
 
 
 if __name__ == "__main__":
