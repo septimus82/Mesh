@@ -3,6 +3,7 @@ venv/
 .mesh/
 .codex_tmp/
 .claude/settings.local.json
+workspace.json
 
 __pycache__/
 *.py[cod]
