@@ -1,11 +1,22 @@
-"""Read-only Dialogue Editor overlay for the editor right dock."""
+"""Dialogue Editor overlay for the editor right dock."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from engine.ui_overlays.common import UIElement
-from engine.ui_overlays.editor_database_form_helpers import compute_database_form_layout
+from engine.ui_overlays.editor_database_form_helpers import (
+    FormColors,
+    add_form_buttons,
+    collect_button_rects,
+    compute_database_form_layout,
+    draw_text_input,
+    draw_text_input_rows,
+    scalar_rows_for_mode,
+    sync_text_inputs,
+    try_click_text_widget,
+)
+from engine.ui_overlays.widgets import Rect, TextInput
 
 if TYPE_CHECKING:  # pragma: no cover
     from engine.game import GameWindow
@@ -14,18 +25,27 @@ if TYPE_CHECKING:  # pragma: no cover
 DIALOGUE_EDITOR_TEXT_COLOR = (220, 220, 230, 255)
 DIALOGUE_EDITOR_DIM_COLOR = (150, 150, 160, 255)
 DIALOGUE_EDITOR_SELECTED_BG = (90, 140, 200, 140)
+DIALOGUE_EDITOR_BUTTON_COLOR = (100, 200, 255, 255)
+DIALOGUE_EDITOR_ERROR_COLOR = (255, 120, 120, 255)
 DIALOGUE_EDITOR_ROW_HEIGHT = 18.0
 DIALOGUE_EDITOR_ROW_PADDING_X = 6.0
 DIALOGUE_EDITOR_PANEL_GAP = 8.0
+DIALOGUE_EDITOR_EDITABLE_SCALAR_FIELDS = {"id", "schema_version", "start_node"}
+_DIALOGUE_FORM_COLORS = FormColors(
+    text=DIALOGUE_EDITOR_TEXT_COLOR,
+    dim=DIALOGUE_EDITOR_DIM_COLOR,
+    button=DIALOGUE_EDITOR_BUTTON_COLOR,
+)
 
 
 class DialogueEditorOverlay(UIElement):
-    """Read-only dialogue database view hosted in the editor right dock."""
+    """Dialogue database view hosted in the editor right dock."""
 
     def __init__(self, window: "GameWindow") -> None:
         super().__init__(window)
         self._model: object | None = None
         self._row_hits: list[tuple[int, object]] = []
+        self._widget_rows: dict[str, object] = {}
 
     def _get_controller(self) -> object | None:
         return getattr(self.window, "editor_controller", None)
@@ -55,10 +75,14 @@ class DialogueEditorOverlay(UIElement):
         if not self._is_visible_for_controller(controller):
             return
 
+        from engine.editor.dialogue_editor_model import DIALOGUE_SCALAR_FIELD_ORDER  # noqa: PLC0415
         from engine.editor.widgets.panel_primitives import EditorPanelBase, PanelField, PanelHeader, PanelRow
 
         list_rect, detail_rect = compute_database_form_layout(self.window, controller, DIALOGUE_EDITOR_PANEL_GAP)
         model = self._get_model()
+        dialogue_editor = getattr(controller, "dialogue_editor", None)
+        edit_mode = bool(dialogue_editor is not None and dialogue_editor.is_edit_mode_active())
+        dirty_marker = " *" if dialogue_editor is not None and dialogue_editor.is_dirty() else ""
 
         list_panel = EditorPanelBase(
             list_rect,
@@ -106,12 +130,40 @@ class DialogueEditorOverlay(UIElement):
             inner_padding_y=0.0,
         )
         dialogue = model.selected_dialogue() if model is not None else None
+        button_rows: dict[str, object] = {}
+        self._widget_rows = {}
         if dialogue is None:
             detail_panel.add_header(PanelHeader("Dialogue", "No entry"))
         else:
+            if edit_mode and dialogue_editor is not None:
+                self._sync_edit_widgets(dialogue_editor)
             dialogue_id = str(dialogue.get("id", "") or "")
-            detail_panel.add_header(PanelHeader(dialogue_id, "Read-only"))
-            for label, value in model.detail_rows():
+            detail_panel.add_header(PanelHeader(f"{dialogue_id}{dirty_marker}", dialogue_id))
+            if dialogue_editor is not None and dialogue_editor.last_error_message():
+                detail_panel.add_row(
+                    PanelRow(
+                        PanelField("Error", dialogue_editor.last_error_message(), label_color=DIALOGUE_EDITOR_ERROR_COLOR),
+                        height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                        padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                    )
+                )
+            for label, value, field_path in scalar_rows_for_mode(
+                model=model,
+                edit_mode=edit_mode,
+                scalar_field_order=DIALOGUE_SCALAR_FIELD_ORDER,
+                selected_record=model.selected_dialogue,
+                value_for_field=lambda record, field: record.get(field) if isinstance(record, dict) else None,
+                label_for_field=_label_for_field,
+            ):
+                if edit_mode and field_path in DIALOGUE_EDITOR_EDITABLE_SCALAR_FIELDS:
+                    self._widget_rows[field_path] = detail_panel.add_row(
+                        PanelRow(
+                            PanelField(label, "", label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                            height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                            padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                        )
+                    )
+                    continue
                 detail_panel.add_row(
                     PanelRow(
                         PanelField(label, value, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
@@ -119,7 +171,40 @@ class DialogueEditorOverlay(UIElement):
                         padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
                     )
                 )
+            script = dialogue.get("script")
+            node_count = str(len(script) if isinstance(script, dict) else 0)
+            choice_count = str(
+                sum(len(n.get("choices", [])) for n in script.values() if isinstance(n, dict))
+                if isinstance(script, dict)
+                else 0
+            )
+            detail_panel.add_header(PanelHeader("Script (read-only)", None, title_color=DIALOGUE_EDITOR_DIM_COLOR))
+            detail_panel.add_row(
+                PanelRow(
+                    PanelField("Node count", node_count, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                    height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                    padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                )
+            )
+            detail_panel.add_row(
+                PanelRow(
+                    PanelField("Choice count", choice_count, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                    height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                    padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                )
+            )
+            button_rows = add_form_buttons(
+                detail_panel,
+                edit_mode=edit_mode,
+                button_color=DIALOGUE_EDITOR_BUTTON_COLOR,
+                row_height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+            )
         detail_panel.draw()
+        if dialogue_editor is not None:
+            dialogue_editor.set_button_rects(collect_button_rects(button_rows))
+        if edit_mode and dialogue_editor is not None:
+            self._draw_edit_widgets(dialogue_editor)
 
     def row_index_at(self, x: float, y: float) -> int | None:
         for index, row in self._row_hits:
@@ -131,3 +216,50 @@ class DialogueEditorOverlay(UIElement):
         model = self._get_model()
         setter = getattr(model, "set_selected_index", None)
         return bool(setter(int(index))) if callable(setter) else False
+
+    def selected_dialogue_dict(self) -> dict[str, object] | None:
+        model = self._get_model()
+        dialogue = model.selected_dialogue() if model is not None and hasattr(model, "selected_dialogue") else None
+        return dict(dialogue) if isinstance(dialogue, dict) else None
+
+    def all_dialogue_dicts(self) -> list[dict[str, object]]:
+        model = self._get_model()
+        dialogues = model.dialogues() if model is not None and hasattr(model, "dialogues") else []
+        return [dict(d) for d in dialogues if isinstance(d, dict)]
+
+    def _draw_text_input(self, text_input: TextInput, rect: Rect) -> None:
+        draw_text_input(text_input, rect, _DIALOGUE_FORM_COLORS)
+
+    def _sync_edit_widgets(self, dialogue_editor: object) -> None:
+        edit_buffer = getattr(dialogue_editor, "edit_buffer", None)
+        if not isinstance(edit_buffer, dict):
+            return
+        focused = getattr(dialogue_editor, "focused_field", lambda: None)
+        focused_field = focused() if callable(focused) else None
+        text_inputs = getattr(dialogue_editor, "text_inputs", lambda: {})()
+        if isinstance(text_inputs, dict):
+            sync_text_inputs(
+                text_inputs,
+                focused_field,
+                lambda field: edit_buffer.get(str(field)),
+            )
+
+    def _draw_edit_widgets(self, dialogue_editor: object) -> None:
+        text_inputs = getattr(dialogue_editor, "text_inputs", lambda: {})()
+        if isinstance(text_inputs, dict):
+            draw_text_input_rows(self._widget_rows, text_inputs, self._draw_text_input)
+
+    def try_click_widget(self, x: float, y: float) -> str | None:
+        controller = self._get_controller()
+        dialogue_editor = getattr(controller, "dialogue_editor", None) if controller is not None else None
+        if dialogue_editor is None:
+            return None
+        return try_click_text_widget(self._widget_rows, dialogue_editor, x, y)
+
+
+def _label_for_field(field_path: str) -> str:
+    return {
+        "id": "ID",
+        "schema_version": "Schema version",
+        "start_node": "Start node",
+    }.get(field_path, field_path)
