@@ -237,15 +237,8 @@ class EditorWorkspaceController:
         if editor.asset_browser_active:
             editor.refresh_asset_browser()
 
-        if settings.light_occluder_tool == "light":
-            editor.lights_tool_active = True
-            editor.occluder_tool_active = False
-        elif settings.light_occluder_tool == "occluder":
-            editor.lights_tool_active = False
-            editor.occluder_tool_active = True
-        else:
-            editor.lights_tool_active = False
-            editor.occluder_tool_active = False
+        editor.lights_tool_active = False
+        editor.occluder_tool_active = False
 
         if settings.last_scene_id:
             current_key = getattr(editor.window, "current_scene_key", None)
