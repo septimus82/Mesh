@@ -106,14 +106,14 @@ def test_prefab_editor_click_routes_only_when_prefabs_tab_and_edit_mode(monkeypa
 
     handled = editor_input_click_handlers.handle_mouse_click(
         controller,
-        12.0,
+        1200.0,
         34.0,
         optional_arcade.arcade.MOUSE_BUTTON_LEFT,
         0,
     )
 
     assert handled is True
-    assert controller.prefab_editor.calls == [("click", (12.0, 34.0))]
+    assert controller.prefab_editor.calls == [("click", (1200.0, 34.0))]
     wrong_tab = _controller(right_tab="Problems")
     assert editor_input_click_handlers._prefab_editor_should_route(wrong_tab, wrong_tab.prefab_editor) is False
     inactive = _controller(edit_mode=False)

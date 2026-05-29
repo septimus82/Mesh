@@ -160,10 +160,10 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
 
     from engine.editor_runtime.editor_database_form_input import dispatch_database_form_click  # noqa: PLC0415
 
-    if dispatch_database_form_click(controller, x, y):
+    if _is_inside_right_dock(controller, x, y) and dispatch_database_form_click(controller, x, y):
         return True
 
-    if is_scene_browser_active(controller):
+    if is_scene_browser_active(controller) and _is_inside_left_dock(controller, x, y):
         handler = getattr(controller, "_scene_browser_handle_mouse_click", None)
         if callable(handler):
             return bool(handler(x, y, button))
@@ -317,6 +317,21 @@ def _is_inside_active_left_dock_content(controller: EditorController, x: float, 
         left_tab = getattr(snapshot, "left_tab", "Outliner") or "Outliner"
         if left_tab == "Outliner" and not getattr(controller, "entity_panels_active", False):
             return False
+        window = getattr(controller, "window", None)
+        window_w = int(getattr(window, "width", 1280) or 1280)
+        window_h = int(getattr(window, "height", 720) or 720)
+        left_w, right_w = get_effective_dock_widths(controller, window_w)
+        layout = compute_editor_shell_layout(window_w, window_h, left_w, right_w)
+        return bool(layout.left_dock.contains_point(x, y))
+    except Exception:  # noqa: BLE001  # REASON: dock guard must not break existing world-space click handling if shell layout state is unavailable
+        return False
+
+
+def _is_inside_left_dock(controller: EditorController, x: float, y: float) -> bool:
+    from engine.editor.editor_dock_query import get_effective_dock_widths  # noqa: PLC0415
+    from engine.editor.editor_shell_layout import compute_editor_shell_layout  # noqa: PLC0415
+
+    try:
         window = getattr(controller, "window", None)
         window_w = int(getattr(window, "width", 1280) or 1280)
         window_h = int(getattr(window, "height", 720) or 720)

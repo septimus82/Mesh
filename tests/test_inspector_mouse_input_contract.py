@@ -43,11 +43,16 @@ def _right_dock_point(row_offset: float = 40.0) -> tuple[float, float]:
     return (dock.left + 24.0, dock.top - row_offset)
 
 
-def _editor(*, right_tab: str = "Inspector", scene: dict[str, Any] | None = None) -> SimpleNamespace:
+def _left_dock_point(row_offset: float = 40.0) -> tuple[float, float]:
+    dock = compute_editor_shell_layout(1280, 720, DOCK_WIDTH, DOCK_WIDTH).left_dock
+    return (dock.left + 24.0, dock.top - row_offset)
+
+
+def _editor(*, left_tab: str = "Outliner", right_tab: str = "Inspector", scene: dict[str, Any] | None = None) -> SimpleNamespace:
     window = _Window(scene)
     editor = SimpleNamespace(
         active=True,
-        dock=make_dock_stub(right_tab=right_tab),
+        dock=make_dock_stub(left_tab=left_tab, right_tab=right_tab),
         window=window,
         _primary_selected_id=None,
         _selected_entity_ids=[],
@@ -61,12 +66,28 @@ def _editor(*, right_tab: str = "Inspector", scene: dict[str, Any] | None = None
     return editor
 
 
+def _disable_top_chrome(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("_handle_menu_bar_click", "_handle_top_bar_controls_click", "_handle_splitter_click", "_handle_dock_tab_click"):
+        monkeypatch.setattr(editor_input_click_handlers, name, lambda *_args: None)
+
+
+def _enable_viewport_fallthrough(editor: SimpleNamespace) -> None:
+    editor.shape_edit_mode = False
+    editor.tile_panel_active = False
+    editor.asset_place_active = False
+    editor.occluder_tool_active = False
+    editor.lights_tool_active = False
+    editor.palette_active = False
+    editor.tool_mode = "SELECT"
+    editor.selected_entity = None
+    editor.begin_marquee = lambda *_args: None
+
+
 def test_click_inside_inspector_routes_to_inspector_input(monkeypatch: pytest.MonkeyPatch) -> None:
     editor = _editor()
     calls: list[tuple[float, float, int]] = []
     editor._inspector_handle_mouse_click = lambda x, y, button: calls.append((x, y, button)) or True
-    for name in ("_handle_menu_bar_click", "_handle_top_bar_controls_click", "_handle_splitter_click", "_handle_dock_tab_click"):
-        monkeypatch.setattr(editor_input_click_handlers, name, lambda *_args: None)
+    _disable_top_chrome(monkeypatch)
 
     x, y = _right_dock_point()
 
@@ -106,8 +127,7 @@ def test_hd2d_header_click_toggles_section_expansion() -> None:
 def test_right_dock_content_guard_consumes_unhandled_click(monkeypatch: pytest.MonkeyPatch) -> None:
     editor = _editor()
     editor._inspector_handle_mouse_click = lambda *_args: False
-    for name in ("_handle_menu_bar_click", "_handle_top_bar_controls_click", "_handle_splitter_click", "_handle_dock_tab_click"):
-        monkeypatch.setattr(editor_input_click_handlers, name, lambda *_args: None)
+    _disable_top_chrome(monkeypatch)
     x, y = _right_dock_point()
 
     assert editor_input_click_handlers.handle_mouse_click(editor, x, y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
@@ -117,19 +137,10 @@ def test_right_dock_content_guard_consumes_unhandled_click(monkeypatch: pytest.M
 def test_viewport_click_still_reaches_world_space(monkeypatch: pytest.MonkeyPatch) -> None:
     editor = _editor()
     editor._inspector_handle_mouse_click = lambda *_args: False
-    editor.shape_edit_mode = False
-    editor.tile_panel_active = False
-    editor.asset_place_active = False
-    editor.occluder_tool_active = False
-    editor.lights_tool_active = False
-    editor.palette_active = False
-    editor.tool_mode = "SELECT"
-    editor.selected_entity = None
-    editor.begin_marquee = lambda *_args: None
+    _enable_viewport_fallthrough(editor)
     editor._find_everything_open = False
     editor.asset_browser_active = False
-    for name in ("_handle_menu_bar_click", "_handle_top_bar_controls_click", "_handle_splitter_click", "_handle_dock_tab_click"):
-        monkeypatch.setattr(editor_input_click_handlers, name, lambda *_args: None)
+    _disable_top_chrome(monkeypatch)
 
     assert editor_input_click_handlers.handle_mouse_click(editor, 640.0, 360.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
     assert editor.window.world_clicks == [(640.0, 360.0)]
@@ -140,17 +151,8 @@ def test_asset_browser_open_viewport_click_falls_through_to_world(monkeypatch: p
     calls: list[tuple[float, float, int, int]] = []
     editor.asset_browser_active = True
     editor.asset_browser = SimpleNamespace(handle_asset_browser_mouse_click=lambda x, y, button, modifiers: calls.append((x, y, button, modifiers)) or True)
-    editor.shape_edit_mode = False
-    editor.tile_panel_active = False
-    editor.asset_place_active = False
-    editor.occluder_tool_active = False
-    editor.lights_tool_active = False
-    editor.palette_active = False
-    editor.tool_mode = "SELECT"
-    editor.selected_entity = None
-    editor.begin_marquee = lambda *_args: None
-    for name in ("_handle_menu_bar_click", "_handle_top_bar_controls_click", "_handle_splitter_click", "_handle_dock_tab_click"):
-        monkeypatch.setattr(editor_input_click_handlers, name, lambda *_args: None)
+    _enable_viewport_fallthrough(editor)
+    _disable_top_chrome(monkeypatch)
 
     assert editor_input_click_handlers.handle_mouse_click(editor, 640.0, 360.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
     assert calls == []
@@ -162,12 +164,42 @@ def test_asset_browser_open_right_dock_click_delegates(monkeypatch: pytest.Monke
     calls: list[tuple[float, float, int, int]] = []
     editor.asset_browser_active = True
     editor.asset_browser = SimpleNamespace(handle_asset_browser_mouse_click=lambda x, y, button, modifiers: calls.append((x, y, button, modifiers)) or True)
-    for name in ("_handle_menu_bar_click", "_handle_top_bar_controls_click", "_handle_splitter_click", "_handle_dock_tab_click"):
-        monkeypatch.setattr(editor_input_click_handlers, name, lambda *_args: None)
+    _disable_top_chrome(monkeypatch)
     x, y = _right_dock_point()
 
     assert editor_input_click_handlers.handle_mouse_click(editor, x, y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
     assert calls == [(x, y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0)]
+    assert editor.window.world_clicks == []
+
+
+@pytest.mark.parametrize("branch", ["database_form", "scene_browser"])
+def test_dock_panel_active_viewport_click_falls_through_to_world(branch: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    editor = _editor(left_tab="Scene", right_tab="Items")
+    calls: list[Any] = []
+    editor.item_editor = SimpleNamespace(handle_item_editor_mouse_click=lambda x, y: calls.append((x, y)) or True, is_edit_mode_active=lambda: True)
+    editor.scene_browser_active = branch == "scene_browser"
+    editor._scene_browser_handle_mouse_click = lambda x, y, button: calls.append((x, y, button)) or True
+    _enable_viewport_fallthrough(editor)
+    _disable_top_chrome(monkeypatch)
+
+    assert editor_input_click_handlers.handle_mouse_click(editor, 640.0, 360.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+    assert calls == []
+    assert editor.window.world_clicks == [(640.0, 360.0)]
+
+
+@pytest.mark.parametrize("branch", ["database_form", "scene_browser"])
+def test_dock_panel_active_own_dock_click_delegates(branch: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    editor = _editor(left_tab="Scene", right_tab="Items")
+    calls: list[Any] = []
+    editor.item_editor = SimpleNamespace(handle_item_editor_mouse_click=lambda x, y: calls.append((x, y)) or True, is_edit_mode_active=lambda: True)
+    editor.scene_browser_active = branch == "scene_browser"
+    editor._scene_browser_handle_mouse_click = lambda x, y, button: calls.append((x, y, button)) or True
+    _disable_top_chrome(monkeypatch)
+    x, y = _left_dock_point() if branch == "scene_browser" else _right_dock_point()
+
+    assert editor_input_click_handlers.handle_mouse_click(editor, x, y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+    expected = (x, y, optional_arcade.arcade.MOUSE_BUTTON_LEFT) if branch == "scene_browser" else (x, y)
+    assert calls == [expected]
     assert editor.window.world_clicks == []
 
 
