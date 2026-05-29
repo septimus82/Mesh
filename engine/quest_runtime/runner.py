@@ -160,6 +160,7 @@ class QuestRunner:
                                  Use high value to avoid collisions with input events.
         """
         self._definitions: dict[str, dict[str, Any]] = {}
+        self._sorted_quest_ids: list[str] = []
         self._states: dict[str, QuestRunnerState] = {}
         self._emit_sequence = emit_sequence_start
         self._diagnostics: list[StepCompletionDiagnostic] = []
@@ -248,6 +249,7 @@ class QuestRunner:
                 # Initialize state if not exists
                 if normalized["id"] not in self._states:
                     self._states[normalized["id"]] = QuestRunnerState(quest_id=normalized["id"])
+        self._sorted_quest_ids = sorted(self._definitions.keys())
         
         return errors
     
@@ -374,7 +376,7 @@ class QuestRunner:
         
         # Two passes for determinism (quests may affect each other)
         for _ in range(2):
-            for quest_id in sorted(self._definitions.keys()):
+            for quest_id in self._sorted_quest_ids:
                 quest = self._definitions[quest_id]
                 state = self._ensure_state(quest_id)
                 
