@@ -37,6 +37,7 @@ from engine.ui_overlays import providers as ui_providers
 from engine.ui_overlays.asset_browser_overlay import AssetBrowserOverlay
 from engine.ui_overlays.component_inspector_overlay import ComponentInspectorOverlay
 from engine.ui_overlays.debug_panels_overlay import DebugPanelsOverlay
+from engine.ui_overlays.dialogue_editor_overlay import DialogueEditorOverlay
 from engine.ui_overlays.editor_shell_overlay import EditorShellOverlay
 from engine.ui_overlays.editor_status_bar_overlay import EditorStatusBarOverlay
 from engine.ui_overlays.entity_panels_overlay import EntityPanelsOverlay
@@ -185,6 +186,8 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
         editor_controller.quest_editor = EditorQuestEditorController(editor_controller)
     window.quest_editor_overlay = QuestEditorOverlay(window)
     window.register_ui_element(window.quest_editor_overlay)
+    window.dialogue_editor_overlay = DialogueEditorOverlay(window)
+    window.register_ui_element(window.dialogue_editor_overlay)
     window.undo_history_overlay = UndoHistoryOverlay(window)
     window.register_ui_element(window.undo_history_overlay)
     window.problems_panel_overlay = ProblemsPanelOverlay(window)
