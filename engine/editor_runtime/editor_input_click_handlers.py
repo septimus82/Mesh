@@ -151,7 +151,7 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
         if callable(handler) and handler(x, y, button, modifiers):
             return True
 
-    if getattr(controller, "asset_browser_active", False):
+    if getattr(controller, "asset_browser_active", False) and _is_inside_right_dock(controller, x, y):
         asset_browser = getattr(controller, "asset_browser", None)
         handler = getattr(asset_browser, "handle_asset_browser_mouse_click", None) if asset_browser is not None else None
         if callable(handler):
