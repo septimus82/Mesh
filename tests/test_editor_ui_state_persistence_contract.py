@@ -159,3 +159,14 @@ def test_persisted_asset_browser_open_restores_closed(tmp_path: Path) -> None:
     ui_state_editor = _make_editor(tmp_path)
     apply_editor_ui_state(ui_state_editor, EditorUiState(asset_browser_open=True))
     assert ui_state_editor.asset_browser_active is False
+
+
+def test_persisted_workspace_interaction_modes_restore_neutral(tmp_path: Path) -> None:
+    save_workspace(tmp_path, WorkspaceSettings(asset_browser_open=True, light_occluder_tool="light"))
+
+    editor = _StubEditor(tmp_path)
+    EditorWorkspaceController(editor).load_workspace()
+
+    assert editor.asset_browser_active is False
+    assert editor.lights_tool_active is False
+    assert editor.occluder_tool_active is False

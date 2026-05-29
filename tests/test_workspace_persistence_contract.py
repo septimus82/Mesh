@@ -85,7 +85,7 @@ def test_editor_controller_load_apply(tmp_path, monkeypatch):
     
     assert editor.entity_panels_active is True
     assert editor.scene_switcher_active is True
-    assert editor.lights_tool_active is True
+    assert editor.lights_tool_active is False
     assert editor.occluder_tool_active is False
     
     # Check scene load call

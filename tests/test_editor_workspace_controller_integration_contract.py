@@ -173,7 +173,7 @@ def test_save_and_load_workspace_roundtrip(tmp_path: Path, monkeypatch: pytest.M
     assert editor2._ghost_originals_enabled is False
     assert editor2._ghost_originals_alpha == 120
     assert editor2._ghost_originals_dim_scale == 0.5
-    assert editor2.lights_tool_active is True
+    assert editor2.lights_tool_active is False
     assert editor2.occluder_tool_active is False
 
 
