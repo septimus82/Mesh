@@ -39,4 +39,5 @@ def test_overlay_draws_truncated_label_for_narrow_right_tab(monkeypatch: pytest.
 
     assert "Inspector" not in drawn_text
     assert any(label.endswith("...") for label in drawn_text)
-    assert "Debug" in drawn_text
+    assert "Debug" not in drawn_text
+    assert any(label.startswith("D") and label.endswith("...") for label in drawn_text)

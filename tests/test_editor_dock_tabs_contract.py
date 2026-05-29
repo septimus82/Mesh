@@ -528,8 +528,9 @@ class TestDockTabIntegration:
         tab_rects = compute_dock_tab_rects(layout)
 
         # Should still have all tabs
+        _, right_tabs = get_dock_tab_options()
         assert len(tab_rects.left_tab_rects) == 3
-        assert len(tab_rects.right_tab_rects) == 8
+        assert len(tab_rects.right_tab_rects) == len(right_tabs)
 
         # Tabs should still be clickable (have positive area)
         for rect in tab_rects.left_tab_rects.values():
