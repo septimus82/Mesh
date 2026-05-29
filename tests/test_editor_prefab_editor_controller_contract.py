@@ -294,3 +294,71 @@ def test_prefab_editor_controller_uses_model_default_path_for_button_save(
     assert controller.handle_prefab_editor_mouse_click(10.0, 10.0) is True
 
     assert saved == [tmp_path / prefab_editor_model.DEFAULT_PREFAB_FILE_PATH]
+
+
+def test_prefab_editor_controller_view_mode_row_click_selects(tmp_path: Path) -> None:
+    selected: list[int] = []
+    overlay = SimpleNamespace(
+        row_index_at=lambda _x, _y: 1,
+        set_selected_index=lambda index: selected.append(index) or True,
+    )
+    controller = EditorPrefabEditorController(_editor(tmp_path, overlay))
+
+    assert controller.handle_prefab_editor_mouse_click(10.0, 10.0) is True
+
+    assert selected == [1]
+    assert controller.is_edit_mode_active() is False
+
+
+def test_prefab_editor_controller_view_mode_row_miss_keeps_edit_button_working(tmp_path: Path) -> None:
+    from engine.ui_overlays.widgets import Rect
+
+    overlay = SimpleNamespace(
+        row_index_at=lambda _x, _y: None,
+        selected_prefab_dict=lambda: _prefab("old_id"),
+    )
+    controller = EditorPrefabEditorController(_editor(tmp_path, overlay))
+    controller.set_button_rects({"edit": Rect(0.0, 0.0, 20.0, 20.0)})
+
+    assert controller.handle_prefab_editor_mouse_click(10.0, 10.0) is True
+
+    assert controller.is_edit_mode_active() is True
+
+
+def test_prefab_editor_controller_edit_mode_skips_row_selection(tmp_path: Path) -> None:
+    from engine.ui_overlays.widgets import Rect
+
+    selected: list[int] = []
+    row_hit_calls: list[tuple[float, float]] = []
+
+    def _row_index_at(x: float, y: float) -> int:
+        row_hit_calls.append((x, y))
+        return 1
+
+    overlay = SimpleNamespace(
+        row_index_at=_row_index_at,
+        set_selected_index=lambda index: selected.append(index) or True,
+    )
+    controller = EditorPrefabEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_prefab("old_id"))
+    controller.set_button_rects({"cancel": Rect(0.0, 0.0, 20.0, 20.0)})
+
+    assert controller.handle_prefab_editor_mouse_click(10.0, 10.0) is True
+
+    assert selected == []
+    assert row_hit_calls == []
+    assert controller.is_edit_mode_active() is False
+
+
+def test_prefab_editor_controller_empty_view_mode_click_falls_through(tmp_path: Path) -> None:
+    selected: list[int] = []
+    overlay = SimpleNamespace(
+        row_index_at=lambda _x, _y: None,
+        set_selected_index=lambda index: selected.append(index) or True,
+    )
+    controller = EditorPrefabEditorController(_editor(tmp_path, overlay))
+
+    assert controller.handle_prefab_editor_mouse_click(10.0, 10.0) is False
+
+    assert selected == []
+    assert controller.is_edit_mode_active() is False
