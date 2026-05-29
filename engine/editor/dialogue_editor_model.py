@@ -8,6 +8,8 @@ from typing import Any
 
 DEFAULT_DIALOGUES_FILE_PATH: Path = Path("assets") / "data" / "dialogues.json"
 
+DIALOGUE_SCALAR_FIELD_ORDER: tuple[str, ...] = ("id", "schema_version", "start_node")
+
 
 class DialogueEditorModel:
     """Read-only view model for browsing assets/data/dialogues.json."""
@@ -77,6 +79,18 @@ class DialogueEditorModel:
             ("Choice count", str(_choice_count(dialogue))),
         ]
 
+    def scalar_detail_rows(self) -> list[tuple[str, str, str]]:
+        dialogue = self.selected_dialogue()
+        if dialogue is None:
+            return []
+        rows: list[tuple[str, str, str]] = []
+        for field_path in DIALOGUE_SCALAR_FIELD_ORDER:
+            value = dialogue.get(field_path)
+            if value is None or value == "":
+                continue
+            rows.append((_label_for_field(field_path), _format_value(value), field_path))
+        return rows
+
     def _dialogue_at(self, index: int | None) -> dict[str, Any] | None:
         if not self._dialogues:
             return None
@@ -112,3 +126,65 @@ def _choice_count(dialogue: dict[str, Any]) -> int:
 
 def _string_value(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _label_for_field(field_path: str) -> str:
+    return {
+        "id": "ID",
+        "schema_version": "Schema version",
+        "start_node": "Start node",
+    }.get(field_path, field_path)
+
+
+def _format_value(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    return str(value)
+
+
+def validate_dialogue_entries(entries: list[dict[str, Any]], target_path: str | Path) -> list[str]:  # noqa: ARG001
+    """Return validation error messages for editable dialogue payloads."""
+    errors: list[str] = []
+    seen_ids: set[str] = set()
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            errors.append(f"entry {index}: must be a dict")
+            continue
+        entry_id = entry.get("id")
+        if not isinstance(entry_id, str) or not entry_id.strip():
+            errors.append(f"entry {index}: id must be a non-empty string")
+            continue
+        entry_id_norm = entry_id.strip()
+        if entry_id_norm in seen_ids:
+            errors.append(f"duplicate dialogue id '{entry_id_norm}'")
+        else:
+            seen_ids.add(entry_id_norm)
+        schema_version = entry.get("schema_version")
+        if schema_version is not None:
+            if isinstance(schema_version, bool) or not isinstance(schema_version, int) or schema_version <= 0:
+                errors.append(
+                    f"entry '{entry_id_norm}': schema_version must be a positive integer, got {schema_version!r}"
+                )
+        start_node = entry.get("start_node")
+        if start_node is not None and isinstance(start_node, str) and start_node.strip():
+            script = entry.get("script")
+            node_keys = set(script.keys()) if isinstance(script, dict) else set()
+            if start_node.strip() not in node_keys:
+                errors.append(
+                    f"entry '{entry_id_norm}': start_node '{start_node.strip()}' does not exist in script"
+                )
+    return errors
+
+
+def save_dialogues(entries: list[dict[str, Any]], target_path: str | Path) -> None:
+    """Persist dialogue dictionaries to assets/data/dialogues.json shape."""
+    from engine.persistence_io import write_json_atomic  # noqa: PLC0415
+
+    errors = validate_dialogue_entries(entries, target_path)
+    if errors:
+        raise ValueError("; ".join(errors))
+    write_json_atomic(Path(target_path), {"dialogues": entries}, sort_keys=False, trailing_newline=True)
