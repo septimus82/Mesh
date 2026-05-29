@@ -34,6 +34,13 @@ DATABASE_FORM_ROUTES: tuple[DatabaseFormRoute, ...] = (
         key_handler="handle_quest_editor_key",
         click_handler="handle_quest_editor_mouse_click",
     ),
+    DatabaseFormRoute(
+        controller_attr="dialogue_editor",
+        tab_name="Dialogue",
+        text_handler="handle_dialogue_editor_text_input",
+        key_handler="handle_dialogue_editor_key",
+        click_handler="handle_dialogue_editor_mouse_click",
+    ),
 )
 
 

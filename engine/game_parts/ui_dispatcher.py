@@ -186,6 +186,10 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
         editor_controller.quest_editor = EditorQuestEditorController(editor_controller)
     window.quest_editor_overlay = QuestEditorOverlay(window)
     window.register_ui_element(window.quest_editor_overlay)
+    from engine.editor.editor_dialogue_editor_controller import EditorDialogueEditorController  # noqa: PLC0415
+
+    if editor_controller is not None and not hasattr(editor_controller, "dialogue_editor"):
+        editor_controller.dialogue_editor = EditorDialogueEditorController(editor_controller)
     window.dialogue_editor_overlay = DialogueEditorOverlay(window)
     window.register_ui_element(window.dialogue_editor_overlay)
     window.undo_history_overlay = UndoHistoryOverlay(window)
