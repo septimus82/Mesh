@@ -58,6 +58,9 @@ class ItemEditorModel:
         self.selected_index = next_index
         return changed
 
+    def set_selected_index(self, index: int) -> bool:
+        return bool(self.select_index(int(index)))
+
     def move_selection(self, delta: int) -> bool:
         return self.select_index(self.selected_index + int(delta))
 

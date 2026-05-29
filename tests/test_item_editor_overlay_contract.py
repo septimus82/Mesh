@@ -149,6 +149,37 @@ def test_item_editor_overlay_renders_selected_item_fields(monkeypatch: pytest.Mo
     assert "heal=25" in captured
 
 
+def test_item_editor_model_set_selected_index_alias_selects_item() -> None:
+    model = _model()
+
+    assert model.set_selected_index(1) is True
+    assert model.selected_index == 1
+    assert model.selected_item is not None
+    assert model.selected_item.id == "iron_key"
+
+    assert model.set_selected_index(1) is False
+    assert model.set_selected_index(999) is False
+    assert model.selected_index == 1
+
+
+def test_item_editor_overlay_tracks_row_hits_and_selection(monkeypatch: pytest.MonkeyPatch) -> None:
+    _capture_panel_text(monkeypatch)
+    overlay = ItemEditorOverlay(_window_for_tab("Items"))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    assert len(overlay._row_hits) == 2
+    second_row = overlay._row_hits[1][1]
+    rect = second_row.last_rect
+    assert rect is not None
+    assert overlay.row_index_at(rect.left + 1.0, rect.center_y) == 1
+    assert overlay.row_index_at(rect.right + 100.0, rect.top + 100.0) is None
+
+    assert overlay.set_selected_index(1) is True
+    assert overlay.set_selected_index(1) is False
+
+
 def test_item_editor_overlay_view_mode_shows_edit_button(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = _capture_panel_text(monkeypatch)
     item_editor = _ItemEditorStub(edit_mode=False)
