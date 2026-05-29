@@ -162,6 +162,24 @@ def test_quest_editor_overlay_renders_selected_quest_fields(monkeypatch: pytest.
     assert "Complete toast" in captured
 
 
+def test_quest_editor_overlay_tracks_row_hits_and_selection(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _capture_panel_text(monkeypatch)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests"))
+    overlay._model = _model(tmp_path)
+
+    overlay.draw()
+
+    assert len(overlay._row_hits) == 2
+    second_row = overlay._row_hits[1][1]
+    rect = second_row.last_rect
+    assert rect is not None
+    assert overlay.row_index_at(rect.left + 1.0, rect.center_y) == 1
+    assert overlay.row_index_at(rect.right + 100.0, rect.top + 100.0) is None
+
+    assert overlay.set_selected_index(1) is True
+    assert overlay.set_selected_index(1) is False
+
+
 def test_quest_editor_overlay_renders_complex_field_section(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     captured = _capture_panel_text(monkeypatch)
     overlay = QuestEditorOverlay(_window_for_tab("Quests"))
