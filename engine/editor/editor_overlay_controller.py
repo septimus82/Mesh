@@ -13,13 +13,15 @@ class EditorOverlayController:
         self._editor = editor
 
     def _dock_shell_active(self) -> bool:
+        from engine.editor.editor_modal_state_query import is_dock_shell_active  # noqa: PLC0415
+
         editor = getattr(self, "_editor", None)
         if editor is None or not getattr(editor, "active", False):
             return False
         window = getattr(editor, "window", None) or getattr(self, "_window", None)
         if window is None:
             return False
-        return getattr(window, "editor_shell_overlay", None) is not None
+        return is_dock_shell_active(window)
 
     def draw_overlay(self) -> None:
         editor = self._editor

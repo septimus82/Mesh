@@ -18,10 +18,9 @@ class LightOccluderEditorOverlay(UIElement):
         self._text_cache = TextCache(max_size=64)
 
     def _dock_shell_active(self) -> bool:
-        controller = getattr(self.window, "editor_controller", None)
-        if controller is None or not getattr(controller, "active", False):
-            return False
-        return getattr(self.window, "editor_shell_overlay", None) is not None
+        from engine.editor.editor_modal_state_query import is_dock_shell_active  # noqa: PLC0415
+
+        return is_dock_shell_active(self.window)
 
     def draw_world(self) -> None:
         if optional_arcade.arcade is None:

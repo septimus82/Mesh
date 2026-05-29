@@ -13,3 +13,10 @@ def is_scene_browser_active(controller: Any) -> bool:
 
 def is_unsaved_changes_pending(controller: Any) -> bool:
     return bool(getattr(controller, "_unsaved_changes_pending", False))
+
+
+def is_dock_shell_active(window: Any) -> bool:
+    controller = getattr(window, "editor_controller", None)
+    if controller is None or not getattr(controller, "active", False):
+        return False
+    return getattr(window, "editor_shell_overlay", None) is not None
