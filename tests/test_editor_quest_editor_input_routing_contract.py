@@ -149,14 +149,14 @@ def test_quest_editor_click_routes_only_when_quests_tab_and_edit_mode(monkeypatc
 
     handled = editor_input_click_handlers.handle_mouse_click(
         controller,
-        12.0,
+        1200.0,
         34.0,
         optional_arcade.arcade.MOUSE_BUTTON_LEFT,
         0,
     )
 
     assert handled is True
-    assert controller.quest_editor.calls == [("click", (12.0, 34.0))]
+    assert controller.quest_editor.calls == [("click", (1200.0, 34.0))]
     wrong_tab = _controller(right_tab="Problems")
     assert dispatch_database_form_click(wrong_tab, 12.0, 34.0) is False
     assert wrong_tab.quest_editor.calls == []
