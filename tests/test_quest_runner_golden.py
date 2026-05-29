@@ -670,3 +670,48 @@ class TestMultipleQuestsInteraction:
         ]
         assert "quest_a" in completed_quests
         assert "quest_b" in completed_quests
+
+    @pytest.mark.fast
+    def test_shared_event_emits_in_sorted_quest_id_order(self):
+        """Quest processing order is sorted by quest id, not definition order."""
+        data = {
+            "schema_version": 1,
+            "quests": [
+                {
+                    "id": "quest_b",
+                    "title": "Quest B",
+                    "stages": [
+                        {"id": "b1", "title": "B1", "complete_on": {"type": "shared_event"}},
+                    ],
+                },
+                {
+                    "id": "quest_a",
+                    "title": "Quest A",
+                    "stages": [
+                        {"id": "a1", "title": "A1", "complete_on": {"type": "shared_event"}},
+                    ],
+                },
+            ],
+        }
+
+        runner = QuestRunner(emit_sequence_start=1000)
+        runner.load_definitions(data)
+        runner.start_quest("quest_a")
+        runner.start_quest("quest_b")
+
+        emitted = runner.process_events([make_event("shared_event", 1)])
+
+        assert [(event.event_type, event.payload, event.sequence) for event in emitted] == [
+            (
+                "quest_stage_completed",
+                {"quest_id": "quest_a", "stage_id": "a1", "quest_title": "Quest A", "stage_title": "A1", "text": "A1"},
+                1000,
+            ),
+            ("quest_completed", {"quest_id": "quest_a", "quest_title": "Quest A", "reward": {"set_flags": {}, "inc_counters": {}}}, 1001),
+            (
+                "quest_stage_completed",
+                {"quest_id": "quest_b", "stage_id": "b1", "quest_title": "Quest B", "stage_title": "B1", "text": "B1"},
+                1002,
+            ),
+            ("quest_completed", {"quest_id": "quest_b", "quest_title": "Quest B", "reward": {"set_flags": {}, "inc_counters": {}}}, 1003),
+        ]
