@@ -31,11 +31,10 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
     def handle_dialogue_editor_mouse_click(self, x: float, y: float) -> bool:
         if not self.is_edit_mode_active():
             overlay = self._get_overlay()
-            if overlay is not None:
-                idx = overlay.row_index_at(float(x), float(y))
-                if idx is not None:
-                    overlay.set_selected_index(idx)
-            return True  # always consume view-mode clicks
+            idx = overlay.row_index_at(float(x), float(y)) if overlay is not None else None
+            if idx is not None:
+                overlay.set_selected_index(int(idx))
+                return True
         return self.handle_mouse_click(float(x), float(y))
 
     def _copy_record(self, record: dict[str, Any]) -> dict[str, Any]:

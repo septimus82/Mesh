@@ -62,27 +62,27 @@ def test_click_hits_row_calls_set_selected_and_returns_true() -> None:
     assert overlay.selected_calls == [2]
 
 
-def test_click_miss_no_selection_change_returns_true() -> None:
+def test_click_miss_no_selection_change_returns_false() -> None:
     controller, overlay = _make_controller(hit_index=None)
     result = controller.handle_dialogue_editor_mouse_click(999.0, 999.0)
-    assert result is True
+    assert result is False
     assert overlay.selected_calls == []
 
 
-def test_click_no_overlay_returns_true() -> None:
+def test_click_no_overlay_falls_through_returns_false() -> None:
     from engine.editor.editor_dialogue_editor_controller import EditorDialogueEditorController
 
     editor = SimpleNamespace(window=SimpleNamespace(dialogue_editor_overlay=None))
     controller = EditorDialogueEditorController(editor)
-    assert controller.handle_dialogue_editor_mouse_click(0.0, 0.0) is True
+    assert controller.handle_dialogue_editor_mouse_click(0.0, 0.0) is False
 
 
-def test_click_no_window_returns_true() -> None:
+def test_click_no_window_falls_through_returns_false() -> None:
     from engine.editor.editor_dialogue_editor_controller import EditorDialogueEditorController
 
     editor = SimpleNamespace()
     controller = EditorDialogueEditorController(editor)
-    assert controller.handle_dialogue_editor_mouse_click(0.0, 0.0) is True
+    assert controller.handle_dialogue_editor_mouse_click(0.0, 0.0) is False
 
 
 # ---------------------------------------------------------------------------

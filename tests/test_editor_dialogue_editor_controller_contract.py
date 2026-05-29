@@ -231,3 +231,42 @@ def test_dialogue_editor_controller_edit_mode_does_not_select_rows(tmp_path: Pat
     controller.handle_dialogue_editor_mouse_click(10.0, 50.0)
 
     assert overlay.selected_calls == []
+
+
+def test_dialogue_editor_controller_edit_button_enters_edit_mode(tmp_path: Path) -> None:
+    from engine.ui_overlays.widgets import Rect
+
+    class _StubOverlay:
+        def row_index_at(self, x: float, y: float) -> int | None:  # noqa: ARG002
+            return None
+
+        def selected_dialogue_dict(self) -> dict[str, object]:
+            return _dialogue()
+
+        def all_dialogue_dicts(self) -> list[dict[str, object]]:
+            return [_dialogue()]
+
+    overlay = _StubOverlay()
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+    controller.set_button_rects({"edit": Rect(x=0.0, y=40.0, width=100.0, height=20.0)})
+
+    result = controller.handle_dialogue_editor_mouse_click(10.0, 50.0)
+
+    assert result is True
+    assert controller.is_edit_mode_active() is True
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["id"] == "ep02_intro"
+
+
+def test_dialogue_editor_controller_empty_view_mode_click_returns_false(tmp_path: Path) -> None:
+    class _StubOverlay:
+        def row_index_at(self, x: float, y: float) -> int | None:  # noqa: ARG002
+            return None
+
+    overlay = _StubOverlay()
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+
+    result = controller.handle_dialogue_editor_mouse_click(10.0, 50.0)
+
+    assert result is False
+    assert controller.is_edit_mode_active() is False
