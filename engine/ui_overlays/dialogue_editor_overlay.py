@@ -25,6 +25,7 @@ class DialogueEditorOverlay(UIElement):
     def __init__(self, window: "GameWindow") -> None:
         super().__init__(window)
         self._model: object | None = None
+        self._row_hits: list[tuple[int, object]] = []
 
     def _get_controller(self) -> object | None:
         return getattr(self.window, "editor_controller", None)
@@ -68,6 +69,7 @@ class DialogueEditorOverlay(UIElement):
             inner_padding_y=0.0,
         )
         list_panel.add_header(PanelHeader("Dialogue", str(model.dialogue_count) if model is not None else "0"))
+        self._row_hits = []
         if model is None or not model.dialogues():
             list_panel.add_row(
                 PanelRow(
@@ -91,6 +93,7 @@ class DialogueEditorOverlay(UIElement):
                     selected_bg=DIALOGUE_EDITOR_SELECTED_BG,
                 )
                 row.set_selected(index == selected_index)
+                self._row_hits.append((index, row))
                 list_panel.add_row(row)
         list_panel.draw()
 
@@ -117,3 +120,14 @@ class DialogueEditorOverlay(UIElement):
                     )
                 )
         detail_panel.draw()
+
+    def row_index_at(self, x: float, y: float) -> int | None:
+        for index, row in self._row_hits:
+            if row.hit_test(float(x), float(y)):
+                return index
+        return None
+
+    def set_selected_index(self, index: int) -> bool:
+        model = self._get_model()
+        setter = getattr(model, "set_selected_index", None)
+        return bool(setter(int(index))) if callable(setter) else False
