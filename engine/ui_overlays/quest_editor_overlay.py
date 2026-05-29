@@ -48,6 +48,7 @@ class QuestEditorOverlay(UIElement):
         super().__init__(window)
         self._model: object | None = None
         self._load_error: str | None = None
+        self._row_hits: list[tuple[int, object]] = []
         self._widget_rows: dict[str, object] = {}
 
     def _get_controller(self) -> object | None:
@@ -110,6 +111,7 @@ class QuestEditorOverlay(UIElement):
             inner_padding_y=0.0,
         )
         list_panel.add_header(PanelHeader("Quests", str(model.quest_count) if model is not None else "0"))
+        self._row_hits = []
 
         if model is None:
             list_panel.add_row(
@@ -137,6 +139,7 @@ class QuestEditorOverlay(UIElement):
                     selected_bg=QUEST_EDITOR_SELECTED_BG,
                 )
                 row.set_selected(index == selected_index)
+                self._row_hits.append((index, row))
                 list_panel.add_row(row)
         list_panel.draw()
 
@@ -216,6 +219,17 @@ class QuestEditorOverlay(UIElement):
             quest_editor.set_button_rects(collect_button_rects(button_rows))
         if edit_mode and quest_editor is not None:
             self._draw_edit_widgets(quest_editor)
+
+    def row_index_at(self, x: float, y: float) -> int | None:
+        for index, row in self._row_hits:
+            if row.hit_test(float(x), float(y)):
+                return index
+        return None
+
+    def set_selected_index(self, index: int) -> bool:
+        model = self._get_model()
+        setter = getattr(model, "set_selected_index", None)
+        return bool(setter(int(index))) if callable(setter) else False
 
     def _draw_text_input(self, text_input: TextInput, rect: Rect) -> None:
         draw_text_input(text_input, rect, _QUEST_FORM_COLORS)
