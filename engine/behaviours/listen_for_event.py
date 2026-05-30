@@ -99,6 +99,9 @@ class ListenForEvent(Behaviour):
             data.update(config)
         return data
 
+    def subscribed_event_types(self) -> frozenset[str] | None:
+        return frozenset({self.event_type}) if self.event_type else frozenset()
+
     def on_event(self, event: MeshEvent) -> None:  # noqa: D401
         if self._consumed:
             return

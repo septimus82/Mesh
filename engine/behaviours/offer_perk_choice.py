@@ -91,6 +91,9 @@ class OfferPerkChoice(Behaviour):
             data.update(config)
         return data
 
+    def subscribed_event_types(self) -> frozenset[str] | None:
+        return frozenset({self.start_event}) if self.start_event else frozenset()
+
     def on_event(self, event: MeshEvent) -> None:
         if self._active:
             return

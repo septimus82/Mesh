@@ -78,6 +78,9 @@ class MainMenuBehaviour(Behaviour):
         # For now, let's use a simple polling with a timer for navigation to avoid super fast scrolling.
         pass
 
+    def subscribed_event_types(self) -> frozenset[str] | None:
+        return frozenset()
+
     def on_event(self, event: Any) -> None:
         # We can use the event bus for input if we wire it up, but standard input isn't on the bus.
         pass

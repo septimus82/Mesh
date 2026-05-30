@@ -247,6 +247,9 @@ class InteractableBehaviour(Behaviour):
         else:
             self._in_range_entity = None
     
+    def subscribed_event_types(self) -> frozenset[str] | None:
+        return frozenset({"input_action", "key_action"})
+
     def on_event(self, event: MeshEvent) -> None:
         """Handle input events for interaction."""
         # Check for interact key press

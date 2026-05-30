@@ -100,6 +100,9 @@ class QuestProgressOnEvent(Behaviour):
         self.once = bool(merged.get("once", False))
         self._fired = False
 
+    def subscribed_event_types(self) -> frozenset[str] | None:
+        return frozenset({self.event_type}) if self.event_type else frozenset()
+
     def on_event(self, event: MeshEvent) -> None:  # noqa: D401
         if self.once and self._fired:
             return
