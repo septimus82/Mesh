@@ -148,3 +148,20 @@ def test_aabb_only_collision_smoke_unchanged() -> None:
     result = sweep_axis_separate(req, _aabb_query)
     assert result.hit_x is True
     assert result.final_pos == pytest.approx((10.0, 0.0))
+
+
+def test_query_overlaps_circle_result_matches_stored_solid_sprites_reference(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Lock: seeding via move_entity_with_physics then querying returns the
+    # correct in-range IDs whether _LAST_SOLID_SPRITES holds a copy or a ref.
+    # Colliders are NOT mutated between move and query.
+    colliders = [
+        _Sprite("wall_a", 0.0, 1.5, 2.0, 2.0),   # nearest to origin: (0, 0.5), dist 0.5 < 3 → hit
+        _Sprite("wall_c", 1.0, 0.0, 2.0, 2.0),   # nearest to origin: (0, 0),   dist 0.0 < 3 → hit
+        _Sprite("wall_z", 8.0, 0.0, 2.0, 2.0),   # nearest to origin: (7, 0),   dist 7.0 > 3 → miss
+    ]
+    _prepare_query_state(monkeypatch, colliders)
+
+    hits = physics_runtime.query_overlaps_circle(0.0, 0.0, 3.0)
+    assert hits == ["wall_a", "wall_c"]

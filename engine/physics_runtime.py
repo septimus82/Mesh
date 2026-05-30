@@ -480,7 +480,7 @@ def move_entity_with_physics(
     Returns the result details.
     """
     global _LAST_SOLID_SPRITES
-    _LAST_SOLID_SPRITES = list(solid_sprites) if solid_sprites else []
+    _LAST_SOLID_SPRITES = solid_sprites if solid_sprites else []
 
     # 1. Setup Request
     moving_shape = _sprite_to_shape(entity)
