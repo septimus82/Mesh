@@ -171,8 +171,63 @@ def test_dialogue_editor_overlay_renders_script_section(
     overlay.draw()
 
     assert "Script (read-only)" in captured
+    assert "0 errors" in captured
     assert "Node count" in captured
     assert "Choice count" in captured
+
+
+def test_dialogue_editor_overlay_renders_single_reference_error_badge(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "bad_ref",
+                "schema_version": 1,
+                "start_node": "start",
+                "script": {"start": {"text": "Broken.", "next": "missing"}},
+            }
+        ],
+    )
+
+    overlay.draw()
+
+    assert "Script (read-only)" in captured
+    assert "1 error" in captured
+
+
+def test_dialogue_editor_overlay_renders_plural_reference_error_badge(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "bad_refs",
+                "schema_version": 1,
+                "start_node": "start",
+                "script": {
+                    "start": {
+                        "text": "Broken.",
+                        "next": "missing",
+                        "choices": [{"next": "also_missing", "text": ""}],
+                    }
+                },
+            }
+        ],
+    )
+
+    overlay.draw()
+
+    assert "Script (read-only)" in captured
+    assert "3 errors" in captured
 
 
 def test_dialogue_editor_overlay_view_mode_shows_edit_button(

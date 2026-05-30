@@ -75,7 +75,10 @@ class DialogueEditorOverlay(UIElement):
         if not self._is_visible_for_controller(controller):
             return
 
-        from engine.editor.dialogue_editor_model import DIALOGUE_SCALAR_FIELD_ORDER  # noqa: PLC0415
+        from engine.editor.dialogue_editor_model import (  # noqa: PLC0415
+            DIALOGUE_SCALAR_FIELD_ORDER,
+            dialogue_reference_problem_count,
+        )
         from engine.editor.widgets.panel_primitives import EditorPanelBase, PanelField, PanelHeader, PanelRow
 
         list_rect, detail_rect = compute_database_form_layout(self.window, controller, DIALOGUE_EDITOR_PANEL_GAP)
@@ -178,7 +181,17 @@ class DialogueEditorOverlay(UIElement):
                 if isinstance(script, dict)
                 else 0
             )
-            detail_panel.add_header(PanelHeader("Script (read-only)", None, title_color=DIALOGUE_EDITOR_DIM_COLOR))
+            reference_count = dialogue_reference_problem_count(dialogue)
+            script_badge = "1 error" if reference_count == 1 else f"{reference_count} errors"
+            script_badge_color = DIALOGUE_EDITOR_ERROR_COLOR if reference_count else DIALOGUE_EDITOR_DIM_COLOR
+            detail_panel.add_header(
+                PanelHeader(
+                    "Script (read-only)",
+                    script_badge,
+                    title_color=DIALOGUE_EDITOR_DIM_COLOR,
+                    subtitle_color=script_badge_color,
+                )
+            )
             detail_panel.add_row(
                 PanelRow(
                     PanelField("Node count", node_count, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
