@@ -152,3 +152,84 @@ def test_validate_dialogue_entries_returns_list_of_strings(tmp_path: Path) -> No
     assert errors
     assert all(isinstance(error, str) for error in errors)
     assert any("id must be a non-empty string" in error for error in errors)
+
+
+def test_validate_dialogue_entries_flags_dangling_node_next(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    entry = _dialogue()
+    entry["script"]["path_a"]["next"] = "missing_node"
+
+    errors = validate_dialogue_entries([entry], target)
+
+    assert (
+        "entry 'ep02_dialogue_intro': node 'path_a' next 'missing_node' does not exist in script"
+        in errors
+    )
+
+
+def test_validate_dialogue_entries_accepts_node_next_to_sibling(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    entry = _dialogue()
+    entry["script"]["path_a"]["next"] = "path_b"
+
+    errors = validate_dialogue_entries([entry], target)
+
+    assert not any("node 'path_a' next" in error for error in errors)
+
+
+def test_validate_dialogue_entries_accepts_null_node_next(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+
+    errors = validate_dialogue_entries([_dialogue()], target)
+
+    assert not any("next 'None'" in error for error in errors)
+
+
+def test_validate_dialogue_entries_flags_dangling_choice_next(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    entry = _dialogue()
+    entry["script"]["start"]["choices"][1]["next"] = "missing_choice_node"
+
+    errors = validate_dialogue_entries([entry], target)
+
+    assert (
+        "entry 'ep02_dialogue_intro': node 'start' choice 1 next 'missing_choice_node' does not exist in script"
+        in errors
+    )
+
+
+def test_validate_dialogue_entries_accepts_choice_next_to_sibling(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+
+    errors = validate_dialogue_entries([_dialogue()], target)
+
+    assert not any("choice 0 next 'path_a' does not exist" in error for error in errors)
+    assert not any("choice 1 next 'path_b' does not exist" in error for error in errors)
+
+
+def test_validate_dialogue_entries_flags_empty_choice_text(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    entry = _dialogue()
+    entry["script"]["start"]["choices"][0]["text"] = ""
+
+    errors = validate_dialogue_entries([entry], target)
+
+    assert "entry 'ep02_dialogue_intro': node 'start' choice 0 text is empty" in errors
+
+
+def test_validate_dialogue_entries_flags_missing_choice_text(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    entry = _dialogue()
+    entry["script"]["start"]["choices"][1].pop("text")
+
+    errors = validate_dialogue_entries([entry], target)
+
+    assert "entry 'ep02_dialogue_intro': node 'start' choice 1 text is empty" in errors
+
+
+def test_validate_dialogue_entries_accepts_real_dialogue_database() -> None:
+    payload = json.loads(Path("assets/data/dialogues.json").read_text(encoding="utf-8"))
+
+    errors = validate_dialogue_entries(payload["dialogues"], Path("assets/data/dialogues.json"))
+
+    assert errors == []
