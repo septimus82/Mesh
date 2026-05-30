@@ -5,6 +5,7 @@ Extracts sorting, culling, and draw order logic from SceneController.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Protocol, Union, cast
 
@@ -353,9 +354,40 @@ def execute_draw_plan(
     execute_scene_plan(plan, render_queue, use_batching, camera_rect, use_culling)
 
 
+def compute_background_tile_ranges(
+    base_x: float,
+    base_y: float,
+    tex_w: float,
+    tex_h: float,
+    viewport_w: float,
+    viewport_h: float,
+    repeat_x: bool,
+    repeat_y: bool,
+) -> tuple[tuple[int, int], tuple[int, int]]:
+    """Return ((x_start, x_end), (y_start, y_end)) for use with range() (end-exclusive).
+
+    Tiles are centered at base + i*tex (draw_texture_rectangle centers on the point).
+    Cover the full viewport with a small pad so no edge gaps; clamp to visible band.
+    Non-repeating axis returns (0, 1).
+    """
+    if repeat_x:
+        x_start = math.ceil((-tex_w / 2.0 - float(base_x)) / tex_w)
+        x_end = math.ceil((float(viewport_w) + tex_w / 2.0 - float(base_x)) / tex_w)
+    else:
+        x_start, x_end = 0, 1
+    if repeat_y:
+        y_start = math.ceil((-tex_h / 2.0 - float(base_y)) / tex_h)
+        y_end = math.ceil((float(viewport_h) + tex_h / 2.0 - float(base_y)) / tex_h)
+    else:
+        y_start, y_end = 0, 1
+    return (x_start, x_end), (y_start, y_end)
+
+
 def execute_background_plan(
     plan: DrawPlan,
     texture_lookup: Callable[[str], Optional[Any]],
+    *,
+    viewport_size: Optional[tuple[int, int]] = None,
 ) -> None:
     """Execute only the background part of the plan (usually requires GUI camera)."""
     if optional_arcade.arcade is None:
@@ -369,33 +401,38 @@ def execute_background_plan(
         texture = texture_lookup(bg_op.plane.asset_path)
         if texture is None:
             continue
-        
+
         tex_w = max(1.0, float(texture.width))
         tex_h = max(1.0, float(texture.height))
-        
+
         if not bg_op.plane.repeat_x and not bg_op.plane.repeat_y:
              draw_texture_rectangle(
                 bg_op.base_x, bg_op.base_y, tex_w, tex_h, texture, alpha=bg_op.alpha
             )
              continue
-        
-        # Tiled drawing
-        x_range = (0, 0)
-        y_range = (0, 0)
-        
-        if bg_op.plane.repeat_x:
-            start_x = -((bg_op.base_x // tex_w) + 2)
-            end_x = (2000 // tex_w) + 2 # Limit
-            x_range = (int(start_x), int(end_x))
-        else:
-            x_range = (0, 1)
 
-        if bg_op.plane.repeat_y:
-             start_y = -((bg_op.base_y // tex_h) + 2)
-             end_y = (2000 // tex_h) + 2
-             y_range = (int(start_y), int(end_y))
+        # Tiled drawing
+        if viewport_size is not None:
+            x_range, y_range = compute_background_tile_ranges(
+                bg_op.base_x, bg_op.base_y, tex_w, tex_h,
+                float(viewport_size[0]), float(viewport_size[1]),
+                bg_op.plane.repeat_x, bg_op.plane.repeat_y,
+            )
         else:
-            y_range = (0, 1)
+            x_range = (0, 0)
+            y_range = (0, 0)
+            if bg_op.plane.repeat_x:
+                start_x = -((bg_op.base_x // tex_w) + 2)
+                end_x = (2000 // tex_w) + 2  # Limit
+                x_range = (int(start_x), int(end_x))
+            else:
+                x_range = (0, 1)
+            if bg_op.plane.repeat_y:
+                start_y = -((bg_op.base_y // tex_h) + 2)
+                end_y = (2000 // tex_h) + 2
+                y_range = (int(start_y), int(end_y))
+            else:
+                y_range = (0, 1)
 
         for ix in range(x_range[0], x_range[1]):
             for iy in range(y_range[0], y_range[1]):
