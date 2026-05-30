@@ -87,11 +87,10 @@ class SceneEntityStoreController:
         ctrl = self._get_controller(controller)
         if ctrl is None:
             return None
-        all_sprites = list(ctrl.all_sprites)
         try:
             idx = int(identifier)
-            if 0 <= idx < len(all_sprites):
-                return all_sprites[idx]
+            if 0 <= idx < len(ctrl.all_sprites):
+                return ctrl.all_sprites[idx]
         except (ValueError, TypeError):
             pass
 
@@ -102,7 +101,7 @@ class SceneEntityStoreController:
         sprite = self._index_by_name.get(target_name)
         if sprite is not None:
             return sprite
-        for sprite in all_sprites:
+        for sprite in ctrl.all_sprites:
             if getattr(sprite, "mesh_name", "") == target_name:
                 return sprite
         return None
