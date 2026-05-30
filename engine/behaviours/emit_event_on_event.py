@@ -35,6 +35,9 @@ class EmitEventOnEvent(Behaviour):
         self.emit_event_name = str(self.config.get("emit_event", "") or "")
         self.emit_payload = dict(self.config.get("emit_payload", {}) or {})
 
+    def subscribed_event_types(self) -> frozenset[str] | None:
+        return frozenset({self.listen_event}) if self.listen_event else frozenset()
+
     def on_event(self, event: MeshEvent) -> None:
         if not self.listen_event or event.type != self.listen_event:
             return

@@ -158,6 +158,9 @@ class SceneTransition(Behaviour):
             return
         self._trigger_transition(reason="interact", actor=actor)
 
+    def subscribed_event_types(self) -> frozenset[str] | None:
+        return frozenset({self.event_type}) if self.event_type else frozenset()
+
     def on_event(self, event: MeshEvent) -> None:  # noqa: D401
         if not self.event_type or event.type != self.event_type:
             return

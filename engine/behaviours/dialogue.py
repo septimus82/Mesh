@@ -369,6 +369,9 @@ class Dialogue(Behaviour):
         if started:
             self._emit_line_event(stage="start", actor_name=actor_name)
 
+    def subscribed_event_types(self) -> frozenset[str] | None:
+        return frozenset({self.start_event}) if self.start_event else frozenset()
+
     def on_event(self, event: MeshEvent) -> None:
         if not self.start_event or event.type != self.start_event:
             return
