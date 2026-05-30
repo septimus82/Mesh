@@ -170,13 +170,37 @@ def validate_dialogue_entries(entries: list[dict[str, Any]], target_path: str | 
                     f"entry '{entry_id_norm}': schema_version must be a positive integer, got {schema_version!r}"
                 )
         start_node = entry.get("start_node")
+        script = entry.get("script")
+        node_keys = set(script.keys()) if isinstance(script, dict) else set()
         if start_node is not None and isinstance(start_node, str) and start_node.strip():
-            script = entry.get("script")
-            node_keys = set(script.keys()) if isinstance(script, dict) else set()
             if start_node.strip() not in node_keys:
                 errors.append(
                     f"entry '{entry_id_norm}': start_node '{start_node.strip()}' does not exist in script"
                 )
+        if isinstance(script, dict):
+            for node_id, node in script.items():
+                if not isinstance(node, dict):
+                    continue
+                node_next = node.get("next")
+                if isinstance(node_next, str) and node_next.strip() and node_next.strip() not in node_keys:
+                    errors.append(
+                        f"entry '{entry_id_norm}': node '{node_id}' next '{node_next.strip()}' does not exist in script"
+                    )
+                choices = node.get("choices")
+                if isinstance(choices, list):
+                    for i, choice in enumerate(choices):
+                        if not isinstance(choice, dict):
+                            continue
+                        choice_next = choice.get("next")
+                        if isinstance(choice_next, str) and choice_next.strip() and choice_next.strip() not in node_keys:
+                            errors.append(
+                                f"entry '{entry_id_norm}': node '{node_id}' choice {i} next '{choice_next.strip()}' does not exist in script"
+                            )
+                        choice_text = choice.get("text")
+                        if not isinstance(choice_text, str) or not choice_text.strip():
+                            errors.append(
+                                f"entry '{entry_id_norm}': node '{node_id}' choice {i} text is empty"
+                            )
     return errors
 
 
