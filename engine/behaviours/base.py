@@ -311,6 +311,26 @@ class Behaviour:
         """
         return
 
+    def subscribed_event_types(self) -> "frozenset[str] | None":
+        """Event types this behaviour may act on. None = wildcard (receives all).
+
+        Override to return a frozenset of event type strings this behaviour
+        cares about. The delivery loop skips calling ``on_event`` when the
+        incoming event type is not in the declared set, saving a call.
+
+        Return ``None`` (the default) to receive every event — identical to
+        the behaviour before this mechanism existed.
+
+        Return ``frozenset()`` to opt out of all event delivery entirely (useful
+        for behaviours that never handle events).
+
+        Example::
+
+            def subscribed_event_types(self) -> frozenset[str] | None:
+                return frozenset({self.event_type}) if self.event_type else frozenset()
+        """
+        return None
+
     def on_event(self, event: "MeshEvent") -> None:  # pragma: no cover - default no-op
         """Handle a gameplay event broadcast through the event bus.
 
