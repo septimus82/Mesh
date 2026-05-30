@@ -124,6 +124,28 @@ def _choice_count(dialogue: dict[str, Any]) -> int:
     return count
 
 
+def script_rows(dialogue: dict[str, Any]) -> list[tuple[str, str]]:
+    script = dialogue.get("script")
+    if not isinstance(script, dict):
+        return []
+    rows: list[tuple[str, str]] = []
+    for node_id, node in script.items():
+        if not isinstance(node, dict):
+            continue
+        node_next = node.get("next")
+        if isinstance(node_next, str) and node_next.strip():
+            summary = f"-> {node_next.strip()}"
+        else:
+            choices = node.get("choices")
+            if isinstance(choices, list):
+                choice_count = len(choices)
+                summary = "1 choice" if choice_count == 1 else f"{choice_count} choices"
+            else:
+                summary = "(end)"
+        rows.append((str(node_id), summary))
+    return rows
+
+
 def _string_value(value: Any) -> str:
     return str(value or "").strip()
 
