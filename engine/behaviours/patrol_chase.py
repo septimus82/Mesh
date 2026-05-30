@@ -144,6 +144,7 @@ class PatrolChaseBehaviour(Behaviour):
         self._waypoint_index: int = 0
 
         self._chase: ChaseTargetBehaviour | None = None
+        self._acquire_helper: ChaseTargetBehaviour | None = None
         self._return_goal_index: int | None = None
 
     @staticmethod
@@ -246,12 +247,18 @@ class PatrolChaseBehaviour(Behaviour):
             return
 
         # Attempt acquisition using the same ChaseTarget logic.
-        chase = self._build_chase()
-        target = chase._acquire_target(grid)  # noqa: SLF001
+        # Reuse a single persistent helper for the pre-check scan so we do not
+        # allocate a throwaway ChaseTargetBehaviour every idle patrol tick.
+        # The helper is never .update()'d, so it stays in pristine post-__init__
+        # state (state="idle", _cooldown_remaining=0) permanently — no
+        # cooldown/disengage contamination (this is what makes Option A safe).
+        if self._acquire_helper is None:
+            self._acquire_helper = self._build_chase()  # built once, reused
+        target = self._acquire_helper._acquire_target(grid)  # noqa: SLF001
         if target is not None:
             self.state = "chase"
-            self._chase = chase
-            chase.update(dt)
+            self._chase = self._build_chase()  # fresh chaser promoted, pristine idle
+            self._chase.update(dt)
             return
 
         self._tick_patrol_motion(dt)
