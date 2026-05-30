@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from typing import Any, List, Tuple, Optional
 from dataclasses import dataclass
-from hashlib import md5
 
 import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
@@ -178,9 +177,7 @@ def _collider_signature(obj: Any) -> int:
     except Exception:
         _log_swallow("PHRT-005", "engine.physics_runtime blanket exception fallback")
         return 0
-    sig = f"{ql}:{qr}:{qb}:{qt}"
-    digest = md5(sig.encode("ascii")).hexdigest()[:8]
-    return int(digest, 16)
+    return ((ql * 73856093) ^ (qr * 19349663) ^ (qb * 83492791) ^ (qt * 2654435761) ^ 0x9E3779B9) & 0xFFFFFFFF
 
 
 def _collider_sample_sigs(solid_sprites: Any, *, limit: int = 8) -> tuple[int, ...]:
