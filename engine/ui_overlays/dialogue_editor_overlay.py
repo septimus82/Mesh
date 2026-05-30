@@ -78,6 +78,7 @@ class DialogueEditorOverlay(UIElement):
         from engine.editor.dialogue_editor_model import (  # noqa: PLC0415
             DIALOGUE_SCALAR_FIELD_ORDER,
             dialogue_reference_problem_count,
+            script_rows,
         )
         from engine.editor.widgets.panel_primitives import EditorPanelBase, PanelField, PanelHeader, PanelRow
 
@@ -206,6 +207,16 @@ class DialogueEditorOverlay(UIElement):
                     padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
                 )
             )
+            start_node_id = str(dialogue.get("start_node") or "").strip()
+            for node_id, summary in script_rows(dialogue):
+                label = f"{node_id} (start)" if node_id == start_node_id else node_id
+                detail_panel.add_row(
+                    PanelRow(
+                        PanelField(label, summary, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                        height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                        padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                    )
+                )
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,

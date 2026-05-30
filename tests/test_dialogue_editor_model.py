@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from engine.editor.dialogue_editor_model import DialogueEditorModel
+from engine.editor.dialogue_editor_model import DialogueEditorModel, script_rows
 
 
 pytestmark = [pytest.mark.fast]
@@ -91,3 +91,44 @@ def test_dialogue_editor_model_missing_file_is_empty(tmp_path: Path) -> None:
 
     assert model.dialogue_count == 0
     assert model.selected_dialogue() is None
+
+
+def test_script_rows_preserves_natural_order_and_summarizes_edges() -> None:
+    dialogue = {
+        "script": {
+            "start": {"text": "Start", "next": "middle"},
+            "middle": {"text": "Middle", "choices": [{"text": "End", "next": "end"}, {"text": "Loop", "next": "start"}]},
+            "end": {"text": "End", "next": None},
+        }
+    }
+
+    assert script_rows(dialogue) == [
+        ("start", "-> middle"),
+        ("middle", "2 choices"),
+        ("end", "(end)"),
+    ]
+
+
+def test_script_rows_singular_and_empty_choices() -> None:
+    dialogue = {
+        "script": {
+            "single": {"text": "One", "choices": [{"text": "Go", "next": "end"}]},
+            "empty": {"text": "None", "choices": []},
+        }
+    }
+
+    assert script_rows(dialogue) == [
+        ("single", "1 choice"),
+        ("empty", "0 choices"),
+    ]
+
+
+def test_script_rows_next_wins_over_choices() -> None:
+    dialogue = {"script": {"mixed": {"text": "Mixed", "next": "end", "choices": [{"text": "Ignored"}]}}}
+
+    assert script_rows(dialogue) == [("mixed", "-> end")]
+
+
+def test_script_rows_skips_non_dict_nodes_and_non_dict_script() -> None:
+    assert script_rows({"script": {"start": "bad", "end": {"text": "End"}}}) == [("end", "(end)")]
+    assert script_rows({"script": []}) == []

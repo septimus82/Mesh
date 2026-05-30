@@ -176,6 +176,23 @@ def test_dialogue_editor_overlay_renders_script_section(
     assert "Choice count" in captured
 
 
+def test_dialogue_editor_overlay_renders_script_node_rows(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(tmp_path)
+
+    overlay.draw()
+
+    assert "start (start)" in captured
+    assert "1 choice" in captured
+    assert "end" in captured
+    assert "end (start)" not in captured
+    assert "(end)" in captured
+
+
 def test_dialogue_editor_overlay_renders_single_reference_error_badge(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
