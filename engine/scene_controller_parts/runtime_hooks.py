@@ -32,7 +32,12 @@ def _iter_layered_sprites(self) -> Iterable[object]:
 
 
 def _deliver_events_to_behaviours(self, events: Sequence[object]) -> None:
+    if not events:
+        return
+    interest_cache: dict[int, "frozenset[str] | None"] = {}
+    _MISSING = object()
     for event in events:
+        etype = getattr(event, "type", None)
         for sprite in self._iter_layered_sprites():
             behaviours = getattr(sprite, "mesh_behaviours_runtime", [])
             if not behaviours:
@@ -40,6 +45,17 @@ def _deliver_events_to_behaviours(self, events: Sequence[object]) -> None:
             for behaviour in behaviours:
                 on_event = getattr(behaviour, "on_event", None)
                 if not callable(on_event):
+                    continue
+                bkey = id(behaviour)
+                interest = interest_cache.get(bkey, _MISSING)
+                if interest is _MISSING:
+                    getter = getattr(behaviour, "subscribed_event_types", None)
+                    try:
+                        interest = getter() if callable(getter) else None
+                    except Exception:  # noqa: BLE001  # REASON: faulty getter must not suppress delivery
+                        interest = None
+                    interest_cache[bkey] = interest
+                if interest is not None and etype not in interest:
                     continue
                 try:
                     on_event(event)
