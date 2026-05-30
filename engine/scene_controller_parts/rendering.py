@@ -60,7 +60,10 @@ def draw(self) -> None:
 
     if hasattr(self.window.camera_controller, "gui_camera"):
         self.window.camera_controller.gui_camera.use()
-        scene_controller_module.execute_background_plan(plan, self._get_background_plane_texture)
+        scene_controller_module.execute_background_plan(
+            plan, self._get_background_plane_texture,
+            viewport_size=(self.window.width, self.window.height),
+        )
         self.window.camera.use()
 
     tile_layers = self._tilemap_draw_layers

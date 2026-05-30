@@ -104,7 +104,7 @@ def test_draw_orders_background_plan_negative_tiles_scene_then_positive_tiles(mo
 
     monkeypatch.setattr(core, "build_render_context", lambda **_kwargs: events.append("build_context") or "ctx")
     monkeypatch.setattr(core, "compute_draw_plan", lambda _ctx: events.append("compute_plan") or "plan")
-    monkeypatch.setattr(core, "execute_background_plan", lambda _plan, _texture_getter: events.append("background_plan"))
+    monkeypatch.setattr(core, "execute_background_plan", lambda _plan, _texture_getter, **_kw: events.append("background_plan"))
     monkeypatch.setattr(core, "execute_scene_plan", lambda _plan, **_kwargs: events.append("scene_plan"))
     monkeypatch.setattr(controller, "_set_world_entities_counter", lambda count: events.append(f"world_count:{count}"))
     monkeypatch.setattr(controller, "_set_tilemap_perf_counters", lambda _stats: events.append("tile_counters"))
