@@ -6,7 +6,11 @@ from typing import Any
 
 import pytest
 
-from engine.editor.dialogue_editor_model import save_dialogues, validate_dialogue_entries
+from engine.editor.dialogue_editor_model import (
+    dialogue_reference_problem_count,
+    save_dialogues,
+    validate_dialogue_entries,
+)
 
 pytestmark = [pytest.mark.fast]
 
@@ -233,3 +237,54 @@ def test_validate_dialogue_entries_accepts_real_dialogue_database() -> None:
     errors = validate_dialogue_entries(payload["dialogues"], Path("assets/data/dialogues.json"))
 
     assert errors == []
+
+
+def test_dialogue_reference_problem_count_clean_dialogue_is_zero() -> None:
+    assert dialogue_reference_problem_count(_dialogue()) == 0
+
+
+def test_dialogue_reference_problem_count_dangling_node_next() -> None:
+    entry = _dialogue()
+    entry["script"]["path_a"]["next"] = "missing_node"
+
+    assert dialogue_reference_problem_count(entry) == 1
+
+
+def test_dialogue_reference_problem_count_dangling_choice_next() -> None:
+    entry = _dialogue()
+    entry["script"]["start"]["choices"][0]["next"] = "missing_choice_node"
+
+    assert dialogue_reference_problem_count(entry) == 1
+
+
+def test_dialogue_reference_problem_count_empty_choice_text() -> None:
+    entry = _dialogue()
+    entry["script"]["start"]["choices"][1]["text"] = ""
+
+    assert dialogue_reference_problem_count(entry) == 1
+
+
+def test_dialogue_reference_problem_count_combined_multiplicity() -> None:
+    entry = _dialogue()
+    entry["script"]["path_a"]["next"] = "missing_node"
+    entry["script"]["start"]["choices"][0]["next"] = "missing_choice_node"
+    entry["script"]["start"]["choices"][1].pop("text")
+
+    assert dialogue_reference_problem_count(entry) == 3
+
+
+def test_validate_dialogue_entries_reference_messages_unchanged(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    entry = _dialogue()
+    entry["script"]["path_a"]["next"] = "missing_node"
+    entry["script"]["start"]["choices"][0]["next"] = "missing_choice_node"
+    entry["script"]["start"]["choices"][1].pop("text")
+
+    errors = validate_dialogue_entries([entry], target)
+
+    assert "entry 'ep02_dialogue_intro': node 'path_a' next 'missing_node' does not exist in script" in errors
+    assert (
+        "entry 'ep02_dialogue_intro': node 'start' choice 0 next 'missing_choice_node' does not exist in script"
+        in errors
+    )
+    assert "entry 'ep02_dialogue_intro': node 'start' choice 1 text is empty" in errors
