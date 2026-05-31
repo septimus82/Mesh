@@ -32,6 +32,9 @@ class _SelectedNodeOverlay:
     def selected_node_id(self) -> str | None:
         return self._node_id
 
+    def set_selected_node_id(self, node_id: str | None) -> None:
+        self._node_id = node_id
+
 
 def _dialogue(dialogue_id: str = "ep02_intro", **overrides: object) -> dict[str, object]:
     payload: dict[str, object] = {
@@ -413,6 +416,106 @@ def test_dialogue_editor_controller_delete_choice_action_ignored_in_view_mode(tm
     controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_ChoiceActionOverlay("start")))
 
     assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is False
+
+
+def test_dialogue_editor_controller_add_node_generates_collision_free_ids(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    source["script"]["node_1"] = {"speaker": "A", "text": "Existing.", "next": ""}
+    overlay = _SelectedNodeOverlay("start")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+    controller.enter_edit_mode(source)
+
+    assert controller._add_node() is True
+
+    assert "node_2" in controller.edit_buffer["script"]
+    assert overlay.selected_node_id() == "node_2"
+
+    semantic_source = _dialogue("ep02_intro")
+    semantic_overlay = _SelectedNodeOverlay("start")
+    semantic_controller = EditorDialogueEditorController(_editor(tmp_path, overlay=semantic_overlay))
+    semantic_controller.enter_edit_mode(semantic_source)
+
+    assert semantic_controller._add_node() is True
+    assert semantic_controller._add_node() is True
+
+    assert {"node_1", "node_2"} <= set(semantic_controller.edit_buffer["script"])
+
+
+def test_dialogue_editor_controller_add_node_selects_and_focuses_new_node(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    overlay = _SelectedNodeOverlay("start")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+    controller.enter_edit_mode(source)
+
+    assert controller._add_node() is True
+
+    assert controller.edit_buffer["script"]["node_1"] == {"speaker": "", "text": "", "next": ""}
+    assert overlay.selected_node_id() == "node_1"
+    assert "script.node_1.speaker" in controller.text_inputs()
+    assert "script.node_1.text" in controller.text_inputs()
+    assert "script.node_1.next" in controller.text_inputs()
+    assert controller.focused_field() == "script.node_1.speaker"
+
+
+def test_dialogue_editor_controller_add_node_syncs_current_node_edits(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+    controller.text_input("script.start.text").text = "Keep node edit"
+
+    assert controller._add_node() is True
+
+    assert controller.edit_buffer["script"]["start"]["text"] == "Keep node edit"
+
+
+def test_dialogue_editor_controller_add_node_noop_without_edit_mode_or_script_dict(tmp_path: Path) -> None:
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+
+    assert controller._add_node() is False
+
+    source = _dialogue("ep02_intro", script=[])
+    controller.enter_edit_mode(source)
+
+    assert controller._add_node() is False
+
+
+def test_dialogue_editor_controller_add_node_routes_only_in_edit_mode(tmp_path: Path) -> None:
+    class _NodeActionOverlay(_SelectedNodeOverlay):
+        def row_index_at(self, x: float, y: float) -> int | None:  # noqa: ARG002
+            return None
+
+        def node_id_at(self, x: float, y: float) -> str | None:  # noqa: ARG002
+            return None
+
+        def node_action_at(self, x: float, y: float) -> str | None:  # noqa: ARG002
+            return "node.add"
+
+    overlay = _NodeActionOverlay("start")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+
+    assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is False
+
+    controller.enter_edit_mode(_dialogue("ep02_intro"))
+    assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is True
+
+    assert "node_1" in controller.edit_buffer["script"]
+
+
+def test_dialogue_editor_controller_add_node_save_persists_empty_terminal_node(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    source = _dialogue("ep02_intro")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+
+    assert controller._add_node() is True
+    ok = controller.commit_save([source], target)
+
+    assert ok is True
+    loaded = json.loads(target.read_text(encoding="utf-8"))
+    script = loaded["dialogues"][0]["script"]
+    assert script["node_1"] == {"speaker": "", "text": "", "next": ""}
+    assert script["start"] == source["script"]["start"]
+    assert script["end"] == source["script"]["end"]
 
 
 def test_dialogue_editor_controller_commit_save_reports_validation_error(

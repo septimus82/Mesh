@@ -85,6 +85,7 @@ class DialogueEditorOverlay(UIElement):
         self._model: object | None = None
         self._row_hits: list[tuple[int, object]] = []
         self._node_row_hits: list[tuple[str, object]] = []
+        self._node_action_hits: list[tuple[str, object]] = []
         self._choice_action_hits: list[tuple[str, object]] = []
         self._selected_node_id: str | None = None
         self._selected_dialogue_id_for_node: str | None = None
@@ -180,6 +181,7 @@ class DialogueEditorOverlay(UIElement):
         button_rows: dict[str, object] = {}
         self._widget_rows = {}
         self._node_row_hits = []
+        self._node_action_hits = []
         self._choice_action_hits = []
         if dialogue is None:
             detail_panel.add_header(PanelHeader("Dialogue", "No entry"))
@@ -270,6 +272,24 @@ class DialogueEditorOverlay(UIElement):
                 row.set_selected(node_id == self._selected_node_id)
                 self._node_row_hits.append((node_id, row))
                 detail_panel.add_row(row)
+            if edit_mode:
+                self._node_action_hits.append(
+                    (
+                        "node.add",
+                        detail_panel.add_row(
+                            PanelRow(
+                                PanelField(
+                                    "Add node",
+                                    "",
+                                    label_color=DIALOGUE_EDITOR_BUTTON_COLOR,
+                                    value_color=DIALOGUE_EDITOR_DIM_COLOR,
+                                ),
+                                height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                                padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                            )
+                        ),
+                    )
+                )
             script_dict = dialogue.get("script")
             selected_node = script_dict.get(self._selected_node_id) if isinstance(script_dict, dict) else None
             if isinstance(selected_node, dict):
@@ -362,6 +382,12 @@ class DialogueEditorOverlay(UIElement):
 
     def choice_action_at(self, x: float, y: float) -> str | None:
         for action, row in self._choice_action_hits:
+            if row.hit_test(float(x), float(y)):
+                return action
+        return None
+
+    def node_action_at(self, x: float, y: float) -> str | None:
+        for action, row in self._node_action_hits:
             if row.hit_test(float(x), float(y)):
                 return action
         return None
