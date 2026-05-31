@@ -453,7 +453,7 @@ def test_dialogue_editor_controller_add_node_selects_and_focuses_new_node(tmp_pa
     assert overlay.selected_node_id() == "node_1"
     assert "script.node_1.speaker" in controller.text_inputs()
     assert "script.node_1.text" in controller.text_inputs()
-    assert "script.node_1.next" in controller.text_inputs()
+    assert "script.node_1.next" not in controller.text_inputs()
     assert controller.focused_field() == "script.node_1.speaker"
 
 
