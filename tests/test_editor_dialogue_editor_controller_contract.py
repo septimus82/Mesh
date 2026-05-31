@@ -213,6 +213,94 @@ def test_dialogue_editor_controller_commit_save_persists_choice_edits(
     assert saved_start["choices"][1] == {"next": "end", "text": "Loop back."}
 
 
+def test_dialogue_editor_controller_add_choice_appends_and_focuses_new_text(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+
+    assert controller._add_choice() is True
+
+    choices = controller.edit_buffer["script"]["start"]["choices"]
+    assert choices[-1] == {"next": "", "text": ""}
+    assert "script.start.choices.1.text" in controller.text_inputs()
+    assert "script.start.choices.1.next" in controller.text_inputs()
+    assert controller.focused_field() == "script.start.choices.1.text"
+
+
+def test_dialogue_editor_controller_add_choice_syncs_existing_edits_before_rebuild(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+    controller.text_input("script.start.choices.0.text").text = "Keep this edit"
+
+    assert controller._add_choice() is True
+
+    choices = controller.edit_buffer["script"]["start"]["choices"]
+    assert choices[0]["text"] == "Keep this edit"
+    assert choices[1] == {"next": "", "text": ""}
+
+
+def test_dialogue_editor_controller_add_choice_linear_node_noop(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("end")))
+    controller.enter_edit_mode(source)
+    before = json.dumps(controller.edit_buffer, sort_keys=True)
+
+    assert controller._add_choice() is False
+
+    assert json.dumps(controller.edit_buffer, sort_keys=True) == before
+    assert not any(".choices." in field for field in controller.text_inputs())
+
+
+def test_dialogue_editor_controller_add_choice_routes_from_edit_mode_action(tmp_path: Path) -> None:
+    class _ChoiceActionOverlay(_SelectedNodeOverlay):
+        def choice_action_at(self, x: float, y: float) -> str | None:  # noqa: ARG002
+            return "choice.add"
+
+    source = _dialogue("ep02_intro")
+    overlay = _ChoiceActionOverlay("start")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+    controller.enter_edit_mode(source)
+
+    assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is True
+
+    assert controller.edit_buffer["script"]["start"]["choices"][1] == {"next": "", "text": ""}
+
+
+def test_dialogue_editor_controller_add_choice_action_ignored_in_view_mode(tmp_path: Path) -> None:
+    class _ChoiceActionOverlay(_SelectedNodeOverlay):
+        def row_index_at(self, x: float, y: float) -> int | None:  # noqa: ARG002
+            return None
+
+        def node_id_at(self, x: float, y: float) -> str | None:  # noqa: ARG002
+            return None
+
+        def choice_action_at(self, x: float, y: float) -> str | None:  # noqa: ARG002
+            return "choice.add"
+
+    overlay = _ChoiceActionOverlay("start")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+
+    assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is False
+
+
+def test_dialogue_editor_controller_save_after_add_choice_blocks_on_empty_text(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    target.parent.mkdir(parents=True)
+    original = '{"dialogues": []}\n'
+    target.write_text(original, encoding="utf-8")
+    source = _dialogue("ep02_intro")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+
+    assert controller._add_choice() is True
+    ok = controller.commit_save([source], target)
+
+    assert ok is False
+    assert controller.last_error_message() == "entry 'ep02_intro': node 'start' choice 1 text is empty"
+    assert target.read_text(encoding="utf-8") == original
+
+
 def test_dialogue_editor_controller_commit_save_reports_validation_error(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
