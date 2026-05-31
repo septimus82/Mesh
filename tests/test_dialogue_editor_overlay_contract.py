@@ -407,6 +407,68 @@ def test_dialogue_editor_overlay_edit_mode_choice_rows_register_widgets(
     assert dialogue_editor.text_input("script.start.choices.0.next").text == "end"
 
 
+def test_dialogue_editor_overlay_selected_node_fields_skip_non_dict_choices(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    dialogues = [
+        {
+            "id": "branching",
+            "schema_version": 1,
+            "start_node": "start",
+            "script": {
+                "start": {
+                    "speaker": "Mentor",
+                    "text": "Choose.",
+                    "choices": [
+                        {"text": "First", "next": "a"},
+                        "not-a-choice",
+                        {"text": "Third", "next": "c"},
+                    ],
+                },
+                "a": {"speaker": "Mentor", "text": "A.", "next": None},
+                "c": {"speaker": "Mentor", "text": "C.", "next": None},
+            },
+        }
+    ]
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(tmp_path, dialogues)
+    overlay._selected_dialogue_id_for_node = "branching"
+    overlay._selected_node_id = "start"
+
+    overlay.draw()
+
+    ordered_labels = ["Speaker", "Text", "Choice 0 text", "Choice 0 next", "Choice 2 text", "Choice 2 next"]
+    label_positions = [captured.index(label) for label in ordered_labels]
+    assert label_positions == sorted(label_positions)
+    assert "Choice 1 text" not in captured
+    assert "Choice 1 next" not in captured
+    assert "First" in captured
+    assert "a" in captured
+    assert "Third" in captured
+    assert "c" in captured
+
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    dialogue_editor.edit_buffer = dict(dialogues[0])
+    edit_overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    edit_overlay._model = _model(tmp_path, dialogues)
+    edit_overlay._selected_dialogue_id_for_node = "branching"
+    edit_overlay._selected_node_id = "start"
+
+    edit_overlay.draw()
+
+    assert {
+        "script.start.speaker",
+        "script.start.text",
+        "script.start.choices.0.text",
+        "script.start.choices.0.next",
+        "script.start.choices.2.text",
+        "script.start.choices.2.next",
+    } <= set(edit_overlay._widget_rows)
+    assert not any(".choices.1." in field for field in edit_overlay._widget_rows)
+
+
 def test_dialogue_editor_overlay_linear_node_renders_no_choice_rows(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
