@@ -346,6 +346,23 @@ class DialogueEditorOverlay(UIElement):
                                 ),
                             )
                         )
+                    self._node_action_hits.append(
+                        (
+                            "node.delete",
+                            detail_panel.add_row(
+                                PanelRow(
+                                    PanelField(
+                                        "Delete node",
+                                        "",
+                                        label_color=DIALOGUE_EDITOR_BUTTON_COLOR,
+                                        value_color=DIALOGUE_EDITOR_DIM_COLOR,
+                                    ),
+                                    height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                                    padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                                )
+                            ),
+                        )
+                    )
                 else:
                     for label, _field_path, value in selected_node_fields:
                         detail_panel.add_row(
