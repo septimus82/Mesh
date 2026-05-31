@@ -52,6 +52,14 @@ class _DialogueEditorStub:
     def text_inputs(self) -> dict[str, TextInput]:
         return dict(self._text_inputs)
 
+    def field_value(self, field: str) -> object:
+        current: object = self.edit_buffer
+        for part in str(field).split("."):
+            if not isinstance(current, dict):
+                return None
+            current = current.get(part)
+        return current
+
     def focused_field(self) -> str | None:
         return self._focused_field
 
@@ -214,9 +222,11 @@ def test_dialogue_editor_overlay_set_selected_node_id_stores_id() -> None:
 
     overlay.set_selected_node_id("end")
     assert overlay._selected_node_id == "end"
+    assert overlay.selected_node_id() == "end"
 
     overlay.set_selected_node_id(None)
     assert overlay._selected_node_id is None
+    assert overlay.selected_node_id() is None
 
 
 def test_dialogue_editor_overlay_draw_highlights_selected_node(
@@ -298,6 +308,49 @@ def test_dialogue_editor_overlay_renders_selected_node_detail(
     assert "Speaker" in captured
     assert "Text" in captured
     assert "Bye." in captured
+
+
+def test_dialogue_editor_overlay_view_mode_selected_node_detail_is_read_only(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(tmp_path)
+    overlay._selected_dialogue_id_for_node = "ep02_intro"
+    overlay._selected_node_id = "end"
+
+    overlay.draw()
+
+    assert "Speaker" in captured
+    assert "Text" in captured
+    assert "script.end.speaker" not in overlay._widget_rows
+    assert "script.end.text" not in overlay._widget_rows
+
+
+def test_dialogue_editor_overlay_edit_mode_selected_node_detail_registers_widgets(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    dialogue_editor.edit_buffer["script"] = {
+        "start": {"speaker": "Mentor", "text": "Hello.", "choices": [{"next": "end", "text": "OK"}]},
+        "end": {"speaker": "Mentor", "text": "Bye.", "next": None},
+    }
+    dialogue_editor._text_inputs["script.end.speaker"] = TextInput(text="", focused=False, font_size=12, height=18.0)
+    dialogue_editor._text_inputs["script.end.text"] = TextInput(text="", focused=False, font_size=12, height=18.0)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    overlay._model = _model(tmp_path)
+    overlay._selected_dialogue_id_for_node = "ep02_intro"
+    overlay._selected_node_id = "end"
+
+    overlay.draw()
+
+    assert "script.end.speaker" in overlay._widget_rows
+    assert "script.end.text" in overlay._widget_rows
+    assert dialogue_editor.text_input("script.end.speaker").text == "Mentor"
+    assert dialogue_editor.text_input("script.end.text").text == "Bye."
 
 
 def test_dialogue_editor_overlay_renders_single_reference_error_badge(

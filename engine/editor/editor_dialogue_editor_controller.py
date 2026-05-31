@@ -4,7 +4,7 @@ import copy
 from pathlib import Path
 from typing import Any
 
-from engine.editor.editor_database_form_controller import EditorDatabaseFormController
+from engine.editor.editor_database_form_controller import EditorDatabaseFormController, _get_path, _set_path
 
 
 class EditorDialogueEditorController(EditorDatabaseFormController):
@@ -21,6 +21,19 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
         ("schema_version", "schema_version"),
         ("start_node", "start_node"),
     )
+
+    def enter_edit_mode(self, record: dict[str, Any]) -> None:
+        overlay = self._get_overlay()
+        node_getter = getattr(overlay, "selected_node_id", None) if overlay is not None else None
+        node_id = node_getter() if callable(node_getter) else None
+        script = record.get("script")
+        valid_node_id = str(node_id) if isinstance(script, dict) and node_id in script else None
+        self._rebuild_text_inputs(valid_node_id)
+        super().enter_edit_mode(record)
+
+    def cancel_edit_mode(self) -> None:
+        super().cancel_edit_mode()
+        self._rebuild_text_inputs(None)
 
     def handle_dialogue_editor_text_input(self, text: str) -> bool:
         return self.handle_text_input(text)
@@ -45,8 +58,17 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
     def _copy_record(self, record: dict[str, Any]) -> dict[str, Any]:
         return copy.deepcopy(record)
 
+    def field_value(self, field: str) -> Any:
+        return self._get_field_value(self.edit_buffer, field) if self.edit_buffer is not None else None
+
+    def _get_field_value(self, record: dict[str, Any], field: str) -> Any:
+        return _get_path(record, field) if "." in str(field) else record.get(field)
+
     def _set_field_value(self, record: dict[str, Any], field: str, value: Any) -> None:
         text = str(value or "")
+        if "." in str(field):
+            _set_path(record, field, text)
+            return
         if field == "schema_version":
             if text == "":
                 record.pop("schema_version", None)
@@ -59,6 +81,22 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
         if field == self.ID_FIELD:
             text = text.strip()
         record[field] = text
+
+    def _rebuild_text_inputs(self, node_id: str | None) -> None:
+        from engine.ui_overlays.widgets import TextInput  # noqa: PLC0415
+
+        specs = list(self.TEXT_INPUT_SPECS)
+        if node_id is not None:
+            specs.extend(
+                [
+                    (f"script.{node_id}.speaker", "speaker"),
+                    (f"script.{node_id}.text", "text"),
+                ]
+            )
+        self._text_inputs = {
+            field: TextInput(text="", placeholder=placeholder, focused=False, font_size=12, height=18.0)
+            for field, placeholder in specs
+        }
 
     def _target_path(self) -> Path:
         from engine.editor.dialogue_editor_model import DEFAULT_DIALOGUES_FILE_PATH  # noqa: PLC0415

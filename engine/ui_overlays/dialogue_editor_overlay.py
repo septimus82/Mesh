@@ -235,20 +235,33 @@ class DialogueEditorOverlay(UIElement):
                 detail_panel.add_header(
                     PanelHeader("Selected node", self._selected_node_id, title_color=DIALOGUE_EDITOR_DIM_COLOR)
                 )
-                detail_panel.add_row(
-                    PanelRow(
-                        PanelField("Speaker", str(selected_node.get("speaker") or ""), label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
-                        height=DIALOGUE_EDITOR_ROW_HEIGHT,
-                        padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                if edit_mode and dialogue_editor is not None:
+                    for label, field_path in (
+                        ("Speaker", f"script.{self._selected_node_id}.speaker"),
+                        ("Text", f"script.{self._selected_node_id}.text"),
+                    ):
+                        self._widget_rows[field_path] = detail_panel.add_row(
+                            PanelRow(
+                                PanelField(label, "", label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                                height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                                padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                            )
+                        )
+                else:
+                    detail_panel.add_row(
+                        PanelRow(
+                            PanelField("Speaker", str(selected_node.get("speaker") or ""), label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                            height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                            padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                        )
                     )
-                )
-                detail_panel.add_row(
-                    PanelRow(
-                        PanelField("Text", str(selected_node.get("text") or ""), label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
-                        height=DIALOGUE_EDITOR_ROW_HEIGHT,
-                        padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                    detail_panel.add_row(
+                        PanelRow(
+                            PanelField("Text", str(selected_node.get("text") or ""), label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                            height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                            padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                        )
                     )
-                )
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,
@@ -282,6 +295,9 @@ class DialogueEditorOverlay(UIElement):
     def set_selected_node_id(self, node_id: str | None) -> None:
         self._selected_node_id = str(node_id) if node_id else None
 
+    def selected_node_id(self) -> str | None:
+        return self._selected_node_id
+
     def selected_dialogue_dict(self) -> dict[str, object] | None:
         model = self._get_model()
         dialogue = model.selected_dialogue() if model is not None and hasattr(model, "selected_dialogue") else None
@@ -306,7 +322,7 @@ class DialogueEditorOverlay(UIElement):
             sync_text_inputs(
                 text_inputs,
                 focused_field,
-                lambda field: edit_buffer.get(str(field)),
+                lambda field: _field_value(dialogue_editor, edit_buffer, str(field)),
             )
 
     def _draw_edit_widgets(self, dialogue_editor: object) -> None:
@@ -328,3 +344,13 @@ def _label_for_field(field_path: str) -> str:
         "schema_version": "Schema version",
         "start_node": "Start node",
     }.get(field_path, field_path)
+
+
+def _field_value(dialogue_editor: object, edit_buffer: dict[str, object], field_path: str) -> object:
+    getter = getattr(dialogue_editor, "field_value", None)
+    if callable(getter):
+        try:
+            return getter(field_path)
+        except Exception:  # noqa: BLE001  # REASON: overlay sync must fall back for lightweight editor stubs
+            pass
+    return edit_buffer.get(field_path)
