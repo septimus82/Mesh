@@ -8,6 +8,7 @@ from engine.editor.editor_database_form_controller import EditorDatabaseFormCont
 
 CHOICE_ADD_ACTION = "choice.add"
 NODE_ADD_ACTION = "node.add"
+NODE_DELETE_ACTION = "node.delete"
 _CHOICE_DELETE_PREFIX = "choice."
 _CHOICE_DELETE_SUFFIX = ".delete"
 
@@ -60,6 +61,9 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
             node_action = node_action_picker(float(x), float(y)) if callable(node_action_picker) else None
             if node_action == NODE_ADD_ACTION:
                 self._add_node()
+                return True
+            if node_action == NODE_DELETE_ACTION:
+                self._delete_node()
                 return True
         else:
             idx = overlay.row_index_at(float(x), float(y)) if overlay is not None else None
@@ -188,6 +192,25 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
         self._focus_field(f"script.{new_id}.speaker")
         return True
 
+    def _delete_node(self) -> bool:
+        if not self.edit_mode_active or not isinstance(self.edit_buffer, dict):
+            return False
+        script = self.edit_buffer.get("script")
+        node_id = self.selected_node_id()
+        if not isinstance(script, dict) or node_id not in script:
+            return False
+        self.sync_widgets_to_buffer()
+        del script[node_id]
+        next_id = _reconciled_node_id(script, self.edit_buffer.get("start_node"))
+        overlay = self._get_overlay()
+        selector = getattr(overlay, "set_selected_node_id", None) if overlay is not None else None
+        if callable(selector):
+            selector(next_id)
+        self._rebuild_text_inputs(next_id, self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(None)
+        return True
+
     def _target_path(self) -> Path:
         from engine.editor.dialogue_editor_model import DEFAULT_DIALOGUES_FILE_PATH  # noqa: PLC0415
 
@@ -239,3 +262,8 @@ def _next_node_id(script: dict[str, Any]) -> str:
     while f"node_{index}" in script:
         index += 1
     return f"node_{index}"
+
+
+def _reconciled_node_id(script: dict[str, Any], start_node: object) -> str | None:
+    start = str(start_node or "").strip()
+    return start if start in script else (next(iter(script)) if script else None)

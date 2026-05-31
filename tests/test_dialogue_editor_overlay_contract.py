@@ -613,6 +613,54 @@ def test_dialogue_editor_overlay_view_mode_renders_no_add_node_action(
     assert overlay.node_action_at(0.0, 0.0) is None
 
 
+def test_dialogue_editor_overlay_edit_mode_renders_delete_node_action(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    overlay._model = _model(tmp_path)
+    overlay._selected_dialogue_id_for_node = "ep02_intro"
+    overlay._selected_node_id = "start"
+
+    overlay.draw()
+
+    assert "Delete node" in captured
+    hit_rows = dict(overlay._node_action_hits)
+    rect = hit_rows["node.delete"].last_rect
+    assert rect is not None
+    assert overlay.node_action_at(rect.left + 1.0, rect.center_y) == "node.delete"
+
+
+def test_dialogue_editor_overlay_no_delete_node_action_in_view_or_no_selection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    view_overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    view_overlay._model = _model(tmp_path)
+    view_overlay._selected_dialogue_id_for_node = "ep02_intro"
+    view_overlay._selected_node_id = "start"
+
+    view_overlay.draw()
+
+    assert "Delete node" not in captured
+    assert view_overlay.node_action_at(0.0, 0.0) is None
+
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    edit_overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    edit_overlay._model = _model(
+        tmp_path,
+        [{"id": "empty", "schema_version": 1, "start_node": "start", "script": {}}],
+    )
+
+    edit_overlay.draw()
+
+    assert edit_overlay.node_action_at(0.0, 0.0) is None
+    assert not any(action == "node.delete" for action, _row in edit_overlay._node_action_hits)
+
+
 def test_dialogue_editor_overlay_selected_node_fields_skip_non_dict_choices(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

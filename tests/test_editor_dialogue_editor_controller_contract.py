@@ -518,6 +518,123 @@ def test_dialogue_editor_controller_add_node_save_persists_empty_terminal_node(t
     assert script["end"] == source["script"]["end"]
 
 
+def test_dialogue_editor_controller_delete_node_reconciles_to_start_and_rebuilds_inputs(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    source["script"]["extra"] = {"speaker": "Mentor", "text": "Extra.", "next": ""}
+    overlay = _SelectedNodeOverlay("extra")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+    controller.enter_edit_mode(source)
+
+    assert controller._delete_node() is True
+
+    script = controller.edit_buffer["script"]
+    assert "extra" not in script
+    assert overlay.selected_node_id() == "start"
+    assert "script.start.speaker" in controller.text_inputs()
+    assert "script.start.text" in controller.text_inputs()
+    assert not any(field.startswith("script.extra.") for field in controller.text_inputs())
+    assert controller.focused_field() is None
+    assert overlay.selected_node_id() in script
+    controller.text_input("script.start.speaker")
+    controller.text_input("script.start.text")
+
+
+def test_dialogue_editor_controller_delete_start_node_save_blocks_on_start_node_validation(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    target.parent.mkdir(parents=True)
+    original = '{"dialogues": []}\n'
+    target.write_text(original, encoding="utf-8")
+    source = _dialogue("ep02_intro")
+    overlay = _SelectedNodeOverlay("start")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+    controller.enter_edit_mode(source)
+
+    assert controller._delete_node() is True
+    ok = controller.commit_save([source], target)
+
+    assert ok is False
+    assert controller.last_error_message() == "entry 'ep02_intro': start_node 'start' does not exist in script"
+    assert target.read_text(encoding="utf-8") == original
+    assert overlay.selected_node_id() == "end"
+
+
+def test_dialogue_editor_controller_delete_referenced_node_save_blocks_on_dangling_next(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    target.parent.mkdir(parents=True)
+    original = '{"dialogues": []}\n'
+    target.write_text(original, encoding="utf-8")
+    source = _dialogue("ep02_intro")
+    source["script"]["start"] = {"speaker": "Mentor", "text": "Hello.", "next": "end"}
+    overlay = _SelectedNodeOverlay("end")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+    controller.enter_edit_mode(source)
+
+    assert controller._delete_node() is True
+    ok = controller.commit_save([source], target)
+
+    assert ok is False
+    assert controller.last_error_message() == "entry 'ep02_intro': node 'start' next 'end' does not exist in script"
+    assert target.read_text(encoding="utf-8") == original
+
+
+def test_dialogue_editor_controller_delete_last_node_clears_selection_and_script_inputs(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro", script={"solo": {"speaker": "Mentor", "text": "Only.", "next": ""}}, start_node="solo")
+    overlay = _SelectedNodeOverlay("solo")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+    controller.enter_edit_mode(source)
+
+    assert controller._delete_node() is True
+
+    assert controller.edit_buffer["script"] == {}
+    assert overlay.selected_node_id() is None
+    assert not any(field.startswith("script.") for field in controller.text_inputs())
+    assert controller.focused_field() is None
+
+
+def test_dialogue_editor_controller_delete_node_noop_guards(tmp_path: Path) -> None:
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+
+    assert controller._delete_node() is False
+
+    missing_overlay = _SelectedNodeOverlay(None)
+    missing_controller = EditorDialogueEditorController(_editor(tmp_path, overlay=missing_overlay))
+    missing_controller.enter_edit_mode(_dialogue("ep02_intro"))
+    before = json.dumps(missing_controller.edit_buffer, sort_keys=True)
+
+    assert missing_controller._delete_node() is False
+    assert json.dumps(missing_controller.edit_buffer, sort_keys=True) == before
+
+    stale_overlay = _SelectedNodeOverlay("missing")
+    stale_controller = EditorDialogueEditorController(_editor(tmp_path, overlay=stale_overlay))
+    stale_controller.enter_edit_mode(_dialogue("ep02_intro"))
+    stale_before = json.dumps(stale_controller.edit_buffer, sort_keys=True)
+
+    assert stale_controller._delete_node() is False
+    assert json.dumps(stale_controller.edit_buffer, sort_keys=True) == stale_before
+
+
+def test_dialogue_editor_controller_delete_node_routes_only_in_edit_mode(tmp_path: Path) -> None:
+    class _NodeActionOverlay(_SelectedNodeOverlay):
+        def row_index_at(self, x: float, y: float) -> int | None:  # noqa: ARG002
+            return None
+
+        def node_id_at(self, x: float, y: float) -> str | None:  # noqa: ARG002
+            return None
+
+        def node_action_at(self, x: float, y: float) -> str | None:  # noqa: ARG002
+            return "node.delete"
+
+    overlay = _NodeActionOverlay("end")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+
+    assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is False
+
+    controller.enter_edit_mode(_dialogue("ep02_intro"))
+    assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is True
+
+    assert "end" not in controller.edit_buffer["script"]
+
+
 def test_dialogue_editor_controller_commit_save_reports_validation_error(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
