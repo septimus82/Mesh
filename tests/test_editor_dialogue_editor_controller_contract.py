@@ -453,7 +453,7 @@ def test_dialogue_editor_controller_add_node_selects_and_focuses_new_node(tmp_pa
     assert overlay.selected_node_id() == "node_1"
     assert "script.node_1.speaker" in controller.text_inputs()
     assert "script.node_1.text" in controller.text_inputs()
-    assert "script.node_1.next" not in controller.text_inputs()
+    assert "script.node_1.next" in controller.text_inputs()
     assert controller.focused_field() == "script.node_1.speaker"
 
 
@@ -703,6 +703,26 @@ def test_dialogue_editor_controller_dotted_script_field_round_trips(tmp_path: Pa
     controller._set_field_value(record, "script.start.text", "Round trip.")
 
     assert controller._get_field_value(record, "script.start.text") == "Round trip."
+
+
+def test_dialogue_editor_controller_node_next_syncs_to_edit_buffer(tmp_path: Path) -> None:
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("end")))
+    controller.enter_edit_mode(_dialogue())
+
+    assert "script.end.next" in controller.text_inputs()
+    controller._focus_field("script.end.next")
+    controller.text_input("script.end.next").text = "start"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["script"]["end"]["next"] == "start"
+
+
+def test_dialogue_editor_controller_suppresses_node_next_for_choice_nodes(tmp_path: Path) -> None:
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(_dialogue())
+
+    assert "script.start.next" not in controller.text_inputs()
 
 
 def test_dialogue_editor_controller_dotted_choice_field_round_trips(tmp_path: Path) -> None:
