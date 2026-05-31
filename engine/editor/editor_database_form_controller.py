@@ -10,9 +10,13 @@ def _get_path(payload: dict[str, Any], field_path: str) -> Any:
         return None
     current: Any = payload
     for part in field_path.split("."):
-        if not isinstance(current, dict):
+        if isinstance(current, dict):
+            current = current.get(part)
+        elif isinstance(current, list) and part.isdigit():
+            idx = int(part)
+            current = current[idx] if 0 <= idx < len(current) else None
+        else:
             return None
-        current = current.get(part)
     return current
 
 
@@ -20,14 +24,31 @@ def _set_path(payload: dict[str, Any], field_path: str, value: Any) -> None:
     if not field_path:
         return
     parts = field_path.split(".")
-    current: dict[str, Any] = payload
+    current: Any = payload
     for part in parts[:-1]:
-        child = current.get(part)
-        if not isinstance(child, dict):
-            child = {}
-            current[part] = child
-        current = child
-    current[parts[-1]] = value
+        if isinstance(current, dict):
+            child = current.get(part)
+            if not isinstance(child, (dict, list)):
+                child = {}
+                current[part] = child
+            current = child
+            continue
+        if isinstance(current, list) and part.isdigit():
+            idx = int(part)
+            if 0 <= idx < len(current):
+                current = current[idx]
+                continue
+            return
+        return
+    last = parts[-1]
+    if isinstance(current, list):
+        if last.isdigit():
+            idx = int(last)
+            if 0 <= idx < len(current):
+                current[idx] = value
+        return
+    if isinstance(current, dict):
+        current[last] = value
 
 
 class EditorDatabaseFormController(ABC):
