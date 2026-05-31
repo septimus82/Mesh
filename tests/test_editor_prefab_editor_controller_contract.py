@@ -93,6 +93,60 @@ def test_prefab_editor_path_helpers_create_and_replace_intermediate_dicts() -> N
     assert "" not in payload
 
 
+def test_prefab_editor_path_helpers_read_nested_list_elements() -> None:
+    payload = {"script": {"n": {"choices": [{"text": "First"}, {"text": "Second"}]}}}
+
+    assert _get_path(payload, "script.n.choices.0.text") == "First"
+    assert _get_path(payload, "script.n.choices.5.text") is None
+    assert _get_path(payload, "script.n.choices.first.text") is None
+
+
+def test_prefab_editor_path_helpers_write_nested_list_elements() -> None:
+    payload = {
+        "script": {
+            "n": {
+                "choices": [
+                    {"next": "a", "text": "First"},
+                    {"next": "b", "text": "Second"},
+                ]
+            }
+        }
+    }
+
+    _set_path(payload, "script.n.choices.1.next", "done")
+
+    choices = payload["script"]["n"]["choices"]
+    assert choices == [{"next": "a", "text": "First"}, {"next": "done", "text": "Second"}]
+
+
+def test_prefab_editor_path_helpers_preserve_list_intermediary() -> None:
+    payload = {"a": {"b": [{"c": "old"}]}}
+
+    _set_path(payload, "a.b.0.c", "new")
+
+    assert isinstance(payload["a"]["b"], list)
+    assert len(payload["a"]["b"]) == 1
+    assert payload["a"]["b"][0]["c"] == "new"
+
+
+def test_prefab_editor_path_helpers_out_of_range_list_write_no_ops() -> None:
+    payload = {"script": {"n": {"choices": [{"next": "a", "text": "First"}]}}}
+    before = {"script": {"n": {"choices": [{"next": "a", "text": "First"}]}}}
+
+    _set_path(payload, "script.n.choices.4.next", "missing")
+
+    assert payload == before
+
+
+def test_prefab_editor_path_helpers_dict_round_trip_unchanged() -> None:
+    payload: dict[str, object] = {}
+
+    _set_path(payload, "a.b.c", "value")
+
+    assert _get_path(payload, "a.b.c") == "value"
+    assert payload == {"a": {"b": {"c": "value"}}}
+
+
 def test_prefab_editor_controller_enter_unfocuses_without_saving(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     saved: list[object] = []
     from engine.editor import prefab_editor_model
