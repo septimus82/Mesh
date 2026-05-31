@@ -37,6 +37,44 @@ _DIALOGUE_FORM_COLORS = FormColors(
     button=DIALOGUE_EDITOR_BUTTON_COLOR,
 )
 
+_SelectedNodeFieldRow = tuple[str, str, str]
+
+
+def _selected_node_choice_field_rows(node_id: str, choices: object) -> list[_SelectedNodeFieldRow]:
+    """Return editable/display choice rows in the same order as the dialogue data."""
+    if not isinstance(choices, list):
+        return []
+    rows: list[_SelectedNodeFieldRow] = []
+    for i, choice in enumerate(choices):
+        if not isinstance(choice, dict):
+            continue
+        choice_prefix = f"script.{node_id}.choices.{i}"
+        choice_text_path = f"{choice_prefix}.text"
+        choice_next_path = f"{choice_prefix}.next"
+        choice_text_value = str(choice.get("text") or "")
+        choice_next_value = str(choice.get("next") or "")
+        rows.extend(
+            [
+                (f"Choice {i} text", choice_text_path, choice_text_value),
+                (f"Choice {i} next", choice_next_path, choice_next_value),
+            ]
+        )
+    return rows
+
+
+def _selected_node_field_rows(node_id: str, selected_node: dict) -> list[_SelectedNodeFieldRow]:
+    """Return the selected-node fields shared by read-only rows and edit widgets."""
+    speaker_path = f"script.{node_id}.speaker"
+    text_path = f"script.{node_id}.text"
+    speaker_value = str(selected_node.get("speaker") or "")
+    text_value = str(selected_node.get("text") or "")
+    rows = [
+        ("Speaker", speaker_path, speaker_value),
+        ("Text", text_path, text_value),
+    ]
+    rows.extend(_selected_node_choice_field_rows(node_id, selected_node.get("choices")))
+    return rows
+
 
 class DialogueEditorOverlay(UIElement):
     """Dialogue database view hosted in the editor right dock."""
@@ -235,23 +273,9 @@ class DialogueEditorOverlay(UIElement):
                 detail_panel.add_header(
                     PanelHeader("Selected node", self._selected_node_id, title_color=DIALOGUE_EDITOR_DIM_COLOR)
                 )
-                choices = selected_node.get("choices")
+                selected_node_fields = _selected_node_field_rows(self._selected_node_id, selected_node)
                 if edit_mode and dialogue_editor is not None:
-                    widget_fields = [
-                        ("Speaker", f"script.{self._selected_node_id}.speaker"),
-                        ("Text", f"script.{self._selected_node_id}.text"),
-                    ]
-                    if isinstance(choices, list):
-                        for i, choice in enumerate(choices):
-                            if not isinstance(choice, dict):
-                                continue
-                            widget_fields.extend(
-                                [
-                                    (f"Choice {i} text", f"script.{self._selected_node_id}.choices.{i}.text"),
-                                    (f"Choice {i} next", f"script.{self._selected_node_id}.choices.{i}.next"),
-                                ]
-                            )
-                    for label, field_path in widget_fields:
+                    for label, field_path, _current_value in selected_node_fields:
                         self._widget_rows[field_path] = detail_panel.add_row(
                             PanelRow(
                                 PanelField(label, "", label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
@@ -260,21 +284,7 @@ class DialogueEditorOverlay(UIElement):
                             )
                         )
                 else:
-                    rows = [
-                        ("Speaker", str(selected_node.get("speaker") or "")),
-                        ("Text", str(selected_node.get("text") or "")),
-                    ]
-                    if isinstance(choices, list):
-                        for i, choice in enumerate(choices):
-                            if not isinstance(choice, dict):
-                                continue
-                            rows.extend(
-                                [
-                                    (f"Choice {i} text", str(choice.get("text") or "")),
-                                    (f"Choice {i} next", str(choice.get("next") or "")),
-                                ]
-                            )
-                    for label, value in rows:
+                    for label, _field_path, value in selected_node_fields:
                         detail_panel.add_row(
                             PanelRow(
                                 PanelField(label, value, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
