@@ -235,11 +235,23 @@ class DialogueEditorOverlay(UIElement):
                 detail_panel.add_header(
                     PanelHeader("Selected node", self._selected_node_id, title_color=DIALOGUE_EDITOR_DIM_COLOR)
                 )
+                choices = selected_node.get("choices")
                 if edit_mode and dialogue_editor is not None:
-                    for label, field_path in (
+                    widget_fields = [
                         ("Speaker", f"script.{self._selected_node_id}.speaker"),
                         ("Text", f"script.{self._selected_node_id}.text"),
-                    ):
+                    ]
+                    if isinstance(choices, list):
+                        for i, choice in enumerate(choices):
+                            if not isinstance(choice, dict):
+                                continue
+                            widget_fields.extend(
+                                [
+                                    (f"Choice {i} text", f"script.{self._selected_node_id}.choices.{i}.text"),
+                                    (f"Choice {i} next", f"script.{self._selected_node_id}.choices.{i}.next"),
+                                ]
+                            )
+                    for label, field_path in widget_fields:
                         self._widget_rows[field_path] = detail_panel.add_row(
                             PanelRow(
                                 PanelField(label, "", label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
@@ -248,20 +260,28 @@ class DialogueEditorOverlay(UIElement):
                             )
                         )
                 else:
-                    detail_panel.add_row(
-                        PanelRow(
-                            PanelField("Speaker", str(selected_node.get("speaker") or ""), label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
-                            height=DIALOGUE_EDITOR_ROW_HEIGHT,
-                            padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                    rows = [
+                        ("Speaker", str(selected_node.get("speaker") or "")),
+                        ("Text", str(selected_node.get("text") or "")),
+                    ]
+                    if isinstance(choices, list):
+                        for i, choice in enumerate(choices):
+                            if not isinstance(choice, dict):
+                                continue
+                            rows.extend(
+                                [
+                                    (f"Choice {i} text", str(choice.get("text") or "")),
+                                    (f"Choice {i} next", str(choice.get("next") or "")),
+                                ]
+                            )
+                    for label, value in rows:
+                        detail_panel.add_row(
+                            PanelRow(
+                                PanelField(label, value, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                                height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                                padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                            )
                         )
-                    )
-                    detail_panel.add_row(
-                        PanelRow(
-                            PanelField("Text", str(selected_node.get("text") or ""), label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
-                            height=DIALOGUE_EDITOR_ROW_HEIGHT,
-                            padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
-                        )
-                    )
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,
