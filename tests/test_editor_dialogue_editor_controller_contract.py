@@ -86,9 +86,13 @@ def test_dialogue_editor_controller_enter_edit_mode_injects_selected_node_inputs
         "start_node",
         "script.start.speaker",
         "script.start.text",
+        "script.start.choices.0.text",
+        "script.start.choices.0.next",
     }
     assert controller.text_input("script.start.speaker").text == "Mentor"
     assert controller.text_input("script.start.text").text == "Hello."
+    assert controller.text_input("script.start.choices.0.text").text == "OK"
+    assert controller.text_input("script.start.choices.0.next").text == "end"
 
 
 def test_dialogue_editor_controller_no_selected_node_keeps_static_inputs(tmp_path: Path) -> None:
@@ -97,6 +101,16 @@ def test_dialogue_editor_controller_no_selected_node_keeps_static_inputs(tmp_pat
     controller.enter_edit_mode(_dialogue())
 
     assert set(controller.text_inputs()) == {"id", "schema_version", "start_node"}
+
+
+def test_dialogue_editor_controller_linear_node_injects_no_choice_inputs(tmp_path: Path) -> None:
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("end")))
+
+    controller.enter_edit_mode(_dialogue())
+
+    assert "script.end.speaker" in controller.text_inputs()
+    assert "script.end.text" in controller.text_inputs()
+    assert not any(".choices." in field for field in controller.text_inputs())
 
 
 def test_dialogue_editor_controller_cancel_resets_dynamic_node_inputs(tmp_path: Path) -> None:
@@ -173,6 +187,32 @@ def test_dialogue_editor_controller_commit_save_persists_selected_node_edits(
     assert saved_dialogue["id"] == "ep02_intro"
 
 
+def test_dialogue_editor_controller_commit_save_persists_choice_edits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[tuple[list[dict[str, object]], Path]] = []
+    from engine.editor import dialogue_editor_model
+
+    monkeypatch.setattr(dialogue_editor_model, "validate_dialogue_entries", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(dialogue_editor_model, "save_dialogues", lambda entries, target: saved.append((entries, target)))
+    source = _dialogue("ep02_intro")
+    source["script"]["start"]["choices"].append({"next": "start", "text": "Again"})
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+    controller.text_input("script.start.choices.1.text").text = "Loop back."
+    controller.text_input("script.start.choices.1.next").text = "end"
+
+    ok = controller.commit_save([source], tmp_path / "assets" / "data" / "dialogues.json")
+
+    assert ok is True
+    saved_start = saved[0][0][0]["script"]["start"]
+    assert saved_start["speaker"] == "Mentor"
+    assert saved_start["text"] == "Hello."
+    assert saved_start["choices"][0] == {"next": "end", "text": "OK"}
+    assert saved_start["choices"][1] == {"next": "end", "text": "Loop back."}
+
+
 def test_dialogue_editor_controller_commit_save_reports_validation_error(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -241,6 +281,32 @@ def test_dialogue_editor_controller_dotted_script_field_round_trips(tmp_path: Pa
     controller._set_field_value(record, "script.start.text", "Round trip.")
 
     assert controller._get_field_value(record, "script.start.text") == "Round trip."
+
+
+def test_dialogue_editor_controller_dotted_choice_field_round_trips(tmp_path: Path) -> None:
+    controller = EditorDialogueEditorController(_editor(tmp_path))
+    record = _dialogue()
+
+    controller._set_field_value(record, "script.start.choices.0.next", "start")
+
+    assert controller._get_field_value(record, "script.start.choices.0.next") == "start"
+
+
+def test_dialogue_editor_controller_empty_choice_text_blocks_save_and_preserves_file(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    target.parent.mkdir(parents=True)
+    original = '{"dialogues": []}\n'
+    target.write_text(original, encoding="utf-8")
+    source = _dialogue("ep02_intro")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+    controller.text_input("script.start.choices.0.text").text = ""
+
+    ok = controller.commit_save([source], target)
+
+    assert ok is False
+    assert controller.last_error_message() == "entry 'ep02_intro': node 'start' choice 0 text is empty"
+    assert target.read_text(encoding="utf-8") == original
 
 
 def test_dialogue_editor_controller_script_preserved_after_id_edit(

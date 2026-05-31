@@ -28,7 +28,7 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
         node_id = node_getter() if callable(node_getter) else None
         script = record.get("script")
         valid_node_id = str(node_id) if isinstance(script, dict) and node_id in script else None
-        self._rebuild_text_inputs(valid_node_id)
+        self._rebuild_text_inputs(valid_node_id, record)
         super().enter_edit_mode(record)
 
     def cancel_edit_mode(self) -> None:
@@ -82,9 +82,10 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
             text = text.strip()
         record[field] = text
 
-    def _rebuild_text_inputs(self, node_id: str | None) -> None:
+    def _rebuild_text_inputs(self, node_id: str | None, record: dict[str, Any] | None = None) -> None:
         from engine.ui_overlays.widgets import TextInput  # noqa: PLC0415
 
+        record = record if isinstance(record, dict) else self.edit_buffer
         specs = list(self.TEXT_INPUT_SPECS)
         if node_id is not None:
             specs.extend(
@@ -93,6 +94,20 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
                     (f"script.{node_id}.text", "text"),
                 ]
             )
+            script = record.get("script") if isinstance(record, dict) else None
+            node = script.get(node_id) if isinstance(script, dict) else None
+            choices = node.get("choices") if isinstance(node, dict) else None
+            if isinstance(choices, list):
+                for i, choice in enumerate(choices):
+                    if not isinstance(choice, dict):
+                        continue
+                    choice_prefix = f"script.{node_id}.choices.{i}"
+                    specs.extend(
+                        [
+                            (f"{choice_prefix}.text", f"Choice {i} text"),
+                            (f"{choice_prefix}.next", f"Choice {i} next"),
+                        ]
+                    )
         self._text_inputs = {
             field: TextInput(text="", placeholder=placeholder, focused=False, font_size=12, height=18.0)
             for field, placeholder in specs

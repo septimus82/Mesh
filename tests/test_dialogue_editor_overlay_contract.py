@@ -55,9 +55,13 @@ class _DialogueEditorStub:
     def field_value(self, field: str) -> object:
         current: object = self.edit_buffer
         for part in str(field).split("."):
-            if not isinstance(current, dict):
+            if isinstance(current, dict):
+                current = current.get(part)
+            elif isinstance(current, list) and part.isdigit():
+                idx = int(part)
+                current = current[idx] if 0 <= idx < len(current) else None
+            else:
                 return None
-            current = current.get(part)
         return current
 
     def focused_field(self) -> str | None:
@@ -328,6 +332,26 @@ def test_dialogue_editor_overlay_view_mode_selected_node_detail_is_read_only(
     assert "script.end.text" not in overlay._widget_rows
 
 
+def test_dialogue_editor_overlay_view_mode_renders_choice_rows_read_only(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(tmp_path)
+    overlay._selected_dialogue_id_for_node = "ep02_intro"
+    overlay._selected_node_id = "start"
+
+    overlay.draw()
+
+    assert "Choice 0 text" in captured
+    assert "OK" in captured
+    assert "Choice 0 next" in captured
+    assert "end" in captured
+    assert "script.start.choices.0.text" not in overlay._widget_rows
+    assert "script.start.choices.0.next" not in overlay._widget_rows
+
+
 def test_dialogue_editor_overlay_edit_mode_selected_node_detail_registers_widgets(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -351,6 +375,60 @@ def test_dialogue_editor_overlay_edit_mode_selected_node_detail_registers_widget
     assert "script.end.text" in overlay._widget_rows
     assert dialogue_editor.text_input("script.end.speaker").text == "Mentor"
     assert dialogue_editor.text_input("script.end.text").text == "Bye."
+
+
+def test_dialogue_editor_overlay_edit_mode_choice_rows_register_widgets(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    dialogue_editor.edit_buffer["script"] = {
+        "start": {"speaker": "Mentor", "text": "Hello.", "choices": [{"next": "end", "text": "OK"}]},
+        "end": {"speaker": "Mentor", "text": "Bye.", "next": None},
+    }
+    for field in (
+        "script.start.speaker",
+        "script.start.text",
+        "script.start.choices.0.text",
+        "script.start.choices.0.next",
+    ):
+        dialogue_editor._text_inputs[field] = TextInput(text="", focused=False, font_size=12, height=18.0)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    overlay._model = _model(tmp_path)
+    overlay._selected_dialogue_id_for_node = "ep02_intro"
+    overlay._selected_node_id = "start"
+
+    overlay.draw()
+
+    assert "script.start.choices.0.text" in overlay._widget_rows
+    assert "script.start.choices.0.next" in overlay._widget_rows
+    assert dialogue_editor.text_input("script.start.choices.0.text").text == "OK"
+    assert dialogue_editor.text_input("script.start.choices.0.next").text == "end"
+
+
+def test_dialogue_editor_overlay_linear_node_renders_no_choice_rows(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    dialogue_editor.edit_buffer["script"] = {
+        "start": {"speaker": "Mentor", "text": "Hello.", "choices": [{"next": "end", "text": "OK"}]},
+        "end": {"speaker": "Mentor", "text": "Bye.", "next": None},
+    }
+    dialogue_editor._text_inputs["script.end.speaker"] = TextInput(text="", focused=False, font_size=12, height=18.0)
+    dialogue_editor._text_inputs["script.end.text"] = TextInput(text="", focused=False, font_size=12, height=18.0)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    overlay._model = _model(tmp_path)
+    overlay._selected_dialogue_id_for_node = "ep02_intro"
+    overlay._selected_node_id = "end"
+
+    overlay.draw()
+
+    assert "Choice 0 text" not in captured
+    assert "Choice 0 next" not in captured
+    assert not any(".choices." in field for field in overlay._widget_rows)
 
 
 def test_dialogue_editor_overlay_renders_single_reference_error_badge(
