@@ -31,6 +31,7 @@ DIALOGUE_EDITOR_ROW_HEIGHT = 18.0
 DIALOGUE_EDITOR_ROW_PADDING_X = 6.0
 DIALOGUE_EDITOR_PANEL_GAP = 8.0
 DIALOGUE_EDITOR_EDITABLE_SCALAR_FIELDS = {"id", "schema_version", "start_node"}
+DIALOGUE_EDITOR_CHOICE_ADD_ACTION = "choice.add"
 _DIALOGUE_FORM_COLORS = FormColors(
     text=DIALOGUE_EDITOR_TEXT_COLOR,
     dim=DIALOGUE_EDITOR_DIM_COLOR,
@@ -84,6 +85,7 @@ class DialogueEditorOverlay(UIElement):
         self._model: object | None = None
         self._row_hits: list[tuple[int, object]] = []
         self._node_row_hits: list[tuple[str, object]] = []
+        self._choice_action_hits: list[tuple[str, object]] = []
         self._selected_node_id: str | None = None
         self._selected_dialogue_id_for_node: str | None = None
         self._widget_rows: dict[str, object] = {}
@@ -178,6 +180,7 @@ class DialogueEditorOverlay(UIElement):
         button_rows: dict[str, object] = {}
         self._widget_rows = {}
         self._node_row_hits = []
+        self._choice_action_hits = []
         if dialogue is None:
             detail_panel.add_header(PanelHeader("Dialogue", "No entry"))
         else:
@@ -273,6 +276,7 @@ class DialogueEditorOverlay(UIElement):
                 detail_panel.add_header(
                     PanelHeader("Selected node", self._selected_node_id, title_color=DIALOGUE_EDITOR_DIM_COLOR)
                 )
+                choices = selected_node.get("choices")
                 selected_node_fields = _selected_node_field_rows(self._selected_node_id, selected_node)
                 if edit_mode and dialogue_editor is not None:
                     for label, field_path, _current_value in selected_node_fields:
@@ -281,6 +285,24 @@ class DialogueEditorOverlay(UIElement):
                                 PanelField(label, "", label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
                                 height=DIALOGUE_EDITOR_ROW_HEIGHT,
                                 padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                            )
+                        )
+                    if isinstance(choices, list):
+                        self._choice_action_hits.append(
+                            (
+                                DIALOGUE_EDITOR_CHOICE_ADD_ACTION,
+                                detail_panel.add_row(
+                                    PanelRow(
+                                        PanelField(
+                                            "Add choice",
+                                            "",
+                                            label_color=DIALOGUE_EDITOR_BUTTON_COLOR,
+                                            value_color=DIALOGUE_EDITOR_DIM_COLOR,
+                                        ),
+                                        height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                                        padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                                    )
+                                ),
                             )
                         )
                 else:
@@ -315,6 +337,12 @@ class DialogueEditorOverlay(UIElement):
         for node_id, row in self._node_row_hits:
             if row.hit_test(float(x), float(y)):
                 return node_id
+        return None
+
+    def choice_action_at(self, x: float, y: float) -> str | None:
+        for action, row in self._choice_action_hits:
+            if row.hit_test(float(x), float(y)):
+                return action
         return None
 
     def set_selected_index(self, index: int) -> bool:
