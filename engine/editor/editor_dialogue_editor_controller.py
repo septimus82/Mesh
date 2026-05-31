@@ -7,6 +7,7 @@ from typing import Any
 from engine.editor.editor_database_form_controller import EditorDatabaseFormController, _get_path, _set_path
 
 CHOICE_ADD_ACTION = "choice.add"
+NODE_ADD_ACTION = "node.add"
 _CHOICE_DELETE_PREFIX = "choice."
 _CHOICE_DELETE_SUFFIX = ".delete"
 
@@ -54,6 +55,11 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
             choice_index = _choice_delete_index(action)
             if choice_index is not None:
                 self._delete_choice(choice_index)
+                return True
+            node_action_picker = getattr(overlay, "node_action_at", None) if overlay is not None else None
+            node_action = node_action_picker(float(x), float(y)) if callable(node_action_picker) else None
+            if node_action == NODE_ADD_ACTION:
+                self._add_node()
                 return True
         else:
             idx = overlay.row_index_at(float(x), float(y)) if overlay is not None else None
@@ -164,6 +170,30 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
         self._focus_field(None)
         return True
 
+    def _add_node(self) -> bool:
+        if not self.edit_mode_active or not isinstance(self.edit_buffer, dict):
+            return False
+        script = self.edit_buffer.get("script")
+        if not isinstance(script, dict):
+            return False
+        self.sync_widgets_to_buffer()
+        new_id = _next_node_id(script)
+        script[new_id] = {"speaker": "", "text": "", "next": ""}
+        overlay = self._get_overlay()
+        selector = getattr(overlay, "set_selected_node_id", None) if overlay is not None else None
+        if callable(selector):
+            selector(new_id)
+        self._rebuild_text_inputs(new_id, self.edit_buffer)
+        self._add_text_input(f"script.{new_id}.next", "next")
+        self._sync_widgets_from_buffer()
+        self._focus_field(f"script.{new_id}.speaker")
+        return True
+
+    def _add_text_input(self, field: str, placeholder: str) -> None:
+        from engine.ui_overlays.widgets import TextInput  # noqa: PLC0415
+
+        self._text_inputs[field] = TextInput(text="", placeholder=placeholder, focused=False, font_size=12, height=18.0)
+
     def _target_path(self) -> Path:
         from engine.editor.dialogue_editor_model import DEFAULT_DIALOGUES_FILE_PATH  # noqa: PLC0415
 
@@ -208,3 +238,10 @@ def _choice_delete_index(action: object) -> int | None:
     if not index_text.isdigit():
         return None
     return int(index_text)
+
+
+def _next_node_id(script: dict[str, Any]) -> str:
+    index = 1
+    while f"node_{index}" in script:
+        index += 1
+    return f"node_{index}"

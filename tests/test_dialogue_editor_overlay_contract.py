@@ -558,6 +558,61 @@ def test_dialogue_editor_overlay_no_delete_choice_actions_in_view_or_linear_edit
     assert not any(action.endswith(".delete") for action, _row in edit_overlay._choice_action_hits)
 
 
+def test_dialogue_editor_overlay_edit_mode_renders_add_node_action(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    overlay._model = _model(tmp_path)
+
+    overlay.draw()
+
+    assert "Add node" in captured
+    action, row = overlay._node_action_hits[0]
+    assert action == "node.add"
+    rect = row.last_rect
+    assert rect is not None
+    assert overlay.node_action_at(rect.left + 1.0, rect.center_y) == "node.add"
+
+
+def test_dialogue_editor_overlay_edit_mode_renders_add_node_action_for_empty_script(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    overlay._model = _model(
+        tmp_path,
+        [{"id": "empty", "schema_version": 1, "start_node": "start", "script": {}}],
+    )
+
+    overlay.draw()
+
+    assert "Add node" in captured
+    action, row = overlay._node_action_hits[0]
+    assert action == "node.add"
+    rect = row.last_rect
+    assert rect is not None
+    assert overlay.node_action_at(rect.left + 1.0, rect.center_y) == "node.add"
+
+
+def test_dialogue_editor_overlay_view_mode_renders_no_add_node_action(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(tmp_path)
+
+    overlay.draw()
+
+    assert "Add node" not in captured
+    assert overlay.node_action_at(0.0, 0.0) is None
+
+
 def test_dialogue_editor_overlay_selected_node_fields_skip_non_dict_choices(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
