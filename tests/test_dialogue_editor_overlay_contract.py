@@ -193,6 +193,113 @@ def test_dialogue_editor_overlay_renders_script_node_rows(
     assert "(end)" in captured
 
 
+def test_dialogue_editor_overlay_node_id_at_returns_matching_node() -> None:
+    from engine.editor.widgets.panel_primitives import PanelField, PanelRow
+    from engine.ui.widgets import Rect
+
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    start_row = PanelRow(PanelField("start", None), height=18.0, padding_x=6.0)
+    end_row = PanelRow(PanelField("end", None), height=18.0, padding_x=6.0)
+    start_row.layout(Rect(0, 100, 200, 18))
+    end_row.layout(Rect(0, 82, 200, 18))
+    overlay._node_row_hits = [("start", start_row), ("end", end_row)]
+
+    assert overlay.node_id_at(10.0, 109.0) == "start"
+    assert overlay.node_id_at(10.0, 91.0) == "end"
+    assert overlay.node_id_at(500.0, 500.0) is None
+
+
+def test_dialogue_editor_overlay_set_selected_node_id_stores_id() -> None:
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+
+    overlay.set_selected_node_id("end")
+    assert overlay._selected_node_id == "end"
+
+    overlay.set_selected_node_id(None)
+    assert overlay._selected_node_id is None
+
+
+def test_dialogue_editor_overlay_draw_highlights_selected_node(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(tmp_path)
+    overlay._selected_dialogue_id_for_node = "ep02_intro"
+    overlay._selected_node_id = "end"
+
+    overlay.draw()
+
+    selected = [node_id for node_id, row in overlay._node_row_hits if row.is_selected]
+    assert selected == ["end"]
+
+
+def test_dialogue_editor_overlay_defaults_node_selection_to_start_node(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(tmp_path)
+
+    overlay.draw()
+
+    assert overlay._selected_node_id == "start"
+    selected = [node_id for node_id, row in overlay._node_row_hits if row.is_selected]
+    assert selected == ["start"]
+
+
+def test_dialogue_editor_overlay_switching_dialogue_redefaults_node_selection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "first",
+                "schema_version": 1,
+                "start_node": "start",
+                "script": {"start": {"speaker": "A", "text": "One.", "next": None}},
+            },
+            {
+                "id": "second",
+                "schema_version": 1,
+                "start_node": "begin",
+                "script": {"begin": {"speaker": "B", "text": "Two.", "next": None}},
+            },
+        ],
+    )
+    overlay.draw()
+    overlay._model.set_selected_index(1)
+
+    overlay.draw()
+
+    assert overlay._selected_dialogue_id_for_node == "second"
+    assert overlay._selected_node_id == "begin"
+
+
+def test_dialogue_editor_overlay_renders_selected_node_detail(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(tmp_path)
+    overlay._selected_dialogue_id_for_node = "ep02_intro"
+    overlay._selected_node_id = "end"
+
+    overlay.draw()
+
+    assert "Selected node" in captured
+    assert "Speaker" in captured
+    assert "Text" in captured
+    assert "Bye." in captured
+
+
 def test_dialogue_editor_overlay_renders_single_reference_error_badge(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

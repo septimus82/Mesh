@@ -19,9 +19,12 @@ pytestmark = [pytest.mark.fast]
 # ---------------------------------------------------------------------------
 
 class _StubOverlay:
-    def __init__(self, hit_index: int | None) -> None:
+    def __init__(self, hit_index: int | None, node_id: str | None = None) -> None:
         self._hit_index = hit_index
+        self._node_id = node_id
         self.selected_calls: list[int] = []
+        self.selected_node_calls: list[str] = []
+        self.node_id_calls: list[tuple[float, float]] = []
 
     def row_index_at(self, x: float, y: float) -> int | None:  # noqa: ARG002
         return self._hit_index
@@ -30,11 +33,18 @@ class _StubOverlay:
         self.selected_calls.append(index)
         return True
 
+    def node_id_at(self, x: float, y: float) -> str | None:
+        self.node_id_calls.append((x, y))
+        return self._node_id
 
-def _make_controller(hit_index: int | None = None) -> tuple[object, _StubOverlay]:
+    def set_selected_node_id(self, node_id: str) -> None:
+        self.selected_node_calls.append(node_id)
+
+
+def _make_controller(hit_index: int | None = None, node_id: str | None = None) -> tuple[object, _StubOverlay]:
     from engine.editor.editor_dialogue_editor_controller import EditorDialogueEditorController
 
-    overlay = _StubOverlay(hit_index)
+    overlay = _StubOverlay(hit_index, node_id)
     editor = SimpleNamespace(window=SimpleNamespace(dialogue_editor_overlay=overlay))
     controller = EditorDialogueEditorController(editor)
     return controller, overlay
@@ -67,6 +77,39 @@ def test_click_miss_no_selection_change_returns_false() -> None:
     result = controller.handle_dialogue_editor_mouse_click(999.0, 999.0)
     assert result is False
     assert overlay.selected_calls == []
+
+
+def test_click_row_hit_wins_before_node_selection() -> None:
+    controller, overlay = _make_controller(hit_index=2, node_id="start")
+
+    result = controller.handle_dialogue_editor_mouse_click(50.0, 120.0)
+
+    assert result is True
+    assert overlay.selected_calls == [2]
+    assert overlay.node_id_calls == []
+    assert overlay.selected_node_calls == []
+
+
+def test_click_row_miss_node_hit_sets_selected_node() -> None:
+    controller, overlay = _make_controller(hit_index=None, node_id="end")
+
+    result = controller.handle_dialogue_editor_mouse_click(50.0, 120.0)
+
+    assert result is True
+    assert overlay.selected_calls == []
+    assert overlay.node_id_calls == [(50.0, 120.0)]
+    assert overlay.selected_node_calls == ["end"]
+
+
+def test_click_edit_mode_skips_node_selection() -> None:
+    controller, overlay = _make_controller(hit_index=None, node_id="end")
+    controller.enter_edit_mode({"id": "ep02_intro", "schema_version": 1, "start_node": "start"})
+
+    result = controller.handle_dialogue_editor_mouse_click(50.0, 120.0)
+
+    assert result is False
+    assert overlay.node_id_calls == []
+    assert overlay.selected_node_calls == []
 
 
 def test_click_no_overlay_falls_through_returns_false() -> None:

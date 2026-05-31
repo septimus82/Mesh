@@ -35,6 +35,11 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
             if idx is not None:
                 overlay.set_selected_index(int(idx))
                 return True
+            node_picker = getattr(overlay, "node_id_at", None) if overlay is not None else None
+            node_id = node_picker(float(x), float(y)) if callable(node_picker) else None
+            if node_id is not None:
+                overlay.set_selected_node_id(node_id)
+                return True
         return self.handle_mouse_click(float(x), float(y))
 
     def _copy_record(self, record: dict[str, Any]) -> dict[str, Any]:

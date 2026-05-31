@@ -45,6 +45,9 @@ class DialogueEditorOverlay(UIElement):
         super().__init__(window)
         self._model: object | None = None
         self._row_hits: list[tuple[int, object]] = []
+        self._node_row_hits: list[tuple[str, object]] = []
+        self._selected_node_id: str | None = None
+        self._selected_dialogue_id_for_node: str | None = None
         self._widget_rows: dict[str, object] = {}
 
     def _get_controller(self) -> object | None:
@@ -136,6 +139,7 @@ class DialogueEditorOverlay(UIElement):
         dialogue = model.selected_dialogue() if model is not None else None
         button_rows: dict[str, object] = {}
         self._widget_rows = {}
+        self._node_row_hits = []
         if dialogue is None:
             detail_panel.add_header(PanelHeader("Dialogue", "No entry"))
         else:
@@ -207,12 +211,40 @@ class DialogueEditorOverlay(UIElement):
                     padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
                 )
             )
+            current_dialogue_id = str(dialogue.get("id") or "")
             start_node_id = str(dialogue.get("start_node") or "").strip()
-            for node_id, summary in script_rows(dialogue):
+            node_rows = script_rows(dialogue)
+            node_ids = [node_id for node_id, _summary in node_rows]
+            if current_dialogue_id != self._selected_dialogue_id_for_node or self._selected_node_id not in node_ids:
+                self._selected_node_id = start_node_id if start_node_id in node_ids else (node_ids[0] if node_ids else None)
+                self._selected_dialogue_id_for_node = current_dialogue_id
+            for node_id, summary in node_rows:
                 label = f"{node_id} (start)" if node_id == start_node_id else node_id
+                row = PanelRow(
+                    PanelField(label, summary, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                    height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                    padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                    selected_bg=DIALOGUE_EDITOR_SELECTED_BG,
+                )
+                row.set_selected(node_id == self._selected_node_id)
+                self._node_row_hits.append((node_id, row))
+                detail_panel.add_row(row)
+            script_dict = dialogue.get("script")
+            selected_node = script_dict.get(self._selected_node_id) if isinstance(script_dict, dict) else None
+            if isinstance(selected_node, dict):
+                detail_panel.add_header(
+                    PanelHeader("Selected node", self._selected_node_id, title_color=DIALOGUE_EDITOR_DIM_COLOR)
+                )
                 detail_panel.add_row(
                     PanelRow(
-                        PanelField(label, summary, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                        PanelField("Speaker", str(selected_node.get("speaker") or ""), label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                        height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                        padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                    )
+                )
+                detail_panel.add_row(
+                    PanelRow(
+                        PanelField("Text", str(selected_node.get("text") or ""), label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
                         height=DIALOGUE_EDITOR_ROW_HEIGHT,
                         padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
                     )
@@ -236,10 +268,19 @@ class DialogueEditorOverlay(UIElement):
                 return index
         return None
 
+    def node_id_at(self, x: float, y: float) -> str | None:
+        for node_id, row in self._node_row_hits:
+            if row.hit_test(float(x), float(y)):
+                return node_id
+        return None
+
     def set_selected_index(self, index: int) -> bool:
         model = self._get_model()
         setter = getattr(model, "set_selected_index", None)
         return bool(setter(int(index))) if callable(setter) else False
+
+    def set_selected_node_id(self, node_id: str | None) -> None:
+        self._selected_node_id = str(node_id) if node_id else None
 
     def selected_dialogue_dict(self) -> dict[str, object] | None:
         model = self._get_model()
