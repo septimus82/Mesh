@@ -723,6 +723,59 @@ def test_dialogue_editor_overlay_selected_node_fields_skip_non_dict_choices(
     assert not any(".choices.1." in field for field in edit_overlay._widget_rows)
 
 
+def test_dialogue_editor_overlay_edit_mode_registers_node_next_widget(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    dialogue_editor.edit_buffer["script"] = {
+        "start": {"speaker": "Mentor", "text": "Hello.", "next": "end"},
+        "end": {"speaker": "Mentor", "text": "Bye.", "next": None},
+    }
+    for field in ("script.end.speaker", "script.end.text", "script.end.next"):
+        dialogue_editor._text_inputs[field] = TextInput(text="", focused=False, font_size=12, height=18.0)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    overlay._model = _model(tmp_path)
+    overlay._selected_dialogue_id_for_node = "ep02_intro"
+    overlay._selected_node_id = "end"
+
+    overlay.draw()
+
+    ordered_labels = ["Speaker", "Text", "Next"]
+    label_positions = [captured.index(label) for label in ordered_labels]
+    assert label_positions == sorted(label_positions)
+    assert "script.end.next" in overlay._widget_rows
+    assert dialogue_editor.text_input("script.end.next").text == ""
+
+
+def test_dialogue_editor_overlay_edit_mode_suppresses_node_next_for_choice_nodes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    dialogue_editor.edit_buffer["script"] = {
+        "start": {"speaker": "Mentor", "text": "Hello.", "choices": [{"next": "end", "text": "OK"}]},
+        "end": {"speaker": "Mentor", "text": "Bye.", "next": None},
+    }
+    for field in (
+        "script.start.speaker",
+        "script.start.text",
+        "script.start.choices.0.text",
+        "script.start.choices.0.next",
+    ):
+        dialogue_editor._text_inputs[field] = TextInput(text="", focused=False, font_size=12, height=18.0)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    overlay._model = _model(tmp_path)
+    overlay._selected_dialogue_id_for_node = "ep02_intro"
+    overlay._selected_node_id = "start"
+
+    overlay.draw()
+
+    assert "script.start.next" not in overlay._widget_rows
+
+
 def test_dialogue_editor_overlay_linear_node_renders_no_choice_rows(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

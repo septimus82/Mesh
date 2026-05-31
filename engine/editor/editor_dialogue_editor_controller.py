@@ -116,14 +116,16 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
         record = record if isinstance(record, dict) else self.edit_buffer
         specs = list(self.TEXT_INPUT_SPECS)
         if node_id is not None:
+            script = record.get("script") if isinstance(record, dict) else None
+            node = script.get(node_id) if isinstance(script, dict) else None
             specs.extend(
                 [
                     (f"script.{node_id}.speaker", "speaker"),
                     (f"script.{node_id}.text", "text"),
                 ]
             )
-            script = record.get("script") if isinstance(record, dict) else None
-            node = script.get(node_id) if isinstance(script, dict) else None
+            if isinstance(node, dict) and not node.get("choices"):
+                specs.append((f"script.{node_id}.next", "next"))
             choices = node.get("choices") if isinstance(node, dict) else None
             if isinstance(choices, list):
                 for i, choice in enumerate(choices):

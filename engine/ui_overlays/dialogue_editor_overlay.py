@@ -73,6 +73,8 @@ def _selected_node_field_rows(node_id: str, selected_node: dict) -> list[_Select
         ("Speaker", speaker_path, speaker_value),
         ("Text", text_path, text_value),
     ]
+    if not selected_node.get("choices"):
+        rows.append(("Next", f"script.{node_id}.next", str(selected_node.get("next") or "")))
     rows.extend(_selected_node_choice_field_rows(node_id, selected_node.get("choices")))
     return rows
 
