@@ -7,6 +7,8 @@ from typing import Any
 from engine.editor.editor_database_form_controller import EditorDatabaseFormController, _get_path, _set_path
 
 CHOICE_ADD_ACTION = "choice.add"
+_CHOICE_DELETE_PREFIX = "choice."
+_CHOICE_DELETE_SUFFIX = ".delete"
 
 
 class EditorDialogueEditorController(EditorDatabaseFormController):
@@ -48,6 +50,10 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
             action = action_picker(float(x), float(y)) if callable(action_picker) else None
             if action == CHOICE_ADD_ACTION:
                 self._add_choice()
+                return True
+            choice_index = _choice_delete_index(action)
+            if choice_index is not None:
+                self._delete_choice(choice_index)
                 return True
         else:
             idx = overlay.row_index_at(float(x), float(y)) if overlay is not None else None
@@ -142,6 +148,22 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
         self._focus_field(f"script.{node_id}.choices.{new_index}.text")
         return True
 
+    def _delete_choice(self, index: int) -> bool:
+        if not self.edit_mode_active or not isinstance(self.edit_buffer, dict):
+            return False
+        node_id = self.selected_node_id()
+        script = self.edit_buffer.get("script")
+        node = script.get(node_id) if isinstance(script, dict) and node_id in script else None
+        choices = node.get("choices") if isinstance(node, dict) else None
+        if not isinstance(choices, list) or not 0 <= int(index) < len(choices):
+            return False
+        self.sync_widgets_to_buffer()
+        del choices[int(index)]
+        self._rebuild_text_inputs(node_id, self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(None)
+        return True
+
     def _target_path(self) -> Path:
         from engine.editor.dialogue_editor_model import DEFAULT_DIALOGUES_FILE_PATH  # noqa: PLC0415
 
@@ -176,3 +198,13 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
         if callable(getter):
             return [self._copy_record(d) for d in getter()]
         return []
+
+
+def _choice_delete_index(action: object) -> int | None:
+    text = str(action or "")
+    if not text.startswith(_CHOICE_DELETE_PREFIX) or not text.endswith(_CHOICE_DELETE_SUFFIX):
+        return None
+    index_text = text[len(_CHOICE_DELETE_PREFIX) : -len(_CHOICE_DELETE_SUFFIX)]
+    if not index_text.isdigit():
+        return None
+    return int(index_text)
