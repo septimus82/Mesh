@@ -184,15 +184,9 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
         if callable(selector):
             selector(new_id)
         self._rebuild_text_inputs(new_id, self.edit_buffer)
-        self._add_text_input(f"script.{new_id}.next", "next")
         self._sync_widgets_from_buffer()
         self._focus_field(f"script.{new_id}.speaker")
         return True
-
-    def _add_text_input(self, field: str, placeholder: str) -> None:
-        from engine.ui_overlays.widgets import TextInput  # noqa: PLC0415
-
-        self._text_inputs[field] = TextInput(text="", placeholder=placeholder, focused=False, font_size=12, height=18.0)
 
     def _target_path(self) -> Path:
         from engine.editor.dialogue_editor_model import DEFAULT_DIALOGUES_FILE_PATH  # noqa: PLC0415
