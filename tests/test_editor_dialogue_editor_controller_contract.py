@@ -301,6 +301,120 @@ def test_dialogue_editor_controller_save_after_add_choice_blocks_on_empty_text(t
     assert target.read_text(encoding="utf-8") == original
 
 
+def test_dialogue_editor_controller_delete_choice_renumbers_survivor_inputs(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    source["script"]["start"]["choices"].append({"next": "start", "text": "Again"})
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+
+    assert controller._delete_choice(0) is True
+
+    choices = controller.edit_buffer["script"]["start"]["choices"]
+    assert choices == [{"next": "start", "text": "Again"}]
+    assert controller.text_input("script.start.choices.0.text").text == "Again"
+    assert controller.text_input("script.start.choices.0.next").text == "start"
+    assert "script.start.choices.1.text" not in controller.text_inputs()
+    assert "script.start.choices.1.next" not in controller.text_inputs()
+    assert controller.focused_field() is None
+
+
+def test_dialogue_editor_controller_delete_choice_syncs_surviving_edit_before_rebuild(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    source["script"]["start"]["choices"].append({"next": "start", "text": "Again"})
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+    controller.text_input("script.start.choices.1.text").text = "Keep survivor"
+
+    assert controller._delete_choice(0) is True
+
+    assert controller.edit_buffer["script"]["start"]["choices"] == [{"next": "start", "text": "Keep survivor"}]
+
+
+def test_dialogue_editor_controller_delete_choice_allows_empty_choice_list(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+
+    assert controller._delete_choice(0) is True
+
+    start = controller.edit_buffer["script"]["start"]
+    assert start["choices"] == []
+    assert not any(".choices." in field for field in controller.text_inputs())
+    assert controller.focused_field() is None
+
+
+def test_dialogue_editor_controller_delete_choice_invalid_indices_noop(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+    before = json.dumps(controller.edit_buffer, sort_keys=True)
+
+    assert controller._delete_choice(-1) is False
+    assert controller._delete_choice(4) is False
+
+    assert json.dumps(controller.edit_buffer, sort_keys=True) == before
+
+
+def test_dialogue_editor_controller_delete_choice_linear_node_noop(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("end")))
+    controller.enter_edit_mode(source)
+    before = json.dumps(controller.edit_buffer, sort_keys=True)
+
+    assert controller._delete_choice(0) is False
+
+    assert json.dumps(controller.edit_buffer, sort_keys=True) == before
+
+
+def test_dialogue_editor_controller_delete_choice_save_persists_survivor(tmp_path: Path) -> None:
+    target = tmp_path / "assets" / "data" / "dialogues.json"
+    source = _dialogue("ep02_intro")
+    source["script"]["start"]["choices"].append({"next": "start", "text": "Again"})
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+
+    assert controller._delete_choice(0) is True
+    ok = controller.commit_save([source], target)
+
+    assert ok is True
+    loaded = json.loads(target.read_text(encoding="utf-8"))
+    start = loaded["dialogues"][0]["script"]["start"]
+    assert start["speaker"] == "Mentor"
+    assert start["text"] == "Hello."
+    assert start["choices"] == [{"next": "start", "text": "Again"}]
+
+
+def test_dialogue_editor_controller_delete_choice_routes_from_edit_mode_action(tmp_path: Path) -> None:
+    class _ChoiceActionOverlay(_SelectedNodeOverlay):
+        def choice_action_at(self, x: float, y: float) -> str | None:  # noqa: ARG002
+            return "choice.1.delete"
+
+    source = _dialogue("ep02_intro")
+    source["script"]["start"]["choices"].append({"next": "start", "text": "Again"})
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_ChoiceActionOverlay("start")))
+    controller.enter_edit_mode(source)
+
+    assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is True
+
+    assert controller.edit_buffer["script"]["start"]["choices"] == [{"next": "end", "text": "OK"}]
+
+
+def test_dialogue_editor_controller_delete_choice_action_ignored_in_view_mode(tmp_path: Path) -> None:
+    class _ChoiceActionOverlay(_SelectedNodeOverlay):
+        def row_index_at(self, x: float, y: float) -> int | None:  # noqa: ARG002
+            return None
+
+        def node_id_at(self, x: float, y: float) -> str | None:  # noqa: ARG002
+            return None
+
+        def choice_action_at(self, x: float, y: float) -> str | None:  # noqa: ARG002
+            return "choice.0.delete"
+
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_ChoiceActionOverlay("start")))
+
+    assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is False
+
+
 def test_dialogue_editor_controller_commit_save_reports_validation_error(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -473,6 +473,91 @@ def test_dialogue_editor_overlay_no_add_choice_action_in_view_or_linear_edit_mod
     assert edit_overlay.choice_action_at(0.0, 0.0) is None
 
 
+def test_dialogue_editor_overlay_edit_mode_renders_delete_choice_actions(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    dialogue_editor.edit_buffer["script"] = {
+        "start": {
+            "speaker": "Mentor",
+            "text": "Hello.",
+            "choices": [{"next": "a", "text": "First"}, "bad", {"next": "c", "text": "Third"}],
+        },
+        "a": {"speaker": "Mentor", "text": "A.", "next": None},
+        "c": {"speaker": "Mentor", "text": "C.", "next": None},
+    }
+    for field in (
+        "script.start.speaker",
+        "script.start.text",
+        "script.start.choices.0.text",
+        "script.start.choices.0.next",
+        "script.start.choices.2.text",
+        "script.start.choices.2.next",
+    ):
+        dialogue_editor._text_inputs[field] = TextInput(text="", focused=False, font_size=12, height=18.0)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "branching",
+                "schema_version": 1,
+                "start_node": "start",
+                "script": dialogue_editor.edit_buffer["script"],
+            }
+        ],
+    )
+    overlay._selected_dialogue_id_for_node = "branching"
+    overlay._selected_node_id = "start"
+
+    overlay.draw()
+
+    assert "Delete choice 0" in captured
+    assert "Delete choice 1" not in captured
+    assert "Delete choice 2" in captured
+    assert "choice.0.delete" not in overlay._widget_rows
+    assert "choice.2.delete" not in overlay._widget_rows
+    hit_rows = dict(overlay._choice_action_hits)
+    for action in ("choice.0.delete", "choice.2.delete"):
+        rect = hit_rows[action].last_rect
+        assert rect is not None
+        assert overlay.choice_action_at(rect.left + 1.0, rect.center_y) == action
+
+
+def test_dialogue_editor_overlay_no_delete_choice_actions_in_view_or_linear_edit_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    view_overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    view_overlay._model = _model(tmp_path)
+    view_overlay._selected_dialogue_id_for_node = "ep02_intro"
+    view_overlay._selected_node_id = "start"
+
+    view_overlay.draw()
+
+    assert "Delete choice 0" not in captured
+    assert view_overlay.choice_action_at(0.0, 0.0) is None
+
+    dialogue_editor = _DialogueEditorStub(edit_mode=True)
+    dialogue_editor.edit_buffer["script"] = {
+        "start": {"speaker": "Mentor", "text": "Hello.", "choices": [{"next": "end", "text": "OK"}]},
+        "end": {"speaker": "Mentor", "text": "Bye.", "next": None},
+    }
+    dialogue_editor._text_inputs["script.end.speaker"] = TextInput(text="", focused=False, font_size=12, height=18.0)
+    dialogue_editor._text_inputs["script.end.text"] = TextInput(text="", focused=False, font_size=12, height=18.0)
+    edit_overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    edit_overlay._model = _model(tmp_path)
+    edit_overlay._selected_dialogue_id_for_node = "ep02_intro"
+    edit_overlay._selected_node_id = "end"
+
+    edit_overlay.draw()
+
+    assert not any(action.endswith(".delete") for action, _row in edit_overlay._choice_action_hits)
+
+
 def test_dialogue_editor_overlay_selected_node_fields_skip_non_dict_choices(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

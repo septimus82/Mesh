@@ -288,7 +288,28 @@ class DialogueEditorOverlay(UIElement):
                             )
                         )
                     if isinstance(choices, list):
-                        self._choice_action_hits.append(
+                        for i, choice in enumerate(choices):
+                            if not isinstance(choice, dict):
+                                continue
+                            self._choice_action_hits.append(
+                                (
+                                    f"choice.{i}.delete",
+                                    detail_panel.add_row(
+                                        PanelRow(
+                                            PanelField(
+                                                f"Delete choice {i}",
+                                                "",
+                                                label_color=DIALOGUE_EDITOR_BUTTON_COLOR,
+                                                value_color=DIALOGUE_EDITOR_DIM_COLOR,
+                                            ),
+                                            height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                                            padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                                        )
+                                    ),
+                                )
+                            )
+                        self._choice_action_hits.insert(
+                            0,
                             (
                                 DIALOGUE_EDITOR_CHOICE_ADD_ACTION,
                                 detail_panel.add_row(
