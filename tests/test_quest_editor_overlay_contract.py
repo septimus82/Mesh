@@ -196,6 +196,73 @@ def test_quest_editor_overlay_renders_complex_field_section(monkeypatch: pytest.
     assert "intro_complete" in captured
 
 
+def test_quest_editor_overlay_renders_stage_rows_after_stages_blob(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests"))
+    overlay._model = _model(tmp_path)
+
+    overlay.draw()
+
+    stages_index = captured.index("Stages")
+    assert "Talk to the guide" in captured[stages_index + 1]
+    assert captured[stages_index + 2] == "intro"
+    assert captured[stages_index + 3] == "Talk"
+
+
+def test_quest_editor_overlay_preserves_multi_stage_row_order(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "multi_stage",
+                "title": "Multi Stage",
+                "stages": [
+                    {"id": "alpha", "title": "First", "text": "First text."},
+                    {"id": "beta", "title": "Second", "text": "Second text."},
+                ],
+            }
+        ],
+    )
+
+    overlay.draw()
+
+    alpha_index = captured.index("alpha")
+    beta_index = captured.index("beta")
+    assert captured[alpha_index + 1] == "First"
+    assert captured[beta_index + 1] == "Second"
+    assert alpha_index < beta_index
+
+
+def test_quest_editor_overlay_omits_stage_rows_when_stages_missing_or_empty(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests"))
+
+    for quest in (
+        {"id": "missing_stages", "title": "Missing Stages", "reward": {"inc_counters": {"gold": 1}}},
+        {"id": "empty_stages", "title": "Empty Stages", "stages": [], "reward": {"inc_counters": {"gold": 1}}},
+    ):
+        captured.clear()
+        overlay._model = _model(tmp_path, [quest])
+
+        overlay.draw()
+
+        assert "Complex fields (read-only)" in captured
+        assert "Reward" in captured
+        assert "Stages" not in captured
+        assert "stage_0" not in captured
+
+
 def test_quest_editor_overlay_view_mode_shows_edit_button(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     captured = _capture_panel_text(monkeypatch)
     quest_editor = _QuestEditorStub(edit_mode=False)

@@ -9,6 +9,7 @@ from engine.editor.quest_editor_model import (
     QUEST_COMPLEX_FIELD_ORDER,
     QUEST_SCALAR_FIELD_ORDER,
     QuestEditorModel,
+    stage_rows,
 )
 
 pytestmark = [pytest.mark.fast]
@@ -117,3 +118,34 @@ def test_quest_editor_model_empty_file_has_no_selection(tmp_path: Path) -> None:
     assert model.selected_quest() is None
     assert model.scalar_detail_rows() == []
     assert model.complex_detail_rows() == []
+
+
+def test_quest_editor_stage_rows_preserve_order_and_summary_fallbacks() -> None:
+    quest = {
+        "stages": [
+            {"id": "intro", "title": "Talk", "text": "Talk to the guide."},
+            {"id": "travel", "text": "Walk to the marker."},
+            {"id": "done"},
+        ]
+    }
+
+    assert stage_rows(quest) == [
+        ("intro", "Talk"),
+        ("travel", "Walk to the marker."),
+        ("done", "(untitled)"),
+    ]
+
+
+def test_quest_editor_stage_rows_skip_invalid_entries_and_use_positional_fallback() -> None:
+    assert stage_rows({}) == []
+    assert stage_rows({"stages": "invalid"}) == []
+
+    quest = {
+        "stages": [
+            {"id": "intro", "title": "Talk"},
+            "invalid",
+            {"title": "No ID"},
+        ]
+    }
+
+    assert stage_rows(quest) == [("intro", "Talk"), ("stage_2", "No ID")]
