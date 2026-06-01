@@ -212,6 +212,38 @@ def dialogue_reference_problem_count(dialogue: dict[str, Any]) -> int:
     return len(_dialogue_reference_errors(entry_id_norm, script, node_keys))
 
 
+def dialogue_unreachable_nodes(dialogue: dict[str, Any]) -> list[str]:
+    """Return node ids unreachable from start_node, in script insertion order."""
+    script = dialogue.get("script")
+    if not isinstance(script, dict) or not script:
+        return []
+    start = str(dialogue.get("start_node") or "").strip()
+    if not start or start not in script:
+        return []
+    visited: set[str] = set()
+    queue = [start]
+    while queue:
+        node_id = queue.pop()
+        if node_id in visited:
+            continue
+        visited.add(node_id)
+        node = script.get(node_id)
+        if not isinstance(node, dict):
+            continue
+        node_next = node.get("next")
+        if isinstance(node_next, str) and node_next.strip() and node_next.strip() in script:
+            queue.append(node_next.strip())
+        choices = node.get("choices")
+        if isinstance(choices, list):
+            for choice in choices:
+                if not isinstance(choice, dict):
+                    continue
+                choice_next = choice.get("next")
+                if isinstance(choice_next, str) and choice_next.strip() and choice_next.strip() in script:
+                    queue.append(choice_next.strip())
+    return [nid for nid in script if nid not in visited]
+
+
 def _dialogue_reference_errors(entry_id_norm: str, script: Any, node_keys: set[str]) -> list[str]:
     errors: list[str] = []
     if isinstance(script, dict):
