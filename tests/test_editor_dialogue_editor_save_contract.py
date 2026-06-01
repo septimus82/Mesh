@@ -8,6 +8,7 @@ import pytest
 
 from engine.editor.dialogue_editor_model import (
     dialogue_reference_problem_count,
+    dialogue_unreachable_nodes,
     save_dialogues,
     validate_dialogue_entries,
 )
@@ -288,3 +289,103 @@ def test_validate_dialogue_entries_reference_messages_unchanged(tmp_path: Path) 
         in errors
     )
     assert "entry 'ep02_dialogue_intro': node 'start' choice 1 text is empty" in errors
+
+
+# ---------------------------------------------------------------------------
+# dialogue_unreachable_nodes
+# ---------------------------------------------------------------------------
+
+
+def test_dialogue_unreachable_nodes_all_reachable_returns_empty() -> None:
+    entry: dict = {
+        "start_node": "a",
+        "script": {
+            "a": {"next": "b"},
+            "b": {"next": "c"},
+            "c": {"next": None},
+        },
+    }
+    assert dialogue_unreachable_nodes(entry) == []
+
+
+def test_dialogue_unreachable_nodes_one_orphan() -> None:
+    # orphan's own next points to a non-existent id — dangling out-edge safety check
+    entry: dict = {
+        "start_node": "a",
+        "script": {
+            "a": {"next": "b"},
+            "b": {"next": None},
+            "orphan": {"next": "nonexistent"},
+        },
+    }
+    assert dialogue_unreachable_nodes(entry) == ["orphan"]
+
+
+def test_dialogue_unreachable_nodes_cycle_among_reachable_returns_empty() -> None:
+    entry: dict = {
+        "start_node": "a",
+        "script": {
+            "a": {"next": "b"},
+            "b": {"next": "a"},
+        },
+    }
+    assert dialogue_unreachable_nodes(entry) == []
+
+
+def test_dialogue_unreachable_nodes_orphaned_cycle() -> None:
+    entry: dict = {
+        "start_node": "a",
+        "script": {
+            "a": {"next": None},
+            "b": {"next": "c"},
+            "c": {"next": "b"},
+        },
+    }
+    assert dialogue_unreachable_nodes(entry) == ["b", "c"]
+
+
+def test_dialogue_unreachable_nodes_missing_start_node_returns_empty() -> None:
+    entry: dict = {
+        "script": {
+            "a": {"next": "b"},
+            "b": {"next": None},
+        },
+    }
+    assert dialogue_unreachable_nodes(entry) == []
+    entry_empty: dict = {"start_node": "", "script": {"a": {"next": None}}}
+    assert dialogue_unreachable_nodes(entry_empty) == []
+
+
+def test_dialogue_unreachable_nodes_start_node_not_in_script_returns_empty() -> None:
+    entry: dict = {
+        "start_node": "nonexistent",
+        "script": {
+            "a": {"next": "b"},
+            "b": {"next": None},
+        },
+    }
+    assert dialogue_unreachable_nodes(entry) == []
+
+
+def test_dialogue_unreachable_nodes_reachable_only_via_choice_next() -> None:
+    entry: dict = {
+        "start_node": "start",
+        "script": {
+            "start": {"choices": [{"next": "branch", "text": "Go."}, {"next": "end", "text": "Stop."}]},
+            "branch": {"next": None},
+            "end": {"next": None},
+        },
+    }
+    assert dialogue_unreachable_nodes(entry) == []
+
+
+def test_dialogue_unreachable_nodes_reachable_only_via_node_next() -> None:
+    entry: dict = {
+        "start_node": "start",
+        "script": {
+            "start": {"next": "middle"},
+            "middle": {"next": "end"},
+            "end": {"next": None},
+        },
+    }
+    assert dialogue_unreachable_nodes(entry) == []
