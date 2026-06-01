@@ -243,16 +243,32 @@ def test_dialogue_editor_controller_add_choice_syncs_existing_edits_before_rebui
     assert choices[1] == {"next": "", "text": ""}
 
 
-def test_dialogue_editor_controller_add_choice_linear_node_noop(tmp_path: Path) -> None:
+def test_dialogue_editor_controller_add_choice_converts_linear_node(tmp_path: Path) -> None:
     source = _dialogue("ep02_intro")
+    source["script"]["end"]["next"] = "start"  # non-empty next proves the conversion-clear
     controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("end")))
     controller.enter_edit_mode(source)
-    before = json.dumps(controller.edit_buffer, sort_keys=True)
 
-    assert controller._add_choice() is False
+    assert controller._add_choice() is True
 
-    assert json.dumps(controller.edit_buffer, sort_keys=True) == before
-    assert not any(".choices." in field for field in controller.text_inputs())
+    end_node = controller.edit_buffer["script"]["end"]
+    assert end_node["choices"] == [{"next": "", "text": ""}]
+    assert end_node["next"] == ""
+    assert "script.end.next" not in controller.text_inputs()
+
+
+def test_dialogue_editor_controller_add_choice_branch_node_leaves_next_untouched(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    # "start" already has 1 choice and no "next" key — conversion guard must not fire
+    assert "next" not in source["script"]["start"]
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+
+    assert controller._add_choice() is True
+
+    start_node = controller.edit_buffer["script"]["start"]
+    assert start_node["choices"][1] == {"next": "", "text": ""}
+    assert "next" not in start_node  # not materialized by conversion guard
 
 
 def test_dialogue_editor_controller_add_choice_routes_from_edit_mode_action(tmp_path: Path) -> None:

@@ -149,10 +149,15 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
         node_id = self.selected_node_id()
         script = self.edit_buffer.get("script")
         node = script.get(node_id) if isinstance(script, dict) and node_id in script else None
-        choices = node.get("choices") if isinstance(node, dict) else None
-        if not isinstance(choices, list):
+        if not isinstance(node, dict):
             return False
         self.sync_widgets_to_buffer()
+        choices = node.get("choices")
+        if not isinstance(choices, list):
+            choices = []
+            node["choices"] = choices
+        if len(choices) == 0:
+            node["next"] = ""
         choices.append({"next": "", "text": ""})
         new_index = len(choices) - 1
         self._rebuild_text_inputs(node_id, self.edit_buffer)

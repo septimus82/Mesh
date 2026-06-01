@@ -330,24 +330,24 @@ class DialogueEditorOverlay(UIElement):
                                     ),
                                 )
                             )
-                        self._choice_action_hits.insert(
-                            0,
-                            (
-                                DIALOGUE_EDITOR_CHOICE_ADD_ACTION,
-                                detail_panel.add_row(
-                                    PanelRow(
-                                        PanelField(
-                                            "Add choice",
-                                            "",
-                                            label_color=DIALOGUE_EDITOR_BUTTON_COLOR,
-                                            value_color=DIALOGUE_EDITOR_DIM_COLOR,
-                                        ),
-                                        height=DIALOGUE_EDITOR_ROW_HEIGHT,
-                                        padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
-                                    )
-                                ),
-                            )
+                    self._choice_action_hits.insert(
+                        0,
+                        (
+                            DIALOGUE_EDITOR_CHOICE_ADD_ACTION,
+                            detail_panel.add_row(
+                                PanelRow(
+                                    PanelField(
+                                        "Add choice",
+                                        "",
+                                        label_color=DIALOGUE_EDITOR_BUTTON_COLOR,
+                                        value_color=DIALOGUE_EDITOR_DIM_COLOR,
+                                    ),
+                                    height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                                    padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                                )
+                            ),
                         )
+                    )
                     self._node_action_hits.append(
                         (
                             "node.delete",
