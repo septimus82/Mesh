@@ -330,3 +330,112 @@ def test_empty_events_no_iteration() -> None:
     sc.layers = {"entities": TrackingLayer()}
     sc._deliver_events_to_behaviours([])
     assert accessed == [], "layers should not be iterated for empty event list"
+
+
+def test_mixed_scene_skips_empty_behaviours_and_non_callable_on_event() -> None:
+    calls: list[tuple[str, str]] = []
+
+    class RealBehaviour:
+        def __init__(self, label: str) -> None:
+            self.label = label
+
+        def on_event(self, event: Any) -> None:
+            calls.append((self.label, event.type))
+
+    class NonCallableBehaviour:
+        on_event = "not-callable"
+
+    sc = _make_controller()
+    sc.layers = {
+        "background": [_sprite("empty", [])],
+        "entities": [
+            _sprite("real-a", [RealBehaviour("a")]),
+            _sprite("skip", [NonCallableBehaviour()]),
+            _sprite("real-b", [RealBehaviour("b")]),
+        ],
+    }
+
+    sc._deliver_events_to_behaviours([_evt("one"), _evt("two")])
+
+    assert calls == [("a", "one"), ("b", "one"), ("a", "two"), ("b", "two")]
+
+
+def test_exact_non_strict_error_message_and_strict_reraise(capsys: pytest.CaptureFixture[str]) -> None:
+    class ReprBoomBehaviour:
+        def __repr__(self) -> str:
+            return "<ReprBoomBehaviour>"
+
+        def on_event(self, event: Any) -> None:
+            raise RuntimeError("boom text")
+
+    sc = _make_controller()
+    sc.layers = {"entities": [_sprite("named-entity", [ReprBoomBehaviour()])]}
+    sc._deliver_events_to_behaviours([_evt("explode")])
+
+    assert capsys.readouterr().out == (
+        "[Mesh][Events] ERROR delivering 'explode' to"
+        " <ReprBoomBehaviour> on named-entity: boom text\n"
+    )
+
+    sc.window.strict_mode = True
+    with pytest.raises(RuntimeError, match="boom text"):
+        sc._deliver_events_to_behaviours([_evt("explode")])
+
+
+def test_duplicate_behaviour_recipient_delivered_twice_with_one_getter_call() -> None:
+    calls: list[tuple[str, str]] = []
+    getter_calls = 0
+
+    class SharedBehaviour:
+        def subscribed_event_types(self) -> frozenset[str]:
+            nonlocal getter_calls
+            getter_calls += 1
+            return frozenset({"ping"})
+
+        def on_event(self, event: Any) -> None:
+            calls.append(("shared", event.type))
+
+    shared = SharedBehaviour()
+    sc = _make_controller()
+    sc.layers = {
+        "background": [_sprite("first", [shared])],
+        "entities": [_sprite("second", [shared])],
+    }
+
+    sc._deliver_events_to_behaviours([_evt("ping"), _evt("skip")])
+
+    assert getter_calls == 1
+    assert calls == [("shared", "ping"), ("shared", "ping")]
+
+
+def test_stable_topology_contract_snapshots_recipients_at_batch_start() -> None:
+    """Intentional narrowing: current-batch recipients are snapshotted once up front."""
+    calls: list[str] = []
+
+    class AddedBehaviour:
+        def on_event(self, event: Any) -> None:
+            calls.append(f"added:{event.type}")
+
+    class MutatingBehaviour:
+        def __init__(self, scene: Any) -> None:
+            self.scene = scene
+            self.getter_calls = 0
+            self.allowed = frozenset({"first"})
+
+        def subscribed_event_types(self) -> frozenset[str]:
+            self.getter_calls += 1
+            return self.allowed
+
+        def on_event(self, event: Any) -> None:
+            calls.append(f"mutating:{event.type}")
+            self.allowed = frozenset({"second"})
+            self.scene.layers["entities"].append(_sprite("added", [AddedBehaviour()]))
+
+    sc = _make_controller()
+    mutating = MutatingBehaviour(sc)
+    sc.layers = {"entities": [_sprite("mutating", [mutating])]}
+
+    sc._deliver_events_to_behaviours([_evt("first"), _evt("second")])
+
+    assert mutating.getter_calls == 1
+    assert calls == ["mutating:first"]

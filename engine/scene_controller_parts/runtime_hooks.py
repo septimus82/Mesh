@@ -36,37 +36,40 @@ def _deliver_events_to_behaviours(self, events: Sequence[object]) -> None:
         return
     interest_cache: dict[int, "frozenset[str] | None"] = {}
     _MISSING = object()
+    recipients = []
+    for sprite in self._iter_layered_sprites():
+        behaviours = getattr(sprite, "mesh_behaviours_runtime", [])
+        if not behaviours:
+            continue
+        for behaviour in behaviours:
+            on_event = getattr(behaviour, "on_event", None)
+            if not callable(on_event):
+                continue
+            bkey = id(behaviour)
+            interest = interest_cache.get(bkey, _MISSING)
+            if interest is _MISSING:
+                getter = getattr(behaviour, "subscribed_event_types", None)
+                try:
+                    interest = getter() if callable(getter) else None
+                except Exception:  # noqa: BLE001  # REASON: faulty getter must not suppress delivery
+                    interest = None
+                interest_cache[bkey] = interest
+            recipients.append((sprite, behaviour, on_event, interest))
     for event in events:
         etype = getattr(event, "type", None)
-        for sprite in self._iter_layered_sprites():
-            behaviours = getattr(sprite, "mesh_behaviours_runtime", [])
-            if not behaviours:
+        for sprite, behaviour, on_event, interest in recipients:
+            if interest is not None and etype not in interest:
                 continue
-            for behaviour in behaviours:
-                on_event = getattr(behaviour, "on_event", None)
-                if not callable(on_event):
-                    continue
-                bkey = id(behaviour)
-                interest = interest_cache.get(bkey, _MISSING)
-                if interest is _MISSING:
-                    getter = getattr(behaviour, "subscribed_event_types", None)
-                    try:
-                        interest = getter() if callable(getter) else None
-                    except Exception:  # noqa: BLE001  # REASON: faulty getter must not suppress delivery
-                        interest = None
-                    interest_cache[bkey] = interest
-                if interest is not None and etype not in interest:
-                    continue
-                try:
-                    on_event(event)
-                except Exception as exc:  # noqa: BLE001  # REASON: behaviour event delivery should not abort the frame outside strict mode
-                    if getattr(self.window, "strict_mode", False):
-                        raise
-                    entity_name = getattr(sprite, "mesh_name", "<unnamed>")
-                    print(
-                        f"[Mesh][Events] ERROR delivering '{event.type}' to"
-                        f" {behaviour} on {entity_name}: {exc}",
-                    )
+            try:
+                on_event(event)
+            except Exception as exc:  # noqa: BLE001  # REASON: behaviour event delivery should not abort the frame outside strict mode
+                if getattr(self.window, "strict_mode", False):
+                    raise
+                entity_name = getattr(sprite, "mesh_name", "<unnamed>")
+                print(
+                    f"[Mesh][Events] ERROR delivering '{event.type}' to"
+                    f" {behaviour} on {entity_name}: {exc}",
+                )
 
 
 def _pre_update_behaviour_stage(self, delta_time: float) -> None:
