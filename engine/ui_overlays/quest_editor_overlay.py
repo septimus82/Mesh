@@ -198,6 +198,8 @@ class QuestEditorOverlay(UIElement):
                 )
             complex_rows = model.complex_detail_rows()
             if complex_rows:
+                from engine.editor.quest_editor_model import stage_rows  # noqa: PLC0415
+
                 detail_panel.add_header(PanelHeader("Complex fields (read-only)", None, title_color=QUEST_EDITOR_DIM_COLOR))
                 for label, value in complex_rows:
                     detail_panel.add_row(
@@ -207,6 +209,20 @@ class QuestEditorOverlay(UIElement):
                             padding_x=QUEST_EDITOR_ROW_PADDING_X,
                         )
                     )
+                    if label == "Stages":
+                        for stage_id, summary in stage_rows(quest):
+                            detail_panel.add_row(
+                                PanelRow(
+                                    PanelField(
+                                        stage_id,
+                                        summary,
+                                        label_color=QUEST_EDITOR_TEXT_COLOR,
+                                        value_color=QUEST_EDITOR_DIM_COLOR,
+                                    ),
+                                    height=QUEST_EDITOR_ROW_HEIGHT,
+                                    padding_x=QUEST_EDITOR_ROW_PADDING_X,
+                                )
+                            )
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,

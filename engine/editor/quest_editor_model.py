@@ -7,7 +7,6 @@ from json import dumps as _format_structured_value
 from pathlib import Path
 from typing import Any
 
-
 DEFAULT_QUESTS_FILE_PATH: Path = Path("assets") / "data" / "quests.json"
 
 QUEST_SCALAR_FIELD_ORDER: tuple[str, ...] = (
@@ -115,6 +114,20 @@ class QuestEditorModel:
         if not self._quests:
             return 0
         return max(0, min(int(index), len(self._quests) - 1))
+
+
+def stage_rows(quest: dict[str, Any]) -> list[tuple[str, str]]:
+    stages = quest.get("stages")
+    if not isinstance(stages, list):
+        return []
+    rows: list[tuple[str, str]] = []
+    for index, stage in enumerate(stages):
+        if not isinstance(stage, dict):
+            continue
+        stage_id = _string_value(stage.get("id")) or f"stage_{index}"
+        summary = _string_value(stage.get("title")) or _string_value(stage.get("text")) or "(untitled)"
+        rows.append((stage_id, summary))
+    return rows
 
 
 def _label_for_field(field_path: str) -> str:
