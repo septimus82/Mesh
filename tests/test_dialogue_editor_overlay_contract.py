@@ -1011,3 +1011,60 @@ def test_dialogue_editor_overlay_selected_dialogue_dict_and_all_dialogue_dicts(t
     assert len(all_dicts) == 2
     assert all_dicts[0]["id"] == "ep02_intro"
     assert all_dicts[1]["id"] == "ep03_intro"
+
+
+# dialogue_unreachable_nodes surface (C4b)
+
+
+def test_dialogue_editor_overlay_renders_unreachable_count_when_orphan_present(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "orphan_test",
+                "schema_version": 1,
+                "start_node": "start",
+                "script": {
+                    "start": {"speaker": "A", "text": "Go.", "next": None},
+                    "orphan": {"speaker": "B", "text": "Lost.", "next": None},
+                },
+            }
+        ],
+    )
+
+    overlay.draw()
+
+    assert "Unreachable" in captured
+    assert captured[captured.index("Unreachable") + 1] == "1"
+
+
+def test_dialogue_editor_overlay_renders_unreachable_count_zero_when_all_reachable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "reachable_test",
+                "schema_version": 1,
+                "start_node": "start",
+                "script": {
+                    "start": {"speaker": "A", "text": "Go.", "next": "end"},
+                    "end": {"speaker": "A", "text": "Done.", "next": None},
+                },
+            }
+        ],
+    )
+
+    overlay.draw()
+
+    assert "Unreachable" in captured
+    assert captured[captured.index("Unreachable") + 1] == "0"

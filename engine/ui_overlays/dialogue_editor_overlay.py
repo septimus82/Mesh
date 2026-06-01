@@ -27,6 +27,7 @@ DIALOGUE_EDITOR_DIM_COLOR = (150, 150, 160, 255)
 DIALOGUE_EDITOR_SELECTED_BG = (90, 140, 200, 140)
 DIALOGUE_EDITOR_BUTTON_COLOR = (100, 200, 255, 255)
 DIALOGUE_EDITOR_ERROR_COLOR = (255, 120, 120, 255)
+DIALOGUE_EDITOR_WARN_COLOR = (255, 200, 60, 255)
 DIALOGUE_EDITOR_ROW_HEIGHT = 18.0
 DIALOGUE_EDITOR_ROW_PADDING_X = 6.0
 DIALOGUE_EDITOR_PANEL_GAP = 8.0
@@ -124,6 +125,7 @@ class DialogueEditorOverlay(UIElement):
         from engine.editor.dialogue_editor_model import (  # noqa: PLC0415
             DIALOGUE_SCALAR_FIELD_ORDER,
             dialogue_reference_problem_count,
+            dialogue_unreachable_nodes,
             script_rows,
         )
         from engine.editor.widgets.panel_primitives import EditorPanelBase, PanelField, PanelHeader, PanelRow
@@ -232,6 +234,7 @@ class DialogueEditorOverlay(UIElement):
                 else 0
             )
             reference_count = dialogue_reference_problem_count(dialogue)
+            unreachable_count = len(dialogue_unreachable_nodes(dialogue))
             script_badge = "1 error" if reference_count == 1 else f"{reference_count} errors"
             script_badge_color = DIALOGUE_EDITOR_ERROR_COLOR if reference_count else DIALOGUE_EDITOR_DIM_COLOR
             detail_panel.add_header(
@@ -252,6 +255,18 @@ class DialogueEditorOverlay(UIElement):
             detail_panel.add_row(
                 PanelRow(
                     PanelField("Choice count", choice_count, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                    height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                    padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                )
+            )
+            detail_panel.add_row(
+                PanelRow(
+                    PanelField(
+                        "Unreachable",
+                        str(unreachable_count),
+                        label_color=DIALOGUE_EDITOR_TEXT_COLOR,
+                        value_color=DIALOGUE_EDITOR_WARN_COLOR if unreachable_count else DIALOGUE_EDITOR_DIM_COLOR,
+                    ),
                     height=DIALOGUE_EDITOR_ROW_HEIGHT,
                     padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
                 )
