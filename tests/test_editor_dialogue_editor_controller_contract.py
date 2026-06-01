@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 import engine.optional_arcade as optional_arcade
+from engine.editor.dialogue_editor_model import script_rows
 from engine.editor.editor_dialogue_editor_controller import EditorDialogueEditorController
 
 pytestmark = [pytest.mark.fast]
@@ -349,7 +350,7 @@ def test_dialogue_editor_controller_delete_choice_syncs_surviving_edit_before_re
     assert controller.edit_buffer["script"]["start"]["choices"] == [{"next": "start", "text": "Keep survivor"}]
 
 
-def test_dialogue_editor_controller_delete_choice_allows_empty_choice_list(tmp_path: Path) -> None:
+def test_dialogue_editor_controller_delete_last_choice_removes_choices_key(tmp_path: Path) -> None:
     source = _dialogue("ep02_intro")
     controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
     controller.enter_edit_mode(source)
@@ -357,9 +358,23 @@ def test_dialogue_editor_controller_delete_choice_allows_empty_choice_list(tmp_p
     assert controller._delete_choice(0) is True
 
     start = controller.edit_buffer["script"]["start"]
-    assert start["choices"] == []
+    assert "choices" not in start
     assert not any(".choices." in field for field in controller.text_inputs())
     assert controller.focused_field() is None
+
+
+def test_dialogue_editor_controller_delete_last_choice_reverts_to_end_node(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+
+    assert controller._delete_choice(0) is True
+
+    start = controller.edit_buffer["script"]["start"]
+    assert "choices" not in start
+    assert "script.start.next" in controller.text_inputs()
+    rows = dict(script_rows(controller.edit_buffer))
+    assert rows["start"] == "(end)"
 
 
 def test_dialogue_editor_controller_delete_choice_invalid_indices_noop(tmp_path: Path) -> None:
