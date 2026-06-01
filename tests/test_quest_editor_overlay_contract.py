@@ -263,6 +263,121 @@ def test_quest_editor_overlay_omits_stage_rows_when_stages_missing_or_empty(
         assert "stage_0" not in captured
 
 
+def test_quest_editor_overlay_stage_id_at_returns_raw_stage_id() -> None:
+    overlay = QuestEditorOverlay(_window_for_tab("Quests"))
+    hit_row = SimpleNamespace(hit_test=lambda x, y: x == 10.0 and y == 20.0)
+    overlay._stage_row_hits = [("raw_stage", hit_row)]
+
+    assert overlay.stage_id_at(10.0, 20.0) == "raw_stage"
+    assert overlay.stage_id_at(1.0, 2.0) is None
+
+
+def test_quest_editor_overlay_selects_stage_row_without_mutating_quest_rows(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "multi_stage",
+                "title": "Multi Stage",
+                "stages": [
+                    {"id": "alpha", "title": "First", "text": "First text."},
+                    {"id": "beta", "title": "Second", "text": "Second text."},
+                ],
+            }
+        ],
+    )
+    overlay.draw()
+    overlay.set_selected_stage_id("beta")
+
+    overlay.draw()
+
+    assert [index for index, _row in overlay._row_hits] == [0]
+    selected_stages = [stage_id for stage_id, row in overlay._stage_row_hits if row.is_selected]
+    assert selected_stages == ["beta"]
+
+
+def test_quest_editor_overlay_renders_selected_stage_detail(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests"))
+    overlay._model = _model(tmp_path)
+
+    overlay.draw()
+
+    selected_index = captured.index("Selected stage")
+    assert captured[selected_index + 1] == "intro"
+    assert captured[selected_index + 2 : selected_index + 8] == [
+        "ID",
+        "intro",
+        "Title",
+        "Talk",
+        "Text",
+        "Talk to the guide.",
+    ]
+
+
+def test_quest_editor_overlay_resets_selected_stage_when_quest_changes(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "quest_a",
+                "title": "Quest A",
+                "stages": [
+                    {"id": "a1", "title": "A1", "text": "A1 text."},
+                    {"id": "a2", "title": "A2", "text": "A2 text."},
+                ],
+            },
+            {
+                "id": "quest_b",
+                "title": "Quest B",
+                "stages": [{"id": "b1", "title": "B1", "text": "B1 text."}],
+            },
+        ],
+    )
+
+    overlay.draw()
+    overlay.set_selected_stage_id("a2")
+    assert overlay.set_selected_index(1) is True
+    overlay.draw()
+
+    assert overlay._selected_stage_id == "b1"
+    assert overlay._selected_quest_id_for_stage == "quest_b"
+
+
+def test_quest_editor_overlay_omits_selected_stage_when_stages_missing_or_empty(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests"))
+
+    for quest in (
+        {"id": "missing_stages", "title": "Missing Stages", "reward": {"inc_counters": {"gold": 1}}},
+        {"id": "empty_stages", "title": "Empty Stages", "stages": [], "reward": {"inc_counters": {"gold": 1}}},
+    ):
+        captured.clear()
+        overlay._model = _model(tmp_path, [quest])
+        overlay.set_selected_stage_id("stale")
+
+        overlay.draw()
+
+        assert overlay._selected_stage_id is None
+        assert "Selected stage" not in captured
+
+
 def test_quest_editor_overlay_view_mode_shows_edit_button(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     captured = _capture_panel_text(monkeypatch)
     quest_editor = _QuestEditorStub(edit_mode=False)
