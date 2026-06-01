@@ -40,6 +40,11 @@ class EditorQuestEditorController(EditorDatabaseFormController):
             if idx is not None:
                 overlay.set_selected_index(int(idx))
                 return True
+            stage_picker = getattr(overlay, "stage_id_at", None) if overlay is not None else None
+            stage_id = stage_picker(float(x), float(y)) if callable(stage_picker) else None
+            if stage_id is not None:
+                overlay.set_selected_stage_id(stage_id)
+                return True
         return self.handle_mouse_click(float(x), float(y))
 
     def _copy_record(self, record: dict[str, Any]) -> dict[str, Any]:

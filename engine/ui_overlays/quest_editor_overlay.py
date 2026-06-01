@@ -41,6 +41,21 @@ QUEST_EDITOR_READ_ONLY_COMPLEX_FIELDS = frozenset(
 )
 
 
+def _selected_stage_dict(quest: dict[str, object], selected_stage_id: str | None) -> dict[str, object] | None:
+    if selected_stage_id is None:
+        return None
+    stages = quest.get("stages")
+    if not isinstance(stages, list):
+        return None
+    for index, stage in enumerate(stages):
+        if not isinstance(stage, dict):
+            continue
+        stage_id = str(stage.get("id") or "").strip() or f"stage_{index}"
+        if stage_id == selected_stage_id:
+            return stage
+    return None
+
+
 class QuestEditorOverlay(UIElement):
     """Read-only quest database view hosted in the editor right dock."""
 
@@ -49,6 +64,9 @@ class QuestEditorOverlay(UIElement):
         self._model: object | None = None
         self._load_error: str | None = None
         self._row_hits: list[tuple[int, object]] = []
+        self._stage_row_hits: list[tuple[str, object]] = []
+        self._selected_stage_id: str | None = None
+        self._selected_quest_id_for_stage: str | None = None
         self._widget_rows: dict[str, object] = {}
 
     def _get_controller(self) -> object | None:
@@ -112,6 +130,7 @@ class QuestEditorOverlay(UIElement):
         )
         list_panel.add_header(PanelHeader("Quests", str(model.quest_count) if model is not None else "0"))
         self._row_hits = []
+        self._stage_row_hits = []
 
         if model is None:
             list_panel.add_row(
@@ -196,10 +215,15 @@ class QuestEditorOverlay(UIElement):
                         padding_x=QUEST_EDITOR_ROW_PADDING_X,
                     )
                 )
+            from engine.editor.quest_editor_model import stage_rows  # noqa: PLC0415
+
+            stage_display_rows = stage_rows(quest)
+            stage_ids = [stage_id for stage_id, _summary in stage_display_rows]
+            if quest_id != self._selected_quest_id_for_stage or self._selected_stage_id not in stage_ids:
+                self._selected_stage_id = stage_ids[0] if stage_ids else None
+                self._selected_quest_id_for_stage = quest_id
             complex_rows = model.complex_detail_rows()
             if complex_rows:
-                from engine.editor.quest_editor_model import stage_rows  # noqa: PLC0415
-
                 detail_panel.add_header(PanelHeader("Complex fields (read-only)", None, title_color=QUEST_EDITOR_DIM_COLOR))
                 for label, value in complex_rows:
                     detail_panel.add_row(
@@ -210,19 +234,38 @@ class QuestEditorOverlay(UIElement):
                         )
                     )
                     if label == "Stages":
-                        for stage_id, summary in stage_rows(quest):
-                            detail_panel.add_row(
-                                PanelRow(
-                                    PanelField(
-                                        stage_id,
-                                        summary,
-                                        label_color=QUEST_EDITOR_TEXT_COLOR,
-                                        value_color=QUEST_EDITOR_DIM_COLOR,
-                                    ),
-                                    height=QUEST_EDITOR_ROW_HEIGHT,
-                                    padding_x=QUEST_EDITOR_ROW_PADDING_X,
-                                )
+                        for stage_id, summary in stage_display_rows:
+                            row = PanelRow(
+                                PanelField(
+                                    stage_id,
+                                    summary,
+                                    label_color=QUEST_EDITOR_TEXT_COLOR,
+                                    value_color=QUEST_EDITOR_DIM_COLOR,
+                                ),
+                                height=QUEST_EDITOR_ROW_HEIGHT,
+                                padding_x=QUEST_EDITOR_ROW_PADDING_X,
+                                selected_bg=QUEST_EDITOR_SELECTED_BG,
                             )
+                            row.set_selected(stage_id == self._selected_stage_id)
+                            self._stage_row_hits.append((stage_id, row))
+                            detail_panel.add_row(row)
+            selected_stage = _selected_stage_dict(quest, self._selected_stage_id)
+            if selected_stage is not None:
+                detail_panel.add_header(
+                    PanelHeader("Selected stage", self._selected_stage_id, title_color=QUEST_EDITOR_DIM_COLOR)
+                )
+                for label, value in (
+                    ("ID", self._selected_stage_id or ""),
+                    ("Title", str(selected_stage.get("title") or "")),
+                    ("Text", str(selected_stage.get("text") or "")),
+                ):
+                    detail_panel.add_row(
+                        PanelRow(
+                            PanelField(label, value, label_color=QUEST_EDITOR_TEXT_COLOR, value_color=QUEST_EDITOR_DIM_COLOR),
+                            height=QUEST_EDITOR_ROW_HEIGHT,
+                            padding_x=QUEST_EDITOR_ROW_PADDING_X,
+                        )
+                    )
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,
@@ -242,10 +285,19 @@ class QuestEditorOverlay(UIElement):
                 return index
         return None
 
+    def stage_id_at(self, x: float, y: float) -> str | None:
+        for stage_id, row in self._stage_row_hits:
+            if row.hit_test(float(x), float(y)):
+                return stage_id
+        return None
+
     def set_selected_index(self, index: int) -> bool:
         model = self._get_model()
         setter = getattr(model, "set_selected_index", None)
         return bool(setter(int(index))) if callable(setter) else False
+
+    def set_selected_stage_id(self, stage_id: str | None) -> None:
+        self._selected_stage_id = str(stage_id) if stage_id else None
 
     def _draw_text_input(self, text_input: TextInput, rect: Rect) -> None:
         draw_text_input(text_input, rect, _QUEST_FORM_COLORS)

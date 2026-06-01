@@ -316,3 +316,20 @@ def test_quest_editor_controller_empty_view_mode_click_falls_through(tmp_path: P
 
     assert selected == []
     assert controller.is_edit_mode_active() is False
+
+
+def test_quest_editor_controller_routes_stage_clicks_only_in_view_mode(tmp_path: Path) -> None:
+    selected_stages: list[str] = []
+    overlay = SimpleNamespace(
+        row_index_at=lambda _x, _y: None,
+        stage_id_at=lambda _x, _y: "stage_a",
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+    )
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+
+    assert controller.handle_quest_editor_mouse_click(10.0, 10.0) is True
+    assert selected_stages == ["stage_a"]
+
+    controller.enter_edit_mode(_quest("old_id"))
+    assert controller.handle_quest_editor_mouse_click(10.0, 10.0) is False
+    assert selected_stages == ["stage_a"]
