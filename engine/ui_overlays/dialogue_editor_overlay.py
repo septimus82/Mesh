@@ -234,7 +234,9 @@ class DialogueEditorOverlay(UIElement):
                 else 0
             )
             reference_count = dialogue_reference_problem_count(dialogue)
-            unreachable_count = len(dialogue_unreachable_nodes(dialogue))
+            unreachable_nodes = dialogue_unreachable_nodes(dialogue)
+            unreachable_count = len(unreachable_nodes)
+            unreachable_node_ids = set(unreachable_nodes)
             script_badge = "1 error" if reference_count == 1 else f"{reference_count} errors"
             script_badge_color = DIALOGUE_EDITOR_ERROR_COLOR if reference_count else DIALOGUE_EDITOR_DIM_COLOR
             detail_panel.add_header(
@@ -280,8 +282,12 @@ class DialogueEditorOverlay(UIElement):
                 self._selected_dialogue_id_for_node = current_dialogue_id
             for node_id, summary in node_rows:
                 label = f"{node_id} (start)" if node_id == start_node_id else node_id
+                value_color = DIALOGUE_EDITOR_DIM_COLOR
+                if node_id in unreachable_node_ids:
+                    label = f"{label} [unreachable]"
+                    value_color = DIALOGUE_EDITOR_WARN_COLOR
                 row = PanelRow(
-                    PanelField(label, summary, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=DIALOGUE_EDITOR_DIM_COLOR),
+                    PanelField(label, summary, label_color=DIALOGUE_EDITOR_TEXT_COLOR, value_color=value_color),
                     height=DIALOGUE_EDITOR_ROW_HEIGHT,
                     padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
                     selected_bg=DIALOGUE_EDITOR_SELECTED_BG,
