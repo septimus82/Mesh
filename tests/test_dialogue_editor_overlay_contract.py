@@ -440,7 +440,7 @@ def test_dialogue_editor_overlay_edit_mode_branch_node_renders_add_choice_action
     assert overlay.choice_action_at(rect.left + 1.0, rect.center_y) == "choice.add"
 
 
-def test_dialogue_editor_overlay_no_add_choice_action_in_view_or_linear_edit_mode(
+def test_dialogue_editor_overlay_no_add_choice_action_in_view_mode(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -455,6 +455,12 @@ def test_dialogue_editor_overlay_no_add_choice_action_in_view_or_linear_edit_mod
     assert "Add choice" not in captured
     assert view_overlay.choice_action_at(0.0, 0.0) is None
 
+
+def test_dialogue_editor_overlay_linear_node_edit_mode_renders_add_choice_action(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
     dialogue_editor = _DialogueEditorStub(edit_mode=True)
     dialogue_editor.edit_buffer["script"] = {
         "start": {"speaker": "Mentor", "text": "Hello.", "choices": [{"next": "end", "text": "OK"}]},
@@ -462,15 +468,20 @@ def test_dialogue_editor_overlay_no_add_choice_action_in_view_or_linear_edit_mod
     }
     dialogue_editor._text_inputs["script.end.speaker"] = TextInput(text="", focused=False, font_size=12, height=18.0)
     dialogue_editor._text_inputs["script.end.text"] = TextInput(text="", focused=False, font_size=12, height=18.0)
-    edit_overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
-    edit_overlay._model = _model(tmp_path)
-    edit_overlay._selected_dialogue_id_for_node = "ep02_intro"
-    edit_overlay._selected_node_id = "end"
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue", dialogue_editor))
+    overlay._model = _model(tmp_path)
+    overlay._selected_dialogue_id_for_node = "ep02_intro"
+    overlay._selected_node_id = "end"
 
-    edit_overlay.draw()
+    overlay.draw()
 
-    assert "choice.add" not in edit_overlay._widget_rows
-    assert edit_overlay.choice_action_at(0.0, 0.0) is None
+    assert "Add choice" in captured
+    assert "choice.add" not in overlay._widget_rows
+    action, row = overlay._choice_action_hits[0]
+    assert action == "choice.add"
+    rect = row.last_rect
+    assert rect is not None
+    assert overlay.choice_action_at(rect.left + 1.0, rect.center_y) == "choice.add"
 
 
 def test_dialogue_editor_overlay_edit_mode_renders_delete_choice_actions(
