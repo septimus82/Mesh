@@ -176,6 +176,8 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
             return False
         self.sync_widgets_to_buffer()
         del choices[int(index)]
+        if not choices:
+            del node["choices"]
         self._rebuild_text_inputs(node_id, self.edit_buffer)
         self._sync_widgets_from_buffer()
         self._focus_field(None)
