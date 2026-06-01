@@ -1068,3 +1068,111 @@ def test_dialogue_editor_overlay_renders_unreachable_count_zero_when_all_reachab
 
     assert "Unreachable" in captured
     assert captured[captured.index("Unreachable") + 1] == "0"
+
+
+def test_dialogue_editor_overlay_marks_unreachable_node_label(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "orphan_marker_test",
+                "schema_version": 1,
+                "start_node": "start",
+                "script": {
+                    "start": {"speaker": "A", "text": "Go.", "next": "reachable"},
+                    "reachable": {"speaker": "A", "text": "Done.", "next": None},
+                    "orphan": {"speaker": "B", "text": "Lost.", "next": None},
+                },
+            }
+        ],
+    )
+
+    overlay.draw()
+
+    assert "orphan [unreachable]" in captured
+
+
+def test_dialogue_editor_overlay_does_not_mark_reachable_node_label(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "reachable_marker_test",
+                "schema_version": 1,
+                "start_node": "start",
+                "script": {
+                    "start": {"speaker": "A", "text": "Go.", "next": "reachable"},
+                    "reachable": {"speaker": "A", "text": "Done.", "next": None},
+                    "orphan": {"speaker": "B", "text": "Lost.", "next": None},
+                },
+            }
+        ],
+    )
+
+    overlay.draw()
+
+    assert "reachable" in captured
+    assert "reachable [unreachable]" not in captured
+
+
+def test_dialogue_editor_overlay_never_marks_start_node_label(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "start_marker_test",
+                "schema_version": 1,
+                "start_node": "start",
+                "script": {
+                    "start": {"speaker": "A", "text": "Go.", "next": None},
+                    "orphan": {"speaker": "B", "text": "Lost.", "next": None},
+                },
+            }
+        ],
+    )
+
+    overlay.draw()
+
+    assert "start (start)" in captured
+    assert "start (start) [unreachable]" not in captured
+
+
+def test_dialogue_editor_overlay_omits_unreachable_marker_when_all_nodes_reachable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = DialogueEditorOverlay(_window_for_tab("Dialogue"))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "no_marker_test",
+                "schema_version": 1,
+                "start_node": "start",
+                "script": {
+                    "start": {"speaker": "A", "text": "Go.", "next": "end"},
+                    "end": {"speaker": "A", "text": "Done.", "next": None},
+                },
+            }
+        ],
+    )
+
+    overlay.draw()
+
+    assert all("[unreachable]" not in text for text in captured)
