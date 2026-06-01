@@ -311,6 +311,30 @@ def add_perf_run_command(subparsers: argparse._SubParsersAction) -> None:
     compare_parser.add_argument("--out", required=True, help="Path to write compare JSON")
     compare_parser.set_defaults(func=handle_perf_compare)
 
+    bench_parser = subparsers.add_parser(
+        "perf-stage-bench",
+        help="Run a headless synthetic frame-stage benchmark",
+    )
+    bench_parser.add_argument("--sprites", type=int, default=500, help="Synthetic sprite count")
+    bench_parser.add_argument("--behaviours", type=int, default=2, help="Behaviours per sprite")
+    bench_parser.add_argument("--events", type=int, default=3, help="Synthetic event count")
+    bench_parser.set_defaults(func=handle_perf_stage_bench)
+
+
+def handle_perf_stage_bench(args: argparse.Namespace) -> int:
+    from engine.tooling.frame_stage_benchmark import (
+        format_benchmark_result,
+        run_frame_stage_benchmark,
+    )
+
+    result = run_frame_stage_benchmark(
+        sprite_count=max(0, int(getattr(args, "sprites", 500))),
+        behaviours_per_sprite=max(0, int(getattr(args, "behaviours", 2))),
+        event_count=max(0, int(getattr(args, "events", 3))),
+    )
+    print(format_benchmark_result(result))
+    return 0
+
 
 def handle_perf_compare(args: argparse.Namespace) -> int:
     from engine.persistence_io import write_json_atomic
