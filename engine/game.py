@@ -406,6 +406,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         *,
         fullscreen: bool = False,
         vsync: bool = True,
+        resizable: bool | None = None,
         config: EngineConfig | None = None,
         config_path: str = "config.json",
     ) -> None:
@@ -417,16 +418,30 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             title: Window title text.
             fullscreen: Start in fullscreen mode.
             vsync: Enable vertical sync.
+            resizable: Allow the OS window to be resized. None uses config/default.
             config: Pre-loaded EngineConfig, or None to use defaults.
             config_path: Path to config.json for runtime reference.
         """
+        resolved_resizable = (
+            resizable
+            if resizable is not None
+            else (getattr(config, "resizable", True) if config is not None else True)
+        )
         super().__init__(
             width=width,
             height=height,
             title=title,
             fullscreen=fullscreen,
             vsync=vsync,
+            resizable=resolved_resizable,
         )
+        set_min = getattr(self, "set_minimum_size", None)
+        if callable(set_min):
+            try:
+                set_min(480, 270)
+            except Exception as exc:  # noqa: BLE001  # REASON: resize safety floor is best-effort for platform/fallback compatibility
+                _log_swallow("GAME-000", "engine/game.py set_minimum_size", once=True)
+                logger.warning("[Mesh][GameWindow] WARNING: Failed to set minimum size: %r", exc)
         try:
             engine.optional_arcade.arcade.set_background_color(engine.optional_arcade.arcade.color.DARK_BLUE_GRAY)
         except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation
@@ -443,6 +458,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
                 title=title,
                 fullscreen=fullscreen,
                 vsync=vsync,
+                resizable=resolved_resizable,
             )
         self.engine_config = config
         self.engine_config.width = width
@@ -450,6 +466,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.engine_config.title = title
         self.engine_config.fullscreen = fullscreen
         self.engine_config.vsync = vsync
+        self.engine_config.resizable = resolved_resizable
 
         # Text cache for overlays to avoid PerformanceWarning
         from engine.text_draw import TextCache
