@@ -414,6 +414,18 @@ class TopBarControls:
     toggle_max: Rect
 
 
+def compute_top_bar_tool_text_rect(layout: EditorShellLayout, text_width: float) -> Rect:
+    """Compute the right-anchored tool-mode text rect left of top bar buttons."""
+    bar = layout.top_bar
+    right = bar.right - TOP_BAR_BUTTON_RIGHT_OFFSET - TOP_BAR_BUTTON_MARGIN
+    return Rect(
+        left=right - max(0.0, float(text_width)),
+        right=right,
+        bottom=bar.bottom,
+        top=bar.top,
+    )
+
+
 def compute_top_bar_controls(layout: EditorShellLayout) -> TopBarControls:
     """Compute hit regions for top bar dock toggle controls.
 
