@@ -411,6 +411,42 @@ def test_quest_editor_overlay_edit_mode_shows_save_cancel_and_scalar_widgets(
     assert "Complex fields (read-only)" in captured
 
 
+def test_quest_editor_overlay_edit_mode_stage_title_text_widgets_respect_selected_stage(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    quest_editor = _QuestEditorStub(edit_mode=True)
+    quest_editor.edit_buffer["stages"] = [
+        {"id": "alpha", "title": "First", "text": "First text."},
+        {"id": "beta", "title": "Second"},
+    ]
+    quest_editor._text_inputs["stages.1.title"] = TextInput(text="Second", focused=False, font_size=12, height=18.0)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests", quest_editor))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "multi_stage",
+                "title": "Multi Stage",
+                "stages": [
+                    {"id": "alpha", "title": "First", "text": "First text."},
+                    {"id": "beta", "title": "Second"},
+                ],
+            }
+        ],
+    )
+    overlay.draw()
+    overlay.set_selected_stage_id("beta")
+
+    overlay.draw()
+
+    assert "ID" not in overlay._widget_rows
+    assert "stages.1.title" in overlay._widget_rows
+    assert "stages.1.text" not in overlay._widget_rows
+    assert {"id", "title", "description", "type", "start_toast", "complete_toast"} <= set(overlay._widget_rows)
+
+
 def test_quest_editor_overlay_edit_mode_shows_optional_fields_when_missing(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

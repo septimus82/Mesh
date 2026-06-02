@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -333,3 +334,115 @@ def test_quest_editor_controller_routes_stage_clicks_only_in_view_mode(tmp_path:
     controller.enter_edit_mode(_quest("old_id"))
     assert controller.handle_quest_editor_mouse_click(10.0, 10.0) is False
     assert selected_stages == ["stage_a"]
+
+
+def test_quest_editor_controller_stage_title_edit_updates_buffer(tmp_path: Path) -> None:
+    overlay = SimpleNamespace(selected_stage_id=lambda: "intro")
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest())
+
+    controller.text_input("stages.0.title").text = "Updated Talk"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["stages"][0]["title"] == "Updated Talk"
+
+
+def test_quest_editor_controller_stage_text_edit_updates_buffer(tmp_path: Path) -> None:
+    overlay = SimpleNamespace(selected_stage_id=lambda: "intro")
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest())
+
+    controller.text_input("stages.0.text").text = "Updated directions."
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["stages"][0]["text"] == "Updated directions."
+
+
+def test_quest_editor_controller_stage_title_and_text_edit_persist_through_save(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[list[dict[str, object]]] = []
+    from engine.editor import quest_editor_model
+
+    monkeypatch.setattr(quest_editor_model, "save_quests", lambda quests, _target: saved.append(quests))
+    overlay = SimpleNamespace(selected_stage_id=lambda: "intro")
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id"))
+    controller.text_input("stages.0.title").text = "Updated Talk"
+    controller.text_input("stages.0.text").text = "Updated directions."
+
+    assert controller.commit_save([_quest("old_id")], tmp_path / "assets" / "data" / "quests.json") is True
+
+    assert saved[0][0]["stages"][0]["title"] == "Updated Talk"
+    assert saved[0][0]["stages"][0]["text"] == "Updated directions."
+
+
+def test_quest_editor_controller_no_edit_save_preserves_stage_dicts_byte_identical(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[list[dict[str, object]]] = []
+    from engine.editor import quest_editor_model
+
+    monkeypatch.setattr(quest_editor_model, "validate_quest_entries", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(quest_editor_model, "save_quests", lambda quests, _target: saved.append(quests))
+    structured_stage = {
+        "id": "intro",
+        "title": "Talk",
+        "text": "Talk to the guide.",
+        "complete_on": {"type": "dialogue_choice", "payload": {"choice_id": "done"}},
+        "start_on_event": {"type": "scene_loaded"},
+        "requirements": {"counters": {"visits": 1}},
+        "emit_events_on_complete": [{"type": "quest_stage_done"}],
+    }
+    textless_stage = {"id": "followup", "title": "Follow Up", "complete_on": {"type": "talked"}}
+    quest = _quest("old_id", stages=[copy.deepcopy(structured_stage), copy.deepcopy(textless_stage)])
+    original_stages = copy.deepcopy(quest["stages"])
+    overlay = SimpleNamespace(selected_stage_id=lambda: "followup")
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(quest)
+
+    assert controller.commit_save([quest], tmp_path / "assets" / "data" / "quests.json") is True
+
+    assert saved[0][0]["stages"] == original_stages
+    assert "text" not in saved[0][0]["stages"][1]
+
+
+def test_quest_editor_controller_empty_stage_title_blocks_save(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[object] = []
+    from engine.editor import quest_editor_model
+
+    monkeypatch.setattr(quest_editor_model, "save_quests", lambda *args, **kwargs: saved.append((args, kwargs)))
+    overlay = SimpleNamespace(selected_stage_id=lambda: "intro")
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id"))
+    controller.text_input("stages.0.title").text = ""
+
+    assert controller.commit_save([_quest("old_id")], tmp_path / "assets" / "data" / "quests.json") is False
+
+    assert "must have a 'title'" in (controller.last_error_message() or "")
+    assert saved == []
+
+
+def test_quest_editor_controller_empty_stage_text_is_saved(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[list[dict[str, object]]] = []
+    from engine.editor import quest_editor_model
+
+    monkeypatch.setattr(quest_editor_model, "save_quests", lambda quests, _target: saved.append(quests))
+    overlay = SimpleNamespace(selected_stage_id=lambda: "intro")
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id"))
+    controller.text_input("stages.0.text").text = ""
+
+    assert controller.commit_save([_quest("old_id")], tmp_path / "assets" / "data" / "quests.json") is True
+
+    assert saved[0][0]["stages"][0]["text"] == ""
