@@ -56,6 +56,35 @@ def _selected_stage_dict(quest: dict[str, object], selected_stage_id: str | None
     return None
 
 
+def _selected_stage_index(quest: dict[str, object], selected_stage_id: str | None) -> int | None:
+    if selected_stage_id is None:
+        return None
+    stages = quest.get("stages")
+    if not isinstance(stages, list):
+        return None
+    for index, stage in enumerate(stages):
+        if not isinstance(stage, dict):
+            continue
+        stage_id = str(stage.get("id") or "").strip() or f"stage_{index}"
+        if stage_id == selected_stage_id:
+            return index
+    return None
+
+
+def _field_value(record: dict[str, object], field_path: str) -> object:
+    current: object = record
+    for part in field_path.split("."):
+        if isinstance(current, dict):
+            current = current.get(part)
+            continue
+        if isinstance(current, list) and part.isdigit():
+            index = int(part)
+            current = current[index] if 0 <= index < len(current) else None
+            continue
+        return None
+    return current
+
+
 class QuestEditorOverlay(UIElement):
     """Read-only quest database view hosted in the editor right dock."""
 
@@ -254,11 +283,29 @@ class QuestEditorOverlay(UIElement):
                 detail_panel.add_header(
                     PanelHeader("Selected stage", self._selected_stage_id, title_color=QUEST_EDITOR_DIM_COLOR)
                 )
-                for label, value in (
-                    ("ID", self._selected_stage_id or ""),
-                    ("Title", str(selected_stage.get("title") or "")),
-                    ("Text", str(selected_stage.get("text") or "")),
-                ):
+                detail_panel.add_row(
+                    PanelRow(
+                        PanelField("ID", self._selected_stage_id or "", label_color=QUEST_EDITOR_TEXT_COLOR, value_color=QUEST_EDITOR_DIM_COLOR),
+                        height=QUEST_EDITOR_ROW_HEIGHT,
+                        padding_x=QUEST_EDITOR_ROW_PADDING_X,
+                    )
+                )
+                selected_stage_index = _selected_stage_index(quest, self._selected_stage_id)
+                selected_stage_fields: list[tuple[str, str, str]] = []
+                if selected_stage_index is not None:
+                    selected_stage_fields.append(("Title", f"stages.{selected_stage_index}.title", str(selected_stage.get("title") or "")))
+                    if "text" in selected_stage:
+                        selected_stage_fields.append(("Text", f"stages.{selected_stage_index}.text", str(selected_stage.get("text") or "")))
+                for label, field_path, value in selected_stage_fields:
+                    if edit_mode and quest_editor is not None:
+                        self._widget_rows[field_path] = detail_panel.add_row(
+                            PanelRow(
+                                PanelField(label, "", label_color=QUEST_EDITOR_TEXT_COLOR, value_color=QUEST_EDITOR_DIM_COLOR),
+                                height=QUEST_EDITOR_ROW_HEIGHT,
+                                padding_x=QUEST_EDITOR_ROW_PADDING_X,
+                            )
+                        )
+                        continue
                     detail_panel.add_row(
                         PanelRow(
                             PanelField(label, value, label_color=QUEST_EDITOR_TEXT_COLOR, value_color=QUEST_EDITOR_DIM_COLOR),
@@ -299,6 +346,9 @@ class QuestEditorOverlay(UIElement):
     def set_selected_stage_id(self, stage_id: str | None) -> None:
         self._selected_stage_id = str(stage_id) if stage_id else None
 
+    def selected_stage_id(self) -> str | None:
+        return self._selected_stage_id
+
     def _draw_text_input(self, text_input: TextInput, rect: Rect) -> None:
         draw_text_input(text_input, rect, _QUEST_FORM_COLORS)
 
@@ -313,7 +363,7 @@ class QuestEditorOverlay(UIElement):
             sync_text_inputs(
                 text_inputs,
                 focused_field,
-                lambda field: edit_buffer.get(str(field)),
+                lambda field: _field_value(edit_buffer, str(field)),
             )
 
     def _draw_edit_widgets(self, quest_editor: object) -> None:

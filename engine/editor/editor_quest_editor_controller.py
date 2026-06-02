@@ -4,7 +4,7 @@ import copy
 from pathlib import Path
 from typing import Any
 
-from engine.editor.editor_database_form_controller import EditorDatabaseFormController
+from engine.editor.editor_database_form_controller import EditorDatabaseFormController, _get_path, _set_path
 
 _OPTIONAL_SCALAR_FIELDS = ("description", "type", "start_toast", "complete_toast")
 
@@ -26,6 +26,15 @@ class EditorQuestEditorController(EditorDatabaseFormController):
         ("start_toast", "Start toast"),
         ("complete_toast", "Complete toast"),
     )
+
+    def enter_edit_mode(self, record: dict[str, Any]) -> None:
+        stage_index = self._selected_stage_index(record)
+        self._rebuild_text_inputs(stage_index, record)
+        super().enter_edit_mode(record)
+
+    def cancel_edit_mode(self) -> None:
+        super().cancel_edit_mode()
+        self._rebuild_text_inputs(None)
 
     def handle_quest_editor_text_input(self, text: str) -> bool:
         return self.handle_text_input(text)
@@ -56,11 +65,50 @@ class EditorQuestEditorController(EditorDatabaseFormController):
     def _record_for_save(self, record: dict[str, Any]) -> dict[str, Any] | None:
         return self._strip_empty_optional_fields(self._copy_record(record))
 
+    def _get_field_value(self, record: dict[str, Any], field: str) -> Any:
+        return _get_path(record, field) if "." in str(field) else record.get(field)
+
     def _set_field_value(self, record: dict[str, Any], field: str, value: Any) -> None:
         next_value = str(value or "")
+        if "." in str(field):
+            _set_path(record, field, next_value)
+            return
         if field == self.ID_FIELD:
             next_value = next_value.strip()
         record[field] = next_value
+
+    def _selected_stage_index(self, record: dict[str, Any]) -> int | None:
+        overlay = self._get_overlay()
+        selected_stage_getter = getattr(overlay, "selected_stage_id", None) if overlay is not None else None
+        selected_stage_id = selected_stage_getter() if callable(selected_stage_getter) else None
+        if not selected_stage_id:
+            return None
+        stages = record.get("stages")
+        if not isinstance(stages, list):
+            return None
+        for index, stage in enumerate(stages):
+            if not isinstance(stage, dict):
+                continue
+            stage_id = str(stage.get("id") or "").strip() or f"stage_{index}"
+            if stage_id == str(selected_stage_id):
+                return index
+        return None
+
+    def _rebuild_text_inputs(self, stage_index: int | None, record: dict[str, Any] | None = None) -> None:
+        from engine.ui_overlays.widgets import TextInput  # noqa: PLC0415
+
+        record = record if isinstance(record, dict) else self.edit_buffer
+        specs = list(self.TEXT_INPUT_SPECS)
+        stages = record.get("stages") if isinstance(record, dict) else None
+        stage = stages[stage_index] if isinstance(stages, list) and stage_index is not None and 0 <= stage_index < len(stages) else None
+        if isinstance(stage, dict):
+            specs.append((f"stages.{stage_index}.title", "Stage title"))
+            if "text" in stage:
+                specs.append((f"stages.{stage_index}.text", "Stage text"))
+        self._text_inputs = {
+            field: TextInput(text="", placeholder=placeholder, focused=False, font_size=12, height=18.0)
+            for field, placeholder in specs
+        }
 
     def _target_path(self) -> Path:
         from engine.editor.quest_editor_model import DEFAULT_QUESTS_FILE_PATH  # noqa: PLC0415
