@@ -152,7 +152,7 @@ class EditorShellOverlay(UIElement):
         right_collapsed: bool = False,
     ) -> None:
         """Draw the top bar with title, scene name, dirty indicator, and dock controls."""
-        from ..editor.editor_shell_layout import compute_top_bar_controls
+        from ..editor.editor_shell_layout import compute_top_bar_controls, compute_top_bar_tool_text_rect
 
         bar = layout.top_bar
 
@@ -207,9 +207,12 @@ class EditorShellOverlay(UIElement):
 
         # Right side: tool mode indicator (after the buttons)
         tool_mode = getattr(controller, "tool_mode", "MOVE")
+        tool_text = f"Tool: {tool_mode}"
+        tool_text_width = len(tool_text) * 12.0 * _GLYPH_WIDTH_RATIO
+        tool_rect = compute_top_bar_tool_text_rect(layout, tool_text_width)
         draw_text_cached(
-            f"Tool: {tool_mode}",
-            bar.right - 16.0,
+            tool_text,
+            tool_rect.right,
             bar.center_y,
             color=SHELL_TEXT_DIM_COLOR,
             font_size=12,
