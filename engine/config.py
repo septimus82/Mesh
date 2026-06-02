@@ -31,6 +31,7 @@ class EngineConfig:
 
     fullscreen: bool = False
     vsync: bool = True
+    resizable: bool = True
 
     start_scene: str = "scenes/cellar.json"
     main_menu_scene: str | None = None
