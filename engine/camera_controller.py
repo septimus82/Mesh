@@ -863,12 +863,15 @@ class CameraController:
         self.resize(width, height)
 
     def resize(self, width: int, height: int) -> None:
-        if hasattr(self.camera, "resize"):
-            try:
-                self.camera.resize(width, height)
-                self.gui_camera.resize(width, height)
-            except Exception:
-                _log_swallow("camera_resize", "resize() failed")
+        try:
+            matcher = getattr(self.camera, "match_window", None)
+            if callable(matcher):
+                matcher(viewport=True, projection=True, scissor=True, position=False)
+            gui_matcher = getattr(self.gui_camera, "match_window", None)
+            if callable(gui_matcher):
+                gui_matcher(viewport=True, projection=True, scissor=True, position=True)
+        except Exception:
+            _log_swallow("camera_resize", "match_window() failed")
 
     def start_camera_shake(
         self,
