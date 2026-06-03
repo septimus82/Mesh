@@ -19,6 +19,13 @@ if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
 
+def _draw_settings_cover(width: float, height: float) -> None:
+    try:
+        optional_arcade.arcade.draw_lrbt_rectangle_filled(0.0, float(width), 0.0, float(height), (8, 10, 14, 255))
+    except RuntimeError:
+        _log_swallow("SETT-010", "settings overlay cover draw without active window", once=True)
+
+
 class SettingsOverlay(UIElement):
     """
     Minimal settings UI (keyboard-only).
@@ -655,6 +662,8 @@ class SettingsOverlay(UIElement):
         if not self.visible:
             return
 
+        _draw_settings_cover(float(self.window.width), float(self.window.height))
+
         lines = self.get_lines()
         overview_lines = lines[:3]
         options_lines = lines[3 + len(self._ACTIONS):]
@@ -674,6 +683,31 @@ class SettingsOverlay(UIElement):
             color=(0, 0, 0, 210),
         )
         _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+
+        title_y = min(float(self.window.height) - 24.0, top + 58.0)
+        draw_text_cached(
+            "MESH",
+            (left + right) / 2.0,
+            title_y,
+            color=(232, 248, 246, 255),
+            font_size=34,
+            anchor_x="center",
+            anchor_y="top",
+            font_name=("Calibri", "Arial"),
+            cache=self._text_cache,
+            bold=True,
+        )
+        draw_text_cached(
+            "Settings",
+            (left + right) / 2.0,
+            title_y - 34.0,
+            color=(142, 178, 190, 255),
+            font_size=15,
+            anchor_x="center",
+            anchor_y="top",
+            font_name=("Calibri", "Arial"),
+            cache=self._text_cache,
+        )
 
         overview_layout = self._layout_overview_section(overview_lines)
         options_layout = self._layout_options_section(options_lines)
