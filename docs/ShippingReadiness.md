@@ -2,7 +2,7 @@
 
 **Doc version:** SR-1  
 **Applies to:** Mesh Engine runtime-only + player package shipping pipeline  
-**Last updated:** 2026-03-02
+**Last updated:** 2026-06-03
 
 This document defines the minimum gates and artifacts required to consider the engine "shippable" as a **runtime-only player build**, without editor dependencies.
 

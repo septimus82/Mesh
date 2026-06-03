@@ -1,5 +1,7 @@
 # Arcade 3 Migration Status
 
+**Last reviewed:** 2026-06-03
+
 ## Status
 
 Arcade 3 migration is in **stabilization/sign-off**:
