@@ -18,7 +18,6 @@ from .common import (
     _draw_rectangle_filled,
 )
 from ..input_hints import get_action_hint, set_keyboard_hints
-from ..text_draw import TextCache, draw_text_cached
 from ._settings_data import SETTINGS_ROWS
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -64,7 +63,7 @@ class ProjectBrowserLayout:
     footer_y: float
 
 
-def compute_project_browser_menu_layout(
+def compute_menu_panel_layout(
     width: float,
     height: float,
     item_count: int,
@@ -106,6 +105,15 @@ def compute_project_browser_menu_layout(
     )
 
 
+def compute_project_browser_menu_layout(
+    width: float,
+    height: float,
+    item_count: int,
+    selected_index: int,
+) -> ProjectBrowserLayout:
+    return compute_menu_panel_layout(width, height, item_count, selected_index)
+
+
 def _is_web_runtime() -> bool:
     return sys.platform == "emscripten" or os.environ.get("PYGBAG") == "1"
 
@@ -143,7 +151,6 @@ class MainMenuOverlay(UIElement):
         )
         self._text_lines: list[Any] = []  # Cache for arcade.Text objects
         self._cache_valid: bool = False
-        self._settings_text_cache = TextCache()
 
     @property
     def blocks_input(self) -> bool:
@@ -719,14 +726,7 @@ class MainMenuOverlay(UIElement):
             bold=bold,
         ).draw()
 
-    def _draw_project_browser(self) -> None:
-        project_items = self._project_items()
-        layout = compute_project_browser_menu_layout(
-            self.window.width,
-            self.window.height,
-            len(project_items),
-            self._project_index,
-        )
+    def _draw_menu_panel(self, layout: ProjectBrowserLayout) -> None:
         panel = layout.panel
 
         gradient_colors = [
@@ -757,6 +757,7 @@ class MainMenuOverlay(UIElement):
             1,
         )
 
+    def _draw_menu_title(self, layout: ProjectBrowserLayout, subtitle: str) -> None:
         self._draw_menu_text(
             "MESH",
             layout.title_x,
@@ -767,7 +768,7 @@ class MainMenuOverlay(UIElement):
             bold=True,
         )
         self._draw_menu_text(
-            "Project Browser",
+            subtitle,
             layout.subtitle_x,
             layout.subtitle_y,
             color=(142, 178, 190, 255),
@@ -775,8 +776,14 @@ class MainMenuOverlay(UIElement):
             anchor_x="center",
         )
 
-        selected_index = self._project_index if 0 <= self._project_index < len(project_items) else -1
-        for index, (item, card) in enumerate(zip(project_items, layout.cards)):
+    def _draw_menu_cards(
+        self,
+        layout: ProjectBrowserLayout,
+        rows: list[tuple[str, str]],
+        selected_index: int,
+    ) -> None:
+        selected_index = selected_index if 0 <= selected_index < len(rows) else -1
+        for index, ((label, subtitle), card) in enumerate(zip(rows, layout.cards)):
             selected = index == selected_index
             bg = (35, 58, 70, 245) if selected else (24, 32, 42, 230)
             border = (108, 224, 210, 255) if selected else (80, 110, 125, 150)
@@ -799,23 +806,24 @@ class MainMenuOverlay(UIElement):
 
             text_left = card.left + 18.0
             self._draw_menu_text(
-                str(item.get("label", "")),
+                str(label),
                 text_left,
                 card.top - 12.0,
                 color=(232, 242, 244, 255),
                 font_size=16,
                 bold=selected,
             )
-            root = str(item.get("root", "") or "")
-            if root:
+            if subtitle:
                 self._draw_menu_text(
-                    root,
+                    str(subtitle),
                     text_left,
                     card.top - 32.0,
                     color=(150, 164, 174, 230),
                     font_size=11,
                 )
 
+    def _draw_menu_footer(self, layout: ProjectBrowserLayout, text: str) -> None:
+        panel = layout.panel
         _draw_rectangle_filled(
             center_x=panel.center_x,
             center_y=layout.footer_y,
@@ -823,17 +831,81 @@ class MainMenuOverlay(UIElement):
             height=24.0,
             color=(255, 255, 255, 18),
         )
-        input_source = "keyboard_mouse"
-        manager = getattr(getattr(self.window, "input_controller", None), "manager", None)
-        if manager is not None:
-            input_source = str(getattr(manager, "input_source", input_source))
         self._draw_menu_text(
-            get_menu_legend(input_source),
+            text,
             layout.footer_x,
             layout.footer_y + 7.0,
             color=(166, 187, 196, 230),
             font_size=12,
             anchor_x="center",
+        )
+
+    def _input_legend(self) -> str:
+        input_source = "keyboard_mouse"
+        manager = getattr(getattr(self.window, "input_controller", None), "manager", None)
+        if manager is not None:
+            input_source = str(getattr(manager, "input_source", input_source))
+        return get_menu_legend(input_source)
+
+    def _draw_card_menu(
+        self,
+        *,
+        rows: list[tuple[str, str]],
+        selected_index: int,
+        subtitle: str,
+        footer: str,
+    ) -> None:
+        layout = compute_menu_panel_layout(self.window.width, self.window.height, len(rows), selected_index)
+        self._draw_menu_panel(layout)
+        self._draw_menu_title(layout, subtitle)
+        self._draw_menu_cards(layout, rows, selected_index)
+        self._draw_menu_footer(layout, footer)
+
+    def _draw_project_browser(self) -> None:
+        rows = [(str(item.get("label", "")), str(item.get("root", "") or "")) for item in self._project_items()]
+        self._draw_card_menu(
+            rows=rows,
+            selected_index=self._project_index,
+            subtitle="Project Browser",
+            footer=self._input_legend(),
+        )
+
+    def _draw_title_screen(self) -> None:
+        self._draw_card_menu(
+            rows=[(label, "") for label, _action in self._items()],
+            selected_index=self._selection_index,
+            subtitle="Title Screen",
+            footer=self._input_legend(),
+        )
+
+    def _draw_template_menu(self) -> None:
+        from ..project_templates import list_templates  # noqa: PLC0415
+
+        templates = list_templates()
+        self._draw_card_menu(
+            rows=[(str(template.title), str(template.description)) for template in templates],
+            selected_index=self._template_index,
+            subtitle="New Project",
+            footer="[Enter] Next  [Esc] Cancel",
+        )
+
+    def _settings_value_text(self, key: str, kind: str) -> str:
+        settings = self._runtime_settings()
+        if kind == "slider":
+            if key == "music_volume":
+                return f"{int(round(settings.music_volume * 100.0))}%"
+            if key == "sfx_volume":
+                return f"{int(round(settings.sfx_volume * 100.0))}%"
+        if kind == "toggle":
+            return "ON" if bool(getattr(settings, key, False)) else "OFF"
+        return ""
+
+    def _draw_settings_cards(self) -> None:
+        self._draw_card_menu(
+            rows=[(label, self._settings_value_text(key, kind)) for key, label, kind in SETTINGS_ROWS],
+            selected_index=self._settings_index,
+            subtitle="Settings",
+            footer="Enter/A: Toggle   Left/Right: Adjust   Esc/B: Back",
         )
 
     def draw(self) -> None:
@@ -857,6 +929,15 @@ class MainMenuOverlay(UIElement):
         if self.state == "project_browser":
             self._draw_project_browser()
             return
+        if self.state == "main":
+            self._draw_title_screen()
+            return
+        if self.state == "create_project_template":
+            self._draw_template_menu()
+            return
+        if self.state == "settings":
+            self._draw_settings_cards()
+            return
 
         _draw_rectangle_filled(
             center_x=(left + right) / 2.0,
@@ -866,10 +947,6 @@ class MainMenuOverlay(UIElement):
             color=(0, 0, 0, 220),
         )
         _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
-
-        if self.state == "settings":
-            self._draw_settings_menu()
-            return
 
         if not self._cache_valid:
             self._rebuild_text_cache(left, top)
@@ -1083,43 +1160,3 @@ class MainMenuOverlay(UIElement):
             return True
         return False
 
-    def _draw_settings_menu(self) -> None:
-        self._title.text = "SETTINGS"
-        self._title.x = self.window.width / 2
-        self._title.y = self.window.height / 2 + 120
-        self._title.draw()
-
-        settings = self._runtime_settings()
-        start_y = self.window.height / 2 + 40
-        for i, (key, label, kind) in enumerate(SETTINGS_ROWS):
-            color = optional_arcade.arcade.color.YELLOW if i == self._settings_index else optional_arcade.arcade.color.GRAY
-            value = ""
-            if kind == "slider":
-                if key == "music_volume":
-                    value = f"{int(round(settings.music_volume * 100.0))}%"
-                elif key == "sfx_volume":
-                    value = f"{int(round(settings.sfx_volume * 100.0))}%"
-            elif kind == "toggle":
-                enabled = bool(getattr(settings, key, False))
-                value = "ON" if enabled else "OFF"
-            text = f"{label}: {value}" if value else label
-            draw_text_cached(
-                text,
-                self.window.width / 2,
-                start_y - i * 36,
-                color=color,
-                font_size=18,
-                anchor_x="center",
-                anchor_y="center",
-                cache=self._settings_text_cache,
-            )
-
-        draw_text_cached(
-            "Enter/A: Toggle   Left/Right: Adjust   Esc/B: Back",
-            self.window.width / 2,
-            50,
-            color=optional_arcade.arcade.color.GRAY,
-            font_size=14,
-            anchor_x="center",
-            cache=self._settings_text_cache,
-        )
