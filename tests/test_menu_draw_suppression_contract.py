@@ -151,8 +151,18 @@ def test_main_menu_draws_full_screen_cover_before_panel(monkeypatch: pytest.Monk
 
     rects: list[dict[str, Any]] = []
     outlines: list[tuple[Any, ...]] = []
+    text_calls: list[dict[str, Any]] = []
+
+    class _TextSpy:
+        def __init__(self, **kwargs: Any) -> None:
+            text_calls.append(kwargs)
+
+        def draw(self) -> None:
+            return
+
     monkeypatch.setattr(main_menu_module, "_draw_rectangle_filled", lambda **kwargs: rects.append(kwargs))
     monkeypatch.setattr(main_menu_module, "_draw_tb_rectangle_outline", lambda *args, **_kwargs: outlines.append(args))
+    monkeypatch.setattr(main_menu_module.optional_arcade.arcade, "Text", _TextSpy)
 
     window = SimpleNamespace(width=1280, height=720, paused=False)
     overlay = MainMenuOverlay(window)
@@ -168,8 +178,10 @@ def test_main_menu_draws_full_screen_cover_before_panel(monkeypatch: pytest.Monk
         "center_y": 360.0,
         "width": 1280,
         "height": 720,
-        "color": (0, 0, 0, 150),
+        "color": (8, 10, 14, 255),
     }
-    assert rects[1]["width"] == 560.0
-    assert rects[1]["height"] == 380.0
+    assert rects[1]["width"] == 720.0
+    assert rects[1]["height"] > 0.0
+    assert rects[1]["color"] == (22, 28, 36, 245)
     assert outlines
+    assert any(call["text"] == "MESH" for call in text_calls)

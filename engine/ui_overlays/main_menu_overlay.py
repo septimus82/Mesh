@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -24,6 +25,85 @@ if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class ProjectBrowserRect:
+    left: float
+    right: float
+    bottom: float
+    top: float
+
+    @property
+    def width(self) -> float:
+        return self.right - self.left
+
+    @property
+    def height(self) -> float:
+        return self.top - self.bottom
+
+    @property
+    def center_x(self) -> float:
+        return (self.left + self.right) / 2.0
+
+    @property
+    def center_y(self) -> float:
+        return (self.bottom + self.top) / 2.0
+
+
+@dataclass(frozen=True)
+class ProjectBrowserLayout:
+    panel: ProjectBrowserRect
+    title_x: float
+    title_y: float
+    subtitle_x: float
+    subtitle_y: float
+    cards: list[ProjectBrowserRect]
+    selected_card: ProjectBrowserRect | None
+    footer_x: float
+    footer_y: float
+
+
+def compute_project_browser_menu_layout(
+    width: float,
+    height: float,
+    item_count: int,
+    selected_index: int,
+) -> ProjectBrowserLayout:
+    panel_width = min(720.0, max(420.0, float(width) - 96.0))
+    panel_height = min(520.0, max(360.0, float(height) - 112.0))
+    left = (float(width) - panel_width) / 2.0
+    bottom = (float(height) - panel_height) / 2.0
+    panel = ProjectBrowserRect(left=left, right=left + panel_width, bottom=bottom, top=bottom + panel_height)
+
+    card_left = panel.left + 34.0
+    card_width = panel.width - 68.0
+    row_height = 52.0
+    gap = 10.0
+    cards: list[ProjectBrowserRect] = []
+    for index in range(max(0, int(item_count))):
+        row_top = panel.top - 120.0 - index * (row_height + gap)
+        cards.append(
+            ProjectBrowserRect(
+                left=card_left,
+                right=card_left + card_width,
+                bottom=row_top - row_height,
+                top=row_top,
+            )
+        )
+
+    selected_card = cards[selected_index] if 0 <= selected_index < len(cards) else None
+    return ProjectBrowserLayout(
+        panel=panel,
+        title_x=panel.center_x,
+        title_y=panel.top - 34.0,
+        subtitle_x=panel.center_x,
+        subtitle_y=panel.top - 68.0,
+        cards=cards,
+        selected_card=selected_card,
+        footer_x=panel.center_x,
+        footer_y=panel.bottom + 28.0,
+    )
 
 
 def _is_web_runtime() -> bool:
@@ -615,6 +695,147 @@ class MainMenuOverlay(UIElement):
             text_y -= line_height
         self._cache_valid = True
 
+    def _draw_menu_text(
+        self,
+        text: str,
+        x: float,
+        y: float,
+        *,
+        color: tuple[int, int, int, int],
+        font_size: float,
+        anchor_x: str = "left",
+        anchor_y: str = "top",
+        bold: bool = False,
+    ) -> None:
+        optional_arcade.arcade.Text(
+            text=text,
+            x=x,
+            y=y,
+            color=color,
+            font_size=font_size,
+            font_name=("Calibri", "Arial"),
+            anchor_x=anchor_x,
+            anchor_y=anchor_y,
+            bold=bold,
+        ).draw()
+
+    def _draw_project_browser(self) -> None:
+        project_items = self._project_items()
+        layout = compute_project_browser_menu_layout(
+            self.window.width,
+            self.window.height,
+            len(project_items),
+            self._project_index,
+        )
+        panel = layout.panel
+
+        gradient_colors = [
+            (22, 28, 36, 245),
+            (20, 25, 33, 245),
+            (18, 22, 29, 245),
+            (15, 19, 25, 245),
+            (12, 16, 22, 245),
+        ]
+        band_height = panel.height / len(gradient_colors)
+        for index, color in enumerate(gradient_colors):
+            top = panel.top - index * band_height
+            bottom = panel.top - (index + 1) * band_height
+            _draw_rectangle_filled(
+                center_x=panel.center_x,
+                center_y=(top + bottom) / 2.0,
+                width=panel.width,
+                height=band_height + 1.0,
+                color=color,
+            )
+        _draw_tb_rectangle_outline(panel.left, panel.right, panel.top, panel.bottom, (72, 180, 205, 220), 2)
+        _draw_tb_rectangle_outline(
+            panel.left + 6.0,
+            panel.right - 6.0,
+            panel.top - 6.0,
+            panel.bottom + 6.0,
+            (120, 220, 210, 90),
+            1,
+        )
+
+        self._draw_menu_text(
+            "MESH",
+            layout.title_x,
+            layout.title_y,
+            color=(232, 248, 246, 255),
+            font_size=34,
+            anchor_x="center",
+            bold=True,
+        )
+        self._draw_menu_text(
+            "Project Browser",
+            layout.subtitle_x,
+            layout.subtitle_y,
+            color=(142, 178, 190, 255),
+            font_size=15,
+            anchor_x="center",
+        )
+
+        selected_index = self._project_index if 0 <= self._project_index < len(project_items) else -1
+        for index, (item, card) in enumerate(zip(project_items, layout.cards)):
+            selected = index == selected_index
+            bg = (35, 58, 70, 245) if selected else (24, 32, 42, 230)
+            border = (108, 224, 210, 255) if selected else (80, 110, 125, 150)
+            _draw_rectangle_filled(
+                center_x=card.center_x,
+                center_y=card.center_y,
+                width=card.width,
+                height=card.height,
+                color=bg,
+            )
+            if selected:
+                _draw_rectangle_filled(
+                    center_x=card.left + 2.5,
+                    center_y=card.center_y,
+                    width=5.0,
+                    height=card.height,
+                    color=(116, 241, 218, 255),
+                )
+            _draw_tb_rectangle_outline(card.left, card.right, card.top, card.bottom, border, 2 if selected else 1)
+
+            text_left = card.left + 18.0
+            self._draw_menu_text(
+                str(item.get("label", "")),
+                text_left,
+                card.top - 12.0,
+                color=(232, 242, 244, 255),
+                font_size=16,
+                bold=selected,
+            )
+            root = str(item.get("root", "") or "")
+            if root:
+                self._draw_menu_text(
+                    root,
+                    text_left,
+                    card.top - 32.0,
+                    color=(150, 164, 174, 230),
+                    font_size=11,
+                )
+
+        _draw_rectangle_filled(
+            center_x=panel.center_x,
+            center_y=layout.footer_y,
+            width=panel.width - 68.0,
+            height=24.0,
+            color=(255, 255, 255, 18),
+        )
+        input_source = "keyboard_mouse"
+        manager = getattr(getattr(self.window, "input_controller", None), "manager", None)
+        if manager is not None:
+            input_source = str(getattr(manager, "input_source", input_source))
+        self._draw_menu_text(
+            get_menu_legend(input_source),
+            layout.footer_x,
+            layout.footer_y + 7.0,
+            color=(166, 187, 196, 230),
+            font_size=12,
+            anchor_x="center",
+        )
+
     def draw(self) -> None:
         if not self.visible:
             return
@@ -631,8 +852,12 @@ class MainMenuOverlay(UIElement):
             center_y=self.window.height / 2,
             width=self.window.width,
             height=self.window.height,
-            color=(0, 0, 0, 150),
+            color=(8, 10, 14, 255),
         )
+        if self.state == "project_browser":
+            self._draw_project_browser()
+            return
+
         _draw_rectangle_filled(
             center_x=(left + right) / 2.0,
             center_y=(top + bottom) / 2.0,
