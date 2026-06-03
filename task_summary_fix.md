@@ -1,3 +1,5 @@
+> **Note:** This document is a historical record and reflects the project state at the time it was written.
+
 I have fixed the misaligned menu text in `MainMenuOverlay.draw()` by implementing a robust per-line rendering loop as requested in Option B.
 
 **Changes:**
