@@ -87,6 +87,22 @@ def test_valid_config_values_are_applied(
     assert "[Mesh][Config] ERROR: Invalid config key" not in capsys.readouterr().out
 
 
+def test_auto_open_quest_log_defaults_false_and_schema_accepts_field(tmp_path: Path) -> None:
+    absent_path = tmp_path / "absent.json"
+    absent_path.write_text("{}", encoding="utf-8")
+
+    absent = config.load_config(str(absent_path))
+
+    assert absent.auto_open_quest_log is False
+
+    present_path = tmp_path / "present.json"
+    present_path.write_text(json.dumps({"auto_open_quest_log": True}) + "\n", encoding="utf-8")
+
+    present = config.load_config(str(present_path))
+
+    assert present.auto_open_quest_log is True
+
+
 def test_multiple_invalid_config_values_default_and_emit_one_diagnostic_each(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

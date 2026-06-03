@@ -48,6 +48,7 @@ class EngineConfig:
     debug_mode: bool = False
     debug_page: int = 0
     tour_completed: bool = False
+    auto_open_quest_log: bool = False
 
     # Scene transition FX
     scene_fade_enabled: bool = False

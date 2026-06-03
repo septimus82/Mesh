@@ -1,3 +1,5 @@
+import pytest
+
 from engine.ui import maybe_auto_open_quest_log
 
 
@@ -14,6 +16,7 @@ class StubWindow:
         self._flags: dict[str, bool] = {}
         self._visible = False
         self.toggle_calls = 0
+        self.engine_config = type("EngineConfig", (), {"auto_open_quest_log": False})()
 
     def get_flag(self, name: str, default: bool = False) -> bool:
         return bool(self._flags.get(str(name), default))
@@ -37,6 +40,7 @@ class StubWindow:
 
 def test_auto_open_triggers_once_on_first_active_quest() -> None:
     window = StubWindow()
+    window.engine_config.auto_open_quest_log = True
     qm = StubQuestManager([{"id": "q1", "status": "inactive"}])
 
     assert maybe_auto_open_quest_log(window, qm) is False
@@ -53,8 +57,20 @@ def test_auto_open_triggers_once_on_first_active_quest() -> None:
     assert window.toggle_calls == 1
 
 
+@pytest.mark.fast
+def test_auto_open_default_off_does_not_open_active_quest() -> None:
+    window = StubWindow()
+    qm = StubQuestManager([{"id": "q1", "status": "active"}])
+
+    assert maybe_auto_open_quest_log(window, qm) is False
+    assert window.toggle_calls == 0
+    assert window.is_quest_log_visible() is False
+    assert window.get_flag("auto_opened_quest_log") is False
+
+
 def test_auto_open_does_nothing_when_log_already_open() -> None:
     window = StubWindow()
+    window.engine_config.auto_open_quest_log = True
     window._visible = True
     qm = StubQuestManager([{"id": "q1", "status": "active"}])
 
@@ -65,9 +81,9 @@ def test_auto_open_does_nothing_when_log_already_open() -> None:
 
 def test_auto_open_does_nothing_when_flag_already_set() -> None:
     window = StubWindow()
+    window.engine_config.auto_open_quest_log = True
     window.set_flag("auto_opened_quest_log", True)
     qm = StubQuestManager([{"id": "q1", "status": "active"}])
 
     assert maybe_auto_open_quest_log(window, qm) is False
     assert window.toggle_calls == 0
-
