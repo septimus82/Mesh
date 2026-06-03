@@ -132,6 +132,9 @@ def on_draw(window: "GameWindow") -> None:
     if render_queue is not None:
         render_queue.begin_frame()
 
+    main_menu = getattr(window, "main_menu_overlay", None)
+    menu_visible = bool(getattr(main_menu, "visible", False))
+
     # Apply editor sprite ghosting (for alt-drag duplicate)
     ghost_snapshots, ghost_sprites = _apply_editor_sprite_ghosting(window)
 
@@ -139,15 +142,16 @@ def on_draw(window: "GameWindow") -> None:
         lighting = getattr(window, "lighting", None)
         if lighting is not None and lighting.enabled:
             with lighting.begin():
-                window.scene_controller.draw()
-                window.particle_manager.draw()
-                window.editor_controller.draw_world()
+                if not menu_visible:
+                    window.scene_controller.draw()
+                    window.particle_manager.draw()
+                    window.editor_controller.draw_world()
             # LightLayer draws/composites in screen space; ensure we are on the GUI camera
             # before calling lighting.end() so the lighting output isn't transformed by the
             # world camera projection.
             window.camera_controller.gui_camera.use()
             lighting.end()
-        else:
+        elif not menu_visible:
             window.scene_controller.draw()
             window.particle_manager.draw()
             window.editor_controller.draw_world()
@@ -156,7 +160,7 @@ def on_draw(window: "GameWindow") -> None:
         _restore_editor_sprite_ghosting(ghost_snapshots, ghost_sprites)
 
     fog_overlay = getattr(window, "fog_overlay", None)
-    if fog_overlay is not None:
+    if fog_overlay is not None and not menu_visible:
         window.camera.use()
         fog_overlay.draw_world()
         window.camera_controller.gui_camera.use()
