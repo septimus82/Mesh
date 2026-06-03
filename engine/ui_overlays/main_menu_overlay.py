@@ -627,6 +627,13 @@ class MainMenuOverlay(UIElement):
         top = bottom + height
 
         _draw_rectangle_filled(
+            center_x=self.window.width / 2,
+            center_y=self.window.height / 2,
+            width=self.window.width,
+            height=self.window.height,
+            color=(0, 0, 0, 150),
+        )
+        _draw_rectangle_filled(
             center_x=(left + right) / 2.0,
             center_y=(top + bottom) / 2.0,
             width=width,
