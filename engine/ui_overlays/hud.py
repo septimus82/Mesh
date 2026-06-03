@@ -1028,6 +1028,10 @@ def maybe_auto_open_quest_log(window: Any, quest_manager: Any = None) -> bool:
     Uses the same action dispatch path as pressing Q ("show_quests").
     Persists the shown state via the game state's flags when available.
     """
+    engine_config = getattr(window, "engine_config", None)
+    if not bool(getattr(engine_config, "auto_open_quest_log", False)):
+        return False
+
     flag_name = "auto_opened_quest_log"
     getter = getattr(window, "get_flag", None)
     if callable(getter) and getter(flag_name, False):
