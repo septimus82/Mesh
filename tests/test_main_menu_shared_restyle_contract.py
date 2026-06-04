@@ -58,6 +58,12 @@ def _card_fill_count(events: list[tuple[str, Any]]) -> int:
     return sum(1 for kind, value in events if kind == "fill" and value in card_colors)
 
 
+def test_shared_menu_title_subtitle_gap_has_breathing_room() -> None:
+    layout = compute_menu_panel_layout(1280, 720, item_count=3, selected_index=0)
+
+    assert layout.title_y - layout.subtitle_y >= 42.0
+
+
 def test_title_screen_draws_mesh_title_and_one_card_per_item() -> None:
     overlay = _overlay("main")
     with patch.object(
