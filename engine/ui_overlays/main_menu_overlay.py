@@ -908,6 +908,38 @@ class MainMenuOverlay(UIElement):
             footer="Enter/A: Toggle   Left/Right: Adjust   Esc/B: Back",
         )
 
+    def _draw_input_menu(self, *, subtitle: str, value: str, error: str, footer: str) -> None:
+        layout = compute_menu_panel_layout(self.window.width, self.window.height, 1, -1)
+        self._draw_menu_panel(layout)
+        self._draw_menu_title(layout, subtitle)
+
+        field = layout.cards[0]
+        _draw_rectangle_filled(
+            center_x=field.center_x,
+            center_y=field.center_y,
+            width=field.width,
+            height=field.height,
+            color=(24, 32, 42, 230),
+        )
+        _draw_tb_rectangle_outline(field.left, field.right, field.top, field.bottom, (80, 110, 125, 150), 1)
+        self._draw_menu_text(
+            f"{value}_",
+            field.left + 18.0,
+            field.center_y + 8.0,
+            color=(232, 242, 244, 255),
+            font_size=16,
+            anchor_y="center",
+        )
+        if error:
+            self._draw_menu_text(
+                str(error),
+                field.left + 18.0,
+                field.bottom - 18.0,
+                color=(255, 220, 120, 255),
+                font_size=12,
+            )
+        self._draw_menu_footer(layout, footer)
+
     def draw(self) -> None:
         if not self.visible:
             return
@@ -937,6 +969,30 @@ class MainMenuOverlay(UIElement):
             return
         if self.state == "settings":
             self._draw_settings_cards()
+            return
+        if self.state == "create_project_name":
+            self._draw_input_menu(
+                subtitle="Project Name",
+                value=self._create_name,
+                error="",
+                footer="[Enter] Next  [Esc] Cancel",
+            )
+            return
+        if self.state == "create_project_path":
+            self._draw_input_menu(
+                subtitle="Project Location",
+                value=self._create_path,
+                error=self._create_error,
+                footer="[Enter] Create  [Esc] Cancel",
+            )
+            return
+        if self.state == "open_project_path":
+            self._draw_input_menu(
+                subtitle="Open Project",
+                value=self._open_path,
+                error=self._open_error,
+                footer="[Enter] Open  [Esc] Cancel",
+            )
             return
 
         _draw_rectangle_filled(

@@ -137,6 +137,88 @@ def test_settings_draws_cards_with_values_and_selected_highlight() -> None:
     assert next(call for call in text_calls if call["text"] == "Fog")["bold"] is True
 
 
+def test_create_project_name_draws_framed_input_menu() -> None:
+    overlay = _overlay("create_project_name")
+    overlay._create_name = "Sky Forge"
+
+    events, text_calls = _capture_draw(overlay)
+
+    assert events[0] == ("fill", (8, 10, 14, 255))
+    assert ("text", "MESH") in events
+    assert ("text", "Project Name") in events
+    assert ("text", "Sky Forge_") in events
+    assert ("text", "[Enter] Next  [Esc] Cancel") in events
+    assert ("fill", (116, 241, 218, 255)) not in events
+    assert next(call for call in text_calls if call["text"] == "Sky Forge_")["anchor_x"] == "left"
+
+
+def test_create_project_path_draws_error_below_input() -> None:
+    overlay = _overlay("create_project_path")
+    overlay._create_path = "D:/Projects/Sky"
+    overlay._create_error = "Project already exists"
+
+    events, text_calls = _capture_draw(overlay)
+
+    assert ("text", "Project Location") in events
+    assert ("text", "D:/Projects/Sky_") in events
+    error_call = next(call for call in text_calls if call["text"] == "Project already exists")
+    input_call = next(call for call in text_calls if call["text"] == "D:/Projects/Sky_")
+    assert error_call["color"] == (255, 220, 120, 255)
+    assert error_call["y"] < input_call["y"]
+
+
+def test_open_project_path_draws_input_menu() -> None:
+    overlay = _overlay("open_project_path")
+    overlay._open_path = "D:/Games/Mesh"
+
+    events, _text_calls = _capture_draw(overlay)
+
+    assert ("text", "Open Project") in events
+    assert ("text", "D:/Games/Mesh_") in events
+    assert ("text", "[Enter] Open  [Esc] Cancel") in events
+
+
+def test_text_entry_get_lines_snapshots_stay_unchanged() -> None:
+    overlay = _overlay("create_project_name")
+    overlay._create_name = "Sky Forge"
+    assert overlay.get_lines() == [
+        "CREATE NEW PROJECT",
+        "",
+        "Enter Project Name:",
+        "> Sky Forge_",
+        "",
+        "[Enter] Next  [Esc] Cancel",
+    ]
+
+    overlay.state = "create_project_path"
+    overlay._create_path = "D:/Projects/Sky"
+    overlay._create_error = "Project already exists"
+    assert overlay.get_lines() == [
+        "CREATE NEW PROJECT",
+        "",
+        "Enter Project Path:",
+        "> D:/Projects/Sky_",
+        "",
+        "[Enter] Create  [Esc] Cancel",
+        "",
+        "Error: Project already exists",
+    ]
+
+    overlay.state = "open_project_path"
+    overlay._open_path = "D:/Games/Mesh"
+    overlay._open_error = "Invalid project directory (missing config.json or packs/)"
+    assert overlay.get_lines() == [
+        "OPEN EXISTING PROJECT",
+        "",
+        "Enter Project Path:",
+        "> D:/Games/Mesh_",
+        "",
+        "[Enter] Open  [Esc] Cancel",
+        "",
+        "Error: Invalid project directory (missing config.json or packs/)",
+    ]
+
+
 def test_shared_refactor_preserves_get_lines_and_project_browser_layout() -> None:
     overlay = _overlay("main")
     with patch.object(overlay, "_has_continue", return_value=False):
