@@ -19,6 +19,35 @@ if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
 
+_SETTINGS_PANEL_THEMES: dict[str, tuple[tuple[int, int, int, int], tuple[int, int, int, int]]] = {
+    "settings_audio": ((24, 32, 42, 230), (72, 180, 205, 190)),
+    "settings_input": ((24, 32, 42, 230), (72, 180, 205, 190)),
+    "settings_keybinds": ((24, 32, 42, 230), (72, 180, 205, 190)),
+}
+_SETTINGS_TEXT_COLOR = (232, 242, 244, 255)
+_SETTINGS_MUTED_TEXT_COLOR = (166, 187, 196, 230)
+_SETTINGS_SELECTED_TEXT_COLOR = (116, 241, 218, 255)
+_SETTINGS_CAPTURE_TEXT_COLOR = (255, 220, 120, 255)
+_SETTINGS_SLIDER_TRACK_COLOR = (42, 56, 66, 230)
+_SETTINGS_SLIDER_FILL_COLOR = (116, 241, 218, 230)
+_SETTINGS_SLIDER_KNOB_COLOR = (232, 248, 246, 255)
+_SETTINGS_SLIDER_DRAG_KNOB_COLOR = (255, 220, 120, 255)
+
+
+def _settings_panel_theme(style_token: str) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int]] | None:
+    return _SETTINGS_PANEL_THEMES.get(str(style_token or "").strip().lower())
+
+
+def _settings_text_color(text: str, *, is_toggle: bool = False) -> tuple[int, int, int, int]:
+    if "[press a key...]" in text:
+        return _SETTINGS_CAPTURE_TEXT_COLOR
+    if text.startswith(">"):
+        return _SETTINGS_SELECTED_TEXT_COLOR
+    if is_toggle:
+        return _SETTINGS_TEXT_COLOR
+    return _SETTINGS_MUTED_TEXT_COLOR if text.startswith(" ") else _SETTINGS_TEXT_COLOR
+
+
 def _draw_settings_cover(width: float, height: float) -> None:
     try:
         optional_arcade.arcade.draw_lrbt_rectangle_filled(0.0, float(width), 0.0, float(height), (8, 10, 14, 255))
@@ -735,24 +764,27 @@ class SettingsOverlay(UIElement):
                 if not isinstance(rect_obj, Rect):
                     continue
                 rect_typed = cast(Rect, rect_obj)  # Explicit cast for Pylance
+                panel_theme = _settings_panel_theme(str(payload.get("style_token", "")))
+                panel_bg, panel_border = panel_theme or ((24, 32, 42, 230), (72, 180, 205, 190))
                 _draw_rectangle_filled(
                     center_x=rect_typed.center_x,
                     center_y=rect_typed.center_y,
                     width=rect_typed.width,
                     height=rect_typed.height,
-                    color=(22, 24, 30, 180),
+                    color=panel_bg,
                 )
+                _draw_tb_rectangle_outline(rect_typed.left, rect_typed.right, rect_typed.top, rect_typed.bottom, panel_border, 1)
             elif kind in ("slider_track", "slider_fill", "slider_knob"):
                 rect_obj = payload.get("rect")
                 if not isinstance(rect_obj, Rect):
                     continue
                 rect_typed = cast(Rect, rect_obj)  # Explicit cast for Pylance
                 if kind == "slider_track":
-                    color = (70, 70, 80, 220)
+                    color = _SETTINGS_SLIDER_TRACK_COLOR
                 elif kind == "slider_fill":
-                    color = (120, 180, 255, 230)
+                    color = _SETTINGS_SLIDER_FILL_COLOR
                 else:
-                    color = (255, 220, 120, 230) if bool(payload.get("dragging", False)) else (220, 220, 230, 230)
+                    color = _SETTINGS_SLIDER_DRAG_KNOB_COLOR if bool(payload.get("dragging", False)) else _SETTINGS_SLIDER_KNOB_COLOR
                 _draw_rectangle_filled(
                     center_x=rect_typed.center_x,
                     center_y=rect_typed.center_y,
@@ -761,11 +793,12 @@ class SettingsOverlay(UIElement):
                     color=color,
                 )
             elif kind in ("text", "slider_label_text", "slider_value_text"):
+                text = str(payload.get("text") or "")
                 draw_text_cached(
-                    str(payload.get("text") or ""),
+                    text,
                     float(payload.get("x", 0.0)),
                     float(payload.get("y", 0.0)),
-                    color=optional_arcade.arcade.color.LIGHT_GRAY,
+                    color=_settings_text_color(text),
                     font_size=int(payload.get("font_size", 12)),
                     anchor_x=str(payload.get("anchor_x", "left")),
                     anchor_y=str(payload.get("anchor_y", "center")),
@@ -773,11 +806,12 @@ class SettingsOverlay(UIElement):
                     cache=self._text_cache,
                 )
             elif kind == "toggle_text":
+                text = str(payload.get("text") or "")
                 draw_text_cached(
-                    str(payload.get("text") or ""),
+                    text,
                     float(payload.get("x", 0.0)),
                     float(payload.get("y", 0.0)),
-                    color=optional_arcade.arcade.color.LIGHT_GRAY,
+                    color=_settings_text_color(text, is_toggle=True),
                     font_size=12,
                     anchor_x=str(payload.get("anchor_x", "left")),
                     anchor_y=str(payload.get("anchor_y", "center")),
