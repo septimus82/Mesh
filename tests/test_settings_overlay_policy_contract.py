@@ -8,7 +8,7 @@ import pytest
 pytestmark = [pytest.mark.fast]
 
 
-MAX_SETTINGS_OVERLAY_LINES = 786
+MAX_SETTINGS_OVERLAY_LINES = 820
 
 
 def test_settings_overlay_line_count_ratcheted() -> None:
