@@ -97,7 +97,7 @@ def compute_menu_panel_layout(
         title_x=panel.center_x,
         title_y=panel.top - 34.0,
         subtitle_x=panel.center_x,
-        subtitle_y=panel.top - 68.0,
+        subtitle_y=panel.top - 76.0,
         cards=cards,
         selected_card=selected_card,
         footer_x=panel.center_x,

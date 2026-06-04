@@ -95,6 +95,25 @@ def test_settings_overlay_draws_mesh_settings_title(
     assert "Settings" in texts
 
 
+def test_settings_overlay_title_subtitle_gap_has_breathing_room(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    overlay = _make_overlay(monkeypatch, tmp_path)
+    title_calls: dict[str, float] = {}
+    monkeypatch.setattr(overlay_module, "_draw_settings_cover", lambda *args, **kwargs: None)
+    monkeypatch.setattr(overlay_module, "_draw_rectangle_filled", lambda *args, **kwargs: None)
+    monkeypatch.setattr(overlay_module, "_draw_tb_rectangle_outline", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        overlay_module,
+        "draw_text_cached",
+        lambda text, _x, y, **_kwargs: title_calls.setdefault(str(text), float(y)),
+    )
+
+    overlay.draw()
+
+    assert title_calls["MESH"] - title_calls["Settings"] >= 42.0
+
+
 def test_settings_overlay_visual_title_does_not_render_diagnostic_rows(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -104,6 +123,31 @@ def test_settings_overlay_visual_title_does_not_render_diagnostic_rows(
 
     assert all(not text.startswith("Settings (") for text in texts)
     assert all(not text.startswith("path: ") for text in texts)
+
+
+def test_settings_overlay_keybind_rows_align_with_audio_labels(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    overlay = _make_overlay(monkeypatch, tmp_path)
+
+    keybind_layout = overlay._layout_keybinds_section()
+    audio_layout = overlay._layout_audio_section()
+    keybind_x_values = {
+        payload["x"]
+        for instruction in keybind_layout.instructions
+        if instruction.kind == "text"
+        for payload in [instruction.payload]
+        if str(payload.get("text", "")).lstrip().startswith("Keybind:")
+    }
+    audio_label_x = next(
+        payload["x"]
+        for instruction in audio_layout.instructions
+        if instruction.kind == "slider_label_text"
+        for payload in [instruction.payload]
+        if payload.get("text") == "Master Volume"
+    )
+
+    assert keybind_x_values == {audio_label_x}
 
 
 def test_settings_overlay_widget_panel_tokens_use_menu_palette(

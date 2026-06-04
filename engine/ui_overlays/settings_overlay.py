@@ -384,7 +384,16 @@ class SettingsOverlay(UIElement):
                 suffix = ": [press a key...]"
             prefix = ">" if idx == self._selection_index else " "
             rows.append(Label(text=f"{prefix} Keybind: {action}{suffix}", font_size=11, height=16.0, anchor_x="left"))
-        return self._layout_labeled_section(self._keybinds_panel, bounds, title="Keybinds", rows=rows)
+        layout = self._layout_labeled_section(self._keybinds_panel, bounds, title="Keybinds", rows=rows)
+        left_x = float(bounds.left + self._keybinds_panel.padding.left)
+        instructions: list[DrawInstruction] = []
+        for instruction in layout.instructions:
+            kind = str(instruction.kind or "")
+            payload = instruction.payload if isinstance(instruction.payload, dict) else {}
+            if kind == "text" and str(payload.get("anchor_x", "")) == "left":
+                instruction = DrawInstruction(kind=kind, payload={**payload, "x": left_x})
+            instructions.append(instruction)
+        return LayoutResult(rect=layout.rect, instructions=instructions, children=layout.children)
 
     def _layout_overview_section(self, rows: Sequence[str]) -> LayoutResult:
         panel_rect = self._panel_rect()
@@ -729,7 +738,7 @@ class SettingsOverlay(UIElement):
         draw_text_cached(
             "Settings",
             (left + right) / 2.0,
-            title_y - 34.0,
+            title_y - 42.0,
             color=(142, 178, 190, 255),
             font_size=15,
             anchor_x="center",
