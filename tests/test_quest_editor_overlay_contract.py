@@ -447,6 +447,67 @@ def test_quest_editor_overlay_edit_mode_stage_title_text_widgets_respect_selecte
     assert {"id", "title", "description", "type", "start_toast", "complete_toast"} <= set(overlay._widget_rows)
 
 
+def test_quest_editor_overlay_edit_mode_stage_add_action_row_hit_tests(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    quest_editor = _QuestEditorStub(edit_mode=True)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests", quest_editor))
+    overlay._model = _model(tmp_path)
+
+    overlay.draw()
+
+    assert "Add stage" in captured
+    add_row = dict(overlay._stage_action_hits)["stage.add"]
+    rect = add_row.last_rect
+    assert rect is not None
+    assert overlay.stage_action_at(rect.left + 1.0, rect.center_y) == "stage.add"
+    assert overlay.stage_action_at(rect.right + 100.0, rect.top + 100.0) is None
+
+
+def test_quest_editor_overlay_edit_mode_delete_stage_action_requires_selection(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    quest_editor = _QuestEditorStub(edit_mode=True)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests", quest_editor))
+    overlay._model = _model(tmp_path)
+
+    overlay.draw()
+
+    assert "Delete stage" in captured
+    assert [action for action, _row in overlay._stage_action_hits] == ["stage.add", "stage.delete"]
+
+    captured.clear()
+    overlay._model = _model(tmp_path, [{"id": "empty", "title": "Empty", "stages": []}])
+    overlay.draw()
+
+    assert "Add stage" in captured
+    assert "Delete stage" not in captured
+    assert [action for action, _row in overlay._stage_action_hits] == ["stage.add"]
+
+
+def test_quest_editor_overlay_stage_actions_do_not_pollute_stage_row_identity(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    quest_editor = _QuestEditorStub(edit_mode=True)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests", quest_editor))
+    overlay._model = _model(tmp_path)
+
+    overlay.draw()
+
+    assert [stage_id for stage_id, _row in overlay._stage_row_hits] == ["intro"]
+    assert [action for action, _row in overlay._stage_action_hits] == ["stage.add", "stage.delete"]
+    add_row = dict(overlay._stage_action_hits)["stage.add"]
+    rect = add_row.last_rect
+    assert rect is not None
+    assert overlay.stage_id_at(rect.left + 1.0, rect.center_y) is None
+
+
 def test_quest_editor_overlay_edit_mode_shows_optional_fields_when_missing(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

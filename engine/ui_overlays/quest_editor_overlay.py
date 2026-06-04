@@ -94,6 +94,7 @@ class QuestEditorOverlay(UIElement):
         self._load_error: str | None = None
         self._row_hits: list[tuple[int, object]] = []
         self._stage_row_hits: list[tuple[str, object]] = []
+        self._stage_action_hits: list[tuple[str, object]] = []
         self._selected_stage_id: str | None = None
         self._selected_quest_id_for_stage: str | None = None
         self._widget_rows: dict[str, object] = {}
@@ -160,6 +161,7 @@ class QuestEditorOverlay(UIElement):
         list_panel.add_header(PanelHeader("Quests", str(model.quest_count) if model is not None else "0"))
         self._row_hits = []
         self._stage_row_hits = []
+        self._stage_action_hits = []
 
         if model is None:
             list_panel.add_row(
@@ -313,6 +315,42 @@ class QuestEditorOverlay(UIElement):
                             padding_x=QUEST_EDITOR_ROW_PADDING_X,
                         )
                     )
+            if edit_mode:
+                self._stage_action_hits.append(
+                    (
+                        "stage.add",
+                        detail_panel.add_row(
+                            PanelRow(
+                                PanelField(
+                                    "Add stage",
+                                    "",
+                                    label_color=QUEST_EDITOR_BUTTON_COLOR,
+                                    value_color=QUEST_EDITOR_DIM_COLOR,
+                                ),
+                                height=QUEST_EDITOR_ROW_HEIGHT,
+                                padding_x=QUEST_EDITOR_ROW_PADDING_X,
+                            )
+                        ),
+                    )
+                )
+                if selected_stage is not None:
+                    self._stage_action_hits.append(
+                        (
+                            "stage.delete",
+                            detail_panel.add_row(
+                                PanelRow(
+                                    PanelField(
+                                        "Delete stage",
+                                        "",
+                                        label_color=QUEST_EDITOR_BUTTON_COLOR,
+                                        value_color=QUEST_EDITOR_DIM_COLOR,
+                                    ),
+                                    height=QUEST_EDITOR_ROW_HEIGHT,
+                                    padding_x=QUEST_EDITOR_ROW_PADDING_X,
+                                )
+                            ),
+                        )
+                    )
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,
@@ -336,6 +374,12 @@ class QuestEditorOverlay(UIElement):
         for stage_id, row in self._stage_row_hits:
             if row.hit_test(float(x), float(y)):
                 return stage_id
+        return None
+
+    def stage_action_at(self, x: float, y: float) -> str | None:
+        for action, row in self._stage_action_hits:
+            if row.hit_test(float(x), float(y)):
+                return action
         return None
 
     def set_selected_index(self, index: int) -> bool:
