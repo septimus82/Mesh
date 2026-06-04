@@ -7,6 +7,8 @@ from typing import Any
 from engine.editor.editor_database_form_controller import EditorDatabaseFormController, _get_path, _set_path
 
 _OPTIONAL_SCALAR_FIELDS = ("description", "type", "start_toast", "complete_toast")
+STAGE_ADD_ACTION = "stage.add"
+STAGE_DELETE_ACTION = "stage.delete"
 
 
 class EditorQuestEditorController(EditorDatabaseFormController):
@@ -54,6 +56,14 @@ class EditorQuestEditorController(EditorDatabaseFormController):
             if stage_id is not None:
                 overlay.set_selected_stage_id(stage_id)
                 return True
+        else:
+            overlay = self._get_overlay()
+            stage_action_picker = getattr(overlay, "stage_action_at", None) if overlay is not None else None
+            stage_action = stage_action_picker(float(x), float(y)) if callable(stage_action_picker) else None
+            if stage_action == STAGE_ADD_ACTION:
+                return self._add_stage()
+            if stage_action == STAGE_DELETE_ACTION:
+                return self._delete_stage()
         return self.handle_mouse_click(float(x), float(y))
 
     def _copy_record(self, record: dict[str, Any]) -> dict[str, Any]:
@@ -110,6 +120,48 @@ class EditorQuestEditorController(EditorDatabaseFormController):
             for field, placeholder in specs
         }
 
+    def _add_stage(self) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        self.sync_widgets_to_buffer()
+        stages = self.edit_buffer.get("stages")
+        if not isinstance(stages, list):
+            stages = []
+            self.edit_buffer["stages"] = stages
+        new_id = _next_stage_id(stages)
+        new_index = len(stages)
+        stages.append({"id": new_id, "title": "New stage", "text": ""})
+        overlay = self._get_overlay()
+        setter = getattr(overlay, "set_selected_stage_id", None) if overlay is not None else None
+        if callable(setter):
+            setter(new_id)
+        self._rebuild_text_inputs(new_index, self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(f"stages.{new_index}.title")
+        return True
+
+    def _delete_stage(self) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        stages = self.edit_buffer.get("stages")
+        if not isinstance(stages, list):
+            return False
+        stage_index = self._selected_stage_index(self.edit_buffer)
+        if stage_index is None or not 0 <= stage_index < len(stages):
+            return False
+        self.sync_widgets_to_buffer()
+        del stages[stage_index]
+        next_index = stage_index if stage_index < len(stages) else len(stages) - 1
+        next_stage_id = _stage_id_at(stages, next_index) if next_index >= 0 else None
+        overlay = self._get_overlay()
+        setter = getattr(overlay, "set_selected_stage_id", None) if overlay is not None else None
+        if callable(setter):
+            setter(next_stage_id)
+        self._rebuild_text_inputs(next_index if next_stage_id is not None else None, self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(None)
+        return True
+
     def _target_path(self) -> Path:
         from engine.editor.quest_editor_model import DEFAULT_QUESTS_FILE_PATH  # noqa: PLC0415
 
@@ -151,3 +203,29 @@ class EditorQuestEditorController(EditorDatabaseFormController):
             if isinstance(value, str) and value.strip() == "":
                 record.pop(field, None)
         return record
+
+
+def _next_stage_id(stages: list[Any]) -> str:
+    existing_ids = {
+        stage_id
+        for index, stage in enumerate(stages)
+        if (stage_id := _stage_id_for_collision(stage, index))
+    }
+    candidate_index = 1
+    while True:
+        candidate = f"stage_{candidate_index}"
+        if candidate not in existing_ids:
+            return candidate
+        candidate_index += 1
+
+
+def _stage_id_at(stages: list[Any], index: int) -> str | None:
+    if not 0 <= index < len(stages):
+        return None
+    return _stage_id_for_collision(stages[index], index)
+
+
+def _stage_id_for_collision(stage: Any, index: int) -> str | None:
+    if not isinstance(stage, dict):
+        return None
+    return str(stage.get("id") or "").strip() or f"stage_{index}"
