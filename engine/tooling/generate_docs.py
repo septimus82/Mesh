@@ -286,7 +286,7 @@ def _first_field_name(fields: Iterable[Any]) -> str | None:
 
 def _fetch_console_help_sections() -> list[tuple[str, list[tuple[str, str]]]]:
     # Import lazily to avoid circular imports with engine.game.
-    from ..console_controller import ConsoleController  # noqa: WPS433 (runtime import by design)
+    from ..console_controller import ConsoleController  # noqa: PLC0415 # REASON: lazy import avoids circular import with engine.game
 
     # We need an instance to get the help sections, but we can't easily create a GameWindow here.
     # However, ConsoleController.help_sections is an instance method but doesn't use self.

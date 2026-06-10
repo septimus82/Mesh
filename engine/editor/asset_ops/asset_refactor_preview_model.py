@@ -5,23 +5,8 @@ Provides deterministic grouping, sorting, and summary generation.
 from __future__ import annotations
 
 from typing import Dict, List, Tuple
-from collections import defaultdict
-from .asset_refactor_model import Replacement, PreviewSummary
 
-def group_replacements_by_file(repls: List[Replacement]) -> List[Tuple[str, int]]:
-    """
-    Group replacements by containing file path and count them.
-    Returns list of (file_path, count) sorted by file_path.
-    """
-    counts: Dict[str, int] = defaultdict(int)
-    # Note: Replacement object does not currently store the source file it was found in!
-    # The current editor_file_ops_controller stores 'modifications' which is Dict[str, List[Replacement]].
-    # So this function should probably take that Dict, not a flat List[Replacement].
-    # But if we must take List[Replacement], we need the source stored in Replacement.
-    # Looking at asset_refactor_model.py, Replacement has: entity_id, field_path, old_value, new_value.
-    # It does NOT have the file path.
-    # So we must change the signature to take the grouping dict.
-    return []
+from .asset_refactor_model import Replacement
 
 def group_modifications_by_file(modifications: Dict[str, List[Replacement]]) -> List[Tuple[str, int]]:
     """
