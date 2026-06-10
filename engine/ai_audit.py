@@ -165,7 +165,8 @@ def _audit_scene(scene_path: Path, index: ContentIndex, valid_quest_ids: Set[str
         if is_npc:
             audit.npc_count += 1
 
-            if dialogue and isinstance(dialogue, dict) and dialogue.get("id"):
+            has_dialogue = bool(dialogue and isinstance(dialogue, dict) and dialogue.get("id"))
+            if has_dialogue:
                 audit.npc_with_dialogue += 1
             else:
                 audit.npc_without_dialogue += 1
