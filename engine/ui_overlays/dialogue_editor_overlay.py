@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from engine.swallowed_exceptions import _log_swallow
 from engine.ui_overlays.common import UIElement
 from engine.ui_overlays.editor_database_form_helpers import (
     FormColors,
@@ -497,5 +498,6 @@ def _field_value(dialogue_editor: object, edit_buffer: dict[str, object], field_
         try:
             return getter(field_path)
         except Exception:  # noqa: BLE001  # REASON: overlay sync must fall back for lightweight editor stubs
+            _log_swallow("DLGE-001", "engine/ui_overlays/dialogue_editor_overlay.py pass-only blanket swallow")
             pass
     return edit_buffer.get(field_path)

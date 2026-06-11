@@ -1,5 +1,7 @@
+import json
 import logging
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -238,3 +240,96 @@ def test_cleanup_stale_pytest_fast_budget_artifacts_removes_only_budget_artifact
     assert not repo_diag_txt.exists()
     assert repo_keep.exists()
     assert not custom_budget.exists()
+
+
+def test_exception_policy_missing_reason_logging_does_not_fail_verify_step(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import mesh_cli
+    import mesh_cli.legacy_impl as mesh_cli_legacy
+    import engine.tooling.asset_doctor as asset_doctor
+    from engine.encounter_report import EncounterReport
+    from tooling import find_blanket_swallow, mypy_gate, mypy_island, scan_exception_policies
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "pyproject.toml").write_text("[project]\nname='x'\n", encoding="utf-8")
+    (repo / "replays").mkdir()
+    (repo / "replays" / "00_smoke.json").write_text("{}", encoding="utf-8")
+    tooling_dir = repo / "tooling"
+    tooling_dir.mkdir()
+    (tooling_dir / "mypy_baseline.txt").write_text("", encoding="utf-8")
+    (tooling_dir / "exception_policy_baseline.json").write_text(
+        json.dumps(
+            {
+                "ble001_count_total": 10,
+                "silent_broad_catch_count_total": 0,
+                "silent_broad_catch_max": 10,
+                "ble001_missing_reason_max": 10,
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(repo)
+    monkeypatch.setenv("MESH_SKIP_PYTEST_FAST", "1")
+
+    info_messages: list[str] = []
+    monkeypatch.setattr(
+        verify_pipeline,
+        "get_logger",
+        lambda _name: SimpleNamespace(info=lambda message: info_messages.append(str(message))),
+    )
+    monkeypatch.setattr(mypy_gate, "main", lambda _argv: 0)
+    monkeypatch.setattr(mypy_gate, "BASELINE_PATH", tooling_dir / "mypy_baseline.txt")
+    monkeypatch.setattr(mypy_island, "main", lambda _argv: 0)
+    monkeypatch.setattr(find_blanket_swallow, "main", lambda _argv: 0)
+    monkeypatch.setattr(
+        scan_exception_policies,
+        "scan",
+        lambda _roots, *, repo_root: {
+            "ble001_count_total": 1,
+            "silent_broad_catch_count_total": 0,
+            "missing_ble001_reason_total": 1,
+            "missing_ble001_reason_sites_first": ["engine/example.py:12"],
+        },
+    )
+    monkeypatch.setattr(mesh_cli_legacy, "load_config", lambda: SimpleNamespace(world_file="worlds/main_world.json"))
+    monkeypatch.setattr(mesh_cli.verify_demo, "run_verify_demo", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(
+        mesh_cli.replay_suite,
+        "run_replay_suite",
+        lambda _folder: {"failed": 0, "passed": 1, "total": 1, "results": []},
+    )
+    monkeypatch.setattr(mesh_cli.validate_all, "main", lambda _argv: 0)
+    monkeypatch.setattr(
+        asset_doctor,
+        "doctor_assets",
+        lambda **_kwargs: {"ok": True, "errors": [], "warnings": [], "fixes": []},
+    )
+    monkeypatch.setattr(mesh_cli_legacy, "_resolve_scene_paths", lambda _path: ["scenes/x.json"])
+    monkeypatch.setattr(mesh_cli_legacy, "generate_encounter_report", lambda **_kwargs: EncounterReport())
+    monkeypatch.setattr(
+        mesh_cli_legacy,
+        "_inventory_list_scenes",
+        lambda: {"ok": True, "scenes": [], "summary": {"scene_count": 0, "issues_count": 0}},
+    )
+    monkeypatch.setattr(
+        mesh_cli_legacy,
+        "_inventory_list_worlds",
+        lambda: {"ok": True, "worlds": [], "summary": {"world_count": 0, "issues_count": 0}},
+    )
+
+    code = mesh_cli.main(["verify-all"])
+    payload = json.loads(capsys.readouterr().out)
+    step = next(item for item in payload["steps"] if item["name"] == "exception-policy-scan")
+
+    assert code == 0
+    assert step["ok"] is True
+    assert step["code"] == 0
+    assert step["error"] == ""
+    assert info_messages == [
+        "[exception-policy-scan] missing_ble001_reason_total=1 "
+        "missing_ble001_reason_sites_first[5]=engine/example.py:12"
+    ]

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 import importlib.util
-from engine.swallowed_exceptions import _log_swallow
+from engine.log_utils import get_logger; from engine.swallowed_exceptions import _log_swallow
 from pathlib import Path
 import time
 from typing import Any, Callable, cast
@@ -680,7 +680,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                                     f"BLE001 missing REASON annotations ({cur_ble001_missing_reason}) exceed max ({baseline_missing_reason_max})"
                                 )
                             if cur_ble001_missing_reason > 0:
-                                logger.info(scan_exception_policies._format_missing_ble001_reason_log(ep_result, limit=5))
+                                get_logger(__name__).info(scan_exception_policies._format_missing_ble001_reason_log(ep_result, limit=5))
                             if violations:
                                 code = 1
                                 error = "; ".join(violations)
