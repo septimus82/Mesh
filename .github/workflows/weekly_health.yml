@@ -46,6 +46,8 @@ jobs:
           python -m pytest -q -W error
 
       - name: Verify-all + CI bundle
+        env:
+          MESH_VERIFY_BUDGET_ENFORCE: "1"
         run: |
           python -m mesh_cli verify-all --artifacts artifacts --ci-bundle
 

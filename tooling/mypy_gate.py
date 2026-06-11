@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import copy
 import re
 import subprocess
@@ -11,6 +12,10 @@ from pathlib import Path
 
 BASELINE_PATH = Path(__file__).resolve().parent / "mypy_baseline.txt"
 _LAST_RUN_DIAGNOSTICS: dict[str, object] | None = None
+_MYPY_ERROR_RE = re.compile(
+    r"^(?P<path>.+?):(?P<line>\d+): error: (?P<message>.*?)(?P<code>\s+\[[^\]]+\])$"
+)
+_MYPY_EMBEDDED_LINE_RE = re.compile(r"\bon line \d+\b")
 
 
 def _repo_root() -> Path:
@@ -74,8 +79,17 @@ def _normalize_lines(raw: str, repo_root: Path) -> list[str]:
         line = line.replace("\\", "/")
         if line.startswith("/"):
             line = line[1:]
+        line = _normalize_mypy_error_line(line)
         lines.append(line)
     return lines
+
+
+def _normalize_mypy_error_line(line: str) -> str:
+    match = _MYPY_ERROR_RE.match(line)
+    if not match:
+        return line
+    message = _MYPY_EMBEDDED_LINE_RE.sub("on line <line>", match.group("message"))
+    return f"{match.group('path')}: error: {message}{match.group('code')}"
 
 
 def _run_mypy(repo_root: Path) -> tuple[int, list[str], dict[str, object]]:
@@ -108,7 +122,12 @@ def _read_baseline() -> list[str]:
     if not BASELINE_PATH.exists():
         return []
     raw = BASELINE_PATH.read_text(encoding="utf-8")
-    return [line.strip() for line in raw.splitlines() if line.strip()]
+    lines: list[str] = []
+    for entry in raw.splitlines():
+        line = entry.strip().replace("\\", "/")
+        if line:
+            lines.append(_normalize_mypy_error_line(line))
+    return lines
 
 
 def _write_baseline(lines: list[str]) -> None:
@@ -141,9 +160,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     baseline_lines = _read_baseline()
-    baseline_set = set(baseline_lines)
-    current_set = set(current_lines)
-    new_errors = sorted(current_set - baseline_set)
+    baseline_counts = Counter(baseline_lines)
+    current_counts = Counter(current_lines)
+    new_errors: list[str] = []
+    for line in sorted(current_counts):
+        current_count = current_counts[line]
+        baseline_count = baseline_counts.get(line, 0)
+        if current_count > baseline_count:
+            extra_count = current_count - baseline_count
+            new_errors.extend([line] * extra_count)
 
     if new_errors:
         print("[mypy-gate] new mypy errors detected:")

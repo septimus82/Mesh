@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import json
 import importlib.util
-from engine.log_utils import get_logger; from engine.swallowed_exceptions import _log_swallow
+from engine.log_utils import get_logger
+from engine.swallowed_exceptions import _log_swallow
 from pathlib import Path
 import time
 from typing import Any, Callable, cast
@@ -17,7 +18,6 @@ _VERIFY_WEB_GATE_EXCEPTIONS: tuple[type[Exception], ...] = (
     TypeError,
     ValueError,
 )
-
 
 def _normalize_diag_path(value: str | Path) -> str:
     return str(value).replace("\\", "/")

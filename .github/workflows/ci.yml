@@ -161,7 +161,6 @@ jobs:
         run: |
           python -m pip install -U pip
           python -m pip install -e ".[dev]"
-          python -m pip install pygbag
 
       - name: Build web target
         run: |
@@ -257,11 +256,15 @@ jobs:
 
       - name: Run verify-all (Windows)
         if: runner.os == 'Windows'
+        env:
+          MESH_VERIFY_BUDGET_ENFORCE: "1"
         run: |
           python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact
 
       - name: Run verify-all (Linux)
         if: runner.os != 'Windows'
+        env:
+          MESH_VERIFY_BUDGET_ENFORCE: "1"
         run: |
           xvfb-run -a python -m mesh_cli verify-all --artifacts artifacts --ci-bundle --release-notes-artifact
 

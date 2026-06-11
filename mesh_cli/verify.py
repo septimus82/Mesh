@@ -52,6 +52,7 @@ _VERIFY_LOCAL_STEP_EXCEPTIONS: tuple[type[Exception], ...] = (
 _VERIFY_STEP_BUDGET_RATIO_LIMIT_OVERRIDES: dict[str, float] = {
     "mypy-gate": 1.35,
 }
+_VERIFY_STEP_BUDGET_ENFORCE_ENV = "MESH_VERIFY_BUDGET_ENFORCE"
 
 
 def _verify_all_invalid_args() -> int:
@@ -63,6 +64,26 @@ def _verify_all_invalid_args() -> int:
     payload = {"ok": False, "steps": [], "artifacts": {"dir": None, "written": {}}}
     sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
     return 2
+
+
+def _verify_step_budget_enforced() -> bool:
+    return os.getenv(_VERIFY_STEP_BUDGET_ENFORCE_ENV, "0") == "1"
+
+
+def _apply_verify_step_budget_exit_state(
+    *,
+    overall_ok: bool,
+    exit_code: int,
+    budget_code: int,
+) -> tuple[bool, int]:
+    if int(budget_code) == 0:
+        return bool(overall_ok), int(exit_code)
+    if not _verify_step_budget_enforced():
+        return bool(overall_ok), int(exit_code)
+    next_exit_code = int(exit_code)
+    if next_exit_code == 0:
+        next_exit_code = 2 if int(budget_code) == 2 else 1
+    return False, next_exit_code
 
 
 def _artifact_base_dir(repo_root, dir_arg: str):
@@ -2048,9 +2069,11 @@ def _build_verify_all_payload(args: argparse.Namespace):
                 trailing_newline=True,
             )
         if budget_code != 0:
-            overall_ok = False
-            if exit_code == 0:
-                exit_code = 2 if budget_code == 2 else 1
+            overall_ok, exit_code = _apply_verify_step_budget_exit_state(
+                overall_ok=overall_ok,
+                exit_code=exit_code,
+                budget_code=budget_code,
+            )
             if budget_error:
                 print(f"[Mesh][Verify] {budget_error}", file=sys.stderr)
             if _is_mypy_budget_offender(verify_step_budget_payload):

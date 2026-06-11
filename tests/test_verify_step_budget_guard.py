@@ -213,6 +213,83 @@ def test_verify_step_budget_guard_fails_when_exceeding_hybrid_threshold(tmp_path
     assert payload["ok"] is False
 
 
+def test_verify_step_budget_local_mode_warns_without_exit_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    step_durations_payload = _durations_payload({"step_a": 131})
+    baseline_path = tmp_path / "verify_step_budget.json"
+    _write_json(
+        baseline_path,
+        {
+            "schema_version": 2,
+            "budgets_ms": {"step_a": 100},
+            "ratio_limits": {"step_a": 1.10},
+            "tolerance_ms": 20,
+        },
+    )
+    monkeypatch.delenv("MESH_VERIFY_BUDGET_ENFORCE", raising=False)
+
+    code, error, payload = verify_mod._evaluate_verify_step_budget_guard(
+        step_durations_payload=step_durations_payload,
+        baseline_path=baseline_path,
+        update_command="python -c \"noop\"",
+        artifacts_dir=artifacts_dir,
+    )
+    overall_ok, exit_code = verify_mod._apply_verify_step_budget_exit_state(
+        overall_ok=True,
+        exit_code=0,
+        budget_code=code,
+    )
+
+    assert code == 2
+    assert "verify slow-step budget exceeded" in error
+    assert payload["ok"] is False
+    assert payload["offenders"]
+    assert overall_ok is True
+    assert exit_code == 0
+
+
+def test_verify_step_budget_enforce_mode_is_fatal(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    step_durations_payload = _durations_payload({"step_a": 131})
+    baseline_path = tmp_path / "verify_step_budget.json"
+    _write_json(
+        baseline_path,
+        {
+            "schema_version": 2,
+            "budgets_ms": {"step_a": 100},
+            "ratio_limits": {"step_a": 1.10},
+            "tolerance_ms": 20,
+        },
+    )
+    monkeypatch.setenv("MESH_VERIFY_BUDGET_ENFORCE", "1")
+
+    code, _error, payload = verify_mod._evaluate_verify_step_budget_guard(
+        step_durations_payload=step_durations_payload,
+        baseline_path=baseline_path,
+        update_command="python -c \"noop\"",
+        artifacts_dir=artifacts_dir,
+    )
+    overall_ok, exit_code = verify_mod._apply_verify_step_budget_exit_state(
+        overall_ok=True,
+        exit_code=0,
+        budget_code=code,
+    )
+
+    assert code == 2
+    assert payload["ok"] is False
+    assert payload["offenders"]
+    assert overall_ok is False
+    assert exit_code == 2
+
+
 def test_verify_step_budget_guard_history_opt_out_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     artifacts_dir = tmp_path / "artifacts"
     _write_duration(artifacts_dir / "run_a" / "verify_step_durations.json", {"step_x": 200}, mtime=100)
