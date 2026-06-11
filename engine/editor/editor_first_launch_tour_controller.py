@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from engine.swallowed_exceptions import _log_swallow
+
 if TYPE_CHECKING:
     pass
 
@@ -140,6 +142,7 @@ class EditorTourController:
                 from engine.config import save_config  # noqa: PLC0415
                 save_config(config, config_path)
         except Exception:  # noqa: BLE001  # REASON: persistence failure must not crash the editor
+            _log_swallow("TOUR-001", "engine/editor/editor_first_launch_tour_controller.py pass-only blanket swallow")
             pass
 
     def _get_config(self) -> Any:

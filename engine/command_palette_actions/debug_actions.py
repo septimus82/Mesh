@@ -76,8 +76,7 @@ def action_palette_clear_recent(w: Any, _arg: str | None) -> None:
     except Exception:
         _log_swallow(
             "CPRA-005",
-            "engine.command_palette_registry_actions_impl.action_palette_clear_recent",
-            "import_clear_command_palette_recent_commands",
+            "engine.command_palette_registry_actions_impl.action_palette_clear_recent: import_clear_command_palette_recent_commands",
         )
         return
     removed = int(clear_command_palette_recent_commands(w))
@@ -94,8 +93,7 @@ def action_palette_reset_ui_layout(w: Any, _arg: str | None) -> None:
     except Exception:
         _log_swallow(
             "CPRA-006",
-            "engine.command_palette_registry_actions_impl.action_palette_reset_ui_layout",
-            "import_editor_ui_state",
+            "engine.command_palette_registry_actions_impl.action_palette_reset_ui_layout: import_editor_ui_state",
         )
         return
     editor = getattr(w, "editor_controller", None)
@@ -122,8 +120,7 @@ def action_macro_objective_zone(w: Any, arg: str | None) -> None:
     except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
         _log_swallow(
             "CPRA-009",
-            "engine.command_palette_registry_actions_impl.action_macro_objective_zone",
-            "parse_json_args",
+            "engine.command_palette_registry_actions_impl.action_macro_objective_zone: parse_json_args",
         )
         data = {}
     if not isinstance(data, dict):
@@ -150,8 +147,7 @@ def action_macro_objective_zone(w: Any, arg: str | None) -> None:
         except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
             _log_swallow(
                 "CPRA-010",
-                "engine.command_palette_registry_actions_impl.action_macro_objective_zone",
-                "parse_toast_seconds",
+                "engine.command_palette_registry_actions_impl.action_macro_objective_zone: parse_toast_seconds",
             )
             toast_seconds = None
     try:
@@ -159,8 +155,7 @@ def action_macro_objective_zone(w: Any, arg: str | None) -> None:
     except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
         _log_swallow(
             "CPRA-011",
-            "engine.command_palette_registry_actions_impl.action_macro_objective_zone",
-            "parse_radius",
+            "engine.command_palette_registry_actions_impl.action_macro_objective_zone: parse_radius",
         )
         print("AUTHOR_MACRO noop reason=bad_args")
         return
@@ -232,8 +227,7 @@ def action_macro_door_transition(w: Any, arg: str | None) -> None:
     except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
         _log_swallow(
             "CPRA-012",
-            "engine.command_palette_registry_actions_impl.action_macro_door_transition",
-            "parse_json_args",
+            "engine.command_palette_registry_actions_impl.action_macro_door_transition: parse_json_args",
         )
         data = {}
     if not isinstance(data, dict):
@@ -297,8 +291,7 @@ def action_macro_dialogue_choice_flag(w: Any, arg: str | None) -> None:
     except Exception:  # noqa: BLE001  # REASON: runtime fallback isolation
         _log_swallow(
             "CPRA-013",
-            "engine.command_palette_registry_actions_impl.action_macro_dialogue_choice_flag",
-            "parse_json_args",
+            "engine.command_palette_registry_actions_impl.action_macro_dialogue_choice_flag: parse_json_args",
         )
         data = {}
     if not isinstance(data, dict):

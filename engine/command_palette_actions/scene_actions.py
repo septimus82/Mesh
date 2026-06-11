@@ -75,8 +75,7 @@ def action_planes_move_to(w: Any, arg: str | None) -> None:
     except Exception:
         _log_swallow(
             "CPRA-007",
-            "engine.command_palette_registry_actions_impl.action_planes_move_to",
-            "set_command_palette_planes_move_to_index",
+            "engine.command_palette_registry_actions_impl.action_planes_move_to: set_command_palette_planes_move_to_index",
         )
         return
     try:
@@ -87,8 +86,7 @@ def action_planes_move_to(w: Any, arg: str | None) -> None:
         except Exception:
             _log_swallow(
                 "CPRA-008",
-                "engine.command_palette_registry_actions_impl.action_planes_move_to",
-                "clear_command_palette_planes_move_to_index",
+                "engine.command_palette_registry_actions_impl.action_planes_move_to: clear_command_palette_planes_move_to_index",
             )
 
 

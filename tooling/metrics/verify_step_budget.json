@@ -1,13 +1,13 @@
 {
   "budgets_ms": {
-    "mypy-gate": 24723,
-    "player-package-gate": 2723,
-    "pytest-fast": 42032,
-    "verify-demo": 30979,
-    "web-smoke": 10901
+    "exception-policy-scan": 2268,
+    "player-package-gate": 2512,
+    "pytest-fast": 43203,
+    "verify-demo": 21789,
+    "web-smoke": 10071
   },
   "ratio_limits": {
-    "mypy-gate": 1.35,
+    "exception-policy-scan": 1.25,
     "player-package-gate": 1.25,
     "pytest-fast": 1.25,
     "verify-demo": 1.25,
