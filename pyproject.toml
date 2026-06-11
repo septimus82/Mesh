@@ -19,7 +19,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff",
-    "mypy",
+    "mypy==1.19.1",
+    "pygbag==0.9.3",
     "pytest>=8.0",
 ]
 
