@@ -16,6 +16,7 @@ STEP_ORDER: tuple[str, ...] = (
     "verify-strict",
     "mypy-gate",
     "mypy-baseline-guard",
+    "ruff-gate",
     "mypy-island",
     "exception-budget-guard",
     "swallow-scan-gate",

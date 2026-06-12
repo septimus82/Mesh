@@ -250,7 +250,7 @@ def test_exception_policy_missing_reason_logging_does_not_fail_verify_step(
     import mesh_cli
     import mesh_cli.legacy_impl as mesh_cli_legacy
     from engine.encounter_report import EncounterReport
-    from tooling import find_blanket_swallow, mypy_gate, mypy_island, scan_exception_policies
+    from tooling import find_blanket_swallow, mypy_gate, mypy_island, ruff_gate, scan_exception_policies
 
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -283,6 +283,7 @@ def test_exception_policy_missing_reason_logging_does_not_fail_verify_step(
     monkeypatch.setattr(mypy_gate, "main", lambda _argv: 0)
     monkeypatch.setattr(mypy_gate, "BASELINE_PATH", tooling_dir / "mypy_baseline.txt")
     monkeypatch.setattr(mypy_island, "main", lambda _argv: 0)
+    monkeypatch.setattr(ruff_gate, "main", lambda _argv: 0)
     monkeypatch.setattr(find_blanket_swallow, "main", lambda _argv: 0)
     monkeypatch.setattr(
         scan_exception_policies,

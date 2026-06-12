@@ -475,7 +475,33 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                 failure_seen = True
                 exit_code = 1 if code != 2 else 2
 
-        # Step 6: mypy-island (strict typing on curated stable subsystems)
+        # Step 6: ruff-gate (ratchet against new lint findings)
+        if failure_seen:
+            _skipped_step("ruff-gate")
+        else:
+            try:
+                from tooling import ruff_gate
+
+                with suppress_stdout():
+                    code = int(ruff_gate.main([]))
+                error = "" if code == 0 else f"failed with code {code}"
+            except ModuleNotFoundError as exc:
+                if str(getattr(exc, "name", "")).startswith("tooling"):
+                    code = 0
+                    error = "skipped: tooling package unavailable"
+                else:
+                    raise
+            except Exception as exc:  # noqa: BLE001  # REASON: ruff-gate step isolation
+                _log_swallow("VSTP-008", "ruff-gate step isolation fallback", once=False)
+                code = 1
+                error = f"{type(exc).__name__}: {exc}"
+
+            _add_step("ruff-gate", code, error=error, artifact=None)
+            if code != 0:
+                failure_seen = True
+                exit_code = 1 if code != 2 else 2
+
+        # Step 7: mypy-island (strict typing on curated stable subsystems)
         if failure_seen:
             _skipped_step("mypy-island")
         else:

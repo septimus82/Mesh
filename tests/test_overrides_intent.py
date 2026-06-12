@@ -1,3 +1,4 @@
+import fnmatch
 import shutil
 import tempfile
 import unittest
@@ -45,7 +46,6 @@ class TestOverridesIntent(unittest.TestCase):
         self.assertIn("core", entry.shadowed_pack_ids)
 
         # Check intent logic (simulated)
-        import fnmatch
         mod_pack = [p for p in index.packs if p.id == "mod"][0]
         declared = False
         for pattern in mod_pack.overrides:
