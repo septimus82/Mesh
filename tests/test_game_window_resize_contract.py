@@ -23,6 +23,7 @@ def _build_window(
     config: EngineConfig | None = None,
     resizable: bool | None = None,
     minimum_size: Any = _noop,
+    day_night_calls: list[dict[str, Any]] | None = None,
 ) -> tuple[GameWindow, dict[str, Any], list[tuple[int, int]]]:
     init_kwargs: dict[str, Any] = {}
     min_calls: list[tuple[int, int]] = []
@@ -54,10 +55,14 @@ def _build_window(
         "ParticleManager",
         "EditorModeController",
         "AIDebugOverlay",
-        "DayNightCycle",
         "ArcadeSpriteBatcher",
         "SpriteRenderQueue",
     )
+
+    def build_day_night(*_: Any, **kwargs: Any) -> SimpleNamespace:
+        if day_night_calls is not None:
+            day_night_calls.append(dict(kwargs))
+        return SimpleNamespace()
 
     with ExitStack() as stack:
         stack.enter_context(patch("arcade.Window.__init__", side_effect=mock_window_init, autospec=True))
@@ -83,6 +88,7 @@ def _build_window(
         stack.enter_context(patch("engine.asset_hot_reload_watcher.maybe_start_hot_reload_watcher", return_value=watcher))
         stack.enter_context(patch("engine.post_processing.PostProcessPipeline", return_value=SimpleNamespace()))
         stack.enter_context(patch("engine.plugin_system.PluginManager", return_value=SimpleNamespace(load_all=_noop, enable_all=_noop)))
+        stack.enter_context(patch("engine.game.DayNightCycle", side_effect=build_day_night))
         for class_name in simple_classes:
             stack.enter_context(patch(f"engine.game.{class_name}", return_value=SimpleNamespace()))
 
@@ -131,6 +137,23 @@ def test_game_window_explicit_resizable_false_beats_config_true() -> None:
 
     assert init_kwargs["resizable"] is False
     assert window.engine_config.resizable is False
+
+
+def test_game_window_passes_canonical_day_night_config_to_cycle() -> None:
+    day_night_calls: list[dict[str, Any]] = []
+    config = EngineConfig(
+        day_night_enabled=True,
+        day_night_start_hour=7.5,
+        day_night_cycle_length_seconds=1200.0,
+    )
+
+    _build_window(config=config, day_night_calls=day_night_calls)
+
+    assert day_night_calls == [{
+        "enabled": True,
+        "start_hour": 7.5,
+        "cycle_length_seconds": 1200.0,
+    }]
 
 
 def test_game_window_sets_guarded_minimum_size_and_tolerates_missing_method() -> None:

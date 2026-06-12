@@ -79,8 +79,6 @@ class EngineConfig:
     day_night_enabled: bool = False
     day_night_start_hour: float = 21.0
     day_night_cycle_length_seconds: float = 600.0
-    day_length_seconds: float = 600.0
-    day_start_hour: float = 21.0
     input_bindings: dict[str, list[str]] = field(default_factory=dict)
     input: dict[str, Any] = field(default_factory=lambda: {
         "rumble_enabled": False,
@@ -199,6 +197,44 @@ def _validate_config_value(key: str, value: Any) -> str | None:
 _PRESETS_DIR_NAME = "presets"
 _PRESETS_COMPAT_MIRROR_NAME = "config_presets.json"
 _PRESET_FILE_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*\.json$")
+_DAY_NIGHT_LEGACY_ALIASES = {
+    "day_start_hour": "day_night_start_hour",
+    "day_length_seconds": "day_night_cycle_length_seconds",
+}
+
+
+def _apply_day_night_aliases(raw: dict[str, Any], cfg_path: Path) -> dict[str, Any]:
+    normalized = dict(raw)
+    for legacy_key, canonical_key in _DAY_NIGHT_LEGACY_ALIASES.items():
+        legacy_present = legacy_key in raw
+        canonical_present = canonical_key in raw
+        if legacy_present and not canonical_present:
+            normalized[canonical_key] = raw[legacy_key]
+            print(
+                f"[Mesh][Config] WARNING: Config key '{legacy_key}' is deprecated; "
+                f"use '{canonical_key}' instead"
+            )
+            diag_warn(
+                "config.day_night_legacy_alias",
+                f"Config key '{legacy_key}' is deprecated; use '{canonical_key}' instead",
+                "engine.config",
+                location=str(cfg_path),
+                context={"legacy_key": legacy_key, "canonical_key": canonical_key},
+            )
+        elif legacy_present and canonical_present:
+            print(
+                f"[Mesh][Config] WARNING: Config keys '{legacy_key}' and '{canonical_key}' "
+                f"are both set; using '{canonical_key}'"
+            )
+            diag_warn(
+                "config.day_night_legacy_conflict",
+                f"Config keys '{legacy_key}' and '{canonical_key}' are both set; using '{canonical_key}'",
+                "engine.config",
+                location=str(cfg_path),
+                context={"legacy_key": legacy_key, "canonical_key": canonical_key},
+            )
+        normalized.pop(legacy_key, None)
+    return normalized
 
 
 def _iter_split_preset_files(presets_dir: Path) -> list[Path]:
@@ -261,6 +297,7 @@ def load_config(path: str | None = None) -> EngineConfig:
     validate(raw, "config.schema.json", cfg_path)
 
     setattr(cfg, "_loaded_keys", set(raw.keys()))
+    raw = _apply_day_night_aliases(raw, cfg_path)
 
     field_types: Dict[str, Any] = {f.name: f.type for f in fields(EngineConfig)}
 

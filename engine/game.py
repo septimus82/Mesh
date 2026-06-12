@@ -589,21 +589,9 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             self.lighting.set_ambient_darkness_alpha(ambient_alpha)
         self.day_night = DayNightCycle(
             self.lighting,
-            enabled=getattr(self.engine_config, "day_night_enabled", False),
-            start_hour=float(
-                getattr(
-                    self.engine_config,
-                    "day_start_hour",
-                    getattr(self.engine_config, "day_night_start_hour", 21.0),
-                )
-            ),
-            cycle_length_seconds=float(
-                getattr(
-                    self.engine_config,
-                    "day_length_seconds",
-                    getattr(self.engine_config, "day_night_cycle_length_seconds", 600.0),
-                )
-            ),
+            enabled=self.engine_config.day_night_enabled,
+            start_hour=float(self.engine_config.day_night_start_hour),
+            cycle_length_seconds=float(self.engine_config.day_night_cycle_length_seconds),
         )
 
         _init_ui_dispatcher(self)
