@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 
+
 def _normalize_path(path: str) -> str:
     """Normalize a path for comparison (forward slashes, stripped)."""
     if not path:
@@ -33,7 +34,7 @@ def compute_move_paths(old_rel: str, dest_folder_rel: str) -> tuple[str, str]:
         return ("", "")
 
     filename = os.path.basename(old_norm)
-    
+
     if not dest_norm:
         # Move to root
         new_norm = filename
@@ -62,14 +63,14 @@ def validate_destination(old_rel: str, dest_folder_rel: str) -> tuple[bool, str]
     current_dir = os.path.dirname(old_norm).replace("\\", "/")
     if not current_dir:
         current_dir = ""
-    
+
     # Normalize empty string handling
     if current_dir == dest_norm:
         return False, "Destination is the same as source folder"
 
     # Check if moving into itself (if old_rel is a folder, which we don't support yet but good to guard)
     # The requirement says "selected file path", so assuming file.
-    
+
     return True, ""
 
 def format_move_undo_label(old_rel: str, new_rel: str, n_refs: int) -> str:
@@ -85,9 +86,9 @@ def format_move_undo_label(old_rel: str, new_rel: str, n_refs: int) -> str:
     """
     old_name = os.path.basename(old_rel)
     # new_folder = os.path.dirname(new_rel).replace("\\", "/")
-    
+
     # "Move hero.png to assets/new_folder"
     if n_refs == 0:
         return f"Move {old_name} → {new_rel}"
-    
+
     return f"Move {old_name} → {new_rel} ({n_refs} refs)"

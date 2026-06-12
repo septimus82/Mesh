@@ -4,7 +4,8 @@ Runtime adapter for behaviour event routing.
 from __future__ import annotations
 
 import logging
-from typing import Any, Tuple, Dict, Set
+from typing import Any, Dict, Set, Tuple
+
 from .behaviour_event_router_model import (
     BehaviourEvent,
     compute_dispatch_targets,
@@ -19,10 +20,10 @@ def _get_methods_from_entity(entity: Any) -> Tuple[str, ...]:
     """Return all handler-like methods available on an entity's behaviours."""
     methods = set()
     behaviours = getattr(entity, "mesh_behaviours_runtime", [])
-    
+
     # Also check the entity itself if it's a Controller/Behaviour but usually behaviours are attached
     # Standard Mesh architecture: entity is a Sprite, has .mesh_behaviours_runtime list.
-    
+
     # The model expects a Tuple[str] of *all* available handlers to match against.
     # To build that list, we iterate behaviours and dir().
     for beh in behaviours:
@@ -89,7 +90,7 @@ def _resolve_primary_player(scene_controller: Any) -> Any | None:
     return None
 
 def dispatch_events(
-    scene_controller: Any, 
+    scene_controller: Any,
     events: Tuple[BehaviourEvent, ...]
 ) -> None:
     """
@@ -102,13 +103,13 @@ def dispatch_events(
     # We need to find entities referenced in events.
     # SceneController usually has a way to look them up.
     # We'll rely on scene_controller having a lookup or looping layers if needed.
-    # In V1, we assume we can resolve by ID. 
+    # In V1, we assume we can resolve by ID.
     # If SceneController doesn't have a fast lookup, we might rely on the caller providing context?
     # No, caller just passes events.
-    
+
     # Optimization: Cache scene methods once per batch
     scene_methods = _get_methods_from_scene(scene_controller)
-    
+
     entity_method_cache: Dict[int, Tuple[str, ...]] = {}
 
     # 2. Compute Plan + Execute

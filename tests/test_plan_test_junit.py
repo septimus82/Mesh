@@ -1,9 +1,9 @@
-import unittest
-import json
 import tempfile
-import os
+import unittest
 from pathlib import Path
+
 from engine.test_reports.junit_writer import write_junit_report
+
 
 class TestPlanTestJUnit(unittest.TestCase):
     def setUp(self):
@@ -22,13 +22,13 @@ class TestPlanTestJUnit(unittest.TestCase):
             ],
             "coverage": {"actions_total": 10, "actions_covered": 5}
         }
-        
+
         output_path = self.root / "report.xml"
         write_junit_report(report, str(output_path))
-        
+
         self.assertTrue(output_path.exists())
         content = output_path.read_text(encoding="utf-8")
-        
+
         self.assertIn('<testsuite name="MeshPlanTests"', content)
         self.assertIn('tests="2"', content)
         self.assertIn('failures="1"', content)

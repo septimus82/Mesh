@@ -6,7 +6,6 @@ from . import command_palette_registry_defs as _defs
 from . import command_palette_registry_parse as _parse
 from .command_palette_registry_selection import parse_float as _parse_float
 
-
 _ALIGN_SIMPLE_MAP: dict[str, tuple[str, str]] = _defs._ALIGN_SIMPLE_MAP
 _DISTRIBUTE_SIMPLE_MAP: dict[str, tuple[str, str]] = _defs._DISTRIBUTE_SIMPLE_MAP
 _SNAP_SIMPLE_MAP: dict[str, tuple[str, str]] = _defs._SNAP_SIMPLE_MAP

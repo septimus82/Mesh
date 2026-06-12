@@ -1,7 +1,9 @@
 """Tests for encounter report diff thresholds."""
 
 import unittest
+
 from engine.encounter_report_diff import EncounterReportDiff, EncounterSceneDiff, check_thresholds
+
 
 class TestEncounterReportDiffThresholds(unittest.TestCase):
     def setUp(self):
@@ -27,7 +29,7 @@ class TestEncounterReportDiffThresholds(unittest.TestCase):
         errors = check_thresholds(self.diff, max_spawn_delta=4)
         self.assertEqual(len(errors), 1)
         self.assertIn("Spawn delta 5 exceeds limit 4", errors[0])
-        
+
         errors = check_thresholds(self.diff, max_spawn_delta=6)
         self.assertEqual(len(errors), 0)
 

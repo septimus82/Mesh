@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
+from engine import savegame
 from engine.game_state_controller import GameStateController
 from engine.quests import QuestManager
-from engine import savegame
 
 
 class _StubSceneController:

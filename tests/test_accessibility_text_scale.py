@@ -14,9 +14,8 @@ pytestmark = [pytest.mark.fast]
 
 class TestTextScale:
     def test_default_scale(self):
-        from engine.text_draw import get_text_scale
         # Reset to default first
-        from engine.text_draw import set_text_scale
+        from engine.text_draw import get_text_scale, set_text_scale
         set_text_scale(1.0)
         assert get_text_scale() == 1.0
 
@@ -72,8 +71,9 @@ class TestRuntimeSettingsTextScale:
         assert s.text_scale == 3.0
 
     def test_from_config(self):
-        from engine.runtime_settings import RuntimeSettings
         from unittest.mock import MagicMock
+
+        from engine.runtime_settings import RuntimeSettings
         cfg = MagicMock()
         cfg.text_scale = 1.8
         cfg.music_volume = 0.5
@@ -96,9 +96,10 @@ class TestRuntimeSettingsTextScale:
         assert s.text_scale == 1.0
 
     def test_apply_pushes_text_scale(self):
+        from unittest.mock import MagicMock
+
         from engine.runtime_settings import RuntimeSettings
         from engine.text_draw import get_text_scale, set_text_scale
-        from unittest.mock import MagicMock
 
         set_text_scale(1.0)  # reset
         s = RuntimeSettings(text_scale=1.75)
@@ -129,9 +130,10 @@ class TestDrawTextCachedScale:
     def test_scaled_font_size_in_fallback_path(self, monkeypatch):
         """When no cache is provided, draw_text falls back to arcade.draw_text.
         Verify the font_size argument is scaled."""
-        import engine.text_draw as td
-        import engine.optional_arcade as oa
         from unittest.mock import MagicMock
+
+        import engine.optional_arcade as oa
+        import engine.text_draw as td
 
         monkeypatch.setattr(td, "_text_scale", 2.0)
 
@@ -149,9 +151,10 @@ class TestDrawTextCachedScale:
 
     def test_scale_1x_no_change(self, monkeypatch):
         """At 1.0x scale, font_size should be unchanged."""
-        import engine.text_draw as td
-        import engine.optional_arcade as oa
         from unittest.mock import MagicMock
+
+        import engine.optional_arcade as oa
+        import engine.text_draw as td
 
         monkeypatch.setattr(td, "_text_scale", 1.0)
 

@@ -10,20 +10,16 @@ import json
 import tempfile
 from pathlib import Path
 
-import pytest
-
+from engine.editor.editor_sprite_ghosting import (
+    apply_ghosting_to_sprites,
+    make_ghosting_cache_key,
+    should_reapply_ghosting,
+)
 from engine.workspace_settings import (
     WorkspaceSettings,
     load_workspace,
     save_workspace,
 )
-from engine.editor.editor_sprite_ghosting import (
-    GhostingCacheState,
-    make_ghosting_cache_key,
-    should_reapply_ghosting,
-    apply_ghosting_to_sprites,
-)
-
 
 # -----------------------------------------------------------------------------
 # Stub Sprite Classes with Write Counters

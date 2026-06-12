@@ -16,13 +16,12 @@ from __future__ import annotations
 import os
 import sys
 import time
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, List
-
 from dataclasses import replace as dataclass_replace
+from pathlib import Path
+from typing import TYPE_CHECKING
 
-from engine.editor.editor_workspace_model import WorkspaceSnapshot
 from engine.editor.editor_modal_state_query import is_scene_browser_active
+from engine.editor.editor_workspace_model import WorkspaceSnapshot
 from engine.editor.safe_mode import is_safe_mode_enabled
 from engine.editor.workspace_autosave_model import (
     AutosaveState,
@@ -36,7 +35,6 @@ from engine.runtime_settings import ensure_runtime_settings
 from engine.runtime_settings_storage import load_runtime_settings, resolve_runtime_settings_path, save_runtime_settings
 from engine.swallowed_exceptions import _log_swallow
 from engine.workspace_settings import WorkspaceSettings, load_workspace, save_workspace
-
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController

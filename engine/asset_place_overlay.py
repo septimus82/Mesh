@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import os
 from engine import optional_arcade
+
 
 def draw_asset_placement_ghost(
     asset_path: str,

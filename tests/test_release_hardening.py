@@ -1,10 +1,10 @@
-import pytest
+from argparse import Namespace
 from unittest.mock import MagicMock, patch
+
 from engine.config import EngineConfig
 from engine.content_lock import compute_strict_fingerprint
 from engine.tooling.replay_goldens_command import handle_replay_goldens
-from argparse import Namespace
-from pathlib import Path
+
 
 def test_strict_fingerprint_determinism():
     # Test that strict fingerprint only cares about content_files
@@ -17,7 +17,7 @@ def test_strict_fingerprint_determinism():
         "audit_snapshot": {"unused": 0}
     }
     assert compute_strict_fingerprint(lock1) == compute_strict_fingerprint(lock2)
-    
+
     lock3 = {
         "content_files": {"a": "hash2"},
         "audit_snapshot": {"unused": 100}
@@ -42,15 +42,15 @@ def test_strict_golden_failure(mock_verify, mock_game, mock_read_events, mock_gl
     mock_read_events.return_value = []
     mock_verify.return_value = True
     mock_load_config.return_value = EngineConfig()
-    
+
     # Mock meta file read
     mock_path.read_text.return_value = '{"content_fingerprint": "expected_hash"}'
-    
+
     # Mock fingerprint mismatch
     mock_compute_fp.return_value = "actual_hash"
-    
+
     args = Namespace(strict=True, world="worlds/main_world.json")
-    
+
     # Should fail
     assert handle_replay_goldens(args) == 1
 
@@ -72,14 +72,14 @@ def test_strict_golden_success(mock_verify, mock_game, mock_read_events, mock_gl
     mock_read_events.return_value = []
     mock_verify.return_value = True
     mock_load_config.return_value = EngineConfig()
-    
+
     # Mock meta file read
     mock_path.read_text.return_value = '{"content_fingerprint": "expected_hash"}'
-    
+
     # Mock fingerprint match
     mock_compute_fp.return_value = "expected_hash"
-    
+
     args = Namespace(strict=True, world="worlds/main_world.json")
-    
+
     # Should pass
     assert handle_replay_goldens(args) == 0

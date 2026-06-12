@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import argparse
-import sys
-from pathlib import Path
 
-from engine.tooling import scaffold, project_index
-from engine.tooling.plan_types import Action, Plan
+from engine.tooling import project_index, scaffold
 from engine.tooling.plan_executor import PlanExecutor
-from mesh_cli import scene as scene_commands
+from engine.tooling.plan_types import Action, Plan
+
 
 def handle(args: argparse.Namespace) -> int:
     if args.command == "new-npc":

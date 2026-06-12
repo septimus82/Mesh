@@ -10,23 +10,24 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-# Re-export action callables from bucket modules so globals() finds them all.
-from engine.editor.editor_actions_parts._shared import *  # noqa: F401, F403
-from engine.editor.editor_actions_parts.planes_actions import *  # noqa: F401, F403
-from engine.editor.editor_actions_parts.alignment_actions import *  # noqa: F401, F403
-from engine.editor.editor_actions_parts.hd2d_actions import *  # noqa: F401, F403
-from engine.editor.editor_actions_parts.ui_actions import *  # noqa: F401, F403
-from engine.editor.editor_actions_parts.project_explorer_actions import *  # noqa: F401, F403
-from engine.editor.editor_actions_parts.debug_actions import *  # noqa: F401, F403
-from engine.editor.editor_actions_parts.core_actions import *  # noqa: F401, F403
-
-# Import registry symbols that we do NOT override, for direct re-export.
-from engine.editor.editor_actions_parts.registry import EditorAction  # noqa: F401
-from engine.editor.editor_actions_parts.registry import find_action  # noqa: F401
-
 # Import the registry module for namespace-injecting wrappers.
 from engine.editor.editor_actions_parts import registry as _registry
 
+# Re-export action callables from bucket modules so globals() finds them all.
+from engine.editor.editor_actions_parts._shared import *  # noqa: F401, F403
+from engine.editor.editor_actions_parts.alignment_actions import *  # noqa: F401, F403
+from engine.editor.editor_actions_parts.core_actions import *  # noqa: F401, F403
+from engine.editor.editor_actions_parts.debug_actions import *  # noqa: F401, F403
+from engine.editor.editor_actions_parts.hd2d_actions import *  # noqa: F401, F403
+from engine.editor.editor_actions_parts.planes_actions import *  # noqa: F401, F403
+from engine.editor.editor_actions_parts.project_explorer_actions import *  # noqa: F401, F403
+
+# Import registry symbols that we do NOT override, for direct re-export.
+from engine.editor.editor_actions_parts.registry import (
+    EditorAction,  # noqa: F401
+    find_action,  # noqa: F401
+)
+from engine.editor.editor_actions_parts.ui_actions import *  # noqa: F401, F403
 
 # --- Thin wrappers that inject this module's globals() into the registry ---
 

@@ -6,16 +6,13 @@ Headless, deterministic - no arcade dependency.
 
 from __future__ import annotations
 
-import pytest
-
 from engine.editor.selection_outline import (
-    resolve_selection_styles,
-    resolve_primary_for_alt_dup,
+    STYLE_DUPLICATE,
     STYLE_NORMAL,
     STYLE_ORIGINAL,
-    STYLE_DUPLICATE,
+    resolve_primary_for_alt_dup,
+    resolve_selection_styles,
 )
-
 
 # -----------------------------------------------------------------------------
 # resolve_selection_styles

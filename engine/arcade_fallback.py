@@ -9,7 +9,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
-
 ColorValue = Tuple[int, int, int] | Tuple[int, int, int, int]
 
 

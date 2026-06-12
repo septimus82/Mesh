@@ -1,8 +1,9 @@
 import unittest
-import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+
 from engine.tooling.validate_all import UnifiedValidator
+
 
 class TestPuzzleWiringValidator(unittest.TestCase):
     def setUp(self):
@@ -18,7 +19,7 @@ class TestPuzzleWiringValidator(unittest.TestCase):
             ]
         }
         self.validator.scene_loader.load_scene.return_value = scene
-        
+
         ok = self.validator.validate_puzzle_wiring(Path("test_scene.json"))
         self.assertTrue(ok)
         self.assertEqual(len(self.validator.warnings), 0)
@@ -32,7 +33,7 @@ class TestPuzzleWiringValidator(unittest.TestCase):
             ]
         }
         self.validator.scene_loader.load_scene.return_value = scene
-        
+
         ok = self.validator.validate_puzzle_wiring(Path("test_scene.json"))
         # Should be ok but with warning (default mode)
         self.assertTrue(ok)
@@ -48,7 +49,7 @@ class TestPuzzleWiringValidator(unittest.TestCase):
             ]
         }
         self.validator.scene_loader.load_scene.return_value = scene
-        
+
         ok = self.validator.validate_puzzle_wiring(Path("test_scene.json"))
         self.assertFalse(ok)
         self.assertEqual(len(self.validator.errors), 1)

@@ -3,10 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterable, Literal, Tuple
+from typing import Any, Callable, Iterable, Literal
 
 from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 from engine.swallowed_exceptions import _log_swallow
@@ -537,8 +536,8 @@ def run_prefab_asset_checks(ctx: DoctorContext) -> None:
     cache_stats = {"hits": 0, "misses": 0, "entries": 0}
 
     try:
-        from engine.prefabs import get_prefab_manager
         from engine.paths import resolve_path
+        from engine.prefabs import get_prefab_manager
 
         prefab_manager = get_prefab_manager()
         prefab_manager.load(force=True)

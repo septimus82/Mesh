@@ -5,9 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, cast
-import engine.optional_arcade as optional_arcade
+
 from PIL import Image
 from PIL.Image import Image as PILImageClass
+
+import engine.optional_arcade as optional_arcade
 
 from .assets import AssetManager
 from .logging_tools import get_logger

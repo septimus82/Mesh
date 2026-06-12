@@ -6,7 +6,7 @@ Pure helpers for deterministic, action-driven context menus.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Tuple, Literal
+from typing import Iterable, List, Literal, Optional, Tuple
 
 # Layout constants
 CONTEXT_MENU_WIDTH = 200
@@ -75,8 +75,8 @@ def _shortcut_for_action(
     actions_registry: Iterable[object],
     active_scopes: Iterable[str],
 ) -> Optional[str]:
-    from engine.editor.shortcut_resolver_model import normalize_shortcut_text
     from engine.editor.editor_actions import SHORTCUT_SCOPE_GLOBAL  # noqa: PLC0415
+    from engine.editor.shortcut_resolver_model import normalize_shortcut_text
 
     action = None
     for item in actions_registry:
@@ -173,11 +173,11 @@ def build_project_explorer_context_menu(
     return trimmed
 
 def clamp_menu_position(
-    x: int, 
-    y: int, 
-    menu_w: int, 
-    menu_h: int, 
-    viewport_w: int, 
+    x: int,
+    y: int,
+    menu_w: int,
+    menu_h: int,
+    viewport_w: int,
     viewport_h: int
 ) -> Tuple[int, int]:
     """Clamp menu position to keep it fully within viewport.
@@ -186,22 +186,22 @@ def clamp_menu_position(
     """
     final_x = x
     final_y = y
-    
+
     # Clamp X (prevent going off right)
     if final_x + menu_w > viewport_w:
         final_x = max(0, viewport_w - menu_w)
-        
+
     # Clamp Y (prevent going off bottom)
     # Usually menus open "down", but if near bottom, maybe open "up"?
     # For simplicity v1: just shift up.
     if final_y + menu_h > viewport_h:
         final_y = max(0, viewport_h - menu_h)
-        
+
     return (int(final_x), int(final_y))
 
 def hit_test_menu_item(
-    rel_x: float, 
-    rel_y: float, 
+    rel_x: float,
+    rel_y: float,
     item_count: int
 ) -> Optional[int]:
     """Determine which item index is at the relative coordinates.
@@ -216,17 +216,17 @@ def hit_test_menu_item(
     """
     if rel_x < 0 or rel_x > CONTEXT_MENU_WIDTH:
         return None
-        
+
     # Skip vertical padding
     content_y = rel_y - CONTEXT_MENU_PADDING_Y
     if content_y < 0:
         return None
-        
+
     index = int(content_y // CONTEXT_MENU_ITEM_HEIGHT)
-    
+
     if 0 <= index < item_count:
         return index
-        
+
     return None
 
 

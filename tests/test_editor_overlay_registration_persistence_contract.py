@@ -1,12 +1,11 @@
 import types
 
 import pytest
-from tests._typing import as_any
 
 from engine.scene_controller import SceneController
 from engine.ui_contract import PERSISTENT_UI_ATTRS
 from engine.ui_controller import UIController
-
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]
 

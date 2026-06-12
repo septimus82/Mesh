@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-
 from engine.editor.editor_panels_query import panels_is_open
 from engine.input_runtime.capture_runtime_focus_model import CaptureFocusSnapshot
 

@@ -87,7 +87,7 @@ class InteractableBehaviour(Behaviour):
     
     Implements SaveableBehaviour for deterministic save/restore.
     """
-    
+
     PARAM_DEFS = {
         "interact_radius": ParamDef(float, 48.0, "Maximum distance for interaction"),
         "interact_key": ParamDef(str, "interact", "Key binding name"),
@@ -99,7 +99,7 @@ class InteractableBehaviour(Behaviour):
         "enabled": ParamDef(bool, True, "Whether interaction is active"),
         "require_line_of_sight": ParamDef(bool, False, "Require unobstructed path"),
     }
-    
+
     def __init__(self, entity, window, **config) -> None:
         # Initialize private state before super().__init__ (which calls setattr for params)
         self._enabled: bool = True
@@ -107,9 +107,9 @@ class InteractableBehaviour(Behaviour):
         self._cooldown_remaining: float = 0.0
         self._in_range_entity: str | None = None
         self._consumed: bool = False
-        
+
         super().__init__(entity, window, **config)
-        
+
         # Config
         self.interact_radius = float(self.config.get("interact_radius", 48.0))
         self.interact_key = str(self.config.get("interact_key", "interact"))
@@ -119,20 +119,20 @@ class InteractableBehaviour(Behaviour):
         self.one_shot = bool(self.config.get("one_shot", False))
         self._enabled = bool(self.config.get("enabled", True))
         self.require_line_of_sight = bool(self.config.get("require_line_of_sight", False))
-        
+
         # Parse target tags
         raw_tags = self.config.get("target_tags") or ["player"]
         self.target_tags: List[str] = [str(t) for t in raw_tags if t]
-    
+
     @property
     def enabled(self) -> bool:
         """Whether interaction is active."""
         return self._enabled
-    
+
     @enabled.setter
     def enabled(self, value: bool) -> None:
         self._enabled = bool(value)
-    
+
     @property
     def can_interact(self) -> bool:
         """Whether interaction is currently possible."""
@@ -143,45 +143,45 @@ class InteractableBehaviour(Behaviour):
         if self._cooldown_remaining > 0:
             return False
         return True
-    
+
     def _find_interactor_in_range(self):
         """Find the closest valid interactor in range."""
         scene_controller = getattr(self.window, "scene_controller", None)
         if scene_controller is None:
             return None
-        
+
         sprites = getattr(scene_controller, "all_sprites", None)
         if sprites is None:
             sprites = getattr(scene_controller, "entities", None)
         if sprites is None:
             return None
-        
+
         my_x = float(self.entity.center_x)
         my_y = float(self.entity.center_y)
-        
+
         closest = None
         closest_dist = float("inf")
-        
+
         for sprite in sprites:
             if sprite is self.entity:
                 continue
-            
+
             # Check tags
             entity_tags = set(getattr(sprite, "mesh_tags", []) or [])
             if self.target_tags and not (entity_tags & set(self.target_tags)):
                 continue
-            
+
             # Check distance
             dx = float(sprite.center_x) - my_x
             dy = float(sprite.center_y) - my_y
             dist = math.hypot(dx, dy)
-            
+
             if dist <= self.interact_radius and dist < closest_dist:
                 closest = sprite
                 closest_dist = dist
-        
+
         return closest
-    
+
     def _get_entity_id(self, sprite) -> str:
         """Get deterministic ID for an entity."""
         return str(
@@ -189,7 +189,7 @@ class InteractableBehaviour(Behaviour):
             or getattr(sprite, "mesh_name", None)
             or id(sprite)
         )
-    
+
     def _emit_event(self, interactor) -> None:
         """Emit the interaction event."""
         interactor_id = self._get_entity_id(interactor)
@@ -210,7 +210,7 @@ class InteractableBehaviour(Behaviour):
             source_entity_id=my_id,
             source_behaviour="Interactable",
         )
-    
+
     def try_interact(self) -> bool:
         """Attempt to interact with this object.
         
@@ -219,34 +219,34 @@ class InteractableBehaviour(Behaviour):
         """
         if not self.can_interact:
             return False
-        
+
         interactor = self._find_interactor_in_range()
         if interactor is None:
             return False
-        
+
         # Perform interaction
         self._interaction_count += 1
         self._cooldown_remaining = self.cooldown
-        
+
         if self.one_shot:
             self._consumed = True
-        
+
         self._emit_event(interactor)
         return True
-    
+
     def update(self, dt: float) -> None:
         """Update cooldown and check for in-range entities."""
         # Update cooldown
         if self._cooldown_remaining > 0:
             self._cooldown_remaining = max(0.0, self._cooldown_remaining - dt)
-        
+
         # Update in-range tracking for UI hints
         if self._enabled and not (self.one_shot and self._consumed):
             interactor = self._find_interactor_in_range()
             self._in_range_entity = self._get_entity_id(interactor) if interactor else None
         else:
             self._in_range_entity = None
-    
+
     def subscribed_event_types(self) -> frozenset[str] | None:
         return frozenset({"input_action", "key_action"})
 
@@ -256,10 +256,10 @@ class InteractableBehaviour(Behaviour):
         if event.type == "input_action" or event.type == "key_action":
             action = event.payload.get("action", "")
             pressed = event.payload.get("pressed", False)
-            
+
             if action == self.interact_key and pressed:
                 self.try_interact()
-    
+
     # SaveableBehaviour protocol
     def saveable_state(self) -> Dict[str, Any]:
         """Return JSON-serializable state dict."""
@@ -269,14 +269,14 @@ class InteractableBehaviour(Behaviour):
             "cooldown_remaining": round(self._cooldown_remaining, 4),
             "consumed": self._consumed,
         }
-    
+
     def restore_state(self, state: Dict[str, Any]) -> None:
         """Apply previously saved state."""
         self._enabled = bool(state.get("enabled", True))
         self._interaction_count = int(state.get("interaction_count", 0))
         self._cooldown_remaining = float(state.get("cooldown_remaining", 0.0))
         self._consumed = bool(state.get("consumed", False))
-    
+
     def get_inspector_state(self) -> Dict[str, Any]:
         """Return state summary for editor inspection."""
         return {
@@ -306,7 +306,7 @@ def validate_interactable_config(
     """
     errors: List[EventConfigError] = []
     behaviour_name = "Interactable"
-    
+
     # Validate interact_radius
     radius = config.get("interact_radius", 48.0)
     try:
@@ -325,7 +325,7 @@ def validate_interactable_config(
             config_path="interact_radius",
             message=f"interact_radius must be a number, got {type(radius).__name__}",
         ))
-    
+
     # Validate cooldown
     cooldown = config.get("cooldown", 0.5)
     try:
@@ -344,7 +344,7 @@ def validate_interactable_config(
             config_path="cooldown",
             message=f"cooldown must be a number, got {type(cooldown).__name__}",
         ))
-    
+
     # Validate interact_event
     interact_event = config.get("interact_event", "on_interact")
     if interact_event:
@@ -354,5 +354,5 @@ def validate_interactable_config(
             behaviour_name=behaviour_name,
             config_path="interact_event",
         ))
-    
+
     return errors

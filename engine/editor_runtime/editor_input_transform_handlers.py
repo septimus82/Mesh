@@ -108,8 +108,8 @@ def handle_scale_drag(controller: EditorController, wx: float, wy: float, modifi
 def finish_rotate_drag(controller: EditorController) -> bool:
     """Finish rotation drag and push command to undo stack."""
     from ..editor.editor_rotate_ops import (  # noqa: PLC0415
-        RotateEntityCommand,
         RotateEntitiesCommand,
+        RotateEntityCommand,
     )
     from .state import get_sprite_for_entity_id  # noqa: PLC0415
 
@@ -149,8 +149,8 @@ def finish_rotate_drag(controller: EditorController) -> bool:
 def finish_scale_drag(controller: EditorController) -> bool:
     """Finish scale drag and push command to undo stack."""
     from ..editor.editor_scale_ops import (  # noqa: PLC0415
-        ScaleEntityCommand,
         ScaleEntitiesCommand,
+        ScaleEntityCommand,
     )
     from .state import get_sprite_for_entity_id  # noqa: PLC0415
 

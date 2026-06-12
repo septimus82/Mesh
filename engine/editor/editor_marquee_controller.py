@@ -6,7 +6,7 @@ operations: begin, update, end, cancel, and reset.
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Tuple
 
 from engine.logging_tools import get_logger
 
@@ -92,9 +92,9 @@ class EditorMarqueeController:
             return
 
         from engine.editor.marquee_select import (  # noqa: PLC0415
-            rect_from_points,
-            compute_marquee_candidates,
             apply_marquee_selection,
+            compute_marquee_candidates,
+            rect_from_points,
         )
         from engine.editor.selection_outline import resolve_entity_bounds  # noqa: PLC0415
         from engine.editor_runtime.state import get_sprite_for_entity_id  # noqa: PLC0415

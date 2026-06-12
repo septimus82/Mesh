@@ -12,7 +12,6 @@ from typing import Tuple
 
 from engine.editor.dock_tab_registry import LEFT_DOCK_TABS, RIGHT_DOCK_TABS
 
-
 # Layout constants
 TOP_BAR_HEIGHT = 48
 BOTTOM_BAR_HEIGHT = 28  # matches existing status bar

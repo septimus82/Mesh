@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
 
-from .common import UIElement, _draw_rectangle_filled
 from ..text_draw import TextCache, draw_text_cached
 from ._settings_data import SETTINGS_ROWS
+from .common import UIElement, _draw_rectangle_filled
 from .widgets import Button, DrawInstruction, Label, Padding, Panel, Rect, VStack
 
 if TYPE_CHECKING:  # pragma: no cover

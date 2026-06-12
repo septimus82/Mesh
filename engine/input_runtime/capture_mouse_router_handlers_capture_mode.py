@@ -4,12 +4,11 @@ from __future__ import annotations
 from typing import Any, cast
 
 import engine.optional_arcade as optional_arcade
-
-from engine.input_runtime.capture_mouse_router_model import MouseEvent
 from engine.input_runtime.capture_mouse_router_handlers_modal_base import (
     maybe_handle_editor_mouse_press,
     maybe_handle_editor_mouse_release,
 )
+from engine.input_runtime.capture_mouse_router_model import MouseEvent
 
 
 def dispatch_capture_mode_mouse(controller: Any, event: MouseEvent, action_id: str) -> bool:

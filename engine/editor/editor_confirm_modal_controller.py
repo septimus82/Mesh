@@ -1,6 +1,6 @@
-from typing import Callable, List, Optional
+from typing import TYPE_CHECKING, Callable, List, Optional
+
 import engine.optional_arcade as optional_arcade
-from typing import TYPE_CHECKING
 from engine.editor.confirm_modal_window_model import clamp_scroll, slice_lines
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ class EditorConfirmModalController:
         self.scroll_y: int = 0
         self._on_confirm: Optional[Callable[[], None]] = None
         self._on_cancel: Optional[Callable[[], None]] = None
-        
+
         # Display settings
         self.compact_rows = 18
         self.expanded_rows = 35
@@ -32,22 +32,22 @@ class EditorConfirmModalController:
     def message_lines(self) -> List[str]:
         """Return windowed lines based on scroll state."""
         visible, start_idx = slice_lines(
-            self._all_message_lines, 
-            self.scroll_y, 
+            self._all_message_lines,
+            self.scroll_y,
             self.visible_rows_count
         )
-        
+
         # Add scroll indicators if needed
         # (Though scrollbar UI is preferred, here we just return text content)
         # We can append status footer line if we want:
         # visible.append(f"Line {start_idx}-{start_idx+len(visible)} of {len(self._all_message_lines)}")
-        
+
         return visible
 
-    def request_confirmation(self, 
-                             title: str, 
-                             message_lines: List[str], 
-                             on_confirm: Callable[[], None], 
+    def request_confirmation(self,
+                             title: str,
+                             message_lines: List[str],
+                             on_confirm: Callable[[], None],
                              on_cancel: Callable[[], None]) -> None:
         """Setup the modal with data and open it."""
         self.title = title
@@ -56,7 +56,7 @@ class EditorConfirmModalController:
         self.scroll_y = 0
         self._on_confirm = on_confirm
         self._on_cancel = on_cancel
-        
+
         panels = getattr(self.controller, "panels", None)
         if panels and hasattr(panels, "open_confirm_modal"):
             panels.open_confirm_modal()
@@ -100,14 +100,14 @@ class EditorConfirmModalController:
             self.scroll_y = len(self._all_message_lines)
             self._clamp_scroll()
             return True
-        
+
         # Block all other input
         return True
 
     def _clamp_scroll(self) -> None:
         self.scroll_y = clamp_scroll(
-            self.scroll_y, 
-            len(self._all_message_lines), 
+            self.scroll_y,
+            len(self._all_message_lines),
             self.visible_rows_count
         )
 

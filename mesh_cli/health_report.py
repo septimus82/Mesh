@@ -7,7 +7,6 @@ from typing import Any
 
 from engine.persistence_io import dumps_json_deterministic, read_json, write_json_atomic
 
-
 _SCANNED_DIRS: tuple[str, ...] = ("engine", "mesh_cli", "tooling")
 _HOTSPOT_LIMIT = 10
 

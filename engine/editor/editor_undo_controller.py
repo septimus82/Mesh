@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
-from engine.logging_tools import get_logger
-
 from engine.editor.editor_undo_model import (
     UndoEntry,
     UndoState,
@@ -14,6 +12,7 @@ from engine.editor.editor_undo_model import (
     redo_cursor,
     undo_cursor,
 )
+from engine.logging_tools import get_logger
 
 logger = get_logger(__name__)
 

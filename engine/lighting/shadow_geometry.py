@@ -20,8 +20,7 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass, field
-from typing import Any, Sequence
-
+from typing import Sequence
 
 # =============================================================================
 # Type Definitions
@@ -50,18 +49,18 @@ def validate_point(point: Point, label: str = "point") -> list[str]:
     if not isinstance(point, (tuple, list)) or len(point) < 2:
         errors.append(f"{label}: Invalid structure (expected 2-tuple)")
         return errors
-    
+
     try:
         x, y = float(point[0]), float(point[1])
     except (TypeError, ValueError) as e:
         errors.append(f"{label}: Cannot convert to float ({e})")
         return errors
-    
+
     if not math.isfinite(x):
         errors.append(f"{label}: x coordinate is not finite ({x})")
     if not math.isfinite(y):
         errors.append(f"{label}: y coordinate is not finite ({y})")
-    
+
     return errors
 
 
@@ -81,20 +80,20 @@ def validate_polygon(poly: Sequence[Point]) -> PolygonValidationResult:
     """
     errors: list[str] = []
     warnings: list[str] = []
-    
+
     # Check minimum points
     if not poly or len(poly) < 3:
         errors.append(f"Polygon has {len(poly) if poly else 0} points (minimum 3 required)")
         return PolygonValidationResult(valid=False, errors=errors)
-    
+
     # Check all points are valid
     for i, point in enumerate(poly):
         point_errors = validate_point(point, f"vertex[{i}]")
         errors.extend(point_errors)
-    
+
     if errors:
         return PolygonValidationResult(valid=False, errors=errors, warnings=warnings)
-    
+
     # Check for duplicate consecutive vertices (warning)
     points = [(float(p[0]), float(p[1])) for p in poly]
     for i in range(len(points)):
@@ -102,13 +101,13 @@ def validate_polygon(poly: Sequence[Point]) -> PolygonValidationResult:
         p1 = points[(i + 1) % len(points)]
         if abs(p0[0] - p1[0]) < 1e-9 and abs(p0[1] - p1[1]) < 1e-9:
             warnings.append(f"Consecutive duplicate vertices at index {i}")
-    
+
     # Check for degenerate (zero area) polygon
     area = _polygon_signed_area(points)
     if abs(area) < 1e-9:
         errors.append("Polygon has zero area (degenerate)")
         return PolygonValidationResult(valid=False, errors=errors, warnings=warnings)
-    
+
     return PolygonValidationResult(valid=True, errors=errors, warnings=warnings)
 
 
@@ -190,42 +189,42 @@ def normalize_polygon(
     """
     if not poly or len(poly) < 3:
         return ()
-    
+
     # Round coordinates
     points: MutablePolygon = [
         (round(float(p[0]), precision), round(float(p[1]), precision))
         for p in poly
     ]
-    
+
     # Remove consecutive duplicates
     cleaned: MutablePolygon = []
     for i, pt in enumerate(points):
         prev = points[i - 1] if i > 0 else points[-1]
         if pt != prev:
             cleaned.append(pt)
-    
+
     # Remove closing duplicate
     if len(cleaned) >= 2 and cleaned[0] == cleaned[-1]:
         cleaned.pop()
-    
+
     if len(cleaned) < 3:
         return ()
-    
+
     # Ensure counter-clockwise winding
     if ensure_ccw:
         area = _polygon_signed_area(cleaned)
         if area < 0:  # Clockwise, reverse
             cleaned = list(reversed(cleaned))
-    
+
     # Find lexicographically smallest vertex
     min_idx = 0
     for i in range(1, len(cleaned)):
         if cleaned[i] < cleaned[min_idx]:
             min_idx = i
-    
+
     # Rotate to start at smallest vertex
     rotated = cleaned[min_idx:] + cleaned[:min_idx]
-    
+
     return tuple(rotated)
 
 
@@ -254,7 +253,7 @@ class ShadowParams:
     extrusion_distance: float | None = None  # None = use light_radius
     cull_outside_radius: bool = True
     round_precision: int = 3
-    
+
     def effective_extrusion(self) -> float:
         """Get the actual extrusion distance to use."""
         return self.extrusion_distance if self.extrusion_distance is not None else self.light_radius
@@ -273,17 +272,17 @@ def _bbox_intersects_circle(
     """Check if polygon's bounding box intersects a circle's bounding square."""
     if not points:
         return False
-    
+
     min_x = min(p[0] for p in points)
     max_x = max(p[0] for p in points)
     min_y = min(p[1] for p in points)
     max_y = max(p[1] for p in points)
-    
+
     left = cx - radius
     right = cx + radius
     bottom = cy - radius
     top = cy + radius
-    
+
     return max_x >= left and min_x <= right and max_y >= bottom and min_y <= top
 
 
@@ -298,11 +297,11 @@ def _extrude_point(
     dx = px - lx
     dy = py - ly
     dist = math.hypot(dx, dy)
-    
+
     if dist < 1e-9:
         # Point is at light position, can't determine direction
         return point
-    
+
     scale = distance / dist
     return (lx + dx * scale, ly + dy * scale)
 
@@ -318,42 +317,42 @@ def _compute_visible_edge_indices(
     n = len(points)
     if n < 3:
         return []
-    
+
     lx, ly = light_pos
-    
+
     # Compute winding
     area = _polygon_signed_area(points)
     outward_sign = 1.0 if area > 0 else -1.0
-    
+
     edges: list[tuple[int, int]] = []
-    
+
     for i in range(n):
         p0 = points[i]
         p1 = points[(i + 1) % n]
-        
+
         dx = p1[0] - p0[0]
         dy = p1[1] - p0[1]
-        
+
         if abs(dx) < 1e-9 and abs(dy) < 1e-9:
             continue
-        
+
         # Compute outward normal
         if outward_sign > 0:
             nx, ny = dy, -dx
         else:
             nx, ny = -dy, dx
-        
+
         # Vector from edge midpoint to light
         mid_x = (p0[0] + p1[0]) * 0.5
         mid_y = (p0[1] + p1[1]) * 0.5
         to_light_x = lx - mid_x
         to_light_y = ly - mid_y
-        
+
         # If dot product is negative, edge faces away from light
         dot = nx * to_light_x + ny * to_light_y
         if dot < 0:
             edges.append((i, (i + 1) % n))
-    
+
     return edges
 
 
@@ -377,46 +376,46 @@ def compute_shadow_hull_for_occluder(
     """
     if len(occluder) < 3:
         return []
-    
+
     # Validate and clean input
     points: MutablePolygon = [
         (float(p[0]), float(p[1])) for p in occluder
     ]
-    
+
     # Early cull if outside light radius
     if params.cull_outside_radius:
         lx, ly = light_pos
         if not _bbox_intersects_circle(points, lx, ly, params.light_radius):
             return []
-    
+
     # Find shadow-casting edges
     edge_indices = _compute_visible_edge_indices(points, light_pos)
     if not edge_indices:
         return []
-    
+
     extrusion = params.effective_extrusion()
     precision = params.round_precision
     hulls: list[Polygon] = []
-    
+
     for start_idx, end_idx in edge_indices:
         p0 = points[start_idx]
         p1 = points[end_idx]
-        
+
         # Extrude edge points
         far0 = _extrude_point(p0, light_pos, extrusion)
         far1 = _extrude_point(p1, light_pos, extrusion)
-        
+
         # Create quad: near_a, near_b, far_b, far_a
         quad: MutablePolygon = [p0, p1, far1, far0]
-        
+
         # Round for determinism
         rounded = tuple(
             (round(x, precision), round(y, precision))
             for x, y in quad
         )
-        
+
         hulls.append(rounded)
-    
+
     return hulls
 
 
@@ -439,14 +438,14 @@ def compute_shadow_hulls(
     """
     if params is None:
         params = ShadowParams()
-    
+
     lx, ly = float(light_pos[0]), float(light_pos[1])
-    
+
     if params.light_radius <= 0:
         return ()
-    
+
     all_hulls: list[Polygon] = []
-    
+
     # Sort occluders for deterministic processing order
     # Use normalized form for sorting key
     indexed_occluders = [
@@ -454,21 +453,21 @@ def compute_shadow_hulls(
         for i, occ in enumerate(occluders)
     ]
     indexed_occluders.sort(key=lambda x: x[1])
-    
+
     for _, norm_occ in indexed_occluders:
         if len(norm_occ) < 3:
             continue
-        
+
         hulls = compute_shadow_hull_for_occluder(norm_occ, (lx, ly), params)
         all_hulls.extend(hulls)
-    
+
     # Sort hulls for deterministic output
     all_hulls.sort()
-    
+
     # Apply limit
     if len(all_hulls) > params.max_hulls:
         all_hulls = all_hulls[:params.max_hulls]
-    
+
     return tuple(all_hulls)
 
 
@@ -486,20 +485,20 @@ class OcclusionSegment:
     end: Point
     occluder_id: int
     edge_index: int
-    
+
     def length(self) -> float:
         """Compute segment length."""
         dx = self.end[0] - self.start[0]
         dy = self.end[1] - self.start[1]
         return math.hypot(dx, dy)
-    
+
     def midpoint(self) -> Point:
         """Get segment midpoint."""
         return (
             (self.start[0] + self.end[0]) * 0.5,
             (self.start[1] + self.end[1]) * 0.5,
         )
-    
+
     def to_tuple(self) -> tuple[Point, Point, int, int]:
         """Convert to tuple for hashing/sorting."""
         return (self.start, self.end, self.occluder_id, self.edge_index)
@@ -525,15 +524,15 @@ def compute_occlusion_segments(
     """
     if params is None:
         params = ShadowParams()
-    
+
     lx, ly = float(light_pos[0]), float(light_pos[1])
-    
+
     if params.light_radius <= 0:
         return ()
-    
+
     segments: list[OcclusionSegment] = []
     precision = params.round_precision
-    
+
     # Process occluders in deterministic order
     # Use normalized form as the canonical ID (not original index)
     indexed_occluders = [
@@ -541,21 +540,21 @@ def compute_occlusion_segments(
         for i, occ in enumerate(occluders)
     ]
     indexed_occluders.sort(key=lambda x: x[1])
-    
+
     # Re-index based on sorted order for determinism
     for sorted_idx, (_, norm_occ) in enumerate(indexed_occluders):
         occ_id = sorted_idx  # Use sorted index, not original
         if len(norm_occ) < 3:
             continue
-        
+
         # Cull distant occluders
         if params.cull_outside_radius:
             if not _bbox_intersects_circle(norm_occ, lx, ly, params.light_radius):
                 continue
-        
+
         # Find shadow-casting edges
         edge_indices = _compute_visible_edge_indices(norm_occ, (lx, ly))
-        
+
         for edge_idx, (start_idx, end_idx) in enumerate(edge_indices):
             start = (
                 round(norm_occ[start_idx][0], precision),
@@ -565,17 +564,17 @@ def compute_occlusion_segments(
                 round(norm_occ[end_idx][0], precision),
                 round(norm_occ[end_idx][1], precision),
             )
-            
+
             segments.append(OcclusionSegment(
                 start=start,
                 end=end,
                 occluder_id=occ_id,
                 edge_index=edge_idx,
             ))
-    
+
     # Sort for determinism
     segments.sort(key=lambda s: s.to_tuple())
-    
+
     return tuple(segments)
 
 
@@ -586,13 +585,13 @@ def compute_occlusion_segments(
 @dataclass
 class ShadowGeometryResult:
     """Result of shadow geometry computation with metadata."""
-    
+
     hulls: tuple[Polygon, ...]
     segments: tuple[OcclusionSegment, ...]
     light_pos: Point
     params: ShadowParams
     occluder_count: int
-    
+
     def hull_digest(self) -> str:
         """Compute SHA-256 digest of hull data."""
         data = json.dumps(
@@ -601,7 +600,7 @@ class ShadowGeometryResult:
             separators=(",", ":"),
         )
         return hashlib.sha256(data.encode("utf-8")).hexdigest()
-    
+
     def segment_digest(self) -> str:
         """Compute SHA-256 digest of segment data."""
         data = json.dumps(
@@ -610,7 +609,7 @@ class ShadowGeometryResult:
             separators=(",", ":"),
         )
         return hashlib.sha256(data.encode("utf-8")).hexdigest()
-    
+
     def full_digest(self) -> str:
         """Compute SHA-256 digest of full result."""
         data = {
@@ -644,10 +643,10 @@ def compute_shadow_geometry(
     """
     if params is None:
         params = ShadowParams()
-    
+
     hulls = compute_shadow_hulls(occluders, light_pos, params)
     segments = compute_occlusion_segments(occluders, light_pos, params)
-    
+
     return ShadowGeometryResult(
         hulls=hulls,
         segments=segments,
@@ -679,21 +678,21 @@ def validate_shadow_hulls(hulls: Sequence[Polygon]) -> ShadowGeometryValidationR
     """
     errors: list[str] = []
     warnings: list[str] = []
-    
+
     for i, hull in enumerate(hulls):
         if len(hull) < 3:
             errors.append(f"hull[{i}]: Has {len(hull)} vertices (minimum 3)")
             continue
-        
+
         for j, point in enumerate(hull):
             point_errors = validate_point(point, f"hull[{i}].vertex[{j}]")
             errors.extend(point_errors)
-        
+
         if not errors:
             area = abs(_polygon_signed_area(hull))
             if area < 1e-9:
                 warnings.append(f"hull[{i}]: Near-zero area ({area})")
-    
+
     return ShadowGeometryValidationResult(
         valid=len(errors) == 0,
         errors=errors,

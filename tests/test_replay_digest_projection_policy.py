@@ -5,7 +5,6 @@ import json
 from mesh_cli import replay_digest_projection as projection_module
 from mesh_cli import replays as replays_module
 
-
 _EXPECTED_DIGEST_PROJECTION_POLICY: dict[str, tuple[str, ...]] = {
     "report_only_keys": (
         "env",

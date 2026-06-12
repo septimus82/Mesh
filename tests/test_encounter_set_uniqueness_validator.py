@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 
 def test_encounter_set_uniqueness_validator_repo_passes() -> None:

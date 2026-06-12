@@ -7,8 +7,8 @@ from typing import Any, Mapping, Sequence
 
 from engine.config import load_config
 from engine.encounter_cost import get_effective_encounter_cost, is_elite_payload, is_mini_boss_payload
-from engine.encounter_sets import iter_encounter_set_source_paths
 from engine.encounter_presets import load_encounter_presets
+from engine.encounter_sets import iter_encounter_set_source_paths
 from engine.paths import resolve_path
 from engine.prefabs import get_prefab_manager
 

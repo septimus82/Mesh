@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
-from engine.ai_bundle import build_ai_bundle
 from engine.ai_audit import AIAuditReport
+from engine.ai_bundle import build_ai_bundle
+
 
 @patch("engine.ai_bundle.generate_ai_schema")
 @patch("engine.ai_bundle.export_ai_context")
@@ -29,7 +29,7 @@ def test_build_ai_bundle(mock_skeleton, mock_audit, mock_context, mock_schema):
     assert bundle["context"] == {"scenes": []}
     assert bundle["audit"] == {"scenes": [], "quests": [], "global_warnings": []}
     assert bundle["plan_skeleton"] == {"wizard": "test"}
-    
+
     assert "meta" in bundle
     assert "bundle_id" in bundle["meta"]
     assert "created_at" in bundle["meta"]

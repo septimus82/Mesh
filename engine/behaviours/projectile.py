@@ -4,16 +4,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from engine.event_emit import emit_gameplay_event
-from .base import Behaviour, ParamDef
-from .registry import register_behaviour
+import engine.optional_arcade as optional_arcade
 from engine.combat_constants import (
     EVENT_PROJECTILE_HIT,
     KEY_AMOUNT,
     KEY_SOURCE,
     KEY_TARGET,
 )
-import engine.optional_arcade as optional_arcade
+from engine.event_emit import emit_gameplay_event
+
+from .base import Behaviour, ParamDef
+from .registry import register_behaviour
 
 if TYPE_CHECKING:
     from arcade import Sprite

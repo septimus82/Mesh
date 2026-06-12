@@ -15,10 +15,10 @@ from unittest.mock import MagicMock
 
 from engine.behaviours.health import Health
 from engine.events import MeshEventBus
-from engine.gameplay_event_bus import GameplayEventBus
 from engine.game_state_controller import GameState
+from engine.gameplay_event_bus import GameplayEventBus
 from engine.quest_runtime.runner import QuestRunner
-from engine.save_runtime.digest import DigestTracker, compute_world_digest
+from engine.save_runtime.digest import DigestTracker
 from engine.state_runtime import flags as state_flags
 
 # ---------------------------------------------------------------------------
@@ -780,8 +780,8 @@ def diff_traces(
 def format_diff_text(diff: Dict[str, Any]) -> str:
     """Format a diff result as human-readable text."""
     lines: List[str] = []
-    lines.append(f"Campaign Replay Diff")
-    lines.append(f"====================")
+    lines.append("Campaign Replay Diff")
+    lines.append("====================")
     lines.append(f"Result: {'IDENTICAL' if diff['identical'] else 'DIVERGENT'}")
     lines.append(f"Total ticks: {diff['total_ticks']}")
 

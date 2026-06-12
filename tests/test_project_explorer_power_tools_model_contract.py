@@ -4,9 +4,9 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from engine.editor.project_explorer_power_tools_model import (
-    invert_selection,
     compute_common_parent,
     format_paths_for_clipboard,
+    invert_selection,
     should_handle_project_explorer_shortcut,
 )
 from tests._dock_stub import make_dock_stub

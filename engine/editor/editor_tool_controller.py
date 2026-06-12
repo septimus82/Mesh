@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from engine.logging_tools import get_logger
 from engine.editor.state import TOOL_MODE_MOVE, TOOL_MODE_PATH, TOOL_MODE_ZONE
+from engine.logging_tools import get_logger
 
 logger = get_logger(__name__)
 

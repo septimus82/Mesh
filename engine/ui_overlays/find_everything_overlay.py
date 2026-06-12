@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
-from .common import UIElement, _draw_tb_rectangle_outline, _draw_rectangle_filled, draw_panel_bg
+from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline, draw_panel_bg
 from .widget_overlay_helpers import build_empty_row, build_status_row, compose_list_rows
 from .widgets import Rect, ScrollList, TextInput
 

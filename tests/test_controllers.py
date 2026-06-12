@@ -1,8 +1,9 @@
-import pytest
-from unittest.mock import MagicMock, patch
-from engine.game_state_controller import GameStateController
+from unittest.mock import patch
+
+from engine.camera_controller import CameraController
 from engine.config import EngineConfig
-from engine.camera_controller import CameraController, CameraArea
+from engine.game_state_controller import GameStateController
+
 
 class MockWindow:
     def __init__(self):
@@ -15,7 +16,7 @@ class MockWindow:
 def test_game_state_flags():
     window = MockWindow()
     controller = GameStateController(window)
-    
+
     assert controller.get_flag("test_flag") is False
     controller.set_flag("test_flag", True)
     assert controller.get_flag("test_flag") is True
@@ -25,7 +26,7 @@ def test_game_state_flags():
 def test_game_state_counters():
     window = MockWindow()
     controller = GameStateController(window)
-    
+
     assert controller.get_counter("coins") == 0.0
     controller.inc_counter("coins", 10)
     assert controller.get_counter("coins") == 10.0
@@ -35,11 +36,11 @@ def test_game_state_counters():
 def test_game_state_spawn_point():
     window = MockWindow()
     controller = GameStateController(window)
-    
+
     assert controller.get_next_spawn_point() is None
     controller.set_next_spawn_point("spawn_1")
     assert controller.get_next_spawn_point() == "spawn_1"
-    
+
     consumed = controller.consume_next_spawn_point()
     assert consumed == "spawn_1"
     assert controller.get_next_spawn_point() is None
@@ -48,11 +49,11 @@ def test_game_state_spawn_point():
 def test_camera_shake(MockCamera):
     window = MockWindow()
     controller = CameraController(window)
-    
+
     controller.start_camera_shake(duration=1.0, amplitude=10.0)
     assert controller.shake_state.duration == 1.0
     assert controller.shake_state.amplitude == 10.0
-    
+
     controller.stop_camera_shake()
     assert controller.shake_state.duration == 0.0
     assert controller.shake_state.amplitude == 0.0
@@ -61,10 +62,10 @@ def test_camera_shake(MockCamera):
 def test_camera_zoom(MockCamera):
     window = MockWindow()
     controller = CameraController(window)
-    
+
     controller.set_zoom_target(2.0)
     assert controller.zoom_state.target == 2.0
-    
+
     # Simulate update
     controller._update_camera_zoom(0.1)
     assert controller.zoom_state.current > 1.0

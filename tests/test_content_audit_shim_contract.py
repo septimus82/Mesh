@@ -8,7 +8,6 @@ from pathlib import Path
 from engine.content_audit import audit_world
 from mesh_cli.content_integrity import run_content_audit
 
-
 _WINDOWS_ABS_RE = re.compile(r"[A-Za-z]:[\\/]")
 _UNIX_ABS_RE = re.compile(r"(^|[\\s\"'])/(home|users|tmp|var|etc)/", re.IGNORECASE)
 

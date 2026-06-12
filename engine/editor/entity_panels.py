@@ -6,18 +6,19 @@ and filtering entity lists. State management remains in EditorModeController.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
+from .prefab_palette_panel import normalize_entity_panel_tags
 from .state import (
     ENTITY_PANEL_FIELDS,
     ENTITY_PANEL_FOCUS_INSPECTOR,
     ENTITY_PANEL_FOCUS_OUTLINER,
 )
-from .prefab_palette_panel import normalize_entity_panel_tags
 
 if TYPE_CHECKING:
-    from engine.editor_prefab_variant_ops import DiffRow
     from engine.editor_entity_ops import EntitySummary
+    from engine.editor_prefab_variant_ops import DiffRow
+
     from .components_model import InspectorComponent, InspectorField
 
 
@@ -369,10 +370,9 @@ def compute_outliner_scroll_window(
 
 def _format_field_value(field: "InspectorField") -> str:
     """Format a field value for display."""
-    from .components_model import InspectorField  # noqa: PLC0415
-    
+
     value = field.value
-    
+
     if field.kind == "float":
         if value is None:
             return "0.0"
@@ -380,7 +380,7 @@ def _format_field_value(field: "InspectorField") -> str:
             return f"{float(cast(Any, value)):.1f}"
         except (TypeError, ValueError):
             return str(value)
-    
+
     if field.kind == "int":
         if value is None:
             return "0"
@@ -388,17 +388,17 @@ def _format_field_value(field: "InspectorField") -> str:
             return str(int(str(value)))
         except (TypeError, ValueError):
             return str(value)
-    
+
     if field.kind == "bool":
         return "Yes" if value else "No"
-    
+
     if field.kind == "color":
         if isinstance(value, (list, tuple)) and len(value) >= 3:
             r, g, b = value[0], value[1], value[2]
             a = value[3] if len(value) >= 4 else 255
             return f"#{r:02x}{g:02x}{b:02x}{a:02x}"
         return str(value) if value else "#ffffffff"
-    
+
     if field.kind == "asset":
         if value:
             # Show just the filename
@@ -409,13 +409,13 @@ def _format_field_value(field: "InspectorField") -> str:
                 return path_str.split("\\")[-1]
             return path_str
         return "(none)"
-    
+
     if field.kind == "enum":
         return str(value) if value else "(none)"
-    
+
     if field.kind == "string":
         return str(value) if value else "(none)"
-    
+
     return str(value) if value is not None else "-"
 
 
@@ -442,14 +442,13 @@ def build_component_inspector_lines(
     Returns:
         List of display lines, deterministic and ordered
     """
-    from .components_model import InspectorComponent, InspectorField  # noqa: PLC0415
-    
+
     lines: List[str] = []
     current_idx = 0
-    
+
     is_editing = edit_state.get("active", False) if edit_state else False
     edit_buffer = edit_state.get("buffer", "") if edit_state else ""
-    
+
     for comp in components:
         # Header line
         is_selected = current_idx == selection_index
@@ -457,30 +456,30 @@ def build_component_inspector_lines(
         removable_marker = " [-]" if comp.removable else ""
         lines.append(f"{prefix}[{comp.title}]{removable_marker}")
         current_idx += 1
-        
+
         # Field lines
         for field in comp.fields:
             is_selected = current_idx == selection_index
             prefix = "> " if is_selected else "  "
-            
+
             # Format value
             if is_selected and is_editing:
                 value_str = f"{edit_buffer}_"
             else:
                 value_str = _format_field_value(field)
-            
+
             # Add editability indicator
             edit_marker = "" if field.editable else " (ro)"
-            
+
             lines.append(f"{prefix}  {field.label}: {value_str}{edit_marker}")
             current_idx += 1
-    
+
     # Add component row
     if show_add_row:
         is_selected = current_idx == selection_index
         prefix = "> " if is_selected else "  "
         lines.append(f"{prefix}[+ Add Component]")
-    
+
     return lines
 
 
@@ -525,10 +524,9 @@ def resolve_component_inspector_selection(
             - "removable": bool (for header)
         Or None if index is out of bounds
     """
-    from .components_model import ComponentKind, InspectorComponent, InspectorField  # noqa: PLC0415
-    
+
     current_idx = 0
-    
+
     for comp in components:
         # Header row
         if current_idx == selection_index:
@@ -538,7 +536,7 @@ def resolve_component_inspector_selection(
                 "removable": comp.removable,
             }
         current_idx += 1
-        
+
         # Field rows
         for field in comp.fields:
             if current_idx == selection_index:
@@ -549,9 +547,9 @@ def resolve_component_inspector_selection(
                     "field": field,
                 }
             current_idx += 1
-    
+
     # Add row
     if current_idx == selection_index:
         return {"type": "add_row"}
-    
+
     return None

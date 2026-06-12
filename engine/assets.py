@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Dict, Optional, cast
+
 import engine.optional_arcade as optional_arcade
 
 from .logging_tools import get_logger

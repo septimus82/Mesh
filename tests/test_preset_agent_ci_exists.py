@@ -1,5 +1,5 @@
-import pytest
 from engine.config import load_config
+
 
 def test_preset_agent_ci_exists():
     """
@@ -7,19 +7,19 @@ def test_preset_agent_ci_exists():
     """
     config = load_config()
     presets = getattr(config, "presets", {})
-    
+
     assert "agent-ci" in presets, "agent-ci preset missing from config.json"
-    
+
     preset = presets["agent-ci"]
     assert preset["description"] == "Agent safety + determinism gates"
-    
+
     steps = preset.get("steps", [])
     assert len(steps) == 10, f"Expected 10 steps, found {len(steps)}"
-    
+
     # Step 1: Preset Lint
     assert steps[0]["cmd"] == "python"
     assert steps[0]["args"] == ["mesh_cli.py", "preset", "lint"]
-    
+
     expected_tests = [
         "tests/test_agent_rules_doc_guard.py",
         "tests/test_plan_executor_write_seam_gate.py",
@@ -31,7 +31,7 @@ def test_preset_agent_ci_exists():
         "tests/test_mesh_triage_artifacts_deterministic.py",
         "tests/test_mesh_assist_summary_json_deterministic.py"
     ]
-    
+
     for i, test_file in enumerate(expected_tests):
         step = steps[i+1]
         assert step["cmd"] == "python"

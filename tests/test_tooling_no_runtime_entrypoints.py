@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib
 import importlib.abc
 import sys
-from types import ModuleType
 
 
 class _BlockRuntimeEntry(importlib.abc.MetaPathFinder):

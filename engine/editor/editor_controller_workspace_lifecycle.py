@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+
 def load_keymap_overrides(self):
     """Load keymap overrides from keymap.json.
 

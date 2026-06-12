@@ -19,6 +19,7 @@ from tooling.pytest_runner_common import (
     format_xdist,
     write_runner_log,
 )
+
 DEFAULT_DURATIONS_PATH = Path(".mesh/metrics/pytest_durations_fast.json")
 _DURATION_RE = re.compile(r"^\s*([0-9.]+)s\s+\w+\s+(.+)$")
 

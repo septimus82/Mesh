@@ -1,17 +1,19 @@
-import unittest
 import json
-import tempfile
 import shutil
+import tempfile
+import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 import mesh_cli
 from tests.utils.args_factory import make_apply_plan_args
+
 
 class TestApplyPlanLintIntegration(unittest.TestCase):
     def setUp(self):
         self.test_dir = Path(tempfile.mkdtemp())
         self.plan_path = self.test_dir / "plan.json"
-        
+
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
@@ -27,13 +29,13 @@ class TestApplyPlanLintIntegration(unittest.TestCase):
         }
         with open(self.plan_path, "w") as f:
             json.dump(plan, f)
-            
+
         args = make_apply_plan_args(
             plan_path=str(self.plan_path),
             no_lint=False,
             dry_run=True
         )
-        
+
         # Capture stdout to check for error message
         with patch("builtins.print") as mock_print:
             ret = mesh_cli._handle_apply_plan(args)
@@ -60,13 +62,13 @@ class TestApplyPlanLintIntegration(unittest.TestCase):
         }
         with open(self.plan_path, "w") as f:
             json.dump(plan, f)
-            
+
         args = make_apply_plan_args(
             plan_path=str(self.plan_path),
             no_lint=False,
             dry_run=True
         )
-        
+
         with patch("builtins.print") as mock_print:
             # Mock PlanExecutor to avoid actual execution issues
             with patch("mesh_cli.ai.PlanExecutor") as MockExecutor:

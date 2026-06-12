@@ -9,7 +9,6 @@ from tests.subprocess_tools import run_checked
 
 
 def _run_blocking_arcade(code: str, *, cwd: Path) -> "subprocess.CompletedProcess[str]":
-    import subprocess  # Only needed for type hint
     script = r"""
 import importlib.abc
 import sys

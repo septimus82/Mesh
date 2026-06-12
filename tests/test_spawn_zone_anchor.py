@@ -4,14 +4,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
+from engine import savegame
 from engine.constants import EVENT_ENTERED_ZONE
 from engine.game_state_controller import GameStateController
-from engine.scene_index import SceneIndex
 from engine.scene_controller import SceneController
-from engine import savegame
+from engine.scene_index import SceneIndex
 from tests._typing import as_any
 
 

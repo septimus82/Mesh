@@ -4,34 +4,41 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-import io
 import json
 import os
 import sys
-from dataclasses import asdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
+
+from engine.swallowed_exceptions import _log_swallow
 
 from .legacy.dispatch import build_parser as _build_parser
 from .legacy.dispatch import dispatch as _dispatch
 from .legacy.dispatch import main as _dispatch_main
 from .legacy.registry import TOOLING_EXPORT_NAMES, get_tooling_export
-from engine.swallowed_exceptions import _log_swallow
 
 if TYPE_CHECKING:
     from engine.config import load_config as load_config
     from engine.encounter_report import generate_encounter_report as generate_encounter_report
-    from engine.tooling_runtime.macro_apply_report import MacroReportPayload
     from engine.tooling import (
         plan_linter as plan_linter,
+    )
+    from engine.tooling import (
         replay_script as replay_script,
+    )
+    from engine.tooling import (
         replay_suite as replay_suite,
+    )
+    from engine.tooling import (
         state_dump as state_dump,
+    )
+    from engine.tooling import (
         validate_all as validate_all,
+    )
+    from engine.tooling import (
         verify_demo as verify_demo,
     )
-    from engine.tooling.content_inventory import list_scenes as _inventory_list_scenes
-    from engine.tooling.content_inventory import list_worlds as _inventory_list_worlds
+    from engine.tooling_runtime.macro_apply_report import MacroReportPayload
 
 _JSON_COMMANDS: set[str] = {
     "verify-demo",
@@ -121,10 +128,10 @@ def _maybe_run_content_inventory_early() -> None:
     parser.add_argument("--out", help="Optional path to write JSON output")
     args = parser.parse_args(sys.argv[2:])
 
-    from engine.persistence_io import dumps_json_deterministic, write_json_atomic
     from engine.logging_tools import configure_logging, suppress_stdout
+    from engine.persistence_io import dumps_json_deterministic, write_json_atomic
     from engine.repo_root import get_repo_root
-    from engine.tooling.content_inventory import list_encounter_presets, list_scenes, list_worlds
+    from engine.tooling.content_inventory import list_encounter_presets, list_worlds
     from engine.tooling.preset_lint import lint_encounter_preset_references
 
     configure_logging(json_mode=True)
@@ -581,12 +588,7 @@ def _handle_scene_tilemap_paint(args: argparse.Namespace) -> int:
 
 
 def _handle_scene_tilemap_brush(args: argparse.Namespace) -> int:
-    from engine.paths import resolve_path
-    from engine.persistence_io import write_json_atomic
-    from engine.scene_loader import SceneLoader
-    from engine.scene_serializer import compact_scene_payload
-    from engine.tilemap_brush import apply_brush, validate_brush
-    from engine.tilemap_edit import TilemapDims, ensure_tiles_array, get_layer_by_id
+
     from . import scene as scene_commands
 
     return int(scene_commands._handle_scene_tilemap_brush(args))

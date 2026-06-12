@@ -10,17 +10,17 @@ from types import SimpleNamespace
 import pytest
 
 from engine.editor_tooltips_model import (
-    TooltipHit,
-    TooltipLayout,
     DOCK_TAB_TOOLTIPS,
     MENU_TITLE_TOOLTIPS,
-    TOP_BAR_CONTROL_TOOLTIPS,
     SPLITTER_TOOLTIP,
-    compute_tooltip_text_for_target,
-    compute_tooltip_box_layout,
-    resolve_editor_tooltip,
-    _is_text_input_active_state,
+    TOP_BAR_CONTROL_TOOLTIPS,
+    TooltipHit,
+    TooltipLayout,
     _is_modal_open_state,
+    _is_text_input_active_state,
+    compute_tooltip_box_layout,
+    compute_tooltip_text_for_target,
+    resolve_editor_tooltip,
 )
 from tests._dock_stub import make_dock_stub
 from tests._session_stub import make_session_stub
@@ -506,8 +506,8 @@ class TestDockTabTooltips:
             window = None
 
         from engine.editor.editor_shell_layout import (
-            compute_editor_shell_layout,
             compute_dock_tab_rects,
+            compute_editor_shell_layout,
         )
 
         layout = compute_editor_shell_layout(800, 600, 320, 320)

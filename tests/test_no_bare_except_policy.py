@@ -11,7 +11,6 @@ This AST-based test acts as a safety net in case ruff is not run.
 from __future__ import annotations
 
 import ast
-import sys
 from pathlib import Path
 
 import pytest

@@ -65,9 +65,9 @@ class TestCampaignReplayHarness:
     def test_determinism_two_runs_identical(self) -> None:
         """Two runs with the same script produce identical digest traces."""
         from tooling.campaign_replay import (
+            diff_traces,
             load_campaign_script,
             run_campaign_replay,
-            diff_traces,
         )
 
         script = load_campaign_script(CAMPAIGN_ID)
@@ -212,8 +212,9 @@ class TestCampaignReplayCheckCLI:
     @pytest.mark.fast
     def test_cli_smoke_produces_expected_files(self, tmp_path: Path) -> None:
         """CLI command produces all expected output files."""
-        from mesh_cli.campaign import _handle_replay_check
         import argparse
+
+        from mesh_cli.campaign import _handle_replay_check
 
         args = argparse.Namespace(
             campaign=CAMPAIGN_ID,
@@ -239,8 +240,9 @@ class TestCampaignReplayCheckCLI:
     @pytest.mark.fast
     def test_cli_json_mode(self, tmp_path: Path) -> None:
         """CLI --json flag produces digest_diff.json."""
-        from mesh_cli.campaign import _handle_replay_check
         import argparse
+
+        from mesh_cli.campaign import _handle_replay_check
 
         args = argparse.Namespace(
             campaign=CAMPAIGN_ID,
@@ -258,8 +260,9 @@ class TestCampaignReplayCheckCLI:
     @pytest.mark.fast
     def test_cli_deterministic_traces(self, tmp_path: Path) -> None:
         """Both trace files have identical digests."""
-        from mesh_cli.campaign import _handle_replay_check
         import argparse
+
+        from mesh_cli.campaign import _handle_replay_check
 
         args = argparse.Namespace(
             campaign=CAMPAIGN_ID,
@@ -275,8 +278,9 @@ class TestCampaignReplayCheckCLI:
     @pytest.mark.fast
     def test_cli_artifact_paths_stable(self, tmp_path: Path) -> None:
         """Output artifact names are stable across multiple invocations."""
-        from mesh_cli.campaign import _handle_replay_check
         import argparse
+
+        from mesh_cli.campaign import _handle_replay_check
 
         args = argparse.Namespace(
             campaign=CAMPAIGN_ID,
@@ -295,8 +299,9 @@ class TestCampaignReplayCheckCLI:
     @pytest.mark.fast
     def test_cli_checkpoint_content_valid(self, tmp_path: Path) -> None:
         """Checkpoint debug bundles contain valid state snapshots."""
-        from mesh_cli.campaign import _handle_replay_check
         import argparse
+
+        from mesh_cli.campaign import _handle_replay_check
 
         args = argparse.Namespace(
             campaign=CAMPAIGN_ID,
@@ -316,8 +321,9 @@ class TestCampaignReplayCheckCLI:
     @pytest.mark.fast
     def test_cli_handles_unknown_campaign(self, tmp_path: Path) -> None:
         """CLI exits with code 2 for unknown campaign id."""
-        from mesh_cli.campaign import _handle_replay_check
         import argparse
+
+        from mesh_cli.campaign import _handle_replay_check
 
         args = argparse.Namespace(
             campaign="nonexistent_campaign",
@@ -330,8 +336,9 @@ class TestCampaignReplayCheckCLI:
     @pytest.mark.fast
     def test_campaign_command_handle_dispatch(self) -> None:
         """campaign handle() returns 2 for missing subcommand."""
-        from mesh_cli.campaign import handle
         import argparse
+
+        from mesh_cli.campaign import handle
 
         args = argparse.Namespace(campaign_command=None)
         assert handle(args) == 2
@@ -339,8 +346,9 @@ class TestCampaignReplayCheckCLI:
     @pytest.mark.fast
     def test_diff_text_file_content(self, tmp_path: Path) -> None:
         """digest_diff.txt contains IDENTICAL for deterministic runs."""
-        from mesh_cli.campaign import _handle_replay_check
         import argparse
+
+        from mesh_cli.campaign import _handle_replay_check
 
         args = argparse.Namespace(
             campaign=CAMPAIGN_ID,

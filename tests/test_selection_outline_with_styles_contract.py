@@ -6,17 +6,14 @@ Headless, no arcade dependency.
 
 from __future__ import annotations
 
-import pytest
-
 from engine.editor.selection_outline import (
+    STYLE_DUPLICATE,
+    STYLE_NORMAL,
+    STYLE_ORIGINAL,
     RectF,
     StyledSelectionOutline,
     build_selection_outlines_with_styles,
-    STYLE_NORMAL,
-    STYLE_ORIGINAL,
-    STYLE_DUPLICATE,
 )
-
 
 # -----------------------------------------------------------------------------
 # Test fixtures

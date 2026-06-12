@@ -3,10 +3,9 @@ from __future__ import annotations
 import argparse
 import subprocess
 import sys
+import tomllib
 import zipfile
 from pathlib import Path
-import tomllib
-
 
 README_TEXT = "\n".join(
     [
@@ -72,7 +71,7 @@ def build_and_zip_web_demo(repo_root: Path, out_zip: Path | None = None) -> Path
     """
     if not (repo_root / "web_main.py").exists():
         raise FileNotFoundError(f"web_main.py not found in {repo_root}")
-        
+
     # Run build in the target directory
     cmd = [sys.executable, "-m", "tooling.build_web", "web_main.py"]
     subprocess.run(cmd, check=True, cwd=repo_root)
@@ -80,7 +79,7 @@ def build_and_zip_web_demo(repo_root: Path, out_zip: Path | None = None) -> Path
     # Read config relative to repo_root
     config = _read_pygbag_toml(repo_root / "pygbag.toml")
     build_dir = repo_root / _extract_output_dir(config)
-    
+
     if not build_dir.exists():
         raise FileNotFoundError(f"Web build output not found: {build_dir}")
 
@@ -89,7 +88,7 @@ def build_and_zip_web_demo(repo_root: Path, out_zip: Path | None = None) -> Path
 
     if out_zip is None:
         out_zip = repo_root / "dist" / "web_demo.zip"
-        
+
     _write_zip(out_zip, build_dir)
     return out_zip
 
@@ -103,12 +102,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Build and package a web demo release.")
     parser.add_argument("entrypoint", nargs="?", default="web_main.py", help="Entry point script.")
     args = parser.parse_args(argv)
-    
+
     # Respect entrypoint arg if needed, though build_and_zip enforces web_main.py for now
-    # to match the signature requirement. 
+    # to match the signature requirement.
     # But wait, original build_release took entrypoint.
     # Refactoring slightly to maintaing CLI behavior accurately.
-    
+
     try:
         path = build_release(args.entrypoint)
         print(f"[Mesh][Web] Wrote {path.as_posix()}")

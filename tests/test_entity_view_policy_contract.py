@@ -11,7 +11,6 @@ Exempt modules:
 """
 from __future__ import annotations
 
-import ast
 import re
 from pathlib import Path
 
@@ -32,7 +31,7 @@ def _is_exempt(filepath: Path) -> bool:
     """Check if a file is exempt from the policy."""
     # Normalize path for comparison
     rel_path = filepath.as_posix()
-    
+
     for exempt in ENTITY_VIEW_POLICY_EXEMPT_MODULES:
         if exempt.endswith("/"):
             # Directory exemption
@@ -51,11 +50,11 @@ def _find_direct_entity_access(content: str) -> list[tuple[int, str, str]]:
     Returns list of (line_number, pattern_found, field_name).
     """
     violations: list[tuple[int, str, str]] = []
-    
+
     # Patterns that indicate direct dict access on entity-like variables
     # We look for: entity["field"] or entity.get("field") where field is canonical
     # and entity is a variable name that looks entity-related
-    
+
     entity_var_patterns = (
         r'\bentity\b',
         r'\bent\b',
@@ -63,14 +62,14 @@ def _find_direct_entity_access(content: str) -> list[tuple[int, str, str]]:
         r'\bnew_entity\b',
         r'\bcopy_entity\b',
     )
-    
+
     lines = content.split('\n')
     for line_num, line in enumerate(lines, 1):
         # Skip comments
         stripped = line.lstrip()
         if stripped.startswith('#'):
             continue
-        
+
         for field in CANONICAL_ENTITY_FIELDS:
             # Pattern 1: entity["field"] (dict subscript)
             for var_pattern in entity_var_patterns:
@@ -80,7 +79,7 @@ def _find_direct_entity_access(content: str) -> list[tuple[int, str, str]]:
                 if match:
                     violations.append((line_num, match.group(0), field))
                     break
-            
+
             # Pattern 2: entity.get("field") (dict get method)
             for var_pattern in entity_var_patterns:
                 pattern = rf'{var_pattern}\.get\s*\(\s*["\']({re.escape(field)})["\']'
@@ -88,15 +87,15 @@ def _find_direct_entity_access(content: str) -> list[tuple[int, str, str]]:
                 if match:
                     violations.append((line_num, match.group(0), field))
                     break
-    
+
     return violations
 
 
 @pytest.mark.fast
 def test_entity_view_exists() -> None:
     """EntityView module exists and exports required symbols."""
-    from engine.entity_view import EntityView, CANONICAL_ENTITY_FIELDS
-    
+    from engine.entity_view import CANONICAL_ENTITY_FIELDS, EntityView
+
     assert EntityView is not None
     assert len(CANONICAL_ENTITY_FIELDS) > 0
 
@@ -105,20 +104,20 @@ def test_entity_view_exists() -> None:
 def test_entity_view_wraps_dict() -> None:
     """EntityView wraps a dict and provides typed access."""
     from engine.entity_view import EntityView
-    
+
     data = {"x": 100.0, "y": 200.0, "name": "Test", "tags": ["enemy"]}
     view = EntityView(data)
-    
+
     # Typed access
     assert view.x == 100.0
     assert view.y == 200.0
     assert view.name == "Test"
     assert view.tags == ["enemy"]
-    
+
     # Setters update underlying dict
     view.x = 150.0
     assert data["x"] == 150.0
-    
+
     view.tags = ["boss"]
     assert data["tags"] == ["boss"]
 
@@ -127,15 +126,15 @@ def test_entity_view_wraps_dict() -> None:
 def test_entity_view_is_dict_like() -> None:
     """EntityView implements MutableMapping protocol."""
     from engine.entity_view import EntityView
-    
+
     data = {"x": 100.0, "custom_field": "value"}
     view = EntityView(data)
-    
+
     # Dict-like access for non-canonical fields
     assert view["custom_field"] == "value"
     view["custom_field"] = "new_value"
     assert data["custom_field"] == "new_value"
-    
+
     # Can iterate
     assert "x" in view
     assert len(view) == 2
@@ -145,11 +144,11 @@ def test_entity_view_is_dict_like() -> None:
 def test_entity_view_wrap_idempotent() -> None:
     """EntityView.wrap() is idempotent."""
     from engine.entity_view import EntityView
-    
+
     data = {"x": 100.0}
     view1 = EntityView(data)
     view2 = EntityView.wrap(view1)
-    
+
     assert view1 is view2
 
 
@@ -176,7 +175,7 @@ def test_canonical_fields_comprehensive() -> None:
         # Flags
         "require_flags", "forbid_flags",
     }
-    
+
     assert CANONICAL_ENTITY_FIELDS == expected
 
 
@@ -184,11 +183,11 @@ def test_canonical_fields_comprehensive() -> None:
 def test_exempt_modules_reasonable() -> None:
     """Exempt module list is reasonable and not empty."""
     assert len(ENTITY_VIEW_POLICY_EXEMPT_MODULES) > 0
-    
+
     # Must include serialization
     assert "engine/scene_loader.py" in ENTITY_VIEW_POLICY_EXEMPT_MODULES
     assert "engine/scene_serializer.py" in ENTITY_VIEW_POLICY_EXEMPT_MODULES
-    
+
     # Must include tests
     assert "tests/" in ENTITY_VIEW_POLICY_EXEMPT_MODULES
 
@@ -210,16 +209,16 @@ def test_no_direct_entity_access_in_production() -> None:
     """
     engine_root = _get_engine_root()
     violations: list[str] = []
-    
+
     for py_file in engine_root.rglob("*.py"):
         if _is_exempt(py_file):
             continue
-        
+
         try:
             content = py_file.read_text(encoding="utf-8")
         except Exception:
             continue
-        
+
         file_violations = _find_direct_entity_access(content)
         for line_num, pattern, field in file_violations:
             rel_path = py_file.relative_to(engine_root.parent)
@@ -227,7 +226,7 @@ def test_no_direct_entity_access_in_production() -> None:
                 f"  {rel_path}:{line_num}: direct access to '{field}' via {pattern}\n"
                 f"    hint: Use EntityView.{field} instead"
             )
-    
+
     if violations:
         pytest.fail(
             f"Found {len(violations)} direct entity dict access patterns:\n\n"
@@ -251,7 +250,7 @@ value = entity["x"]
 name = entity.get("name")
 '''
     violations = _find_direct_entity_access(sample_code)
-    
+
     # Should detect the violations
     assert len(violations) == 2
     fields = {v[2] for v in violations}

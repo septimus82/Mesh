@@ -7,6 +7,7 @@ arcade/pygame dependencies (pure unit tests).
 from __future__ import annotations
 
 import copy
+
 import pytest
 
 from engine.editor.editor_transform_ops import (
@@ -17,7 +18,6 @@ from engine.editor.editor_transform_ops import (
     create_move_command_from_drag,
     invert_move_command,
 )
-
 
 # ------------------------------------------------------------------------------
 # MoveEntityCommand dataclass tests

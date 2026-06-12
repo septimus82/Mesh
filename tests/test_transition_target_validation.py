@@ -44,7 +44,7 @@ class TestTransitionTargetValidation(unittest.TestCase):
                 "SceneTransition": {"target_scene": "scene2"}
             }
         }]
-        
+
         self._write_json(self.world_path, self.world_data)
         self._write_json(self.scene1_path, scene1)
         self._write_json(self.scene2_path, self.scene_data)
@@ -63,7 +63,7 @@ class TestTransitionTargetValidation(unittest.TestCase):
                 "SceneTransition": {"target_scene": "non_existent_scene"}
             }
         }]
-        
+
         self._write_json(self.world_path, self.world_data)
         self._write_json(self.scene1_path, scene1)
         self._write_json(self.scene2_path, self.scene_data)
@@ -82,7 +82,7 @@ class TestTransitionTargetValidation(unittest.TestCase):
                 "SceneTransition": {"target_scene": "non_existent_scene"}
             }
         }]
-        
+
         self._write_json(self.world_path, self.world_data)
         self._write_json(self.scene1_path, scene1)
         self._write_json(self.scene2_path, self.scene_data)
@@ -103,7 +103,7 @@ class TestTransitionTargetValidation(unittest.TestCase):
                 "SceneTransition": {"target_scene": "scene2.json"}
             }
         }]
-        
+
         self._write_json(self.world_path, self.world_data)
         self._write_json(self.scene1_path, scene1)
         self._write_json(self.scene2_path, self.scene_data)

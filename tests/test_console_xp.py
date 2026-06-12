@@ -1,5 +1,5 @@
-from engine.console_controller import ConsoleController
 from engine.config import EngineConfig
+from engine.console_controller import ConsoleController
 from engine.game_state_controller import GameStateController
 
 

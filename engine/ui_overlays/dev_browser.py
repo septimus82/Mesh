@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Sequence
+
 import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import _log_swallow
 
 from .common import (
     INSPECTOR_MAX_LINE_CHARS,
     UIElement,
-    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
+    _draw_tb_rectangle_outline,
     _safe_truncate,
     load_config_json,
 )

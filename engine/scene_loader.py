@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set
 
+from engine.swallowed_exceptions import _log_swallow
+
 from .behaviours.registry import get_behaviour_info, get_behaviour_param_defs
 from .diagnostics import error as diag_error
 from .diagnostics import warn as diag_warn
@@ -16,7 +18,6 @@ from .migrations import migrate_payload
 from .paths import resolve_path
 from .prefabs import get_prefab_manager
 from .schema_validation import validate
-from engine.swallowed_exceptions import _log_swallow
 
 DEFAULT_LAYERS = [
     {"name": "background"},

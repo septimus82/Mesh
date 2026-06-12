@@ -1,6 +1,5 @@
-import pytest
 from engine.palette_mode import _apply_stamp
-from engine.tilemap_edit import TilemapDims
+
 
 def test_apply_stamp_mutates():
     scene = {
@@ -18,9 +17,9 @@ def test_apply_stamp_mutates():
         ],
         "entities": [{"prefab_id": "player", "x": 0, "y": 0, "id_suffix": "1"}]
     }
-    
+
     _apply_stamp(scene, stamp, 0, 0)
-    
+
     # Check tiles
     tiles = scene["tilemap"]["tile_layers"][0]["tiles"]
     assert tiles[0] == 1
@@ -28,7 +27,7 @@ def test_apply_stamp_mutates():
     assert tiles[10] == 1
     assert tiles[11] == 1
     assert tiles[2] == 0
-    
+
     # Check entities
     assert len(scene["entities"]) == 1
     assert scene["entities"][0]["prefab_id"] == "player"

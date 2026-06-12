@@ -6,7 +6,7 @@ from typing import Any
 
 from engine.config import load_config
 from engine.tooling import build_demo_command, release_command
-from engine.tooling.preset_policy import validate_preset_python_step, get_preset_policy_snapshot, validate_preset_env
+from engine.tooling.preset_policy import get_preset_policy_snapshot, validate_preset_env, validate_preset_python_step
 
 # Private alias for backward compatibility if needed, but prefer using the imported one
 _validate_python_step = validate_preset_python_step
@@ -164,7 +164,7 @@ def run_preset_command(args: argparse.Namespace) -> None:
 def validate_presets(config) -> dict:
     """Validate presets in config and return result dict."""
     presets = getattr(config, "presets", {})
-    
+
     issues: list[dict] = []
     presets_checked = 0
 
@@ -185,10 +185,10 @@ def validate_presets(config) -> dict:
         if detail is not None:
             issue["detail"] = detail
         issues.append(issue)
-    
+
     for preset_name, preset in presets.items():
         presets_checked += 1
-        
+
         # Schema Validation
         if not isinstance(preset, dict):
             _add_issue(issue_id="preset_step_invalid", preset=preset_name, step_index=-1, message="Preset must be a dictionary")
@@ -204,42 +204,42 @@ def validate_presets(config) -> dict:
                     message=str(env_issue.get("message", "Invalid preset env")),
                     detail=dict(env_issue.get("detail") or {}),
                 )
-            
+
         if "description" not in preset:
             _add_issue(issue_id="preset_step_invalid", preset=preset_name, step_index=-1, message="Missing 'description'")
         elif not isinstance(preset["description"], str) or not preset["description"].strip():
             _add_issue(issue_id="preset_step_invalid", preset=preset_name, step_index=-1, message="Description must be a non-empty string")
-            
+
         has_steps = "steps" in preset
         has_action = "action" in preset
-        
+
         if not (has_steps or has_action):
             _add_issue(issue_id="preset_step_invalid", preset=preset_name, step_index=-1, message="Must have 'steps' or 'action'")
-            
+
         if has_steps:
             steps = preset["steps"]
             if not isinstance(steps, list):
                 _add_issue(issue_id="preset_step_invalid", preset=preset_name, step_index=-1, message="'steps' must be a list")
                 continue
-                
+
             if not steps:
                 _add_issue(issue_id="preset_step_invalid", preset=preset_name, step_index=-1, message="'steps' cannot be empty")
                 continue
-                
+
             for i, step in enumerate(steps):
                 if not isinstance(step, dict):
                     _add_issue(issue_id="preset_step_invalid", preset=preset_name, step_index=i, message="Step must be a dictionary")
                     continue
-                    
+
                 if "cmd" not in step:
                     _add_issue(issue_id="preset_step_invalid", preset=preset_name, step_index=i, message="Step missing 'cmd'")
                     continue
-                    
+
                 cmd = step["cmd"]
                 if not isinstance(cmd, str):
                     _add_issue(issue_id="preset_step_invalid", preset=preset_name, step_index=i, message="'cmd' must be a string")
                     continue
-                    
+
                 if "args" in step:
                     if not isinstance(step["args"], list):
                         _add_issue(issue_id="preset_step_invalid", preset=preset_name, step_index=i, message="'args' must be a list")
@@ -247,7 +247,7 @@ def validate_presets(config) -> dict:
                     for arg in step["args"]:
                         if not isinstance(arg, str):
                             _add_issue(issue_id="preset_step_invalid", preset=preset_name, step_index=i, message="Step args must be strings")
-                
+
                 # Python Step Validation
                 if cmd == "python":
                     try:
@@ -284,7 +284,7 @@ def validate_presets(config) -> dict:
             )
 
         issues.sort(key=_sort_key)
-        
+
         return {
             "version": 1,
             "ok": False,

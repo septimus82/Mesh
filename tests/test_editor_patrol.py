@@ -1,13 +1,16 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+
 import arcade
+
 from engine.editor_controller import (
-    EditorModeController,
     TOOL_MODE_PATH,
     TOOL_MODE_ZONE,
     ZONE_TARGET_HITBOX,
     ZONE_TARGET_TRIGGER,
+    EditorModeController,
 )
+
 
 class MockSprite(MagicMock):
     def __init__(self, *args, **kwargs):
@@ -49,49 +52,49 @@ class TestEditorPatrol(unittest.TestCase):
         self.window.height = 600
         self.window.scene_controller = MagicMock()
         self.window.scene_controller.all_sprites = []
-        
+
         # Mock ensure methods needed by editor
         self.window.scene_controller._ensure_entity_data_dict = lambda s: s.mesh_entity_data
         self.window.scene_controller._ensure_behaviour_config_root = lambda d: {}
         # Mock config list to match runtime list (assuming 1 behaviour for simplicity in tests)
         self.window.scene_controller._get_behaviour_configs_for_sprite = lambda s: [{"type": b.mesh_behaviour_type} for b in s.mesh_behaviours_runtime]
-        
+
         self.controller = EditorModeController(self.window)
         self.controller.active = True
 
     def test_path_tool_selection(self):
         self.controller.tool_mode = TOOL_MODE_PATH
-        
+
         sprite = MockSprite()
         patrol = PatrolBehaviour()
         sprite.mesh_behaviours_runtime = [patrol]
         self.controller.selected_entity = sprite
-        
+
         # Test selecting existing waypoint
         # Click near (100, 100)
         self.window.screen_to_world.return_value = (102, 102)
-        
+
         result = self.controller.handle_mouse_click(102, 102, arcade.MOUSE_BUTTON_LEFT, 0)
-        
+
         self.assertTrue(result)
         self.assertEqual(self.controller.selected_waypoint_index, 0)
 
     def test_path_tool_add_point(self):
         self.controller.tool_mode = TOOL_MODE_PATH
-        
+
         sprite = MockSprite()
         patrol = PatrolBehaviour()
         patrol.entity = sprite # Link back
         sprite.mesh_behaviours_runtime = [patrol]
         self.controller.selected_entity = sprite
         self.window.scene_controller.all_sprites = [sprite] # Needed for lookup
-        
+
         # Shift+Click at (300, 100)
         self.window.screen_to_world.return_value = (300, 100)
-        
+
         initial_count = len(patrol.points)
         result = self.controller.handle_mouse_click(300, 100, arcade.MOUSE_BUTTON_LEFT, arcade.key.MOD_SHIFT)
-        
+
         self.assertTrue(result)
         self.assertEqual(len(patrol.points), initial_count + 1)
         # Check if new point is roughly correct (snapped)
@@ -99,18 +102,18 @@ class TestEditorPatrol(unittest.TestCase):
 
     def test_zone_tool_resize(self):
         self.controller.tool_mode = TOOL_MODE_ZONE
-        
+
         sprite = MockSprite()
         zone = TriggerZoneBehaviour()
         zone.entity = sprite # Link back
         sprite.mesh_behaviours_runtime = [zone]
         self.controller.selected_entity = sprite
         self.window.scene_controller.all_sprites = [sprite] # Needed for lookup
-        
+
         # Shift+Right Arrow
         initial_radius = zone.radius
         self.controller.shape.handle_zone_input(arcade.key.RIGHT, arcade.key.MOD_SHIFT)
-        
+
         self.assertGreater(zone.radius, initial_radius)
         self.assertEqual(zone.radius, initial_radius + 16.0)
 

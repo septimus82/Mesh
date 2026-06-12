@@ -7,7 +7,6 @@ from typing import Any
 
 from engine.swallowed_exceptions import _log_swallow
 
-
 ALLOWED_PRESET_KEYS: frozenset[str] = frozenset(
     {
         "id",

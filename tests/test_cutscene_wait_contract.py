@@ -10,17 +10,14 @@ These tests document and enforce the invariant that:
 from __future__ import annotations
 
 import pytest
-from typing import Any
 
 from engine.cutscene_runtime.runner import CutsceneRunner
-
 from tests.cutscene_helpers import (
-    MockFlags,
     MockEventBus,
+    MockFlags,
     advance_cutscene_time,
     make_script,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

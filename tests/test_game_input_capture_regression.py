@@ -4,8 +4,7 @@ from dataclasses import dataclass, field
 
 import arcade
 
-from engine.game_runtime import input_dispatch
-from engine.game_runtime import tick
+from engine.game_runtime import input_dispatch, tick
 
 
 @dataclass

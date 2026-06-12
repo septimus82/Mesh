@@ -1,18 +1,16 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Callable, Optional
 
-from pathlib import Path
-
-from engine.diagnostics import Diagnostic, get_diagnostics, sort_diagnostics
-from engine.editor.scene_lint_model import SceneLintIssue
-from engine.editor.problems_jump_model import choose_jump_target, JumpTarget
-from engine.editor.scene_lint_model import build_scene_lint_issues
 import engine.optional_arcade as optional_arcade
-
+from engine.diagnostics import Diagnostic, get_diagnostics, sort_diagnostics
 from engine.editor.editor_dock_query import get_dock_snapshot, get_effective_dock_widths
+from engine.editor.problems_jump_model import JumpTarget, choose_jump_target
 from engine.editor.scene_lint_model import (
     PROBLEMS_LINE_HEIGHT,
+    SceneLintIssue,
+    build_scene_lint_issues,
     compute_problems_panel_layout,
     compute_problems_window,
 )
@@ -39,16 +37,16 @@ class ProblemsController:
         self._include_structured_diagnostics = bool(include_structured_diagnostics)
         self._last_diagnostic_signature: tuple[tuple[str, str, str, str, str, str], ...] = ()
         self._new_error_indicator: bool = False
-    
+
     def set_issues(self, issues: list[SceneLintIssue]) -> None:
         """Set the list of issues and sort them deterministically."""
         def sort_key(issue: SceneLintIssue) -> tuple[int, str, int, str]:
             # Severity (desc) -> negated rank for asc sort
             sev_rank = SEVERITY_RANK.get(issue.severity.lower(), 0)
-            
+
             # Path (scene_id)
             path = issue.scene_id or ""
-            
+
             # Line (index/entity_id) - heuristic
             # Try to get index from meta, else 0
             line = 0
@@ -56,18 +54,18 @@ class ProblemsController:
                 val = issue.meta.get("index")
                 if isinstance(val, int):
                     line = val
-            
+
             # Code (kind)
             code = issue.kind or ""
-            
+
             return (-sev_rank, path, line, code)
 
         self.issues = sorted(issues, key=sort_key)
         self.issues_rev += 1
-        
-        # Reset selection details if needed? 
+
+        # Reset selection details if needed?
         # Usually we want to preserve selection if possible, but indices shift.
-        # For v1, resetting or clamping is safest. 
+        # For v1, resetting or clamping is safest.
         # Existing logic in EditorController was _clamp_problems_selection.
         self._clamp_selection()
 
@@ -142,7 +140,7 @@ class ProblemsController:
         if not self.query:
             return all_issues
         q = self.query.lower()
-        
+
         # Filter logic similar to scene_lint_model.filter_lint_issues
         # Matches against message, kind, issue_id, entity_id
         filtered = []
@@ -168,7 +166,7 @@ class ProblemsController:
         if not filtered:
             self.selected_index = 0
             return
-        
+
         new_idx = self.selected_index + delta
         self.selected_index = max(0, min(new_idx, len(filtered) - 1))
         self._ensure_visible()
@@ -194,28 +192,28 @@ class ProblemsController:
         self.refresh_structured_diagnostics()
         filtered = self.get_filtered_issues()
         total_count = len(filtered)
-        
+
         # Auto-scroll Logic
         visible_count = int(viewport_height / row_height) if row_height > 0 else 1
         current_scroll_idx = int(self.scroll_y / row_height) if row_height > 0 else 0
         max_scroll = max(0, total_count - visible_count)
-        
+
         # Adjust scroll to keep selection visible
         if self.selected_index < current_scroll_idx:
             current_scroll_idx = self.selected_index
         elif self.selected_index >= current_scroll_idx + visible_count:
             current_scroll_idx = self.selected_index - visible_count + 1
-            
+
         current_scroll_idx = max(0, min(current_scroll_idx, max_scroll))
         self.scroll_y = int(current_scroll_idx * row_height)
-        
+
         # Windowing
         start_idx = max(0, current_scroll_idx - overscan)
         end_idx = min(total_count, current_scroll_idx + visible_count + overscan)
-        
+
         visible_subset = filtered[start_idx:end_idx]
         counts = self.get_severity_counts()
-        
+
         return {
             "rows": visible_subset,
             "start_index": start_idx,
@@ -270,7 +268,7 @@ class ProblemsController:
         # but we need to ensure next call updates scroll_y.
         # Since scroll_y is state, get_provider_payload updates it.
         # But if we want to support "headless" validity, we might want to update it here?
-        # Typically UI requests payload and that updates scroll. 
+        # Typically UI requests payload and that updates scroll.
         pass
 
     def get_selected_jump_target(self) -> JumpTarget | None:

@@ -7,13 +7,13 @@ from pathlib import Path
 
 from engine.editor.editor_workspace_model import (
     WorkspaceSnapshot,
-    compute_workspace_paths,
-    resolve_settings_precedence,
-    build_save_payload,
     apply_loaded_payload,
-    normalize_project_path,
-    update_recent_projects,
+    build_save_payload,
+    compute_workspace_paths,
     merge_user_settings,
+    normalize_project_path,
+    resolve_settings_precedence,
+    update_recent_projects,
 )
 from engine.workspace_settings import WorkspaceSettings
 

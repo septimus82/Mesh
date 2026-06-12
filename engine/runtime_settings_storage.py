@@ -9,7 +9,6 @@ from . import json_io
 from .repo_root import get_repo_root
 from .runtime_settings import RuntimeSettings
 
-
 _SETTINGS_ENV = "MESH_RUNTIME_SETTINGS_PATH"
 
 

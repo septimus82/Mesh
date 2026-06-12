@@ -10,19 +10,18 @@ Tests the pure model functions for HD-2D settings panel:
 
 from __future__ import annotations
 
-import copy
 from typing import Any
 
 import pytest
 
 from engine.editor.hd2d_settings_panel_model import (
-    HD2D_DEFAULTS,
     BOOL_KEYS,
     COLOR_KEYS,
+    HD2D_DEFAULTS,
     INT_KEYS,
     STRENGTH_KEYS,
-    Hd2dSettings,
     Hd2dSettingRow,
+    Hd2dSettings,
     apply_hd2d_setting_patch,
     build_hd2d_settings_rows,
     detect_active_preset,
@@ -34,7 +33,6 @@ from engine.editor.hd2d_settings_panel_model import (
     sanitize_hd2d_setting_value,
 )
 from tests._typing import as_any
-
 
 # =============================================================================
 # Test Constants

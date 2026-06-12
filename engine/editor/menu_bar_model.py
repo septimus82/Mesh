@@ -9,11 +9,10 @@ from __future__ import annotations
 
 import os
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
 from engine.editor.editor_actions import get_editor_actions
-
 
 # Layout constants
 MENU_BAR_HEIGHT = 24

@@ -1,13 +1,11 @@
 import types
 from unittest.mock import MagicMock
 
-import arcade
 import pytest
 
 from engine.behaviours.scene_exit import SceneExit
 from engine.events import MeshEventBus
 from engine.scene_controller import SceneController
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 

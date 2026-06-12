@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import MagicMock, patch
 import argparse
+from unittest.mock import MagicMock, patch
+
 from mesh_cli import _handle_demo
+
 
 def test_demo_command_launches_game():
     with patch("engine.tooling.demo_runner.load_config") as mock_load_config, patch("engine.tooling.demo_runner.GameWindow") as mock_window:

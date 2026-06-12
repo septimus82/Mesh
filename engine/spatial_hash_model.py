@@ -1,9 +1,9 @@
 """Deterministic spatial hash model for broad-phase queries."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import math
-from typing import Callable, Sequence, Tuple, TypeVar
+from dataclasses import dataclass
+from typing import Callable, Sequence, TypeVar
 
 from .physics_model import Aabb
 

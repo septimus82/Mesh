@@ -8,7 +8,6 @@ import pytest
 from engine.game import GameWindow
 from engine.tooling import preset_commands
 
-
 pytestmark = [pytest.mark.builtin_behaviours, pytest.mark.integration, pytest.mark.slow]
 
 class TestPresetHeaderToast(unittest.TestCase):
@@ -17,7 +16,7 @@ class TestPresetHeaderToast(unittest.TestCase):
         self.mock_config.presets = {}
         self.patcher_config = patch("engine.tooling.preset_commands.load_config", return_value=self.mock_config)
         self.patcher_config.start()
-        
+
         self.patcher_cli = patch("mesh_cli.main", return_value=0)
         self.mock_cli_main = self.patcher_cli.start()
 
@@ -39,20 +38,20 @@ class TestPresetHeaderToast(unittest.TestCase):
                 "steps": [{"cmd": "pipeline"}]
             }
         }
-        
+
         def check_env(*args, **kwargs):
             self.assertEqual(os.environ.get("MESH_ACTIVE_PRESET"), "test_preset")
             self.assertEqual(os.environ.get("MESH_PRESET_DESCRIPTION"), "Test Description")
             self.assertEqual(os.environ.get("MESH_PRESET_NOTES"), "Test Notes")
             return 0
-            
+
         self.mock_cli_main.side_effect = check_env
-        
+
         args = argparse.Namespace(name="test_preset")
         preset_commands.run_preset_command(args)
-        
+
         self.mock_cli_main.assert_called()
-        
+
         # Verify env vars are cleaned up
         self.assertIsNone(os.environ.get("MESH_ACTIVE_PRESET"))
         self.assertIsNone(os.environ.get("MESH_PRESET_DESCRIPTION"))
@@ -65,20 +64,20 @@ class TestPresetHeaderToast(unittest.TestCase):
                 "steps": [{"cmd": "pipeline"}]
             }
         }
-        
+
         def check_env(*args, **kwargs):
             self.assertEqual(os.environ.get("MESH_ACTIVE_PRESET"), "test_preset_no_desc")
             self.assertEqual(os.environ.get("MESH_PRESET_DESCRIPTION"), "Test Description")
             self.assertIsNone(os.environ.get("MESH_PRESET_NOTES"))
             return 0
-            
+
         self.mock_cli_main.side_effect = check_env
-        
+
         args = argparse.Namespace(name="test_preset_no_desc")
         preset_commands.run_preset_command(args)
-        
+
         self.mock_cli_main.assert_called()
-        
+
         self.assertIsNone(os.environ.get("MESH_ACTIVE_PRESET"))
 
 class TestGameWindowToast(unittest.TestCase):
@@ -117,7 +116,7 @@ class TestGameWindowToast(unittest.TestCase):
             "GameStateController", "SaveManager", "QuestManager", "ParticleManager",
             "MeshEventBus"
         ]
-        
+
         self.mocks = {}
         for mgr in managers:
             patcher = patch(f"engine.game.{mgr}")
@@ -143,9 +142,9 @@ class TestGameWindowToast(unittest.TestCase):
         os.environ["MESH_ACTIVE_PRESET"] = "test_preset"
         os.environ["MESH_PRESET_DESCRIPTION"] = "Test Description"
         os.environ["MESH_PRESET_NOTES"] = "Test Notes"
-        
+
         window = GameWindow(800, 600, "Test")
-        
+
         # Verify PlayerHUD.enqueue_toast was called
         mock_hud_instance = self.mocks["PlayerHUD"].return_value
         mock_hud_instance.enqueue_toast.assert_called_with("Preset: test_preset — Test Description (Notes: Test Notes)")
@@ -156,17 +155,17 @@ class TestGameWindowToast(unittest.TestCase):
             del os.environ["MESH_PRESET_DESCRIPTION"]
         if "MESH_PRESET_NOTES" in os.environ:
             del os.environ["MESH_PRESET_NOTES"]
-            
+
         window = GameWindow(800, 600, "Test")
-        
+
         mock_hud_instance = self.mocks["PlayerHUD"].return_value
         mock_hud_instance.enqueue_toast.assert_called_with("Preset: test_preset_simple")
 
     def test_game_window_no_toast_without_preset(self):
         if "MESH_ACTIVE_PRESET" in os.environ:
             del os.environ["MESH_ACTIVE_PRESET"]
-            
+
         window = GameWindow(800, 600, "Test")
-        
+
         mock_hud_instance = self.mocks["PlayerHUD"].return_value
         mock_hud_instance.enqueue_toast.assert_not_called()

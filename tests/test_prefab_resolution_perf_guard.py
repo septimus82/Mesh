@@ -1,12 +1,14 @@
-import unittest
 import time
+import unittest
+
 from engine.prefabs import PrefabManager
+
 
 class TestPrefabResolutionPerfGuard(unittest.TestCase):
     def setUp(self):
         self.manager = PrefabManager()
         self.manager._loaded = True
-        
+
         # Create a chain of 10 prefabs
         prefabs = {}
         for i in range(10):
@@ -20,9 +22,9 @@ class TestPrefabResolutionPerfGuard(unittest.TestCase):
     def test_resolution_performance(self):
         # Resolve the head of the chain 1000 times
         # This tests caching effectiveness
-        
+
         start_time = time.perf_counter()
-        
+
         for _ in range(1000):
             # Resolve P0 (depth 10)
             # First time: computes and caches
@@ -31,7 +33,7 @@ class TestPrefabResolutionPerfGuard(unittest.TestCase):
             self.assertIsNotNone(resolved)
             self.assertEqual(resolved["entity"]["attr_0"], 0)
             self.assertEqual(resolved["entity"]["attr_9"], 9)
-            
+
             # Also test resolve() with entity override
             entity = {"prefab_id": "P0", "x": 100}
             final = self.manager.resolve(entity)
@@ -39,7 +41,7 @@ class TestPrefabResolutionPerfGuard(unittest.TestCase):
 
         end_time = time.perf_counter()
         duration = end_time - start_time
-        
+
         # Threshold: 0.5 seconds is very generous for 1000 iterations.
         # Without caching, 1000 * 10 merges might take a bit, but still fast.
         # With caching, it should be instant.

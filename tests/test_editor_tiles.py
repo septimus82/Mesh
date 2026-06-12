@@ -1,4 +1,3 @@
-import arcade
 
 from engine.editor_controller import EditorModeController
 

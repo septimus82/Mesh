@@ -1,13 +1,12 @@
-import pytest
 import json
 from pathlib import Path
+
+import pytest
 
 from engine.scene_loader import SceneLoader
 from engine.ui import maybe_enqueue_quest_progress_toast
 from engine.validators.transition_validator import TransitionValidator
 from tests._variant_contracts import _StubWindow
-
-
 
 pytestmark = pytest.mark.builtin_behaviours
 

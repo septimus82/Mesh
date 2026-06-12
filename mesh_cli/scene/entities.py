@@ -8,12 +8,12 @@ from engine.persistence_io import write_json_atomic
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
 from engine.swallowed_exceptions import _log_swallow
-
 from mesh_cli.scene.common import (
-    _sanitize_entity_id_token,
-    _format_placeholder_id_number,
     _dict_diffs,
+    _format_placeholder_id_number,
+    _sanitize_entity_id_token,
 )
+
 
 def _default_spawn_entity_id(scene_path: str, spawn_id: str, x: float, y: float) -> str:
     stem = Path(str(scene_path)).stem

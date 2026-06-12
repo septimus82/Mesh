@@ -4,7 +4,6 @@ import pytest
 
 import engine.scene_runtime.authoring.entity_ops as entity_ops
 
-
 pytestmark = [pytest.mark.fast]
 
 

@@ -9,9 +9,7 @@ Tests the pure model functions for:
 
 from __future__ import annotations
 
-import pytest
 from tests._typing import as_any
-
 
 # =============================================================================
 # Test Constants
@@ -251,8 +249,9 @@ class TestApplySafeMerge:
 
     def test_does_not_mutate_input(self) -> None:
         """Does not mutate the input scene."""
-        from engine.editor.hd2d_defaults_model import apply_safe_merge
         import copy
+
+        from engine.editor.hd2d_defaults_model import apply_safe_merge
 
         scene = {"settings": {"world_width": 1920}}
         original = copy.deepcopy(scene)
@@ -360,6 +359,7 @@ class TestWorkspaceSettingsHd2dDefault:
     def test_round_trip(self) -> None:
         """Settings can be serialized and deserialized."""
         from dataclasses import asdict
+
         from engine.workspace_settings import WorkspaceSettings
 
         original = WorkspaceSettings(hd2d_default_preset_id="crisp")
@@ -389,8 +389,9 @@ class TestAutoApplyDoesNotPushUndo:
 
     def test_apply_safe_merge_does_not_modify_input(self) -> None:
         """apply_safe_merge does not modify the input scene."""
-        from engine.editor.hd2d_defaults_model import apply_safe_merge
         import copy
+
+        from engine.editor.hd2d_defaults_model import apply_safe_merge
 
         scene = {"settings": {"x": 1}}
         original = copy.deepcopy(scene)

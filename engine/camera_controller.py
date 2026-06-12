@@ -48,6 +48,7 @@ import math
 import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
+
 import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import _log_swallow
 
@@ -598,7 +599,7 @@ class CameraController:
         camera = self.camera
         if camera is None:
             return (float(x), float(y))
-        
+
         # Try new arcade 3.0 API first
         unproject = getattr(camera, "unproject", None)
         if callable(unproject):

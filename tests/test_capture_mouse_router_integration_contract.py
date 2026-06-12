@@ -5,24 +5,25 @@ from types import SimpleNamespace
 import pytest
 
 import engine.input_runtime.capture_mouse_router as mouse_router
-from engine.input_runtime.capture_mouse_router_model import MouseEvent
-from engine.input_runtime.capture_runtime_focus_model import CaptureFocusSnapshot
-from engine.input_runtime import capture_mouse_router_handlers_ui as ui_handlers
-from engine.input_runtime import capture_mouse_router_handlers_confirm_modal as confirm_modal_handlers
-from engine.input_runtime import capture_mouse_router_handlers_context_menu as context_menu_handlers
-from engine.input_runtime import capture_mouse_router_handlers_keybinds as keybinds_handlers
-from engine.input_runtime import capture_mouse_router_handlers_command_palette as command_palette_handlers
-from engine.input_runtime import capture_mouse_router_handlers_console as console_handlers
-from engine.input_runtime import capture_mouse_router_handlers_project_explorer as project_explorer_handlers
-from engine.input_runtime import capture_mouse_router_handlers_problems as problems_handlers
+from engine.input_runtime import capture_mouse_router_handlers_authoring_selected as authoring_selected_handlers
+
 # Paint handlers - now split into per-scope modules
 from engine.input_runtime import capture_mouse_router_handlers_capture_mode as capture_mode_handlers
-from engine.input_runtime import capture_mouse_router_handlers_tile_paint as tile_paint_handlers
+from engine.input_runtime import capture_mouse_router_handlers_command_palette as command_palette_handlers
+from engine.input_runtime import capture_mouse_router_handlers_confirm_modal as confirm_modal_handlers
+from engine.input_runtime import capture_mouse_router_handlers_console as console_handlers
+from engine.input_runtime import capture_mouse_router_handlers_context_menu as context_menu_handlers
 from engine.input_runtime import capture_mouse_router_handlers_entity_paint as entity_paint_handlers
+
 # Select handlers - now split into per-scope modules
 from engine.input_runtime import capture_mouse_router_handlers_entity_select as entity_select_handlers
-from engine.input_runtime import capture_mouse_router_handlers_authoring_selected as authoring_selected_handlers
 from engine.input_runtime import capture_mouse_router_handlers_global as global_handlers
+from engine.input_runtime import capture_mouse_router_handlers_keybinds as keybinds_handlers
+from engine.input_runtime import capture_mouse_router_handlers_problems as problems_handlers
+from engine.input_runtime import capture_mouse_router_handlers_project_explorer as project_explorer_handlers
+from engine.input_runtime import capture_mouse_router_handlers_tile_paint as tile_paint_handlers
+from engine.input_runtime.capture_mouse_router_model import MouseEvent
+from engine.input_runtime.capture_runtime_focus_model import CaptureFocusSnapshot
 
 
 def _make_snapshot(**overrides) -> CaptureFocusSnapshot:
@@ -251,7 +252,7 @@ def test_problems_mouse_routes_to_handler(monkeypatch) -> None:
 def test_prefix_registry_determinism() -> None:
     """Prefix registry returns same handler for same action_id every time."""
     from engine.input_runtime.capture_mouse_router import MOUSE_PREFIX_DISPATCH, _get_handler
-    
+
     # Test multiple lookups for the same action_id
     test_actions = [
         "mouse.confirm_modal",
@@ -259,7 +260,7 @@ def test_prefix_registry_determinism() -> None:
         "mouse.entity_select.press",
         "mouse.global",
     ]
-    
+
     for action_id in test_actions:
         handlers = []
         for _ in range(3):
@@ -267,7 +268,7 @@ def test_prefix_registry_determinism() -> None:
                 if action_id.startswith(prefix) or action_id == prefix:
                     handlers.append(_get_handler(module_name, func_name))
                     break
-        
+
         assert len(set(id(h) for h in handlers)) == 1, f"Non-deterministic handler for {action_id}"
 
 
@@ -275,16 +276,16 @@ def test_prefix_registry_determinism() -> None:
 def test_longer_prefix_wins() -> None:
     """When multiple prefixes match, the longer one wins (appears first in registry)."""
     from engine.input_runtime.capture_mouse_router import MOUSE_PREFIX_DISPATCH
-    
+
     # mouse.capture_mode.press should match "mouse.capture_mode." not "mouse."
     action_id = "mouse.capture_mode.press"
-    
+
     matched_prefix = None
     for prefix, _, _ in MOUSE_PREFIX_DISPATCH:
         if action_id.startswith(prefix) or action_id == prefix:
             matched_prefix = prefix
             break
-    
+
     assert matched_prefix == "mouse.capture_mode.", (
         f"Expected 'mouse.capture_mode.' but got '{matched_prefix}'"
     )
@@ -467,7 +468,7 @@ def test_confirm_modal_beats_tile_paint(monkeypatch) -> None:
 
     monkeypatch.setattr(confirm_modal_handlers, "dispatch_confirm_modal_mouse", _dispatch_modal)
     monkeypatch.setattr(tile_paint_handlers, "dispatch_tile_paint_mouse", _dispatch_paint)
-    
+
     # Both scopes active - modal should win due to higher priority
     snapshot = _make_snapshot(
         is_confirm_modal_open=True,
@@ -498,7 +499,7 @@ def test_context_menu_beats_entity_select(monkeypatch) -> None:
 
     monkeypatch.setattr(context_menu_handlers, "dispatch_context_menu_mouse", _dispatch_menu)
     monkeypatch.setattr(entity_select_handlers, "dispatch_entity_select_mouse", _dispatch_select)
-    
+
     # Both scopes active - context menu should win due to higher priority
     snapshot = _make_snapshot(
         is_context_menu_open=True,
@@ -528,7 +529,7 @@ def test_console_beats_capture_mode(monkeypatch) -> None:
 
     monkeypatch.setattr(console_handlers, "dispatch_console_mouse", _dispatch_console)
     monkeypatch.setattr(capture_mode_handlers, "dispatch_capture_mode_mouse", _dispatch_capture)
-    
+
     # Both scopes active - console should win due to higher priority
     snapshot = _make_snapshot(
         is_console_active=True,

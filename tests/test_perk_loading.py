@@ -1,23 +1,24 @@
-import unittest
-from unittest.mock import MagicMock, patch
-from pathlib import Path
 import json
-import tempfile
 import shutil
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from engine.perks import PerkManager
+
 
 class TestPerkLoading(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
         self.packs_dir = Path(self.test_dir) / "packs"
         self.packs_dir.mkdir()
-        
+
         # Create a mock pack with perks
         self.pack_dir = self.packs_dir / "test_pack"
         self.pack_dir.mkdir()
         self.perks_file = self.pack_dir / "perks.json"
-        
+
         data = {
             "perks": [
                 {
@@ -38,7 +39,7 @@ class TestPerkLoading(unittest.TestCase):
         # Mock resolve_path to return nothing for global perks
         with patch("engine.perks.resolve_path") as mock_resolve:
             mock_resolve.return_value = Path("non_existent")
-            
+
             import os
             cwd = os.getcwd()
             os.chdir(self.test_dir)
@@ -47,7 +48,7 @@ class TestPerkLoading(unittest.TestCase):
                 print(f"Packs dir exists: {Path('packs').exists()}")
                 manager = PerkManager()
                 manager.load_perks()
-                
+
                 perk = manager.get_perk("test_perk")
                 print(f"Perk found: {perk}")
                 self.assertIsNotNone(perk)

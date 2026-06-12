@@ -18,11 +18,8 @@ def dispatch_entity_select_action(
 def _handle_entity_select_action(window: Any, action_id: str, snapshot: CaptureFocusSnapshot) -> bool:
     from engine.entity_select_mode import (  # noqa: PLC0415
         EntitySelectState,
-        clear_drag,
-        get_duplicate_offset,
         other_authoring_modes_active,
         selection_sorted_unique,
-        set_selection,
     )
 
     if other_authoring_modes_active(window):
@@ -80,11 +77,11 @@ def _handle_entity_select_delete(window: Any, state: Any, selected_ids: list[str
             count += 1
 
     from engine.entity_select_mode import clear_drag, set_selection  # noqa: PLC0415
-    
+
     # Always clear selection and drag state after delete attempt
     clear_drag(state)
     set_selection(window, state, [])
-    
+
     if count <= 0:
         print("ENTITY_DELETE noop reason=only_player")
         return True

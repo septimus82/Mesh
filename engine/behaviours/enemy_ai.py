@@ -5,13 +5,11 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING
 
-from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
-
 
 if TYPE_CHECKING:
     from arcade import Sprite

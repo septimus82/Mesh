@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Tuple
 
-from engine.editor.editor_session_query import get_session_snapshot
 from engine.editor.editor_dock_query import get_raw_dock_widths
 from engine.editor.editor_modal_state_query import (
     get_active_menu_id,
     is_scene_browser_active,
     is_unsaved_changes_pending,
 )
+from engine.editor.editor_session_query import get_session_snapshot
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController
@@ -116,8 +116,8 @@ def update_hover_state(
 
     # Get shell layout for hit testing
     from engine.editor.editor_shell_layout import (
-        compute_editor_shell_layout,
         compute_dock_tab_rects,
+        compute_editor_shell_layout,
         hit_test_dock_tab,
         hit_test_splitter,
     )
@@ -257,9 +257,8 @@ def _update_menu_bar_hover(
     from engine.editor.menu_bar_model import (
         build_menu_groups,
         compute_menu_bar_layout,
-        hit_test_menu_bar,
-        hit_test_menu_title,
         hit_test_menu_item,
+        hit_test_menu_title,
     )
 
     active_menu = get_active_menu_id(controller)
@@ -467,8 +466,8 @@ def _update_entity_hover(
     sprites = iter_entities(scene_controller) if callable(iter_entities) else getattr(scene_controller, "all_sprites", [])
     sprite_list = getattr(scene_controller, "entity_sprites", None)
 
-    from engine.editor.selection_outline import resolve_entity_bounds, RectF
     from engine.editor.editor_clipboard_ops import get_entity_id_from_data  # noqa: PLC0415
+    from engine.editor.selection_outline import resolve_entity_bounds
 
     # Find topmost entity under cursor
     # Prefer currently selected entity if it contains the point

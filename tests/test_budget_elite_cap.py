@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
+
 from engine.scene_controller import SceneController
+
 
 class TestBudgetEliteCap(unittest.TestCase):
     def setUp(self):
@@ -25,14 +27,14 @@ class TestBudgetEliteCap(unittest.TestCase):
                 {"prefab_id": "theme_enemy_placeholder"}
             ]
         }
-        
+
         encounter_set = MagicMock()
         encounter_set.enemy_prefab_ids = ["elite_enemy", "grunt_enemy"]
         encounter_set.variant_id = None
-        
+
         theme = MagicMock()
         theme.default_variant_id = None
-        
+
         # Mock Prefab Manager
         def get_prefab(pid):
             if pid == "elite_enemy":
@@ -40,17 +42,17 @@ class TestBudgetEliteCap(unittest.TestCase):
             elif pid == "grunt_enemy":
                 return {"encounter_cost": 2.0, "is_elite": False}
             return None
-            
+
         mock_pm.return_value.get_prefab.side_effect = get_prefab
-        
+
         # Execute
         self.controller._resolve_budgeted_spawns(scene_data, encounter_set, theme)
-        
+
         # Assert
         entities = scene_data["entities"]
         elites = [e for e in entities if e["prefab_id"] == "elite_enemy"]
         grunts = [e for e in entities if e["prefab_id"] == "grunt_enemy"]
-        
+
         # Should have max 1 elite
         self.assertLessEqual(len(elites), 1)
         # Should fill rest with grunts if budget allows
@@ -69,17 +71,17 @@ class TestBudgetEliteCap(unittest.TestCase):
                 {"prefab_id": "theme_enemy_placeholder"}
             ]
         }
-        
+
         encounter_set = MagicMock()
         encounter_set.enemy_prefab_ids = ["elite_enemy"]
         encounter_set.variant_id = None
         theme = MagicMock()
         theme.default_variant_id = None
-        
+
         mock_pm.return_value.get_prefab.return_value = {"encounter_cost": 5.0, "is_elite": True}
-        
+
         self.controller._resolve_budgeted_spawns(scene_data, encounter_set, theme)
-        
+
         # Should spawn nothing because only candidate is elite and allow_elites=False
         # The placeholder should be removed as it cannot be fulfilled.
         self.assertEqual(len(scene_data["entities"]), 0)

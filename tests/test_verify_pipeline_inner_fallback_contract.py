@@ -7,7 +7,6 @@ import pytest
 
 import mesh_cli.verify_steps.pipeline as verify_pipeline
 
-
 pytestmark = [pytest.mark.fast]
 
 
@@ -247,9 +246,9 @@ def test_exception_policy_missing_reason_logging_does_not_fail_verify_step(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    import engine.tooling.asset_doctor as asset_doctor
     import mesh_cli
     import mesh_cli.legacy_impl as mesh_cli_legacy
-    import engine.tooling.asset_doctor as asset_doctor
     from engine.encounter_report import EncounterReport
     from tooling import find_blanket_swallow, mypy_gate, mypy_island, scan_exception_policies
 

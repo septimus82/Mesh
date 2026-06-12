@@ -1,10 +1,12 @@
-import unittest
 import os
 import tempfile
+import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 from engine.tooling import content_commands
 from tests.utils.args_factory import make_audit_args
+
 
 class TestAuditBaselineAuto(unittest.TestCase):
     def setUp(self):
@@ -14,7 +16,7 @@ class TestAuditBaselineAuto(unittest.TestCase):
         self._old_cwd = Path.cwd()
         os.chdir(self._temp_dir.name)
         self.lock_path = Path("content.lock.json")
-        
+
     def tearDown(self):
         os.chdir(self._old_cwd)
         self._temp_dir.cleanup()
@@ -28,7 +30,7 @@ class TestAuditBaselineAuto(unittest.TestCase):
         mock_audit.return_value = {"stats": {"unused_assets_count": 10}}
         mock_read_lock.return_value = {"audit_snapshot": {"unused_assets_count": 5}}
         self.lock_path.write_text("{}", encoding="utf-8")
-            
+
         try:
             args = make_audit_args(
                 world_path="worlds/main.json",
@@ -50,13 +52,13 @@ class TestAuditBaselineAuto(unittest.TestCase):
 
             # Capture print output or check calls
             # We want to verify that read_lock was called with content.lock.json
-            
+
             content_commands.audit_content_command(args)
-            
+
             mock_read_lock.assert_called()
             call_arg = mock_read_lock.call_args[0][0]
             self.assertEqual(call_arg, self.lock_path)
-            
+
         finally:
             if self.lock_path.exists():
                 self.lock_path.unlink()
@@ -67,11 +69,11 @@ class TestAuditBaselineAuto(unittest.TestCase):
     def test_auto_baseline_missing(self, mock_config, mock_audit, mock_read_lock):
         mock_config.return_value = MagicMock(audit_policy={})
         mock_audit.return_value = {"stats": {"unused_assets_count": 10}}
-        
+
         # Ensure file does not exist
         if self.lock_path.exists():
             self.lock_path.unlink()
-            
+
         args = make_audit_args(
             world_path="worlds/main.json",
             baseline="auto",
@@ -91,7 +93,7 @@ class TestAuditBaselineAuto(unittest.TestCase):
         )
 
         content_commands.audit_content_command(args)
-        
+
         # Should NOT call read_lock
         mock_read_lock.assert_not_called()
 

@@ -1,9 +1,8 @@
-import pytest
 
-from engine.ui import CharacterPanel
-from engine.ui_controller import UIController
 from engine.config import EngineConfig
 from engine.game_state_controller import GameStateController
+from engine.ui import CharacterPanel
+from engine.ui_controller import UIController
 
 
 class StubAudio:

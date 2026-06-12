@@ -18,7 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "ruff",
+    "ruff==0.15.16",
     "mypy==1.19.1",
     "pygbag==0.9.3",
     "pytest>=8.0",
@@ -52,6 +52,7 @@ ignore = []
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"engine/editor_runtime/input.py" = ["F401", "I001"]
 "engine/arcade_fallback.py" = ["E741"]
 
 [tool.mypy]

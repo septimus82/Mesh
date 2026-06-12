@@ -1,19 +1,18 @@
 import types
 
 import pytest
-from tests._typing import as_any
 
 from engine.scene_controller import SceneController
 from engine.ui import (
+    PERSISTENT_UI_ATTRS,
     GameOverScreen,
     HelpOverlay,
-    PERSISTENT_UI_ATTRS,
     PauseMenu,
     PlayerHUD,
     missing_persistent_ui_attrs,
 )
 from engine.ui_controller import UIController
-
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable
 
-
 _MISSING = object()
 
 DEFAULT_OVERRIDE_IGNORE: set[str] = {

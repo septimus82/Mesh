@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from mesh_cli.verify import _missing_required_verify_metric_artifacts
-
 import pytest
 
+from mesh_cli.verify import _missing_required_verify_metric_artifacts
 
 pytestmark = [pytest.mark.fast]
 

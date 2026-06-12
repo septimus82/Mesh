@@ -17,7 +17,6 @@ from pathlib import Path
 
 import pytest
 
-
 # Skip unless in CI or explicitly requested
 _IN_CI = any(
     os.environ.get(var) in ("true", "1", "yes")

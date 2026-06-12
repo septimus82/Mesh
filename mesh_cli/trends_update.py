@@ -2,12 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
-import tomllib
-
 
 _DEFAULT_TREND_FILE = "tooling/metrics/weekly_trends.json"
 _MAX_ENTRIES = 26

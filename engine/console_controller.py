@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+
 import engine.optional_arcade as optional_arcade
 
 from .console_runtime import commands as console_commands
@@ -31,13 +32,13 @@ class ConsoleController:
 
     def toggle(self) -> None:
         self.active = not self.active
-        
+
         # Fallback for input manager access
         input_mgr = getattr(self.window, "input", None)
         if input_mgr is None:
             ctrl = getattr(self.window, "input_controller", None)
             input_mgr = getattr(ctrl, "manager", None)
-            
+
         if input_mgr is None:
             logger.error("[Mesh][Console] Cannot toggle: InputManager not found")
             self.active = False
@@ -63,7 +64,7 @@ class ConsoleController:
         if input_mgr is None:
             ctrl = getattr(self.window, "input_controller", None)
             input_mgr = getattr(ctrl, "manager", None)
-            
+
         if input_mgr is None:
             return False
 
@@ -79,7 +80,7 @@ class ConsoleController:
             if nxt is not None:
                 input_mgr.set_text_buffer(nxt)
             return True
-        
+
         # Check for various Enter keys (Standard, Numpad, Linefeed)
         if key in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.RETURN, getattr(optional_arcade.arcade.key, "NUM_ENTER", 65421), 10, 13):
             command = input_mgr.stop_text_capture()

@@ -4,7 +4,6 @@ from pathlib import Path
 
 from tooling.todo_audit import scan_repo, summarize
 
-
 BASELINE_TOTAL = 35
 
 

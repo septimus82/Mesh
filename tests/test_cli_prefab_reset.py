@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import mesh_cli
-
 from engine.paths import get_content_roots, set_content_roots
 
 

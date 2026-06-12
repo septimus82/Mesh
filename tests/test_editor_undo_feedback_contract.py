@@ -8,7 +8,6 @@ import pytest
 
 from engine.editor.editor_undo_controller import EditorUndoController
 
-
 pytestmark = [pytest.mark.fast]
 
 

@@ -8,16 +8,15 @@ from __future__ import annotations
 import pytest
 
 from engine.editor.editor_gizmo_feedback import (
-    GizmoFeedbackState,
     GizmoFeedbackLines,
+    GizmoFeedbackState,
+    build_gizmo_feedback_lines,
+    compute_feedback_box_layout,
+    compute_pivot_marker_segments,
     format_move_delta,
     format_rotate_delta,
     format_scale_factor,
-    build_gizmo_feedback_lines,
-    compute_pivot_marker_segments,
-    compute_feedback_box_layout,
 )
-
 
 # -----------------------------------------------------------------------------
 # format_move_delta

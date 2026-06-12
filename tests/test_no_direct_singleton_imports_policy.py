@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 PROD_ROOTS = (ROOT / "engine", ROOT / "mesh_cli")
 SINGLETON_IMPORT_ALLOWLIST = {

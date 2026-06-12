@@ -5,6 +5,7 @@ from typing import Any
 
 from ._shared import _get_authored_payload, _get_selection_ids_and_primary, _log_swallow, _resolve_macro_anchor_pos
 
+
 def action_toggle_tile_paint(w: Any, _arg: str | None) -> None:
     """Toggle tile paint mode."""
     state = getattr(w, "tile_paint_state", None)

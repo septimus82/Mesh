@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from engine.log_utils import (
-    get_logger,
     get_log_once_count,
+    get_logger,
     log_once,
     reset_log_once_state,
 )

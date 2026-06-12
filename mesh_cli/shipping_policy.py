@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Mapping
 
-
 SHIPPING_VERIFY_STEP_NAMES: tuple[str, ...] = (
     "runtime-player-smoke",
     "player-package-gate",

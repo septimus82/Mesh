@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-
 DEFAULT_DIALOGUES_FILE_PATH: Path = Path("assets") / "data" / "dialogues.json"
 
 DIALOGUE_SCALAR_FIELD_ORDER: tuple[str, ...] = ("id", "schema_version", "start_node")

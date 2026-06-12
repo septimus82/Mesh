@@ -7,11 +7,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from engine.editor.editor_workspace_controller import EditorWorkspaceController
 from engine.editor.editor_history_controller import EditorHistoryController
+from engine.editor.editor_workspace_controller import EditorWorkspaceController
+from engine.workspace_settings import load_workspace
 from tests._dock_stub import make_dock_stub
 from tests._search_stub import attach_search_stub
-from engine.workspace_settings import WorkspaceSettings, load_workspace
 
 
 class _StubPanels:

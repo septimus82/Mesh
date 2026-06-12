@@ -3,20 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from types import SimpleNamespace
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
 pytestmark = [pytest.mark.fast]
 
-from engine.editor.find_everything_model import FindItem, FindResult, filter_find_items, build_find_display_rows
+from engine.editor.find_everything_model import FindItem, FindResult, build_find_display_rows, filter_find_items
 from engine.editor.scene_lint_model import SceneLintIssue
 from engine.editor_controller import EditorModeController
-from tests._typing import as_any
-from tests._session_stub import make_session_stub
 from tests._dock_stub import make_dock_stub
+from tests._session_stub import make_session_stub
+from tests._typing import as_any
 
 
 @dataclass
@@ -33,23 +33,23 @@ class StubController:
         self.active = True
         self.window = StubWindow()
         self.session = make_session_stub()
-        
+
         # UI Flow Controller
         from engine.editor.editor_ui_flow_controller import EditorUIFlowController
         self._ui_flow_ctl = EditorUIFlowController(self)
         from engine.editor.editor_search_controller import EditorSearchController
         self.search = EditorSearchController(self, self._ui_flow_ctl)
-        
+
         # self._find_everything_open = False # Delegated
         # self._find_everything_query = "" # Delegated
         # self._find_everything_selection_index = 0 # Delegated
         # self._find_everything_cached_results: list[FindResult] = [] # Delegated
-        
+
         self._find_items_override: list[FindItem] = []
         # self._find_asset_lookup: dict[str, object] = {} # Delegated
         self._asset_browser_cached_rows: list[Any] = []
         self.scene_switcher_recent: list[str] = []
-        
+
         self._repo_root_override = repo_root
         self.dock = make_dock_stub(left_tab="Outliner", right_tab="Inspector")
         self.problems = SimpleNamespace(
@@ -109,17 +109,17 @@ class StubController:
             # Logic from editor_controller.py: _activate_find_problem
             # It sets preview open and switches tab.
             self.problems.preview_open = True
-            self.dock.right_tab = "Problems" 
+            self.dock.right_tab = "Problems"
             return True
         return False
-    
+
     def ui_hd2d_preview(self, preset_id: str) -> None:
         self._hd2d_preview_active = True
         self._hd2d_preview_preset_id = preset_id
 
     def ui_hd2d_cancel_preview(self) -> None:
         self._hd2d_preview_active = False
-        
+
     def ui_hd2d_commit(self, preset_id: str) -> bool:
         return True
 
@@ -133,17 +133,17 @@ class StubController:
     def _find_everything_query(self): return self._ui_flow_ctl.query
     @_find_everything_query.setter
     def _find_everything_query(self, v): self._ui_flow_ctl.query = v
-    
+
     @property
     def _find_everything_selection_index(self): return self._ui_flow_ctl.selection_index
     @_find_everything_selection_index.setter
     def _find_everything_selection_index(self, v): self._ui_flow_ctl.selection_index = v
-    
+
     @property
     def _find_everything_cached_results(self): return self._ui_flow_ctl.cached_results
     @_find_everything_cached_results.setter
     def _find_everything_cached_results(self, v): self._ui_flow_ctl.cached_results = v
-    
+
     @property
     def _find_asset_lookup(self): return self._ui_flow_ctl.asset_lookup
     @_find_asset_lookup.setter
@@ -154,7 +154,7 @@ class StubController:
     def _find_everything_all_results(self): return self._ui_flow_ctl.all_results
     @_find_everything_all_results.setter
     def _find_everything_all_results(self, v): self._ui_flow_ctl.all_results = v
-    
+
     @property
     def _find_everything_counts(self): return self._ui_flow_ctl.counts
     @_find_everything_counts.setter
@@ -315,8 +315,8 @@ def test_activate_problem_opens_preview(tmp_path: Path) -> None:
 
 
 def test_find_everything_ctrl_j_toggles(tmp_path: Path) -> None:
-    from engine.editor_runtime import input as editor_input
     from engine import optional_arcade
+    from engine.editor_runtime import input as editor_input
 
     ctrl = StubController(tmp_path)
     assert ctrl._find_everything_open is False
@@ -330,9 +330,10 @@ def test_find_everything_ctrl_j_toggles(tmp_path: Path) -> None:
 
 def test_find_everything_hint_line_by_input_source(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     from types import SimpleNamespace
-    from engine.ui_overlays.find_everything_overlay import FindEverythingOverlay
+
     from engine import arcade_fallback as arcade_stub
     from engine import optional_arcade
+    from engine.ui_overlays.find_everything_overlay import FindEverythingOverlay
 
     ctrl = StubController(tmp_path)
     ctrl._find_everything_open = True

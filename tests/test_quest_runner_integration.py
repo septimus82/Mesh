@@ -8,9 +8,10 @@ Tests the complete flow:
 """
 from __future__ import annotations
 
-import pytest
 from typing import Any
 from unittest.mock import MagicMock
+
+import pytest
 
 from engine.gameplay_event_bus import GameplayEvent, GameplayEventBus
 from engine.quest_runtime.runner import QuestRunner
@@ -81,13 +82,13 @@ class TestQuestRunnerTriggerVolumeIntegration:
         runner = QuestRunner()
         runner.load_definitions(integration_quest_def)
         runner.start_quest("exploration_quest")
-        
+
         # Verify initial state
         state = runner.get_quest_state("exploration_quest")
         assert state is not None
         assert state.status == "active"
         assert state.current_stage == "visit_landmark_1"
-        
+
         # Simulate TriggerVolume emitting an enter event
         # TriggerVolume emits with zone=mesh_id of the trigger entity
         mock_window.gameplay_event_bus.emit(
@@ -99,17 +100,17 @@ class TestQuestRunnerTriggerVolumeIntegration:
             source_entity="landmark_trigger_1",
             source_behaviour="TriggerVolume",
         )
-        
+
         # Drain events and process through QuestRunner
         events = mock_window.gameplay_event_bus.drain()
         emitted = runner.process_events(events)
-        
+
         # Should have completed stage 1 and started stage 2
         state = runner.get_quest_state("exploration_quest")
         assert state is not None
         assert state.current_stage == "visit_landmark_2"
         assert "visit_landmark_1" in state.completed_stages
-        
+
         # Should have emitted stage completed and started events
         event_types = [e.event_type for e in emitted]
         assert "quest_stage_completed" in event_types
@@ -122,20 +123,20 @@ class TestQuestRunnerTriggerVolumeIntegration:
         runner = QuestRunner()
         runner.load_definitions(integration_quest_def)
         runner.start_quest("exploration_quest")
-        
+
         # Complete stage 1
         mock_window.gameplay_event_bus.emit("on_enter", zone="landmark_trigger_1")
         runner.process_events(mock_window.gameplay_event_bus.drain())
-        
+
         # Complete stage 2
         mock_window.gameplay_event_bus.emit("on_enter", zone="landmark_trigger_2")
         emitted = runner.process_events(mock_window.gameplay_event_bus.drain())
-        
+
         # Quest should be completed
         state = runner.get_quest_state("exploration_quest")
         assert state is not None
         assert state.status == "completed"
-        
+
         # Should have quest_completed event
         completed_events = [e for e in emitted if e.event_type == "quest_completed"]
         assert len(completed_events) == 1
@@ -148,18 +149,18 @@ class TestQuestRunnerTriggerVolumeIntegration:
         runner = QuestRunner()
         runner.load_definitions(integration_quest_def)
         runner.start_quest("exploration_quest")
-        
+
         # Simulate trigger event
         mock_window.gameplay_event_bus.emit("on_enter", zone="landmark_trigger_1")
         events = mock_window.gameplay_event_bus.drain()
-        
+
         # Process and get emitted quest events
         emitted = runner.process_events(events)
-        
+
         # Re-emit to bus (this is what QuestManager does)
         for event in emitted:
             mock_window.gameplay_event_bus.emit_event(event)
-        
+
         # Verify events are in the bus
         pending = mock_window.gameplay_event_bus.peek()
         quest_events = [e for e in pending if e.source_behaviour == "QuestRunner"]
@@ -172,11 +173,11 @@ class TestQuestRunnerQuestHookIntegration:
     def test_quest_hook_receives_progress_events(self, mock_window, integration_quest_def):
         """QuestHook can listen to quest_stage_completed events."""
         from engine.behaviours.quest_hook import QuestHookBehaviour
-        
+
         runner = QuestRunner()
         runner.load_definitions(integration_quest_def)
         runner.start_quest("exploration_quest")
-        
+
         # Set up QuestHook that listens for stage completion
         entity = MagicMock()
         entity.mesh_id = "hook_entity"
@@ -188,17 +189,17 @@ class TestQuestRunnerQuestHookIntegration:
             listen_events=["quest_stage_completed"],
             target_count=2,
         )
-        
+
         # Complete stage 1
         mock_window.gameplay_event_bus.emit("on_enter", zone="landmark_trigger_1")
         events = mock_window.gameplay_event_bus.drain()
         emitted = runner.process_events(events)
-        
+
         # Feed emitted events to QuestHook
         for event in emitted:
             if event.event_type in quest_hook.listen_events:
                 quest_hook.handle_event(event.payload)
-        
+
         # QuestHook should have counted the completion
         assert quest_hook.current_count == 1
 
@@ -206,12 +207,12 @@ class TestQuestRunnerQuestHookIntegration:
         """Full integration: TriggerVolume -> QuestRunner -> QuestHook."""
         from engine.behaviours.quest_hook import QuestHookBehaviour
         from engine.behaviours.trigger_volume import TriggerVolumeBehaviour
-        
+
         # Set up QuestRunner
         runner = QuestRunner()
         runner.load_definitions(integration_quest_def)
         runner.start_quest("exploration_quest")
-        
+
         # Set up TriggerVolume entity
         trigger_entity = MagicMock()
         trigger_entity.mesh_id = "landmark_trigger_1"
@@ -220,7 +221,7 @@ class TestQuestRunnerQuestHookIntegration:
         trigger_entity.center_y = 100.0
         trigger_entity.width = 32
         trigger_entity.height = 32
-        
+
         trigger = TriggerVolumeBehaviour(
             trigger_entity,
             mock_window,
@@ -230,7 +231,7 @@ class TestQuestRunnerQuestHookIntegration:
             target_tags=["player"],
             on_enter_event="on_enter",
         )
-        
+
         # Set up QuestHook listening for quest progress
         hook_entity = MagicMock()
         hook_entity.mesh_id = "hook_001"
@@ -242,7 +243,7 @@ class TestQuestRunnerQuestHookIntegration:
             listen_events=["quest_stage_completed"],
             target_count=2,
         )
-        
+
         # Set up player
         player = MagicMock()
         player.mesh_id = "player_001"
@@ -250,33 +251,33 @@ class TestQuestRunnerQuestHookIntegration:
         player.mesh_tags = ["player"]
         player.center_x = 100.0  # Inside trigger
         player.center_y = 100.0
-        
+
         # Set up scene
         mock_window.scene_controller = MagicMock()
         mock_window.scene_controller.all_sprites = [player]
-        
+
         # Player enters trigger zone
         trigger.update(0.016)
-        
+
         # Get trigger events
         trigger_events = mock_window.gameplay_event_bus.drain()
         enter_events = [e for e in trigger_events if e.event_type == "on_enter"]
         assert len(enter_events) == 1
         assert enter_events[0].payload.get("zone") == "landmark_trigger_1"
-        
+
         # Process through QuestRunner
         emitted = runner.process_events(trigger_events)
-        
+
         # Quest should have advanced
         state = runner.get_quest_state("exploration_quest")
         assert state is not None
         assert state.current_stage == "visit_landmark_2"
-        
+
         # Feed emitted events to QuestHook
         for event in emitted:
             if event.event_type in quest_hook.listen_events:
                 quest_hook.handle_event(event.payload)
-        
+
         # QuestHook should have counted
         assert quest_hook.current_count == 1
 
@@ -292,35 +293,35 @@ class TestQuestRunnerSaveRestoreIntegration:
         runner1 = QuestRunner()
         runner1.load_definitions(integration_quest_def)
         runner1.start_quest("exploration_quest")
-        
+
         # Complete stage 1
         mock_window.gameplay_event_bus.emit("on_enter", zone="landmark_trigger_1")
         runner1.process_events(mock_window.gameplay_event_bus.drain())
-        
+
         # Save state
         saved_state = runner1.get_state()
-        
+
         # Create new runner (simulating game load)
         runner2 = QuestRunner()
         runner2.load_definitions(integration_quest_def)
         runner2.apply_state(saved_state)
-        
+
         # Verify state restored correctly
         state = runner2.get_quest_state("exploration_quest")
         assert state is not None
         assert state.status == "active"
         assert state.current_stage == "visit_landmark_2"
         assert "visit_landmark_1" in state.completed_stages
-        
+
         # Continue progression
         mock_window.gameplay_event_bus.emit("on_enter", zone="landmark_trigger_2")
         emitted = runner2.process_events(mock_window.gameplay_event_bus.drain())
-        
+
         # Should complete the quest
         state = runner2.get_quest_state("exploration_quest")
         assert state is not None
         assert state.status == "completed"
-        
+
         # Should have completion event
         assert any(e.event_type == "quest_completed" for e in emitted)
 
@@ -336,32 +337,32 @@ class TestDeterminismAcrossRestarts:
         runner1 = QuestRunner(emit_sequence_start=5000)
         runner1.load_definitions(integration_quest_def)
         runner1.start_quest("exploration_quest")
-        
+
         events1 = [
             GameplayEvent("on_enter", {"zone": "landmark_trigger_1"}, 1, "", ""),
             GameplayEvent("on_enter", {"zone": "landmark_trigger_2"}, 2, "", ""),
         ]
         emitted1 = runner1.process_events(events1)
         final_state1 = runner1.get_state()
-        
+
         # Second run (fresh runner, same events)
         runner2 = QuestRunner(emit_sequence_start=5000)
         runner2.load_definitions(integration_quest_def)
         runner2.start_quest("exploration_quest")
-        
+
         events2 = [
             GameplayEvent("on_enter", {"zone": "landmark_trigger_1"}, 1, "", ""),
             GameplayEvent("on_enter", {"zone": "landmark_trigger_2"}, 2, "", ""),
         ]
         emitted2 = runner2.process_events(events2)
         final_state2 = runner2.get_state()
-        
+
         # Emitted events should be identical
         assert len(emitted1) == len(emitted2)
         for e1, e2 in zip(emitted1, emitted2):
             assert e1.event_type == e2.event_type
             assert e1.payload == e2.payload
             assert e1.sequence == e2.sequence
-        
+
         # Final states should be identical
         assert final_state1 == final_state2

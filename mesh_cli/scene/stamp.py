@@ -3,22 +3,22 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+from engine.path_norm import normalize_scene_path
 from engine.paths import resolve_path
 from engine.persistence_io import write_json_atomic
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
+from engine.swallowed_exceptions import _log_swallow
 from engine.tilemap_edit import TilemapDims, ensure_tiles_array, fill_rect, get_layer_by_id
 from engine.tooling_runtime.stamp_report import StampReportError, compute_scene_stamp_report
-from engine.path_norm import normalize_scene_path
-from engine.swallowed_exceptions import _log_swallow
-
 from mesh_cli.scene.common import _sanitize_entity_id_token
 from mesh_cli.scene.tilemap import (
-    _tilemap_resolve_dims_for_edit,
     _scene_tilemap_maybe_migrate_layers,
+    _tilemap_resolve_dims_for_edit,
     _tilemap_try_resolve_tile_size_for_stamp,
     _tilemap_validate_scene_payload,
 )
+
 
 def _default_stamp_entity_id(
     scene_path: str,

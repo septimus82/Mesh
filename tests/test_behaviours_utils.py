@@ -1,20 +1,20 @@
-import pytest
 from engine.behaviours.utils import (
-    normalize_behaviour_entry,
-    strip_behaviour_metadata,
-    prepare_behaviour_configs,
+    BEHAVIOUR_META_EXPLICIT,
+    ZONE_TARGET_HITBOX,
+    ZONE_TARGET_TRIGGER,
     build_behaviour_config_map,
+    describe_zone_behaviour,
     ensure_behaviour_config_root,
     format_behaviour_config_summary,
-    BEHAVIOUR_META_EXPLICIT,
-    is_trigger_behaviour,
-    is_hitbox_behaviour,
     infer_zone_target_from_behaviour,
-    describe_zone_behaviour,
+    is_hitbox_behaviour,
+    is_trigger_behaviour,
+    normalize_behaviour_entry,
     parse_flag_list,
-    ZONE_TARGET_TRIGGER,
-    ZONE_TARGET_HITBOX,
+    prepare_behaviour_configs,
+    strip_behaviour_metadata,
 )
+
 
 class MockBehaviour:
     def __init__(self, type_name):
@@ -27,7 +27,7 @@ def test_is_trigger_behaviour():
     assert is_trigger_behaviour(MockBehaviour("trigger_zone"))
     assert is_trigger_behaviour(MockBehaviour("triggerzone"))
     assert not is_trigger_behaviour(MockBehaviour("Other"))
-    
+
     b = MockClassBehaviour()
     b.__class__.__name__ = "TriggerZoneBehaviour"
     assert is_trigger_behaviour(b)
@@ -50,7 +50,7 @@ def test_describe_zone_behaviour():
     assert describe_zone_behaviour(None) == "Zone"
     assert describe_zone_behaviour(MockBehaviour("MyBehaviour")) == "My"
     assert describe_zone_behaviour(MockBehaviour("some_thing")) == "some thing"
-    
+
     b = MockClassBehaviour()
     b.__class__.__name__ = "TestBehaviour"
     assert describe_zone_behaviour(b) == "Test"
@@ -96,7 +96,7 @@ def test_strip_behaviour_metadata():
     assert "a" in stripped
     assert BEHAVIOUR_META_EXPLICIT not in stripped
     # Original should not be modified if it was a copy, but here we test the return value
-    
+
     config_clean = {"a": 1}
     assert strip_behaviour_metadata(config_clean) == config_clean
 
@@ -126,15 +126,15 @@ def test_format_behaviour_config_summary():
 def test_build_behaviour_config_map():
     entity_data = {"behaviour_config": {"b1": {"existing": 1}}}
     behaviours = [{"type": "b1", "params": {"new": 2}}, {"type": "b2", "params": {"p": 3}}]
-    
+
     # Mock get_behaviour_info to return None or empty for simplicity as we can't easily mock the registry here without more setup
     # But the function uses it. We rely on it returning None for unknown behaviours which is handled.
-    
+
     config_map = build_behaviour_config_map(entity_data, behaviours)
-    
+
     assert "b1" in config_map
     assert config_map["b1"]["existing"] == 1
     assert config_map["b1"]["new"] == 2
-    
+
     assert "b2" in config_map
     assert config_map["b2"]["p"] == 3

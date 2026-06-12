@@ -4,10 +4,9 @@ import json
 from pathlib import Path
 
 import mesh_cli
-
+from engine import savegame
 from engine.persistence_io import SAVE_FORMAT_VERSION
 from engine.save_manager import SaveManager
-from engine import savegame
 from engine.save_runtime import io as save_io
 from engine.save_runtime import payloads as save_payloads
 from engine.save_runtime.restore_policy import REPLAY_POLICY, SLOT_POLICY, SNAPSHOT_POLICY

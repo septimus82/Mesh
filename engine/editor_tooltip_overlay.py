@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import engine.optional_arcade as optional_arcade
 
-from .text_draw import draw_text_cached, TextCache
+from .text_draw import TextCache, draw_text_cached
 from .ui_overlays.common import UIElement
 
 if TYPE_CHECKING:
@@ -53,8 +53,8 @@ class EditorTooltipOverlay(UIElement):
 
         # Resolve tooltip text
         from .editor_tooltips_model import (
-            resolve_editor_tooltip,
             compute_tooltip_box_layout,
+            resolve_editor_tooltip,
         )
 
         tooltip_text = resolve_editor_tooltip(

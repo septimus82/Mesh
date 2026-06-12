@@ -8,17 +8,16 @@ from __future__ import annotations
 import pytest
 
 from engine.editor.selection_outline import (
+    GroupBounds,
     RectF,
     SelectionOutline,
-    GroupBounds,
-    resolve_entity_bounds,
     build_selection_outlines,
     compute_group_bounds,
     rect_to_border_segments,
     rect_to_corner_markers,
+    resolve_entity_bounds,
 )
 from tests._typing import as_any
-
 
 # -----------------------------------------------------------------------------
 # RectF

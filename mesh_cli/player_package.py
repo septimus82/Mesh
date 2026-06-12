@@ -6,12 +6,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from engine.persistence_io import dumps_json_deterministic
-from engine.persistence_io import write_json_atomic
-from engine.runtime_only import DEFAULT_SMOKE_SCENE
-from engine.runtime_only import FORBIDDEN_EDITOR_PREFIXES
+from engine.persistence_io import dumps_json_deterministic, write_json_atomic
+from engine.runtime_only import DEFAULT_SMOKE_SCENE, FORBIDDEN_EDITOR_PREFIXES
 from engine.swallowed_exceptions import _log_swallow
-
 
 DEFAULT_RUNTIME_ENTRY = "python -m mesh_cli play-runtime --headless-smoke"
 _PACKAGE_SOURCE_ROOTS: tuple[str, ...] = ("engine", "mesh_cli")

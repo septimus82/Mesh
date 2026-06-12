@@ -6,28 +6,24 @@ Verifies that the pipeline:
 3. Respects render context settings (batching, culling).
 4. Is deterministic given the same input.
 """
+# Mock these instead of strict typing for tests, or just pass dicts/objects if allowed
+# But for now, let's just use Any or mocks where needed.
+# We need the classes just for typing? No python is dynamic.
+# But build_render_context expects them.
+from dataclasses import dataclass
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, ANY
 
 import engine.optional_arcade as optional_arcade
+from engine.render_queue import DrawSpriteCmd
 from engine.scene_render_pipeline import (
+    DrawPlan,
+    SpriteDrawOp,
     build_render_context,
     compute_draw_plan,
     execute_scene_plan,
-    execute_background_plan,
-    RenderContext,
-    DrawPlan,
-    SpriteDrawOp,
 )
-from engine.render_queue import DrawSpriteCmd
-from engine.parallax_model import BackgroundPlane
-# Mock these instead of strict typing for tests, or just pass dicts/objects if allowed
-# But for now, let's just use Any or mocks where needed.
-
-# We need the classes just for typing? No python is dynamic.
-# But build_render_context expects them.
-
-from dataclasses import dataclass
 
 pytestmark = [pytest.mark.fast]
 
@@ -63,13 +59,13 @@ class MockSprite:
 class MockRenderQueue:
     def __init__(self):
         self.commands = []
-    
+
     def submit(self, cmd):
         self.commands.append(cmd)
-        
+
     def flush(self):
         pass
-        
+
     def is_enabled(self):
         return True
 
@@ -117,7 +113,7 @@ def test_compute_draw_plan_sorting():
     s1 = MockSprite(y=100)
     s2 = MockSprite(y=0)
     s3 = MockSprite(y=200)
-    
+
     ctx = build_render_context(
         sprites=[s1, s2, s3],
         background_planes=[],
@@ -132,16 +128,16 @@ def test_compute_draw_plan_sorting():
         outline_settings=MockOutlineSettings(),
         use_culling=False
     )
-    
+
     plan = compute_draw_plan(ctx)
-    
+
 # Sort uses render_sort_model.
     # Current implementation in render_sort_model uses +y as sort key.
     # So Low Y (Bottom) -> First -> Back
     # High Y (Top) -> Last -> Front
     # (Matches side-scroller or specific layering, but confusing for top-down).
     # We assert what the model DOES, not what it hypothetically should do.
-    
+
     assert len(plan.sprite_ops) == 3
     # Expect order: s2 (0), s1 (100), s3 (200)
     assert plan.sprite_ops[0].sprite == s2
@@ -197,10 +193,10 @@ def test_execution_emits_commands():
         use_culling=False
     )
     plan = compute_draw_plan(ctx)
-    
+
     queue = MockRenderQueue()
     execute_scene_plan(plan, render_queue=queue, use_batching=True)
-    
+
     assert len(queue.commands) == 1
     cmd = queue.commands[0]
     assert isinstance(cmd, DrawSpriteCmd)
@@ -210,7 +206,7 @@ def test_execution_emits_commands():
 def test_shadow_generation():
     """Verify shadow operations are generated if enabled."""
     sprite = MockSprite()
-    
+
     # Enable shadows
     ctx = build_render_context(
         sprites=[sprite],
@@ -226,9 +222,9 @@ def test_shadow_generation():
         outline_settings=MockOutlineSettings(),
         use_culling=False
     )
-    
+
     plan = compute_draw_plan(ctx)
-    
+
     # Shadows are put into shadow_ops
     assert len(plan.shadow_ops) > 0
 
@@ -249,13 +245,13 @@ def test_determinism():
         outline_settings=MockOutlineSettings(),
         use_culling=False
     )
-    
+
     ctx1 = build_render_context(**args)
     ctx2 = build_render_context(**args)
-    
+
     plan1 = compute_draw_plan(ctx1)
     plan2 = compute_draw_plan(ctx2)
-    
+
     # Compare op lists
     assert len(plan1.sprite_ops) == len(plan2.sprite_ops)
     for op1, op2 in zip(plan1.sprite_ops, plan2.sprite_ops):

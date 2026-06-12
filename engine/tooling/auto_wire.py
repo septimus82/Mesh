@@ -74,7 +74,7 @@ class AutoWireController:
             settings = scene_data.get("settings", {})
             template = settings.get("region_template")
             kind = settings.get("scene_kind")
-            
+
             if not template or not kind:
                 continue
 

@@ -7,11 +7,11 @@ from engine.tooling.pipeline_runner import run_pipeline_result
 def _verify_preset(preset_name, world_path):
     cfg = load_config()
     preset = cfg.presets.get(preset_name)
-    
+
     steps = preset
     if isinstance(preset, dict):
         steps = preset.get("steps")
-        
+
     assert isinstance(steps, list)
     assert steps and steps[0].get("cmd") == "pipeline"
     args = steps[0].get("args") or []
@@ -29,6 +29,7 @@ def _verify_preset(preset_name, world_path):
     if result.exit_code != 0:
         import contextlib
         import io
+
         import mesh_cli
 
         buf = io.StringIO()

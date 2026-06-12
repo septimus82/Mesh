@@ -1,7 +1,5 @@
 import sys
 
-import pytest
-
 from tests.subprocess_tools import run_checked
 
 
@@ -40,6 +38,6 @@ def test_misc_commands_help():
 def test_demo_subcommands_help():
     result = run_cli_help(["demo", "run"])
     assert result.returncode == 0
-    
+
     result = run_cli_help(["demo", "scaffold-objective"])
     assert result.returncode == 0

@@ -4,10 +4,13 @@ import copy
 from typing import Any, Dict, List, Optional
 
 import engine.optional_arcade as optional_arcade
-
 from engine.editor.animation_panel import (
     apply_animator_runtime as _apply_animator_runtime_impl,
+)
+from engine.editor.animation_panel import (
     entity_has_animator as _entity_has_animator_impl,
+)
+from engine.editor.animation_panel import (
     get_animator_config as _get_animator_config_impl,
 )
 from engine.logging_tools import get_logger

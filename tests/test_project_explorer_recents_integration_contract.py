@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 
-from engine.editor.project_explorer_model import ProjectExplorerRecentItem, ProjectRow
-from engine.editor_controller import EditorModeController
 from engine.editor.editor_project_explorer_actions_controller import (
     EditorProjectExplorerActionsController,
 )
+from engine.editor.project_explorer_model import ProjectExplorerRecentItem, ProjectRow
+from engine.editor_controller import EditorModeController
 from engine.workspace_settings import WorkspaceSettings
 from tests._dock_stub import make_dock_stub
 from tests._search_stub import attach_search_stub
@@ -27,8 +27,10 @@ class StubHud:
         self.toasts.append(text)
 
 
-from engine.editor.editor_project_explorer_controller import ProjectExplorerController
 from pathlib import Path
+
+from engine.editor.editor_project_explorer_controller import ProjectExplorerController
+
 
 class StubController:
     def __init__(self) -> None:
@@ -36,24 +38,24 @@ class StubController:
         self.project_explorer = ProjectExplorerController(Path("."))
         self.project_explorer.recents = []
         self.project_explorer_actions = EditorProjectExplorerActionsController(self)
-        
+
         self.active = True
         self.dock = make_dock_stub(left_tab="Project")
         self._project_search = ""
         self.search = attach_search_stub(self)
-        
+
         self.scene_calls: list[str] = []
         self.asset_calls: list[str] = []
         self.path_calls: list[str] = []
         self.autosave_calls: int = 0 # If this exists, need to verify
         # Ah, autosave_calls might be missing in the read block?
         # Let's check if autosave_calls is in the file.
-    
+
     # Sync recents
     @property
     def _project_explorer_recents(self):
         return self.project_explorer.recents
-    
+
     @_project_explorer_recents.setter
     def _project_explorer_recents(self, value):
         self.project_explorer.recents = value
@@ -61,16 +63,16 @@ class StubController:
     @property
     def _project_rows(self):
          return self.project_explorer.project_rows
-         
+
     @_project_rows.setter
     def _project_rows(self, value):
          self.project_explorer.project_rows = value
          self.project_explorer.tree_rev += 1
-         
+
     @property
     def _project_selected_index(self):
         return self.project_explorer.selected_index
-    
+
     @_project_selected_index.setter
     def _project_selected_index(self, value):
         self.project_explorer.selected_index = value

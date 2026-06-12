@@ -1,11 +1,13 @@
-import unittest
 import json
-import tempfile
 import os
+import tempfile
+import unittest
 from pathlib import Path
-from engine.tooling.plan_linter import lint_ai_plan, Issue
+
 from engine.tooling.plan_executor import PlanExecutor
-from engine.tooling.plan_types import Plan, Action
+from engine.tooling.plan_linter import lint_ai_plan
+from engine.tooling.plan_types import Action, Plan
+
 
 class TestPlanNpcDialogue(unittest.TestCase):
     def setUp(self):
@@ -13,7 +15,7 @@ class TestPlanNpcDialogue(unittest.TestCase):
         self.root = Path(self.test_dir.name)
         self.prev_cwd = Path.cwd()
         os.chdir(self.root)
-        
+
         # Setup basic structure
         (self.root / "scenes").mkdir()
         self.scene_path = self.root / "scenes/test_scene.json"
@@ -69,10 +71,10 @@ class TestPlanNpcDialogue(unittest.TestCase):
                 "dialogue_id": "guard_intro"
             }, description="Add dialogue")
         ])
-        
+
         executor = PlanExecutor(dry_run=False, safe_paths_only=False)
         executor.execute(plan)
-        
+
         # Verify
         with self.scene_path.open("r") as f:
             data = json.load(f)

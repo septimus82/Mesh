@@ -5,11 +5,11 @@ EditorModeController for the Vertical Slice Diet V2.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Tuple
+from typing import TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
-    from engine.editor_controller import EditorModeController
     from engine.editor.editor_gizmo_feedback import GizmoFeedbackState
+    from engine.editor_controller import EditorModeController
 
 
 class EditorCursorController:

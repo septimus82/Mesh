@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from engine.console_controller import ConsoleController
+    pass
 
 def handle_clear(controller: Any, _args: list[str]) -> bool:
     controller.lines.clear()

@@ -16,8 +16,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterable, TypedDict
-import engine.optional_arcade as optional_arcade
-from engine.logging_tools import get_logger
+
 from engine.swallowed_exceptions import _log_swallow
 
 

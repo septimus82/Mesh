@@ -2,6 +2,7 @@
 import os
 import re
 
+
 def test_ui_module_is_thin_facade():
     """
     Ensure engine/ui.py remains a thin facade re-exporting symbols from submodules.
@@ -11,7 +12,7 @@ def test_ui_module_is_thin_facade():
     if not os.path.exists(ui_path):
         # If running from tests dir
         ui_path = os.path.join("..", "engine", "ui.py")
-    
+
     assert os.path.exists(ui_path), "engine/ui.py not found"
 
     with open(ui_path, "r", encoding="utf-8") as f:
@@ -26,9 +27,9 @@ def test_ui_module_is_thin_facade():
     # 2. Check for class definitions
     # Only InventoryOverlay is allowed for now (legacy).
     allowed_classes = {"InventoryOverlay"}
-    
+
     class_def_pattern = re.compile(r"^\s*class\s+(\w+)")
-    
+
     defined_classes = []
     for i, line in enumerate(lines):
         match = class_def_pattern.match(line)

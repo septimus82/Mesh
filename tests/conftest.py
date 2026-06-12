@@ -1,7 +1,7 @@
+import importlib.abc
 import os
 import sys
-import importlib.abc
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 

@@ -1,18 +1,18 @@
-import unittest
-import json
-import tempfile
-import time
 import os
+import tempfile
+import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-from engine.tooling import release_command, plan_history
+from unittest.mock import MagicMock, patch
+
+from engine.tooling import release_command
 from tests.utils.args_factory import make_release_args
+
 
 class TestReleaseCheckPlanPolicy(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.TemporaryDirectory()
         self.root = Path(self.test_dir.name)
-        
+
         # Mock config
         self.config_patcher = patch('engine.tooling.release_command.load_config')
         self.mock_load_config = self.config_patcher.start()
@@ -23,13 +23,13 @@ class TestReleaseCheckPlanPolicy(unittest.TestCase):
             "min_coverage": 0.5
         }
         self.mock_load_config.return_value = self.mock_config
-        
+
         # Mock paths
         self.paths_patcher = patch('engine.tooling.release_command.resolve_path')
         self.mock_resolve_path = self.paths_patcher.start()
         self.lock_path = self.root / "content.lock.json"
         self.mock_resolve_path.return_value = self.lock_path
-        
+
         # Create dummy lock file
         self.lock_path.write_text("{}")
         # Set mtime to 1000
@@ -38,7 +38,7 @@ class TestReleaseCheckPlanPolicy(unittest.TestCase):
         # Mock plan history
         self.history_patcher = patch('engine.tooling.plan_history.list_history')
         self.mock_list_history = self.history_patcher.start()
-        
+
         self.get_history_patcher = patch('engine.tooling.plan_history.get_history')
         self.mock_get_history = self.get_history_patcher.start()
 
@@ -60,14 +60,14 @@ class TestReleaseCheckPlanPolicy(unittest.TestCase):
                 }
             }
         }
-        
+
         # We need to mock build_lock/read_lock/diff_locks to pass step 1
         with patch('engine.tooling.release_command.build_lock') as bl, \
              patch('engine.tooling.release_command.read_lock') as rl, \
              patch('engine.tooling.release_command.diff_locks') as dl, \
              patch('engine.tooling.release_command.ReferenceValidator') as rv, \
              patch('engine.tooling.release_command.audit_world') as aw:
-             
+
             dl.return_value = {
                 "packs": {"added": [], "removed": [], "version_changed": [], "order_changed": []},
                 "overrides": {"total_delta": 0},
@@ -84,7 +84,7 @@ class TestReleaseCheckPlanPolicy(unittest.TestCase):
                     "unused_assets_count": 0
                 }
             } # minimal audit result
-            
+
             # Run command
             args = make_release_args(
                 profile="release-ready",
@@ -95,7 +95,7 @@ class TestReleaseCheckPlanPolicy(unittest.TestCase):
                 emit_changelog=False,
                 diff_from=None
             )
-            
+
             # Should not exit
             try:
                 release_command.release_check_command(args)
@@ -113,22 +113,22 @@ class TestReleaseCheckPlanPolicy(unittest.TestCase):
                 }
             }
         }
-        
+
         with patch('engine.tooling.release_command.build_lock'), \
              patch('engine.tooling.release_command.read_lock'), \
              patch('engine.tooling.release_command.diff_locks') as dl:
-             
+
             dl.return_value = {
                 "packs": {"added": [], "removed": [], "version_changed": [], "order_changed": []},
                 "overrides": {"total_delta": 0},
                 "content_files": {"changed": [], "added": [], "removed": []}
             }
-            
+
             args = make_release_args(
                 profile="release-ready",
                 baseline=None
             )
-            
+
             with self.assertRaises(SystemExit) as cm:
                 release_command.release_check_command(args)
             self.assertEqual(cm.exception.code, 1)

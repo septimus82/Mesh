@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import json
 from dataclasses import dataclass
-from typing import Any, cast, TypedDict
+from typing import Any, TypedDict, cast
 
 from engine.macro_specs import get_builtin_macro_spec
 from engine.path_norm import normalize_scene_path

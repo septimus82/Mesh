@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+
 def action_scene_persist(w: Any, _arg: str | None) -> None:
     """Persist scene to disk (if armed)."""
     if not bool(getattr(w, "scene_persist_armed", False)):

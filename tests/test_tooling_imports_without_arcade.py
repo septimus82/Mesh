@@ -1,9 +1,10 @@
 import sys
-
-import pytest
 from pathlib import Path
 
+import pytest
+
 from tests.subprocess_tools import run_checked
+
 
 def test_tooling_imports_without_arcade():
     """
@@ -13,7 +14,7 @@ def test_tooling_imports_without_arcade():
     Runs in a subprocess to ensure total isolation and no side-effects on sys.modules.
     """
     repo_root = Path(__file__).parent.parent
-    
+
     # Script to run in subprocess
     # We use a dedicated script or a -c command
     # Using a helper string here
@@ -62,16 +63,16 @@ except Exception as e:
 # The validator main() might need arguments or files, but checking import is the main step
 # checking if safe to run
 """
-    
+
     # Run the subprocess
     result = run_checked(
         [sys.executable, "-c", check_script],
         cwd=repo_root,
     )
-    
+
     if result.returncode != 0:
         pytest.fail(f"Headless check failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
-    
+
     assert "Import successful" in result.stdout
 
 

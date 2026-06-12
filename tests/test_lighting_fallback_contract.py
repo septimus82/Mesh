@@ -6,7 +6,6 @@ import engine.lighting as lighting
 import engine.swallowed_exceptions as swallowed_exceptions
 from engine.lighting import LightManager
 
-
 pytestmark = [pytest.mark.fast]
 
 

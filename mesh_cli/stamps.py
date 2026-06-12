@@ -16,6 +16,7 @@ from engine.brushes import (
     summarize_brush,
     validate_brush,
 )
+from engine.logging_tools import get_logger
 from engine.paths import resolve_path
 from engine.stamps import (
     StampIssue,
@@ -26,7 +27,6 @@ from engine.stamps import (
     summarize_stamp,
     validate_stamp,
 )
-from engine.logging_tools import get_logger
 
 _logger = get_logger(__name__)
 
@@ -428,7 +428,7 @@ def _handle_capture(args: argparse.Namespace) -> int:
         for rel_path in iter_stamp_paths(pack_id=pack):
             try:
                 stamp = load_stamp(str(resolve_path(rel_path)))
-            except Exception as exc:  # noqa: BLE001  # REASON: cli stamps fallback isolation
+            except Exception:  # noqa: BLE001  # REASON: cli stamps fallback isolation
                 _logger.debug("SWALLOW[STMP-012] capture stamp load failed for %s", rel_path, exc_info=True)
                 continue
             if not _is_captured(rel_path=rel_path, payload=stamp):
@@ -440,7 +440,7 @@ def _handle_capture(args: argparse.Namespace) -> int:
             full_path = resolve_path(rel_path)
             try:
                 raw = json.loads(full_path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError) as exc:
+            except (OSError, json.JSONDecodeError):
                 _logger.debug("SWALLOW[STMP-013] capture brush parse failed for %s", rel_path, exc_info=True)
                 continue
             if not _is_captured(rel_path=rel_path, payload=raw):

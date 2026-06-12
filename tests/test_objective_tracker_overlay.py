@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from engine.ui import compute_objective_tracker_lines
 
 

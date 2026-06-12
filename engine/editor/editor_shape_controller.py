@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, List, Optional, cast
 
 import engine.optional_arcade as optional_arcade
-
-from engine.editor.state import TOOL_MODE_ZONE
 from engine.behaviours.utils import (
     ZONE_TARGET_HITBOX,
     ZONE_TARGET_TRIGGER,
@@ -13,6 +11,7 @@ from engine.behaviours.utils import (
     is_hitbox_behaviour,
     is_trigger_behaviour,
 )
+from engine.editor.state import TOOL_MODE_ZONE
 from engine.logging_tools import get_logger
 
 logger = get_logger(__name__)

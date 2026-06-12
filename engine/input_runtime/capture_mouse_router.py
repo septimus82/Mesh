@@ -35,28 +35,30 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from engine.input_runtime.capture_runtime_focus_model import CaptureFocusSnapshot, compute_active_scopes
-from engine.input_runtime.capture_mouse_router_model import MouseEvent, MouseRouteSpec, build_mouse_routes, resolve_mouse_route
+from engine.input_runtime import capture_mouse_router_handlers_authoring_selected as authoring_selected_handlers
+
+# Paint mode scopes (split from monolithic paint handlers)
+from engine.input_runtime import capture_mouse_router_handlers_capture_mode as capture_mode_handlers
+from engine.input_runtime import capture_mouse_router_handlers_command_palette as command_palette_handlers
 
 # Import handler modules - UI modal scopes
 from engine.input_runtime import capture_mouse_router_handlers_confirm_modal as confirm_modal_handlers
-from engine.input_runtime import capture_mouse_router_handlers_context_menu as context_menu_handlers
-from engine.input_runtime import capture_mouse_router_handlers_keybinds as keybinds_handlers
-from engine.input_runtime import capture_mouse_router_handlers_inline_rename as inline_rename_handlers
-from engine.input_runtime import capture_mouse_router_handlers_command_palette as command_palette_handlers
 from engine.input_runtime import capture_mouse_router_handlers_console as console_handlers
-from engine.input_runtime import capture_mouse_router_handlers_project_explorer as project_explorer_handlers
-from engine.input_runtime import capture_mouse_router_handlers_problems as problems_handlers
-# Paint mode scopes (split from monolithic paint handlers)
-from engine.input_runtime import capture_mouse_router_handlers_capture_mode as capture_mode_handlers
-from engine.input_runtime import capture_mouse_router_handlers_tile_paint as tile_paint_handlers
+from engine.input_runtime import capture_mouse_router_handlers_context_menu as context_menu_handlers
 from engine.input_runtime import capture_mouse_router_handlers_entity_paint as entity_paint_handlers
+
 # Select mode scopes (split from monolithic select handlers)
 from engine.input_runtime import capture_mouse_router_handlers_entity_select as entity_select_handlers
-from engine.input_runtime import capture_mouse_router_handlers_authoring_selected as authoring_selected_handlers
+
 # Global fallback
 from engine.input_runtime import capture_mouse_router_handlers_global as global_handlers
-
+from engine.input_runtime import capture_mouse_router_handlers_inline_rename as inline_rename_handlers
+from engine.input_runtime import capture_mouse_router_handlers_keybinds as keybinds_handlers
+from engine.input_runtime import capture_mouse_router_handlers_problems as problems_handlers
+from engine.input_runtime import capture_mouse_router_handlers_project_explorer as project_explorer_handlers
+from engine.input_runtime import capture_mouse_router_handlers_tile_paint as tile_paint_handlers
+from engine.input_runtime.capture_mouse_router_model import MouseEvent, MouseRouteSpec, build_mouse_routes, resolve_mouse_route
+from engine.input_runtime.capture_runtime_focus_model import CaptureFocusSnapshot, compute_active_scopes
 
 # ---------------------------------------------------------------------------
 # Route table cache

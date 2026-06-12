@@ -8,8 +8,8 @@ from types import SimpleNamespace
 import pytest
 
 from engine import optional_arcade
-from engine.editor_runtime import input as editor_input
 from engine.editor.editor_debug_panels_controller import EditorDebugPanelsController
+from engine.editor_runtime import input as editor_input
 from engine.workspace_settings import WorkspaceSettings
 from tests._dock_stub import make_dock_stub
 from tests._search_stub import attach_search_stub

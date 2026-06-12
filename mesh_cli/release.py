@@ -39,6 +39,7 @@ from mesh_cli.release_notes import (
 )
 from mesh_cli.version_bump import BumpKind, bump_semver, bump_version_file
 from mesh_cli.version_info import get_tool_version
+
 from . import release_promote_packaging as _release_promote_packaging
 from . import release_promote_reporting as _release_promote_reporting
 from . import release_rc_helpers as _release_rc_helpers

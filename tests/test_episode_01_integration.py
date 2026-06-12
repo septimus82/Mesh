@@ -7,15 +7,13 @@ from typing import Any
 from unittest.mock import MagicMock
 
 from engine.cutscene_runtime.runner import CutsceneRunner
-from engine.gameplay_event_bus import GameplayEventBus
 from engine.game_state_controller import GameState
+from engine.gameplay_event_bus import GameplayEventBus
 from engine.quest_runtime.runner import QuestRunner
 from engine.save_runtime.digest import compute_world_digest
 from engine.scene_entity_gating import runtime_entity_passes_flag_gates
 from engine.state_runtime import flags as state_flags
-
 from tests.cutscene_helpers import advance_cutscene_time
-
 
 SCENE_PATH = Path("scenes/episode_01_intro.json")
 PREFABS_PATH = Path("assets/prefabs.json")

@@ -9,7 +9,6 @@ from typing import Any
 
 import pytest
 
-
 pytestmark = [pytest.mark.fast]
 
 
@@ -36,11 +35,11 @@ def _stub_config():
 
 
 def test_verify_all_skips_tooling_only_steps_when_tooling_missing(monkeypatch, tmp_path, capsys):
+    import engine.tooling.asset_doctor as asset_doctor
     import mesh_cli
     import mesh_cli.legacy_impl as mesh_cli_legacy
     import mesh_cli.verify_steps.pipeline as verify_pipeline
     from engine.encounter_report import EncounterReport
-    import engine.tooling.asset_doctor as asset_doctor
 
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -107,11 +106,11 @@ def test_verify_all_skips_tooling_only_steps_when_tooling_missing(monkeypatch, t
 
 
 def test_verify_all_routes_verify_demo_to_artifacts_scoped_scratch(monkeypatch, tmp_path, capsys):
+    import engine.tooling.asset_doctor as asset_doctor
     import mesh_cli
     import mesh_cli.legacy_impl as mesh_cli_legacy
     import mesh_cli.verify_steps.pipeline as verify_pipeline
     from engine.encounter_report import EncounterReport
-    import engine.tooling.asset_doctor as asset_doctor
 
     repo = tmp_path / "repo"
     repo.mkdir()

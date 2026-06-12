@@ -1,18 +1,19 @@
-import unittest
 import json
+import unittest
 from pathlib import Path
+
 
 class TestPresetsNotDuplicated(unittest.TestCase):
     def test_presets_structure(self):
         config_path = Path("config.json")
         if not config_path.exists():
             self.skipTest("config.json not found")
-            
+
         with open(config_path, "r", encoding="utf-8") as f:
             # json.load will overwrite duplicates, so we can't detect them easily with standard json.load
             # But we can check if the resulting dict has the expected keys.
             # To detect duplicates, we can parse it as text or use object_pairs_hook.
-            
+
             def duplicate_check_hook(pairs):
                 keys = set()
                 result = {}
@@ -30,7 +31,7 @@ class TestPresetsNotDuplicated(unittest.TestCase):
                 data = json.load(f, object_pairs_hook=duplicate_check_hook)
             except ValueError as e:
                 self.fail(str(e))
-                
+
             self.assertIn("presets", data)
             presets = data["presets"]
             self.assertIn("ci-check", presets)

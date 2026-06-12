@@ -7,11 +7,7 @@ using stubs and mocks.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Tuple
-from unittest.mock import MagicMock, patch
-
-import pytest
-
+from typing import Tuple
 
 # -----------------------------------------------------------------------------
 # Stub classes for headless testing

@@ -38,7 +38,7 @@ See Also:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Protocol, Tuple, Sequence
+from typing import List, Optional, Protocol, Sequence, Tuple
 
 
 @dataclass
@@ -291,7 +291,7 @@ def sweep_axis_separate(
     """
     dx, dy = req.delta
     curr_aabb = req.aabb
-    
+
     hits: List[Hit] = []
     hit_x = False
     hit_y = False
@@ -300,34 +300,34 @@ def sweep_axis_separate(
     if abs(dx) > 1e-9:
         # Proposed X move
         next_aabb_x = curr_aabb.move(dx, 0)
-        
+
         # Check collisions
         walls_x = query_tiles(next_aabb_x)
-        
+
         if walls_x:
             hit_x = True
-            
+
             # Snap logic matches SceneController
             if dx > 0:
                 # Moving right: snap to left-most wall edge
                 min_left = min(w.left for w in walls_x)
                 # New right = min_left -> New center = min_left - w/2
                 snapped_x = min_left - curr_aabb.w / 2
-                
+
                 # Record hit
                 for w in walls_x:
-                    # Approximation: we only care about the one we hit first? 
+                    # Approximation: we only care about the one we hit first?
                     # SceneController logic grabs ALL overlapping and takes min.
                     # We'll just record generic hits for now as we don't use them for physics response other than snap
                     hits.append(Hit("tile", "wall", (-1.0, 0.0), overlap=None))
-                
+
                 curr_aabb = Aabb(snapped_x, curr_aabb.y, curr_aabb.w, curr_aabb.h)
-                
+
             elif dx < 0:
                 # Moving left: snap to right-most wall edge
                 max_right = max(w.right for w in walls_x)
                 snapped_x = max_right + curr_aabb.w / 2
-                
+
                 hits.append(Hit("tile", "wall", (1.0, 0.0), overlap=None))
                 curr_aabb = Aabb(snapped_x, curr_aabb.y, curr_aabb.w, curr_aabb.h)
         else:
@@ -338,14 +338,14 @@ def sweep_axis_separate(
     if abs(dy) > 1e-9:
         next_aabb_y = curr_aabb.move(0, dy)
         walls_y = query_tiles(next_aabb_y)
-        
+
         if walls_y:
             hit_y = True
             if dy > 0:
                 # Moving up: snap to bottom of wall
                 min_bottom = min(w.bottom for w in walls_y)
                 snapped_y = min_bottom - curr_aabb.h / 2
-                
+
                 hits.append(Hit("tile", "wall", (0.0, -1.0), overlap=None))
                 curr_aabb = Aabb(curr_aabb.x, snapped_y, curr_aabb.w, curr_aabb.h)
 
@@ -353,7 +353,7 @@ def sweep_axis_separate(
                 # Moving down: snap to top of wall
                 max_top = max(w.top for w in walls_y)
                 snapped_y = max_top + curr_aabb.h / 2
-                
+
                 hits.append(Hit("tile", "wall", (0.0, 1.0), overlap=None))
                 curr_aabb = Aabb(curr_aabb.x, snapped_y, curr_aabb.w, curr_aabb.h)
         else:

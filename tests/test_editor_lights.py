@@ -1,6 +1,7 @@
 import arcade
-from engine.editor_controller import EditorModeController
+
 from engine.config import EngineConfig
+from engine.editor_controller import EditorModeController
 
 
 class DummySceneController:

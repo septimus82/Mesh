@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
 from .command_palette_registry_selection import (
@@ -15,6 +14,7 @@ from .command_palette_registry_selection import (
 from .command_palette_registry_selection import (
     selection_non_player_ids as _selection_non_player_ids,
 )
+
 
 def enabled_always(_w: Any) -> tuple[bool, str]:
     return True, ""

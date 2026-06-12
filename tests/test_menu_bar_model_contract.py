@@ -6,8 +6,9 @@ correctly without any arcade/pygame dependencies (pure unit tests).
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from engine.editor.menu_bar_model import (
     MENU_BAR_HEIGHT,
@@ -18,11 +19,9 @@ from engine.editor.menu_bar_model import (
     build_menu_groups,
     compute_menu_bar_layout,
     get_dropdown_bounds,
-    hit_test_menu_bar,
     hit_test_menu_item,
     hit_test_menu_title,
 )
-
 
 # ------------------------------------------------------------------------------
 # MenuRect tests

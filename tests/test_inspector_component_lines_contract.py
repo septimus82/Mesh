@@ -13,17 +13,15 @@ from typing import Any, Dict
 import pytest
 
 from engine.editor.components_model import (
-    build_components,
     add_component,
+    build_components,
     remove_component,
-    InspectorComponent,
 )
 from engine.editor.entity_panels import (
     build_component_inspector_lines,
     get_component_inspector_row_count,
     resolve_component_inspector_selection,
 )
-
 
 # -----------------------------------------------------------------------------
 # Test Fixtures
@@ -74,7 +72,7 @@ class TestBuildComponentInspectorLines:
         """Minimal entity should have Transform header."""
         components = build_components(minimal_entity)
         lines = build_component_inspector_lines(components, selection_index=0)
-        
+
         # Should have at least the Transform header
         assert any("[Transform]" in line for line in lines)
 
@@ -82,7 +80,7 @@ class TestBuildComponentInspectorLines:
         """Minimal entity should have Transform fields."""
         components = build_components(minimal_entity)
         lines = build_component_inspector_lines(components, selection_index=0)
-        
+
         # Should have X, Y, Rotation fields
         assert any("X:" in line for line in lines)
         assert any("Y:" in line for line in lines)
@@ -92,7 +90,7 @@ class TestBuildComponentInspectorLines:
         """Full entity should have all component headers."""
         components = build_components(full_entity)
         lines = build_component_inspector_lines(components, selection_index=0)
-        
+
         assert any("[Transform]" in line for line in lines)
         assert any("[SpriteRenderer]" in line for line in lines)
         assert any("[LightSource]" in line for line in lines)
@@ -102,21 +100,21 @@ class TestBuildComponentInspectorLines:
         """Add component row should be present."""
         components = build_components(minimal_entity)
         lines = build_component_inspector_lines(components, selection_index=0, show_add_row=True)
-        
+
         assert any("[+ Add Component]" in line for line in lines)
 
     def test_add_row_can_be_hidden(self, minimal_entity: Dict[str, Any]):
         """Add component row can be hidden."""
         components = build_components(minimal_entity)
         lines = build_component_inspector_lines(components, selection_index=0, show_add_row=False)
-        
+
         assert not any("[+ Add Component]" in line for line in lines)
 
     def test_selection_marker(self, minimal_entity: Dict[str, Any]):
         """Selected row should have > prefix."""
         components = build_components(minimal_entity)
         lines = build_component_inspector_lines(components, selection_index=0)
-        
+
         # First line (Transform header) should be selected
         assert lines[0].startswith("> ")
 
@@ -124,7 +122,7 @@ class TestBuildComponentInspectorLines:
         """Non-selected rows should have space prefix."""
         components = build_components(minimal_entity)
         lines = build_component_inspector_lines(components, selection_index=0)
-        
+
         # Second line (first field) should not be selected
         if len(lines) > 1:
             assert lines[1].startswith("  ")
@@ -133,7 +131,7 @@ class TestBuildComponentInspectorLines:
         """Removable components should have [-] marker."""
         components = build_components(full_entity)
         lines = build_component_inspector_lines(components, selection_index=0)
-        
+
         # Sprite/Light/Collider are removable
         sprite_line = next(line for line in lines if "[SpriteRenderer]" in line)
         assert "[-]" in sprite_line
@@ -142,7 +140,7 @@ class TestBuildComponentInspectorLines:
         """Transform should not have [-] marker."""
         components = build_components(full_entity)
         lines = build_component_inspector_lines(components, selection_index=0)
-        
+
         transform_line = next(line for line in lines if "[Transform]" in line)
         assert "[-]" not in transform_line
 
@@ -151,7 +149,7 @@ class TestBuildComponentInspectorLines:
         components = build_components(minimal_entity)
         edit_state = {"active": True, "buffer": "123"}
         lines = build_component_inspector_lines(components, selection_index=1, edit_state=edit_state)
-        
+
         # First field (X) should show buffer with cursor
         x_line = next(line for line in lines if "X:" in line)
         assert "123_" in x_line
@@ -168,30 +166,30 @@ class TestLineOrdering:
         """Each component header should come before its fields."""
         components = build_components(full_entity)
         lines = build_component_inspector_lines(components, selection_index=0, show_add_row=False)
-        
+
         # Find Transform header and X field indices
         transform_idx = next(i for i, line in enumerate(lines) if "[Transform]" in line)
         x_idx = next(i for i, line in enumerate(lines) if "X:" in line)
-        
+
         assert transform_idx < x_idx
 
     def test_component_order_matches_spec(self, full_entity: Dict[str, Any]):
         """Components should be in order: Transform, Sprite, Light, Collider."""
         components = build_components(full_entity)
         lines = build_component_inspector_lines(components, selection_index=0, show_add_row=False)
-        
+
         transform_idx = next(i for i, line in enumerate(lines) if "[Transform]" in line)
         sprite_idx = next(i for i, line in enumerate(lines) if "[SpriteRenderer]" in line)
         light_idx = next(i for i, line in enumerate(lines) if "[LightSource]" in line)
         collider_idx = next(i for i, line in enumerate(lines) if "[Collider]" in line)
-        
+
         assert transform_idx < sprite_idx < light_idx < collider_idx
 
     def test_add_row_is_last(self, minimal_entity: Dict[str, Any]):
         """Add component row should be last."""
         components = build_components(minimal_entity)
         lines = build_component_inspector_lines(components, selection_index=0, show_add_row=True)
-        
+
         assert "[+ Add Component]" in lines[-1]
 
 
@@ -206,7 +204,7 @@ class TestRowCount:
         """Minimal entity should have Transform header + 3 fields + add row."""
         components = build_components(minimal_entity)
         count = get_component_inspector_row_count(components, include_add_row=True)
-        
+
         # 1 header + 3 fields (X, Y, Rotation) + 1 add row = 5
         assert count == 5
 
@@ -215,14 +213,14 @@ class TestRowCount:
         components = build_components(minimal_entity)
         count_with = get_component_inspector_row_count(components, include_add_row=True)
         count_without = get_component_inspector_row_count(components, include_add_row=False)
-        
+
         assert count_without == count_with - 1
 
     def test_full_entity_row_count(self, full_entity: Dict[str, Any]):
         """Full entity should have correct row count."""
         components = build_components(full_entity)
         count = get_component_inspector_row_count(components, include_add_row=False)
-        
+
         # Transform: 1 header + 3 fields = 4
         # Sprite: 1 header + 1 field = 2
         # Light: 1 header + 8 fields = 9
@@ -242,7 +240,7 @@ class TestResolveComponentInspectorSelection:
         """Index 0 should be Transform header."""
         components = build_components(minimal_entity)
         selection = resolve_component_inspector_selection(components, 0)
-        
+
         assert selection is not None
         assert selection["type"] == "header"
         assert selection["component_kind"] == "transform"
@@ -251,7 +249,7 @@ class TestResolveComponentInspectorSelection:
         """Index 1 should be X field."""
         components = build_components(minimal_entity)
         selection = resolve_component_inspector_selection(components, 1)
-        
+
         assert selection is not None
         assert selection["type"] == "field"
         assert selection["component_kind"] == "transform"
@@ -262,7 +260,7 @@ class TestResolveComponentInspectorSelection:
         components = build_components(minimal_entity)
         count = get_component_inspector_row_count(components, include_add_row=True)
         selection = resolve_component_inspector_selection(components, count - 1)
-        
+
         assert selection is not None
         assert selection["type"] == "add_row"
 
@@ -271,14 +269,14 @@ class TestResolveComponentInspectorSelection:
         components = build_components(minimal_entity)
         count = get_component_inspector_row_count(components, include_add_row=True)
         selection = resolve_component_inspector_selection(components, count + 10)
-        
+
         assert selection is None
 
     def test_field_selection_has_field_object(self, minimal_entity: Dict[str, Any]):
         """Field selection should include the InspectorField object."""
         components = build_components(minimal_entity)
         selection = resolve_component_inspector_selection(components, 1)
-        
+
         assert "field" in selection
         assert selection["field"].key == "x"
         assert selection["field"].kind == "float"
@@ -297,12 +295,12 @@ class TestRemoveComponentUpdateLines:
         components_before = build_components(full_entity)
         lines_before = build_component_inspector_lines(components_before, selection_index=0)
         assert any("[LightSource]" in line for line in lines_before)
-        
+
         # Remove light
         updated_entity = remove_component(full_entity, "light")
         components_after = build_components(updated_entity)
         lines_after = build_component_inspector_lines(components_after, selection_index=0)
-        
+
         # Light section should be gone
         assert not any("[LightSource]" in line for line in lines_after)
         # But others should remain
@@ -315,18 +313,18 @@ class TestRemoveComponentUpdateLines:
         updated_entity = remove_component(full_entity, "sprite")
         components = build_components(updated_entity)
         lines = build_component_inspector_lines(components, selection_index=0)
-        
+
         assert not any("[SpriteRenderer]" in line for line in lines)
 
     def test_row_count_decreases_after_removal(self, full_entity: Dict[str, Any]):
         """Row count should decrease after removing component."""
         components_before = build_components(full_entity)
         count_before = get_component_inspector_row_count(components_before)
-        
+
         updated_entity = remove_component(full_entity, "light")
         components_after = build_components(updated_entity)
         count_after = get_component_inspector_row_count(components_after)
-        
+
         assert count_after < count_before
 
 
@@ -343,12 +341,12 @@ class TestAddComponentUpdateLines:
         components_before = build_components(minimal_entity)
         lines_before = build_component_inspector_lines(components_before, selection_index=0)
         assert not any("[LightSource]" in line for line in lines_before)
-        
+
         # Add light
         updated_entity = add_component(minimal_entity, "light")
         components_after = build_components(updated_entity)
         lines_after = build_component_inspector_lines(components_after, selection_index=0)
-        
+
         assert any("[LightSource]" in line for line in lines_after)
 
     def test_add_collider_adds_section(self, minimal_entity: Dict[str, Any]):
@@ -356,7 +354,7 @@ class TestAddComponentUpdateLines:
         updated_entity = add_component(minimal_entity, "collider")
         components = build_components(updated_entity)
         lines = build_component_inspector_lines(components, selection_index=0)
-        
+
         assert any("[Collider]" in line for line in lines)
 
 
@@ -370,10 +368,10 @@ class TestDeterminism:
     def test_same_input_same_output(self, full_entity: Dict[str, Any]):
         """Same input should produce same output."""
         components = build_components(full_entity)
-        
+
         lines1 = build_component_inspector_lines(components, selection_index=5)
         lines2 = build_component_inspector_lines(components, selection_index=5)
-        
+
         assert lines1 == lines2
 
     def test_multiple_builds_same_order(self, full_entity: Dict[str, Any]):

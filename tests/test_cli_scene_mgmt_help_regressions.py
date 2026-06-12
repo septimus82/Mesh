@@ -1,7 +1,5 @@
 import sys
 
-import pytest
-
 from tests.subprocess_tools import run_checked
 
 
@@ -10,7 +8,7 @@ def test_new_scene_help_output():
     cmd = [sys.executable, "-m", "mesh_cli", "new-scene", "--help"]
     result = run_checked(cmd)
     assert result.returncode == 0
-    
+
     expected_substrings = [
         "usage:",
         "new-scene",
@@ -22,7 +20,7 @@ def test_new_scene_help_output():
         "--encounter-layout",
         "Encounter layout preset",
     ]
-    
+
     for substring in expected_substrings:
         assert substring in result.stdout, f"Missing substring: {substring}"
 
@@ -31,7 +29,7 @@ def test_edit_scene_help_output():
     cmd = [sys.executable, "-m", "mesh_cli", "edit-scene", "--help"]
     result = run_checked(cmd)
     assert result.returncode == 0
-    
+
     expected_substrings = [
         "usage:",
         "edit-scene",
@@ -53,7 +51,7 @@ def test_edit_scene_help_output():
         "--spawn-id",
         "Spawn ID in target scene",
     ]
-    
+
     for substring in expected_substrings:
         assert substring in result.stdout, f"Missing substring: {substring}"
 
@@ -62,7 +60,7 @@ def test_tidy_scene_help_output():
     cmd = [sys.executable, "-m", "mesh_cli", "tidy-scene", "--help"]
     result = run_checked(cmd)
     assert result.returncode == 0
-    
+
     expected_substrings = [
         "usage:",
         "tidy-scene",
@@ -70,7 +68,7 @@ def test_tidy_scene_help_output():
         "scene_path",
         "Path to scene file",
     ]
-    
+
     for substring in expected_substrings:
         assert substring in result.stdout, f"Missing substring: {substring}"
 
@@ -79,7 +77,7 @@ def test_list_scenes_help_output():
     cmd = [sys.executable, "-m", "mesh_cli", "list-scenes", "--help"]
     result = run_checked(cmd)
     assert result.returncode == 0
-    
+
     expected_substrings = [
         "usage:",
         "list-scenes",
@@ -95,7 +93,7 @@ def test_validate_help_output():
     cmd = [sys.executable, "-m", "mesh_cli", "validate", "--help"]
     result = run_checked(cmd)
     assert result.returncode == 0
-    
+
     expected_substrings = [
         "usage:",
         "validate",
@@ -103,6 +101,6 @@ def test_validate_help_output():
         "scene_path",
         "Path to scene file",
     ]
-    
+
     for substring in expected_substrings:
         assert substring in result.stdout, f"Missing substring: {substring}"

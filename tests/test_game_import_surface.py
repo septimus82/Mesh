@@ -8,6 +8,7 @@ import sys
 
 def test_importing_game_has_no_side_effects_and_exports_surface(monkeypatch) -> None:
     import arcade  # noqa: F401
+
     from engine.logging_tools import suppress_stdout
 
     def guarded_open(*_a, **_k):

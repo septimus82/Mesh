@@ -6,9 +6,6 @@ transitions, and workspace persistence - all headless-safe.
 
 from __future__ import annotations
 
-import pytest
-
-
 # =============================================================================
 # resolve_effective_dock_widths Tests
 # =============================================================================
@@ -79,7 +76,7 @@ class TestResolveEffectiveDockWidths:
 
     def test_neither_collapsed_returns_clamped_widths(self) -> None:
         """When neither collapsed, should return clamped widths."""
-        from engine.editor.editor_shell_layout import resolve_effective_dock_widths, DOCK_MIN_W
+        from engine.editor.editor_shell_layout import DOCK_MIN_W, resolve_effective_dock_widths
 
         left_eff, right_eff = resolve_effective_dock_widths(
             left_collapsed=False,
@@ -95,9 +92,9 @@ class TestResolveEffectiveDockWidths:
     def test_clamp_behavior_unchanged_for_expanded_docks(self) -> None:
         """Expanded docks should still respect min/max clamping."""
         from engine.editor.editor_shell_layout import (
-            resolve_effective_dock_widths,
-            DOCK_MIN_W,
             DOCK_MAX_W,
+            DOCK_MIN_W,
+            resolve_effective_dock_widths,
         )
 
         # Very small width should be clamped to min
@@ -167,7 +164,7 @@ class TestLayoutWithCollapsedDocks:
 
     def test_viewport_width_increases_with_smaller_docks(self) -> None:
         """Viewport width should increase when dock widths decrease."""
-        from engine.editor.editor_shell_layout import compute_editor_shell_layout, DOCK_MIN_W
+        from engine.editor.editor_shell_layout import DOCK_MIN_W, compute_editor_shell_layout
 
         # Large docks
         large = compute_editor_shell_layout(1920, 1080, 400, 400)
@@ -428,6 +425,7 @@ class TestWorkspacePersistence:
     def test_to_dict_includes_fields(self) -> None:
         """asdict(settings) should include dock/maximize fields."""
         from dataclasses import asdict
+
         from engine.workspace_settings import WorkspaceSettings
 
         settings = WorkspaceSettings(
@@ -444,6 +442,7 @@ class TestWorkspacePersistence:
     def test_roundtrip_preserves_state(self) -> None:
         """Saving and loading should preserve dock/maximize state."""
         from dataclasses import asdict
+
         from engine.workspace_settings import WorkspaceSettings
 
         original = WorkspaceSettings(

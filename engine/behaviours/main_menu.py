@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable
 
+import engine.optional_arcade as optional_arcade
+
 from ..input_bindings import known_actions, snapshot_bindings
 from ..ui import UIElement
 from .base import Behaviour
 from .registry import register_behaviour
-import engine.optional_arcade as optional_arcade
 
 if TYPE_CHECKING:
     from arcade import Sprite
+
     from ..game import GameWindow
 
 @register_behaviour("MainMenuBehaviour", description="Handles the main menu logic and rendering.")

@@ -26,7 +26,6 @@ import pytest
 
 from engine.lighting import LightManager
 
-
 pytestmark = [pytest.mark.fast]
 
 

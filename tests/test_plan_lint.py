@@ -1,6 +1,8 @@
 import unittest
-from engine.tooling.plan_types import Plan, Action
+
 from engine.tooling import plan_linter
+from engine.tooling.plan_types import Action, Plan
+
 
 class TestPlanLint(unittest.TestCase):
     def test_valid_plan(self):

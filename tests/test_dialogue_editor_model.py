@@ -6,7 +6,6 @@ import pytest
 
 from engine.editor.dialogue_editor_model import DialogueEditorModel, script_rows
 
-
 pytestmark = [pytest.mark.fast]
 
 

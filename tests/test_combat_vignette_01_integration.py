@@ -14,12 +14,11 @@ from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
 from engine.behaviours.health import Health
-from engine.gameplay_event_bus import GameplayEventBus
 from engine.game_state_controller import GameState
+from engine.gameplay_event_bus import GameplayEventBus
 from engine.quest_runtime.runner import QuestRunner
 from engine.scene_entity_gating import runtime_entity_passes_flag_gates
 from engine.state_runtime import flags as state_flags
-
 
 SCENE_PATH = Path("scenes/combat_vignette_01.json")
 PREFABS_PATH = Path("assets/prefabs.json")

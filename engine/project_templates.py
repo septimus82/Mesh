@@ -56,7 +56,7 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
 def _apply_blank(root: Path) -> None:
     # Blank is the default scaffold, but we ensure specific minimal content here
     # just in case scaffold changes or we need to override it.
-    
+
     # Minimal Scene
     scene = {
         "format_version": 1,
@@ -97,7 +97,7 @@ def _apply_lighting_playground(root: Path) -> None:
                     "color": [255, 200, 100]
                 },
                 {
-                    "type": "point_light", 
+                    "type": "point_light",
                     "x": 100, "y": 100,
                     "radius": 100,
                     "color": [100, 100, 255]
@@ -106,7 +106,7 @@ def _apply_lighting_playground(root: Path) -> None:
         }
     }
     _write_json(root / "packs/core_regions/scenes/start.json", scene)
-    
+
     # Update config to ensure lighting is on
     config_path = root / "config.json"
     if config_path.exists():
@@ -129,7 +129,7 @@ def _apply_demo_slice(root: Path) -> None:
         ]
     }
     _write_json(root / "packs/core_regions/quests/intro.json", quest)
-    
+
     # Scene with NPC
     scene = {
         "format_version": 1,
@@ -139,8 +139,8 @@ def _apply_demo_slice(root: Path) -> None:
              "entities": [
                 {"type": "player_spawn", "x": 100, "y": 100},
                 {
-                    "type": "npc", 
-                    "x": 300, "y": 100, 
+                    "type": "npc",
+                    "x": 300, "y": 100,
                     "name": "Guide",
                     "interaction": {
                         "type": "dialogue",

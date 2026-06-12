@@ -11,8 +11,14 @@ from engine.editor.find_everything_model import FindResult, compute_find_counts
 from engine.editor.keybinds_ui_model import KeybindRow, KeybindsState
 from engine.ui_overlays import (
     asset_browser_overlay as asset_overlay_module,
+)
+from engine.ui_overlays import (
     find_everything_overlay as find_overlay_module,
+)
+from engine.ui_overlays import (
     keybinds_overlay as keybinds_overlay_module,
+)
+from engine.ui_overlays import (
     scene_browser_overlay as scene_overlay_module,
 )
 from engine.ui_overlays.asset_browser_overlay import AssetBrowserOverlay

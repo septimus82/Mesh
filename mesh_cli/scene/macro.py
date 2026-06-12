@@ -6,8 +6,7 @@ from engine.paths import resolve_path
 from engine.persistence_io import write_json_atomic
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
-from engine.tooling_runtime.macro_apply_report import MacroReportPayload
-from engine.tooling_runtime.macro_apply_report import compute_scene_macro_report
+from engine.tooling_runtime.macro_apply_report import MacroReportPayload, compute_scene_macro_report
 
 
 def _compute_scene_macro_apply(

@@ -1,7 +1,10 @@
 import os
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from engine.lighting import LightManager
+
 
 @pytest.fixture
 def mock_window():
@@ -88,7 +91,7 @@ def test_env_seeds_only_when_not_overridden(light_manager_factory):
     # Case 1: Env var sets it to ON (1)
     with patch.dict(os.environ, {"MESH_SHADOWCAST_MASK": "1", "MESH_SHADOWCAST_DEBUG": "1"}):
         lm = light_manager_factory()
-        
+
         # Initially seeded from env
         assert lm.shadowmask_enabled is True
         assert lm.shadowcast_debug_enabled is True
@@ -98,7 +101,7 @@ def test_env_seeds_only_when_not_overridden(light_manager_factory):
         # Toggle OFF (override)
         lm.toggle_shadowmask()
         lm.toggle_shadowcast_debug()
-        
+
         assert lm.shadowmask_enabled is False
         assert lm.shadowcast_debug_enabled is False
         assert lm._shadowmask_overridden is True
@@ -106,29 +109,29 @@ def test_env_seeds_only_when_not_overridden(light_manager_factory):
 
         # Simulate scene load - should NOT revert to env var
         lm.configure_scene_lights([{"x": 100, "y": 100, "radius": 50}])
-        
+
         assert lm.shadowmask_enabled is False
         assert lm.shadowcast_debug_enabled is False
 
     # Case 2: Env var sets it to OFF (0)
     with patch.dict(os.environ, {"MESH_SHADOWCAST_MASK": "0", "MESH_SHADOWCAST_DEBUG": "0"}):
         lm = light_manager_factory()
-        
+
         # Initially seeded from env
         assert lm.shadowmask_enabled is False
         assert lm.shadowcast_debug_enabled is False
-        
+
         # Toggle ON (override)
         lm.toggle_shadowmask()
         lm.toggle_shadowcast_debug()
-        
+
         assert lm.shadowmask_enabled is True
         assert lm.shadowcast_debug_enabled is True
         assert lm._shadowmask_overridden is True
         assert lm._shadowcast_debug_overridden is True
-        
+
         # Simulate scene load - should NOT revert to env var
         lm.configure_scene_lights([{"x": 100, "y": 100, "radius": 50}])
-        
+
         assert lm.shadowmask_enabled is True
         assert lm.shadowcast_debug_enabled is True

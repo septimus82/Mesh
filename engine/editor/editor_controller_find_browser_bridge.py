@@ -6,7 +6,7 @@ Every function takes ``self`` (an ``EditorModeController``) as first arg.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController

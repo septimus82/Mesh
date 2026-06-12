@@ -1,7 +1,9 @@
 
-import pytest
-from unittest.mock import MagicMock, patch
 from types import SimpleNamespace
+from unittest.mock import MagicMock, patch
+
+import pytest
+
 import engine.game
 import engine.optional_arcade
 from engine.config import EngineConfig
@@ -16,7 +18,7 @@ def fake_arcade(monkeypatch):
     fake.draw_line = MagicMock()
     fake.draw_circle_filled = MagicMock()
     fake.color = SimpleNamespace(YELLOW=(255, 255, 0), RED=(255, 0, 0))
-    
+
     monkeypatch.setattr(engine.optional_arcade, "arcade", fake)
     return fake
 
@@ -27,14 +29,14 @@ def test_shadowcast_overlay_hook(fake_arcade, monkeypatch):
     """
     # Enable debug flag
     monkeypatch.setenv("MESH_SHADOWCAST_DEBUG", "1")
-    
+
     # Import GameWindow from game module
     from engine.game import GameWindow
 
     # Create mock game
     game = MagicMock()
     game.engine_config = EngineConfig()
-    
+
     # Setup lighting mock
     mock_lighting = MagicMock()
     snapshot = {
@@ -48,7 +50,7 @@ def test_shadowcast_overlay_hook(fake_arcade, monkeypatch):
     mock_lighting.get_lighting_snapshot.return_value = snapshot
     mock_lighting.enabled = True
     game.lighting = mock_lighting
-    
+
     # Mock other components
     game.camera = MagicMock()
     game.camera_controller = MagicMock()
@@ -65,12 +67,12 @@ def test_shadowcast_overlay_hook(fake_arcade, monkeypatch):
 
     # 3. Execution & Assertion (Enabled)
     draw_method()
-    
+
     assert fake_arcade.draw_line.called, "draw_line was not called on the canonical arcade patch"
-    
+
     # Reset
     fake_arcade.draw_line.reset_mock()
-    
+
     # 4. Execution & Assertion (Disabled via lighting)
     # If lighting is None, it should return early
     game.lighting = None
@@ -80,9 +82,9 @@ def test_shadowcast_overlay_hook(fake_arcade, monkeypatch):
 def test_shadowcast_overlay_hook_disabled_env(fake_arcade, monkeypatch):
     monkeypatch.delenv("MESH_SHADOWCAST_DEBUG", raising=False)
     from engine.game import GameWindow
-    
+
     game = MagicMock()
-    # If debug is disabled, lighting/logic shouldn't even define the method usually? 
+    # If debug is disabled, lighting/logic shouldn't even define the method usually?
     # Or rather, on_draw checks the env?
     # No, on_draw calls _draw_shadowcast_debug if env is set.
     # But here we are calling _draw_shadowcast_debug DIRECTLY in the previous test via binding.
@@ -91,17 +93,17 @@ def test_shadowcast_overlay_hook_disabled_env(fake_arcade, monkeypatch):
     # If I call the method directly, does it respect the env var?
     # Usually the caller (on_draw) respects the env var.
     # Let's verify on_draw integration too.
-    
+
     game.on_draw = GameWindow.on_draw.__get__(game, GameWindow)
-    
-    # We need to mock _draw_shadowcast_debug if on_draw calls it, 
+
+    # We need to mock _draw_shadowcast_debug if on_draw calls it,
     # to see if it gets called.
     # BUT on_draw implementation is what we are testing for the conditional logic.
-    
+
     # Mock specific internal method to trace call
-    # We can't easily mock the method on the class we are testing without side effects 
+    # We can't easily mock the method on the class we are testing without side effects
     # unless we patch the class.
-    
+
     with patch.object(GameWindow, '_draw_shadowcast_debug', MagicMock()) as mock_draw:
         game.on_draw()
         assert not mock_draw.called, "Should not call shadowcast debug if env var is missing"

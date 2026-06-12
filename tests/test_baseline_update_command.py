@@ -80,7 +80,6 @@ class TestDefaultFlow:
     """With no --artifacts, verify-all → validate → update-baseline."""
 
     def test_calls_three_steps_in_order(self, tmp_path: Path) -> None:
-        from mesh_cli.baseline_update import baseline_update
 
         # Pre-create the temp dir source with bundle files so update-baseline works
         work_dir = tmp_path / "artifacts" / "_baseline_tmp_test"

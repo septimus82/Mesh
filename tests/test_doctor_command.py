@@ -1,9 +1,11 @@
-import unittest
 import json
+import unittest
 from unittest.mock import patch
+
 from engine.tooling import doctor_command
 from engine.tooling.tool_result import ToolResult
 from tests.utils.args_factory import make_doctor_args
+
 
 class TestDoctorCommand(unittest.TestCase):
     @patch("engine.tooling.doctor_command.DoctorRunner")
@@ -23,8 +25,8 @@ class TestDoctorCommand(unittest.TestCase):
 
         args = make_doctor_args(json=True, world="worlds/main_world.json")
 
-        from io import StringIO
         import sys
+        from io import StringIO
 
         captured_output = StringIO()
         sys.stdout = captured_output

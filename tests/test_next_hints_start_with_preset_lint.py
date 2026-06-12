@@ -6,8 +6,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import pytest
-
 import mesh_cli
 from engine.tooling import assist_command, pipeline_runner
 

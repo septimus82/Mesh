@@ -2,7 +2,6 @@
 
 import argparse
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -465,13 +464,13 @@ def handle(args: argparse.Namespace) -> int:
             return _handle_world_link_scenes(args)
         print("[Mesh][CLI] Error: missing world subcommand")
         return 2
-    
+
     if args.command == "validate-world":
         return _handle_validate_world(args)
-    
+
     if args.command == "auto-wire-transitions":
         return _handle_auto_wire_transitions(args)
-    
+
     if args.command == "world-graph":
         return _handle_world_graph(args)
 

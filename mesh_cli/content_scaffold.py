@@ -8,7 +8,6 @@ from typing import Any
 
 from engine import json_io
 
-
 EVENTS_REL_PATH = Path("assets/data/events.json")
 QUESTS_REL_PATH = Path("assets/data/quests.json")
 CUTSCENES_REL_PATH = Path("cutscenes.json")

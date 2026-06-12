@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from engine import json_io
+
+
 def build_project_index(root_dir: str, output_path: str) -> None:
     from engine.tooling.project_index import build_project_index as _build  # noqa: PLC0415
 

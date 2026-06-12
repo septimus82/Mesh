@@ -3,7 +3,6 @@ import types
 from pathlib import Path
 
 import engine.optional_arcade as optional_arcade
-
 from engine.ui import DevBrowserOverlay
 from tests._typing import as_any
 

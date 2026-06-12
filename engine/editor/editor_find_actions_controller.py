@@ -5,7 +5,7 @@ for the Vertical Slice Diet V2.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController
@@ -20,8 +20,8 @@ class EditorFindActionsController:
     def activate_find_command(self, command_id: str) -> bool:
         """Activate a command from find-everything or command palette."""
         from engine.editor.hd2d_preset_preview_model import (  # noqa: PLC0415
-            is_hd2d_preset_command,
             extract_preset_id_from_command,
+            is_hd2d_preset_command,
         )
 
         editor = self._editor
@@ -44,8 +44,8 @@ class EditorFindActionsController:
 
     def activate_find_entity(self, entity_id: str) -> bool:
         """Activate an entity from find-everything (select and focus camera)."""
-        from engine.editor_runtime.state import apply_selection, get_sprite_for_entity_id  # noqa: PLC0415
         from engine.editor_runtime.input import _focus_camera_on_entity  # noqa: PLC0415
+        from engine.editor_runtime.state import apply_selection, get_sprite_for_entity_id  # noqa: PLC0415
 
         editor = self._editor
         sprite = get_sprite_for_entity_id(editor, entity_id)

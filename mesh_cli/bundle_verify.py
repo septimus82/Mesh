@@ -29,7 +29,6 @@ from typing import Any, cast
 from engine.diagnostics import Diagnostic, DiagnosticLevel, sort_diagnostics
 from engine.log_utils import normalize_path
 
-
 # ---------------------------------------------------------------------------
 # Registration
 # ---------------------------------------------------------------------------

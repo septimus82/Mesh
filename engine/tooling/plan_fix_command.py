@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from engine import json_io
 from engine.tooling.explain import ExplainRunner
-from engine.tooling.plan_types import Action, Plan
-from engine.tooling.plan_linter import is_allowed_ai_path
 from engine.tooling.issue_mapper import IssueHint, map_issue_to_hint
+from engine.tooling.plan_linter import is_allowed_ai_path
+from engine.tooling.plan_types import Action, Plan
 
 
 def add_plan_fix_command(subparsers: argparse._SubParsersAction) -> None:
@@ -43,9 +42,9 @@ def run_plan_fix_command(args: argparse.Namespace) -> int:
         return 1
 
     plan = generate_fix_plan(report, artifact_path)
-    
+
     out_path = Path(args.out)
-    
+
     # Serialize manually to match expected JSON format
     plan_data = {
         "wizard": plan.wizard,
@@ -61,7 +60,7 @@ def run_plan_fix_command(args: argparse.Namespace) -> int:
             for a in plan.actions
         ]
     }
-    
+
     json_io.write_json_atomic(out_path, plan_data)
     print(f"Generated fix plan: {out_path}")
     return 0
@@ -87,10 +86,10 @@ def generate_fix_plan(report: Dict[str, Any], artifact_path: str) -> Plan:
         source = issue.get("source", "")
         msg = issue.get("message", "")
         file_path = issue.get("file")
-        
+
         if file_path:
             file_path = file_path.replace("\\", "/")
-            
+
             # Root enforcement
             if not is_allowed_ai_path(file_path):
                 notes.append(f"Unfixable {source}: {msg} ({file_path}) - outside allowed roots")
@@ -99,7 +98,7 @@ def generate_fix_plan(report: Dict[str, Any], artifact_path: str) -> Plan:
 
         hint = map_issue_to_hint(source, msg, file_path)
         action = _hint_to_action(hint) if hint else None
-        
+
         if action:
             actions.append(action)
             # Collect touched files from action args
@@ -112,7 +111,7 @@ def generate_fix_plan(report: Dict[str, Any], artifact_path: str) -> Plan:
     # Deduplicate actions
     unique_actions: List[Action] = []
     seen_signatures = set()
-    
+
     for action in actions:
         # Create a signature based on type and args
         # args is a dict, so we need to serialize it to make it hashable
@@ -120,7 +119,7 @@ def generate_fix_plan(report: Dict[str, Any], artifact_path: str) -> Plan:
         if sig not in seen_signatures:
             seen_signatures.add(sig)
             unique_actions.append(action)
-            
+
     actions = unique_actions
 
     return Plan(
@@ -142,7 +141,7 @@ def generate_fix_plan(report: Dict[str, Any], artifact_path: str) -> Plan:
 def _hint_to_action(hint: IssueHint) -> Optional[Action]:
     action_type = hint["suggested_action"]
     target = hint["target"]
-    
+
     if action_type == "create_scene":
         return Action(
             type="create_scene",
@@ -152,7 +151,7 @@ def _hint_to_action(hint: IssueHint) -> Optional[Action]:
             },
             description=f"Create missing scene: {target}"
         )
-    
+
     if action_type == "validate":
         return Action(
             type="validate",
@@ -161,5 +160,5 @@ def _hint_to_action(hint: IssueHint) -> Optional[Action]:
             },
             description=f"Validate file: {target}"
         )
-        
+
     return None

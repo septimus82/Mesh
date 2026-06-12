@@ -7,8 +7,6 @@ import random
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .base import Behaviour, ParamDef
-from .registry import register_behaviour
 from ..particles_core import (
     ParticleSystem,
     RateAccumulator,
@@ -17,6 +15,8 @@ from ..particles_core import (
     sample_spawn_offset,
     spawn_radial_particles,
 )
+from .base import Behaviour, ParamDef
+from .registry import register_behaviour
 
 if TYPE_CHECKING:
     from arcade import Sprite

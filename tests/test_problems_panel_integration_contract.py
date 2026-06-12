@@ -8,10 +8,9 @@ from pathlib import Path
 import pytest
 
 from engine import optional_arcade
-from engine.editor.state import EditorDirtyState
 from engine.editor.scene_lint_model import SceneLintIssue
+from engine.editor.state import EditorDirtyState
 from engine.editor_controller import EditorModeController
-from engine.ui_overlays.problems_panel_overlay import ProblemsPanelOverlay
 from tests._dock_stub import make_dock_stub
 from tests._search_stub import attach_search_stub
 from tests._session_stub import make_session_stub
@@ -48,10 +47,10 @@ class StubController:
         self.window = StubWindow(StubSceneController(scene), player_hud=StubHud())
         self.active = True
         self.dock = make_dock_stub(left_tab="Project", right_tab="Problems")
-        
+
         from engine.editor.editor_problems_controller import ProblemsController
         self.problems = ProblemsController()
-        
+
         self._repo_root_override = repo_root
         self.undo_stack: list[dict] = []
         self.redo_stack: list[dict] = []
@@ -72,12 +71,12 @@ class StubController:
         self.unsaved_confirm = SimpleNamespace(is_open=False)
         self.session = make_session_stub()
         self.search = attach_search_stub(self)
-        
+
         # Stub for _selection_ctl needed by problems_jump_to_selected
         class StubSelectionCtl:
             primary_selected_id: str | None = None
         self._selection_ctl = StubSelectionCtl()
-        
+
         # Stub for project_explorer needed by _reveal_in_project_explorer
         class StubProjectExplorer:
             def reveal_path(self, path: str, viewport_height: int, row_height: int) -> bool:

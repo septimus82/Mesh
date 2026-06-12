@@ -1,9 +1,11 @@
-import unittest
-from unittest.mock import MagicMock, patch
-from engine.encounter_report_diff import EncounterReportDiff, EncounterSceneDiff, diff_reports
-from engine.encounter_report import EncounterReport, EncounterSceneReport
-from mesh_cli import _handle_encounter_report
 import argparse
+import unittest
+from unittest.mock import patch
+
+from engine.encounter_report import EncounterReport, EncounterSceneReport
+from engine.encounter_report_diff import EncounterReportDiff, EncounterSceneDiff, diff_reports
+from mesh_cli import _handle_encounter_report
+
 
 class TestEncounterReportDiff(unittest.TestCase):
     def test_diff_reports(self):
@@ -37,12 +39,12 @@ class TestEncounterReportDiff(unittest.TestCase):
             boss_guard_heuristic=False,
             groups=[]
         )
-        
+
         old_report = EncounterReport(scenes=[old_scene])
         new_report = EncounterReport(scenes=[new_scene])
-        
+
         diff = diff_reports(old_report, new_report)
-        
+
         self.assertEqual(len(diff.scene_diffs), 1)
         d = diff.scene_diffs[0]
         self.assertEqual(d.spawn_count_delta, 2)
@@ -52,7 +54,7 @@ class TestEncounterReportDiff(unittest.TestCase):
         # new: cost 120, budget 100 -> over 20
         # delta: 20
         self.assertEqual(d.cost_over_budget_delta, 20)
-        
+
     @patch("mesh_cli.load_report")
     @patch("mesh_cli.diff_reports")
     def test_cli_diff_thresholds(self, mock_diff, mock_load):
@@ -69,7 +71,7 @@ class TestEncounterReportDiff(unittest.TestCase):
             boss_reserve_delta=0
         )
         mock_diff.return_value = EncounterReportDiff(scene_diffs=[scene_diff])
-        
+
         args = argparse.Namespace(
             path=["diff", "old.json", "new.json"],
             max_spawn_delta=2,
@@ -79,10 +81,10 @@ class TestEncounterReportDiff(unittest.TestCase):
             json=False,
             out=None
         )
-        
+
         ret = _handle_encounter_report(args)
         self.assertEqual(ret, 1) # Should fail
-        
+
     @patch("mesh_cli.legacy_impl.load_report")
     @patch("mesh_cli.legacy_impl.diff_reports")
     def test_cli_diff_pass(self, mock_diff, mock_load):
@@ -99,7 +101,7 @@ class TestEncounterReportDiff(unittest.TestCase):
             boss_reserve_delta=0
         )
         mock_diff.return_value = EncounterReportDiff(scene_diffs=[scene_diff])
-        
+
         args = argparse.Namespace(
             path=["diff", "old.json", "new.json"],
             max_spawn_delta=2,
@@ -109,13 +111,13 @@ class TestEncounterReportDiff(unittest.TestCase):
             json=False,
             out=None
         )
-        
+
         ret = _handle_encounter_report(args)
         self.assertEqual(ret, 0) # Should pass
-    
+
     def test_check_thresholds(self):
-        from engine.encounter_report_diff import check_thresholds, EncounterReportDiff, EncounterSceneDiff
-        
+        from engine.encounter_report_diff import EncounterReportDiff, EncounterSceneDiff, check_thresholds
+
         diff = EncounterReportDiff(scene_diffs=[
             EncounterSceneDiff(
                 scene_path="scenes/test.json",
@@ -130,27 +132,27 @@ class TestEncounterReportDiff(unittest.TestCase):
                 groups=[]
             )
         ])
-        
+
         # Test elite delta
         errors = check_thresholds(diff, max_elite_delta=1)
         self.assertEqual(len(errors), 1)
         self.assertIn("Elite delta 2", errors[0])
-        
+
         # Test spawn delta
         errors = check_thresholds(diff, max_spawn_delta=2)
         self.assertEqual(len(errors), 1)
         self.assertIn("Spawn delta 5", errors[0])
-        
+
         # Test cost overrun
         errors = check_thresholds(diff, max_cost_overrun=10)
         self.assertEqual(len(errors), 1)
         self.assertIn("Cost overrun 20.00", errors[0])
-        
+
         # Test fail on overrun
         errors = check_thresholds(diff, fail_on_overrun=True)
         self.assertEqual(len(errors), 1)
         self.assertIn("Cost overrun 20.00 not allowed", errors[0])
-        
+
         # Test pass
         errors = check_thresholds(diff, max_elite_delta=5, max_spawn_delta=10, max_cost_overrun=50)
         self.assertEqual(len(errors), 0)

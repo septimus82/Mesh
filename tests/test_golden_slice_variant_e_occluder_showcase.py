@@ -1,6 +1,8 @@
-import pytest
 import json
 from pathlib import Path
+
+import pytest
+
 
 def test_golden_slice_variant_e_occluder_showcase():
     """
@@ -21,7 +23,7 @@ def test_golden_slice_variant_e_occluder_showcase():
     entrance = next((e for e in entities if e.get("name") == "Entrance"), None)
 
     assert boss is not None, "Boss entity missing from Variant E"
-    
+
     # If Entrance is missing, we assume 0 as per instructions, but let's try to find it first.
     entrance_x = entrance["x"] if entrance else 0
     boss_x = boss["x"]
@@ -39,28 +41,28 @@ def test_golden_slice_variant_e_occluder_showcase():
     # 3. Check for Blocking Occluder
     # "Assert there exists at least one occluder whose bounding box x-range lies strictly between entrance x and boss x."
     # Strictly between means: occluder_min_x > min_x AND occluder_max_x < max_x
-    
+
     blocking_occluder_found = False
-    
+
     for occluder in occluders:
         occ_type = occluder.get("type")
         occ_min_x = 0
         occ_max_x = 0
-        
+
         if occ_type == "rect":
             x = occluder.get("x", 0)
             w = occluder.get("width", 0)
-            # In Mesh engine, rects are usually defined by bottom-left or center? 
+            # In Mesh engine, rects are usually defined by bottom-left or center?
             # Looking at previous files (e.g. Ridge Outpost_dungeon_variant_e.json):
             # "x": 200, "y": 200, "width": 20, "height": 200
-            # Standard Arcade/Mesh rects are often bottom-left origin for Tiled, but let's assume x is left edge 
+            # Standard Arcade/Mesh rects are often bottom-left origin for Tiled, but let's assume x is left edge
             # or check engine code. However, for "x..x+w" logic, let's assume x is min_x.
-            # If x was center, it would be x - w/2. 
-            # Let's check how other tests or engine handles it. 
+            # If x was center, it would be x - w/2.
+            # Let's check how other tests or engine handles it.
             # But the prompt says: "For rect occluders: use x..x+w" -> This implies x is left edge.
             occ_min_x = x
             occ_max_x = x + w
-            
+
         elif occ_type == "poly":
             points = occluder.get("points", [])
             if not points:

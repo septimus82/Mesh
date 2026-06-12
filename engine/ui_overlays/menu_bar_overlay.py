@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import engine.optional_arcade as optional_arcade
 
-from ..text_draw import draw_text_cached, TextCache
+from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, draw_panel_bg
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -45,15 +45,15 @@ class MenuBarOverlay(UIElement):
             return
 
         # Import here to avoid circular imports
+        from engine.editor.editor_menu_hover_query import get_menu_hover_item_id
+        from engine.editor.editor_modal_state_query import get_active_menu_id
+
         from ..editor.menu_bar_model import (
+            MENU_FONT_SIZE,
             build_menu_groups,
             compute_menu_bar_layout,
             get_dropdown_bounds,
-            MENU_BAR_HEIGHT,
-            MENU_FONT_SIZE,
         )
-        from engine.editor.editor_menu_hover_query import get_menu_hover_item_id
-        from engine.editor.editor_modal_state_query import get_active_menu_id
 
         # Get current state
         active_menu = get_active_menu_id(controller)

@@ -1,8 +1,8 @@
 
-import pytest
-import engine.optional_arcade
 import importlib
-import sys
+
+import engine.optional_arcade
+
 
 def test_arcade_reference_singleton_contract():
     """
@@ -44,16 +44,16 @@ def test_arcade_reference_singleton_contract():
         try:
             mod = importlib.import_module(mod_name)
         except ImportError:
-            # If module doesn't exist (e.g. refactored away), skip but warn? 
-            # Ideally strict, but acceptable to skip if it's genuinely gone. 
+            # If module doesn't exist (e.g. refactored away), skip but warn?
+            # Ideally strict, but acceptable to skip if it's genuinely gone.
             print(f"WARNING: Module {mod_name} could not be imported for contract check.")
             continue
-            
+
         assert not hasattr(mod, "arcade"), f"{mod_name} has a static 'arcade' attribute. Use engine.optional_arcade.arcade instead."
         # Also check for aliases if we know them? e.g. _arcade
         # We generally frown upon top-level private aliases too for the same reason.
         if hasattr(mod, "_arcade"):
-             # It might be the optional_arcade module alias itself? 
+             # It might be the optional_arcade module alias itself?
              pass # Less strictly enforcing this, but good to know.
 
     # 3. Verify they DO have access to optional_arcade (concept check)

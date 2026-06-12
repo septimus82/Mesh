@@ -7,7 +7,6 @@ import pytest
 import mesh_cli
 from mesh_cli.main import create_parser
 
-
 pytestmark = [pytest.mark.fast]
 
 

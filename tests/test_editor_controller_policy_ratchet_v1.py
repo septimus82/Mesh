@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
-
+from pathlib import Path
 
 EDITOR_CONTROLLER_PATH = Path("engine/editor_controller.py")
 EDITOR_DIR = Path("engine/editor")

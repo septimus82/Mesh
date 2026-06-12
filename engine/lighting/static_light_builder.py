@@ -8,8 +8,6 @@ from engine.swallowed_exceptions import _log_swallow
 
 from .flicker import FlickerNoise, apply_light_flicker
 from .types import _FlickerLightState
-from engine.logging_tools import get_logger
-
 
 
 def rebuild_static_and_dynamic_lights(manager: Any) -> None:

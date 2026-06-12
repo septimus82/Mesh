@@ -5,12 +5,12 @@ from pathlib import Path
 
 from engine.persistence_io import write_json_atomic, write_text_atomic
 
-from .content_scaffold import apply_episode_scaffold, build_episode_scaffold_plan
 from .content_integrity import (
     content_audit_report_to_json,
     format_content_audit_text,
     run_content_audit,
 )
+from .content_scaffold import apply_episode_scaffold, build_episode_scaffold_plan
 
 
 def register(subparsers: argparse._SubParsersAction) -> None:

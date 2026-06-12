@@ -3,17 +3,17 @@
 Matrix contract tests for Safe Refactor Ops (V2).
 Covers path mapping, reference scanning, and replacement logic under various conditions.
 """
+from typing import List
+
 import pytest
-from typing import List, Dict, Any
 
 from engine.editor.asset_refactor_model import (
-    normalize_repo_rel,
-    compute_move_mapping,
-    scan_scene_references,
-    compute_replacements,
-    apply_replacements,
     AssetReference,
-    Replacement
+    Replacement,
+    apply_replacements,
+    compute_move_mapping,
+    compute_replacements,
+    scan_scene_references,
 )
 
 # -- Path Mapping Matrix --
@@ -121,9 +121,9 @@ def test_apply_replacements():
     """Verify application of changes returns correct deep copy."""
     original = {"entities": [{"id": "e1", "sprite": "old.png"}]}
     reps = [Replacement("e1", "sprite", "old.png", "new.png", "k")]
-    
+
     new_scene = apply_replacements(original, reps)
-    
+
     # Check modification
     assert new_scene["entities"][0]["sprite"] == "new.png"
     # Check original unmodified

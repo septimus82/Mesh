@@ -7,11 +7,10 @@ import sys
 from pathlib import Path
 from typing import Any, cast
 
-from engine.tooling import triage_command, plan_apply, plan_cli
 from engine.swallowed_exceptions import _log_swallow
+from engine.tooling import plan_apply, triage_command
 from engine.tooling.plan_executor import PlanExecutor
 from engine.tooling.plan_types import Action
-
 
 DIFF_SUPPORTED_ACTIONS = {
     "create_scene",
@@ -46,7 +45,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
     also_text = getattr(args, "also_text", False)
     diff_guard_mode = bool(getattr(args, "dry_run", False) and getattr(args, "diff", False) and not summary_json)
     defer_trige_output = bool(not summary_json)
-    
+
     if args.diff and not args.dry_run:
         print("Error: --diff requires --dry-run")
         return 1
@@ -59,15 +58,15 @@ def run_assist_command(args: argparse.Namespace) -> int:
 
     # 1. Run Triage
     # Equivalent to: mesh triage --world <world> --out artifacts/assist_plan.json --write-artifacts
-    
+
     plan_path = Path("artifacts/assist_plan.json")
-    
+
     triage_args = argparse.Namespace(
         world=args.world,
         out=str(plan_path),
         write_artifacts=True
     )
-    
+
     # We capture stdout to suppress triage output unless we want to show it?
     # The requirement says "Deterministic output; keep prints minimal and structured."
     # Triage prints the explanation JSON. We might want to suppress that or let it be.
@@ -75,29 +74,29 @@ def run_assist_command(args: argparse.Namespace) -> int:
     # "keep prints minimal" suggests we should probably control it.
     # But triage_command prints to stdout.
     # Let's run it.
-    
+
     # We can't easily suppress stdout without redirecting sys.stdout, which is risky in a library call.
     # But since we are the CLI entry point, it's okay.
     # However, triage output is useful. Let's keep it but maybe prefix or separate it?
     # Actually, the requirement says:
     # "If triage produced a plan with zero actions ... Print: [ASSIST] ..."
     # This implies we should check the plan AFTER triage runs.
-    
+
     deferred_output: list[str] = []
     if defer_trige_output:
         deferred_output.append(f"[ASSIST] Running triage on {args.world}...")
-    
+
     # Capture stdout to check for warnings in triage output
     from io import StringIO
     capture_out = StringIO()
     original_stdout = sys.stdout
     sys.stdout = capture_out
-    
+
     try:
         exit_code = triage_command.run_triage_command(triage_args)
     finally:
         sys.stdout = original_stdout
-        
+
     triage_output = capture_out.getvalue()
     # Print triage output to stdout so user can see it (or maybe just the relevant parts?)
     # Requirement says "keep prints minimal". Triage prints a big JSON.
@@ -106,7 +105,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
     # Let's print it for now, as it's the primary output of the first step.
     if defer_trige_output:
         deferred_output.append(triage_output)
-    
+
     if exit_code != 0:
         # Triage failed (doctor failed AND failed to generate plan? No, triage returns 0 if plan generated)
         # If triage returns non-zero, it means something went wrong in the process.
@@ -119,7 +118,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
         if not summary_json:
             print("[ASSIST] No plan generated.")
         return 1
-        
+
     try:
         plan_data = json.loads(plan_path.read_text(encoding="utf-8"))
     except Exception as e:
@@ -127,7 +126,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
         if not summary_json:
             print(f"[ASSIST] Failed to read plan: {e}")
         return 1
-        
+
     actions = plan_data.get("actions", [])
     unfixable = plan_data.get("meta", {}).get("unfixable", [])
     touches_raw = (
@@ -184,23 +183,23 @@ def run_assist_command(args: argparse.Namespace) -> int:
                     parsed.append({"id": "action_hints_mismatch", "message": item})
 
         return sorted(parsed, key=lambda w: (w["id"], w["message"]))
-    
+
     if args.dry_run:
         # Execute plan in capture mode to see what would be written
         from engine.tooling.plan_executor import PlanExecutor
         from engine.tooling.plan_types import Plan
-        
+
         captured_writes = {}
         def capture_writer(path: Path, content: str):
             captured_writes[str(path)] = content
-            
+
         executor = PlanExecutor(dry_run=False, writer=capture_writer)
         # Disable backups for dry run
         def _noop_backup_file(p: Path) -> None:  # noqa: ARG001
             return None
 
         cast(Any, executor.backup_mgr).backup_file = _noop_backup_file  # intentional monkeypatch for dry-run
-        
+
         try:
             plan_data_for_exec = dict(plan_data)
             plan_inputs = dict(plan_data_for_exec.get("inputs") or {})
@@ -239,7 +238,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
                 print(f"[ASSIST] Warning: Failed to simulate plan execution: {e}")
                 # Fallback to just listing touches if execution fails
                 print(f"[ASSIST] Touches: {', '.join(touches)}")
-        
+
         # Analyze changes
         changes = []
         skipped_identical = 0
@@ -258,7 +257,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
                     _log_swallow("ASCM-004", "engine/tooling/assist_command.py blanket swallow", once=True)
                     # If read fails, assume changed
                     changes.append((path_str, "~changed"))
-        
+
         changes.sort(key=lambda x: x[0])
 
         captured_paths = sorted({_norm_path(p) for p in captured_writes.keys()})
@@ -280,7 +279,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
                 print(item)
             print("[ASSIST] Dry run")
             print(f"[ASSIST] Actions: {len(actions)}")
-        
+
         if summary_json:
             if also_text:
                 print(f"[ASSIST] Would write: {len(changes)} files")
@@ -308,14 +307,14 @@ def run_assist_command(args: argparse.Namespace) -> int:
             }
             print(json.dumps(summary, indent=2, sort_keys=True))
             return 0
-        
+
         print(f"[ASSIST] Would write: {len(changes)} files")
         for path_str, kind in changes:
             print(f"[ASSIST] Write: {path_str} ({kind})")
-        
+
         if args.diff:
             _print_diff(actions, getattr(args, "max_diff_lines", 200))
-            
+
         print("[ASSIST] Next: mesh apply-plan --from-triage")
         return 0
 
@@ -325,7 +324,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
                 print(item)
         print("[ASSIST] No actionable fixes. Next: mesh explain --last --json")
         return 2
-        
+
     # Check for consistency warnings in triage output
     # We look for "warnings": [...] in the JSON output from triage
     try:
@@ -360,7 +359,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
     # But requirement says: "Equivalent to: mesh triage ... --out artifacts/assist_plan.json"
     # So we have a mismatch if --from-triage is hardcoded.
     # Let's assume we can pass the path explicitly to apply_plan.
-    
+
     print("[ASSIST] Applying plan...")
     # We use the shared entrypoint
     apply_exit = plan_apply.apply_plan(
@@ -370,7 +369,7 @@ def run_assist_command(args: argparse.Namespace) -> int:
         no_lint=False,
         run_tests=False # We run tests separately
     )
-    
+
     if apply_exit != 0:
         print("[ASSIST] Stopped at: apply-plan")
         print("[ASSIST] Next: mesh undo-last-plan") # Suggestion
@@ -379,25 +378,25 @@ def run_assist_command(args: argparse.Namespace) -> int:
     # 4. Run AI Plan Tests
     # Equivalent to: mesh plan test-ai --path artifacts/triage_last_plan.json
     # We use our plan path.
-    
+
     print("[ASSIST] Verifying fixes...")
     # We need to invoke plan_cli.run_test_ai_command or similar.
     # plan_cli doesn't expose a clean function for test-ai, it's likely inside a handler.
     # Let's check plan_cli.py again or plan_tester.py.
-    
+
     # We can construct args for plan_cli.
     # But plan_cli.add_plan_arguments registers subparsers.
     # We might need to call the underlying function directly.
     # Let's look at plan_tester.py.
-    
+
     from engine.tooling import plan_tester
-    
+
     # plan_tester.run_test_ai(plan_path, out=None, junit=None) -> int
     # We need to check if this function exists and is accessible.
     # Assuming it is based on standard patterns.
-    
+
     test_exit = plan_tester.run_test_ai(str(plan_path))
-    
+
     if test_exit != 0:
         print("[ASSIST] Stopped at: plan test-ai")
         print("[ASSIST] Next: mesh undo-last-plan")
@@ -409,16 +408,16 @@ def run_assist_command(args: argparse.Namespace) -> int:
 
 def _print_diff(actions: list[dict], max_diff_lines: int = 200) -> None:
     import difflib
-    
+
     for action in actions:
         action_type = action.get("type")
         target = action.get("args", {}).get("path") or action.get("args", {}).get("scene_path")
-        
+
         if not target and action_type == "auto_wire_transitions":
             target = action.get("args", {}).get("world_path")
-            
+
         target = target or "unknown"
-        
+
         if action_type == "create_scene":
             # For create_scene, we can show the content that would be written.
             # The content is usually implied by the template or args.
@@ -438,14 +437,13 @@ def _print_diff(actions: list[dict], max_diff_lines: int = 200) -> None:
             # However, the requirement says: "Reuse existing code that formats/serializes scene skeleton JSON (same as plan action payload)."
             # This suggests maybe the plan action payload HAS the content?
             # Or maybe I should use `scaffold.create_scene_data`?
-            
+
             # Let's assume for now we just show what we know.
             # If the action has "content" or similar, use it.
             # If not, maybe we can't show a perfect diff.
             # But wait, `scaffold.py` has `create_scene`.
-            
-            from engine.tooling import scaffold
-            
+
+
             # Generate a minimal scene dict to show as diff
             scene_data = {
                 "name": Path(target).stem,
@@ -454,24 +452,24 @@ def _print_diff(actions: list[dict], max_diff_lines: int = 200) -> None:
                 "layers": {},
                 "entities": []
             }
-            
+
             # Serialize to JSON lines
             new_lines = json.dumps(scene_data, indent=2).splitlines(keepends=True)
-            
+
             # Diff against empty
             diff = list(difflib.unified_diff(
-                [], 
-                new_lines, 
-                fromfile="/dev/null", 
+                [],
+                new_lines,
+                fromfile="/dev/null",
                 tofile=target
             ))
-            
+
             if len(diff) > max_diff_lines:
                 print("".join(diff[:max_diff_lines]), end="")
                 print(f"[ASSIST] Diff truncated: {target} (showing first {max_diff_lines} lines)")
             else:
                 print("".join(diff), end="")
-            
+
         elif action_type in DIFF_SUPPORTED_ACTIONS:
             if action_type != "auto_wire_transitions" and not Path(target).exists():
                 print(f"[ASSIST] Diff: (skipped) {action_type} {target} (file not found)")
@@ -490,17 +488,17 @@ def _print_diff(actions: list[dict], max_diff_lines: int = 200) -> None:
                 return None
 
             cast(Any, executor.backup_mgr).backup_file = _noop_backup_file  # intentional monkeypatch for preview
-            
+
             try:
                 # Run action
                 act = Action(
-                    type=action_type, 
+                    type=action_type,
                     args=action["args"],
                     description=action.get("description", "Preview action")
                 )
                 # Access protected method to run single action
                 executor._run_action(act)
-                
+
                 if not captured:
                     print(f"[ASSIST] Diff: (no changes) {action_type} {target}")
                     continue
@@ -508,7 +506,7 @@ def _print_diff(actions: list[dict], max_diff_lines: int = 200) -> None:
                 for path_str in sorted(captured.keys()):
                     new_content = captured[path_str]
                     path_obj = Path(path_str)
-                    
+
                     if path_obj.exists():
                         with open(path_obj, "r", encoding="utf-8") as f:
                             old_lines = f.readlines()
@@ -516,24 +514,24 @@ def _print_diff(actions: list[dict], max_diff_lines: int = 200) -> None:
                     else:
                         old_lines = []
                         from_file = "/dev/null"
-                    
+
                     new_lines = new_content.splitlines(keepends=True)
-                    
+
                     diff = list(difflib.unified_diff(
-                        old_lines, 
-                        new_lines, 
-                        fromfile=from_file, 
+                        old_lines,
+                        new_lines,
+                        fromfile=from_file,
                         tofile=str(path_obj)
                     ))
-                    
+
                     print(f"[ASSIST] Diff: {path_str}")
-                    
+
                     if len(diff) > max_diff_lines:
                         print("".join(diff[:max_diff_lines]), end="")
                         print(f"[ASSIST] Diff truncated: {path_str} (showing first {max_diff_lines} lines)")
                     else:
                         print("".join(diff), end="")
-                    
+
             except Exception as e:
                 _log_swallow("ASCM-005", "engine/tooling/assist_command.py blanket swallow", once=True)
                 print(f"[ASSIST] Diff: (error) {action_type} {target}: {e}")

@@ -89,10 +89,10 @@ def remove_recent_project(root: str) -> None:
     recent = payload.get("recent_roots", [])
     if not isinstance(recent, list):
         recent = []
-    
+
     # Filter out matches
     new_recent = [r for r in recent if _normalize_root(r) != normalized]
-    
+
     # If change occurred, save
     if len(new_recent) != len(recent):
         payload["recent_roots"] = new_recent

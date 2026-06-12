@@ -5,11 +5,10 @@ Manages registration and runtime state of UI layers (modals, panels).
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Optional, Tuple
-from .ui_layer_stack_model import (
-    UiLayer, UiStackState, register_layer, push_modal, pop_modal, 
-    set_visible, route_input_targets, get_layer
-)
+from typing import Any, Callable, Dict, Optional
+
+from .ui_layer_stack_model import UiLayer, UiStackState, get_layer, pop_modal, push_modal, register_layer, route_input_targets, set_visible
+
 
 class EditorUiLayerStackController:
     def __init__(self, editor: Any):
@@ -20,10 +19,10 @@ class EditorUiLayerStackController:
         self._draw_handlers: Dict[str, Callable[[Any], None]] = {}
 
     def register_layer(
-        self, 
-        id: str, 
-        kind: str, 
-        z: str | int, 
+        self,
+        id: str,
+        kind: str,
+        z: str | int,
         blocks_input: bool = False,
         visible: bool = False,
         input_handler: Optional[Callable[[int, int], bool]] = None,
@@ -32,14 +31,14 @@ class EditorUiLayerStackController:
     ) -> None:
         """Register a new UI layer."""
         layer = UiLayer(
-            id=id, 
-            kind=kind, 
-            visible=visible, 
-            z=int(z), 
+            id=id,
+            kind=kind,
+            visible=visible,
+            z=int(z),
             blocks_input=blocks_input
         )
         self._state = register_layer(self._state, layer)
-        
+
         if input_handler:
             self._input_handlers[id] = input_handler
         if text_handler:
@@ -77,13 +76,13 @@ class EditorUiLayerStackController:
         Returns True if handled.
         """
         targets = route_input_targets(self._state)
-        
+
         for target_id in targets:
             handler = self._input_handlers.get(target_id)
             if handler:
                 if handler(key, modifiers):
                     return True
-            
+
             # If layer blocks input, do we stop propagation even if not handled?
             # Model `route_input_targets` already stops returning targets if a blocking modal is hit.
             # But the blocking modal itself is included in targets.
@@ -107,7 +106,7 @@ class EditorUiLayerStackController:
         Returns True if handled.
         """
         targets = route_input_targets(self._state)
-        
+
         for target_id in targets:
             handler = self._text_handlers.get(target_id)
             if handler:

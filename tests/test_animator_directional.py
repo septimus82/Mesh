@@ -1,4 +1,3 @@
-import types
 
 from engine.behaviours.animator import SpriteAnimatorBehaviour
 

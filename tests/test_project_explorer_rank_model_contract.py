@@ -9,8 +9,6 @@ Verifies:
 
 from __future__ import annotations
 
-import pytest
-
 from tests._typing import as_any
 
 

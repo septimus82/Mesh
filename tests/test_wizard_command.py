@@ -1,7 +1,10 @@
-import pytest
 from unittest.mock import ANY, patch
 
+import pytest
+
 from engine.tooling import wizard_command
+
+
 class TestWizardCommand:
     @patch("engine.tooling.wizard_command.run_pipeline_result")
     @patch("engine.tooling.wizard_command.json_io.write_json_atomic")

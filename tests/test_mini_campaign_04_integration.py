@@ -5,7 +5,6 @@ from pathlib import Path
 
 from tooling.campaign_replay import load_campaign_script_from_path, run_campaign_replay
 
-
 BONUS_SCRIPT_PATH = Path("replays/campaign04_bonus.json")
 STANDARD_SCRIPT_PATH = Path("replays/campaign04_standard.json")
 EVENTS_PATH = Path("assets/data/events.json")

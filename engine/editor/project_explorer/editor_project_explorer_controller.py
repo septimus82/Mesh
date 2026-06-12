@@ -2,66 +2,63 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Optional
 
-from .project_explorer_model import (
-    ProjectExplorerDisplayRow,
-    ProjectExplorerRecentItem,
-    scan_project_tree,
-    build_project_explorer_display_rows,
-    clamp_selection_on_selectables,
-    push_recent,
-    coerce_recent_items,
-    recent_items_to_payloads,
-    activation_intent_for_display_row,
-    ProjectRow,
-)
-from .project_explorer_perf_model import compute_filter_key
-from .project_explorer_selection_model import (
-    SelectionState,
-    select_single,
-    toggle_index,
-    select_range,
-    select_all,
-    clear_selection,
-    move_primary,
-    selected_indices_sorted,
-    selection_summary,
-)
-from .project_explorer_power_tools_model import invert_selection
-from .project_explorer_inline_rename_model import (
-    InlineRenameState,
-    create_inline_rename_state,
-    append_rename_text,
-    handle_rename_backspace,
-    handle_rename_delete,
-    should_commit_rename,
-    get_final_rename_name,
-    move_cursor_left,
-    move_cursor_right,
-    move_cursor_home,
-    move_cursor_end,
-    move_cursor_word_left,
-    move_cursor_word_right,
-    delete_prev_word,
-    delete_next_word,
-)
+from .project_explorer_context_menu_layout_model import clamp_menu_rect
 from .project_explorer_context_menu_model import (
+    CONTEXT_MENU_ITEM_HEIGHT,
+    CONTEXT_MENU_PADDING_Y,
+    CONTEXT_MENU_WIDTH,
     ContextMenuItem,
     ProjectExplorerSelectionPayload,
     build_project_explorer_context_menu,
     clamp_menu_index,
-    first_selectable_index,
     find_index_by_action_id,
-    next_selectable_index,
+    first_selectable_index,
     hit_test_menu_item,
-    CONTEXT_MENU_WIDTH,
-    CONTEXT_MENU_ITEM_HEIGHT,
-    CONTEXT_MENU_PADDING_Y,
+    next_selectable_index,
 )
-from .project_explorer_context_menu_layout_model import clamp_menu_rect
-from .project_explorer_power_tools_model import compute_common_parent
+from .project_explorer_inline_rename_model import (
+    InlineRenameState,
+    append_rename_text,
+    create_inline_rename_state,
+    delete_next_word,
+    delete_prev_word,
+    handle_rename_backspace,
+    handle_rename_delete,
+    move_cursor_end,
+    move_cursor_home,
+    move_cursor_left,
+    move_cursor_right,
+    move_cursor_word_left,
+    move_cursor_word_right,
+    should_commit_rename,
+)
+from .project_explorer_model import (
+    ProjectExplorerDisplayRow,
+    ProjectExplorerRecentItem,
+    ProjectRow,
+    build_project_explorer_display_rows,
+    clamp_selection_on_selectables,
+    coerce_recent_items,
+    push_recent,
+    recent_items_to_payloads,
+    scan_project_tree,
+)
+from .project_explorer_perf_model import compute_filter_key
+from .project_explorer_power_tools_model import compute_common_parent, invert_selection
+from .project_explorer_selection_model import (
+    SelectionState,
+    clear_selection,
+    move_primary,
+    select_all,
+    select_range,
+    select_single,
+    selected_indices_sorted,
+    toggle_index,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
+
     from engine.editor_controller import EditorModeController
 
 
@@ -70,25 +67,25 @@ class ProjectExplorerController:
 
     def __init__(self, repo_root: Path) -> None:
         self.repo_root = repo_root
-        
+
         # State
         self.tree_rev: int = 0
         self.project_rows: list[ProjectRow] = []
-        
+
         # Filtering & Caching
         self.filter_cache_key: Optional[str] = None
         self.search_query: str = ""
         self.cached_rows: list[ProjectExplorerDisplayRow] = []
         self.selectable_rows: list[ProjectExplorerDisplayRow] = []
-        
+
         # Selection
         self.selection_state = SelectionState(primary_index=0, selected_indices=frozenset(), anchor_index=None)
         self.scroll_y: int = 0
-        
+
         # Recents
         self.recents_rev: int = 0
         self.recents: list[ProjectExplorerRecentItem] = []
-        
+
         # Inline Rename State
         self.inline_rename_state: Optional[InlineRenameState] = None
 
@@ -168,7 +165,7 @@ class ProjectExplorerController:
         """Recompute filtered rows based on state."""
         combined_rev = self.tree_rev * 1000 + self.recents_rev
         cache_key = compute_filter_key(self.search_query, None, combined_rev)
-        
+
         if cache_key == self.filter_cache_key and self.cached_rows:
             return
 
@@ -191,7 +188,7 @@ class ProjectExplorerController:
         Updates scroll_y to ensure selection is visible.
         """
         self.ensure_rows()
-        
+
         # 1. Ensure selection visibility (Auto-Scroll)
         # Map selectable index to display index
         # Optimization: cache this map? For now, we linear scan.
@@ -202,29 +199,29 @@ class ProjectExplorerController:
                 display_index = self.cached_rows.index(selected_row)
             except ValueError:
                 display_index = 0
-        
+
         visible_count = int(viewport_height / row_height) if row_height > 0 else 1
         current_scroll_idx = int(self.scroll_y / row_height) if row_height > 0 else 0
-        
+
         # Clamp scroll to valid range
         total_rows = len(self.cached_rows)
         max_scroll = max(0, total_rows - visible_count)
-        
+
         # Adjust for visibility
         if display_index < current_scroll_idx:
             current_scroll_idx = display_index
         elif display_index >= current_scroll_idx + visible_count:
             current_scroll_idx = display_index - visible_count + 1
-            
+
         current_scroll_idx = max(0, min(current_scroll_idx, max_scroll))
         self.scroll_y = int(current_scroll_idx * row_height)
-        
+
         # 2. Compute Window
         start_idx = max(0, current_scroll_idx - overscan)
         end_idx = min(total_rows, current_scroll_idx + visible_count + overscan)
-        
+
         visible_subset = self.cached_rows[start_idx:end_idx]
-        
+
         selection_count = len(self.selection_state.selected_indices)
         primary_path = self.primary_path(self.selectable_rows)
         selected_paths = self.selected_paths(self.selectable_rows)
@@ -252,23 +249,23 @@ class ProjectExplorerController:
         }
 
     # Recents Management
-    
+
     def set_recents(self, recents: Any) -> None:
         """Load recents from storage."""
         self.recents = coerce_recent_items(recents)
         self.recents_rev += 1
         self._filter_rows()
-        
+
     def get_recents_payload(self) -> list[dict[str, Any]]:
         """Get recents for storage."""
         return recent_items_to_payloads(self.recents)
-        
+
     def push_recent_item(self, item: ProjectExplorerRecentItem) -> None:
         """Add an item to recents."""
         self.recents = push_recent(self.recents, item)
         self.recents_rev += 1
         self._filter_rows()
-        
+
     def clear_recents(self) -> None:
         """Clear all recent items."""
         self.recents = []
@@ -658,7 +655,7 @@ class ProjectExplorerController:
     # -------------------------------------------------------------------------
     # Inline Rename Methods
     # -------------------------------------------------------------------------
-    
+
     @property
     def inline_rename_active(self) -> bool:
         """Check if inline rename mode is active."""
@@ -680,7 +677,7 @@ class ProjectExplorerController:
         selected_row = self.get_selected_row()
         if selected_row and selected_row.entry:
             is_dir = getattr(selected_row.entry, "is_dir", False)
-        
+
         state = create_inline_rename_state(path, is_dir=is_dir)
         if state is None:
             return False
@@ -702,7 +699,7 @@ class ProjectExplorerController:
         """
         if self.inline_rename_state is None:
             return (False, None, None)
-        
+
         state = self.inline_rename_state
         should_commit, normalized_name, error = should_commit_rename(
             state.original_stem,
@@ -710,7 +707,7 @@ class ProjectExplorerController:
             state.original_ext,
             is_dir=state.is_dir,
         )
-        
+
         if should_commit and normalized_name:
             return (True, normalized_name, None)
         return (False, None, error)
@@ -725,7 +722,7 @@ class ProjectExplorerController:
             Tuple of (success, new_name). If success is False, new_name is None.
         """
         should_commit, new_name, error = self.get_inline_rename_commit_result()
-        
+
         if should_commit and new_name:
             # Clear state - caller will handle actual rename
             self.inline_rename_state = None
@@ -748,7 +745,7 @@ class ProjectExplorerController:
         """
         if self.inline_rename_state is None:
             return False
-        
+
         if text and text.isprintable():
             self.inline_rename_state = append_rename_text(self.inline_rename_state, text)
             return True
@@ -762,7 +759,7 @@ class ProjectExplorerController:
         """
         if self.inline_rename_state is None:
             return False
-        
+
         self.inline_rename_state = handle_rename_backspace(self.inline_rename_state)
         return True
 
@@ -774,7 +771,7 @@ class ProjectExplorerController:
         """
         if self.inline_rename_state is None:
             return False
-        
+
         self.inline_rename_state = handle_rename_delete(self.inline_rename_state)
         return True
 
@@ -789,7 +786,7 @@ class ProjectExplorerController:
         """
         if self.inline_rename_state is None:
             return False
-        
+
         self.inline_rename_state = move_cursor_left(self.inline_rename_state, shift)
         return True
 
@@ -804,7 +801,7 @@ class ProjectExplorerController:
         """
         if self.inline_rename_state is None:
             return False
-        
+
         self.inline_rename_state = move_cursor_right(self.inline_rename_state, shift)
         return True
 
@@ -819,7 +816,7 @@ class ProjectExplorerController:
         """
         if self.inline_rename_state is None:
             return False
-        
+
         self.inline_rename_state = move_cursor_home(self.inline_rename_state, shift)
         return True
 
@@ -834,7 +831,7 @@ class ProjectExplorerController:
         """
         if self.inline_rename_state is None:
             return False
-        
+
         self.inline_rename_state = move_cursor_end(self.inline_rename_state, shift)
         return True
 
@@ -911,7 +908,7 @@ class ProjectExplorerController:
         if self.inline_rename_state is None:
             return None
         return self.inline_rename_state.original_path
-        
+
     def reveal_path(self, target_path: str, viewport_height: int, row_height: int) -> bool:
         """Reveal a file path in the project explorer."""
         from .project_explorer_reveal_model import (
@@ -938,11 +935,11 @@ class ProjectExplorerController:
             return ""
 
         visible_count = max(1, int(viewport_height / row_height))
-        
+
         row_idx, scroll_start = compute_reveal_scroll_index(
             self.selectable_rows, target_norm, get_row_path, visible_count
         )
-        
+
         if row_idx is None:
             return False
 
@@ -951,5 +948,5 @@ class ProjectExplorerController:
         # Assuming scroll_y is in pixels, we multiply by row_height
         if scroll_start is not None:
              self.scroll_y = scroll_start * row_height
-             
+
         return True

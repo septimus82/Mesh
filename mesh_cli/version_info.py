@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-
 _VERSION_RE = re.compile(r'^ENGINE_VERSION\s*=\s*"([^"]+)"\s*$', re.MULTILINE)
 
 

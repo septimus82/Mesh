@@ -8,7 +8,6 @@ import pytest
 
 from tests.subprocess_tools import run_checked
 
-
 pytestmark = [pytest.mark.fast]
 
 

@@ -16,13 +16,12 @@ Save/restore:
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..event_emit import emit_gameplay_event
-from ..gameplay_event_bus import EventConfigError, validate_event_type
+from ..gameplay_event_bus import EventConfigError
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
-
 
 # =============================================================================
 # Constants
@@ -99,9 +98,9 @@ class PatrolPathBehaviour(Behaviour):
     - List of named marker entity IDs
     - Auto-discovered via waypoint_tag
     """
-    
+
     STATE_VERSION = 1
-    
+
     PARAM_DEFS = {
         "waypoints": ParamDef(list, [], "List of waypoints"),
         "waypoint_tag": ParamDef(str, "", "Discover waypoints by mesh_tag"),
@@ -112,7 +111,7 @@ class PatrolPathBehaviour(Behaviour):
         "start_on_create": ParamDef(bool, True, "Auto-start patrol"),
         "enabled": ParamDef(bool, True, "Whether active"),
     }
-    
+
     def __init__(self, entity, window, **config) -> None:
         # Initialize private state before super().__init__
         self._enabled: bool = True
@@ -125,9 +124,9 @@ class PatrolPathBehaviour(Behaviour):
         self._last_pos: Optional[Tuple[float, float]] = None
         self._started: bool = False
         self._waypoints_resolved: bool = False
-        
+
         super().__init__(entity, window, **config)
-        
+
         # Config
         self._raw_waypoints = list(self.config.get("waypoints", []))
         self._waypoint_tag = str(self.config.get("waypoint_tag", "")).strip()
@@ -138,49 +137,49 @@ class PatrolPathBehaviour(Behaviour):
         self.wait_time = max(0.0, float(self.config.get("wait_time", 0.0)))
         self.start_on_create = bool(self.config.get("start_on_create", True))
         self._enabled = bool(self.config.get("enabled", True))
-        
+
         # Auto-start if configured
         if self.start_on_create and self._enabled:
             self._state = "patrolling"
-    
+
     @property
     def enabled(self) -> bool:
         """Whether the patrol is active."""
         return self._enabled
-    
+
     @enabled.setter
     def enabled(self, value: bool) -> None:
         self._enabled = bool(value)
-    
+
     @property
     def state(self) -> str:
         """Current patrol state: idle, patrolling, waiting, completed."""
         return self._state
-    
+
     @property
     def current_waypoint_index(self) -> int:
         """Index of current target waypoint."""
         return self._waypoint_index
-    
+
     @property
     def waypoint_count(self) -> int:
         """Total number of waypoints."""
         return len(self._waypoints)
-    
+
     @property
     def is_patrolling(self) -> bool:
         """Whether patrol is actively running."""
         return self._state in ("patrolling", "waiting")
-    
+
     def start(self) -> None:
         """Start or resume patrolling."""
         if not self._waypoints and not self._waypoints_resolved:
             self._resolve_waypoints()
-        
+
         if not self._waypoints:
             self._state = "idle"
             return
-        
+
         self._state = "patrolling"
         if not self._started:
             self._started = True
@@ -189,11 +188,11 @@ class PatrolPathBehaviour(Behaviour):
                 waypoint_count=len(self._waypoints),
                 mode=self.mode,
             )
-    
+
     def stop(self) -> None:
         """Stop patrolling."""
         self._state = "idle"
-    
+
     def reset(self) -> None:
         """Reset patrol to initial state."""
         self._waypoint_index = 0
@@ -203,34 +202,34 @@ class PatrolPathBehaviour(Behaviour):
         self._last_pos = None
         self._started = False
         self._state = "idle"
-    
+
     def _resolve_waypoints(self) -> None:
         """Resolve waypoint definitions to world coordinates."""
         self._waypoints_resolved = True
         self._waypoints = []
-        
+
         # First try tag-based discovery
         if self._waypoint_tag:
             self._resolve_waypoints_by_tag()
             if self._waypoints:
                 return
-        
+
         # Parse raw waypoints
         for wp in self._raw_waypoints:
             coords = self._parse_waypoint(wp)
             if coords is not None:
                 self._waypoints.append(coords)
-    
+
     def _resolve_waypoints_by_tag(self) -> None:
         """Discover waypoints by mesh_tag, sorted deterministically."""
         scene = getattr(self.window, "scene_controller", None)
         if scene is None:
             return
-        
+
         sprites = getattr(scene, "all_sprites", None)
         if sprites is None:
             return
-        
+
         # Collect matching sprites
         matching: List[Tuple[float, float, str]] = []
         for sprite in sprites:
@@ -239,7 +238,7 @@ class PatrolPathBehaviour(Behaviour):
             tags = getattr(sprite, "mesh_tags", []) or []
             if self._waypoint_tag not in tags:
                 continue
-            
+
             x = float(getattr(sprite, "center_x", 0.0))
             y = float(getattr(sprite, "center_y", 0.0))
             entity_id = str(
@@ -248,11 +247,11 @@ class PatrolPathBehaviour(Behaviour):
                 or ""
             )
             matching.append((x, y, entity_id))
-        
+
         # Sort deterministically: by x, then y, then id
         matching.sort(key=lambda t: (t[0], t[1], t[2]))
         self._waypoints = [(x, y) for x, y, _ in matching]
-    
+
     def _parse_waypoint(self, wp: Any) -> Optional[Tuple[float, float]]:
         """Parse a single waypoint definition.
         
@@ -266,25 +265,25 @@ class PatrolPathBehaviour(Behaviour):
                 return (float(wp.get("x", 0.0)), float(wp.get("y", 0.0)))
             except (TypeError, ValueError):
                 return None
-        
+
         if isinstance(wp, (list, tuple)) and len(wp) >= 2:
             try:
                 return (float(wp[0]), float(wp[1]))
             except (TypeError, ValueError):
                 return None
-        
+
         if isinstance(wp, str) and wp.strip():
             # Look up by entity ID/name
             return self._resolve_marker(wp.strip())
-        
+
         return None
-    
+
     def _resolve_marker(self, marker_id: str) -> Optional[Tuple[float, float]]:
         """Resolve a marker entity ID to world coordinates."""
         scene = getattr(self.window, "scene_controller", None)
         if scene is None:
             return None
-        
+
         # Try scene index first
         idx = getattr(scene, "_scene_index", None)
         if idx is not None:
@@ -296,12 +295,12 @@ class PatrolPathBehaviour(Behaviour):
                         float(getattr(sprite, "center_x", 0.0)),
                         float(getattr(sprite, "center_y", 0.0)),
                     )
-        
+
         # Fallback: search all sprites
         sprites = getattr(scene, "all_sprites", None)
         if sprites is None:
             return None
-        
+
         for sprite in sprites:
             entity_id = (
                 getattr(sprite, "mesh_id", None)
@@ -312,20 +311,20 @@ class PatrolPathBehaviour(Behaviour):
                     float(getattr(sprite, "center_x", 0.0)),
                     float(getattr(sprite, "center_y", 0.0)),
                 )
-        
+
         return None
-    
+
     def _emit_event(self, event_type: str, **kwargs) -> None:
         """Emit a gameplay event."""
         my_id = getattr(self.entity, "mesh_id", "")
-        
+
         payload = {
             "entity": my_id,
             "entity_name": getattr(self.entity, "mesh_name", ""),
             "waypoint_index": self._waypoint_index,
             **kwargs,
         }
-        
+
         emit_gameplay_event(
             self.window,
             event_type,
@@ -333,7 +332,7 @@ class PatrolPathBehaviour(Behaviour):
             source_entity_id=my_id,
             source_behaviour="PatrolPath",
         )
-    
+
     def update(self, dt: float) -> None:
         """Update patrol state."""
         if dt <= 0:
@@ -342,15 +341,15 @@ class PatrolPathBehaviour(Behaviour):
             return
         if self._state == "idle" or self._state == "completed":
             return
-        
+
         # Lazy resolve waypoints
         if not self._waypoints_resolved:
             self._resolve_waypoints()
-        
+
         if not self._waypoints:
             self._state = "idle"
             return
-        
+
         # Handle waiting state
         if self._state == "waiting":
             self._wait_remaining -= dt
@@ -358,15 +357,15 @@ class PatrolPathBehaviour(Behaviour):
                 self._wait_remaining = 0.0
                 self._advance_waypoint()
             return
-        
+
         # Patrolling state
         if self._state != "patrolling":
             return
-        
+
         # Get current position
         ex = float(getattr(self.entity, "center_x", 0.0))
         ey = float(getattr(self.entity, "center_y", 0.0))
-        
+
         # Check stuck detection
         if self._last_pos is not None:
             if abs(ex - self._last_pos[0]) < 0.01 and abs(ey - self._last_pos[1]) < 0.01:
@@ -374,20 +373,20 @@ class PatrolPathBehaviour(Behaviour):
             else:
                 self._stuck_counter = 0
         self._last_pos = (ex, ey)
-        
+
         # Get target waypoint
         if self._waypoint_index >= len(self._waypoints):
             self._waypoint_index = 0
-        
+
         target = self._waypoints[self._waypoint_index]
         tx, ty = target
-        
+
         # Check arrival
         dist = math.hypot(tx - ex, ty - ey)
         if dist <= self.arrive_radius:
             self._on_waypoint_reached()
             return
-        
+
         # Move toward waypoint
         step = self.speed * dt
         if step >= dist:
@@ -398,7 +397,7 @@ class PatrolPathBehaviour(Behaviour):
             ny = (ty - ey) / dist
             move_x = nx * step
             move_y = ny * step
-        
+
         # Apply movement
         scene = getattr(self.window, "scene_controller", None)
         mover = getattr(scene, "move_entity_with_collision", None) if scene else None
@@ -407,7 +406,7 @@ class PatrolPathBehaviour(Behaviour):
         else:
             self.entity.center_x = ex + move_x
             self.entity.center_y = ey + move_y
-    
+
     def _on_waypoint_reached(self) -> None:
         """Handle reaching a waypoint."""
         self._emit_event(
@@ -415,24 +414,24 @@ class PatrolPathBehaviour(Behaviour):
             waypoint_index=self._waypoint_index,
             waypoint_position=self._waypoints[self._waypoint_index],
         )
-        
+
         # Enter wait state if configured
         if self.wait_time > 0:
             self._state = "waiting"
             self._wait_remaining = self.wait_time
         else:
             self._advance_waypoint()
-    
+
     def _advance_waypoint(self) -> None:
         """Advance to the next waypoint."""
         if not self._waypoints:
             self._state = "idle"
             return
-        
+
         if self.mode == "loop":
             self._waypoint_index = (self._waypoint_index + 1) % len(self._waypoints)
             self._state = "patrolling"
-        
+
         elif self.mode == "pingpong":
             next_idx = self._waypoint_index + self._direction
             if next_idx >= len(self._waypoints):
@@ -441,10 +440,10 @@ class PatrolPathBehaviour(Behaviour):
             elif next_idx < 0:
                 self._direction = 1
                 next_idx = 1
-            
+
             self._waypoint_index = max(0, min(next_idx, len(self._waypoints) - 1))
             self._state = "patrolling"
-        
+
         elif self.mode == "once":
             next_idx = self._waypoint_index + 1
             if next_idx >= len(self._waypoints):
@@ -453,11 +452,11 @@ class PatrolPathBehaviour(Behaviour):
             else:
                 self._waypoint_index = next_idx
                 self._state = "patrolling"
-    
+
     # =========================================================================
     # SaveableBehaviour Protocol
     # =========================================================================
-    
+
     def saveable_state(self) -> Dict[str, Any]:
         """Return JSON-serializable state dict."""
         return {
@@ -471,7 +470,7 @@ class PatrolPathBehaviour(Behaviour):
             "waypoints_resolved": self._waypoints_resolved,
             "waypoints": list(self._waypoints),
         }
-    
+
     def restore_state(self, state: Dict[str, Any]) -> None:
         """Apply previously saved state."""
         self._state = str(state.get("state", "idle"))
@@ -481,7 +480,7 @@ class PatrolPathBehaviour(Behaviour):
         self._stuck_counter = int(state.get("stuck_counter", 0))
         self._started = bool(state.get("started", False))
         self._waypoints_resolved = bool(state.get("waypoints_resolved", False))
-        
+
         # Restore waypoints if saved
         raw_wps = state.get("waypoints", [])
         if isinstance(raw_wps, list):
@@ -492,19 +491,19 @@ class PatrolPathBehaviour(Behaviour):
                         self._waypoints.append((float(wp[0]), float(wp[1])))
                     except (TypeError, ValueError):
                         pass
-        
+
         self._last_pos = None
-    
+
     # =========================================================================
     # Inspector Support
     # =========================================================================
-    
+
     def get_inspector_state(self) -> Dict[str, Any]:
         """Return state for editor inspector."""
         current_wp = None
         if self._waypoints and 0 <= self._waypoint_index < len(self._waypoints):
             current_wp = self._waypoints[self._waypoint_index]
-        
+
         return {
             "state": self._state,
             "waypoint_index": self._waypoint_index,
@@ -538,11 +537,11 @@ def validate_patrol_path_config(
     """
     errors: List[EventConfigError] = []
     behaviour_name = "PatrolPath"
-    
+
     # Validate waypoints
     waypoints = config.get("waypoints", [])
     waypoint_tag = config.get("waypoint_tag", "")
-    
+
     if not waypoints and not waypoint_tag:
         errors.append(EventConfigError(
             entity_id=entity_id,
@@ -550,7 +549,7 @@ def validate_patrol_path_config(
             config_path="waypoints",
             message="either waypoints or waypoint_tag must be specified",
         ))
-    
+
     if waypoints and not isinstance(waypoints, list):
         errors.append(EventConfigError(
             entity_id=entity_id,
@@ -558,7 +557,7 @@ def validate_patrol_path_config(
             config_path="waypoints",
             message=f"waypoints must be a list, got {type(waypoints).__name__}",
         ))
-    
+
     # Validate mode
     mode = config.get("mode", "loop")
     if mode and str(mode).strip().lower() not in PATROL_MODES:
@@ -568,7 +567,7 @@ def validate_patrol_path_config(
             config_path="mode",
             message=f"invalid mode: {mode!r}. Valid modes: {sorted(PATROL_MODES)}",
         ))
-    
+
     # Validate speed
     speed = config.get("speed", 60.0)
     try:
@@ -587,7 +586,7 @@ def validate_patrol_path_config(
             config_path="speed",
             message=f"speed must be a number, got {type(speed).__name__}",
         ))
-    
+
     # Validate arrive_radius
     arrive = config.get("arrive_radius", 4.0)
     try:
@@ -606,5 +605,5 @@ def validate_patrol_path_config(
             config_path="arrive_radius",
             message=f"arrive_radius must be a number, got {type(arrive).__name__}",
         ))
-    
+
     return errors

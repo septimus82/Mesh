@@ -10,12 +10,11 @@ import pytest
 
 from engine.editor.editor_sprite_ghosting import (
     GhostSpriteSnapshot,
-    compute_ghost_alpha,
     apply_ghosting_to_sprites,
+    compute_ghost_alpha,
     restore_ghosted_sprites,
 )
 from tests._typing import as_any
-
 
 # -----------------------------------------------------------------------------
 # Stub Sprite Classes

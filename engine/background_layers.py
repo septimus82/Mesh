@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Callable, Protocol
+
 import engine.optional_arcade as optional_arcade
 
 from .logging_tools import get_logger

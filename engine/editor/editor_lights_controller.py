@@ -5,15 +5,11 @@ import time
 from typing import Any, Dict, List, Optional, cast
 
 import engine.optional_arcade as optional_arcade
-
 from engine.editor_light_occluder_ops import (
-    COOKIE_PRESETS,
-    LIGHT_COLOR_PRESETS,
     LIGHTING_PRESET_ORDER,
     LIGHTING_PRESETS,
-    add_occluder,
     add_light,
-    apply_lighting_preset as apply_lighting_preset_ops,
+    add_occluder,
     apply_occluder_command,
     build_delete_polygon_cmd,
     build_finish_polygon_cmd,
@@ -30,11 +26,13 @@ from engine.editor_light_occluder_ops import (
     toggle_light_flicker,
     update_light_property,
 )
+from engine.editor_light_occluder_ops import (
+    apply_lighting_preset as apply_lighting_preset_ops,
+)
 from engine.editor_runtime import ops as editor_ops
 from engine.i18n import tr
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
-
 
 logger = get_logger(__name__)
 

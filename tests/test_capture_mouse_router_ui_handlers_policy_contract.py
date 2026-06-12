@@ -8,7 +8,6 @@ These tests prevent architectural regression by enforcing:
 """
 from __future__ import annotations
 
-import ast
 import json
 import os
 import re
@@ -18,7 +17,6 @@ from functools import lru_cache
 from pathlib import Path
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Size ratchets - prevent modules from becoming god-files
@@ -99,7 +97,7 @@ def test_ui_handler_module_size_ratchets() -> None:
     """UI handler modules stay under size limit."""
     base = _get_input_runtime_path()
     violations: list[str] = []
-    
+
     for module_name in UI_HANDLER_MODULES:
         path = base / module_name
         if not path.exists():
@@ -117,7 +115,7 @@ def test_ui_handler_module_size_ratchets() -> None:
                 f"    limit:  {UI_HANDLER_MAX_LINES} lines\n"
                 f"    hint:   Extract logic to a helper module or increase UI_HANDLER_MAX_LINES."
             )
-    
+
     if violations:
         pytest.fail(
             "UI handler modules exceed size limits:\n\n"
@@ -130,7 +128,7 @@ def test_paint_select_handler_module_size_ratchets() -> None:
     """Paint/select handler modules stay under per-module size limits."""
     base = _get_input_runtime_path()
     violations: list[str] = []
-    
+
     for module_name, max_lines in PAINT_SELECT_HANDLER_LIMITS.items():
         path = base / module_name
         if not path.exists():
@@ -148,7 +146,7 @@ def test_paint_select_handler_module_size_ratchets() -> None:
                 f"    limit:  {max_lines} lines\n"
                 f"    hint:   Split handler logic or increase limit in PAINT_SELECT_HANDLER_LIMITS."
             )
-    
+
     if violations:
         pytest.fail(
             "Paint/select handler modules exceed size limits:\n\n"
@@ -174,7 +172,7 @@ def test_router_size_ratchet() -> None:
 # Patterns that indicate handler logic in the router
 HANDLER_BODY_PATTERNS = [
     re.compile(r"def _handle_"),  # Private handler functions
-    re.compile(r'if action_id\s*==\s*["\']'),  # Per-action conditionals  
+    re.compile(r'if action_id\s*==\s*["\']'),  # Per-action conditionals
     re.compile(r"getattr\s*\(\s*window\s*,"),  # Direct window attribute access
     re.compile(r"\.center_x|\.center_y"),  # Sprite coordinate access
     re.compile(r"screen_to_world"),  # Coordinate transforms
@@ -186,13 +184,13 @@ def test_router_has_no_handler_bodies() -> None:
     """Router must not contain handler implementation details."""
     path = _get_input_runtime_path() / "capture_mouse_router.py"
     content = path.read_text(encoding="utf-8")
-    
+
     violations: list[str] = []
     for lineno, line in enumerate(content.splitlines(), 1):
         for pattern in HANDLER_BODY_PATTERNS:
             if pattern.search(line):
                 violations.append(f"Line {lineno}: {line.strip()[:60]}")
-    
+
     if violations:
         pytest.fail(
             "capture_mouse_router.py contains handler logic (must be glue-only):\n"
@@ -208,7 +206,7 @@ def test_router_has_no_handler_bodies() -> None:
 def test_prefix_registry_is_tuple() -> None:
     """Prefix registry is immutable tuple."""
     from engine.input_runtime.capture_mouse_router import MOUSE_PREFIX_DISPATCH
-    
+
     assert isinstance(MOUSE_PREFIX_DISPATCH, tuple), "Registry must be tuple for immutability"
     for entry in MOUSE_PREFIX_DISPATCH:
         assert isinstance(entry, tuple), f"Registry entry must be tuple: {entry}"
@@ -223,9 +221,9 @@ def test_prefix_registry_is_tuple() -> None:
 def test_prefix_registry_sorted_longest_first() -> None:
     """Prefix registry is sorted longest-prefix-first for determinism."""
     from engine.input_runtime.capture_mouse_router import MOUSE_PREFIX_DISPATCH
-    
+
     prefixes = [prefix for prefix, _, _ in MOUSE_PREFIX_DISPATCH]
-    
+
     # Check that if prefix A is a prefix of prefix B, then B comes before A
     for i, prefix_a in enumerate(prefixes):
         for j, prefix_b in enumerate(prefixes[i + 1:], i + 1):
@@ -241,11 +239,11 @@ def test_prefix_registry_covers_all_action_ids() -> None:
     """Prefix registry covers all action IDs from the route table."""
     from engine.input_runtime.capture_mouse_router import MOUSE_PREFIX_DISPATCH
     from engine.input_runtime.capture_mouse_router_model import build_mouse_routes
-    
+
     routes = build_mouse_routes()
     action_ids = {route.action_id for route in routes}
     prefixes = [prefix for prefix, _, _ in MOUSE_PREFIX_DISPATCH]
-    
+
     uncovered: list[str] = []
     for action_id in action_ids:
         covered = any(
@@ -254,9 +252,9 @@ def test_prefix_registry_covers_all_action_ids() -> None:
         )
         if not covered:
             uncovered.append(action_id)
-    
+
     if uncovered:
-        pytest.fail(f"Action IDs not covered by prefix registry:\n" + "\n".join(sorted(uncovered)))
+        pytest.fail("Action IDs not covered by prefix registry:\n" + "\n".join(sorted(uncovered)))
 
 
 # ---------------------------------------------------------------------------
@@ -277,7 +275,7 @@ def test_handler_modules_have_dispatch_function() -> None:
         ("capture_mouse_router_handlers_project_explorer", "dispatch_project_explorer_mouse"),
         ("capture_mouse_router_handlers_problems", "dispatch_problems_mouse"),
     ]
-    
+
     missing: list[str] = []
     for module_name, func_name in expected_functions:
         try:
@@ -287,7 +285,7 @@ def test_handler_modules_have_dispatch_function() -> None:
                 missing.append(f"{module_name}.{func_name}: not callable")
         except ImportError as e:
             missing.append(f"{module_name}: import failed - {e}")
-    
+
     if missing:
         pytest.fail("Handler modules missing dispatch functions:\n" + "\n".join(missing))
 
@@ -296,18 +294,19 @@ def test_handler_modules_have_dispatch_function() -> None:
 def test_dispatch_functions_have_consistent_signature() -> None:
     """All dispatch functions accept (controller, event, action_id) and return bool."""
     import inspect
+
     from engine.input_runtime import (
-        capture_mouse_router_handlers_confirm_modal,
-        capture_mouse_router_handlers_context_menu,
-        capture_mouse_router_handlers_keybinds,
-        capture_mouse_router_handlers_inline_rename,
         capture_mouse_router_handlers_command_palette,
+        capture_mouse_router_handlers_confirm_modal,
         capture_mouse_router_handlers_console,
-        capture_mouse_router_handlers_project_explorer,
-        capture_mouse_router_handlers_problems,
+        capture_mouse_router_handlers_context_menu,
+        capture_mouse_router_handlers_inline_rename,
+        capture_mouse_router_handlers_keybinds,
         capture_mouse_router_handlers_modal_base,
+        capture_mouse_router_handlers_problems,
+        capture_mouse_router_handlers_project_explorer,
     )
-    
+
     modules = [
         (capture_mouse_router_handlers_modal_base, "dispatch_modal_mouse_base"),
         (capture_mouse_router_handlers_confirm_modal, "dispatch_confirm_modal_mouse"),
@@ -319,18 +318,18 @@ def test_dispatch_functions_have_consistent_signature() -> None:
         (capture_mouse_router_handlers_project_explorer, "dispatch_project_explorer_mouse"),
         (capture_mouse_router_handlers_problems, "dispatch_problems_mouse"),
     ]
-    
+
     issues: list[str] = []
     for module, func_name in modules:
         func = getattr(module, func_name)
         sig = inspect.signature(func)
         params = list(sig.parameters.keys())
-        
+
         # Check parameter names (allow Any type hints)
         expected = ["controller", "event", "action_id"]
         if params != expected:
             issues.append(f"{func_name}: params are {params}, expected {expected}")
-    
+
     if issues:
         pytest.fail("Dispatch functions have inconsistent signatures:\n" + "\n".join(issues))
 
@@ -368,7 +367,7 @@ def test_deprecated_modules_not_imported_in_production_code() -> None:
             if f"import {deprecated}" in content or f"from engine.input_runtime import {deprecated}" in content:
                 rel_path = filepath.relative_to(engine_root.parent)
                 violations.append(f"{rel_path}: imports deprecated module '{deprecated}'")
-    
+
     if violations:
         pytest.fail(
             "Deprecated modules are imported in production code (use per-scope handlers):\n"
@@ -376,13 +375,13 @@ def test_deprecated_modules_not_imported_in_production_code() -> None:
         )
 
 
-@pytest.mark.fast  
+@pytest.mark.fast
 def test_deprecated_shim_modules_are_tiny() -> None:
     """Deprecated shim modules must stay tiny (< 60 lines)."""
     base = _get_input_runtime_path()
     shim_max_lines = 60
     violations: list[str] = []
-    
+
     for module_name in ("capture_mouse_router_handlers_paint.py", "capture_mouse_router_handlers_select.py"):
         path = base / module_name
         if not path.exists():
@@ -396,7 +395,7 @@ def test_deprecated_shim_modules_are_tiny() -> None:
                 f"    limit:  {shim_max_lines} lines (shim must be minimal)\n"
                 f"    hint:   Shim should only re-export and emit DeprecationWarning. Remove logic."
             )
-    
+
     if violations:
         pytest.fail(
             "Deprecated shim modules are too large:\n\n"
@@ -443,18 +442,18 @@ def test_deprecated_import_forbiddance_not_bypassable() -> None:
     This test verifies that even if warnings are ignored, the AST-based check
     in test_deprecated_modules_not_imported_in_production_code still catches imports.
     """
-    import tempfile
     import os
-    
+    import tempfile
+
     engine_root = _get_input_runtime_path().parent
-    
+
     # Create a temporary test file that imports the deprecated module with warnings ignored
     test_content = '''
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 from engine.input_runtime import capture_mouse_router_handlers_paint
 '''
-    
+
     # Write to a temp file in engine (simulating production code)
     with tempfile.NamedTemporaryFile(
         mode="w",
@@ -465,7 +464,7 @@ from engine.input_runtime import capture_mouse_router_handlers_paint
     ) as f:
         f.write(test_content)
         temp_path = Path(f.name)
-    
+
     try:
         # Verify the check catches it via string matching
         content = temp_path.read_text(encoding="utf-8")
@@ -474,7 +473,7 @@ from engine.input_runtime import capture_mouse_router_handlers_paint
             if f"import {deprecated}" in content or f"from engine.input_runtime import {deprecated}" in content:
                 found = True
                 break
-        
+
         assert found, (
             "The string-based import check failed to detect the deprecated import. "
             "This means the forbiddance test can be bypassed!"
@@ -492,7 +491,7 @@ from engine.input_runtime import capture_mouse_router_handlers_paint
 def test_prefix_registry_baseline_count() -> None:
     """Prefix registry has at least the baseline number of entries."""
     from engine.input_runtime.capture_mouse_router import MOUSE_PREFIX_DISPATCH
-    
+
     actual = len(MOUSE_PREFIX_DISPATCH)
     if actual < MOUSE_PREFIX_DISPATCH_BASELINE:
         pytest.fail(
@@ -509,13 +508,13 @@ def test_router_has_no_button_conditionals() -> None:
     """Router must not contain button == conditionals (handler logic)."""
     path = _get_input_runtime_path() / "capture_mouse_router.py"
     content = path.read_text(encoding="utf-8")
-    
+
     forbidden_patterns = [
         (re.compile(r"if\s+button\s*=="), "button comparison"),
         (re.compile(r"event\.button\s*=="), "event.button comparison"),
         (re.compile(r"editor_actions"), "editor_actions import"),
     ]
-    
+
     violations: list[str] = []
     for lineno, line in enumerate(content.splitlines(), 1):
         for pattern, desc in forbidden_patterns:
@@ -525,10 +524,10 @@ def test_router_has_no_button_conditionals() -> None:
                     f"    pattern: {desc}\n"
                     f"    code:    {line.strip()[:70]}"
                 )
-    
+
     if violations:
         pytest.fail(
-            f"capture_mouse_router.py contains forbidden patterns:\n\n"
+            "capture_mouse_router.py contains forbidden patterns:\n\n"
             + "\n\n".join(violations[:10])
             + (f"\n\n  ... and {len(violations) - 10} more violations" if len(violations) > 10 else "")
             + "\n\n  hint: Move handler logic to per-scope handler modules."
@@ -602,7 +601,7 @@ def test_per_scope_handlers_only_imported_by_router() -> None:
                         f"    imports:  {handler_module}\n"
                         f"    allowed:  Only {', '.join(ALLOWED_HANDLER_IMPORTERS)}"
                     )
-    
+
     if violations:
         pytest.fail(
             "Import boundary violation: per-scope handlers imported outside router:\n\n"
@@ -630,30 +629,30 @@ def test_router_public_surface_is_minimal() -> None:
     This prevents API sprawl and ensures the router remains a simple choke point.
     """
     from engine.input_runtime import capture_mouse_router
-    
+
     actual_all = getattr(capture_mouse_router, "__all__", None)
-    
+
     # Must have __all__ defined
     assert actual_all is not None, (
         "capture_mouse_router.py must define __all__ to declare its public API"
     )
-    
+
     # Check for exact match
     actual_set = set(actual_all)
     expected_set = set(ROUTER_PUBLIC_API)
-    
+
     extra = actual_set - expected_set
     missing = expected_set - actual_set
-    
+
     issues: list[str] = []
     if extra:
         issues.append(f"  unexpected exports: {sorted(extra)}")
     if missing:
         issues.append(f"  missing exports:    {sorted(missing)}")
-    
+
     if issues:
         pytest.fail(
-            f"Router public API mismatch:\n"
+            "Router public API mismatch:\n"
             + "\n".join(issues) + "\n"
             f"  expected: {sorted(ROUTER_PUBLIC_API)}\n"
             f"  actual:   {sorted(actual_all)}\n"
@@ -666,20 +665,21 @@ def test_router_public_surface_is_minimal() -> None:
 def test_router_entry_function_signature_and_return_type() -> None:
     """route_and_dispatch_mouse has the expected signature and returns bool."""
     import inspect
+
     from engine.input_runtime.capture_mouse_router import route_and_dispatch_mouse
-    
+
     # Check signature
     sig = inspect.signature(route_and_dispatch_mouse)
     params = list(sig.parameters.keys())
     expected_params = ["controller", "event", "snapshot"]
-    
+
     assert params == expected_params, (
         f"route_and_dispatch_mouse signature changed:\n"
         f"  expected params: {expected_params}\n"
         f"  actual params:   {params}\n"
         f"  hint: The public API must remain stable."
     )
-    
+
     # Check return annotation if present
     return_annotation = sig.return_annotation
     if return_annotation != inspect.Parameter.empty:
@@ -695,23 +695,23 @@ def test_router_returns_route_table_of_expected_shape() -> None:
     """Internal route table builder returns tuple of MouseRouteSpec."""
     from engine.input_runtime.capture_mouse_router import _get_routes
     from engine.input_runtime.capture_mouse_router_model import MouseRouteSpec
-    
+
     routes = _get_routes()
-    
+
     # Must be a tuple (immutable)
     assert isinstance(routes, tuple), (
         f"_get_routes() must return tuple, got {type(routes).__name__}"
     )
-    
+
     # Must contain at least one route
     assert len(routes) > 0, "_get_routes() returned empty route table"
-    
+
     # All entries must be MouseRouteSpec
     for i, route in enumerate(routes):
         assert isinstance(route, MouseRouteSpec), (
             f"Route at index {i} is {type(route).__name__}, expected MouseRouteSpec"
         )
-    
+
     # Each route must have required fields
     for i, route in enumerate(routes):
         assert route.scope, f"Route {i} missing scope"
@@ -768,21 +768,21 @@ def test_no_new_shim_modules_allowed() -> None:
     that is not in the known allowlist.
     """
     base = _get_input_runtime_path()
-    
+
     all_handler_files: list[str] = []
     for path in base.iterdir():
         if path.is_file() and path.name.startswith("capture_mouse_router_handlers_") and path.name.endswith(".py"):
             all_handler_files.append(path.name)
-    
+
     # Known allowed files = legitimate modules + deprecated shims
     all_allowed = LEGITIMATE_HANDLER_MODULES | ALLOWED_DEPRECATED_SHIMS
-    
+
     # Find any unknown files
     unknown_files = [f for f in all_handler_files if f not in all_allowed]
-    
+
     if unknown_files:
         pytest.fail(
-            f"Unknown capture_mouse_router_handlers_*.py files found:\n\n"
+            "Unknown capture_mouse_router_handlers_*.py files found:\n\n"
             + "\n".join(f"  - {f}" for f in sorted(unknown_files))
             + "\n\n"
             f"If this is a legitimate handler module, add it to LEGITIMATE_HANDLER_MODULES.\n"
@@ -824,32 +824,32 @@ def test_helper_modules_have_no_route_registration() -> None:
     """
     base = _get_input_runtime_path()
     violations: list[str] = []
-    
+
     for module_name in PURE_HELPER_MODULES:
         path = base / module_name
         if not path.exists():
             continue
-        
+
         content = path.read_text(encoding="utf-8")
         found_patterns: list[str] = []
-        
+
         for pattern in ROUTE_REGISTRATION_PATTERNS:
             matches = pattern.findall(content)
             if matches:
                 found_patterns.append(pattern.pattern)
-        
+
         if found_patterns:
             violations.append(
                 f"  {module_name}:\n"
                 f"    forbidden patterns: {found_patterns}\n"
                 f"    hint: Move route definitions to a per-scope handler module."
             )
-    
+
     if violations:
         pytest.fail(
-            f"Helper modules must not contain route registration code:\n\n"
+            "Helper modules must not contain route registration code:\n\n"
             + "\n".join(violations)
             + "\n\n"
-            f"Base/helper modules should only contain utility functions.\n"
-            f"Route definitions belong in per-scope handler modules."
+            "Base/helper modules should only contain utility functions.\n"
+            "Route definitions belong in per-scope handler modules."
         )

@@ -3,7 +3,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import engine.optional_arcade as optional_arcade
-
 from engine.input_runtime.capture_focus_query import get_capture_focus_snapshot
 
 

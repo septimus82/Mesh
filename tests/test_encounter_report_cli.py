@@ -1,8 +1,10 @@
+import argparse
 import unittest
 from unittest.mock import MagicMock, patch
-import argparse
-from mesh_cli import _handle_encounter_report
+
 from engine.encounter_report import EncounterReport
+from mesh_cli import _handle_encounter_report
+
 
 class TestEncounterReportCLI(unittest.TestCase):
     @patch("mesh_cli.legacy_impl.generate_encounter_report")
@@ -19,18 +21,18 @@ class TestEncounterReportCLI(unittest.TestCase):
             difficulty="easy,hard",
             only_dungeons=True
         )
-        
+
         # Mock world file read
         mock_json_load.return_value = {"scenes": [{"path": "s1.json"}, {"path": "s2.json"}]}
-        
+
         # Mock report result
         mock_report = EncounterReport()
         mock_generate.return_value = mock_report
-        
+
         ret = _handle_encounter_report(args)
-        
+
         self.assertEqual(ret, 0)
-        
+
         # Verify generate called with correct args
         mock_generate.assert_called_once()
         call_args = mock_generate.call_args[1]

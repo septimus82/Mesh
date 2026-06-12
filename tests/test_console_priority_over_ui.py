@@ -3,7 +3,6 @@ from __future__ import annotations
 import types
 
 import engine.optional_arcade as optional_arcade
-
 from engine.game_runtime import input_dispatch
 
 

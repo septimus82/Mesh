@@ -4,23 +4,22 @@ from dataclasses import dataclass
 from typing import Callable, Sequence
 
 from engine.input_runtime.capture_runtime_focus_model import (
-    CaptureFocusSnapshot,
     SCOPE_AUTHORING_SELECTED,
     SCOPE_CAPTURE_MODE,
     SCOPE_COMMAND_PALETTE,
     SCOPE_CONFIRM_MODAL,
-    SCOPE_CONTEXT_MENU,
     SCOPE_CONSOLE,
+    SCOPE_CONTEXT_MENU,
     SCOPE_ENTITY_PAINT,
     SCOPE_ENTITY_SELECT,
     SCOPE_GLOBAL,
     SCOPE_INLINE_RENAME,
     SCOPE_KEYBINDS,
-    SCOPE_PALETTE_MODE,
+    SCOPE_PRIORITY,
     SCOPE_PROBLEMS,
     SCOPE_PROJECT_EXPLORER,
     SCOPE_TILE_PAINT,
-    SCOPE_PRIORITY,
+    CaptureFocusSnapshot,
 )
 
 
@@ -118,11 +117,11 @@ def _mouse_route_sort_key(route: MouseRouteSpec) -> tuple[int, str, int, int | N
         scope_priority = SCOPE_PRIORITY.index(route.scope)
     except ValueError:
         scope_priority = len(SCOPE_PRIORITY)  # unknown scopes go last
-    
+
     kind_order = {"press": 0, "release": 1, "scroll": 2}.get(route.kind, 99)
     # button: None sorts before any button number
     button_key = route.button if route.button is not None else -1
-    
+
     return (scope_priority, route.kind, kind_order, button_key, route.action_id)
 
 
@@ -134,17 +133,17 @@ def dedupe_mouse_routes(routes: Sequence[MouseRouteSpec]) -> tuple[MouseRouteSpe
     """
     seen: set[tuple[str, str, int | None, str, str]] = set()
     deduped: list[MouseRouteSpec] = []
-    
+
     for route in routes:
         ident = _mouse_route_identity(route)
         if ident in seen:
             continue
         seen.add(ident)
         deduped.append(route)
-    
+
     # Sort for deterministic ordering
     deduped.sort(key=_mouse_route_sort_key)
-    
+
     return tuple(deduped)
 
 
@@ -163,17 +162,17 @@ def audit_mouse_routes(routes: Sequence[MouseRouteSpec]) -> MouseRouteAuditRepor
     for route in routes:
         combo_key = (route.scope, route.kind, route.button)
         by_combo.setdefault(combo_key, []).append(route)
-    
+
     # Track exact duplicates by full identity
     identity_counts: dict[tuple[str, str, int | None, str, str], int] = {}
     for route in routes:
         ident = _mouse_route_identity(route)
         identity_counts[ident] = identity_counts.get(ident, 0) + 1
-    
+
     conflicts: list[MouseRouteAuditIssue] = []
     duplicates: list[MouseRouteAuditIssue] = []
     aliases: list[MouseRouteAuditIssue] = []
-    
+
     # Check for duplicates (same full identity appearing multiple times)
     seen_dup_idents: set[tuple[str, str, int | None, str, str]] = set()
     for route in routes:
@@ -187,19 +186,19 @@ def audit_mouse_routes(routes: Sequence[MouseRouteSpec]) -> MouseRouteAuditRepor
                 action_ids=(route.action_id,),
                 note=f"Exact duplicate route (count={identity_counts[ident]})",
             ))
-    
+
     # Check for conflicts/aliases (same combo, different action_ids)
     for combo_key, group in by_combo.items():
         action_ids = frozenset(r.action_id for r in group)
         if len(action_ids) <= 1:
             continue  # No conflict: single action_id
-        
+
         scope, kind, button = combo_key
         action_id_tuple = tuple(sorted(action_ids))
-        
+
         # Check if this is an allowed alias pair
         is_alias = action_ids in ALLOWED_ALIAS_PAIRS
-        
+
         if is_alias:
             aliases.append(MouseRouteAuditIssue(
                 kind="alias",
@@ -217,7 +216,7 @@ def audit_mouse_routes(routes: Sequence[MouseRouteSpec]) -> MouseRouteAuditRepor
                 action_ids=action_id_tuple,
                 note=f"Different action_ids with when={when_names}",
             ))
-    
+
     # Sort for deterministic output
     def issue_sort_key(issue: MouseRouteAuditIssue) -> tuple:
         try:
@@ -225,11 +224,11 @@ def audit_mouse_routes(routes: Sequence[MouseRouteSpec]) -> MouseRouteAuditRepor
         except ValueError:
             scope_idx = len(SCOPE_PRIORITY)
         return (scope_idx, issue.combo, issue.action_ids)
-    
+
     conflicts.sort(key=issue_sort_key)
     duplicates.sort(key=issue_sort_key)
     aliases.sort(key=issue_sort_key)
-    
+
     return MouseRouteAuditReport(
         conflicts=tuple(conflicts),
         duplicates=tuple(duplicates),
@@ -248,7 +247,7 @@ def format_audit_issues(report: MouseRouteAuditReport, max_issues: int = 10) -> 
         A compact printable summary of audit issues.
     """
     lines: list[str] = []
-    
+
     if report.conflicts:
         lines.append(f"CONFLICTS ({len(report.conflicts)}):")
         for issue in report.conflicts[:max_issues]:
@@ -256,7 +255,7 @@ def format_audit_issues(report: MouseRouteAuditReport, max_issues: int = 10) -> 
             lines.append(f"    {issue.note}")
         if len(report.conflicts) > max_issues:
             lines.append(f"  ... and {len(report.conflicts) - max_issues} more")
-    
+
     if report.duplicates:
         lines.append(f"DUPLICATES ({len(report.duplicates)}):")
         for issue in report.duplicates[:max_issues]:
@@ -264,17 +263,17 @@ def format_audit_issues(report: MouseRouteAuditReport, max_issues: int = 10) -> 
             lines.append(f"    {issue.note}")
         if len(report.duplicates) > max_issues:
             lines.append(f"  ... and {len(report.duplicates) - max_issues} more")
-    
+
     if report.aliases:
         lines.append(f"ALLOWED ALIASES ({len(report.aliases)}):")
         for issue in report.aliases[:max_issues]:
             lines.append(f"  [{issue.scope}] {issue.combo} -> {issue.action_ids}")
         if len(report.aliases) > max_issues:
             lines.append(f"  ... and {len(report.aliases) - max_issues} more")
-    
+
     if not lines:
         return "No audit issues found."
-    
+
     return "\n".join(lines)
 
 
@@ -285,12 +284,12 @@ def assert_no_conflicts_or_duplicates(report: MouseRouteAuditReport) -> None:
     This is the canonical helper for tests to enforce route table integrity.
     """
     issues: list[str] = []
-    
+
     if report.conflicts:
         issues.append(f"Found {len(report.conflicts)} conflict(s)")
     if report.duplicates:
         issues.append(f"Found {len(report.duplicates)} duplicate(s)")
-    
+
     if issues:
         summary = format_audit_issues(report)
         raise AssertionError(f"Route table integrity violation: {', '.join(issues)}\n{summary}")
@@ -324,11 +323,11 @@ def validate_route_table(routes: tuple[MouseRouteSpec, ...]) -> None:
         raise RouteTableValidationError(
             f"Route table must be tuple, got {type(routes).__name__}"
         )
-    
+
     # 2. Must be non-empty
     if len(routes) == 0:
         raise RouteTableValidationError("Route table must not be empty")
-    
+
     # 3. All entries must be MouseRouteSpec
     for i, route in enumerate(routes):
         if not isinstance(route, MouseRouteSpec):
@@ -336,7 +335,7 @@ def validate_route_table(routes: tuple[MouseRouteSpec, ...]) -> None:
                 f"Route at index {i} is {type(route).__name__}, expected MouseRouteSpec; "
                 f"value={route!r}"
             )
-    
+
     # 4. Field validity checks
     valid_kinds = ("press", "release", "scroll")
     for i, route in enumerate(routes):
@@ -358,7 +357,7 @@ def validate_route_table(routes: tuple[MouseRouteSpec, ...]) -> None:
                 f"Route {i}.when is not callable: scope={route.scope!r}, "
                 f"action_id={route.action_id!r}, kind={route.kind!r}"
             )
-    
+
     # 5. Integrity: no conflicts or duplicates
     report = audit_mouse_routes(routes)
     if report.conflicts or report.duplicates:

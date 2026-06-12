@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol, runtime_checkable
 
+
 @runtime_checkable
 class EditorFileOpsProtocol(Protocol):
     """Protocol for file operations controller."""
@@ -19,10 +20,10 @@ class EditorFileOpsProtocol(Protocol):
 @runtime_checkable
 class EditorHostProtocol(Protocol):
     """Protocol for the main EditorController host."""
-    
+
     @property
     def file_ops(self) -> EditorFileOpsProtocol: ...
-    
+
     # State access
     window: Any
     scene_switcher_recent: Any
@@ -31,16 +32,16 @@ class EditorHostProtocol(Protocol):
 @runtime_checkable
 class EditorUiFlowHost(Protocol):
     """Protocol for the host of EditorUiFlowController."""
-    
+
     # Core Actions
     def ui_activate_command(self, cmd_id: str) -> bool: ...
     def ui_activate_scene(self, scene_id: str) -> bool: ...
     def ui_activate_asset(self, asset_id: str) -> bool: ...
     def ui_activate_entity(self, entity_id: str) -> bool: ...
     def ui_activate_problem(self, problem_id: str) -> bool: ...
-    
+
     def ui_get_palette_items(self) -> list[Any]: ...
-    
+
     # HD2D Preview
     def ui_hd2d_preview(self, preset_id: str) -> None: ...
     def ui_hd2d_cancel_preview(self) -> None: ...

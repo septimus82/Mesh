@@ -5,22 +5,20 @@ Tests alt-drag duplicate computation as pure functions - headless, no arcade dep
 
 from __future__ import annotations
 
-import copy
 import pytest
 
 from engine.editor.editor_alt_drag_duplicate_ops import (
-    DuplicateEntitySpec,
     AltDragDuplicateCommand,
-    normalize_selection_ids,
+    DuplicateEntitySpec,
+    apply_alt_drag_duplicate,
+    apply_drag_delta_to_specs,
     compute_next_copy_ids,
     duplicate_entities_in_scene,
-    apply_drag_delta_to_specs,
-    apply_alt_drag_duplicate,
+    normalize_selection_ids,
     remove_alt_drag_duplicates,
     should_start_alt_drag_duplicate,
 )
 from tests._typing import as_any
-
 
 # -----------------------------------------------------------------------------
 # normalize_selection_ids

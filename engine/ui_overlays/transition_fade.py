@@ -4,9 +4,9 @@ from typing import Callable, Optional
 
 import engine.optional_arcade as optional_arcade
 
-from .common import UIElement, _draw_rectangle_filled
-from ..text_draw import draw_text_cached
 from ..i18n import tr
+from ..text_draw import draw_text_cached
+from .common import UIElement, _draw_rectangle_filled
 
 
 class TransitionFadeOverlay(UIElement):

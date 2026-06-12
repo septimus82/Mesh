@@ -9,8 +9,9 @@ These tests verify that validation path resolution is robust:
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from engine.tooling_runtime.discovery import resolve_validation_targets
 

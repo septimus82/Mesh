@@ -44,7 +44,7 @@ class _Window:
 def test_occluder_cache_invalidation_on_tilemap_clear(mock_arcade_window, mock_arcade_background) -> None:
     window = _Window()
     mock_arcade_window.return_value = window
-    
+
     with patch("arcade.SpriteList"), patch("arcade.sprite_list.SpriteList"), patch("arcade.gl.types.BufferDescription"):
         controller = SceneController(window)
 

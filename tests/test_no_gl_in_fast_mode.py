@@ -24,8 +24,8 @@ def test_no_arcade_gl_in_fast_mode() -> None:
             del sys.modules[key]
     sys.meta_path.insert(0, blocker)
     try:
-        import engine.tooling.validate_all  # noqa: F401
         import engine.tooling.content_contract  # noqa: F401
+        import engine.tooling.validate_all  # noqa: F401
     finally:
         sys.meta_path[:] = original_meta
 

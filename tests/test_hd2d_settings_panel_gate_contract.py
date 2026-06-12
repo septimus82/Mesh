@@ -8,7 +8,6 @@ import pytest
 from engine.editor.editor_dock_controller import EditorDockController
 from engine.ui_overlays.hd2d_settings_panel_overlay import Hd2dSettingsPanelOverlay
 
-
 pytestmark = pytest.mark.fast
 
 

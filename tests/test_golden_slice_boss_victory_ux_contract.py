@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import json
-import pytest
 from pathlib import Path
-from engine.config import load_config
+
+import pytest
+
 from engine.behaviours.drop_table import DropTable
+from engine.config import load_config
 from engine.events import MeshEvent, MeshEventBus
 from engine.game_state_controller import GameStateController
 from engine.ui import (
     begin_boss_gold_reward_tracking,
-    maybe_finish_boss_gold_reward_toast,
     maybe_enqueue_boss_defeat_toast,
+    maybe_finish_boss_gold_reward_toast,
 )
+
 
 class StubHUD:
     def __init__(self) -> None:
@@ -49,7 +52,7 @@ def _get_dungeon_scene_path(preset_name: str) -> Path:
     preset = config.presets.get(preset_name)
     if not preset:
         pytest.fail(f"Preset {preset_name} not found")
-    
+
     # Find world file in pipeline steps
     steps = preset.get("steps", [])
     world_path_str = None
@@ -60,11 +63,11 @@ def _get_dungeon_scene_path(preset_name: str) -> Path:
             if idx + 1 < len(args):
                 world_path_str = args[idx + 1]
                 break
-    
+
     if not world_path_str:
         # Fallback for simple presets or if not found in args (e.g. implicit)
         # But Golden Slice variants usually have explicit world args.
-        # If not, check config.profiles or similar? 
+        # If not, check config.profiles or similar?
         # For this test, we assume standard Golden Slice structure.
         pytest.fail(f"Could not find world file for preset {preset_name}")
 
@@ -76,14 +79,14 @@ def _get_dungeon_scene_path(preset_name: str) -> Path:
 
     with open(world_path, "r") as f:
         world_data = json.load(f)
-    
+
     # Find dungeon scene
     # Convention: "Ridge Outpost_dungeon" key in scenes map
     scenes = world_data.get("scenes", {})
     dungeon_entry = scenes.get("Ridge Outpost_dungeon")
     if not dungeon_entry:
         pytest.fail(f"Ridge Outpost_dungeon not found in world {world_path}")
-        
+
     return Path(dungeon_entry["path"])
 
 @pytest.mark.parametrize("preset_name", [
@@ -121,28 +124,28 @@ def test_golden_slice_boss_victory_ux_contract(preset_name: str) -> None:
     behaviour_config = boss_entity.get("behaviour_config", {})
     drop_table_config = behaviour_config.get("DropTable", {})
     drops = drop_table_config.get("drops", [])
-    
+
     gold_drop = next((d for d in drops if d.get("gold") is not None), None)
     assert gold_drop, f"Boss in {preset_name} has no gold drop configured"
-    
-    # Normalize drop config (handle min/max quantity if present, though usually just 'gold': 10 implies quantity 1 of 10 gold? 
-    # No, DropTable logic: gold value is per unit. 
-    # Let's check how DropTable parses it. 
+
+    # Normalize drop config (handle min/max quantity if present, though usually just 'gold': 10 implies quantity 1 of 10 gold?
+    # No, DropTable logic: gold value is per unit.
+    # Let's check how DropTable parses it.
     # If 'gold': 10, and no quantity, it's 10 gold.
     # If 'gold': 1, and min_quantity: 10, it's 10 gold.
     # We want total guaranteed gold to be 10.
-    
+
     gold_val = gold_drop.get("gold", 0)
     min_q = gold_drop.get("min_quantity", 1)
     max_q = gold_drop.get("max_quantity", 1)
     chance = gold_drop.get("chance", 1.0)
-    
+
     assert chance == 1.0, f"Boss gold drop in {preset_name} is not guaranteed (chance={chance})"
-    
-    # Calculate expected total. 
+
+    # Calculate expected total.
     # If min_q != max_q, it's not deterministic 10g.
     assert min_q == max_q, f"Boss gold drop in {preset_name} is variable ({min_q}-{max_q})"
-    
+
     total_gold = gold_val * min_q
     assert total_gold == 10, f"Boss in {preset_name} drops {total_gold}g, expected 10g"
 

@@ -222,9 +222,9 @@ def test_deterministic_output(tmp_path: Path) -> None:
 
 def test_missing_artifacts_dir_exit_code(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Missing artifacts dir → exit code 2 and message."""
-    from mesh_cli.verify_report import _handle_verify_report
-
     import argparse
+
+    from mesh_cli.verify_report import _handle_verify_report
 
     args = argparse.Namespace(artifacts=str(tmp_path / "nonexistent"))
     code = _handle_verify_report(args)

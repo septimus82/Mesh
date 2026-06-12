@@ -8,7 +8,6 @@ from typing import Any
 
 import engine.optional_arcade
 from engine.arcade_compat import activate_framebuffer, clear_framebuffer, close_framebuffer_activation
-
 from engine.log_once import log_once_with_counter
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
@@ -358,6 +357,7 @@ def end_hard_shadows_composite(manager: Any) -> bool:
         return False
 
     from .hard_shadows_backend import composite_to_window, ensure_render_targets  # noqa: PLC0415
+    from .shadow_soften import expand_polygon  # noqa: PLC0415
     from .shadows import (  # noqa: PLC0415
         Viewport,
         build_shadow_polygons,
@@ -366,7 +366,6 @@ def end_hard_shadows_composite(manager: Any) -> bool:
         render_shadow_mask,
     )
     from .shadows_v1 import build_shadow_polygons_v1  # noqa: PLC0415
-    from .shadow_soften import expand_polygon  # noqa: PLC0415
 
     targets = ensure_render_targets(window, (int(getattr(window, "width", 0) or 0), int(getattr(window, "height", 0) or 0)))
     if targets is None:

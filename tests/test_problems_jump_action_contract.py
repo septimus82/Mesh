@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from typing import Any
 
-import pytest
-
 from engine.editor.editor_actions import (
-    EditorAction,
     _enabled_problems_can_jump,
     _enabled_problems_panel_active,
     find_action,

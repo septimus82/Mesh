@@ -2,15 +2,13 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING, Any
-import engine.optional_arcade as optional_arcade
 
-from engine.swallowed_exceptions import record_swallowed
+import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
-from engine.swallowed_exceptions import _log_swallow
+from engine.swallowed_exceptions import _log_swallow, record_swallowed
 from engine.ui import maybe_auto_open_quest_log, maybe_enqueue_demo_interior_hint, maybe_enqueue_quest_progress_toast
 
 if TYPE_CHECKING:
-    from engine.events import MeshEvent
     from engine.game import GameWindow
 
 

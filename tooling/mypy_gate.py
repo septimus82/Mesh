@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import argparse
-from collections import Counter
 import copy
 import re
 import subprocess
 import sys
 import time
+from collections import Counter
 from pathlib import Path
-
 
 BASELINE_PATH = Path(__file__).resolve().parent / "mypy_baseline.txt"
 _LAST_RUN_DIAGNOSTICS: dict[str, object] | None = None

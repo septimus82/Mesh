@@ -6,13 +6,13 @@ import math
 import time
 from typing import TYPE_CHECKING, Any
 
+from engine.behaviours.base import Behaviour, ParamDef
+from engine.behaviours.registry import register_behaviour
 from engine.combat_constants import (
     EVENT_COMBAT_ATTACK,
     EVENT_PROJECTILE_FIRED,
 )
 from engine.event_emit import emit_gameplay_event
-from engine.behaviours.base import Behaviour, ParamDef
-from engine.behaviours.registry import register_behaviour
 
 if TYPE_CHECKING:
     from arcade import Sprite

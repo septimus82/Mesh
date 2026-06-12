@@ -8,8 +8,7 @@ Handles:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
-import engine.optional_arcade as optional_arcade
+from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController
@@ -19,16 +18,16 @@ class EditorSelectionController:
 
     def __init__(self, controller: EditorModeController) -> None:
         self.controller = controller
-        
+
         # Selection state
         self.primary_selected_id: Optional[str] = None
         self.selected_ids: List[str] = []
-        
+
     def clear_selection(self) -> None:
         """Clear all selection."""
         self.primary_selected_id = None
         self.selected_ids.clear()
-        
+
         # Clear arcade sprites if applicable
         if hasattr(self.controller, "selection_group"):
             # If selection_group is a SpriteList, clear it
@@ -47,7 +46,7 @@ class EditorSelectionController:
         self.primary_selected_id = entity_id
         if entity_id not in self.selected_ids:
             self.selected_ids.append(entity_id)
-        
+
         # Trigger UI updates via main controller
         # In a full refactor, this would be an event/signal
         if hasattr(self.controller, "_update_inspector"):
@@ -57,7 +56,7 @@ class EditorSelectionController:
         """Deselect an entity."""
         if entity_id in self.selected_ids:
             self.selected_ids.remove(entity_id)
-            
+
         if self.primary_selected_id == entity_id:
             if self.selected_ids:
                 # Pick the last one added as new primary? Or first?

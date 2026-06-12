@@ -236,23 +236,23 @@ class QuestManager:
         active_count = 0
         completed_count = 0
         inactive_count = 0
-        
+
         for quest_id, quest in self._definitions.items():
             state = self._ensure_state(quest_id)
             status = state.get("status", "inactive")
-            
+
             if status == "active":
                 active_count += 1
             elif status == "completed":
                 completed_count += 1
             else:
                 inactive_count += 1
-            
+
             current_stage = state.get("current_stage")
             awaiting_stage = state.get("awaiting_stage")
             completed_stages = state.get("completed_stages", [])
             total_stages = len(quest.get("stages", []))
-            
+
             # Get current stage info
             stage_info: dict[str, Any] | None = None
             if current_stage:
@@ -265,7 +265,7 @@ class QuestManager:
                         "has_complete_trigger": stage_def.get("complete_event") is not None,
                         "has_requirements": bool(stage_def.get("requirements")),
                     }
-            
+
             quests.append({
                 "id": quest_id,
                 "title": quest.get("title", quest_id),
@@ -278,7 +278,7 @@ class QuestManager:
                 "requires_flags": quest.get("requires_flags", []),
                 "blocks_flags": quest.get("blocks_flags", []),
             })
-        
+
         return {
             "total_quests": len(self._definitions),
             "active_count": active_count,

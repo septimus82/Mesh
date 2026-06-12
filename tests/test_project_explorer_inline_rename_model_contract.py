@@ -1,10 +1,10 @@
 from engine.editor.project_explorer_inline_rename_model import (
-    is_renameable_path,
-    split_basename_ext,
+    compute_committed_name_for_path,
     compute_initial_rename_text,
+    is_renameable_path,
     should_commit_rename,
-    compute_committed_name_for_path
 )
+
 
 def test_is_renameable_path_allows_folders():
     assert is_renameable_path("assets/sprites", is_dir=True) is True

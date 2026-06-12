@@ -132,7 +132,6 @@ def test_replay_script_stdout_is_pure_json_even_if_noisy(monkeypatch, tmp_path, 
 def test_encounter_report_stdout_is_pure_json_even_if_noisy(monkeypatch, capsys):
     import mesh_cli
     import mesh_cli.legacy_impl as mesh_cli_legacy
-
     from engine.encounter_report import EncounterReport
 
     def noisy_generate(*_a, **_k):

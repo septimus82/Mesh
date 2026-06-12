@@ -6,7 +6,6 @@ import pytest
 import engine.tooling_runtime.verify_demo as runtime_verify_demo
 from engine.tooling.verify_demo import build_verify_demo_pytest_cmd, run_verify_demo
 
-
 pytestmark = [pytest.mark.fast]
 
 

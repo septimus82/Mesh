@@ -5,8 +5,8 @@ from __future__ import annotations
 import copy
 from types import SimpleNamespace
 from typing import Any, Callable
-from engine.swallowed_exceptions import _log_swallow
 
+from engine.swallowed_exceptions import _log_swallow
 
 GetEditorFn = Callable[[Any], Any | None]
 

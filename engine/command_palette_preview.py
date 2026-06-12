@@ -5,7 +5,6 @@ from typing import Any
 
 from engine import command_palette_registry_defs as _defs
 
-
 _PARSER_BY_COMMAND_ID: dict[str, str] = {
     "selection.align": "_parse_align_args",
     "selection.distribute": "_parse_distribute_args",

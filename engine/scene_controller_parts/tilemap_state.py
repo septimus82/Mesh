@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any, Dict, cast
 
 import engine.optional_arcade as optional_arcade
-
 from engine.tilemap import TilemapInstance
 from engine.tilemap_batch import TilemapBatchState
 from engine.tilemap_batch_arcade import TilemapBatcher

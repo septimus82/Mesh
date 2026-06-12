@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 SNAPSHOT_VERSION = 1
 
 DEFAULT_SAVE_DIR = "saves"

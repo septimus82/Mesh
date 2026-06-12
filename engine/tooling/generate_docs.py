@@ -6,10 +6,12 @@ import argparse
 from pathlib import Path
 from typing import Any, Iterable, cast
 
+import engine.optional_arcade as optional_arcade
+from mesh_cli.version_info import get_tool_version
+
 from ..behaviours import list_behaviours
 from ..input import InputManager
-from mesh_cli.version_info import get_tool_version
-import engine.optional_arcade as optional_arcade
+
 arcade_mod = optional_arcade.arcade
 from .project_index import build_project_index
 

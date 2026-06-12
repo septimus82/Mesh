@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import engine.optional_arcade as optional_arcade
-
 from engine.editor.editor_actions import get_editor_actions
 from engine.editor.shortcut_resolver_model import (
+    SHORTCUT_SCOPE_GLOBAL,
+    SHORTCUT_SCOPE_INLINE_RENAME,
     build_shortcut_map,
     build_shortcut_map_by_scope,
     normalize_shortcut_event,
@@ -15,8 +16,6 @@ from engine.editor.shortcut_resolver_model import (
     resolve_shortcut,
     resolve_shortcut_scoped,
     validate_shortcut_scopes,
-    SHORTCUT_SCOPE_GLOBAL,
-    SHORTCUT_SCOPE_INLINE_RENAME,
 )
 
 
@@ -57,11 +56,11 @@ def test_scoped_resolution_prefers_active_scope() -> None:
         _Action("rename.enter", "Enter", SHORTCUT_SCOPE_INLINE_RENAME),
     ]
     scope_maps = build_shortcut_map_by_scope(actions)
-    
+
     # With inline rename scope active, scoped action wins
     active_scopes = [SHORTCUT_SCOPE_INLINE_RENAME, SHORTCUT_SCOPE_GLOBAL]
     assert resolve_shortcut_scoped(scope_maps, "Enter", active_scopes) == "rename.enter"
-    
+
     # With only global scope, global action is used
     active_scopes = [SHORTCUT_SCOPE_GLOBAL]
     assert resolve_shortcut_scoped(scope_maps, "Enter", active_scopes) == "global.enter"
@@ -74,7 +73,7 @@ def test_scoped_resolution_falls_back_to_global() -> None:
         _Action("rename.enter", "Enter", SHORTCUT_SCOPE_INLINE_RENAME),
     ]
     scope_maps = build_shortcut_map_by_scope(actions)
-    
+
     # Ctrl+S only exists in global, so it resolves there even with inline_rename active
     active_scopes = [SHORTCUT_SCOPE_INLINE_RENAME, SHORTCUT_SCOPE_GLOBAL]
     assert resolve_shortcut_scoped(scope_maps, "Ctrl+S", active_scopes) == "global.save"
@@ -86,7 +85,7 @@ def test_scoped_resolution_returns_none_for_no_match() -> None:
         _Action("global.save", "Ctrl+S", SHORTCUT_SCOPE_GLOBAL),
     ]
     scope_maps = build_shortcut_map_by_scope(actions)
-    
+
     active_scopes = [SHORTCUT_SCOPE_GLOBAL]
     assert resolve_shortcut_scoped(scope_maps, "Ctrl+Q", active_scopes) is None
 
@@ -120,7 +119,7 @@ def test_build_shortcut_map_by_scope_deterministic() -> None:
         _Action("second.action", "Ctrl+S", SHORTCUT_SCOPE_GLOBAL),
     ]
     scope_maps = build_shortcut_map_by_scope(actions)
-    
+
     # First action should win
     assert scope_maps[SHORTCUT_SCOPE_GLOBAL]["Ctrl+S"] == "first.action"
 
@@ -128,14 +127,14 @@ def test_build_shortcut_map_by_scope_deterministic() -> None:
 def test_inline_rename_actions_have_correct_scope() -> None:
     """Verify inline rename actions are scoped to text_input.inline_rename."""
     actions = get_editor_actions(None, None)
-    
+
     inline_rename_ids = [
         "editor.project_explorer.inline_rename.commit",
         "editor.project_explorer.inline_rename.cancel",
         "editor.project_explorer.inline_rename.backspace",
         "editor.project_explorer.inline_rename.delete",
     ]
-    
+
     for action in actions:
         if action.id in inline_rename_ids:
             assert action.shortcut_scope == SHORTCUT_SCOPE_INLINE_RENAME, (

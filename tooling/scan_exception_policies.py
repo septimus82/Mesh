@@ -21,7 +21,6 @@ import ast
 import json
 import os
 import re
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -148,7 +147,7 @@ def _scan_file(
             if not _BLE001_WITH_REASON_RE.search(ln):
                 ble001_missing_reason += 1
                 ble001_missing_reason_lines.append(lineno)
-    
+
     except_pass_count = len(_EXCEPT_PASS_RE.findall(raw))
 
     broad_count = 0

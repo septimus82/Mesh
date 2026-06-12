@@ -3,10 +3,11 @@ from __future__ import annotations
 import math
 import random
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
+
 import engine.optional_arcade as optional_arcade
 
-from .particles_core import ParticleData, ParticleSystem, appearance_key
 from .culling import is_sprite_visible, sprite_bounds
+from .particles_core import ParticleData, ParticleSystem, appearance_key
 from .paths import resolve_path
 from .render_queue import DrawSpriteCmd
 from .swallowed_exceptions import _log_swallow

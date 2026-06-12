@@ -7,7 +7,6 @@ from __future__ import annotations
 from typing import Any, Callable
 
 import engine.optional_arcade as optional_arcade
-
 from engine.input_runtime.capture_mouse_router_model import MouseEvent
 from engine.swallowed_exceptions import _log_swallow
 
@@ -87,7 +86,7 @@ def get_authoring_payloads(window: Any) -> list[dict]:
     sc = getattr(window, "scene_controller", None)
     if sc is None:
         return []
-    
+
     iter_payloads: Callable[..., list[dict]] | None = getattr(sc, "_debug_iter_authoring_payloads", None)
     if iter_payloads is not None:
         try:
@@ -98,7 +97,7 @@ def get_authoring_payloads(window: Any) -> list[dict]:
         except Exception:  # noqa: BLE001  # REASON: authored scene payload queries are optional and should fall back to loaded scene payloads only
             _log_swallow("CAPT-001", "engine/input_runtime/capture_mouse_router_handlers_paint_base.py pass-only blanket swallow")
             pass
-    
+
     # Fallback to loaded scene data
     scene_data = getattr(sc, "_loaded_scene_data", None)
     if isinstance(scene_data, dict):

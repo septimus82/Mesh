@@ -7,16 +7,19 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
-from typing import Any, Optional, Dict, Tuple
-from pathlib import Path
+from typing import Any, Tuple
 
-from engine.editor.keybinds_ui_model import (
-    KeybindsState, KeybindRow, build_keybind_rows,
-    apply_staged_override, begin_recording, cancel_recording, commit_recorded_key,
-    update_recording_preview
-)
 from engine.editor.editor_actions import get_editor_actions
-from engine.editor.shortcut_resolver_model import normalize_shortcut_event
+from engine.editor.keybinds_ui_model import (
+    KeybindRow,
+    KeybindsState,
+    apply_staged_override,
+    begin_recording,
+    build_keybind_rows,
+    cancel_recording,
+    commit_recorded_key,
+    update_recording_preview,
+)
 from engine.editor.persistence_utils import write_atomic_utf8
 from engine.repo_root import get_repo_root
 from engine.ui_overlays.widget_overlay_helpers import (
@@ -37,7 +40,7 @@ class EditorKeybindsController:
         # Load initial overrides from editor or disk?
         # Editor usually has `_keymap_overrides` which are ScopedOverrides.
         initial_overrides = getattr(editor, "_keymap_overrides", {})
-        
+
         self.state = KeybindsState(
             staged_overrides=dict(initial_overrides)
         )
@@ -46,14 +49,14 @@ class EditorKeybindsController:
 
     def _get_overlay(self) -> Any | None:
         return getattr(self._editor, "keybinds_overlay", None)
-        
+
     def _refresh_rows(self) -> None:
         if not self._rows_dirty:
             return
-            
+
         actions = get_editor_actions(self._editor, getattr(self._editor, "window", None))
         self._cached_rows = build_keybind_rows(
-            actions, 
+            actions,
             self.state.staged_overrides,
             self.state.query,
             self.state.scope_filter,
@@ -83,11 +86,11 @@ class EditorKeybindsController:
         reset = getattr(overlay, "reset_for_close", None)
         if callable(reset):
             reset()
-            
+
     def set_scope_filter(self, scope: str) -> None:
         self.state = replace(self.state, scope_filter=scope, selected_index=0)
         self._rows_dirty = True
-        
+
     def toggle_show_conflicts(self) -> None:
         self.state = replace(self.state, show_conflicts_only=not self.state.show_conflicts_only, selected_index=0)
         self._rows_dirty = True
@@ -129,7 +132,7 @@ class EditorKeybindsController:
         rows = self.visible_rows
         if not rows:
             return
-        
+
         row = rows[self.state.selected_index]
         self.state = begin_recording(self.state, row.scope, row.action_id)
 
@@ -138,7 +141,7 @@ class EditorKeybindsController:
         if not rows:
             return
         row = rows[self.state.selected_index]
-        
+
         # Unbind means set override to empty string
         self.state = apply_staged_override(self.state, row.scope, row.action_id, "")
         self._rows_dirty = True
@@ -153,7 +156,7 @@ class EditorKeybindsController:
         if not rows:
             return
         row = rows[self.state.selected_index]
-        
+
         # Reset means remove override (None)
         self.state = apply_staged_override(self.state, row.scope, row.action_id, None)
         self._rows_dirty = True
@@ -164,24 +167,24 @@ class EditorKeybindsController:
         Returns True if consumed.
         """
         import engine.optional_arcade as optional_arcade
-        
+
         # If recording, consume EVERYTHING
         if self.state.recording:
             # Check for Escape first -> Cancel
             if key == optional_arcade.arcade.key.ESCAPE:
                 self.state = cancel_recording(self.state)
                 return True
-                
+
             is_mod = key in (
                 optional_arcade.arcade.key.LSHIFT, optional_arcade.arcade.key.RSHIFT,
                 optional_arcade.arcade.key.LCTRL, optional_arcade.arcade.key.RCTRL,
                 optional_arcade.arcade.key.LALT, optional_arcade.arcade.key.RALT,
                 optional_arcade.arcade.key.LMETA, optional_arcade.arcade.key.RMETA
             )
-            
+
             # Build string representation for preview
             k_name = str(optional_arcade.arcade.key.symbol_string(key)).replace("KEY_", "")
-            
+
             mod_str = ""
             parts = []
             if modifiers & optional_arcade.arcade.key.MOD_CTRL:
@@ -191,7 +194,7 @@ class EditorKeybindsController:
             if modifiers & optional_arcade.arcade.key.MOD_SHIFT:
                 parts.append("Shift")
             mod_str = "+".join(parts)
-            
+
             # Construct preview string
             if is_mod:
                 # Just show modifiers
@@ -202,14 +205,14 @@ class EditorKeybindsController:
                 pass
             else:
                 preview_str = f"{mod_str}+{k_name}" if mod_str else k_name
-                
+
             # Update Preview (Live conflict check)
             all_actions = get_editor_actions(self._editor, getattr(self._editor, "window", None))
             self.state = update_recording_preview(self.state, preview_str, all_actions)
-            
+
             if is_mod:
                 return True # Swallow modifier presses, just update preview
-            
+
             # Commit on non-modifier press
             self.state = commit_recorded_key(self.state, k_name, mod_str)
             self._rows_dirty = True
@@ -284,7 +287,7 @@ class EditorKeybindsController:
         if key == optional_arcade.arcade.key.DELETE:
             self.reset_selected()
             return True
-            
+
         # Ctrl+S or Apply?
         if key == optional_arcade.arcade.key.S and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
             # Check for existing conflicts before applying?
@@ -292,7 +295,7 @@ class EditorKeybindsController:
             self.apply_changes()
             self.close()
             return True
-            
+
         # Filter Hotkeys
         if key == optional_arcade.arcade.key.F1:
             # Cycle scope filter: all -> global -> mesh -> all
@@ -300,7 +303,7 @@ class EditorKeybindsController:
             nxt = "global" if sc == "all" else ("mesh" if sc == "global" else "all")
             self.set_scope_filter(nxt)
             return True
-            
+
         if key == optional_arcade.arcade.key.F2:
             self.toggle_show_conflicts()
             return True
@@ -340,9 +343,9 @@ class EditorKeybindsController:
         repo_root = get_repo_root()
         if not repo_root:
             return
-        
+
         path = repo_root / KEYMAP_FILENAME
-        
+
         data = []
         # Sort for determinism
         for (scope, aid), sc in sorted(self.state.staged_overrides.items()):
@@ -353,7 +356,7 @@ class EditorKeybindsController:
                 "action_id": aid,
                 "shortcut": sc
             })
-            
+
         try:
             write_atomic_utf8(path, json.dumps(data, indent=2))
         except Exception as e:

@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Any, Callable, cast
-from json import JSONDecodeError
 
 from engine.config import EngineConfig, load_config
 from engine.events import MeshEvent

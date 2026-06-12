@@ -1,6 +1,5 @@
 import json
 import sys
-from pathlib import Path
 
 import pytest
 
@@ -26,7 +25,7 @@ def temp_replay_script(tmp_path):
 def test_perf_run_command(temp_replay_script, tmp_path):
     """Test that the perf-run command executes and produces a valid report."""
     out_path = tmp_path / "perf.json"
-    
+
     # We use a small number of frames to keep tests fast
     # We use the current python executable to run the module
     cmd = [
@@ -45,7 +44,7 @@ def test_perf_run_command(temp_replay_script, tmp_path):
     # to open a window. However, this satisfies the requirement to adding the command/test.
     # If the environment is Windows (as per context), it should open a window briefly.
     result = run_checked(cmd, timeout_s=_PERF_RUN_TIMEOUT)
-    
+
     # Debug output if failed
     if result.returncode != 0:
         print("STDOUT:", result.stdout)
@@ -58,13 +57,13 @@ def test_perf_run_command(temp_replay_script, tmp_path):
     # Verify JSON output
     assert out_path.exists()
     report = json.loads(out_path.read_text(encoding="utf-8"))
-    
+
     # Check structure
     assert "metrics" in report
     assert "frame_total_ms" in report["metrics"]
     assert "update_ms" in report["metrics"]
     assert "draw_ms" in report["metrics"]
-    
+
     # Check meta
     assert report["meta"]["frames"] == 30
     assert report["meta"]["warmup"] == 10
@@ -72,12 +71,12 @@ def test_perf_run_command(temp_replay_script, tmp_path):
     assert "engine_git_sha" in report["meta"]
     assert "thresholds" in report["meta"]
     assert "evaluation" in report["meta"]
-    
+
     # Check stats presence (p95 exists and is a number)
     draw_stats = report["metrics"]["draw_ms"]
     assert "p95" in draw_stats
     assert isinstance(draw_stats["p95"], (int, float))
-    
+
     # Sanity check: Perf shouldn't be insanely slow (e.g. > 1000ms per frame)
     # This acts as a loose regression gate
     assert draw_stats["p95"] < 1000.0

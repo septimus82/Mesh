@@ -24,7 +24,6 @@ from __future__ import annotations
 
 from typing import Any, Protocol, runtime_checkable
 
-
 # Default state version for behaviours without explicit versioning
 DEFAULT_STATE_VERSION = 1
 
@@ -181,7 +180,7 @@ def extract_saveable_state(behaviour: Any) -> tuple[dict[str, Any], int] | None:
     """
     if not is_saveable_behaviour(behaviour):
         return None
-    
+
     try:
         state = behaviour.saveable_state()
         if not isinstance(state, dict):
@@ -209,12 +208,12 @@ def apply_saveable_state(
     """
     if not is_saveable_behaviour(behaviour):
         return False
-    
+
     try:
         # Check if migration is needed
         current_version = get_behaviour_state_version(behaviour)
         effective_version = from_version if from_version is not None else current_version
-        
+
         migrated_state = state
         if effective_version < current_version:
             # Check if behaviour supports migration
@@ -226,7 +225,7 @@ def apply_saveable_state(
                         migrated_state = state
                 except Exception:
                     migrated_state = state
-        
+
         behaviour.restore_state(migrated_state)
         return True
     except Exception:
@@ -243,13 +242,13 @@ def validate_saveable_state(state: dict[str, Any]) -> list[str]:
         List of validation error messages (empty if valid)
     """
     import json
-    
+
     errors: list[str] = []
-    
+
     if not isinstance(state, dict):
         errors.append(f"State must be dict, got {type(state).__name__}")
         return errors
-    
+
     def check_value(value: Any, path: str) -> None:
         if value is None:
             return
@@ -266,22 +265,22 @@ def validate_saveable_state(state: dict[str, Any]) -> list[str]:
                 check_value(v, f"{path}.{k}")
             return
         errors.append(f"{path}: unsupported type {type(value).__name__}")
-    
+
     # Check top-level keys are strings
     for key in state.keys():
         if not isinstance(key, str):
             errors.append(f"Top-level dict key must be str, got {type(key).__name__}")
-    
+
     # Check all values recursively
     for key, value in state.items():
         path = str(key) if isinstance(key, str) else f"<{type(key).__name__}:{key}>"
         check_value(value, path)
-    
+
     # Final check: try to serialize
     if not errors:
         try:
             json.dumps(state, sort_keys=True)
         except (TypeError, ValueError) as e:
             errors.append(f"JSON serialization failed: {e}")
-    
+
     return errors

@@ -3,7 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 from typing import Any
+
 from engine.swallowed_exceptions import _log_swallow
+
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     macro_parser = subparsers.add_parser("macro", help="Macro asset discovery and validation")

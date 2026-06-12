@@ -94,22 +94,22 @@ class ProjectExplorerOverlay(UIElement):
         # Note: We let the provider handle windowing if it wants, but we need to compute viewport height for it.
         viewport_h = int(panel.list_rect.height)
         data = project_explorer_provider(self.window, viewport_h, PROJECT_LINE_HEIGHT, overscan=5)
-        
+
         rows = data.get("rows", [])
         search_text = str(data.get("search_query", ""))
         search = getattr(controller, "search", None)
         search_focused = bool(search is not None and search.is_panel_search_focused("project"))
-        
+
         # Get inline rename state
         rename_active, rename_text, rename_path, rename_cursor, rename_sel_start, rename_sel_end = self._get_inline_rename_info(controller)
-        
+
         # Selection logic:
         # The data returns 'selected_index' which is index in 'selectable_rows'.
         # We need to map it to display rows if we are just rendering display rows.
         # But 'rows' returned by provider are ALREADY WINDOWED?
         # Let's check get_provider_payload implementation:
         # returns "rows": visible_rows (windowed), "selectable_rows": self.selectable_rows, "selected_index": self.selected_index
-        
+
         # Search line
         search_line = format_search_bar_text(search_text, search_focused)
         draw_text_cached(
@@ -299,14 +299,14 @@ class ProjectExplorerOverlay(UIElement):
         """
         # Background
         _draw_rectangle_filled(left, right, bottom, top, PROJECT_RENAME_BG)
-        
+
         # Border
         _draw_tb_rectangle_outline(left, right, top, bottom, PROJECT_RENAME_BORDER, 1)
-        
+
         # Approximate character width for monospace font at size 11
         CHAR_WIDTH = 7.0
         TEXT_OFFSET = 2
-        
+
         # Draw selection highlight if there is a selection
         if sel_start != sel_end and sel_start < sel_end:
             sel_left = left + TEXT_OFFSET + sel_start * CHAR_WIDTH
@@ -322,7 +322,7 @@ class ProjectExplorerOverlay(UIElement):
                     top,
                     (80, 120, 180, 128),  # Selection highlight color
                 )
-        
+
         # Draw cursor (blinking)
         import time
         blink = int(time.time() * 2) % 2 == 0
@@ -337,7 +337,7 @@ class ProjectExplorerOverlay(UIElement):
                 PROJECT_TEXT_COLOR,
                 1,
             )
-        
+
         # Draw text
         draw_text_cached(
             text,

@@ -7,13 +7,14 @@ tooltip text and layout based on editor state. No arcade dependency.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
+from engine.editor.dock_tab_registry import DOCK_TAB_TOOLTIPS
+from engine.editor.editor_dock_query import get_raw_dock_widths
 from engine.editor.editor_focus_model import (
     derive_focus_target_for_controller,
     is_text_input_active_for_controller,
 )
-from engine.editor.editor_dock_query import get_raw_dock_widths
 from engine.editor.editor_menu_hover_query import get_context_menu_hover_id
 from engine.editor.editor_modal_state_query import (
     get_active_menu_id,
@@ -21,8 +22,6 @@ from engine.editor.editor_modal_state_query import (
     is_unsaved_changes_pending,
 )
 from engine.editor.editor_session_query import get_session_snapshot
-from engine.editor.dock_tab_registry import DOCK_TAB_TOOLTIPS
-
 
 # Layout constants
 TOOLTIP_PADDING_X = 8.0
@@ -251,8 +250,8 @@ def _hit_test_menu_bar(
     from engine.editor.menu_bar_model import (
         build_menu_groups,
         compute_menu_bar_layout,
-        hit_test_menu_title,
         hit_test_menu_item,
+        hit_test_menu_title,
     )
 
     window = getattr(controller, "window", None)
@@ -370,8 +369,8 @@ def _hit_test_dock_tabs(
         TooltipHit if hovering a dock tab, None otherwise.
     """
     from engine.editor.editor_shell_layout import (
-        compute_editor_shell_layout,
         compute_dock_tab_rects,
+        compute_editor_shell_layout,
     )
 
     left_dock, right_dock = get_raw_dock_widths(controller)
@@ -430,7 +429,7 @@ def _hit_test_inspector_field(
     if not inspector_sections:
         return None
 
-    from engine.editor.inspector_components_model import get_cursor_row, InspectorCursor
+    from engine.editor.inspector_components_model import InspectorCursor, get_cursor_row
 
     # Convert tuple to InspectorCursor if needed
     if isinstance(inspector_cursor, tuple):

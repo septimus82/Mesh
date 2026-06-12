@@ -2,7 +2,9 @@ import json
 import shutil
 import unittest
 from pathlib import Path
+
 from engine.tooling.validate_all import UnifiedValidator
+
 
 class TestWorldReachability(unittest.TestCase):
     def setUp(self):
@@ -28,7 +30,7 @@ class TestWorldReachability(unittest.TestCase):
         p1 = self.create_dummy_scene("s1")
         p2 = self.create_dummy_scene("s2")
         p3 = self.create_dummy_scene("s3")
-        
+
         # World where s1 -> s2, but s3 is unreachable
         world_data = {
             "start_scene": "s1",
@@ -41,10 +43,10 @@ class TestWorldReachability(unittest.TestCase):
                 {"from": "s1", "to": "s2"}
             ]
         }
-        
+
         validator = UnifiedValidator(self.test_dir, check_reachability=True)
         validator.check_reachability(world_data)
-        
+
         warnings = "\n".join(validator.warnings)
         self.assertIn("Scene 's3' is unreachable", warnings)
 
@@ -52,17 +54,17 @@ class TestWorldReachability(unittest.TestCase):
         # Create scenes
         p1 = self.create_dummy_scene("s1")
         self.create_dummy_scene("orphan")
-        
+
         world_data = {
             "scenes": {
                 "s1": {"path": p1}
             },
             "links": []
         }
-        
+
         validator = UnifiedValidator(self.test_dir, check_orphans=True)
         validator.check_orphans(world_data, self.test_dir / "world.json")
-        
+
         warnings = "\n".join(validator.warnings)
         self.assertIn("Orphan scene file found", warnings)
         self.assertIn("orphan.json", warnings)

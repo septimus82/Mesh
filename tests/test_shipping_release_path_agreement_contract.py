@@ -11,7 +11,6 @@ from mesh_cli.shipping_policy import (
 )
 from mesh_cli.verify_steps import STEP_ORDER
 
-
 pytestmark = [pytest.mark.fast]
 
 

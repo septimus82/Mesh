@@ -11,14 +11,14 @@ from types import SimpleNamespace
 import pytest
 
 from engine.editor_hover_highlight_model import (
+    HighlightRect,
     HoverHighlightKind,
     HoverHighlightSpec,
-    HighlightRect,
     is_ui_blocked,
     resolve_hover_highlights,
 )
-from tests._typing import as_any
 from tests._session_stub import make_session_stub
+from tests._typing import as_any
 
 
 def _make_controller(**attrs: object) -> object:

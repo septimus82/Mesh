@@ -2,8 +2,6 @@ import json
 from argparse import Namespace
 from pathlib import Path
 
-import pytest
-
 from engine.content_audit import audit_world
 from engine.tooling.content_commands import _check_thresholds
 
@@ -55,24 +53,24 @@ def test_check_thresholds_delta():
     stats = {"unused_assets_count": 105}
     deltas = {"unused_assets_count": 5}
     policy = {}
-    
+
     # Case 1: No limit
     args = Namespace(
-        max_unused_assets=None, max_unused_prefabs=None, 
+        max_unused_assets=None, max_unused_prefabs=None,
         max_unused_items=None, max_unused_quests=None,
         max_unused_textures=None, max_unused_audio=None, max_unused_data=None,
         max_unused_delta=None, fail_on_unused=False
     )
     assert not _check_thresholds(args, stats, policy, deltas, silent=True)
-    
+
     # Case 2: Delta limit exceeded
     args.max_unused_delta = 2
     assert _check_thresholds(args, stats, policy, deltas, silent=True)
-    
+
     # Case 3: Delta limit met
     args.max_unused_delta = 5
     assert not _check_thresholds(args, stats, policy, deltas, silent=True)
-    
+
     # Case 4: Delta limit met (higher)
     args.max_unused_delta = 10
     assert not _check_thresholds(args, stats, policy, deltas, silent=True)
@@ -88,17 +86,17 @@ def test_check_thresholds_category():
     }
     policy = {}
     deltas = {}
-    
+
     args = Namespace(
-        max_unused_assets=None, max_unused_prefabs=None, 
+        max_unused_assets=None, max_unused_prefabs=None,
         max_unused_items=None, max_unused_quests=None,
         max_unused_textures=5, max_unused_audio=None, max_unused_data=None,
         max_unused_delta=None, fail_on_unused=False
     )
-    
+
     # Texture limit 5, actual 8 -> Fail
     assert _check_thresholds(args, stats, policy, deltas, silent=True)
-    
+
     # Audio limit 5, actual 2 -> Pass
     args.max_unused_textures = None
     args.max_unused_audio = 5

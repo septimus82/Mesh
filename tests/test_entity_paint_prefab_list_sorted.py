@@ -3,8 +3,8 @@ from __future__ import annotations
 
 def test_entity_paint_prefab_list_sorted_and_filter_cycles() -> None:
     from engine.entity_paint_mode import (
-        EntityPaintState,
         FILTER_ORDER,
+        EntityPaintState,
         PrefabInfo,
         cycle_filter_mode,
         get_available_filters,

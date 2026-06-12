@@ -9,6 +9,11 @@ This module provides:
 
 from __future__ import annotations
 
+from .runner import (
+    CutsceneCommand,
+    CutsceneRunner,
+    CutsceneRunnerState,
+)
 from .schema import (
     CUTSCENE_SCHEMA_VERSION,
     CutsceneValidationError,
@@ -17,11 +22,6 @@ from .schema import (
     sort_cutscene_validation_errors,
     validate_cutscene_command,
     validate_cutscene_script,
-)
-from .runner import (
-    CutsceneRunner,
-    CutsceneRunnerState,
-    CutsceneCommand,
 )
 
 __all__ = [

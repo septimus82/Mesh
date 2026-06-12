@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, List, cast
 
 import engine.optional_arcade as optional_arcade
-
 from engine.logging_tools import get_logger
 from engine.ui_overlays.common import draw_panel_bg
 

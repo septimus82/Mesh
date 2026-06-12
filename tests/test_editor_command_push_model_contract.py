@@ -8,8 +8,6 @@ Tests the pure functions for command push plumbing:
 
 from __future__ import annotations
 
-import pytest
-
 from engine.editor.editor_command_push_model import (
     backfill_label_from_action,
     compute_command_backfill,
@@ -17,7 +15,6 @@ from engine.editor.editor_command_push_model import (
     should_push_command,
 )
 from tests._typing import as_any
-
 
 # =============================================================================
 # Test compute_command_backfill

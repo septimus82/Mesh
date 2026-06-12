@@ -14,14 +14,13 @@ import pytest
 
 from engine.parallax_model import (
     BackgroundPlane,
+    background_planes_to_payloads,
     compute_parallax_offset,
     compute_parallax_offset_with_zoom,
     parse_background_planes,
     sort_background_planes,
-    background_planes_to_payloads,
 )
 from tests._typing import as_any
-
 
 # -----------------------------------------------------------------------------
 # Test compute_parallax_offset

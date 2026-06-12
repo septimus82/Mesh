@@ -7,6 +7,7 @@ from pathlib import Path
 
 from engine import json_io
 
+
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     # Plan
     from engine.tooling import plan_cli

@@ -11,9 +11,8 @@ from typing import TYPE_CHECKING
 import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import _log_swallow
 
-from ..text_draw import draw_text_cached, TextCache
+from ..text_draw import TextCache, draw_text_cached
 from ..ui_overlays.common import UIElement
-
 
 if TYPE_CHECKING:
     from ..game import GameWindow

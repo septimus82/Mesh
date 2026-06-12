@@ -14,10 +14,7 @@ from __future__ import annotations
 
 import textwrap
 
-import pytest
-
 from tests.subprocess_tools import run_python_code
-
 
 # Same representative modules as test_no_tkinter_imports_policy
 _REPRESENTATIVE_MODULES: tuple[str, ...] = (

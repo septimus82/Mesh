@@ -5,7 +5,6 @@ from pathlib import Path
 
 import pytest
 
-
 MAX_EDITOR_ACTIONS_LINES = 2300
 
 

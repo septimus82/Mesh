@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 from ._shared import resolve_input_service
 
 if TYPE_CHECKING:
-    import engine.optional_arcade
     from engine.game import GameWindow
 
 

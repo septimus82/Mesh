@@ -9,8 +9,8 @@ from engine.swallowed_exceptions import _log_swallow
 def _apply_collision_poly(self, sprite: Any, poly: Any) -> None:
     import os
 
-    from engine.geometry_tools import sanitize_poly  # noqa: PLC0415
     import engine.scene_controller_core as scene_controller_module
+    from engine.geometry_tools import sanitize_poly  # noqa: PLC0415
 
     points: list[tuple[float, float]] = []
     if isinstance(poly, list):

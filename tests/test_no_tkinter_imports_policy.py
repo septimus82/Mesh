@@ -16,8 +16,6 @@ from __future__ import annotations
 import textwrap
 from typing import TYPE_CHECKING
 
-import pytest
-
 from tests.subprocess_tools import run_python_code
 
 if TYPE_CHECKING:

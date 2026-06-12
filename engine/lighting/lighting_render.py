@@ -8,10 +8,9 @@ a clean interface that can be mocked for testing.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from engine.swallowed_exceptions import _log_swallow
-
 
 if TYPE_CHECKING:
     from .lighting_config import LightConfig

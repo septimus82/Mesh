@@ -7,10 +7,16 @@ from engine.editor.editor_dock_query import get_dock_drag_active
 
 from ..logging_tools import get_logger
 from .editor_input_transform_handlers import (
-    handle_rotate_drag as _handle_rotate_drag,
-    handle_scale_drag as _handle_scale_drag,
     finish_rotate_drag as _finish_rotate_drag,
+)
+from .editor_input_transform_handlers import (
     finish_scale_drag as _finish_scale_drag,
+)
+from .editor_input_transform_handlers import (
+    handle_rotate_drag as _handle_rotate_drag,
+)
+from .editor_input_transform_handlers import (
+    handle_scale_drag as _handle_scale_drag,
 )
 
 if TYPE_CHECKING:
@@ -218,8 +224,8 @@ def handle_mouse_release(controller: EditorController, x: float, y: float, butto
         if drag_starts and len(selected_ids) > 1:
             # Multi-entity move: create group command
             from ..editor.editor_transform_ops import (  # noqa: PLC0415
-                MoveEntityCommand,
                 MoveEntitiesCommand,
+                MoveEntityCommand,
             )
             from .state import get_sprite_for_entity_id  # noqa: PLC0415
 

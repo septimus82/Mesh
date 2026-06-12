@@ -2,9 +2,11 @@
 Runtime state management for sensors.
 """
 from __future__ import annotations
-from typing import Dict, Tuple, Any
-from .sensors_model import SensorDef, SensorEvent, parse_sensors, diff_overlaps
+
+from typing import Any, Dict, Tuple
+
 from .physics_model import Aabb
+from .sensors_model import SensorDef, SensorEvent, diff_overlaps, parse_sensors
 from .spatial_hash_model import SpatialHashConfig, SpatialHashIndex, build_spatial_hash, query_aabb
 
 
@@ -27,7 +29,7 @@ class SensorRuntime:
         pid = id(scene_payload)
         if pid in self._sensor_cache:
             return self._sensor_cache[pid]
-        
+
         sensors = parse_sensors(scene_payload)
         self._sensor_cache[pid] = sensors
         return sensors
@@ -47,9 +49,9 @@ class SensorRuntime:
         self.exact_checks_count = 0
 
     def update_entity_sensors(
-        self, 
-        scene_payload: dict[str, Any], 
-        entity_id: str, 
+        self,
+        scene_payload: dict[str, Any],
+        entity_id: str,
         entity_aabb: Aabb
     ) -> Tuple[SensorEvent, ...]:
         """
@@ -77,14 +79,14 @@ class SensorRuntime:
                 hits.append(sensor.id)
         current_overlaps = tuple(hits)
         prev_overlaps = self.last_overlaps_by_entity.get(entity_id, ())
-        
+
         # Optimization: if equal, no diff needed
         if current_overlaps == prev_overlaps:
             return ()
-            
+
         events = diff_overlaps(entity_id, prev_overlaps, current_overlaps)
         self.last_overlaps_by_entity[entity_id] = current_overlaps
-        
+
         return events
 
     def reset(self):

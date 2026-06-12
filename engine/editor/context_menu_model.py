@@ -10,7 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, List, Tuple
 
-
 # Layout constants
 CONTEXT_MENU_WIDTH = 180
 CONTEXT_MENU_ITEM_HEIGHT = 24

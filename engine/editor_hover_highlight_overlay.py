@@ -9,13 +9,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Tuple
 
 import engine.optional_arcade as optional_arcade
-from engine.editor_hover_highlight_model import (
-    HoverHighlightKind,
-    HoverHighlightSpec,
-    HighlightRect,
-    is_ui_blocked,
-    resolve_hover_highlights,
-)
 from engine.editor.editor_hover_dock_tab_query import (
     get_hovered_dock_tab,
     get_hovered_dock_tab_rect,
@@ -37,6 +30,13 @@ from engine.editor.editor_menu_hover_query import (
     get_menu_hover_title_rect,
 )
 from engine.editor.editor_modal_state_query import get_active_menu_id
+from engine.editor_hover_highlight_model import (
+    HighlightRect,
+    HoverHighlightKind,
+    HoverHighlightSpec,
+    is_ui_blocked,
+    resolve_hover_highlights,
+)
 from engine.logging_tools import get_logger
 from engine.ui_overlays.common import UIElement
 

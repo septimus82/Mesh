@@ -1,5 +1,4 @@
 import engine.optional_arcade as optional_arcade
-
 from engine.behaviours.hitbox import Hitbox
 from engine.behaviours.projectile import Projectile
 from engine.behaviours.scene_transition import SceneTransition

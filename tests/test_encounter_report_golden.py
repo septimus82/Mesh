@@ -1,11 +1,12 @@
-import pytest
-import unittest
 import json
 import os
-from unittest.mock import MagicMock, patch
-from engine.encounter_report import generate_encounter_report
+import unittest
 from dataclasses import asdict
+from unittest.mock import MagicMock, patch
 
+import pytest
+
+from engine.encounter_report import generate_encounter_report
 
 pytestmark = pytest.mark.builtin_behaviours
 
@@ -14,12 +15,12 @@ class TestEncounterReportGolden(unittest.TestCase):
         self.mock_loader_patch = patch("engine.encounter_report.SceneLoader")
         self.mock_loader_cls = self.mock_loader_patch.start()
         self.mock_loader = self.mock_loader_cls.return_value
-        
+
         self.mock_tm_patch = patch("engine.encounter_report.get_theme_manager")
         self.mock_get_tm = self.mock_tm_patch.start()
         self.mock_tm = MagicMock()
         self.mock_get_tm.return_value = self.mock_tm
-        
+
         self.mock_pm_patch = patch("engine.encounter_report.get_prefab_manager")
         self.mock_get_pm = self.mock_pm_patch.start()
         self.mock_pm = MagicMock()
@@ -35,34 +36,34 @@ class TestEncounterReportGolden(unittest.TestCase):
         fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "encounter_report_scene.json")
         with open(fixture_path, "r") as f:
             scene_data = json.load(f)
-            
+
         self.mock_loader.load_scene.return_value = scene_data
-        
+
         # Setup mocks
         mock_theme = MagicMock()
         mock_theme.default_variant_id = "default"
         self.mock_tm.get_theme.return_value = mock_theme
-        
+
         mock_set = MagicMock()
         mock_set.enemy_prefab_ids = ["goblin"]
         self.mock_tm.resolve_encounter_set_for_theme.return_value = mock_set
-        
+
         mock_prefab = {"encounter_cost": 1, "tags": ["enemy", "mini_boss"]}
         self.mock_pm.get_prefab.return_value = mock_prefab
-        
+
         with patch("engine.scene_controller.get_prefab_manager", return_value=self.mock_pm), \
              patch("engine.scene_controller.get_theme_manager", return_value=self.mock_tm), \
              patch("os.path.exists", return_value=True):
-             
+
             report = generate_encounter_report([fixture_path], difficulties=["normal"])
             output = asdict(report)
-            
+
             # Verify schema structure
             self.assertEqual(output.get("schema_version"), 1)
             self.assertIn("scenes", output)
             self.assertEqual(len(output["scenes"]), 1)
             scene = output["scenes"][0]
-            
+
             expected_keys = {
                 "scene_path", "difficulty", "encounter_budget", "boss_budget_reserve",
                 "elite_cap", "allow_elites", "encounter_layout", "encounter_seed",
@@ -72,7 +73,7 @@ class TestEncounterReportGolden(unittest.TestCase):
                 "groups"
             }
             self.assertTrue(expected_keys.issubset(scene.keys()))
-            
+
             # Verify values (assuming mocks worked)
             # We have 2 placeholders, budget 10.
             # If logic runs, they get replaced by goblins (cost 2).
@@ -83,13 +84,13 @@ class TestEncounterReportGolden(unittest.TestCase):
             # No, it picks from `encounter_set.enemy_prefab_ids`.
             # And it modifies `entity["prefab_id"]`.
             # So yes, it should work if the base class method is called.
-            
+
             # However, we need to make sure `_resolve_budgeted_spawns` doesn't crash.
             # It uses `random.Random(seed)`.
-            
+
             # Let's just assert the schema is correct for now, as requested.
             # "Assert the report schema version and key fields exist"
-            
+
             self.assertEqual(scene["difficulty"], "normal")
             self.assertEqual(scene["encounter_seed"], 12345)
             self.assertEqual(scene["elite_count"], 0)

@@ -13,7 +13,6 @@ NOTE: Override fields are stored directly on entities (not nested under hd2d_ove
 from __future__ import annotations
 
 import copy
-from typing import Any
 
 import pytest
 
@@ -39,7 +38,6 @@ from engine.editor.hd2d_entity_overrides_model import (
     sanitize_hd2d_entity_override_patch,
 )
 from tests._typing import as_any
-
 
 # =============================================================================
 # Test Constants

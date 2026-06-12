@@ -541,7 +541,7 @@ def validate_prefab(
     """
     errors: list[ValidationError] = []
     base_path = f"[{index}]" if index is not None else ""
-    
+
     if not isinstance(data, dict):
         return [
             ValidationError(
@@ -550,7 +550,7 @@ def validate_prefab(
                 message=f"Prefab {path}{base_path}: must be an object",
             )
         ]
-    
+
     # Required: id
     prefab_id = data.get("id")
     if not isinstance(prefab_id, str) or not prefab_id.strip():
@@ -574,7 +574,7 @@ def validate_prefab(
                     message=f"Prefab {path}{base_path}: 'id' must match pattern ^[a-z0-9_]+$ (got '{prefab_id}')",
                 )
             )
-    
+
     # Required: entity
     entity = data.get("entity")
     if entity is None:
@@ -594,11 +594,11 @@ def validate_prefab(
             )
         )
         entity = None
-    
+
     # Validate entity fields
     if isinstance(entity, dict):
         ent_base = f"{base_path}.entity" if base_path else "entity"
-        
+
         # Check for unknown fields (strict mode)
         if strict:
             for key in entity.keys():
@@ -611,7 +611,7 @@ def validate_prefab(
                                     f"(use 'x_' prefix for extensions)",
                         )
                     )
-        
+
         # Validate behaviours
         behaviours = entity.get("behaviours")
         if behaviours is not None:
@@ -633,7 +633,7 @@ def validate_prefab(
                                 message=f"Prefab {path} '{prefab_id}': behaviours[{i}] must be string or object",
                             )
                         )
-        
+
         # Validate behaviour_config
         bcfg = entity.get("behaviour_config")
         if bcfg is not None and not isinstance(bcfg, dict):
@@ -644,7 +644,7 @@ def validate_prefab(
                     message=f"Prefab {path} '{prefab_id}': behaviour_config must be an object",
                 )
             )
-        
+
         # Validate collision_poly and occluder_poly
         for poly_field in ("collision_poly", "occluder_poly"):
             poly = entity.get(poly_field)
@@ -665,7 +665,7 @@ def validate_prefab(
                             message=f"Prefab {path} '{prefab_id}': {poly_field} needs at least 3 points",
                         )
                     )
-        
+
         # Validate tags
         tags = entity.get("tags")
         if tags is not None:
@@ -687,7 +687,7 @@ def validate_prefab(
                                 message=f"Prefab {path} '{prefab_id}': tags[{i}] must be a string",
                             )
                         )
-    
+
     # Optional: base (inheritance)
     base = data.get("base")
     if base is not None and not isinstance(base, str):
@@ -698,7 +698,7 @@ def validate_prefab(
                 message=f"Prefab {path} '{prefab_id}': 'base' must be a string",
             )
         )
-    
+
     # Optional: tags (top-level)
     top_tags = data.get("tags")
     if top_tags is not None:
@@ -720,7 +720,7 @@ def validate_prefab(
                             message=f"Prefab {path} '{prefab_id}': tags[{i}] must be a string",
                         )
                     )
-    
+
     # Optional: metadata
     metadata = data.get("metadata")
     if metadata is not None and not isinstance(metadata, dict):
@@ -731,7 +731,7 @@ def validate_prefab(
                 message=f"Prefab {path} '{prefab_id}': 'metadata' must be an object",
             )
         )
-    
+
     # Check for unknown top-level fields (strict mode)
     if strict:
         for key in data.keys():
@@ -744,7 +744,7 @@ def validate_prefab(
                                 f"(use 'x_' prefix for extensions)",
                     )
                 )
-    
+
     return sort_validation_errors(errors)
 
 
@@ -765,7 +765,7 @@ def validate_prefab_file(
         List of ValidationError objects (empty if valid).
     """
     errors: list[ValidationError] = []
-    
+
     if not isinstance(data, list):
         return [
             ValidationError(
@@ -774,13 +774,13 @@ def validate_prefab_file(
                 message=f"Prefab file {path}: must be an array of prefab definitions",
             )
         ]
-    
+
     seen_ids: set[str] = set()
     for index, prefab in enumerate(data):
         # Validate individual prefab
         prefab_errors = validate_prefab(path, prefab, index=index, strict=strict)
         errors.extend(prefab_errors)
-        
+
         # Check for duplicate IDs
         if isinstance(prefab, dict):
             pid = prefab.get("id")
@@ -796,6 +796,6 @@ def validate_prefab_file(
                     )
                 else:
                     seen_ids.add(pid)
-    
+
     return sort_validation_errors(errors)
 

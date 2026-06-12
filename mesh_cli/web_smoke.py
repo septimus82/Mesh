@@ -1,17 +1,15 @@
 from __future__ import annotations
 
 import importlib.util
-from pathlib import Path
 import re
-from typing import Any
 import tomllib
+from pathlib import Path
+from typing import Any
 
-from engine.diagnostics import clear_diagnostics
+from engine.diagnostics import clear_diagnostics, get_diagnostics_payload
 from engine.diagnostics import error as diag_error
-from engine.diagnostics import get_diagnostics_payload
 from engine.diagnostics import warn as diag_warn
 from engine.persistence_io import write_json_atomic
-
 
 DEFAULT_WEB_BUILD_DIR = "build/web"
 _LAYOUT_CANDIDATE_SUFFIXES: tuple[str, ...] = ("", "build", "dist", "web", "html")

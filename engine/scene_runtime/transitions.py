@@ -155,10 +155,10 @@ def perform_scene_change(controller: SceneController, scene_path: str, spawn_id:
 def reload_scene(controller: SceneController, new_path: str | None = None) -> bool:
     """Hot reload the current (or provided) scene immediately."""
     from .persistence import (
-        snapshot_player_state,
-        snapshot_camera_state,
-        restore_player_state,
         restore_camera_state,
+        restore_player_state,
+        snapshot_camera_state,
+        snapshot_player_state,
     )
 
     scene_path = str(new_path or controller.current_scene_path or "").strip()

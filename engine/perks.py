@@ -7,9 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .paths import resolve_path
 from .logging_tools import get_logger
-
+from .paths import resolve_path
 
 logger = get_logger(__name__)
 

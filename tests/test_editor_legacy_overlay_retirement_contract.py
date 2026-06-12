@@ -8,7 +8,6 @@ import pytest
 from engine.editor.editor_overlay_controller import EditorOverlayController
 from engine.ui_overlays.light_occluder_editor import LightOccluderEditorOverlay
 
-
 pytestmark = pytest.mark.fast
 
 

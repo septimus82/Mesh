@@ -202,12 +202,12 @@ def resolve_shortcut_scoped(
     normalized = normalize_shortcut_text(shortcut)
     if not normalized:
         return None
-    
+
     for scope in active_scopes:
         scope_map = scope_maps.get(scope, {})
         if normalized in scope_map:
             return scope_map[normalized]
-    
+
     return None
 
 
@@ -219,20 +219,20 @@ def validate_shortcut_scopes(actions: Iterable[object]) -> list[str]:
     """
     # Track: {scope: {shortcut: [action_ids]}}
     scope_shortcuts: dict[str, dict[str, list[str]]] = {}
-    
+
     for action in actions:
         shortcut = normalize_shortcut_text(getattr(action, "shortcut", ""))
         if not shortcut:
             continue
         scope = getattr(action, "shortcut_scope", SHORTCUT_SCOPE_GLOBAL)
         action_id = str(getattr(action, "id", ""))
-        
+
         if scope not in scope_shortcuts:
             scope_shortcuts[scope] = {}
         if shortcut not in scope_shortcuts[scope]:
             scope_shortcuts[scope][shortcut] = []
         scope_shortcuts[scope][shortcut].append(action_id)
-    
+
     errors: list[str] = []
     for scope, shortcuts in scope_shortcuts.items():
         for shortcut, action_ids in shortcuts.items():
@@ -240,5 +240,5 @@ def validate_shortcut_scopes(actions: Iterable[object]) -> list[str]:
                 errors.append(
                     f"Duplicate shortcut '{shortcut}' in scope '{scope}': {', '.join(action_ids)}"
                 )
-    
+
     return errors

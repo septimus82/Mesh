@@ -2,7 +2,9 @@ import json
 import shutil
 import unittest
 from pathlib import Path
+
 from engine.tooling import polish
+
 
 class TestToolingPolish(unittest.TestCase):
     def setUp(self):
@@ -27,10 +29,10 @@ class TestToolingPolish(unittest.TestCase):
         }
         with open(scene_path, "w") as f:
             json.dump(data, f)
-            
+
         # Polish it
         self.assertTrue(polish.polish_scene(scene_path))
-        
+
         # Check if compacted
         with open(scene_path, "r") as f:
             polished = json.load(f)
@@ -40,7 +42,7 @@ class TestToolingPolish(unittest.TestCase):
         # Create world and scene
         world_path = self.test_dir / "world.json"
         scene_path = self.test_dir / "scene.json"
-        
+
         scene_data = {
             "name": "Scene",
             "version": 1,
@@ -50,7 +52,7 @@ class TestToolingPolish(unittest.TestCase):
         }
         with open(scene_path, "w") as f:
             json.dump(scene_data, f)
-            
+
         world_data = {
             "scenes": {
                 "main": {"path": str(scene_path)}
@@ -59,10 +61,10 @@ class TestToolingPolish(unittest.TestCase):
         }
         with open(world_path, "w") as f:
             json.dump(world_data, f)
-            
+
         # Polish world with compact_scenes=True
         self.assertTrue(polish.polish_world(world_path, compact_scenes=True))
-        
+
         # Check scene
         with open(scene_path, "r") as f:
             polished_scene = json.load(f)

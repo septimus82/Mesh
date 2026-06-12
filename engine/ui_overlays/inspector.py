@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING, Any, cast
+
 import engine.optional_arcade as optional_arcade
 
 from .common import (

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Protocol, Union, cast
+from typing import Any, Callable, List, Optional, cast
 
 from engine.logging_tools import get_logger
 
@@ -179,7 +179,7 @@ def _compute_background_ops(ctx: RenderContext) -> List[BackgroundDrawOp]:
         base_x = center_x + offset_x + plane.offset_x
         base_y = center_y + offset_y + plane.offset_y
         alpha = int(max(0, min(255, plane.alpha * 255)))
-        
+
         ops.append(BackgroundDrawOp(
             plane=plane,
             base_x=base_x,
@@ -261,13 +261,13 @@ def _compute_shadow_ops(ctx: RenderContext, sorted_sprites: List[Any]) -> List[S
                 height=multi_shadow.contact_ellipse.height,
                 color=(*shadow_base_color, contact_alpha),
             ))
-            
+
     return ops
 
 
 def _compute_sprite_ops(ctx: RenderContext, sorted_sprites: List[Any]) -> List[SpriteDrawOp]:
     ops = []
-    
+
     for sprite in sorted_sprites:
         # Culling check
         if ctx.use_culling and ctx.camera_rect is not None:
@@ -276,12 +276,12 @@ def _compute_sprite_ops(ctx: RenderContext, sorted_sprites: List[Any]) -> List[S
             width = getattr(sprite, "width", None)
             height = getattr(sprite, "height", None)
             sprite_rect = None
-            
+
             # Fast path
             if isinstance(width, (int, float)) and isinstance(height, (int, float)):
                  if float(width) > 0.0 and float(height) > 0.0:
                       sprite_rect = sprite_bounds(center_x, center_y, float(width), float(height))
-            
+
             # Slow path (texture check)
             if sprite_rect is None:
                 texture = getattr(sprite, "texture", None)
@@ -295,7 +295,7 @@ def _compute_sprite_ops(ctx: RenderContext, sorted_sprites: List[Any]) -> List[S
             if sprite_rect is None:
                  # Fallback
                  sprite_rect = sprite_bounds(center_x, center_y, 100, 100)
-            
+
             if not is_sprite_visible(ctx.camera_rect, sprite_rect):
                 continue
 
@@ -313,7 +313,7 @@ def _compute_sprite_ops(ctx: RenderContext, sorted_sprites: List[Any]) -> List[S
                  depth_z = float(entity_data.get("depth_z", 0.0))
              except (TypeError, ValueError):
                  depth_z = 0.0
-             
+
              outline_calls = compute_sprite_outline_draw_calls(
                 center_x,
                 center_y,
@@ -455,7 +455,7 @@ def execute_scene_plan(
         return
 
     draw_ellipse_filled = getattr(optional_arcade.arcade, "draw_ellipse_filled", None)
-    
+
     # Shadows
     if draw_ellipse_filled:
         for sh_op in plan.shadow_ops:
@@ -516,7 +516,7 @@ def _execute_outline_ops(
                 sprite.alpha = int(call.alpha)
             except Exception:
                 logger.debug("Failed to set outline alpha on sprite %s", getattr(sprite, 'mesh_name', '?'), exc_info=True)
-            
+
             if use_batching and render_queue:
                 _submit_to_queue(sprite, render_queue, camera_rect, use_culling)
             else:
@@ -533,7 +533,7 @@ def _execute_sprite_op(
     use_culling: bool,
 ) -> None:
     sprite = op.sprite
-    
+
     if op.tint is None:
         if use_batching and render_queue:
             _submit_to_queue(sprite, render_queue, camera_rect, use_culling)
@@ -594,7 +594,7 @@ def _submit_to_queue(sprite: Any, render_queue: Any, camera_rect: Optional[Rect]
          if sprite_rect is None:
               # Fallback
               sprite_rect = sprite_bounds(center_x, center_y, 100, 100)
-         
+
          if not is_sprite_visible(camera_rect, sprite_rect):
              return
 
@@ -605,7 +605,7 @@ def _submit_to_queue(sprite: Any, render_queue: Any, camera_rect: Optional[Rect]
         layer_index = int(render_layer)
     except (TypeError, ValueError):
         layer_index = 0
-    
+
     # Use current color (which might have been tinted by _execute_sprite_op)
     sprite_color = getattr(sprite, "color", None)
 

@@ -8,8 +8,14 @@ import pytest
 import engine.optional_arcade as optional_arcade
 from engine.editor import (
     editor_asset_browser_controller as asset_module,
+)
+from engine.editor import (
     editor_keybinds_controller as keybinds_module,
+)
+from engine.editor import (
     editor_scene_browse_controller as scene_module,
+)
+from engine.editor import (
     editor_search_controller as search_module,
 )
 from engine.editor.keybinds_ui_model import KeybindRow, KeybindsState

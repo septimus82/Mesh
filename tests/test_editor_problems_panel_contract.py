@@ -5,7 +5,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from engine.diagnostics import clear_diagnostics, error as diag_error, get_diagnostics, sort_diagnostics, warn as diag_warn
+from engine.diagnostics import clear_diagnostics, get_diagnostics, sort_diagnostics
+from engine.diagnostics import error as diag_error
+from engine.diagnostics import warn as diag_warn
 from engine.editor.editor_actions import run_editor_action
 from engine.editor.editor_problems_controller import ProblemsController
 from engine.editor.scene_lint_model import (
@@ -15,7 +17,6 @@ from engine.editor.scene_lint_model import (
 )
 from engine.ui_overlays.problems_panel_overlay import ProblemsPanelOverlay, format_problem_row_label
 from tests._dock_stub import make_dock_stub
-
 
 pytestmark = [pytest.mark.fast]
 

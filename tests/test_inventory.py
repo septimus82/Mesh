@@ -1,8 +1,10 @@
 import json
 
 import pytest
+
 import engine.inventory as inventory_module
-from engine.inventory import Inventory, ItemDatabase, ItemDefinition, clear_item_database_cache, load_item_database
+from engine.inventory import Inventory, ItemDefinition, clear_item_database_cache, load_item_database
+
 
 # Mock the item database to avoid file I/O and dependency on assets
 @pytest.fixture
@@ -17,7 +19,7 @@ def mock_item_db(monkeypatch):
             stackable=False, max_stack=1, tags=[], effects={}
         )
     }
-    
+
     class MockDB:
         def __init__(self, items):
             self.items = items
@@ -33,12 +35,12 @@ def mock_item_db(monkeypatch):
 def test_inventory_add_item(mock_item_db):
     data = {}
     inv = Inventory(data)
-    
+
     # Add stackable item
     assert inv.add_item("potion", 5)
     assert inv.get_count("potion") == 5
     assert data["items"]["potion"] == 5
-    
+
     # Add more
     assert inv.add_item("potion", 3)
     assert inv.get_count("potion") == 8
@@ -46,22 +48,22 @@ def test_inventory_add_item(mock_item_db):
 def test_inventory_max_stack(mock_item_db):
     data = {}
     inv = Inventory(data)
-    
+
     # Max stack is 10
     inv.add_item("potion", 8)
     # Adding 5 should cap at 10
     inv.add_item("potion", 5)
-    
+
     assert inv.get_count("potion") == 10
 
 def test_inventory_remove_item(mock_item_db):
     data = {}
     inv = Inventory(data)
-    
+
     inv.add_item("potion", 5)
     assert inv.remove_item("potion", 2)
     assert inv.get_count("potion") == 3
-    
+
     # Remove remaining
     assert inv.remove_item("potion", 3)
     assert inv.get_count("potion") == 0
@@ -70,10 +72,10 @@ def test_inventory_remove_item(mock_item_db):
 def test_inventory_non_stackable(mock_item_db):
     data = {}
     inv = Inventory(data)
-    
+
     inv.add_item("sword", 1)
     assert inv.get_count("sword") == 1
-    
+
     # Try to add another sword (max stack 1)
     # Note: The current implementation of add_item returns True if new_total > bucket.
     # If bucket is 1 and max_stack is 1, new_total is 1. 1 > 1 is False.

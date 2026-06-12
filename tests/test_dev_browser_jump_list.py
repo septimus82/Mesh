@@ -2,7 +2,6 @@ import types
 from unittest.mock import MagicMock
 
 import engine.optional_arcade as optional_arcade
-
 from engine.scene_index import SceneIndex
 from engine.ui import DevBrowserOverlay
 from tests._typing import as_any

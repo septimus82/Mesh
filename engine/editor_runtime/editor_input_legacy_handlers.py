@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 import engine.optional_arcade as optional_arcade
 from engine.editor.editor_modal_state_query import is_scene_browser_active

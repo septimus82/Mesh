@@ -15,7 +15,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import FrozenSet, Sequence
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ENGINE_ROOT = REPO_ROOT / "engine"
 
@@ -88,7 +87,7 @@ class ImportViolation:
     line: int
     col: int
     imported_module: str
-    
+
     def as_key(self) -> tuple[str, str]:
         return (self.file, self.imported_module)
 
@@ -115,13 +114,13 @@ def _scan_file_for_violations(path: Path, repo_root: Path) -> list[ImportViolati
     """Scan a single Python file for editor imports."""
     violations: list[ImportViolation] = []
     rel_path = path.relative_to(repo_root).as_posix()
-    
+
     try:
         src = path.read_text(encoding="utf-8")
         tree = ast.parse(src, filename=rel_path)
     except (SyntaxError, UnicodeDecodeError):
         return []
-    
+
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -140,7 +139,7 @@ def _scan_file_for_violations(path: Path, repo_root: Path) -> list[ImportViolati
                     col=node.col_offset,
                     imported_module=node.module,
                 ))
-    
+
     return violations
 
 
@@ -173,35 +172,35 @@ def test_runtime_modules_do_not_import_editor() -> None:
     3. If truly necessary, add to ALLOWED_VIOLATIONS with documented reason
     """
     all_violations: list[ImportViolation] = []
-    
+
     # Scan all runtime directories
     for runtime_dir in RUNTIME_DIRS:
         dir_path = ENGINE_ROOT / runtime_dir
         if not dir_path.exists():
             continue
-        
+
         for py_file in sorted(dir_path.rglob("*.py")):
             if "__pycache__" in str(py_file):
                 continue
             violations = _scan_file_for_violations(py_file, REPO_ROOT)
             all_violations.extend(violations)
-    
+
     # Filter out allowed violations
     actual_violations = _filter_allowed(all_violations)
-    
+
     if not actual_violations:
         return
-    
+
     # Format error message with actionable information
     lines = [
         "Runtime modules must not import editor/overlay code.",
         "",
         "Violations found:",
     ]
-    
+
     for v in sorted(actual_violations, key=lambda x: (x.file, x.line)):
         lines.append(f"  {v.file}:{v.line}:{v.col} imports {v.imported_module}")
-    
+
     lines.extend([
         "",
         "To fix:",
@@ -210,7 +209,7 @@ def test_runtime_modules_do_not_import_editor() -> None:
         "",
         f"Total violations: {len(actual_violations)}",
     ])
-    
+
     raise AssertionError("\n".join(lines))
 
 
@@ -226,30 +225,30 @@ def test_runtime_editor_import_ratchet() -> None:
     """
     # Count current violations
     all_violations: list[ImportViolation] = []
-    
+
     for runtime_dir in RUNTIME_DIRS:
         dir_path = ENGINE_ROOT / runtime_dir
         if not dir_path.exists():
             continue
-        
+
         for py_file in sorted(dir_path.rglob("*.py")):
             if "__pycache__" in str(py_file):
                 continue
             violations = _scan_file_for_violations(py_file, REPO_ROOT)
             all_violations.extend(violations)
-    
+
     actual_violations = _filter_allowed(all_violations)
     current_count = len(actual_violations)
-    
+
     # Read ratchet
     ratchet_count = _read_ratchet_count()
-    
+
     if ratchet_count is None:
         # No ratchet file - this is initial run, create it
         RATCHET_FILE.parent.mkdir(parents=True, exist_ok=True)
         RATCHET_FILE.write_text(str(current_count) + "\n", encoding="utf-8")
         return
-    
+
     if current_count > ratchet_count:
         raise AssertionError(
             f"Runtime→Editor import violations increased!\n"
@@ -260,7 +259,7 @@ def test_runtime_editor_import_ratchet() -> None:
             f"Fix the new violations or, if intentional, update the ratchet:\n"
             f"  echo {current_count} > {RATCHET_FILE.relative_to(REPO_ROOT)}"
         )
-    
+
     if current_count < ratchet_count:
         # Count decreased - update ratchet automatically
         RATCHET_FILE.write_text(str(current_count) + "\n", encoding="utf-8")

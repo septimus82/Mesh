@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import math
 import os
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +11,6 @@ from engine.logging_tools import get_logger
 from engine.path_norm import normalize_scene_path
 from engine.repo_root import get_repo_root
 from engine.swallowed_exceptions import _log_swallow
-
 
 _LOG = get_logger(__name__)
 

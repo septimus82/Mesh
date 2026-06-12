@@ -9,21 +9,18 @@ Covers:
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass, field
 from typing import Any
-from io import StringIO
 
 import pytest
 
 from engine.save_runtime.entity_state import (
-    SaveSerializationError,
     SavedEntityState,
+    SaveSerializationError,
     apply_entity_state,
     serialize_entities,
     serialize_entity,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Fixtures

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import math
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 import engine.optional_arcade as optional_arcade
 
 from .common import UIElement, _draw_rectangle_filled

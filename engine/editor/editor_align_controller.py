@@ -75,7 +75,6 @@ class EditorAlignController:
             List of (entity_id, sprite, left, right, bottom, top) tuples.
         """
         from engine.editor_runtime.state import get_sprite_for_entity_id  # noqa: PLC0415
-        from engine.editor.editor_transform_ops import resolve_entity_id_for_sprite  # noqa: PLC0415
 
         selected_ids = getattr(self.editor, "_selected_entity_ids", [])
         if len(selected_ids) < 2:

@@ -5,13 +5,12 @@ Detects common scene issues and provides deterministic, headless-safe helpers.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import math
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Iterable, List, Literal
 
-from .editor_shell_layout import Rect, TAB_HEADER_HEIGHT
-
+from .editor_shell_layout import TAB_HEADER_HEIGHT, Rect
 
 PROBLEMS_LINE_HEIGHT = 18.0
 PROBLEMS_PADDING = 8.0

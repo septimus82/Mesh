@@ -14,9 +14,8 @@ Constraints:
 from __future__ import annotations
 
 import copy
-import posixpath
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Optional
 
 __all__ = [
     "normalize_repo_rel",
@@ -138,7 +137,7 @@ def _set_nested_value(obj: Dict[str, Any], path: str, value: str) -> None:
             # This shouldn't happen if we scanned correctly, but robust check
             return
         curr = curr[p]
-    
+
     last = parts[-1]
     if last in curr:
         curr[last] = value
@@ -147,14 +146,14 @@ def _set_nested_value(obj: Dict[str, Any], path: str, value: str) -> None:
 def scan_scene_references(scene_payload: Dict[str, Any]) -> List[AssetReference]:
     """Scan a scene dictionary for asset references."""
     refs = []
-    
+
     entities = scene_payload.get("entities", [])
     # Sort entities for deterministic scanning order
     sorted_entities = sorted(entities, key=lambda e: e.get("id", ""))
-    
+
     for entity in sorted_entities:
         eid = entity.get("id", "unknown")
-        
+
         # Scan top-level fields
         for field in sorted(ASSET_PATH_FIELDS):
             val = entity.get(field)
@@ -165,7 +164,7 @@ def scan_scene_references(scene_payload: Dict[str, Any]) -> List[AssetReference]
                     value=normalize_repo_rel(val),
                     order_key=f"{eid}|{field}"
                 ))
-        
+
         # Scan nested fields
         for parent_field, child_fields in sorted(NESTED_ASSET_FIELDS.items()):
             parent_val = entity.get(parent_field)
@@ -180,7 +179,7 @@ def scan_scene_references(scene_payload: Dict[str, Any]) -> List[AssetReference]
                             value=normalize_repo_rel(child_val),
                             order_key=f"{eid}|{full_field}"
                         ))
-                        
+
     return refs
 
 
@@ -189,13 +188,13 @@ def scan_prefab_references(prefab_payload: Dict[str, Any]) -> List[AssetReferenc
     # distinct from scene because prefab root is effectively an entity
     # but might also have children? For now, assume flat or single entity structure like scene
     # actually prefab payloads usually look like a single entity definition.
-    
+
     refs = []
-    # Prefabs often don't have an ID in the file itself until instantiated, 
+    # Prefabs often don't have an ID in the file itself until instantiated,
     # or the root object is the entity.
     # We'll use "ROOT" as ID if missing.
     eid = prefab_payload.get("id", "ROOT")
-    
+
     # Scan top-level fields
     for field in sorted(ASSET_PATH_FIELDS):
         val = prefab_payload.get(field)
@@ -206,7 +205,7 @@ def scan_prefab_references(prefab_payload: Dict[str, Any]) -> List[AssetReferenc
                 value=normalize_repo_rel(val),
                 order_key=f"{eid}|{field}"
             ))
-            
+
     # Scan nested fields
     for parent_field, child_fields in sorted(NESTED_ASSET_FIELDS.items()):
         parent_val = prefab_payload.get(parent_field)
@@ -221,7 +220,7 @@ def scan_prefab_references(prefab_payload: Dict[str, Any]) -> List[AssetReferenc
                         value=normalize_repo_rel(child_val),
                         order_key=f"{eid}|{full_field}"
                     ))
-                    
+
     return refs
 
 
@@ -231,17 +230,17 @@ def compute_replacements(refs: List[AssetReference], mapping: Dict[str, str]) ->
     Handles prefix matching for folder moves.
     """
     replacements = []
-    
+
     # Sort mapping by length descending to match most specific paths first
     sorted_mapping = sorted(mapping.items(), key=lambda x: len(x[0]), reverse=True)
-    
+
     for ref in refs:
         # Check against mappings
         ref_val = ref.value
-        
+
         match_found = False
         new_val = ""
-        
+
         for old_prefix, new_prefix in sorted_mapping:
             # Exact match
             if ref_val == old_prefix:
@@ -256,7 +255,7 @@ def compute_replacements(refs: List[AssetReference], mapping: Dict[str, str]) ->
                 new_val = f"{new_prefix}/{suffix}"
                 match_found = True
                 break
-        
+
         if match_found and new_val != ref_val:
             # Check if this change is redundant (e.g. somehow mapped to same) -> covered by new_val != ref_val
             replacements.append(Replacement(
@@ -266,7 +265,7 @@ def compute_replacements(refs: List[AssetReference], mapping: Dict[str, str]) ->
                 new_value=new_val,
                 order_key=ref.order_key
             ))
-            
+
     # Deterministic sort
     return sorted(replacements, key=lambda r: r.order_key)
 
@@ -277,12 +276,12 @@ def apply_replacements(payload: Dict[str, Any], replacements: List[Replacement])
     Works for both Scene and Prefab payloads if structure matches.
     """
     new_payload = copy.deepcopy(payload)
-    
+
     # Index entities by ID for fast cleanup if it's a scene
     # If it's a prefab (single dict), we treat new_payload as the entity
-    
+
     is_scene = "entities" in new_payload and isinstance(new_payload["entities"], list)
-    
+
     entity_map = {}
     if is_scene:
         for ent in new_payload["entities"]:
@@ -297,7 +296,7 @@ def apply_replacements(payload: Dict[str, Any], replacements: List[Replacement])
         ent = entity_map.get(rep.entity_id)
         if ent:
             _set_nested_value(ent, rep.field_path, rep.new_value)
-            
+
     return new_payload
 
 
@@ -306,23 +305,23 @@ def build_preview_summary(replacements: List[Replacement]) -> PreviewSummary:
     total = len(replacements)
     # We don't have file counts directly here since replacements are just for one payload context usually
     # But if we pass a list of ALL replacements across all files?
-    # The signature implies we might pass replacements for a single file context 
+    # The signature implies we might pass replacements for a single file context
     # OR we need to adjust to aggregate outside.
     # Let's assume this is for a collection of replacements.
-    
+
     # Actually, for the global summary, the controller will aggregate.
     # This helper might be just for formatting or simple stats.
-    
+
     # Let's return stats for this SET of replacements
-    
+
     # We'll just list the first few changes as descriptions
     first_few = []
     for r in replacements[:3]:
         first_few.append(f"{r.entity_id}.{r.field_path}: {r.old_value} -> {r.new_value}")
-    
+
     if total > 3:
         first_few.append(f"...and {total - 3} more")
-        
+
     return PreviewSummary(
         total_files=0, # Context unaware
         total_refs=total,
@@ -344,7 +343,7 @@ def compute_rename_mapping(old_rel: str, new_rel: str) -> Dict[str, str]:
 
 
 def build_refactor_preview(
-    mapping: Dict[str, str], 
+    mapping: Dict[str, str],
     replacements: List[Replacement]
 ) -> PreviewSummary:
     """
@@ -359,19 +358,19 @@ def build_refactor_preview(
     """
     total_files_renamed = len(mapping)
     total_refs = len(replacements)
-    
+
     # Simple categorization
     changes_by_kind: Dict[str, int] = {}
     changes_by_kind["files_renamed"] = total_files_renamed
     changes_by_kind["references_updated"] = total_refs
-    
+
     # Sort replacements for stable preview
     # Sort by entity_id, field_path
     sorted_repls = sorted(replacements, key=lambda r: (r.entity_id, r.field_path))
-    
+
     preview_lines = []
     MAX_LINES = 10
-    
+
     for r in sorted_repls:
         # Truncate values
         orig = r.old_value if len(r.old_value) < 30 else "..." + r.old_value[-27:]
@@ -380,7 +379,7 @@ def build_refactor_preview(
         preview_lines.append(line)
         if len(preview_lines) >= MAX_LINES:
             break
-            
+
     return PreviewSummary(
         total_files=total_files_renamed,
         total_refs=total_refs,
@@ -392,11 +391,11 @@ def build_refactor_preview(
 def format_preview_lines(summary: PreviewSummary, max_lines: int = 40) -> List[str]:
     """Format the preview summary into a list of strings for the modal."""
     lines = []
-    
+
     lines.append(f"Renaming {summary.total_files} file(s/folders).")
     lines.append(f"Updating {summary.total_refs} references.")
     lines.append("-" * 40)
-    
+
     if summary.total_refs == 0:
         lines.append("No references found to update.")
         return lines
@@ -406,9 +405,9 @@ def format_preview_lines(summary: PreviewSummary, max_lines: int = 40) -> List[s
     for line in summary.first_few:
         lines.append(f"  {line}")
         count += 1
-        
+
     remaining = summary.total_refs - count
     if remaining > 0:
         lines.append(f"  ...and {remaining} more references.")
-        
+
     return lines

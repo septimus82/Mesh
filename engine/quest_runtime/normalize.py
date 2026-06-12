@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Iterable
+from typing import Any
 
 
 def normalize_quest(data: Any) -> dict[str, Any] | None:

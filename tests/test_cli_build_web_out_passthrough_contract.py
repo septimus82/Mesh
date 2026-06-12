@@ -4,7 +4,6 @@ import argparse
 
 import pytest
 
-
 pytestmark = [pytest.mark.fast]
 
 

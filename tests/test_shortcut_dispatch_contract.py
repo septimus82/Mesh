@@ -5,14 +5,13 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import engine.optional_arcade as optional_arcade
-
-from engine.editor_runtime import input as editor_input
-from engine.editor_runtime import editor_input_shortcut_handlers as editor_shortcuts
 from engine.editor.editor_project_explorer_actions_controller import (
     EditorProjectExplorerActionsController,
 )
-from tests._session_stub import make_session_stub
+from engine.editor_runtime import editor_input_shortcut_handlers as editor_shortcuts
+from engine.editor_runtime import input as editor_input
 from tests._dock_stub import make_dock_stub
+from tests._session_stub import make_session_stub
 
 
 def _stub_controller() -> SimpleNamespace:
@@ -417,10 +416,10 @@ def test_inline_rename_inactive_enter_uses_global(monkeypatch) -> None:
 def test_inline_rename_consumes_other_keys() -> None:
     """Other keys during inline rename are consumed by _handle_project_explorer_input."""
     from engine import editor_controller as ec_module
-    
+
     controller = _stub_controller_with_project_explorer(inline_rename_active=True)
     handler = ec_module.EditorModeController._handle_project_explorer_input
-    
+
     # Regular letter key should be consumed but not dispatched as action
     result = handler(controller, optional_arcade.arcade.key.A, 0)
     assert result is True

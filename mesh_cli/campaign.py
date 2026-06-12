@@ -53,9 +53,8 @@ def handle(args: argparse.Namespace) -> int:
 
 def _handle_replay_check(args: argparse.Namespace) -> int:
     """Run the campaign replay-check pipeline."""
-    import json
 
-    from engine.persistence_io import write_json_atomic, dumps_json_deterministic
+    from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 
     try:
         from engine.repo_root import get_repo_root
@@ -78,10 +77,10 @@ def _handle_replay_check(args: argparse.Namespace) -> int:
 
     # Late import to keep CLI parsing fast
     from tooling.campaign_replay import (
-        load_campaign_script,
-        run_campaign_replay,
         diff_traces,
         format_diff_text,
+        load_campaign_script,
+        run_campaign_replay,
     )
 
     # Load script

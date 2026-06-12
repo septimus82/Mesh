@@ -8,10 +8,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-import engine.optional_arcade as optional_arcade
-
 if TYPE_CHECKING:
     from arcade import Sprite
+
     from engine.editor_controller import EditorModeController
 
 

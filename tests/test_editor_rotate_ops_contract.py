@@ -6,22 +6,22 @@ Tests rotation operations as pure functions - headless, no arcade dependency.
 from __future__ import annotations
 
 import math
+
 import pytest
 
 from engine.editor.editor_rotate_ops import (
-    RotateEntityCommand,
     RotateEntitiesCommand,
-    wrap_deg,
+    RotateEntityCommand,
+    apply_rotate_entities,
+    apply_rotate_entity,
     compute_angle_deg,
     compute_rotation_delta_deg,
-    snap_rot_deg,
-    apply_rotate_entity,
-    apply_rotate_entities,
-    invert_rotate_entity,
-    invert_rotate_entities,
     create_rotate_entities_command_from_drag,
+    invert_rotate_entities,
+    invert_rotate_entity,
+    snap_rot_deg,
+    wrap_deg,
 )
-
 
 # -----------------------------------------------------------------------------
 # wrap_deg
@@ -118,7 +118,6 @@ class TestComputeRotationDeltaDeg:
     def test_wrap_around_positive(self) -> None:
         # Mouse from nearly left-down to nearly left-up
         # Start at about 260° (just past down-left), end at about 100° (just past up)
-        import math
         start_angle = 260
         end_angle = 100
         start = (math.cos(math.radians(start_angle)) * 10, math.sin(math.radians(start_angle)) * 10)

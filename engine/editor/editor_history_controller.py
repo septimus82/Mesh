@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from engine.editor.editor_dock_query import get_dock_snapshot, get_effective_dock_widths
 from engine.editor.undo_history_model import (
     clamp_history_cursor,
     compute_history_window,
     filter_undo_history_entries,
     resolve_jump_delta,
 )
-from engine.editor.editor_dock_query import get_dock_snapshot, get_effective_dock_widths
 
 
 class EditorHistoryController:
@@ -103,8 +103,8 @@ class EditorHistoryController:
             return True
 
         from engine.editor.editor_shell_layout import (  # noqa: PLC0415
-            compute_editor_shell_layout,
             TAB_HEADER_HEIGHT,
+            compute_editor_shell_layout,
         )
         from engine.editor.undo_history_model import HISTORY_LINE_HEIGHT, HISTORY_PADDING
 
@@ -168,11 +168,11 @@ class EditorHistoryController:
                 self._editor.redo_last()
 
     def _history_input_blocked(self) -> bool:
+        from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
         from engine.editor_tooltips_model import (  # noqa: PLC0415
             _is_modal_open_state,
             _is_text_input_active_state,
         )
-        from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
 
         if panels_is_open(self._editor, "unsaved_confirm"):
             return True

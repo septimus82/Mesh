@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from engine.editor.project_explorer_model import ProjectRow
-from engine.editor_controller import EditorModeController
 from engine.editor.editor_project_explorer_actions_controller import (
     EditorProjectExplorerActionsController,
 )
+from engine.editor.project_explorer_model import ProjectRow
+from engine.editor_controller import EditorModeController
 from tests._dock_stub import make_dock_stub
 from tests._search_stub import attach_search_stub
 
@@ -31,18 +31,18 @@ class StubWindow:
 
 
 from engine.editor.editor_project_explorer_controller import ProjectExplorerController
-from pathlib import Path
+
 
 class StubController:
     def __init__(self, rows: list[ProjectRow]) -> None:
         self.window = StubWindow(player_hud=StubHud())
         self.active = True
         self.dock = make_dock_stub(left_tab="Project")
-        
+
         self.project_explorer = ProjectExplorerController(Path("."))
         self.project_explorer.project_rows = list(rows)
         self.project_explorer.tree_rev = 1
-        
+
         self.project_explorer.ensure_rows()
         self.project_explorer_actions = EditorProjectExplorerActionsController(self)
 
@@ -50,10 +50,10 @@ class StubController:
         # But tests seem to access _project_selected_index.
         # I should probably use properties or update tests.
         # But for now, let's see if StubController usages can just be updated or if I can sync state.
-        
+
         self._project_search = ""
         self.search = attach_search_stub(self)
-        
+
         # Mocks
         self.scene_calls: list[str] = []
         self.asset_calls: list[str] = []
@@ -61,19 +61,19 @@ class StubController:
     @property
     def _project_selected_index(self):
         return self.project_explorer.selected_index
-    
+
     @_project_selected_index.setter
     def _project_selected_index(self, value):
         self.project_explorer.selected_index = value
-        
+
     @property
     def _project_rows(self):
         return self.project_explorer.project_rows
-    
+
     @_project_rows.setter
     def _project_rows(self, value):
         self.project_explorer.project_rows = value
-        
+
 
     def _filter_project_explorer_rows(self) -> None:
         self.project_explorer.set_query(self._project_search)

@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 from .encounter_presets import load_encounter_presets
-from .paths import resolve_path
 from .logging_tools import get_logger
+from .paths import resolve_path
 
 _LOG = get_logger("engine.encounter_sets")
 

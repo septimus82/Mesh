@@ -5,7 +5,6 @@ import pytest
 from engine.editor.editor_feedback_controller import EditorFeedbackController
 from engine.editor.editor_feedback_model import FeedbackSeverity
 
-
 pytestmark = [pytest.mark.fast]
 
 

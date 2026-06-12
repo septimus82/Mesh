@@ -13,6 +13,7 @@ from ._shared import (
     _set_last_props_action,
 )
 
+
 def action_props_set_prefab_id(w: Any, arg: str | None) -> None:
     """Set prefab ID for selected entities."""
     from engine.entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415

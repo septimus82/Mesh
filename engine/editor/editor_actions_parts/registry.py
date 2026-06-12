@@ -5,9 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, cast
 
-from engine.editor.editor_actions_registry import ActionDef, DEFAULT_ACTION_DEFS
-
 from engine.editor.editor_actions_parts._shared import SHORTCUT_SCOPE_GLOBAL
+from engine.editor.editor_actions_registry import DEFAULT_ACTION_DEFS, ActionDef
 
 __all__ = [
     "EditorAction",

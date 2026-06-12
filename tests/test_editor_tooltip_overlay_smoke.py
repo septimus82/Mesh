@@ -8,9 +8,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from tests._dock_stub import make_dock_stub
+
 
 class TestEditorTooltipOverlaySmoke:
     """Smoke tests for EditorTooltipOverlay."""

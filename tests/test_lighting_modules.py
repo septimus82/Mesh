@@ -6,40 +6,32 @@ These tests verify:
 3. Shadow geometry integration through the new modules
 """
 
-import pytest
 
+from engine.lighting.lighting_cache import (
+    LightingCacheState,
+    check_cache_invalidation,
+    compute_ambient_digest,
+    mark_all_dirty,
+    mark_lights_dirty,
+    mark_shadows_dirty,
+)
 from engine.lighting.lighting_config import (
     LightConfig,
-    OccluderConfig,
     LightingSceneConfig,
+    OccluderConfig,
     normalize_color,
     parse_light_config,
     parse_occluder_config,
     parse_scene_config,
-    DEFAULT_AMBIENT_COLOR,
-)
-from engine.lighting.lighting_cache import (
-    LightingCacheState,
-    CacheInvalidationResult,
-    check_cache_invalidation,
-    update_cache_state,
-    mark_lights_dirty,
-    mark_shadows_dirty,
-    mark_all_dirty,
-    compute_ambient_digest,
 )
 from engine.lighting.lighting_geometry import (
-    LightGeometry,
-    SceneGeometry,
     compute_hulls_digest,
-    compute_light_geometry,
     compute_scene_geometry,
     occluder_config_to_polygon_typed,
 )
 from engine.lighting.lighting_plan import (
-    LightPlanEntry,
-    OccluderPlanEntry,
     LightingPlan,
+    LightPlanEntry,
     build_lighting_plan,
     build_lighting_plan_from_dicts,
 )
@@ -47,7 +39,6 @@ from engine.lighting.lighting_render import (
     RenderStats,
     compute_render_plan,
 )
-
 
 # =============================================================================
 # Config Module Tests

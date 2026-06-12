@@ -6,13 +6,14 @@ correctly without any arcade/pygame dependencies (pure unit tests).
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 from engine.editor.context_menu_model import (
-    CONTEXT_MENU_WIDTH,
     CONTEXT_MENU_ITEM_HEIGHT,
     CONTEXT_MENU_PADDING_Y,
+    CONTEXT_MENU_WIDTH,
     ContextMenuItem,
     ContextMenuLayout,
     ContextMenuRect,
@@ -21,7 +22,6 @@ from engine.editor.context_menu_model import (
     hit_test_context_menu,
     hit_test_context_menu_bounds,
 )
-
 
 # ------------------------------------------------------------------------------
 # ContextMenuRect tests

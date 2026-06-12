@@ -6,8 +6,6 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
-import pytest
-
 from mesh_cli.bundle_verify import DEFAULT_EXCLUDE_RULES, VerifyOptions, verify_zip
 from mesh_cli.release import handle
 

@@ -1,28 +1,31 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
 import arcade
+import pytest
+
+from engine.config import EngineConfig
 from engine.game import GameWindow
 from engine.scene_controller import SceneController
-from engine.config import EngineConfig
+
 
 @pytest.fixture
 def mock_window():
     # Rebase GameWindow to avoid calling real arcade.Window.__init__
     import engine.game
     original_bases = engine.game.GameWindow.__bases__
-    
+
     class DummyWindow:
         def __init__(self, *args, **kwargs):
             self.width = 800
             self.height = 600
             self._ctx = MagicMock()
-            
+
     engine.game.GameWindow.__bases__ = (DummyWindow,)
-    
+
     # Patch arcade components accessed via optional_arcade for good measure?
     # No need if GameWindow.__init__ is effectively mocked by inheritance change (super() calls mock).
     # But GameWindow code inside __init__ might access engine.optional_arcade.arcade functions.
-    
+
     import engine.optional_arcade
     with patch('engine.optional_arcade.arcade'): # Mock the whole arcade module
         with patch('engine.camera_controller.ArcadeCamera'):
@@ -32,7 +35,7 @@ def mock_window():
             window.assets = MagicMock()
             window.audio = MagicMock()
             yield window
-            
+
     # Cleanup
     engine.game.GameWindow.__bases__ = original_bases
 
@@ -48,7 +51,7 @@ def test_load_scene_delegation(mock_window):
         ],
         "layers": [{"name": "entities"}]
     })
-    
+
     # Mock assets.get_texture to return a dummy texture
     import engine.optional_arcade
     if engine.optional_arcade.arcade:
@@ -69,24 +72,24 @@ def test_load_scene_delegation(mock_window):
         mock_texture = MagicMock()
 
     mock_window.assets.get_texture.return_value = mock_texture
-    
+
     # Patch arcade.Sprite.  Points to engine.optional_arcade.arcade.Sprite
     with patch('engine.optional_arcade.arcade.Sprite') as MockSprite:
         # Configure MockSprite instance
         mock_sprite_instance = MockSprite.return_value
         mock_sprite_instance.center_x = 0
         mock_sprite_instance.center_y = 0
-        
+
         # Replace layers with simple lists to avoid SpriteList logic
         mock_window.scene_controller.layers = {
             "entities": [],
             "background": [],
             "foreground": []
         }
-        
+
         # Call load_scene on window
         mock_window.load_scene("scenes/test_scene.json")
-        
+
         # Verify scene_controller.load_scene was called (implicitly by logic)
         # Verify sprites were created
         layer = mock_window.scene_controller.layers["entities"]

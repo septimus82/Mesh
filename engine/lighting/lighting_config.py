@@ -9,7 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # Default ambient color (gray-ish neutral)
 DEFAULT_AMBIENT_COLOR: tuple[int, int, int, int] = (128, 128, 128, 255)
 

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, List
 
+import engine.optional_arcade as optional_arcade
+
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
-import engine.optional_arcade as optional_arcade
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from arcade import Sprite

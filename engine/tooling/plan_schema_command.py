@@ -1,5 +1,4 @@
 import argparse
-import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -78,20 +77,20 @@ def build_plan_schema() -> dict[str, Any]:
     This ensures a single source of truth.
     """
     actions: dict[str, Any] = {}
-    
+
     # We need descriptions and type info which are not fully in ACTION_SCHEMAS yet.
     # However, for now we will generate a best-effort schema based on linter requirements.
     # Ideally, ACTION_SCHEMAS should be richer, or we merge with a description registry.
-    
+
     # Since we are replacing the manual dictionary, we need to preserve the descriptions and types
     # that were there.
     # Let's define a metadata registry here that augments the linter schema.
-    
+
     for action_type, linter_def in sorted(ACTION_SCHEMAS.items()):
         meta: dict[str, Any] = METADATA.get(action_type, {})
-        
+
         args_schema: dict[str, Any] = {}
-        
+
         # Process required args
         for arg in linter_def.get("required", []):
             args_schema[arg] = {
@@ -100,7 +99,7 @@ def build_plan_schema() -> dict[str, Any]:
             }
             if "choices" in meta and arg in meta["choices"]:
                 args_schema[arg]["choices"] = meta["choices"][arg]
-                
+
         # Process optional args
         for arg in linter_def.get("optional", []):
             args_schema[arg] = {
@@ -116,12 +115,12 @@ def build_plan_schema() -> dict[str, Any]:
             "description": meta.get("description", f"Action: {action_type}"),
             "args": args_schema
         }
-        
+
         if linter_def.get("writes_files") is False:
             action_schema["writes_files"] = False
-            
+
         actions[action_type] = action_schema
-        
+
     return {"actions": actions}
 
 PLAN_SCHEMA = build_plan_schema()

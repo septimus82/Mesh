@@ -9,16 +9,13 @@ from engine.config import load_config
 from engine.content_audit import audit_world
 from engine.content_diff import diff_locks
 from engine.content_lock import build_lock, read_lock
-from engine.paths import get_content_index, resolve_path
-from engine.paths import reset_path_caches, set_content_roots
+from engine.paths import get_content_index, reset_path_caches, resolve_path, set_content_roots
 from engine.swallowed_exceptions import _log_swallow
 from engine.tooling.content_contract import (
     collect_contract_files,
     run_content_contract,
 )
 from engine.validators.reference_validator import ReferenceValidator
-from engine.logging_tools import get_logger
-
 
 
 def index_content_command(args: argparse.Namespace) -> None:

@@ -21,7 +21,6 @@ from typing import Any, Iterable
 
 from engine.persistence_io import read_json, write_json_atomic
 
-
 _SAFE_CHARS_RE = re.compile(r"[^a-zA-Z0-9_]+")
 _COLLAPSE_UNDERSCORES_RE = re.compile(r"_+")
 

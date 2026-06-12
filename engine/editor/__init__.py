@@ -2,38 +2,6 @@
 
 from __future__ import annotations
 
-# Re-export state classes and constants for convenience
-from .state import (
-    ENTITY_PANEL_FIELDS,
-    ENTITY_PANEL_FOCUS_INSPECTOR,
-    ENTITY_PANEL_FOCUS_OUTLINER,
-    SCENE_SWITCHER_RECENT_LIMIT,
-    TOOL_MODE_MOVE,
-    TOOL_MODE_PATH,
-    TOOL_MODE_ZONE,
-    EditorDirtyState,
-    EditorPlaySession,
-)
-
-from .prefab_palette_panel import (
-    apply_entity_panel_tag_delta,
-    filter_prefab_palette_items,
-    normalize_entity_panel_tags,
-    palette_tag_frequencies,
-    parse_palette_filter,
-)
-
-from .dialogue_panel import (
-    apply_dialogue_edit_to_root,
-    build_dialogue_nodes_list,
-    collect_dialogue_warnings,
-    entity_has_dialogue,
-    get_dialogue_edit_value,
-    get_entity_dialogue_config,
-    next_dialogue_field,
-    prev_dialogue_field,
-)
-
 from .animation_panel import (
     apply_animator_runtime,
     cycle_animation_mode,
@@ -43,30 +11,6 @@ from .animation_panel import (
     next_animation_field,
     prev_animation_field,
 )
-
-from .scene_opening import (
-    apply_scene_switcher_filter,
-    build_scene_browser_lines,
-    build_scene_switcher_lines,
-    build_scene_switcher_rows,
-    clamp_scene_selection_index,
-    compute_scene_browser_hit_index,
-    compute_scene_browser_layout,
-    compute_scene_window,
-    open_scene_by_id,
-)
-
-from .entity_panels import (
-    build_inspector_lines,
-    build_outliner_lines,
-    clamp_entity_panels_index,
-    compute_outliner_scroll_window,
-    filter_entity_panels_items,
-    format_entity_field_value,
-    get_entity_numeric_value,
-    resolve_entity_panels_id,
-)
-
 from .asset_browser_panel import (
     ASSET_BROWSER_KINDS,
     build_asset_browser_lines,
@@ -77,7 +21,43 @@ from .asset_browser_panel import (
     move_asset_selection,
     resolve_asset_activation,
 )
-
+from .context_menu_model import (
+    CONTEXT_MENU_WIDTH,
+    ContextMenuItem,
+    ContextMenuLayout,
+    ContextMenuRect,
+    build_context_menu_items,
+    compute_context_menu_layout,
+    hit_test_context_menu,
+    hit_test_context_menu_bounds,
+)
+from .dialogue_panel import (
+    apply_dialogue_edit_to_root,
+    build_dialogue_nodes_list,
+    collect_dialogue_warnings,
+    entity_has_dialogue,
+    get_dialogue_edit_value,
+    get_entity_dialogue_config,
+    next_dialogue_field,
+    prev_dialogue_field,
+)
+from .editor_clipboard_ops import (
+    clone_entity_payload,
+    collect_existing_entity_ids,
+    generate_copy_entity_id,
+    get_entity_id_from_data,
+)
+from .editor_cursor_model import (
+    CursorHintResult,
+    build_cursor_hint,
+)
+from .editor_multiselect_ops import (
+    clear_selection,
+    get_primary_id,
+    is_entity_selected,
+    select_single,
+    toggle_selection,
+)
 from .editor_shell_layout import (
     BOTTOM_BAR_HEIGHT,
     DOCK_MAX_W,
@@ -86,11 +66,11 @@ from .editor_shell_layout import (
     SPLITTER_W,
     TAB_HEADER_HEIGHT,
     TAB_PADDING,
-    TOP_BAR_HEIGHT,
     TOP_BAR_BUTTON_H,
     TOP_BAR_BUTTON_MARGIN,
     TOP_BAR_BUTTON_RIGHT_OFFSET,
     TOP_BAR_BUTTON_W,
+    TOP_BAR_HEIGHT,
     VIEWPORT_MIN_W,
     DockSizing,
     DockTabRects,
@@ -109,61 +89,47 @@ from .editor_shell_layout import (
     hit_test_top_bar_controls,
     resolve_effective_dock_widths,
 )
-
 from .editor_transform_ops import (
-    MoveEntityCommand,
     MoveEntitiesCommand,
-    apply_move_command,
+    MoveEntityCommand,
     apply_group_move_command,
+    apply_move_command,
     apply_snap_to_xy,
     compute_dragged_xy,
-    create_move_command_from_drag,
     create_group_move_command_from_drag,
-    invert_move_command,
+    create_move_command_from_drag,
     invert_group_move_command,
+    invert_move_command,
     resolve_entity_id_for_sprite,
 )
-
-from .editor_multiselect_ops import (
-    clear_selection,
-    get_primary_id,
-    is_entity_selected,
-    select_single,
-    toggle_selection,
+from .entity_panels import (
+    build_inspector_lines,
+    build_outliner_lines,
+    clamp_entity_panels_index,
+    compute_outliner_scroll_window,
+    filter_entity_panels_items,
+    format_entity_field_value,
+    get_entity_numeric_value,
+    resolve_entity_panels_id,
 )
-
-from .menu_bar_model import (
-    MENU_BAR_HEIGHT,
-    MenuBarLayout,
-    MenuGroup,
-    MenuItem,
-    MenuRect,
-    build_menu_groups,
-    compute_menu_bar_layout,
-    get_dropdown_bounds,
-    hit_test_menu_bar,
-    hit_test_menu_item,
-    hit_test_menu_title,
+from .find_everything_model import (
+    GROUP_ORDER,
+    FindDisplayRow,
+    FindGroup,
+    FindItem,
+    FindResult,
+    FindView,
+    build_find_display_rows,
+    build_find_everything_hint_line,
+    build_find_groups,
+    build_find_items,
+    clamp_selection,
+    compute_find_counts,
+    filter_find_items,
+    flatten_find_groups,
+    fuzzy_score,
+    move_selection,
 )
-
-from .context_menu_model import (
-    CONTEXT_MENU_WIDTH,
-    ContextMenuItem,
-    ContextMenuLayout,
-    ContextMenuRect,
-    build_context_menu_items,
-    compute_context_menu_layout,
-    hit_test_context_menu,
-    hit_test_context_menu_bounds,
-)
-
-from .editor_clipboard_ops import (
-    clone_entity_payload,
-    collect_existing_entity_ids,
-    generate_copy_entity_id,
-    get_entity_id_from_data,
-)
-
 from .inspector_components_model import (
     COMPONENT_SECTIONS,
     NUMERIC_STEP_NORMAL,
@@ -179,35 +145,102 @@ from .inspector_components_model import (
     move_cursor,
     toggle_section,
 )
-
-from .editor_cursor_model import (
-    CursorHintResult,
-    build_cursor_hint,
+from .menu_bar_model import (
+    MENU_BAR_HEIGHT,
+    MenuBarLayout,
+    MenuGroup,
+    MenuItem,
+    MenuRect,
+    build_menu_groups,
+    compute_menu_bar_layout,
+    get_dropdown_bounds,
+    hit_test_menu_bar,
+    hit_test_menu_item,
+    hit_test_menu_title,
 )
-
 from .panel_search_model import (
     format_search_bar_text,
 )
-
-from .find_everything_model import (
-    FindDisplayRow,
-    FindGroup,
-    FindItem,
-    FindResult,
-    FindView,
-    GROUP_ORDER,
-    build_find_items,
-    build_find_groups,
-    build_find_display_rows,
-    build_find_everything_hint_line,
-    clamp_selection,
-    compute_find_counts,
-    filter_find_items,
-    flatten_find_groups,
-    fuzzy_score,
-    move_selection,
+from .prefab_palette_panel import (
+    apply_entity_panel_tag_delta,
+    filter_prefab_palette_items,
+    normalize_entity_panel_tags,
+    palette_tag_frequencies,
+    parse_palette_filter,
+)
+from .project_explorer_model import (
+    PROJECT_LINE_HEIGHT,
+    PROJECT_PADDING,
+    ProjectExplorerDisplayRow,
+    ProjectExplorerRecentItem,
+    ProjectRow,
+    activation_intent_for_display_row,
+    activation_intent_for_row,
+    build_project_explorer_display_rows,
+    clamp_project_selection,
+    clamp_selection_on_selectables,
+    coerce_recent_items,
+    compute_project_explorer_hit_index,
+    compute_project_explorer_layout,
+    compute_project_window,
+    display_index_from_selectable_index,
+    filter_project_rows,
+    format_project_action_label,
+    format_project_recent_label,
+    format_project_row_label,
+    normalize_recent_key,
+    push_recent,
+    recent_items_to_payloads,
+    scan_project_tree,
+    selectable_index_from_display_index,
+)
+from .scene_lint_model import (
+    PROBLEMS_LINE_HEIGHT,
+    PROBLEMS_PADDING,
+    SceneLintIssue,
+    build_problems_panel_lines,
+    build_scene_lint_issues,
+    clamp_issue_index,
+    compute_problems_panel_layout,
+    compute_problems_window,
+    filter_lint_issues,
+)
+from .scene_lint_ops import (
+    FixSceneIssueCommand,
+    FixSceneIssuesCommand,
+    apply_all_safe_fixes,
+    apply_fix_all,
+    apply_fix_command,
+    build_fix_command_for_issue,
+    compute_next_unique_id,
+    invert_fix_command,
+    is_fix_safe,
+    sanitize_transform_value,
+)
+from .scene_opening import (
+    apply_scene_switcher_filter,
+    build_scene_browser_lines,
+    build_scene_switcher_lines,
+    build_scene_switcher_rows,
+    clamp_scene_selection_index,
+    compute_scene_browser_hit_index,
+    compute_scene_browser_layout,
+    compute_scene_window,
+    open_scene_by_id,
 )
 
+# Re-export state classes and constants for convenience
+from .state import (
+    ENTITY_PANEL_FIELDS,
+    ENTITY_PANEL_FOCUS_INSPECTOR,
+    ENTITY_PANEL_FOCUS_OUTLINER,
+    SCENE_SWITCHER_RECENT_LIMIT,
+    TOOL_MODE_MOVE,
+    TOOL_MODE_PATH,
+    TOOL_MODE_ZONE,
+    EditorDirtyState,
+    EditorPlaySession,
+)
 from .undo_history_model import (
     UndoEntry,
     build_undo_history_entries,
@@ -217,57 +250,6 @@ from .undo_history_model import (
     resolve_jump_delta,
 )
 
-from .scene_lint_model import (
-    SceneLintIssue,
-    build_scene_lint_issues,
-    clamp_issue_index,
-    compute_problems_panel_layout,
-    compute_problems_window,
-    filter_lint_issues,
-    build_problems_panel_lines,
-    PROBLEMS_LINE_HEIGHT,
-    PROBLEMS_PADDING,
-)
-
-from .scene_lint_ops import (
-    FixSceneIssueCommand,
-    FixSceneIssuesCommand,
-    apply_all_safe_fixes,
-    apply_fix_command,
-    apply_fix_all,
-    invert_fix_command,
-    is_fix_safe,
-    build_fix_command_for_issue,
-    compute_next_unique_id,
-    sanitize_transform_value,
-)
-
-from .project_explorer_model import (
-    ProjectExplorerDisplayRow,
-    ProjectExplorerRecentItem,
-    ProjectRow,
-    scan_project_tree,
-    filter_project_rows,
-    build_project_explorer_display_rows,
-    clamp_project_selection,
-    clamp_selection_on_selectables,
-    compute_project_window,
-    display_index_from_selectable_index,
-    selectable_index_from_display_index,
-    activation_intent_for_row,
-    activation_intent_for_display_row,
-    format_project_recent_label,
-    format_project_action_label,
-    format_project_row_label,
-    compute_project_explorer_layout,
-    compute_project_explorer_hit_index,
-    normalize_recent_key,
-    push_recent,
-    coerce_recent_items,
-    recent_items_to_payloads,
-    PROJECT_LINE_HEIGHT,
-    PROJECT_PADDING,
-)
 __all__ = [
     # State
     "EditorDirtyState",

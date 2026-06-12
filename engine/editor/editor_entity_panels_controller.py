@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, cast
 import logging
+from typing import Any, Dict, List, Optional, cast
 
 import engine.optional_arcade as optional_arcade
-
-from engine.editor_entity_ops import EntitySummary, list_entities, update_entity_field
 from engine.editor.entity_panels import (
     build_inspector_lines,
     build_outliner_lines,
@@ -20,6 +18,7 @@ from engine.editor.prefab_palette_panel import (
     normalize_entity_panel_tags,
 )
 from engine.editor.state import ENTITY_PANEL_FIELDS, ENTITY_PANEL_FOCUS_INSPECTOR, ENTITY_PANEL_FOCUS_OUTLINER
+from engine.editor_entity_ops import EntitySummary, list_entities, update_entity_field
 from engine.swallowed_exceptions import _log_swallow
 
 

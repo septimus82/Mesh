@@ -4,18 +4,18 @@ import os
 import sys
 from pathlib import Path
 
-from engine.tooling import scaffold, project_index, scene_validate
-from engine.tooling.plan_types import Action, Plan
-from engine.tooling.plan_executor import PlanExecutor
+from engine.logging_tools import suppress_stdout
+from engine.persistence_io import dumps_json_deterministic, write_json_atomic
+from engine.repo_root import get_repo_root
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
-from engine.tooling.content_inventory import list_scenes
-from engine.persistence_io import dumps_json_deterministic, write_json_atomic
-from engine.logging_tools import suppress_stdout
-from engine.repo_root import get_repo_root
 from engine.swallowed_exceptions import _log_swallow
-
+from engine.tooling import project_index, scaffold, scene_validate
+from engine.tooling.content_inventory import list_scenes
+from engine.tooling.plan_executor import PlanExecutor
+from engine.tooling.plan_types import Action, Plan
 from mesh_cli.scene.common import _single_line_error
+
 
 def _emit_inventory(payload: dict, out_path: str | None) -> int:
     text = dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True)
@@ -155,7 +155,6 @@ def _handle_validate_scene_file(args: argparse.Namespace) -> int:
 def _handle_scene_create(args: argparse.Namespace) -> int:
     """Create (or update) a scene JSON with a multi-layer tilemap and optional backgrounds/spawns."""
     from engine.paths import resolve_path
-
     from mesh_cli.scene.entities import _default_spawn_entity_id
     from mesh_cli.scene.tilemap import _parse_tilemap_layer_spec
 

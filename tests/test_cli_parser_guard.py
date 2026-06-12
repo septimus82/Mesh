@@ -1,6 +1,8 @@
-import unittest
 import argparse
+import unittest
+
 from mesh_cli import create_parser
+
 
 class TestCLIParserGuard(unittest.TestCase):
     def setUp(self):

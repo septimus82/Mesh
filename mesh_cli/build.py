@@ -29,10 +29,10 @@ def register(subparsers: argparse._SubParsersAction) -> None:
 def handle(args: argparse.Namespace) -> int:
     if args.command == "build-demo":
         return build_demo_command.handle_build_demo(args)
-    
+
     # Handle commands that use set_defaults(func=...)
     if hasattr(args, "func"):
         result = args.func(args)
         return int(result) if isinstance(result, int) else 0
-        
+
     return 1

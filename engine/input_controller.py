@@ -62,22 +62,21 @@ See Also:
 from __future__ import annotations
 
 import logging
-import os
 from typing import TYPE_CHECKING, Iterable, Set
+
 import engine.optional_arcade as optional_arcade
+from engine.log_once import log_once_with_counter
 from engine.swallowed_exceptions import _log_swallow
 
 from .actions import dispatch_action
 from .input_runtime import capture as input_capture
 from .input_runtime import dispatch as input_dispatch
 from .logging_tools import get_logger
-from engine.log_once import log_once_with_counter
 
 logger = logging.getLogger(__name__)
 _stderr_logger = get_logger(__name__)
 from .input import InputManager
 from .input_bindings import ACTION_SHOW_CHARACTER, apply_config_bindings, known_actions, snapshot_bindings
-
 
 if TYPE_CHECKING:
     from .game import GameWindow

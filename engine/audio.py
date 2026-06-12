@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from math import hypot
 from pathlib import Path
 from typing import Any, Dict, Optional
+
 import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import _log_swallow
 

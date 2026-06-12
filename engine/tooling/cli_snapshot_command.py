@@ -1,11 +1,11 @@
 import argparse
-import json
 import re
 import sys
 from pathlib import Path
 from typing import Any, Dict
 
 from engine import json_io
+
 
 def extract_parser_info(parser: argparse.ArgumentParser) -> Dict[str, Any]:
     """Extract structure from an ArgumentParser."""

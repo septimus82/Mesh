@@ -1,4 +1,3 @@
-import pytest
 
 from engine.behaviours.time_of_day_gate import TimeOfDayGate
 from engine.events import MeshEventBus

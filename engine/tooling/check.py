@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import List, Optional
 
 from engine.actions import validate_bound_actions
+from engine.config import load_config
 from engine.content_lock import build_lock, read_lock
 from engine.content_packs import validate_pack_dependencies
-from engine.config import load_config
 from engine.paths import get_content_index
-from engine.ui_contract import PERSISTENT_UI_ATTRS, missing_persistent_ui_attrs
 from engine.tooling import preset_commands
+from engine.ui_contract import PERSISTENT_UI_ATTRS, missing_persistent_ui_attrs
 
 from .validate_all import UnifiedValidator
 

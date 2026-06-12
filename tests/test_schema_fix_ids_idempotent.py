@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import mesh_cli
 from engine.persistence_io import read_json, write_json_atomic
 from engine.validators.schema_validation import validate_scene
-import mesh_cli
 
 
 def test_schema_fix_ids_idempotent_bytes_and_schema_strict(tmp_path: Path) -> None:

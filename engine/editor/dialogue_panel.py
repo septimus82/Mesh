@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     from arcade import Sprite
@@ -128,25 +128,25 @@ def apply_dialogue_edit_to_root(
     if not isinstance(current_node, dict):
         current_node = {}
     nodes[node_id] = current_node
-    
+
     if focus == "node_text":
         current_node["text"] = new_text
         return True
-    
+
     # Choice editing
     choices = current_node.setdefault("choices", [])
     if not isinstance(choices, list):
         choices = []
         current_node["choices"] = choices
-    
+
     if not (0 <= choice_index < len(choices)):
         return False
-    
+
     target = choices[choice_index]
     if not isinstance(target, dict):
         target = {}
         choices[choice_index] = target
-    
+
     if focus == "choice_text":
         target["text"] = new_text
     elif focus == "choice_next":
@@ -157,5 +157,5 @@ def apply_dialogue_edit_to_root(
         target["forbid_flags"] = parse_flag_list_fn(new_text)
     else:
         return False
-    
+
     return True

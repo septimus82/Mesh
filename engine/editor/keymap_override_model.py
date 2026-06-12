@@ -5,12 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Any, Iterable
 
-from engine.editor.shortcut_resolver_model import normalize_shortcut_text
-from engine.swallowed_exceptions import _log_swallow
-
 # Re-export scope constants for convenience
 from engine.editor.editor_actions import SHORTCUT_SCOPE_GLOBAL  # noqa: F401
-
+from engine.editor.shortcut_resolver_model import normalize_shortcut_text
+from engine.swallowed_exceptions import _log_swallow
 
 # Type alias for scoped overrides: {(scope, action_id): shortcut_or_empty}
 ScopedOverrides = dict[tuple[str, str], str]
@@ -40,7 +38,6 @@ def parse_override_key(key: str) -> tuple[str, str]:
     - "editor.foo" -> ("global", "editor.foo")
     - "text_input.inline_rename:editor.foo" -> ("text_input.inline_rename", "editor.foo")
     """
-    from engine.editor.editor_actions import SHORTCUT_SCOPE_GLOBAL  # noqa: PLC0415
 
     if ":" in key:
         scope, _, action_id = key.partition(":")
@@ -89,7 +86,6 @@ def apply_keymap_overrides(
         - Set of unknown scopes encountered (scope strings)
         - Set of unknown action keys (scope, action_id) tuples
     """
-    from engine.editor.editor_actions import SHORTCUT_SCOPE_GLOBAL  # noqa: PLC0415
 
     if not overrides:
         return list(actions), set(), set()
@@ -138,7 +134,6 @@ def compute_keymap_conflicts(actions: Iterable[object]) -> list[KeymapConflict]:
 
     Returns list of KeymapConflict sorted by (scope, shortcut, action_ids).
     """
-    from engine.editor.editor_actions import SHORTCUT_SCOPE_GLOBAL  # noqa: PLC0415
 
     # Group by (scope, normalized_shortcut)
     scope_shortcut_to_ids: dict[tuple[str, str], list[str]] = {}

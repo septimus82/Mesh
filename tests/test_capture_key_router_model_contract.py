@@ -14,35 +14,22 @@ import pytest
 
 import engine.optional_arcade as optional_arcade
 from engine.input_runtime.capture_key_router_model import (
-    AuditResult,
     KeyCombo,
     RouteSpec,
-    audit_routes,
-    build_route_table,
     _dedupe_routes,
     _when_always,
-    _when_debug,
-    _when_editor_active,
+    audit_routes,
+    build_route_table,
 )
 from engine.input_runtime.capture_runtime_focus_model import (
-    SCOPE_CAPTURE_MODE,
     SCOPE_COMMAND_PALETTE,
     SCOPE_CONFIRM_MODAL,
     SCOPE_CONSOLE,
     SCOPE_CONTEXT_MENU,
-    SCOPE_ENTITY_PAINT,
-    SCOPE_ENTITY_SELECT,
     SCOPE_GLOBAL,
     SCOPE_INLINE_RENAME,
-    SCOPE_KEYBINDS,
-    SCOPE_PALETTE_MODE,
-    SCOPE_PRIORITY,
-    SCOPE_PROBLEMS,
-    SCOPE_PROJECT_EXPLORER,
-    SCOPE_TILE_PAINT,
 )
 from tests._typing import as_any
-
 
 # ---------------------------------------------------------------------------
 # Determinism tests
@@ -102,26 +89,26 @@ def test_build_audit_dedupe_produces_clean_routes() -> None:
     # Step 1: Build routes
     routes = build_route_table()
     assert len(routes) > 0, "build_route_table() must return at least one route"
-    
+
     # Step 2: Audit before dedupe
     report_before = audit_routes(routes)
-    
+
     # Step 3: Dedupe
     deduped_routes = tuple(_dedupe_routes(routes))
-    
+
     # Step 4: Re-audit after dedupe
     report_after = audit_routes(deduped_routes)
-    
+
     # Verify: no conflicts remain
     assert len(report_after.conflicts) == 0, (
         f"Conflicts remain after dedupe: {report_after.conflicts}"
     )
-    
+
     # Verify: no duplicates remain
     assert len(report_after.duplicates) == 0, (
         f"Duplicates remain after dedupe: {report_after.duplicates}"
     )
-    
+
     # Verify: routes are identical (build_route_table already dedupes internally)
     assert routes == deduped_routes, (
         "build_route_table() should already return deduped routes"
@@ -141,31 +128,31 @@ def test_build_audit_dedupe_is_idempotent() -> None:
     routes_1 = build_route_table()
     report_1 = audit_routes(routes_1)
     deduped_1 = tuple(_dedupe_routes(routes_1))
-    
+
     # Second run (independent)
     routes_2 = build_route_table()
     report_2 = audit_routes(routes_2)
     deduped_2 = tuple(_dedupe_routes(routes_2))
-    
+
     # Assert: raw builds are identical
     assert routes_1 == routes_2, (
         f"build_route_table() is not idempotent.\n"
         f"First run: {len(routes_1)} routes\n"
         f"Second run: {len(routes_2)} routes"
     )
-    
+
     # Assert: deduped outputs are identical (including order)
     assert deduped_1 == deduped_2, (
         f"_dedupe_routes() is not idempotent.\n"
         f"First run: {len(deduped_1)} routes\n"
         f"Second run: {len(deduped_2)} routes"
     )
-    
+
     # Assert: audit reports are identical (same issues found)
     assert report_1.conflicts == report_2.conflicts, "Audit conflicts differ between runs"
     assert report_1.duplicates == report_2.duplicates, "Audit duplicates differ between runs"
     assert report_1.aliases == report_2.aliases, "Audit aliases differ between runs"
-    
+
     # Assert: ordering is preserved (not just set equality)
     for i, (r1, r2) in enumerate(zip(deduped_1, deduped_2)):
         assert r1 == r2, (
@@ -197,7 +184,7 @@ def test_audit_detects_conflict() -> None:
         RouteSpec(SCOPE_GLOBAL, KeyCombo(key.A, 0), "action.two", _when_always),
     ]
     report = audit_routes(routes)
-    
+
     assert len(report.conflicts) == 1, f"Expected 1 conflict, got {report.conflicts}"
     conflict = report.conflicts[0]
     assert conflict.scope == SCOPE_GLOBAL
@@ -214,7 +201,7 @@ def test_audit_detects_duplicate() -> None:
     route = RouteSpec(SCOPE_GLOBAL, KeyCombo(key.A, 0), "action.one", _when_always)
     routes = [route, route]
     report = audit_routes(routes)
-    
+
     assert len(report.duplicates) == 1, f"Expected 1 duplicate, got {report.duplicates}"
 
 
@@ -252,7 +239,7 @@ def test_confirm_modal_scope_has_routes() -> None:
     table = build_route_table()
     modal_routes = [r for r in table if r.scope == SCOPE_CONFIRM_MODAL]
     assert len(modal_routes) >= 2, "Confirm modal needs at least ENTER and ESC handlers"
-    
+
     # Check for escape and enter/return
     keys_handled = {r.combo.key for r in modal_routes}
     assert key.ESCAPE in keys_handled, "Modal must handle ESCAPE"
@@ -266,7 +253,7 @@ def test_command_palette_scope_has_routes() -> None:
     table = build_route_table()
     palette_routes = [r for r in table if r.scope == SCOPE_COMMAND_PALETTE]
     assert len(palette_routes) >= 3, "Command palette needs navigation keys"
-    
+
     keys_handled = {r.combo.key for r in palette_routes}
     assert key.UP in keys_handled or key.DOWN in keys_handled, (
         "Command palette must handle UP/DOWN for navigation"
@@ -289,7 +276,7 @@ def test_inline_rename_scope_has_routes() -> None:
     table = build_route_table()
     rename_routes = [r for r in table if r.scope == SCOPE_INLINE_RENAME]
     assert len(rename_routes) >= 2, "Inline rename needs ENTER and ESC handlers"
-    
+
     keys_handled = {r.combo.key for r in rename_routes}
     assert key.ESCAPE in keys_handled, "Inline rename must handle ESCAPE"
 
@@ -312,10 +299,10 @@ def test_route_spec_is_frozen() -> None:
     """RouteSpec instances must be frozen (immutable)."""
     key = optional_arcade.arcade.key
     route = RouteSpec(SCOPE_GLOBAL, KeyCombo(key.A, 0), "test", _when_always)
-    
+
     with pytest.raises(AttributeError):
         as_any(route).scope = SCOPE_CONSOLE
-    
+
     with pytest.raises(AttributeError):
         as_any(route).action_id = "modified"
 
@@ -325,10 +312,10 @@ def test_key_combo_is_frozen() -> None:
     """KeyCombo instances must be frozen (immutable)."""
     key = optional_arcade.arcade.key
     combo = KeyCombo(key=key.A, mods=0)
-    
+
     with pytest.raises(AttributeError):
         as_any(combo).key = key.B
-    
+
     with pytest.raises(AttributeError):
         as_any(combo).mods = 1
 

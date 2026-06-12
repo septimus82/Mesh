@@ -6,7 +6,6 @@ import pytest
 
 from tooling import scan_exception_policies
 
-
 pytestmark = [pytest.mark.fast]
 
 

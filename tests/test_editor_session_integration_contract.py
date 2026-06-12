@@ -4,12 +4,12 @@ from types import SimpleNamespace
 
 from engine.capture_mode import CaptureState
 from engine.editor.editor_session_controller import EditorSessionController
+from engine.editor.editor_session_query import get_session_snapshot
+from engine.editor_runtime import editor_input_router
 from engine.entity_paint_mode import EntityPaintState, PrefabInfo
 from engine.entity_select_mode import EntitySelectState, set_selection
 from engine.input_runtime import capture_key_router_handlers_entity_paint as entity_paint_handlers
 from engine.input_runtime import capture_key_router_handlers_palette as palette_handlers
-from engine.editor_runtime import editor_input_router
-from engine.editor.editor_session_query import get_session_snapshot
 
 
 def test_session_updates_via_capture_entity_paint_and_selection() -> None:

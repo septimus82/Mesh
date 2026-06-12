@@ -11,8 +11,6 @@ Tests cover:
 
 from __future__ import annotations
 
-import json
-import shutil
 from pathlib import Path
 
 import pytest
@@ -27,7 +25,6 @@ from tooling.export_bundle import (
     diff_bundles,
     load_bundle_manifest,
 )
-
 
 # --------------------------------------------------------------------------- #
 # Fixtures

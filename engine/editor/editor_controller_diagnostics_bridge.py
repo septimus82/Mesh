@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from typing import Any
+
 from engine.i18n import tr
+
 
 def scan_scene_problems(self):
     """Scan current scene JSON for issues."""

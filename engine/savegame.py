@@ -8,12 +8,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
+from engine.swallowed_exceptions import _log_swallow
+
 from .diagnostics import add_exception as diag_add_exception
 from .diagnostics import error as diag_error
 from .diagnostics import info as diag_info
 from .diagnostics import warn as diag_warn
-from .persistence_io import SAVE_FORMAT_VERSION
-from .persistence_io import read_json, write_json_atomic
+from .persistence_io import SAVE_FORMAT_VERSION, read_json, write_json_atomic
 from .save_runtime import constants as save_constants
 from .save_runtime import io as save_io
 from .save_runtime import payloads as save_payloads
@@ -29,7 +30,6 @@ from .save_runtime.ux_codes import (
     SAVE_SERIALIZE_FAILED,
     SAVE_WRITE_FAILED,
 )
-from engine.swallowed_exceptions import _log_swallow
 
 _DIAG_SOURCE = "engine.savegame"
 _SLOT_RE = re.compile(r"(\d+)")

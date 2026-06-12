@@ -6,10 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import arcade
-
-from engine.editor_controller import EditorModeController
 from engine import editor_palette_thumbs
+from engine.editor_controller import EditorModeController
 
 
 def _write_tiny_png(path: Path, *, rgba: tuple[int, int, int, int]) -> None:

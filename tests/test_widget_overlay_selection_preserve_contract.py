@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import replace
 from types import SimpleNamespace
 from typing import Any
 
@@ -12,7 +11,6 @@ from engine.editor.editor_asset_browser_controller import EditorAssetBrowserCont
 from engine.editor.editor_keybinds_controller import EditorKeybindsController
 from engine.editor.editor_ui_flow_controller import EditorUIFlowController
 from engine.editor.find_everything_model import FindItem
-from engine.editor.keybinds_ui_model import KeybindRow, KeybindsState
 from engine.scene_index import SceneRow
 from engine.ui_overlays import scene_browser_overlay as scene_overlay_module
 from engine.ui_overlays.scene_browser_overlay import SceneBrowserOverlay

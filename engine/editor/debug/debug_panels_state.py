@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from typing import Any
-from engine.logging_tools import get_logger
-from engine.swallowed_exceptions import _log_swallow
 
+from engine.swallowed_exceptions import _log_swallow
 
 
 def get_quest_inspector_state(window: Any) -> dict[str, Any] | None:

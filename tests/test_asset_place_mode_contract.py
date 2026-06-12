@@ -1,9 +1,12 @@
-import pytest
 from unittest.mock import MagicMock
-from engine.editor_controller import EditorModeController
+
+import pytest
+
 import engine.editor_runtime.input as editor_input
-from engine.asset_index import AssetRow
 import engine.optional_arcade as optional_arcade
+from engine.asset_index import AssetRow
+from engine.editor_controller import EditorModeController
+
 
 class MockWindow:
     def __init__(self):
@@ -41,10 +44,10 @@ def test_activation_enters_placement_mode(test_controller):
     row = AssetRow(rel_path="assets/img.png", kind="image", display_name="img")
     test_controller._asset_browser_filtered_rows = [row]
     test_controller.asset_browser_selection_index = 0
-    
+
     # Act
     test_controller._activate_selected_asset()
-    
+
     # Assert
     assert test_controller.asset_place_active is True
     assert test_controller.asset_place_path == "assets/img.png"
@@ -58,13 +61,13 @@ def test_placement_spawns_entity_snapped(test_controller):
     test_controller.snap_enabled = True
     test_controller.snap_mode = "grid16"
     test_controller.grid_size = 16
-    
+
     # Place at (18.0, 18.0)
     test_controller.place_asset_at(18.0, 18.0)
-    
+
     scene_data = test_controller.window.scene_controller._loaded_scene_data
     assert len(scene_data["entities"]) == 1
-    
+
     eid = list(scene_data["entities"].keys())[0]
     entity = scene_data["entities"][eid]
     # Check snap to 16
@@ -74,14 +77,14 @@ def test_placement_spawns_entity_snapped(test_controller):
 def test_input_place_and_cancel(test_controller):
     test_controller.asset_place_active = True
     test_controller.asset_place_path = "img.png"
-    
+
     # ESC cancels
     editor_input.handle_input(test_controller, optional_arcade.arcade.key.ESCAPE, 0)
     assert test_controller.asset_place_active is False
-    
+
     # Re-enable
     test_controller.asset_place_active = True
-    
+
     # Enter places
     count = len(test_controller.window.scene_controller._loaded_scene_data["entities"])
     editor_input.handle_input(test_controller, optional_arcade.arcade.key.ENTER, 0)
@@ -99,12 +102,12 @@ def test_input_place_and_cancel(test_controller):
 def test_multiple_placements_increment_ids(test_controller):
     test_controller.asset_place_active = True
     test_controller.asset_place_path = "assets/tree.png"
-    
+
     # Place 1
     test_controller.place_asset_at(0, 0)
     scene_data = test_controller.window.scene_controller._loaded_scene_data
     assert "asset_tree_1" in scene_data["entities"]
-    
+
     # Place 2
     test_controller.place_asset_at(100, 100)
     assert "asset_tree_2" in scene_data["entities"]

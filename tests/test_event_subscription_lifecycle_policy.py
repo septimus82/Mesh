@@ -10,7 +10,6 @@ This AST-based test scans engine/behaviours/ for violations.
 from __future__ import annotations
 
 import ast
-import textwrap
 from pathlib import Path
 
 import pytest

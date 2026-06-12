@@ -62,28 +62,28 @@ See Also:
 
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import math
 import os
-import importlib.util
-import importlib
 import zlib
 from contextlib import nullcontext
-from typing import Any, Iterable, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 import engine.optional_arcade
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
 from . import cookies as _cookies
+from . import lighting_snapshot as _lighting_snapshot
+from . import lighting_stats as _lighting_stats
 from . import occluder_layer_builder as _occluder_layer_builder
 from . import occluder_utils as _occluder_utils
-from . import lighting_stats as _lighting_stats
-from . import lighting_snapshot as _lighting_snapshot
 from . import polygon_raycaster as _polygon_raycaster
-from . import shadowcast_snapshot as _shadowcast_snapshot
-from . import shadow_selection as _shadow_selection
-from . import shafts as _shafts
 from . import shadow_pipeline as _shadow_pipeline
+from . import shadow_selection as _shadow_selection
+from . import shadowcast_snapshot as _shadowcast_snapshot
+from . import shafts as _shafts
 from . import static_light_builder as _static_light_builder
 from .flicker import FlickerNoise, apply_light_flicker
 from .types import DynamicLightHandle, _FlickerLightState, _LayerContext
@@ -253,13 +253,13 @@ class LightManager:
         self.shadowmask_enabled: bool = os.environ.get("MESH_SHADOWCAST_MASK") == "1"
         self.shadowcast_debug_enabled: bool = os.environ.get("MESH_SHADOWCAST_DEBUG") == "1" or debug_shadows
         self.debug_geometry_enabled: bool = os.environ.get("MESH_LIGHTING_DEBUG_GEOMETRY") == "1"
-        
+
         env_shadows = os.environ.get("MESH_SHADOWS_MODE")
         if env_shadows:
             self.shadows_mode = str(env_shadows).strip().lower()
         else:
             self.shadows_mode = str(shadows_mode).strip().lower()
-            
+
         self._shadowmask_overridden: bool = False
         self._shadowcast_debug_overridden: bool = False
         self._debug_geometry_overridden: bool = False
@@ -387,10 +387,10 @@ class LightManager:
         if not isinstance(counters, dict):
             counters = {}
             setattr(self, "_mesh_logged_counters", counters)
-        
+
         count = counters.get(key, 0)
         counters[key] = count + 1
-        
+
         if count == 0:
             print(f"[Mesh][Lighting] WARNING {key}: {msg}")
 
@@ -1027,7 +1027,7 @@ class LightManager:
             self.enabled = False
             self.available = False
             return
-        
+
         _occluder_layer_builder.rebuild_occluder_layer(self)
         _static_light_builder.rebuild_static_and_dynamic_lights(self)
 
@@ -1093,28 +1093,27 @@ class LightManager:
 
 # Re-exports from submodules for clean public API
 # Config module - dataclasses and parsing
+# Cache module - invalidation and state tracking
+from .lighting_cache import (
+    CacheInvalidationResult,
+    LightingCacheState,
+    check_cache_invalidation,
+    mark_all_dirty,
+    mark_lights_dirty,
+    mark_shadows_dirty,
+    update_cache_state,
+)
 from .lighting_config import (
+    DEFAULT_AMBIENT_COLOR,
+    DEFAULT_MAX_DYNAMIC_LIGHTS,
+    DEFAULT_MAX_STATIC_LIGHTS,
     LightConfig,
-    OccluderConfig,
     LightingSceneConfig,
+    OccluderConfig,
     normalize_color,
     parse_light_config,
     parse_occluder_config,
     parse_scene_config,
-    DEFAULT_AMBIENT_COLOR,
-    DEFAULT_MAX_STATIC_LIGHTS,
-    DEFAULT_MAX_DYNAMIC_LIGHTS,
-)
-
-# Cache module - invalidation and state tracking
-from .lighting_cache import (
-    LightingCacheState,
-    CacheInvalidationResult,
-    check_cache_invalidation,
-    update_cache_state,
-    mark_lights_dirty,
-    mark_shadows_dirty,
-    mark_all_dirty,
 )
 
 # Geometry module - shadow hull computation
@@ -1128,9 +1127,9 @@ from .lighting_geometry import (
 
 # Plan module - headless lighting model
 from .lighting_plan import (
+    LightingPlan,
     LightPlanEntry,
     OccluderPlanEntry,
-    LightingPlan,
     build_lighting_plan,
     build_lighting_plan_from_dicts,
 )
@@ -1138,33 +1137,33 @@ from .lighting_plan import (
 # Render module - draw helpers
 from .lighting_render import (
     RenderStats,
-    prepare_light_layer,
-    draw_layer_safe,
     clear_layer,
     compute_render_plan,
+    draw_layer_safe,
+    prepare_light_layer,
 )
 
 # Shadow geometry (already exists)
 from .shadow_geometry import (
     Point,
     Polygon,
-    ShadowParams,
     ShadowGeometryResult,
-    compute_shadow_hulls,
+    ShadowParams,
     compute_shadow_geometry,
+    compute_shadow_hulls,
     normalize_polygon,
     validate_polygon,
 )
 
 # Shadow geometry adapter
 from .shadow_geometry_adapter import (
-    rect_to_polygon,
-    rects_to_polygons,
+    compute_shadow_geometry_from_configs,
+    compute_shadow_hulls_from_configs,
+    compute_shadow_hulls_from_rects,
     occluder_config_to_polygon,
     occluder_configs_to_polygons,
-    compute_shadow_hulls_from_rects,
-    compute_shadow_hulls_from_configs,
-    compute_shadow_geometry_from_configs,
+    rect_to_polygon,
+    rects_to_polygons,
 )
 
 __all__ = [

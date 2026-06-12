@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from engine.logging_tools import get_logger
+
 from engine.swallowed_exceptions import _log_swallow
 
 HINT_LABEL = "Ctrl+P Palette  Ctrl+O Scenes  Ctrl+S Save"

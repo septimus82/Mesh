@@ -1,7 +1,10 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from engine.scene_controller import SceneController
+
+import pytest
+
 from engine.encounter_sets import EncounterSet, RegionTheme
+from engine.scene_controller import SceneController
+
 
 @pytest.fixture
 def mock_scene_controller():
@@ -13,7 +16,7 @@ def mock_scene_controller():
 
 def test_budgeted_spawn_selection(mock_scene_controller):
     sc = mock_scene_controller
-    
+
     # Setup data
     scene_data = {
         "settings": {
@@ -27,30 +30,30 @@ def test_budgeted_spawn_selection(mock_scene_controller):
             {"prefab_id": "theme_enemy_placeholder", "name": "P3"}
         ]
     }
-    
+
     encounter_set = EncounterSet(
         id="test_set",
         enemy_prefab_ids=["cheap", "expensive"]
     )
     theme = RegionTheme(id="test_theme", description="Test")
-    
+
     # Mock PrefabManager
     with patch("engine.scene_controller.get_prefab_manager") as mock_pm_get:
         pm = MagicMock()
         mock_pm_get.return_value = pm
-        
+
         def get_prefab_side_effect(pid):
             if pid == "cheap":
                 return {"encounter_cost": 2}
             if pid == "expensive":
                 return {"encounter_cost": 5}
             return {}
-        
+
         pm.get_prefab.side_effect = get_prefab_side_effect
-        
+
         # Run
         sc._resolve_budgeted_spawns(scene_data, encounter_set, theme)
-        
+
         # Verify
         entities = scene_data["entities"]
         # Budget is 10.
@@ -64,12 +67,12 @@ def test_budgeted_spawn_selection(mock_scene_controller):
             assert pid in ["cheap", "expensive"]
             cost = 2 if pid == "cheap" else 5
             total_cost += cost
-        
+
         assert total_cost <= 10
 
 def test_budget_exceeded_fallback(mock_scene_controller):
     sc = mock_scene_controller
-    
+
     # Budget 1, cheapest enemy 2
     scene_data = {
         "settings": {
@@ -82,17 +85,17 @@ def test_budget_exceeded_fallback(mock_scene_controller):
             {"prefab_id": "theme_enemy_placeholder", "name": "P2"}
         ]
     }
-    
+
     encounter_set = EncounterSet(id="test_set", enemy_prefab_ids=["expensive"])
     theme = RegionTheme(id="test_theme", description="Test")
-    
+
     with patch("engine.scene_controller.get_prefab_manager") as mock_pm_get:
         pm = MagicMock()
         mock_pm_get.return_value = pm
         pm.get_prefab.return_value = {"encounter_cost": 5}
-        
+
         sc._resolve_budgeted_spawns(scene_data, encounter_set, theme)
-        
+
         # Should spawn 1 (fallback) and remove the other
         entities = scene_data["entities"]
         assert len(entities) == 1

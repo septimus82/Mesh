@@ -7,7 +7,6 @@ from typing import Any
 from engine.console_runtime.utils import parse_int
 from engine.inventory import get_or_create_inventory, load_item_database
 
-
 # ---------------------------------------------------------------------------
 # Dispatch-compatible handlers  (controller, args) -> bool
 # ---------------------------------------------------------------------------

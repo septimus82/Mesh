@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 _COMMAND_ACTION_IDS: dict[str, str] = {
     "AddEntity": "editor.entity.add",
     "DeleteEntity": "editor.entity.delete",

@@ -8,7 +8,6 @@ def test_repair_package_submodule_attr_fixes_stale_package_attr() -> None:
     # Import canonical module object A.
     import engine
     import engine.editor_controller as canonical
-
     from engine.import_tools import repair_package_submodule_attr
 
     a = canonical

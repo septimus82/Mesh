@@ -1,5 +1,8 @@
-import unittest
+# ruff: noqa: F401
+
 import sys
+import unittest
+
 
 class TestPlaceholderImports(unittest.TestCase):
     def test_pillow_import(self):
@@ -19,7 +22,7 @@ class TestPlaceholderImports(unittest.TestCase):
             # It might be because it's a script not a module, or path issues.
             # But the task says "Import the module that uses Pillow".
             pass
-        except Exception as e:
+        except Exception:
             # If it runs code on import, it might fail, but we just want to check imports
             pass
 

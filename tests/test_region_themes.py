@@ -1,12 +1,12 @@
-import pytest
 import json
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from engine.tooling import scaffold
+import pytest
 
+from engine.tooling import scaffold
 
 pytestmark = pytest.mark.builtin_behaviours
 

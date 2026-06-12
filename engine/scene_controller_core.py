@@ -12,6 +12,7 @@ import random
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, Iterator
 
 import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow, record_swallowed
 
 from . import scene_controller_save_load as _save_load_proxy
 from .animation_state import request_animation_state, tick_animation_state
@@ -29,6 +30,8 @@ from .behaviours.utils import (
 from .constants import EVENT_COLLECTIBLE_PICKED, EVENT_DAMAGE_APPLIED
 from .culling import Rect
 from .depth_tint_model import DEFAULT_DEPTH_TINT_SETTINGS, DepthTintSettings
+from .editor.sprite_outline_model import DEFAULT_OUTLINE_SETTINGS, OutlineSettings
+from .elite_labeling import format_elite_label
 from .encounter_cost import (
     get_effective_encounter_cost,
     is_boss_payload,
@@ -36,8 +39,6 @@ from .encounter_cost import (
     is_mini_boss_payload,
 )
 from .encounter_sets import get_theme_manager
-from .editor.sprite_outline_model import DEFAULT_OUTLINE_SETTINGS, OutlineSettings
-from .elite_labeling import format_elite_label
 from .parallax_model import BackgroundPlane
 from .pathfinding import NavGrid
 from .paths import resolve_path
@@ -84,6 +85,8 @@ from .scene_controller_parts.tilemap_state import (
 from .scene_controller_parts.transitions import (
     _perform_scene_change_runtime,
     _reload_scene_runtime,
+)
+from .scene_controller_parts.transitions import (
     bind_transitions_methods as _bind_transitions_methods,
 )
 from .scene_controller_parts.ui_runtime import (
@@ -115,7 +118,6 @@ from .scene_runtime.spawn import find_spawn_marker as _find_spawn_marker_runtime
 from .scene_runtime.spawn import get_spawn as _get_spawn_runtime
 from .scene_update_controller import SceneUpdateController
 from .sensors_runtime import SensorRuntime
-from engine.swallowed_exceptions import _log_swallow, record_swallowed
 from .tilemap import TilemapDrawLayer, TilemapInstance, compute_parallax_camera_position
 from .tilemap_batch import TilemapBatchState, TilemapBatchStats
 from .tilemap_batch_arcade import TilemapBatcher

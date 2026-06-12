@@ -2,6 +2,7 @@ import os
 import re
 from typing import Any
 
+
 def validate_preset_python_step(args: list[str]) -> None:
     if not args:
         raise ValueError("Python step args cannot be empty")
@@ -39,19 +40,19 @@ def validate_preset_python_step(args: list[str]) -> None:
             "--disable-warnings",
             "--tb=no", "--tb=none"
         }
-        
+
         for arg in args:
             if arg in banned_flags:
                 raise ValueError(f"Pytest step cannot use '{arg}'")
             if arg.startswith("-k"):
                 raise ValueError("Pytest step cannot use '-k'")
-                
+
             # Check targets (positional args that are not flags)
             if not arg.startswith("-"):
                 # Skip the initial "-m" and "pytest"
                 if arg in ["-m", "pytest"]:
                     continue
-                    
+
                 # Must be in tests/
                 if not arg.startswith("tests/"):
                     raise ValueError(f"Pytest target '{arg}' must be in 'tests/'")

@@ -8,8 +8,8 @@ from typing import Any, cast
 
 from jsonschema import Draft202012Validator, ValidationError
 from jsonschema.exceptions import best_match
-from referencing import Registry as ReferencingRegistry, Resource
-
+from referencing import Registry as ReferencingRegistry
+from referencing import Resource
 
 _SCHEMA_DIR = Path(__file__).with_name("schemas")
 _SCHEMA_CACHE: dict[str, Draft202012Validator] = {}

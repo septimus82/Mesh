@@ -28,9 +28,9 @@ def debug_build_macro_objective_zone_payload(
 
     Returns (new_payload, created_count, updated_count). Does not mutate scene state by itself.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id  # noqa: PLC0415
     from ...entity_paint_mode import _format_id_number as _fmt  # noqa: PLC0415
     from ...entity_paint_mode import _sanitize_entity_id_token as _san  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id  # noqa: PLC0415
 
     authored = get_authored_scene_payload(controller)
     authored_copy = copy.deepcopy(authored) if isinstance(authored, dict) else {"entities": []}
@@ -246,9 +246,9 @@ def debug_build_macro_door_transition_payload(
 
     Returns (new_payload, created_count, updated_count). Does not mutate scene state by itself.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
     from ...entity_paint_mode import _format_id_number as _fmt  # noqa: PLC0415
     from ...entity_paint_mode import _sanitize_entity_id_token as _san  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id, is_player_entity  # noqa: PLC0415
 
     authored = get_authored_scene_payload(controller)
     authored_copy = copy.deepcopy(authored) if isinstance(authored, dict) else {"entities": []}
@@ -389,8 +389,8 @@ def debug_build_macro_dialogue_choice_flag_payload(
 
     Returns (new_payload, created_count, updated_count). Does not mutate scene state by itself.
     """
-    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id  # noqa: PLC0415
     from ...entity_paint_mode import _sanitize_entity_id_token as _san  # noqa: PLC0415
+    from ...entity_paint_mode import ensure_entities_list, find_entity_by_id  # noqa: PLC0415
 
     authored = get_authored_scene_payload(controller)
     authored_copy = copy.deepcopy(authored) if isinstance(authored, dict) else {"entities": []}

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from typing import Any
 import logging
+from typing import Any
 
 from engine.editor.editor_dock_model import (
-    DockInputs,
-    DockStateSnapshot,
     LEFT_DOCK_TABS,
     RIGHT_DOCK_TABS,
+    DockInputs,
+    DockStateSnapshot,
     build_dock_snapshot,
-    should_focus_project_explorer,
     should_focus_problems_panel,
+    should_focus_project_explorer,
 )
 from engine.editor.editor_shell_layout import DOCK_WIDTH
 from engine.swallowed_exceptions import _log_swallow

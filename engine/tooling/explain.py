@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Tuple
+from typing import Any, Dict, Optional
 
 from engine import json_io
 from engine.tooling.doctor import DoctorRunner
-from engine.tooling.tool_result import ToolResult
 from engine.tooling.issue_mapper import map_issue_to_hint
-
+from engine.tooling.tool_result import ToolResult
 
 _DEFAULT_LAST_FAILURE_PATH = Path(".mesh") / "reports" / "doctor_last_failure.json"
 
@@ -74,7 +73,7 @@ class ExplainRunner:
                 all_issues.append(item)
             for item in report.get("warnings", []):
                 all_issues.append(item)
-            
+
             for issue in all_issues:
                 hint = map_issue_to_hint(issue.get("source", ""), issue.get("message", ""), issue.get("file"))
                 if hint:

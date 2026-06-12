@@ -11,8 +11,6 @@ Tests cover:
 
 from __future__ import annotations
 
-import pytest
-
 from engine.hd2d_debug_model import (
     compute_hd2d_debug_payload,
     extract_sprite_debug_info,

@@ -1,8 +1,9 @@
-from engine.game_state_controller import GameStateController
-from engine.config import EngineConfig
-from engine.behaviours.grant_experience import GrantExperience
-from engine.events import MeshEvent, MeshEventBus
 import arcade
+
+from engine.behaviours.grant_experience import GrantExperience
+from engine.config import EngineConfig
+from engine.events import MeshEvent, MeshEventBus
+from engine.game_state_controller import GameStateController
 
 
 class DummyWindow:

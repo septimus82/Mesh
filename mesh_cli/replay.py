@@ -2,7 +2,6 @@
 
 import argparse
 import json
-import logging
 import sys
 from pathlib import Path
 
@@ -11,6 +10,7 @@ from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 from engine.swallowed_exceptions import _log_swallow
 from engine.tooling import replay_script, replay_suite, trace_command
 from engine.tooling.replay_hash import hash_payload
+
 
 def register(subparsers: argparse._SubParsersAction) -> None:
     # Replay script (deterministic regression runner)
@@ -83,7 +83,7 @@ def _handle_replay_script(args: argparse.Namespace) -> int:
 
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
         return 0
-    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+    except Exception:  # noqa: BLE001  # REASON: cli fallback isolation
         _log_swallow("RPLY-001", "replay_script failed", once=True)
         payload = {"ok": False, "code": 1, "error": "replay_script.failed"}
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
@@ -110,7 +110,7 @@ def _handle_replay_suite(args: argparse.Namespace) -> int:
         except (TypeError, ValueError):
             failed_int = 1
         return 0 if failed_int == 0 else 1
-    except Exception as exc:  # noqa: BLE001  # REASON: cli fallback isolation
+    except Exception:  # noqa: BLE001  # REASON: cli fallback isolation
         _log_swallow("RPLY-002", "replay_suite failed", once=True)
         payload = {"ok": False, "code": 1, "error": "replay_suite.failed"}
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
@@ -195,7 +195,7 @@ def _handle_replay_hash(args: argparse.Namespace) -> int:
         from engine.tooling.perf_command import _get_engine_git_sha
 
         engine_sha = _get_engine_git_sha()
-    except Exception as exc:
+    except Exception:
         _log_swallow("RPLY-006", "_get_engine_git_sha failed", once=True)
         engine_sha = None
 

@@ -1,9 +1,11 @@
-import unittest
-import tempfile
-import shutil
 import json
+import shutil
+import tempfile
+import unittest
 from pathlib import Path
+
 from engine.content_packs import Pack, load_pack, sort_packs, validate_pack_dependencies
+
 
 class TestContentPacks(unittest.TestCase):
     def setUp(self):
@@ -48,7 +50,7 @@ class TestContentPacks(unittest.TestCase):
         # A load_after B -> A overrides B -> A comes before B in list
         pA = Pack(id="A", root=Path("A"), load_after=["B"])
         pB = Pack(id="B", root=Path("B"))
-        
+
         sorted_packs = sort_packs([pB, pA]) # Input order B, A
         # Expected: A, B
         self.assertEqual([p.id for p in sorted_packs], ["A", "B"])
@@ -57,7 +59,7 @@ class TestContentPacks(unittest.TestCase):
         # A load_after B, B load_after A -> Cycle
         pA = Pack(id="A", root=Path("A"), load_after=["B"])
         pB = Pack(id="B", root=Path("B"), load_after=["A"])
-        
+
         sorted_packs = sort_packs([pA, pB])
         # Should fallback to input order or handle gracefully
         # Our implementation prints warning and returns input
@@ -68,14 +70,14 @@ class TestContentPacks(unittest.TestCase):
         pB = Pack(id="B", root=Path("B"), requires=[])
         # B requires A
         pB.requires.append(type("obj", (object,), {"id": "A", "min_version": None, "max_version": None}))
-        
+
         errors = validate_pack_dependencies([pA, pB])
         self.assertEqual(len(errors), 0)
-        
+
         # Missing dependency
         pC = Pack(id="C", root=Path("C"))
         pC.requires.append(type("obj", (object,), {"id": "MISSING", "min_version": None, "max_version": None}))
-        
+
         errors = validate_pack_dependencies([pA, pB, pC])
         self.assertEqual(len(errors), 1)
         self.assertIn("requires missing pack 'MISSING'", errors[0])

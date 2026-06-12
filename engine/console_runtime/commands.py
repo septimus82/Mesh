@@ -1,22 +1,25 @@
+# ruff: noqa: F401
+
 from __future__ import annotations
 
 import json
 import os
 from typing import Any, Callable
 
-from engine.logging_tools import get_logger
-from engine.swallowed_exceptions import _log_swallow
+from engine.console_runtime import (
+    handlers,
+    handlers_ai,
+    handlers_behaviour,
+    handlers_camera,
+    handlers_config,
+    handlers_entity,
+    handlers_inventory,
+    handlers_scene,
+)
 from engine.console_runtime.models import ParsedCommand
 from engine.console_runtime.parse import parse_command_line
-from engine.console_runtime import handlers
-from engine.console_runtime import handlers_ai
-from engine.console_runtime import handlers_behaviour
-from engine.console_runtime import handlers_camera
-from engine.console_runtime import handlers_config
-from engine.console_runtime import handlers_entity
-from engine.console_runtime import handlers_inventory
-from engine.console_runtime import handlers_scene
-
+from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 
 Handler = Callable[[Any, list[str]], bool]
 

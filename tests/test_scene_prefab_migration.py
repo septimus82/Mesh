@@ -50,9 +50,9 @@ def test_migrate_scene_noop_current_version() -> None:
         "schema_version": SCENE_SCHEMA_VERSION,
         "entities": [],
     }
-    
+
     result = migrate_scene(scene)
-    
+
     # Should return the same data (no migration needed)
     assert result["name"] == "Test Scene"
     assert result["schema_version"] == SCENE_SCHEMA_VERSION
@@ -68,9 +68,9 @@ def test_migrate_scene_preserves_data() -> None:
         "entities": [{"x": 100, "y": 200}],
         "tilemap": {"width": 10, "height": 10},
     }
-    
+
     result = migrate_scene(scene)
-    
+
     assert result["name"] == "Test Scene"
     assert result["settings"]["background_color"] == "black"
     assert result["entities"][0]["x"] == 100
@@ -85,9 +85,9 @@ def test_migrate_prefab_noop_current_version() -> None:
         "schema_version": PREFAB_SCHEMA_VERSION,
         "entity": {"sprite": "test.png"},
     }
-    
+
     result = migrate_prefab(prefab)
-    
+
     assert result["id"] == "test_prefab"
     assert result["schema_version"] == PREFAB_SCHEMA_VERSION
 
@@ -106,9 +106,9 @@ def test_migrate_prefab_preserves_data() -> None:
             "behaviours": ["AI"],
         },
     }
-    
+
     result = migrate_prefab(prefab)
-    
+
     assert result["id"] == "test_prefab"
     assert result["base"] == "base_prefab"
     assert result["display_name"] == "Test"
@@ -123,7 +123,7 @@ def test_migrate_scene_adds_version_if_missing() -> None:
         "name": "Old Scene",
         "entities": [],
     }
-    
+
     # Should not raise, should treat as v1
     result = migrate_scene(scene)
     assert result["name"] == "Old Scene"
@@ -136,7 +136,7 @@ def test_migrate_prefab_adds_version_if_missing() -> None:
         "id": "old_prefab",
         "entity": {},
     }
-    
+
     # Should not raise, should treat as v1
     result = migrate_prefab(prefab)
     assert result["id"] == "old_prefab"

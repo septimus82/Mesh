@@ -1,9 +1,10 @@
 import json
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from engine.tooling.validate_all import UnifiedValidator
+
 
 class TestThemeValidation(unittest.TestCase):
     def setUp(self):

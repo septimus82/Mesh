@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Sequence
 
+from .occluders import Rect
 from .shadow_geometry import (
     Point,
     Polygon,
@@ -15,9 +16,7 @@ from .shadow_geometry import (
     ShadowParams,
     compute_shadow_geometry,
     compute_shadow_hulls,
-    normalize_polygon,
 )
-from .occluders import Rect
 
 
 def rect_to_polygon(rect: Rect) -> list[Point]:
@@ -53,17 +52,17 @@ def occluder_config_to_polygon(config: dict[str, Any]) -> list[Point] | None:
             return [(float(p[0]), float(p[1])) for p in points]
         except (TypeError, IndexError, ValueError):
             return None
-    
+
     # Check for rect-style config
     try:
         x = float(config.get("x", 0.0))
         y = float(config.get("y", 0.0))
         width = float(config.get("width", 0.0))
         height = float(config.get("height", 0.0))
-        
+
         if width <= 0 or height <= 0:
             return None
-        
+
         return [
             (x, y),
             (x + width, y),

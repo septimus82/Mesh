@@ -1,17 +1,17 @@
 """
 Contract tests for asset refactoring model (V2).
 """
-import pytest
 from engine.editor.asset_refactor_model import (
-    normalize_repo_rel,
-    compute_move_mapping,
-    scan_scene_references,
-    scan_prefab_references,
-    compute_replacements,
-    apply_replacements,
     AssetReference,
-    Replacement
+    Replacement,
+    apply_replacements,
+    compute_move_mapping,
+    compute_replacements,
+    normalize_repo_rel,
+    scan_prefab_references,
+    scan_scene_references,
 )
+
 
 def test_normalize_repo_rel():
     assert normalize_repo_rel("foo\\bar") == "foo/bar"
@@ -60,9 +60,9 @@ def test_compute_replacements_folder_prefix():
     ]
     mapping = {"assets/chars": "assets/unit_v2"}
     reps = compute_replacements(refs, mapping)
-    
+
     assert len(reps) == 2
-    
+
     val_map = {r.old_value: r.new_value for r in reps}
     assert val_map["assets/chars/hero.png"] == "assets/unit_v2/hero.png"
     assert val_map["assets/chars/villain.png"] == "assets/unit_v2/villain.png"
@@ -75,16 +75,16 @@ def test_apply_replacements_scene_immutability():
         ]
     }
     reps = [Replacement("e1", "sprite", "old.png", "new.png", "k1")]
-    
+
     new_scene = apply_replacements(scene, reps)
-    
+
     assert new_scene["entities"][0]["sprite"] == "new.png"
     assert scene["entities"][0]["sprite"] == "old.png" # Immutable
 
 def test_apply_replacements_nested():
     prefab = {"id": "ROOT", "sprite_sheet": {"image": "old_sheet.png"}}
     reps = [Replacement("ROOT", "sprite_sheet.image", "old_sheet.png", "new_sheet.png", "k1")]
-    
+
     new_prefab = apply_replacements(prefab, reps)
     assert new_prefab["sprite_sheet"]["image"] == "new_sheet.png"
 

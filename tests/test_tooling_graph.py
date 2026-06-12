@@ -2,7 +2,9 @@ import json
 import shutil
 import unittest
 from pathlib import Path
+
 from engine.tooling import graph
+
 
 class TestGraph(unittest.TestCase):
     def setUp(self):
@@ -10,7 +12,7 @@ class TestGraph(unittest.TestCase):
         if self.test_dir.exists():
             shutil.rmtree(self.test_dir)
         self.test_dir.mkdir()
-        
+
         self.world_file = self.test_dir / "world.json"
         self.world_data = {
             "scenes": {
@@ -39,7 +41,7 @@ class TestGraph(unittest.TestCase):
         output_file = self.test_dir / "graph.dot"
         self.assertTrue(graph.export_graph(str(self.world_file), str(output_file)))
         self.assertTrue(output_file.exists())
-        
+
         with open(output_file, "r") as f:
             content = f.read()
             self.assertIn("digraph World {", content)

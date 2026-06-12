@@ -101,8 +101,9 @@ def test_snapshot_functions_ordering_is_deterministic(monkeypatch: pytest.Monkey
 
 def test_artifacts_written_includes_authoring_trace_key() -> None:
     """The artifacts_written dict in verify.py initializes authoring_trace to None."""
-    import mesh_cli.verify as verify_mod
     from pathlib import Path
+
+    import mesh_cli.verify as verify_mod
 
     src = Path(verify_mod.__file__).read_text(encoding="utf-8")
     assert '"authoring_trace": None' in src

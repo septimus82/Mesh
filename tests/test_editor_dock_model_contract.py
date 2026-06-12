@@ -4,8 +4,8 @@ from engine.editor.editor_dock_model import (
     DockInputs,
     build_dock_snapshot,
     compute_active_panel,
-    should_focus_project_explorer,
     should_focus_problems_panel,
+    should_focus_project_explorer,
 )
 
 

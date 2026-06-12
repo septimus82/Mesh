@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Sequence
-import pytest
 
+import pytest
 
 # ---------------------------------------------------------------------------
 # Headless step simulator
@@ -43,7 +43,7 @@ class AnimationStepSimulator:
     elapsed: float = 0.0
     paused: bool = False
     events: list[dict[str, Any]] = field(default_factory=list)
-    
+
     def __post_init__(self) -> None:
         if not self.configs:
             raise ValueError("AnimationStepSimulator requires at least one config")
@@ -51,7 +51,7 @@ class AnimationStepSimulator:
             # Deterministic fallback: sorted first name
             self.active = sorted(self.configs.keys())[0]
         self._clamp_cursor()
-    
+
     def set_animation(self, name: str, *, restart: bool = False) -> bool:
         """Set the active animation, returning True if changed."""
         if name not in self.configs:
@@ -63,29 +63,29 @@ class AnimationStepSimulator:
         self.elapsed = 0.0
         self.paused = False
         return True
-    
+
     def step(self, dt: float) -> list[dict[str, Any]]:
         """Advance animation by dt seconds, returning any emitted events."""
         if dt <= 0 or self.paused:
             return []
-        
+
         config = self.configs.get(self.active)
         if config is None or not config.frames:
             return []
-        
+
         fps = max(config.fps, 0.0001)
         if fps <= 0 or len(config.frames) == 1:
             return []
-        
+
         frame_time = 1.0 / fps
         self.elapsed += float(dt)
         emitted: list[dict[str, Any]] = []
-        
+
         while self.elapsed >= frame_time and not self.paused:
             self.elapsed -= frame_time
             prev_cursor = self.cursor
             self.cursor += 1
-            
+
             if self.cursor >= len(config.frames):
                 if config.loop:
                     self.cursor = 0
@@ -101,10 +101,10 @@ class AnimationStepSimulator:
                     "from": prev_cursor,
                     "to": self.cursor,
                 })
-        
+
         self.events.extend(emitted)
         return emitted
-    
+
     def current_frame(self) -> int:
         """Get the current frame index from the active animation's frames list."""
         config = self.configs.get(self.active)
@@ -112,7 +112,7 @@ class AnimationStepSimulator:
             return 0
         idx = min(max(0, self.cursor), len(config.frames) - 1)
         return config.frames[idx]
-    
+
     def snapshot(self) -> dict[str, Any]:
         """Return a deterministic snapshot of current state."""
         return {
@@ -122,7 +122,7 @@ class AnimationStepSimulator:
             "elapsed": round(self.elapsed, 6),
             "paused": self.paused,
         }
-    
+
     def _clamp_cursor(self) -> None:
         config = self.configs.get(self.active)
         if config is None or not config.frames:
@@ -207,13 +207,13 @@ def test_animation_golden(case: AnimationGoldenCase) -> None:
         configs=dict(case.configs),
         active=case.initial,
     )
-    
+
     actual_frames: list[int] = []
     for dt in case.dt_sequence:
         if actual_frames:  # Don't step on first iteration (initial state)
             sim.step(dt)
         actual_frames.append(sim.current_frame())
-    
+
     assert tuple(actual_frames) == case.expected_frames, (
         f"Frame mismatch for {case.name}:\n"
         f"  Expected: {case.expected_frames}\n"
@@ -227,12 +227,12 @@ def test_animation_golden(case: AnimationGoldenCase) -> None:
 
 class TestAnimationInvariants:
     """Structural invariant tests for animation stepping."""
-    
+
     def test_frame_index_always_in_bounds(self) -> None:
         """Frame index must always be within the frames list bounds."""
         config = AnimationConfig("test", frames=(0, 1, 2, 3, 4), fps=100.0, loop=True)
         sim = AnimationStepSimulator(configs={"test": config}, active="test")
-        
+
         # Rapid stepping with various dt values
         dt_values = [0.001, 0.01, 0.1, 0.5, 1.0, 0.0, -0.1, 0.123456]
         for _ in range(100):
@@ -246,33 +246,33 @@ class TestAnimationInvariants:
                 assert sim.current_frame() in config.frames, (
                     f"frame {sim.current_frame()} not in {config.frames}"
                 )
-    
+
     def test_non_loop_stops_and_stays_stopped(self) -> None:
         """Non-looping animation must stop at last frame and stay stopped."""
         config = AnimationConfig("once", frames=(10, 20, 30), fps=10.0, loop=False)
         sim = AnimationStepSimulator(configs={"once": config}, active="once")
-        
+
         # Step until finished
         for _ in range(10):
             sim.step(0.1)
-        
+
         assert sim.paused, "Non-looping animation should be paused"
         assert sim.cursor == len(config.frames) - 1
         assert sim.current_frame() == 30
-        
+
         # Further stepping should not change state
         for _ in range(10):
             sim.step(0.1)
-        
+
         assert sim.paused
         assert sim.cursor == len(config.frames) - 1
         assert sim.current_frame() == 30
-    
+
     def test_determinism_same_input_same_output(self) -> None:
         """Same config and dt sequence must produce identical results."""
         config = AnimationConfig("det", frames=(0, 1, 2, 3), fps=12.5, loop=True)
         dt_sequence = [0.08, 0.08, 0.08, 0.08, 0.08, 0.16, 0.04]
-        
+
         results: list[list[dict[str, Any]]] = []
         for _ in range(3):
             sim = AnimationStepSimulator(configs={"det": config}, active="det")
@@ -281,7 +281,7 @@ class TestAnimationInvariants:
                 sim.step(dt)
                 snapshots.append(sim.snapshot())
             results.append(snapshots)
-        
+
         # All runs must produce identical snapshot sequences
         for i in range(1, len(results)):
             assert results[i] == results[0], (
@@ -289,18 +289,18 @@ class TestAnimationInvariants:
                 f"  Run 0: {results[0]}\n"
                 f"  Run {i}: {results[i]}"
             )
-    
+
     def test_elapsed_never_negative(self) -> None:
         """Elapsed time accumulator should never go negative."""
         config = AnimationConfig("test", frames=(0, 1, 2), fps=10.0, loop=True)
         sim = AnimationStepSimulator(configs={"test": config}, active="test")
-        
+
         dt_values = [0.05, 0.1, 0.15, 0.001, 0.5]
         for _ in range(50):
             for dt in dt_values:
                 sim.step(dt)
                 assert sim.elapsed >= 0, f"elapsed {sim.elapsed} is negative"
-    
+
     def test_set_animation_resets_state(self) -> None:
         """Setting a new animation must reset cursor and elapsed."""
         configs = {
@@ -308,22 +308,22 @@ class TestAnimationInvariants:
             "b": AnimationConfig("b", frames=(10, 11, 12), fps=10.0, loop=True),
         }
         sim = AnimationStepSimulator(configs=configs, active="a")
-        
+
         # Advance animation a
         sim.step(0.25)  # Should be at cursor 2
         assert sim.cursor > 0
-        
+
         # Switch to b
         sim.set_animation("b")
         assert sim.active == "b"
         assert sim.cursor == 0
         assert sim.elapsed == 0.0
         assert not sim.paused
-    
+
     def test_events_emitted_deterministically(self) -> None:
         """Events must be emitted in deterministic order."""
         config = AnimationConfig("loop", frames=(0, 1, 2), fps=10.0, loop=True)
-        
+
         results: list[list[dict[str, Any]]] = []
         for _ in range(3):
             sim = AnimationStepSimulator(configs={"loop": config}, active="loop")
@@ -332,10 +332,10 @@ class TestAnimationInvariants:
                 events = sim.step(dt)
                 all_events.extend(events)
             results.append(all_events)
-        
+
         for i in range(1, len(results)):
             assert results[i] == results[0], f"Event sequence differs in run {i}"
-        
+
         # Verify at least one loop event occurred
         loop_events = [e for e in results[0] if e.get("event") == "loop"]
         assert len(loop_events) >= 1, "Expected at least one loop event"
@@ -343,7 +343,7 @@ class TestAnimationInvariants:
 
 class TestAnimationEdgeCases:
     """Edge case tests for animation handling."""
-    
+
     def test_empty_frames_handled(self) -> None:
         """Empty frames list should not crash."""
         # AnimationConfig with empty frames
@@ -352,32 +352,32 @@ class TestAnimationEdgeCases:
             configs={"empty": config, "valid": AnimationConfig("valid", frames=(1,), fps=1.0)},
             active="valid",  # Start with valid, then switch
         )
-        
+
         # Should not crash on step
         sim.step(0.1)
         assert sim.current_frame() == 1
-    
+
     def test_very_high_fps(self) -> None:
         """Very high FPS should not cause issues."""
         config = AnimationConfig("fast", frames=(0, 1), fps=10000.0, loop=True)
         sim = AnimationStepSimulator(configs={"fast": config}, active="fast")
-        
+
         # Even small dt should advance multiple frames
         sim.step(0.01)  # 0.01s * 10000fps = 100 frame advances
         # Should have looped many times, cursor in [0, 1]
         assert 0 <= sim.cursor <= 1
-    
+
     def test_very_low_fps(self) -> None:
         """Very low FPS should work correctly."""
         config = AnimationConfig("slow", frames=(0, 1, 2), fps=0.1, loop=True)
         sim = AnimationStepSimulator(configs={"slow": config}, active="slow")
-        
+
         # Need 10 seconds per frame at 0.1 fps
         sim.step(5.0)  # Half a frame time
         assert sim.cursor == 0
         sim.step(5.0)  # Full frame time
         assert sim.cursor == 1
-    
+
     def test_multiple_animations_isolation(self) -> None:
         """Switching animations must not leak state."""
         configs = {
@@ -385,16 +385,16 @@ class TestAnimationEdgeCases:
             "b": AnimationConfig("b", frames=(10, 11), fps=10.0, loop=False),
         }
         sim = AnimationStepSimulator(configs=configs, active="a")
-        
+
         # Progress a
         sim.step(0.3)  # cursor 3
         cursor_a = sim.cursor
-        
+
         # Switch to b, progress until stopped
         sim.set_animation("b")
         sim.step(0.5)  # Should finish
         assert sim.paused
-        
+
         # Switch back to a - must be fresh
         sim.set_animation("a")
         assert not sim.paused
@@ -408,15 +408,15 @@ class TestAnimationEdgeCases:
 
 class TestSpriteAnimatorDeterminism:
     """Tests that SpriteAnimator has deterministic behavior."""
-    
+
     def test_sprite_animator_matches_simulator(self) -> None:
         """SpriteAnimator should match our headless simulator's behavior."""
         from engine.sprite_animator import AnimationDef, SpriteAnimator
-        
+
         # Same config in both
         frames = [0, 1, 2, 3]
         fps = 10.0
-        
+
         anim = SpriteAnimator(
             {"test": AnimationDef(frames=frames, fps=fps, loop=True)},
             initial="test",
@@ -425,7 +425,7 @@ class TestSpriteAnimatorDeterminism:
             configs={"test": AnimationConfig("test", frames=tuple(frames), fps=fps, loop=True)},
             active="test",
         )
-        
+
         dt_sequence = [0.1, 0.1, 0.1, 0.1, 0.1]
         for dt in dt_sequence:
             anim.update(dt)
@@ -435,11 +435,11 @@ class TestSpriteAnimatorDeterminism:
                 f"SpriteAnimator={anim.current_frame_index()}, "
                 f"Simulator={sim.current_frame()}"
             )
-    
+
     def test_sprite_animator_deterministic_across_runs(self) -> None:
         """SpriteAnimator must be deterministic across multiple runs."""
         from engine.sprite_animator import AnimationDef, SpriteAnimator
-        
+
         def run_animation() -> list[int]:
             anim = SpriteAnimator(
                 {"walk": AnimationDef(frames=[0, 1, 2, 3], fps=12.0, loop=True)},
@@ -450,7 +450,7 @@ class TestSpriteAnimatorDeterminism:
                 anim.update(dt)
                 results.append(anim.current_frame_index())
             return results
-        
+
         runs = [run_animation() for _ in range(5)]
         for i in range(1, len(runs)):
             assert runs[i] == runs[0], f"Run {i} differs from run 0"

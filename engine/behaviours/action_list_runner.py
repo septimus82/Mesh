@@ -30,7 +30,6 @@ from ..state_runtime import flags as state_flags
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
 
-
 # =============================================================================
 # Action Type Registry
 # =============================================================================
@@ -115,7 +114,7 @@ class ActionListRunnerBehaviour(Behaviour):
     Implements SaveableBehaviour for deterministic save/restore.
     Action execution order is deterministic.
     """
-    
+
     PARAM_DEFS = {
         "listen_events": ParamDef(list, [], "Event types to listen for"),
         "event_filter": ParamDef(dict, {}, "Event payload filter"),
@@ -126,7 +125,7 @@ class ActionListRunnerBehaviour(Behaviour):
         "require_flags": ParamDef(list, [], "Flags that must be true to trigger"),
         "forbid_flags": ParamDef(list, [], "Flags that must be false to trigger"),
     }
-    
+
     def __init__(self, entity, window, **config) -> None:
         # Initialize private state before super().__init__
         self._enabled: bool = True
@@ -137,15 +136,15 @@ class ActionListRunnerBehaviour(Behaviour):
         self._last_triggered: float = 0.0
         self._cooldown_remaining: float = 0.0
         self._triggered_event: Optional[Dict[str, Any]] = None
-        
+
         super().__init__(entity, window, **config)
-        
+
         # Config
         listen = self.config.get("listen_events", [])
         if isinstance(listen, str):
             listen = [listen]
         self.listen_events: Set[str] = set(str(e) for e in listen if e)
-        
+
         self.event_filter: Dict[str, Any] = dict(self.config.get("event_filter", {}))
         self.actions: List[Dict[str, Any]] = list(self.config.get("actions", []))
         self.run_once: bool = bool(self.config.get("run_once", False))
@@ -153,41 +152,41 @@ class ActionListRunnerBehaviour(Behaviour):
         self._enabled = bool(self.config.get("enabled", True))
         self.require_flags: List[str] = self._normalize_flag_list(self.config.get("require_flags"))
         self.forbid_flags: List[str] = self._normalize_flag_list(self.config.get("forbid_flags"))
-    
+
     @property
     def enabled(self) -> bool:
         """Whether the runner is active."""
         return self._enabled
-    
+
     @enabled.setter
     def enabled(self, value: bool) -> None:
         self._enabled = bool(value)
-    
+
     @property
     def is_running(self) -> bool:
         """Whether actions are currently being executed."""
         return bool(self._pending_actions)
-    
+
     @property
     def run_count(self) -> int:
         """Number of times actions have been triggered."""
         return self._run_count
-    
+
     def _matches_filter(self, payload: Dict[str, Any]) -> bool:
         """Check if event payload matches the filter."""
         if not self.event_filter:
             return True
-        
+
         for key, expected in self.event_filter.items():
             actual = payload.get(key)
             if actual != expected:
                 return False
         return True
-    
+
     def _emit_event(self, event_type: str, **kwargs) -> None:
         """Emit a gameplay event."""
         my_id = getattr(self.entity, "mesh_id", "")
-        
+
         payload = {
             "entity": my_id,
             "entity_name": getattr(self.entity, "mesh_name", ""),
@@ -201,7 +200,7 @@ class ActionListRunnerBehaviour(Behaviour):
             source_entity_id=my_id,
             source_behaviour="ActionListRunner",
         )
-    
+
     def _can_trigger(self) -> bool:
         """Check if action list can be triggered."""
         if not self._enabled:
@@ -259,7 +258,7 @@ class ActionListRunnerBehaviour(Behaviour):
             if name:
                 values.append(name)
         return values
-    
+
     def handle_event(self, event_type: str, payload: Dict[str, Any]) -> bool:
         """Handle an incoming event.
         
@@ -276,7 +275,7 @@ class ActionListRunnerBehaviour(Behaviour):
             return False
         if not self._can_trigger():
             return False
-        
+
         # Start action execution
         self._pending_actions = list(self.actions)
         self._pending_index = 0
@@ -284,16 +283,16 @@ class ActionListRunnerBehaviour(Behaviour):
         self._run_count += 1
         self._cooldown_remaining = self.cooldown
         self._triggered_event = dict(payload)
-        
+
         # Emit start event
         self._emit_event(
             "action_list_started",
             run_count=self._run_count,
             action_count=len(self._pending_actions),
         )
-        
+
         return True
-    
+
     def _execute_action(self, action: Dict[str, Any]) -> bool:
         """Execute a single action.
         
@@ -304,7 +303,7 @@ class ActionListRunnerBehaviour(Behaviour):
             True if action needs to wait (delay), False to continue.
         """
         action_type = str(action.get("type", "")).strip()
-        
+
         if action_type == "emit_event":
             return self._action_emit_event(action)
         elif action_type == "set_flag":
@@ -323,16 +322,16 @@ class ActionListRunnerBehaviour(Behaviour):
             return self._action_start_dialogue(action)
         elif action_type == "delay":
             return self._action_delay(action)
-        
+
         # Unknown action type - skip
         return False
-    
+
     def _action_emit_event(self, action: Dict[str, Any]) -> bool:
         """Execute emit_event action."""
         event_type = str(action.get("event_type", "")).strip()
         if not event_type:
             return False
-        
+
         # Get payload, merging with triggered event if requested
         payload = dict(action.get("payload", {}))
         if action.get("include_trigger_payload"):
@@ -340,123 +339,123 @@ class ActionListRunnerBehaviour(Behaviour):
             merged = dict(trigger_payload)
             merged.update(payload)
             payload = merged
-        
+
         self._emit_event(event_type, **payload)
         return False
-    
+
     def _action_set_flag(self, action: Dict[str, Any], value: bool) -> bool:
         """Execute set_flag or clear_flag action."""
         flag_name = str(action.get("flag", "")).strip()
         if not flag_name:
             return False
-        
+
         # Get game state from window
         game_state_ctrl = getattr(self.window, "game_state_controller", None)
         if game_state_ctrl is None:
             return False
-        
+
         state = getattr(game_state_ctrl, "state", None)
         if state is None:
             return False
-        
+
         state_flags.set_flag(state, flag_name, value)
         return False
-    
+
     def _action_modify_tag(self, action: Dict[str, Any], add: bool) -> bool:
         """Execute add_tag or remove_tag action."""
         tag = str(action.get("tag", "")).strip()
         if not tag:
             return False
-        
+
         # Get target entity
         target = self._resolve_target(action)
         if target is None:
             return False
-        
+
         # Get or create tags list
         tags = getattr(target, "mesh_tags", None)
         if tags is None:
             if add:
                 setattr(target, "mesh_tags", [tag])
             return False
-        
+
         if not isinstance(tags, list):
             tags = list(tags)
             setattr(target, "mesh_tags", tags)
-        
+
         if add:
             if tag not in tags:
                 tags.append(tag)
         else:
             if tag in tags:
                 tags.remove(tag)
-        
+
         return False
-    
+
     def _action_timer(self, action: Dict[str, Any], start: bool) -> bool:
         """Execute start_timer or stop_timer action."""
         # Get target entity
         target = self._resolve_target(action)
         if target is None:
             return False
-        
+
         # Find timer behaviour
         timer_id = str(action.get("timer_id", "")).strip()
         behaviours = getattr(target, "behaviours", None) or []
-        
+
         for behaviour in behaviours:
             if type(behaviour).__name__ != "TimerBehaviour":
                 continue
-            
+
             # Match by timer_id if specified
             if timer_id:
                 behaviour_timer_id = getattr(behaviour, "timer_id", "")
                 if behaviour_timer_id != timer_id:
                     continue
-            
+
             if start:
                 if hasattr(behaviour, "start"):
                     behaviour.start()
             else:
                 if hasattr(behaviour, "stop"):
                     behaviour.stop()
-            
+
             # Only affect first matching timer unless "all" is set
             if not action.get("all"):
                 break
-        
+
         return False
-    
+
     def _action_start_dialogue(self, action: Dict[str, Any]) -> bool:
         """Execute start_dialogue action."""
         # Get target entity
         target = self._resolve_target(action)
         if target is None:
             return False
-        
+
         # Find dialogue runner behaviour
         dialogue_id = str(action.get("dialogue_id", "")).strip()
         behaviours = getattr(target, "behaviours", None) or []
-        
+
         for behaviour in behaviours:
             if type(behaviour).__name__ != "DialogueRunnerBehaviour":
                 continue
-            
+
             # Match by dialogue_id if specified
             if dialogue_id:
                 behaviour_dialogue_id = getattr(behaviour, "dialogue_id", "")
                 if behaviour_dialogue_id != dialogue_id:
                     continue
-            
+
             if hasattr(behaviour, "start"):
                 node_id = action.get("node_id")
                 behaviour.start(node_id)
-            
+
             # Only start first matching dialogue
             break
-        
+
         return False
-    
+
     def _action_delay(self, action: Dict[str, Any]) -> bool:
         """Execute delay action (pause before next action)."""
         duration = float(action.get("duration", 0.0))
@@ -464,7 +463,7 @@ class ActionListRunnerBehaviour(Behaviour):
             self._delay_remaining = duration
             return True  # Needs to wait
         return False
-    
+
     def _resolve_target(self, action: Dict[str, Any]):
         """Resolve target entity from action config.
         
@@ -474,54 +473,54 @@ class ActionListRunnerBehaviour(Behaviour):
         - entity_name: Entity by mesh_name
         """
         target_spec = action.get("target", "self")
-        
+
         if target_spec == "self" or not target_spec:
             return self.entity
-        
+
         # Search for entity by ID or name
         scene_controller = getattr(self.window, "scene_controller", None)
         if scene_controller is None:
             return None
-        
+
         sprites = getattr(scene_controller, "all_sprites", None)
         if sprites is None:
             sprites = getattr(scene_controller, "entities", None)
         if sprites is None:
             return None
-        
+
         for sprite in sprites:
             if getattr(sprite, "mesh_id", None) == target_spec:
                 return sprite
             if getattr(sprite, "mesh_name", None) == target_spec:
                 return sprite
-        
+
         return None
-    
+
     def update(self, dt: float) -> None:
         """Update action execution and cooldowns."""
         # Update cooldown
         if self._cooldown_remaining > 0:
             self._cooldown_remaining = max(0.0, self._cooldown_remaining - dt)
-        
+
         # Process pending actions
         if not self._pending_actions:
             return
-        
+
         # Handle delay
         if self._delay_remaining > 0:
             self._delay_remaining -= dt
             if self._delay_remaining > 0:
                 return  # Still waiting
-        
+
         # Execute actions until delay or completion
         while self._pending_index < len(self._pending_actions):
             action = self._pending_actions[self._pending_index]
             self._pending_index += 1
-            
+
             needs_wait = self._execute_action(action)
             if needs_wait:
                 return  # Wait for delay
-        
+
         # All actions completed
         self._emit_event(
             "action_list_completed",
@@ -531,7 +530,7 @@ class ActionListRunnerBehaviour(Behaviour):
         self._pending_actions = []
         self._pending_index = 0
         self._triggered_event = None
-    
+
     # SaveableBehaviour protocol
     def saveable_state(self) -> Dict[str, Any]:
         """Return JSON-serializable state dict."""
@@ -544,7 +543,7 @@ class ActionListRunnerBehaviour(Behaviour):
             "cooldown_remaining": round(self._cooldown_remaining, 6),
             "triggered_event": self._triggered_event,
         }
-    
+
     def restore_state(self, state: Dict[str, Any]) -> None:
         """Apply previously saved state."""
         self._enabled = bool(state.get("enabled", True))
@@ -554,7 +553,7 @@ class ActionListRunnerBehaviour(Behaviour):
         self._run_count = int(state.get("run_count", 0))
         self._cooldown_remaining = float(state.get("cooldown_remaining", 0.0))
         self._triggered_event = state.get("triggered_event")
-    
+
     def get_inspector_state(self) -> Dict[str, Any]:
         """Return state summary for editor inspection."""
         return {
@@ -653,7 +652,7 @@ def validate_action(
     """
     errors: List[EventConfigError] = []
     path_prefix = f"actions[{index}]"
-    
+
     if not isinstance(action, dict):
         errors.append(EventConfigError(
             entity_id=entity_id,
@@ -662,7 +661,7 @@ def validate_action(
             message=f"action must be a dict, got {type(action).__name__}",
         ))
         return errors
-    
+
     action_type = action.get("type")
     if not action_type:
         errors.append(EventConfigError(
@@ -672,7 +671,7 @@ def validate_action(
             message="action type is required",
         ))
         return errors
-    
+
     action_type = str(action_type).strip()
     if action_type not in VALID_ACTION_TYPES:
         errors.append(EventConfigError(
@@ -682,7 +681,7 @@ def validate_action(
             message=f"unknown action type: {action_type!r}. Valid types: {sorted(VALID_ACTION_TYPES)}",
         ))
         return errors
-    
+
     # Type-specific validation
     if action_type == "emit_event":
         event_type = action.get("event_type")
@@ -700,7 +699,7 @@ def validate_action(
                 behaviour_name=behaviour_name,
                 config_path=f"{path_prefix}.event_type",
             ))
-    
+
     elif action_type in ("set_flag", "clear_flag"):
         flag = action.get("flag")
         if not flag or not str(flag).strip():
@@ -710,7 +709,7 @@ def validate_action(
                 config_path=f"{path_prefix}.flag",
                 message=f"{action_type} requires flag name",
             ))
-    
+
     elif action_type in ("add_tag", "remove_tag"):
         tag = action.get("tag")
         if not tag or not str(tag).strip():
@@ -720,7 +719,7 @@ def validate_action(
                 config_path=f"{path_prefix}.tag",
                 message=f"{action_type} requires tag name",
             ))
-    
+
     elif action_type == "delay":
         duration = action.get("duration")
         if duration is None:
@@ -747,7 +746,7 @@ def validate_action(
                     config_path=f"{path_prefix}.duration",
                     message=f"delay duration must be a number, got {type(duration).__name__}",
                 ))
-    
+
     return errors
 
 
@@ -767,7 +766,7 @@ def validate_action_list_runner_config(
     """
     errors: List[EventConfigError] = []
     behaviour_name = "ActionListRunner"
-    
+
     # Validate listen_events
     listen_events = config.get("listen_events", [])
     if isinstance(listen_events, str):
@@ -795,7 +794,7 @@ def validate_action_list_runner_config(
                     behaviour_name=behaviour_name,
                     config_path=f"listen_events[{i}]",
                 ))
-    
+
     # Validate actions
     actions = config.get("actions", [])
     if not isinstance(actions, list):
@@ -820,7 +819,7 @@ def validate_action_list_runner_config(
                 entity_id=entity_id,
                 behaviour_name=behaviour_name,
             ))
-    
+
     # Validate cooldown
     cooldown = config.get("cooldown", 0.0)
     try:
@@ -849,5 +848,5 @@ def validate_action_list_runner_config(
             behaviour_name=behaviour_name,
         )
         errors.extend(flag_errors)
-    
+
     return errors

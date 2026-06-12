@@ -46,9 +46,7 @@ def handle_perf_run(args: argparse.Namespace) -> int:
     scenes_path = str(getattr(args, "scenes", "") or "").strip()
     if scenes_path:
         from engine.persistence_io import write_json_atomic
-        from engine.tooling.perf_baselines import compare_perf_run_to_baseline
-        from engine.tooling.perf_baselines import load_perf_baseline
-        from engine.tooling.perf_baselines import run_perf_scene_capture
+        from engine.tooling.perf_baselines import compare_perf_run_to_baseline, load_perf_baseline, run_perf_scene_capture
 
         scene_set_path = Path(scenes_path)
         if not scene_set_path.exists():
@@ -118,23 +116,23 @@ def handle_perf_run(args: argparse.Namespace) -> int:
         # We ignore script-specific window args if they conflict with our perf config,
         # but _default_window_factory usually sets up the scene path.
         # We'll replicate _default_window_factory's logic but return a REAL GameWindow.
-        
+
         # NOTE: We are NOT using the lightweight ReplayWindow here.
         config = EngineConfig()
         config.debug_on_start = False
-        
+
         # Respect script start scene if present
         scene_path = script_payload.get("scene_path")
         if scene_path:
-             pass # GameWindow usually loads config.start_scene. 
+             pass # GameWindow usually loads config.start_scene.
                   # We might need to warp after creation if we can't inject it easily.
                   # EngineConfig doesn't usually take start_scene directly, it's in config.json.
-        
+
         # Create real window
         # Force a reasonable resolution for perf consistency
         width, height = 1280, 720
         window = GameWindow(width, height, "Mesh Perf Run", config=config)
-        
+
         # Warp if needed
         if scene_path:
             # We need to manually inject this because GameWindow.__init__ kicks off loading.
@@ -142,7 +140,7 @@ def handle_perf_run(args: argparse.Namespace) -> int:
             # This is tricky because GameWindow loads the start scene immediately.
             # If the script specifies a different scene, we should warp.
             pass
-            
+
         window_ref.append(window)
         return window
 
@@ -173,7 +171,7 @@ def handle_perf_run(args: argparse.Namespace) -> int:
 
         # Measurement
         print(f"[Mesh][Perf] Measuring ({frames} frames)...")
-        
+
         start_time = time.time()
         for _ in range(frames):
             window.on_update(1.0 / 60.0)
@@ -195,7 +193,7 @@ def handle_perf_run(args: argparse.Namespace) -> int:
     if snapshot is None:
         print("[Mesh][Perf] Failed to collect performance stats.")
         return 1
-    
+
     # Report to stdout
     print("\nPerformance Summary:")
     metrics = snapshot.metrics
@@ -243,7 +241,7 @@ def handle_perf_run(args: argparse.Namespace) -> int:
     # Output JSON
     if args.out:
         out_path = Path(args.out)
-        
+
         output_data = asdict(snapshot)
         output_data["meta"] = {
             "replay": str(replay_path),
@@ -255,7 +253,7 @@ def handle_perf_run(args: argparse.Namespace) -> int:
             "thresholds": thresholds,
             "evaluation": evaluation,
         }
-        
+
         json_io.write_json_atomic(out_path, output_data)
         print(f"\n[Mesh][Perf] Report written to {out_path}")
 
@@ -338,8 +336,7 @@ def handle_perf_stage_bench(args: argparse.Namespace) -> int:
 
 def handle_perf_compare(args: argparse.Namespace) -> int:
     from engine.persistence_io import write_json_atomic
-    from engine.tooling.perf_baselines import compare_perf_run_to_baseline
-    from engine.tooling.perf_baselines import load_perf_baseline
+    from engine.tooling.perf_baselines import compare_perf_run_to_baseline, load_perf_baseline
 
     run_path = Path(str(getattr(args, "run", "") or "").strip())
     baseline_path = Path(str(getattr(args, "baseline", "") or "").strip())

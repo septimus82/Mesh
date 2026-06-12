@@ -21,7 +21,6 @@ from typing import Any
 from engine.diagnostics import Diagnostic, DiagnosticLevel
 from engine.log_utils import normalize_path
 
-
 # Schema version for quest state serialization
 QUEST_STATE_SCHEMA_VERSION = 1
 
@@ -84,25 +83,25 @@ class SavedQuestState:
             "quest_id": self.quest_id,
             "state": self.state,
         }
-        
+
         if self.current_step != 0:
             result["current_step"] = self.current_step
-        
+
         if self.counters:
             result["counters"] = dict(sorted(self.counters.items()))
-        
+
         if self.timestamp_started:
             result["timestamp_started"] = self.timestamp_started
-        
+
         if self.timestamp_completed:
             result["timestamp_completed"] = self.timestamp_completed
-        
+
         # Preserve unknown fields under x_ namespace
         if self.x_extra:
             for k, v in sorted(self.x_extra.items()):
                 if k.startswith("x_"):
                     result[k] = v
-        
+
         return result
 
     @classmethod
@@ -110,15 +109,15 @@ class SavedQuestState:
         """Deserialize from dict with safe defaults."""
         if not isinstance(data, dict):
             return cls(quest_id="unknown")
-        
+
         quest_id = str(data.get("quest_id", "") or data.get("id", "") or "").strip()
         if not quest_id:
             quest_id = "unknown"
-        
+
         state = str(data.get("state", "inactive") or "inactive").lower()
         if state not in ("inactive", "active", "completed", "failed"):
             state = "inactive"
-        
+
         current_step = data.get("current_step", 0)
         if current_step is None:
             current_step = 0
@@ -129,7 +128,7 @@ class SavedQuestState:
                 current_step = int(current_step)
             except (TypeError, ValueError):
                 current_step = 0
-        
+
         counters_raw = data.get("counters", {})
         counters: dict[str, int] = {}
         if isinstance(counters_raw, dict):
@@ -141,21 +140,21 @@ class SavedQuestState:
                     counters[key] = int(v)
                 except (TypeError, ValueError):
                     counters[key] = 0
-        
+
         timestamp_started = data.get("timestamp_started")
         if timestamp_started is not None:
             timestamp_started = str(timestamp_started).strip() or None
-        
+
         timestamp_completed = data.get("timestamp_completed")
         if timestamp_completed is not None:
             timestamp_completed = str(timestamp_completed).strip() or None
-        
+
         # Collect x_ extension fields
         x_extra: dict[str, Any] = {}
         for k, v in data.items():
             if isinstance(k, str) and k.startswith("x_"):
                 x_extra[k] = v
-        
+
         return cls(
             quest_id=quest_id,
             state=state,
@@ -179,21 +178,21 @@ def serialize_quest(quest: Any) -> SavedQuestState | None:
     quest_id = getattr(quest, "id", None)
     if not isinstance(quest_id, str) or not quest_id.strip():
         return None
-    
+
     quest_id = quest_id.strip()
-    
+
     state = getattr(quest, "state", "inactive")
     if not isinstance(state, str):
         state = "inactive"
     state = state.lower()
     if state not in ("inactive", "active", "completed", "failed"):
         state = "inactive"
-    
+
     # Get current step if available
     current_step = getattr(quest, "current_step", 0)
     if current_step is None:
         current_step = 0
-    
+
     # Get counters if available
     counters: dict[str, int] = {}
     quest_counters = getattr(quest, "counters", None)
@@ -205,11 +204,11 @@ def serialize_quest(quest: Any) -> SavedQuestState | None:
                     counters[key] = int(v)
                 except (TypeError, ValueError):
                     pass
-    
+
     # Get timestamps if available
     timestamp_started = getattr(quest, "timestamp_started", None)
     timestamp_completed = getattr(quest, "timestamp_completed", None)
-    
+
     return SavedQuestState(
         quest_id=quest_id,
         state=state,
@@ -233,22 +232,22 @@ def serialize_quests(quest_manager: Any) -> dict[str, Any]:
         "schema_version": QUEST_STATE_SCHEMA_VERSION,
         "quests": {},
     }
-    
+
     # Try to get quests from manager
     quests: list[Any] = []
     if hasattr(quest_manager, "get_all_quests"):
         quests = quest_manager.get_all_quests() or []
     elif hasattr(quest_manager, "_quests"):
         quests = list(getattr(quest_manager, "_quests", {}).values())
-    
+
     for quest in quests:
         state = serialize_quest(quest)
         if state is not None:
             result["quests"][state.quest_id] = state.to_dict()
-    
+
     # Sort quests for determinism
     result["quests"] = dict(sorted(result["quests"].items()))
-    
+
     return result
 
 
@@ -272,24 +271,24 @@ def apply_quest_state(
         # Apply state
         if hasattr(quest, "state"):
             quest.state = state.state
-        
+
         # Apply current_step if supported
         if hasattr(quest, "current_step"):
             quest.current_step = state.current_step
-        
+
         # Apply counters if supported
         if hasattr(quest, "counters") and state.counters:
             if isinstance(quest.counters, dict):
                 quest.counters.update(state.counters)
             else:
                 quest.counters = dict(state.counters)
-        
+
         # Apply timestamps if supported
         if hasattr(quest, "timestamp_started") and state.timestamp_started:
             quest.timestamp_started = state.timestamp_started
         if hasattr(quest, "timestamp_completed") and state.timestamp_completed:
             quest.timestamp_completed = state.timestamp_completed
-        
+
         return True
     except Exception as exc:
         _append_diagnostic(
@@ -335,7 +334,7 @@ def apply_quests(
             ),
         )
         return (0, 0)
-    
+
     quests_data = saved_quests.get("quests", saved_quests)
     if not isinstance(quests_data, dict):
         _append_diagnostic(
@@ -350,23 +349,23 @@ def apply_quests(
             ),
         )
         return (0, 0)
-    
+
     applied = 0
     created = 0
-    
+
     for quest_id, quest_dict in quests_data.items():
         if not isinstance(quest_dict, dict):
             continue
-        
+
         state = SavedQuestState.from_dict(quest_dict)
-        
+
         # Try to find existing quest
         quest = None
         if hasattr(quest_manager, "get_quest"):
             quest = quest_manager.get_quest(state.quest_id)
         elif hasattr(quest_manager, "_quests"):
             quest = quest_manager._quests.get(state.quest_id)
-        
+
         if quest is not None:
             # Update existing quest
             if apply_quest_state(
@@ -417,7 +416,7 @@ def apply_quests(
                         hint="Provide quest definitions before loading saves with new quests.",
                     ),
                 )
-    
+
     return (applied, created)
 
 
@@ -431,25 +430,25 @@ def migrate_quest_state_v0(data: dict[str, Any]) -> dict[str, Any]:
     """
     # Add schema version
     data["schema_version"] = QUEST_STATE_SCHEMA_VERSION
-    
+
     quests = data.get("quests", {})
     if isinstance(quests, dict):
         for quest_id, quest_data in quests.items():
             if not isinstance(quest_data, dict):
                 continue
-            
+
             # Normalize quest_id
             if "quest_id" not in quest_data and "id" in quest_data:
                 quest_data["quest_id"] = quest_data.pop("id")
             if "quest_id" not in quest_data:
                 quest_data["quest_id"] = quest_id
-            
+
             # Normalize state
             if "state" not in quest_data and "status" in quest_data:
                 quest_data["state"] = quest_data.pop("status")
-            
+
             # Ensure counters exists
             if "counters" not in quest_data:
                 quest_data["counters"] = {}
-    
+
     return data

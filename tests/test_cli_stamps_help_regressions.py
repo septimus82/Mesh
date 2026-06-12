@@ -1,7 +1,5 @@
 import sys
 
-import pytest
-
 from tests.subprocess_tools import run_checked
 
 

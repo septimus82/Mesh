@@ -1,13 +1,9 @@
-import ast
-import pathlib
 import unittest
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-import engine.scene_controller as scene_controller_module
 from engine.scene_controller import SceneController
-
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 

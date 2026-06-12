@@ -5,7 +5,6 @@ from typing import Any
 
 from . import json_io
 
-
 SAVE_FORMAT_VERSION = 1
 
 

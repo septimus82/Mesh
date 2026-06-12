@@ -5,13 +5,11 @@ import time
 from pathlib import Path
 from typing import Any
 
-import engine.optional_arcade as optional_arcade
+from engine.behaviours.utils import describe_zone_behaviour
+from engine.editor.state import TOOL_MODE_PATH, TOOL_MODE_ZONE
 from engine.swallowed_exceptions import format_swallowed_summary
 from engine.swallowed_exceptions import reset as reset_swallowed_exceptions
-
 from engine.ui_overlays.common import draw_panel_bg
-from engine.editor.state import TOOL_MODE_PATH, TOOL_MODE_ZONE
-from engine.behaviours.utils import describe_zone_behaviour
 
 
 class EditorDebugOverlayController:

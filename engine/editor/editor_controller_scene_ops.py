@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from typing import Any
+
 from engine.editor.state import SCENE_SWITCHER_RECENT_LIMIT
 from engine.path_norm import normalize_scene_path
+
 
 def record_recent_scene(self, scene_path: str):
     normalized = normalize_scene_path(scene_path)

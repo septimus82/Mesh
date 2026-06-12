@@ -1,7 +1,9 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from engine.tooling import preset_commands
 from tests.utils.args_factory import make_run_preset_args
+
 
 class TestRunPreset(unittest.TestCase):
     @patch("engine.tooling.preset_commands.load_config")
@@ -20,11 +22,11 @@ class TestRunPreset(unittest.TestCase):
             },
             world_file="worlds/main.json"
         )
-        
+
         args = make_run_preset_args(name="ci_check")
-        
+
         preset_commands.run_preset_command(args)
-        
+
         mock_release.assert_called()
         call_args = mock_release.call_args[0][0]
         self.assertEqual(call_args.world_path, "worlds/main.json")

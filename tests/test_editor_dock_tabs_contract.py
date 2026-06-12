@@ -10,23 +10,18 @@ Tests for:
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from engine.editor.editor_shell_layout import (
-    DOCK_WIDTH,
     TAB_HEADER_HEIGHT,
-    TAB_PADDING,
-    Rect,
     DockTabRects,
     DockTabState,
-    EditorShellLayout,
-    compute_editor_shell_layout,
     compute_dock_tab_rects,
-    hit_test_dock_tab,
+    compute_editor_shell_layout,
     get_dock_tab_options,
+    hit_test_dock_tab,
 )
 from engine.workspace_settings import (
     WorkspaceSettings,
@@ -34,7 +29,6 @@ from engine.workspace_settings import (
     save_workspace,
 )
 from tests._dock_stub import make_dock_stub
-
 
 # ------------------------------------------------------------------------------
 # Dock Tab Geometry Tests
@@ -246,7 +240,6 @@ class TestDockTabStateSwitching:
 
     def test_set_dock_tab_left_scene(self, mock_controller):
         """Switching left dock to Scene should update state."""
-        from engine.editor_controller import EditorModeController
 
         # Test pure state logic
         mock_controller.dock.left_tab = "Outliner"

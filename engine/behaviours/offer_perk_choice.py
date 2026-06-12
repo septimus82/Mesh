@@ -126,7 +126,7 @@ class OfferPerkChoice(Behaviour):
         if input_mgr is None:
             ctrl = getattr(self.window, "input_controller", None)
             input_mgr = getattr(ctrl, "manager", None)
-        
+
         if input_mgr is None:
             return
 

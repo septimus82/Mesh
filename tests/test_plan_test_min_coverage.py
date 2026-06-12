@@ -1,6 +1,7 @@
 import unittest
-from pathlib import Path
-from engine.tooling.plan_tester import PlanTester, TestReport
+
+from engine.tooling.plan_tester import TestReport
+
 
 class TestPlanTestMinCoverage(unittest.TestCase):
     def test_coverage_ratio(self):
@@ -10,7 +11,7 @@ class TestPlanTestMinCoverage(unittest.TestCase):
             coverage={"actions_total": 10, "actions_covered": 8}
         )
         self.assertEqual(report.coverage_ratio, 0.8)
-        
+
         report_empty = TestReport(
             passed=True,
             tests=[],

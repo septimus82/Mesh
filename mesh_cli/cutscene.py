@@ -67,10 +67,10 @@ def _parse_dt_schedule(dt_str: str, dt_repeat: int) -> list[float]:
     """Parse dt string into schedule list."""
     if not dt_str:
         return [0.0]
-    
+
     parts = dt_str.split(",")
     schedule: list[float] = []
-    
+
     for part in parts:
         part = part.strip()
         if not part:
@@ -80,14 +80,14 @@ def _parse_dt_schedule(dt_str: str, dt_repeat: int) -> list[float]:
             schedule.append(value)
         except ValueError:
             continue
-    
+
     if not schedule:
         schedule = [0.0]
-    
+
     # If single value and repeat > 1, repeat it
     if len(schedule) == 1 and dt_repeat > 1:
         schedule = schedule * dt_repeat
-    
+
     return schedule
 
 
@@ -107,7 +107,7 @@ def _parse_flags(flags_str: str) -> dict[str, bool]:
 def _handle_simulate(args: argparse.Namespace) -> int:
     """Handle cutscene-simulate command."""
     from engine.cutscene_runtime.runner import simulate_cutscene
-    
+
     script_path = Path(args.script)
     if not script_path.exists():
         result: dict[str, Any] = {
@@ -118,7 +118,7 @@ def _handle_simulate(args: argparse.Namespace) -> int:
         }
         sys.stdout.write(dumps_json_deterministic(result, indent=2, sort_keys=True, trailing_newline=True))
         return 1
-    
+
     try:
         with script_path.open("r", encoding="utf-8") as f:
             script = json.load(f)
@@ -131,14 +131,14 @@ def _handle_simulate(args: argparse.Namespace) -> int:
         }
         sys.stdout.write(dumps_json_deterministic(result, indent=2, sort_keys=True, trailing_newline=True))
         return 1
-    
+
     # Parse arguments
     dt_schedule = _parse_dt_schedule(args.dt, args.dt_repeat)
     flags = _parse_flags(args.flags)
-    
+
     # Run simulation
     simulation_result = simulate_cutscene(script, dt_schedule, flags=flags)
-    
+
     # Build output
     output: dict[str, Any] = {
         "ok": simulation_result["ok"],
@@ -146,7 +146,7 @@ def _handle_simulate(args: argparse.Namespace) -> int:
         "dt_schedule": dt_schedule,
         "dt_count": len(dt_schedule),
     }
-    
+
     if simulation_result["ok"]:
         output["final_state"] = simulation_result["final_state"]
         output["step_count"] = len(simulation_result["steps"])
@@ -155,17 +155,17 @@ def _handle_simulate(args: argparse.Namespace) -> int:
             if e["type"] not in ("cutscene_started", "cutscene_completed", "cutscene_stopped")
         ])
         output["flags"] = simulation_result.get("flags", {})
-        
+
         if args.verbose:
             output["steps"] = simulation_result["steps"]
             output["emitted_events"] = simulation_result["emitted_events"]
     else:
         output["errors"] = simulation_result["errors"]
-    
+
     # Write output
     if args.out:
         write_json_atomic(Path(args.out), output, indent=2, sort_keys=True, trailing_newline=True)
-    
+
     sys.stdout.write(dumps_json_deterministic(output, indent=2, sort_keys=True, trailing_newline=True))
     return 0 if simulation_result["ok"] else 1
 
@@ -176,7 +176,7 @@ def _handle_validate(args: argparse.Namespace) -> int:
         migrate_cutscene_script,
         validate_cutscene_script,
     )
-    
+
     script_path = Path(args.path)
     if not script_path.exists():
         result: dict[str, Any] = {
@@ -187,7 +187,7 @@ def _handle_validate(args: argparse.Namespace) -> int:
         }
         sys.stdout.write(dumps_json_deterministic(result, indent=2, sort_keys=True, trailing_newline=True))
         return 1
-    
+
     try:
         with script_path.open("r", encoding="utf-8") as f:
             script = json.load(f)
@@ -200,7 +200,7 @@ def _handle_validate(args: argparse.Namespace) -> int:
         }
         sys.stdout.write(dumps_json_deterministic(result, indent=2, sort_keys=True, trailing_newline=True))
         return 1
-    
+
     # Migrate
     try:
         script = migrate_cutscene_script(script)
@@ -213,10 +213,10 @@ def _handle_validate(args: argparse.Namespace) -> int:
         }
         sys.stdout.write(dumps_json_deterministic(result, indent=2, sort_keys=True, trailing_newline=True))
         return 1
-    
+
     # Validate
     errors = validate_cutscene_script(script, file_path=str(script_path))
-    
+
     result = {
         "ok": len(errors) == 0,
         "script": str(script_path),
@@ -232,10 +232,10 @@ def _handle_validate(args: argparse.Namespace) -> int:
             for e in errors
         ],
     }
-    
+
     # Write output
     if args.out:
         write_json_atomic(Path(args.out), result, indent=2, sort_keys=True, trailing_newline=True)
-    
+
     sys.stdout.write(dumps_json_deterministic(result, indent=2, sort_keys=True, trailing_newline=True))
     return 0 if result["ok"] else 1

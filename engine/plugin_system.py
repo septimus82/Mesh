@@ -45,7 +45,6 @@ from typing import Any, Dict, List, Optional
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
-
 logger = get_logger(__name__)
 
 

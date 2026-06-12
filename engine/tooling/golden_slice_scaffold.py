@@ -10,6 +10,7 @@ from typing import Any
 
 from engine import json_io
 
+
 @dataclass(frozen=True, slots=True)
 class ScaffoldSpec:
     location: str

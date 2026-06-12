@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from unittest.mock import patch
-
-from engine.lighting import LightManager
 
 
 def test_render_shadow_mask_returns_texture_on_fbo_failure() -> None:

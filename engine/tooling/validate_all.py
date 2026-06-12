@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 from typing import List
 
-from engine.tooling_runtime.run import UnifiedValidatorCore
 from engine.tooling_runtime.discovery import resolve_validation_targets
+from engine.tooling_runtime.run import UnifiedValidatorCore
 from engine.validators.prefab_validator import PrefabValidator
 from engine.validators.transition_validator import TransitionValidator
 from engine.validators.variant_validator import VariantValidator

@@ -1,6 +1,7 @@
-import unittest
 import json
+import unittest
 from pathlib import Path
+
 
 class TestBossRewardTiers(unittest.TestCase):
     def setUp(self):
@@ -27,7 +28,7 @@ class TestBossRewardTiers(unittest.TestCase):
 
         drop_table = boss.get("behaviour_config", {}).get("DropTable", {})
         drops = drop_table.get("drops", [])
-        
+
         found_item = False
         for drop in drops:
             item_id = drop.get("item_id")
@@ -37,7 +38,7 @@ class TestBossRewardTiers(unittest.TestCase):
                 self.assertIsNotNone(item, "warden_mace not defined in items.json")
                 tier = item.get("effects", {}).get("tier")
                 self.assertEqual(tier, 2, "Ridge Boss item should be Tier 2")
-        
+
         self.assertTrue(found_item, "Ridge Boss missing warden_mace drop")
 
     def test_hollow_boss_rewards(self):
@@ -48,7 +49,7 @@ class TestBossRewardTiers(unittest.TestCase):
 
         drop_table = boss.get("behaviour_config", {}).get("DropTable", {})
         drops = drop_table.get("drops", [])
-        
+
         found_item = False
         for drop in drops:
             item_id = drop.get("item_id")
@@ -58,7 +59,7 @@ class TestBossRewardTiers(unittest.TestCase):
                 self.assertIsNotNone(item, "shadow_blade not defined in items.json")
                 tier = item.get("effects", {}).get("tier")
                 self.assertEqual(tier, 3, "Hollow Boss item should be Tier 3")
-        
+
         self.assertTrue(found_item, "Hollow Boss missing shadow_blade drop")
 
     def test_ashen_boss_rewards(self):
@@ -69,7 +70,7 @@ class TestBossRewardTiers(unittest.TestCase):
 
         drop_table = boss.get("behaviour_config", {}).get("DropTable", {})
         drops = drop_table.get("drops", [])
-        
+
         found_item = False
         for drop in drops:
             item_id = drop.get("item_id")
@@ -79,7 +80,7 @@ class TestBossRewardTiers(unittest.TestCase):
                 self.assertIsNotNone(item, "cinder_staff not defined in items.json")
                 tier = item.get("effects", {}).get("tier")
                 self.assertEqual(tier, 3, "Ashen Boss item should be Tier 3")
-        
+
         self.assertTrue(found_item, "Ashen Boss missing cinder_staff drop")
 
 if __name__ == "__main__":

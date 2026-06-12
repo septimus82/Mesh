@@ -10,7 +10,6 @@ from engine.editor.editor_commands_registry import (
     run_command,
 )
 
-
 __all__ = [
     "Command",
     "filter_commands",

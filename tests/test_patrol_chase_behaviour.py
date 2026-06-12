@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import math
-
 
 def test_patrol_chase_patrols_when_no_target() -> None:
     from engine.behaviours.patrol_chase import PatrolChaseBehaviour
