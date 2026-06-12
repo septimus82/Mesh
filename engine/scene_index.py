@@ -10,7 +10,6 @@ from engine.paths import resolve_path
 from engine.swallowed_exceptions import _log_swallow
 
 
-
 def _non_empty_str(value: object | None) -> str | None:
     if value is None:
         return None

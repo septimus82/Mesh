@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
 import engine.optional_arcade as optional_arcade
 
 from . import json_io

@@ -10,11 +10,11 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Tuple
 
-from engine.editor.editor_session_query import get_session_snapshot
 from engine.editor.editor_modal_state_query import (
     is_scene_browser_active,
     is_unsaved_changes_pending,
 )
+from engine.editor.editor_session_query import get_session_snapshot
 
 
 class HoverHighlightKind(str, Enum):

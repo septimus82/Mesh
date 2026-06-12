@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 from engine.editor_status import (
     HINT_LABEL,
-    build_editor_status,
     build_editor_operation_banner,
+    build_editor_status,
 )
 
 

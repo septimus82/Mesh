@@ -37,7 +37,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from typing import Any, Iterator, Sequence
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,13 +51,13 @@ class GameplayEvent:
         source_entity: Optional ID of the entity that emitted the event.
         source_behaviour: Optional name of the behaviour that emitted the event.
     """
-    
+
     event_type: str
     payload: dict[str, Any]
     sequence: int
     source_entity: str = ""
     source_behaviour: str = ""
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to JSON-serializable dictionary."""
         return {
@@ -67,7 +67,7 @@ class GameplayEvent:
             "source_entity": self.source_entity,
             "source_behaviour": self.source_behaviour,
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "GameplayEvent":
         """Create from dictionary."""
@@ -91,7 +91,7 @@ class GameplayEventBus:
     Attributes:
         include_in_digest: Whether to include pending events in world digest.
     """
-    
+
     include_in_digest: bool = True
     _queue: list[GameplayEvent] = field(default_factory=list)
     _next_sequence: int = field(default=0)
@@ -99,7 +99,7 @@ class GameplayEventBus:
     _history_limit: int = field(default=100)
     _entity_history: dict[str, list[GameplayEvent]] = field(default_factory=dict)
     _entity_history_limit: int = field(default=20)
-    
+
     def emit(
         self,
         event_type: str,
@@ -121,7 +121,7 @@ class GameplayEventBus:
         """
         # Normalize payload for determinism
         normalized_payload = _normalize_payload(payload)
-        
+
         event = GameplayEvent(
             event_type=str(event_type).strip(),
             payload=normalized_payload,
@@ -132,14 +132,14 @@ class GameplayEventBus:
         self._next_sequence += 1
         self._queue.append(event)
         return event
-    
+
     def emit_event(self, event: GameplayEvent) -> None:
         """Re-emit an existing event (useful for replay).
         
         The event keeps its original sequence number.
         """
         self._queue.append(event)
-    
+
     def drain(self) -> list[GameplayEvent]:
         """Remove and return all pending events in order.
         
@@ -149,7 +149,7 @@ class GameplayEventBus:
         # Sort by sequence to ensure deterministic order
         events = sorted(self._queue, key=lambda e: e.sequence)
         self._queue.clear()
-        
+
         # Add to history
         for event in events:
             self._history.append(event)
@@ -163,9 +163,9 @@ class GameplayEventBus:
                     entity_list.pop(0)
         while len(self._history) > self._history_limit:
             self._history.pop(0)
-        
+
         return events
-    
+
     def peek(self) -> list[GameplayEvent]:
         """Return pending events without removing them.
         
@@ -173,7 +173,7 @@ class GameplayEventBus:
             Copy of pending events in sequence order.
         """
         return sorted(self._queue, key=lambda e: e.sequence)
-    
+
     def clear(self) -> int:
         """Remove all pending events.
         
@@ -183,11 +183,11 @@ class GameplayEventBus:
         count = len(self._queue)
         self._queue.clear()
         return count
-    
+
     def pending_count(self) -> int:
         """Return the number of pending events."""
         return len(self._queue)
-    
+
     def get_history(self, limit: int = 10) -> list[GameplayEvent]:
         """Return recent processed events.
         
@@ -198,7 +198,7 @@ class GameplayEventBus:
             Most recent processed events.
         """
         return self._history[-limit:]
-    
+
     def get_entity_history(self, entity_id: str, limit: int = 10) -> list[GameplayEvent]:
         """Return recent events for a specific entity.
         
@@ -211,7 +211,7 @@ class GameplayEventBus:
         """
         entity_list = self._entity_history.get(entity_id, [])
         return entity_list[-limit:]
-    
+
     def get_event_log_summary(
         self,
         entity_id: str | None = None,
@@ -230,7 +230,7 @@ class GameplayEventBus:
             events = self.get_entity_history(entity_id, limit)
         else:
             events = self.get_history(limit)
-        
+
         return [
             {
                 "seq": e.sequence,
@@ -241,7 +241,7 @@ class GameplayEventBus:
             }
             for e in events
         ]
-    
+
     def set_history_limit(self, global_limit: int = 100, entity_limit: int = 20) -> None:
         """Configure history limits.
         
@@ -251,14 +251,14 @@ class GameplayEventBus:
         """
         self._history_limit = max(1, int(global_limit))
         self._entity_history_limit = max(1, int(entity_limit))
-        
+
         # Trim if needed
         while len(self._history) > self._history_limit:
             self._history.pop(0)
         for entity_list in self._entity_history.values():
             while len(entity_list) > self._entity_history_limit:
                 entity_list.pop(0)
-    
+
     def digest(self) -> str:
         """Compute a deterministic digest of pending events.
         
@@ -269,15 +269,15 @@ class GameplayEventBus:
         """
         if not self.include_in_digest:
             return ""
-        
+
         # Sort by sequence for determinism
         events = sorted(self._queue, key=lambda e: e.sequence)
-        
+
         # Build deterministic representation
         data = [e.to_dict() for e in events]
         json_str = json.dumps(data, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(json_str.encode()).hexdigest()[:32]
-    
+
     def saveable_state(self) -> dict[str, Any]:
         """Return state for serialization.
         
@@ -289,7 +289,7 @@ class GameplayEventBus:
             "next_sequence": self._next_sequence,
             "pending_events": [e.to_dict() for e in events],
         }
-    
+
     def restore_state(self, state: dict[str, Any]) -> None:
         """Restore state from serialization.
         
@@ -298,7 +298,7 @@ class GameplayEventBus:
         """
         self._next_sequence = int(state.get("next_sequence", 0))
         self._queue.clear()
-        
+
         pending = state.get("pending_events") or []
         for event_data in pending:
             if isinstance(event_data, dict):
@@ -348,13 +348,13 @@ class EventConfigError:
         message: Human-readable error message.
         hint: Actionable fix suggestion.
     """
-    
+
     entity_id: str
     behaviour_name: str
     config_path: str
     message: str
     hint: str = ""
-    
+
     def __str__(self) -> str:
         base = f"[{self.entity_id}:{self.behaviour_name}] {self.config_path}: {self.message}"
         if self.hint:
@@ -381,7 +381,7 @@ def validate_event_type(
         List of validation errors (empty if valid).
     """
     errors: list[EventConfigError] = []
-    
+
     if event_type is None:
         errors.append(EventConfigError(
             entity_id=entity_id,
@@ -390,7 +390,7 @@ def validate_event_type(
             message="event_type is required",
         ))
         return errors
-    
+
     if not isinstance(event_type, str):
         errors.append(EventConfigError(
             entity_id=entity_id,
@@ -399,7 +399,7 @@ def validate_event_type(
             message=f"event_type must be a string, got {type(event_type).__name__}",
         ))
         return errors
-    
+
     event_type = event_type.strip()
     if not event_type:
         errors.append(EventConfigError(
@@ -409,7 +409,7 @@ def validate_event_type(
             message="event_type cannot be empty",
         ))
         return errors
-    
+
     # Check for valid characters (alphanumeric, underscores)
     if not all(c.isalnum() or c == "_" for c in event_type):
         errors.append(EventConfigError(
@@ -418,5 +418,5 @@ def validate_event_type(
             config_path=config_path,
             message="event_type must contain only alphanumeric characters and underscores",
         ))
-    
+
     return errors

@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
+from engine import savegame
 from engine.persistence_io import SAVE_FORMAT_VERSION, migrate_save_payload
 from engine.save_manager import SaveManager
-from engine import savegame
 
 
 def test_migrate_v0_payload_inserts_version():

@@ -251,6 +251,7 @@ def handle_command_palette_navigate(window: Any, direction: int) -> bool:
 def handle_command_palette_activate(window: Any, snapshot: "CaptureFocusSnapshot", *, repeat: bool) -> bool:
     """Handle command palette activation (ENTER or Ctrl+ENTER for repeat)."""
     import json as _json  # noqa: PLC0415
+
     from engine.command_palette import (  # noqa: PLC0415
         build_default_commands,
         filter_commands,

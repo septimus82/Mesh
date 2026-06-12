@@ -8,19 +8,18 @@ from __future__ import annotations
 import pytest
 
 from engine.editor.editor_scale_ops import (
-    ScaleEntityCommand,
-    ScaleEntitiesCommand,
     MIN_SCALE,
+    ScaleEntitiesCommand,
+    ScaleEntityCommand,
+    apply_scale_entities,
+    apply_scale_entity,
     clamp_scale,
     compute_scale_factor,
-    snap_scale_factor,
-    apply_scale_entity,
-    apply_scale_entities,
-    invert_scale_entity,
-    invert_scale_entities,
     create_scale_entities_command_from_drag,
+    invert_scale_entities,
+    invert_scale_entity,
+    snap_scale_factor,
 )
-
 
 # -----------------------------------------------------------------------------
 # clamp_scale
@@ -86,7 +85,6 @@ class TestComputeScaleFactor:
 
     def test_diagonal_distances(self) -> None:
         # Test with diagonal vectors
-        import math
         # Start at (10, 10), end at (20, 20) from pivot (0, 0)
         # start_dist = sqrt(200) ≈ 14.14
         # end_dist = sqrt(800) ≈ 28.28

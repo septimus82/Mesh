@@ -6,8 +6,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Type
 
-from engine.paths import resolve_path
 from engine.behaviours import load_builtin_behaviours
+from engine.paths import resolve_path
+from engine.swallowed_exceptions import _log_swallow
 from engine.tooling_runtime import discovery, json_lines
 from engine.validators.prefab_validator import PrefabValidator
 from engine.validators.reference_validator import ReferenceValidator
@@ -15,15 +16,16 @@ from engine.validators.schema_validation import (
     ValidationError,
     render_validation_error_line,
     sort_validation_errors,
+)
+from engine.validators.schema_validation import (
     validate_scene as schema_validate_scene,
+)
+from engine.validators.schema_validation import (
     validate_world as schema_validate_world,
 )
+from engine.validators.theme_spawn_variant_override_validator import validate_theme_spawn_variant_override_settings
 from engine.validators.transition_validator import TransitionValidator
 from engine.validators.variant_validator import VariantValidator
-from engine.validators.theme_spawn_variant_override_validator import validate_theme_spawn_variant_override_settings
-from engine.logging_tools import get_logger
-from engine.swallowed_exceptions import _log_swallow
-
 
 
 class UnifiedValidatorCore:

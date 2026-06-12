@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING
 
 import engine.optional_arcade as optional_arcade
 
-from .common import (
-    UIElement,
-    _draw_tb_rectangle_outline,
-    _draw_rectangle_filled,
-)
 from ..input_hints import get_action_hint, set_keyboard_hints
 from ..text_draw import TextCache, draw_text_cached
+from .common import (
+    UIElement,
+    _draw_rectangle_filled,
+    _draw_tb_rectangle_outline,
+)
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow

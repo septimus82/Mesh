@@ -29,7 +29,7 @@ def test_explain_json_schema(monkeypatch, capsys):
     assert isinstance(payload["root_causes"], list)
     assert isinstance(payload["files"], list)
     assert isinstance(payload["suggested_fixes"], list)
-    
+
     # Check content
     assert len(payload["files"]) > 0
     assert "packs/core/scenes/test_scene.json" in payload["files"][0]

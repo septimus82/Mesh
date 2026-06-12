@@ -18,8 +18,8 @@ from .ops import (
     redo_last,
     save_current_scene,
     select_palette_index,
-    toggle_occluder_tool,
     toggle_lights_tool,
+    toggle_occluder_tool,
     toggle_palette,
     undo_last,
 )

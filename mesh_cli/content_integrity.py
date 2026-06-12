@@ -12,7 +12,6 @@ from engine.diagnostics import Diagnostic, DiagnosticLevel, sort_diagnostics
 from engine.log_utils import normalize_path
 from engine.persistence_io import dumps_json_deterministic
 
-
 SCHEMA_VERSION = 1
 
 EVENTS_REL = Path("assets/data/events.json")

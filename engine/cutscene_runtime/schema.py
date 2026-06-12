@@ -25,9 +25,7 @@ Validation produces CutsceneValidationError objects with:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any, Callable
-
 
 # Current cutscene script schema version.
 # Increment when adding new required fields or changing semantics.
@@ -58,7 +56,7 @@ class CutsceneValidationError:
     code: str  # Machine-readable error code
     message: str  # Human-readable error
     hint: str = ""  # Actionable fix suggestion
-    
+
     def __str__(self) -> str:
         parts = [f"[{self.code}]"]
         if self.file_path:
@@ -96,12 +94,12 @@ def _migrate_v0_to_v1(data: dict[str, Any]) -> dict[str, Any]:
     - Consistent command field naming
     """
     data["schema_version"] = 1
-    
+
     # Normalize commands array
     commands = data.get("commands")
     if not isinstance(commands, list):
         data["commands"] = []
-    
+
     # Normalize command types (e.g., "delay" -> "wait")
     for cmd in data.get("commands", []):
         if not isinstance(cmd, dict):
@@ -109,7 +107,7 @@ def _migrate_v0_to_v1(data: dict[str, Any]) -> dict[str, Any]:
         cmd_type = cmd.get("type", "")
         if cmd_type == "delay":
             cmd["type"] = "wait"
-    
+
     return data
 
 
@@ -128,14 +126,14 @@ def migrate_cutscene_script(data: dict[str, Any]) -> dict[str, Any]:
     """
     if not isinstance(data, dict):
         return {"schema_version": CUTSCENE_SCHEMA_VERSION, "commands": []}
-    
+
     # Determine current version
     raw_version = data.get("schema_version", 0)
     try:
         version = int(raw_version)
     except (TypeError, ValueError):
         version = 0
-    
+
     # Reject future versions
     if version > CUTSCENE_SCHEMA_VERSION:
         raise ValueError(
@@ -143,7 +141,7 @@ def migrate_cutscene_script(data: dict[str, Any]) -> dict[str, Any]:
             f"this game supports up to v{CUTSCENE_SCHEMA_VERSION}). "
             f"Please update your game."
         )
-    
+
     # Apply migrations sequentially
     while version < CUTSCENE_SCHEMA_VERSION:
         migration = _CUTSCENE_MIGRATIONS.get(version)
@@ -154,7 +152,7 @@ def migrate_cutscene_script(data: dict[str, Any]) -> dict[str, Any]:
         else:
             data = migration(data)
             version = data.get("schema_version", version + 1)
-    
+
     return data
 
 
@@ -179,7 +177,7 @@ def validate_cutscene_command(
     """
     errors: list[CutsceneValidationError] = []
     base_path = f"commands[{command_index}]"
-    
+
     if not isinstance(command, dict):
         errors.append(CutsceneValidationError(
             file_path=file_path,
@@ -189,7 +187,7 @@ def validate_cutscene_command(
             hint="Wrap command data in curly braces {}",
         ))
         return errors
-    
+
     # Required: type
     cmd_type = command.get("type")
     if not cmd_type or not isinstance(cmd_type, str) or not cmd_type.strip():
@@ -201,7 +199,7 @@ def validate_cutscene_command(
             hint=f"Add a command type like \"type\": \"wait\". Valid types: {sorted(VALID_COMMAND_TYPES)}",
         ))
         return errors
-    
+
     cmd_type = cmd_type.strip()
     if cmd_type not in VALID_COMMAND_TYPES:
         errors.append(CutsceneValidationError(
@@ -212,7 +210,7 @@ def validate_cutscene_command(
             hint=f"Valid types: {sorted(VALID_COMMAND_TYPES)}",
         ))
         return errors
-    
+
     # Type-specific validation
     if cmd_type == "wait":
         errors.extend(_validate_wait_command(command, file_path, base_path))
@@ -231,7 +229,7 @@ def validate_cutscene_command(
     elif cmd_type == "label":
         errors.extend(_validate_label_command(command, file_path, base_path))
     # "stop" has no additional validation needed
-    
+
     return errors
 
 
@@ -242,7 +240,7 @@ def _validate_wait_command(
 ) -> list[CutsceneValidationError]:
     """Validate wait command."""
     errors: list[CutsceneValidationError] = []
-    
+
     duration = command.get("duration")
     if duration is None:
         errors.append(CutsceneValidationError(
@@ -268,7 +266,7 @@ def _validate_wait_command(
             message="wait duration cannot be negative",
             hint="Use a non-negative value",
         ))
-    
+
     return errors
 
 
@@ -279,7 +277,7 @@ def _validate_emit_event_command(
 ) -> list[CutsceneValidationError]:
     """Validate emit_event command."""
     errors: list[CutsceneValidationError] = []
-    
+
     event_type = command.get("event_type")
     if not event_type or not isinstance(event_type, str) or not event_type.strip():
         errors.append(CutsceneValidationError(
@@ -289,7 +287,7 @@ def _validate_emit_event_command(
             message="emit_event command requires 'event_type'",
             hint="Add \"event_type\": \"my_event\"",
         ))
-    
+
     payload = command.get("payload")
     if payload is not None and not isinstance(payload, dict):
         errors.append(CutsceneValidationError(
@@ -299,7 +297,7 @@ def _validate_emit_event_command(
             message=f"emit_event payload must be an object, got {type(payload).__name__}",
             hint="Use format: \"payload\": {\"key\": \"value\"}",
         ))
-    
+
     return errors
 
 
@@ -311,7 +309,7 @@ def _validate_flag_command(
 ) -> list[CutsceneValidationError]:
     """Validate set_flag/clear_flag command."""
     errors: list[CutsceneValidationError] = []
-    
+
     flag = command.get("flag")
     if not flag or not isinstance(flag, str) or not flag.strip():
         errors.append(CutsceneValidationError(
@@ -321,7 +319,7 @@ def _validate_flag_command(
             message=f"{cmd_type} command requires 'flag'",
             hint="Add \"flag\": \"my_flag_name\"",
         ))
-    
+
     return errors
 
 
@@ -332,7 +330,7 @@ def _validate_run_actions_command(
 ) -> list[CutsceneValidationError]:
     """Validate run_actions command."""
     errors: list[CutsceneValidationError] = []
-    
+
     actions = command.get("actions")
     if actions is None:
         errors.append(CutsceneValidationError(
@@ -350,7 +348,7 @@ def _validate_run_actions_command(
             message=f"run_actions actions must be an array, got {type(actions).__name__}",
             hint="Use format: \"actions\": [...]",
         ))
-    
+
     return errors
 
 
@@ -361,11 +359,11 @@ def _validate_start_dialogue_command(
 ) -> list[CutsceneValidationError]:
     """Validate start_dialogue command."""
     errors: list[CutsceneValidationError] = []
-    
+
     # Either dialogue_id or target is required
     dialogue_id = command.get("dialogue_id")
     target = command.get("target")
-    
+
     if not dialogue_id and not target:
         errors.append(CutsceneValidationError(
             file_path=file_path,
@@ -374,7 +372,7 @@ def _validate_start_dialogue_command(
             message="start_dialogue requires 'dialogue_id' or 'target'",
             hint="Add \"dialogue_id\": \"my_dialogue\" or \"target\": \"EntityName\"",
         ))
-    
+
     return errors
 
 
@@ -386,7 +384,7 @@ def _validate_branch_command(
 ) -> list[CutsceneValidationError]:
     """Validate branch_on_flag command."""
     errors: list[CutsceneValidationError] = []
-    
+
     flag = command.get("flag")
     if not flag or not isinstance(flag, str) or not flag.strip():
         errors.append(CutsceneValidationError(
@@ -396,11 +394,11 @@ def _validate_branch_command(
             message="branch_on_flag command requires 'flag'",
             hint="Add \"flag\": \"my_flag_name\"",
         ))
-    
+
     # At least one branch target required
     true_target = command.get("true_goto")
     false_target = command.get("false_goto")
-    
+
     if not true_target and not false_target:
         errors.append(CutsceneValidationError(
             file_path=file_path,
@@ -409,7 +407,7 @@ def _validate_branch_command(
             message="branch_on_flag requires 'true_goto' and/or 'false_goto'",
             hint="Add \"true_goto\": \"label_name\" or \"false_goto\": \"label_name\"",
         ))
-    
+
     # Validate label references if labels provided
     if labels is not None:
         for target_key in ("true_goto", "false_goto"):
@@ -422,7 +420,7 @@ def _validate_branch_command(
                     message=f"branch_on_flag {target_key} references undefined label '{target}'",
                     hint=f"Define a label: {{\"type\": \"label\", \"name\": \"{target}\"}}",
                 ))
-    
+
     return errors
 
 
@@ -434,7 +432,7 @@ def _validate_goto_command(
 ) -> list[CutsceneValidationError]:
     """Validate goto command."""
     errors: list[CutsceneValidationError] = []
-    
+
     target = command.get("target")
     if not target or not isinstance(target, str) or not target.strip():
         errors.append(CutsceneValidationError(
@@ -452,7 +450,7 @@ def _validate_goto_command(
             message=f"goto references undefined label '{target}'",
             hint=f"Define a label: {{\"type\": \"label\", \"name\": \"{target}\"}}",
         ))
-    
+
     return errors
 
 
@@ -463,7 +461,7 @@ def _validate_label_command(
 ) -> list[CutsceneValidationError]:
     """Validate label command."""
     errors: list[CutsceneValidationError] = []
-    
+
     name = command.get("name")
     if not name or not isinstance(name, str) or not name.strip():
         errors.append(CutsceneValidationError(
@@ -473,7 +471,7 @@ def _validate_label_command(
             message="label command requires 'name'",
             hint="Add \"name\": \"my_label\"",
         ))
-    
+
     return errors
 
 
@@ -495,7 +493,7 @@ def validate_cutscene_script(
         List of validation errors (empty if valid)
     """
     errors: list[CutsceneValidationError] = []
-    
+
     if not isinstance(data, dict):
         errors.append(CutsceneValidationError(
             file_path=file_path,
@@ -505,7 +503,7 @@ def validate_cutscene_script(
             hint="Wrap content in curly braces {}",
         ))
         return errors
-    
+
     # Check schema version
     version = data.get("schema_version")
     if version is not None:
@@ -517,7 +515,7 @@ def validate_cutscene_script(
                 message=f"Invalid schema_version: {version}",
                 hint=f"Use schema_version: {CUTSCENE_SCHEMA_VERSION}",
             ))
-    
+
     # Validate script ID if present
     script_id = data.get("id")
     if strict and not script_id:
@@ -528,7 +526,7 @@ def validate_cutscene_script(
             message="Script should have an 'id' for save/restore",
             hint="Add \"id\": \"my_cutscene\"",
         ))
-    
+
     # Validate commands array
     commands = data.get("commands")
     if commands is None:
@@ -540,7 +538,7 @@ def validate_cutscene_script(
             hint="Add \"commands\": [...]",
         ))
         return errors
-    
+
     if not isinstance(commands, list):
         errors.append(CutsceneValidationError(
             file_path=file_path,
@@ -550,7 +548,7 @@ def validate_cutscene_script(
             hint="Convert to array format: \"commands\": [...]",
         ))
         return errors
-    
+
     # First pass: collect labels
     labels: set[str] = set()
     duplicate_labels: set[str] = set()
@@ -563,7 +561,7 @@ def validate_cutscene_script(
                     duplicate_labels.add(name)
                 else:
                     labels.add(name)
-    
+
     # Report duplicate labels
     for dup in duplicate_labels:
         errors.append(CutsceneValidationError(
@@ -573,7 +571,7 @@ def validate_cutscene_script(
             message=f"Duplicate label '{dup}'",
             hint="Each label name must be unique",
         ))
-    
+
     # Second pass: validate each command
     for idx, cmd in enumerate(commands):
         cmd_errors = validate_cutscene_command(
@@ -583,7 +581,7 @@ def validate_cutscene_script(
             labels=labels,
         )
         errors.extend(cmd_errors)
-    
+
     return errors
 
 

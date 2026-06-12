@@ -1,7 +1,8 @@
 import unittest
 from unittest.mock import MagicMock
-import arcade
+
 from engine.editor_controller import EditorModeController
+
 
 class MockSprite(MagicMock):
     def __init__(self, name="Entity", layer="entities", behaviours=None, mesh_tag=None, **kwargs):
@@ -26,59 +27,59 @@ class TestEditorHierarchy(unittest.TestCase):
         self.window = MagicMock()
         self.window.scene_controller = MagicMock()
         self.window.scene_controller.all_sprites = []
-        
+
         # Mock ensure methods needed by editor
         self.window.scene_controller._ensure_entity_data_dict = lambda s: s.mesh_entity_data
         self.window.scene_controller._ensure_behaviour_config_root = lambda d: {}
-        
+
         self.controller = EditorModeController(self.window)
         self.controller.active = True
-        
+
     def test_build_hierarchy(self):
         s1 = MockSprite("Player", "entities")
         s2 = MockSprite("Wall", "solid")
         self.window.scene_controller.all_sprites = [s1, s2]
-        
+
         items = self.controller._build_hierarchy_list()
         self.assertEqual(len(items), 2)
         self.assertEqual(items[0], s1)
         self.assertEqual(items[1], s2)
-        
+
     def test_filter_by_name(self):
         s1 = MockSprite("Player", "entities")
         s2 = MockSprite("Wall", "solid")
         self.window.scene_controller.all_sprites = [s1, s2]
-        
+
         self.controller.hierarchy_filter = "Play"
         items = self.controller._build_hierarchy_list()
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0], s1)
-        
+
     def test_filter_by_behaviour(self):
         b1 = MockBehaviour("PatrolBehaviour")
         s1 = MockSprite("Enemy", "entities", [b1])
         s2 = MockSprite("Wall", "solid")
         self.window.scene_controller.all_sprites = [s1, s2]
-        
+
         self.controller.hierarchy_filter = "@Patrol"
         items = self.controller._build_hierarchy_list()
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0], s1)
-        
+
     def test_selection_sync(self):
         s1 = MockSprite("Player", "entities")
         s2 = MockSprite("Wall", "solid")
         self.window.scene_controller.all_sprites = [s1, s2]
-        
+
         # Select via hierarchy index
         self.controller.hierarchy_active = True
         # We need to ensure the list is built
         self.controller._refresh_hierarchy_list()
-        
+
         # Simulate selecting index 1 (Wall)
         self.controller.hierarchy_selection_index = 1
         self.controller._select_hierarchy_item(1)
-        
+
         self.assertEqual(self.controller.selected_entity, s2)
 
     def test_selection_index_clamped_after_filter(self):

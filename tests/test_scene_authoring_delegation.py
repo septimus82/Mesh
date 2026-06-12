@@ -5,7 +5,6 @@ import pytest
 
 from engine.scene_controller import SceneController
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 

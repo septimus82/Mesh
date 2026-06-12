@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, cast
+
 import engine.optional_arcade as optional_arcade
 
 from .behaviours.registry import BEHAVIOUR_REGISTRY

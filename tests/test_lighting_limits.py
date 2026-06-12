@@ -1,5 +1,4 @@
-from types import SimpleNamespace
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import arcade
 
@@ -25,7 +24,7 @@ def test_static_light_cap(mock_light, mock_layer):
     mgr = LightManager(window, max_static_lights=1, enabled=True)
     # Ensure available is True (mocks make it so, but let's be sure)
     assert mgr.available
-    
+
     mgr.configure_scene_lights(
         [
             {"x": 0, "y": 0, "radius": 10, "color": arcade.color.WHITE},

@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-from engine.physics_model import Aabb
 from engine import physics_runtime
+from engine.physics_model import Aabb
 
 
 class _MutableSprite:

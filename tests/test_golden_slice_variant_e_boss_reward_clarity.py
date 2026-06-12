@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+
 from engine.behaviours.drop_table import DropTable
 from engine.events import MeshEvent, MeshEventBus
 from engine.game_state_controller import GameStateController
 from engine.ui import begin_boss_gold_reward_tracking, maybe_finish_boss_gold_reward_toast
+
 
 class StubHUD:
     def __init__(self) -> None:
@@ -40,16 +42,16 @@ def test_variant_e_boss_reward_clarity() -> None:
     real_path = Path(scene_path)
     if not real_path.exists():
         real_path = Path("d:/Games/Mesh") / scene_path
-    
+
     with open(real_path, "r") as f:
         scene_data = json.load(f)
-        
+
     boss_entity = next(e for e in scene_data["entities"] if e["name"] == "Boss")
-    
+
     # Verify preconditions from JSON
     tags = boss_entity.get("tags", [])
     assert "boss" in tags, "Boss entity must have 'boss' tag for toast logic"
-    
+
     drop_config = boss_entity["behaviour_config"]["DropTable"]
     assert drop_config["drops"][0].get("gold") == 10, "Boss must drop 10 gold"
 

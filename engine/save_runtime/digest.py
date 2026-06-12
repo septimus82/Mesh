@@ -21,7 +21,6 @@ import hashlib
 import json
 from typing import TYPE_CHECKING, Any
 
-
 if TYPE_CHECKING:  # pragma: no cover
     pass
 
@@ -68,26 +67,26 @@ def normalize_entity_state(entity: dict[str, Any]) -> dict[str, Any]:
         Normalized dict with sorted keys and rounded floats
     """
     normalized: dict[str, Any] = {}
-    
+
     # Required fields
     normalized["entity_id"] = str(entity.get("entity_id", ""))
     normalized["x"] = _stable_float(float(entity.get("x", 0.0)))
     normalized["y"] = _stable_float(float(entity.get("y", 0.0)))
-    
+
     # Optional fields (only include if present)
     if "prefab_id" in entity and entity["prefab_id"]:
         normalized["prefab_id"] = str(entity["prefab_id"])
-    
+
     if "tags" in entity and entity["tags"]:
         normalized["tags"] = sorted(str(t) for t in entity["tags"])
-    
+
     if "animation_state" in entity and entity["animation_state"]:
         normalized["animation_state"] = str(entity["animation_state"])
-    
+
     if "behaviour_state" in entity and entity["behaviour_state"]:
         # Deep sort behaviour state
         normalized["behaviour_state"] = _sort_recursive(entity["behaviour_state"])
-    
+
     return normalized
 
 
@@ -101,20 +100,20 @@ def normalize_quest_state(quest: dict[str, Any]) -> dict[str, Any]:
         Normalized dict with sorted keys
     """
     normalized: dict[str, Any] = {}
-    
+
     # Required fields
     normalized["quest_id"] = str(quest.get("quest_id", ""))
     normalized["state"] = str(quest.get("state", "inactive"))
     normalized["current_step"] = int(quest.get("current_step", 0))
-    
+
     # Optional fields
     if "counters" in quest and quest["counters"]:
         normalized["counters"] = {
             str(k): int(v) for k, v in sorted(quest["counters"].items())
         }
-    
+
     # Timestamps excluded from digest (they're not deterministic)
-    
+
     return normalized
 
 
@@ -129,11 +128,11 @@ def compute_entity_digest(entities: list[dict[str, Any]]) -> str:
     """
     if not entities:
         return hashlib.sha256(b"[]").hexdigest()
-    
+
     # Normalize and sort by entity_id
     normalized = [normalize_entity_state(e) for e in entities]
     normalized.sort(key=lambda e: e.get("entity_id", ""))
-    
+
     # JSON encode with sorted keys
     json_bytes = json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(json_bytes).hexdigest()
@@ -150,11 +149,11 @@ def compute_quest_digest(quests: list[dict[str, Any]]) -> str:
     """
     if not quests:
         return hashlib.sha256(b"[]").hexdigest()
-    
+
     # Normalize and sort by quest_id
     normalized = [normalize_quest_state(q) for q in quests]
     normalized.sort(key=lambda q: q.get("quest_id", ""))
-    
+
     json_bytes = json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(json_bytes).hexdigest()
 
@@ -187,19 +186,19 @@ def compute_world_digest(
         digest = compute_world_digest(entities, quests, frame=100)
     """
     components: list[str] = []
-    
+
     # Entity digest
     entity_digest = compute_entity_digest(entities or [])
     components.append(f"entities:{entity_digest}")
-    
+
     # Quest digest
     quest_digest = compute_quest_digest(quests or [])
     components.append(f"quests:{quest_digest}")
-    
+
     # Frame number (for sequence verification)
     if include_frame:
         components.append(f"frame:{frame}")
-    
+
     # Combine components
     combined = "|".join(components)
     return hashlib.sha256(combined.encode("utf-8")).hexdigest()
@@ -223,15 +222,15 @@ def compute_world_digest_from_scene(
     # Import here to avoid circular imports
     from engine.save_runtime.entity_state import serialize_entities
     from engine.save_runtime.quest_state import serialize_quests
-    
+
     entities = serialize_entities(scene_controller)
-    
+
     # serialize_quests returns {"schema_version": ..., "quests": {...}}
     # Extract just the quest dicts as a list
     quests_data = serialize_quests(quest_manager) if quest_manager else {}
     quests_dict = quests_data.get("quests", {}) if isinstance(quests_data, dict) else {}
     quests_list = list(quests_dict.values()) if isinstance(quests_dict, dict) else []
-    
+
     return compute_world_digest(entities, quests_list, frame)
 
 
@@ -300,13 +299,13 @@ class DigestTracker:
         """
         mismatches: list[tuple[int, str, str]] = []
         all_frames = set(self.digests.keys()) | set(other.digests.keys())
-        
+
         for frame in sorted(all_frames):
             this_digest = self.digests.get(frame, "<missing>")
             other_digest = other.digests.get(frame, "<missing>")
             if this_digest != other_digest:
                 mismatches.append((frame, this_digest, other_digest))
-        
+
         return mismatches
 
     def to_dict(self) -> dict[str, Any]:

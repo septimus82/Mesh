@@ -1,25 +1,26 @@
-import pytest
 from unittest.mock import MagicMock, patch
-from engine.validators.encounter_budget_validator import EncounterBudgetValidator
+
 from engine.encounter_report import HeadlessSceneController
+from engine.validators.encounter_budget_validator import EncounterBudgetValidator
+
 
 def test_encounter_budget_validation():
     validator = EncounterBudgetValidator()
-    
+
     # Valid
     res = validator.validate({"settings": {"encounter_budget": 10}}, "scene.json")
     assert len(res) == 0
-    
+
     # Invalid type
     res = validator.validate({"settings": {"encounter_budget": "ten"}}, "scene.json")
     assert len(res) == 1
     assert res[0].level == "ERROR"
-    
+
     # Negative
     res = validator.validate({"settings": {"encounter_budget": -1}}, "scene.json")
     assert len(res) == 1
     assert res[0].level == "ERROR"
-    
+
     # Unknown profile
     # Note: This test relies on load_config() returning default config which has easy/normal/hard
     res = validator.validate({"settings": {"encounter_budget_profile": "unknown"}}, "scene.json")

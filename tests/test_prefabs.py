@@ -43,7 +43,7 @@ class TestPrefabManager(unittest.TestCase):
                 "tags_add": ["strong"]
             }
         }
-        
+
         # Inject mock data
         self.manager._prefabs = self.mock_prefabs
         self.manager._variants = self.mock_variants
@@ -54,13 +54,13 @@ class TestPrefabManager(unittest.TestCase):
         base = self.manager.get_prefab("base_enemy")
         self.assertEqual(base["entity"]["Health"]["max_health"], 10)
         self.assertEqual(base["entity"]["sprite"], "base.png")
-        
+
         # Test level 1 inheritance
         goblin = self.manager.get_prefab("goblin")
         self.assertEqual(goblin["entity"]["Health"]["max_health"], 15) # Overridden
         self.assertEqual(goblin["entity"]["sprite"], "goblin.png") # Overridden
         self.assertIn("enemy", goblin["tags"]) # Inherited
-        
+
         # Test level 2 inheritance
         elite = self.manager.get_prefab("elite_goblin")
         self.assertEqual(elite["entity"]["Health"]["max_health"], 30)
@@ -71,10 +71,10 @@ class TestPrefabManager(unittest.TestCase):
     def test_variant_resolution(self) -> None:
         # Test variant application
         variant = self.manager.resolve_with_variant("goblin", "v_strong")
-        
+
         # HP should be 15 * 2.0 = 30
         self.assertEqual(variant["entity"]["Health"]["max_health"], 30)
-        
+
         # Tags should include added tag
         self.assertIn("strong", variant["tags"])
         self.assertIn("enemy", variant["tags"])
@@ -84,9 +84,9 @@ class TestPrefabManager(unittest.TestCase):
         p1 = self.manager.get_prefab("goblin")
         # Second call
         p2 = self.manager.get_prefab("goblin")
-        
+
         self.assertIs(p1, p2) # Should be same object from cache
-        
+
         # Variant caching
         v1 = self.manager.resolve_with_variant("goblin", "v_strong")
         v2 = self.manager.resolve_with_variant("goblin", "v_strong")
@@ -115,7 +115,7 @@ class TestPrefabValidator(unittest.TestCase):
                     ]
                 })
             return mock_path
-            
+
         mock_resolve.side_effect = side_effect
 
         validator = PrefabValidator()
@@ -135,7 +135,7 @@ class TestPrefabValidator(unittest.TestCase):
             elif "encounter_sets.json" in path_str:
                 mock_path.read_text.return_value = json.dumps({"encounter_sets": []})
             return mock_path
-            
+
         mock_resolve.side_effect = side_effect
 
         validator = PrefabValidator()

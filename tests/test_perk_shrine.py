@@ -1,16 +1,17 @@
-import pytest
 from unittest.mock import MagicMock
+
 from engine.behaviours.offer_perk_choice import OfferPerkChoice
-from engine.perks import PerkManager, Perk
+from engine.perks import PerkManager
+
 
 class MockGameState:
     def __init__(self):
         self.perk_manager = PerkManager()
         self.perks = []
-    
+
     def has_perk(self, perk_id):
         return perk_id in self.perks
-    
+
     def add_perk(self, perk_id):
         self.perks.append(perk_id)
 
@@ -31,13 +32,13 @@ def test_offer_perk_choice_start():
         "description": "Desc 1",
         "effects": {}
     })
-    
+
     entity = MagicMock()
     behaviour = OfferPerkChoice(entity, window, pool=["p1"])
-    
+
     # Trigger start
     behaviour._start_offer()
-    
+
     # Verify dialogue shown
     assert window.ui.show_dialogue.called
     args = window.ui.show_dialogue.call_args[0][0] # entries
@@ -53,25 +54,25 @@ def test_offer_perk_choice_select():
         "description": "Desc 1",
         "effects": {}
     })
-    
+
     entity = MagicMock()
     behaviour = OfferPerkChoice(entity, window, pool=["p1"])
-    
+
     # Start
     behaviour._start_offer()
     behaviour._active = True # Simulate active
     behaviour._cooldown = 0 # Clear cooldown
-    
+
     # Mock input
     window.input.was_action_pressed.side_effect = lambda action: action == "interact"
-    
+
     # Mock dialogue box submission
     window.ui.dialogue_box.is_active_for.return_value = True
     window.ui.dialogue_box.submit_choice.return_value = {"id": "p1"}
-    
+
     # Update
     behaviour.update(0.1)
-    
+
     # Verify perk added
     assert "p1" in window.game_state.perks
     assert window.ui.close_dialogue.called
@@ -85,13 +86,13 @@ def test_offer_perk_choice_already_owned():
         "effects": {}
     })
     window.game_state.add_perk("p1")
-    
+
     entity = MagicMock()
     behaviour = OfferPerkChoice(entity, window, pool=["p1"])
-    
+
     # Trigger start
     behaviour._start_offer()
-    
+
     # Verify message shown instead of choices
     assert window.ui.show_dialogue.called
     args = window.ui.show_dialogue.call_args[0][0]

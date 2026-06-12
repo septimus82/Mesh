@@ -1,7 +1,9 @@
 import unittest
 from unittest.mock import MagicMock
+
 from engine.console_controller import ConsoleController
 from engine.console_runtime.commands import dispatch_command
+
 
 class TestEncounterRerollDeterminism(unittest.TestCase):
     def setUp(self):
@@ -30,15 +32,15 @@ class TestEncounterRerollDeterminism(unittest.TestCase):
         # If no seed in settings, use hash of scene_id
         self.mock_window.scene_controller.scene_settings = {} # Clear seed
         self._dispatch_encounter(["reroll"])
-        
+
         seed = self.mock_window.scene_controller.scene_settings.get("encounter_seed")
         self.assertIsNotNone(seed)
-        
+
         # Calculate expected hash
         scene_id = "test_scene"
         expected = sum(ord(c) for c in scene_id) * 12345 % 1000000
         self.assertEqual(seed, expected)
-        
+
         # Verify stability
         self.mock_window.scene_controller.scene_settings = {}
         self._dispatch_encounter(["reroll"])

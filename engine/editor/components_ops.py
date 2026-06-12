@@ -13,16 +13,14 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
 
 from .components_model import (
-    ComponentKind,
-    COMPONENT_DEFAULTS,
-    COLLIDER_RECT_DEFAULTS,
     COLLIDER_CIRCLE_DEFAULTS,
     COLLIDER_KIND_OPTIONS,
+    COLLIDER_RECT_DEFAULTS,
+    COMPONENT_DEFAULTS,
+    ComponentKind,
     get_component_dict,
     set_component_field,
-    InspectorField,
 )
-
 
 # -----------------------------------------------------------------------------
 # Clamp/Wrap Helpers
@@ -108,14 +106,14 @@ FIELD_CONSTRAINTS: Dict[Tuple[ComponentKind, str], Tuple[Optional[float], Option
     ("transform", "x"): (None, None, False),  # Free float
     ("transform", "y"): (None, None, False),  # Free float
     ("transform", "rot"): (0.0, 360.0, True),  # Wraps [0, 360)
-    
+
     # Light
     ("light", "radius_px"): (8.0, None, False),  # Min 8
     ("light", "flicker_amount"): (0.0, 1.0, False),  # [0, 1]
     ("light", "flicker_speed"): (0.0, None, False),  # >= 0
     ("light", "cookie_scale"): (0.0, None, False),  # >= 0
     ("light", "cookie_rotation_deg"): (0.0, 360.0, True),  # Wraps [0, 360)
-    
+
     # Collider
     ("collider", "w"): (1.0, None, False),  # Min 1
     ("collider", "h"): (1.0, None, False),  # Min 1
@@ -150,12 +148,12 @@ def _apply_constraints(
         Constrained value
     """
     lo, hi, wraps = _get_field_constraints(kind, field_key)
-    
+
     if wraps:
         value = wrap_deg(value)
     else:
         value = clamp_float(value, lo, hi)
-    
+
     return value
 
 
@@ -189,14 +187,14 @@ def apply_inspector_delta(
     comp_data = get_component_dict(entity_json, kind)
     if comp_data is None:
         return entity_json  # Component doesn't exist
-    
+
     current_value = comp_data.get(field_key)
-    
+
     # Handle bool fields
     if isinstance(current_value, bool):
         bool_value = not current_value
         return set_component_field(entity_json, kind, field_key, bool_value)
-    
+
     # Handle enum fields (collider kind)
     if field_key == "kind" and kind == "collider":
         options = COLLIDER_KIND_OPTIONS
@@ -204,33 +202,33 @@ def apply_inspector_delta(
             current_idx = options.index(str(current_value))
         except ValueError:
             current_idx = 0
-        
+
         if delta > 0:
             new_idx = (current_idx + 1) % len(options)
         else:
             new_idx = (current_idx - 1) % len(options)
-        
+
         enum_value: str = options[new_idx]
         return set_component_field(entity_json, kind, field_key, enum_value)
-    
+
     # Handle color fields
     if field_key == "color_rgba":
         # Color editing is complex; for now, just return unchanged
         # Could implement per-channel adjustment later
         return entity_json
-    
+
     # Handle numeric fields
     try:
         current_float = float(current_value) if current_value is not None else 0.0
     except (TypeError, ValueError):
         return entity_json  # Can't convert to float
-    
+
     # Apply shift multiplier
     actual_delta = delta * 10.0 if shift else delta
-    
+
     numeric_value = current_float + actual_delta
     numeric_value = _apply_constraints(numeric_value, kind, field_key)
-    
+
     return set_component_field(entity_json, kind, field_key, numeric_value)
 
 
@@ -250,7 +248,7 @@ def reset_field_to_default(
         New dict with field reset to default
     """
     defaults = COMPONENT_DEFAULTS.get(kind, {})
-    
+
     # Handle collider shape-specific defaults
     default_value: Any = None
     if kind == "collider":
@@ -264,11 +262,11 @@ def reset_field_to_default(
             default_value = defaults.get(field_key)
     else:
         default_value = defaults.get(field_key)
-    
+
     if default_value is None and field_key not in defaults:
         # Unknown field, return unchanged
         return entity_json
-    
+
     return set_component_field(entity_json, kind, field_key, default_value)
 
 
@@ -318,6 +316,6 @@ def cycle_enum_value(
         idx = options.index(current)
     except ValueError:
         idx = 0
-    
+
     new_idx = (idx + direction) % len(options)
     return options[new_idx]

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Mapping, Optional, Sequence
+from typing import Any, Callable, Mapping, Optional, Sequence
 
-from engine.paths import resolve_path
 from engine.geometry_tools import sanitize_poly
+from engine.paths import resolve_path
 
 
 @dataclass(frozen=True, slots=True)

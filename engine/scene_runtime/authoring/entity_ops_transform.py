@@ -217,6 +217,7 @@ def debug_rotate_selection(
     Returns ``{ok, rotated, moved, skipped, deg, about}``.
     """
     import math  # noqa: PLC0415
+
     from ...entity_paint_mode import ensure_entities_list, is_player_entity  # noqa: PLC0415
 
     ab = str(about or "self").strip().lower()

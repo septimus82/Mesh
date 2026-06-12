@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from engine.physics_model import Aabb
-from engine.sensors_model import parse_sensors, overlaps_for_entity, diff_overlaps
+from engine.sensors_model import diff_overlaps, overlaps_for_entity, parse_sensors
 from engine.sensors_runtime import SensorRuntime
 
 

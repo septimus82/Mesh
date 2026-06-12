@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+
 def ui_activate_command(self, cmd_id: str):
     return self._activate_find_command(cmd_id)
 

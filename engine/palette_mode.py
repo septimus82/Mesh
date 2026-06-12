@@ -1,19 +1,18 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
-from typing import Any, Optional
+
 import json
-from pathlib import Path
 import logging
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional
 
-from engine.stamps import iter_stamp_paths
 from engine.brushes import iter_brush_paths
-from engine.tooling_runtime.stamp_report import compute_scene_stamp_report
-from engine.tooling_runtime.brush_report import compute_scene_brush_report
-from engine.tilemap_edit import TilemapDims, ensure_tiles_array, set_tile, get_layer_by_id
 from engine.paths import resolve_path
-from engine.logging_tools import get_logger
+from engine.stamps import iter_stamp_paths
 from engine.swallowed_exceptions import _log_swallow
-
+from engine.tilemap_edit import TilemapDims, ensure_tiles_array, get_layer_by_id, set_tile
+from engine.tooling_runtime.brush_report import compute_scene_brush_report
+from engine.tooling_runtime.stamp_report import compute_scene_stamp_report
 
 logger = logging.getLogger(__name__)
 
@@ -30,19 +29,19 @@ class PaletteState:
     mode: str = "STAMPS" # "STAMPS" or "BRUSHES"
     selected_index: int = 0
     preview_on: bool = False
-    
+
     stamps: list[PaletteItem] = field(default_factory=list)
     brushes: list[PaletteItem] = field(default_factory=list)
 
     last_saved_path: str = ""
     last_saved_type: str = ""  # "stamp" or "brush"
     last_saved_display: str = ""
-    
+
     last_warnings: list[str] = field(default_factory=list)
-    
+
     def __post_init__(self):
         self.refresh_lists()
-        
+
     def reset(self):
         self.enabled = False
         self.mode = "STAMPS"
@@ -52,7 +51,7 @@ class PaletteState:
         self.last_saved_path = ""
         self.last_saved_type = ""
         self.last_saved_display = ""
-        
+
     def refresh_lists(self):
         # Load stamps
         self.stamps = []
@@ -64,7 +63,7 @@ class PaletteState:
                 stem = Path(path).stem
                 self.stamps.append(PaletteItem(pack_id, stem, path, "stamp"))
         self.stamps.sort(key=lambda x: (x.pack_id, x.id))
-        
+
         # Load brushes
         self.brushes = []
         for path in iter_brush_paths():
@@ -160,7 +159,7 @@ def apply_at(scene_payload: dict, tx: int, ty: int, layer_id: str = "ground") ->
     item = _STATE.selected_item
     if not item:
         return False
-    
+
     _STATE.last_warnings = []
 
     # Load item payload
@@ -225,13 +224,13 @@ def _apply_stamp(scene_payload: dict, stamp_payload: dict, tx: int, ty: int) -> 
     tilemap = scene_payload.get("tilemap", {})
     dims = TilemapDims(tilemap.get("width", 0), tilemap.get("height", 0))
     tile_layers = tilemap.get("tile_layers", [])
-    
+
     for change in report.get("tile_changes", []):
         layer_id = change["layer_id"]
         x = change["x"]
         y = change["y"]
         after = change["after"]
-        
+
         try:
             layer = get_layer_by_id(tile_layers, layer_id)
             tiles = ensure_tiles_array(layer, dims=dims)
@@ -245,11 +244,11 @@ def _apply_stamp(scene_payload: dict, stamp_payload: dict, tx: int, ty: int) -> 
     if not isinstance(entities, list):
         entities = []
         scene_payload["entities"] = entities
-        
+
     for change in report.get("entity_changes", []):
         action = change["action"]
         entity_id = change["id"]
-        
+
         if action == "add":
             entities.append({
                 "id": entity_id,
@@ -288,13 +287,13 @@ def _apply_brush(scene_payload: dict, brush_payload: dict, tx: int, ty: int, lay
     tilemap = scene_payload.get("tilemap", {})
     dims = TilemapDims(tilemap.get("width", 0), tilemap.get("height", 0))
     tile_layers = tilemap.get("tile_layers", [])
-    
+
     for change in report.get("tile_changes", []):
         lid = change["layer_id"]
         x = change["x"]
         y = change["y"]
         after = change["after"]
-        
+
         try:
             layer = get_layer_by_id(tile_layers, lid)
             tiles = ensure_tiles_array(layer, dims=dims)

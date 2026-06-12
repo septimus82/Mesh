@@ -39,7 +39,7 @@ def scan_assets(repo_root: Path) -> list[AssetRow]:
         for filename in sorted(files, key=str.casefold):
             if filename.startswith("."):
                 continue
-            
+
             # Construct relative path
             full_path = Path(root) / filename
             try:
@@ -66,20 +66,20 @@ def filter_assets(
     """Filters asset rows by text and kind."""
     text = text.strip().casefold()
     res: list[AssetRow] = []
-    
+
     kind_target = (kind_filter or "All").lower()
-    
+
     for row in rows:
         # Kind filter
         if kind_target != "all":
             if row.kind != kind_target:
                 continue
-        
+
         # Text filter
         if text:
             if text not in row.rel_path.casefold():
                 continue
-        
+
         res.append(row)
-        
+
     return res

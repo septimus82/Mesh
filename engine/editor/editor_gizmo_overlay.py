@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable
 
 import engine.optional_arcade as optional_arcade
+
 from ..logging_tools import get_logger
 from ..ui_overlays.common import UIElement
 from .editor_gizmo_feedback import (
@@ -18,7 +19,7 @@ from .editor_gizmo_feedback import (
 )
 
 if TYPE_CHECKING:
-    from engine.editor_controller import EditorModeController
+    pass
 
 logger = get_logger(__name__)
 

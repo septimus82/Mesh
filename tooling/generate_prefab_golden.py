@@ -1,7 +1,5 @@
 """Generate golden file for resolved prefabs."""
 
-import json
-from pathlib import Path
 
 from engine import json_io
 from engine.prefabs import get_prefab_manager

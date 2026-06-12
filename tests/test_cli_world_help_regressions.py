@@ -1,7 +1,5 @@
 import sys
 
-import pytest
-
 from tests.subprocess_tools import run_checked
 
 
@@ -17,9 +15,9 @@ def test_world_help_output():
     cmd = [sys.executable, "-m", "mesh_cli", "world", "--help"]
     result = run_checked(cmd)
     assert result.returncode == 0
-    
+
     normalized = normalize_help_output(result.stdout)
-    
+
     expected_substrings = [
         "usage:",
         "world",
@@ -29,7 +27,7 @@ def test_world_help_output():
         "link-scenes",
         "Insert SceneTransition entities linking two scenes",
     ]
-    
+
     for substring in expected_substrings:
         assert substring in result.stdout, f"Missing substring: {substring}"
 
@@ -38,7 +36,7 @@ def test_validate_world_help_output():
     cmd = [sys.executable, "-m", "mesh_cli", "validate-world", "--help"]
     result = run_checked(cmd)
     assert result.returncode == 0
-    
+
     expected_substrings = [
         "usage:",
         "validate-world",
@@ -48,7 +46,7 @@ def test_validate_world_help_output():
         "--no-events",
         "Skip event validation",
     ]
-    
+
     for substring in expected_substrings:
         assert substring in result.stdout, f"Missing substring: {substring}"
 
@@ -57,7 +55,7 @@ def test_auto_wire_transitions_help_output():
     cmd = [sys.executable, "-m", "mesh_cli", "auto-wire-transitions", "--help"]
     result = run_checked(cmd)
     assert result.returncode == 0
-    
+
     expected_substrings = [
         "usage:",
         "auto-wire-transitions",
@@ -67,7 +65,7 @@ def test_auto_wire_transitions_help_output():
         "--apply",
         "Apply changes",
     ]
-    
+
     for substring in expected_substrings:
         assert substring in result.stdout, f"Missing substring: {substring}"
 
@@ -76,7 +74,7 @@ def test_world_graph_help_output():
     cmd = [sys.executable, "-m", "mesh_cli", "world-graph", "--help"]
     result = run_checked(cmd)
     assert result.returncode == 0
-    
+
     expected_substrings = [
         "usage:",
         "world-graph",
@@ -86,6 +84,6 @@ def test_world_graph_help_output():
         "output",
         "Output DOT file",
     ]
-    
+
     for substring in expected_substrings:
         assert substring in result.stdout, f"Missing substring: {substring}"

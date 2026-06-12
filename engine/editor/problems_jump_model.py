@@ -5,7 +5,6 @@ Headless-safe logic for resolving jump targets and formatting location text.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Literal, TypedDict
 
 from .scene_lint_model import SceneLintIssue

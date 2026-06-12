@@ -4,11 +4,13 @@ from typing import TYPE_CHECKING
 
 from engine.editor.editor_actions import run_editor_action
 
-from .editor_input_router import route_and_dispatch as route_editor_input
-from .editor_input_legacy_handlers import handle_input_legacy
 from .editor_input_key_handlers import handle_pre_routed_keys as handle_pre_routed_keys
+from .editor_input_legacy_handlers import handle_input_legacy
+from .editor_input_router import route_and_dispatch as route_editor_input
 from .editor_input_shortcut_handlers import (
     handle_editor_action_shortcut as handle_editor_action_shortcut,
+)
+from .editor_input_shortcut_handlers import (
     is_text_input_active as is_text_input_active,
 )
 

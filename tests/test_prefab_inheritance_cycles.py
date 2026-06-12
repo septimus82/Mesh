@@ -1,5 +1,7 @@
 import unittest
+
 from engine.prefabs import PrefabManager
+
 
 class TestPrefabInheritanceCycles(unittest.TestCase):
     def setUp(self):
@@ -43,7 +45,7 @@ class TestPrefabInheritanceCycles(unittest.TestCase):
         # Then it returns {}.
         # Then A merges {} with its entity.
         # So it should return A's entity.
-        
+
         # Let's check implementation:
         # prefab_def = self._prefabs.get(prefab_id) -> Gets A
         # base_id = "Missing"
@@ -52,7 +54,7 @@ class TestPrefabInheritanceCycles(unittest.TestCase):
         #   merged = base_entity.copy() -> {}
         #   merge A's entity over {}
         #   return merged
-        
+
         resolved = self.manager.get_prefab("A")
         self.assertEqual(resolved["entity"]["x"], 1)
 
@@ -66,7 +68,7 @@ class TestPrefabInheritanceCycles(unittest.TestCase):
                 "entity": {"val": i}
             }
         self.manager._prefabs = prefabs
-        
+
         # P0 -> P1 -> ... -> P24
         # Depth 24. Max is 20.
         resolved = self.manager.get_prefab("P0")

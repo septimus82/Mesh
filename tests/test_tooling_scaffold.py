@@ -1,9 +1,10 @@
 import json
-import os
 import shutil
 import unittest
 from pathlib import Path
+
 from engine.tooling import scaffold
+
 
 class TestScaffold(unittest.TestCase):
     def setUp(self):
@@ -22,7 +23,7 @@ class TestScaffold(unittest.TestCase):
             path = self.test_dir / f"scene_{tmpl}.json"
             self.assertTrue(scaffold.create_scene(str(path), template_name=tmpl))
             self.assertTrue(path.exists())
-            
+
             with open(path, "r") as f:
                 data = json.load(f)
                 self.assertEqual(data["version"], 1)
@@ -32,11 +33,11 @@ class TestScaffold(unittest.TestCase):
 
     def test_create_quest(self):
         quest_file = self.test_dir / "quests.json"
-        
+
         # Create first quest
         self.assertTrue(scaffold.create_quest("My First Quest", str(quest_file)))
         self.assertTrue(quest_file.exists())
-        
+
         with open(quest_file, "r") as f:
             data = json.load(f)
             self.assertEqual(len(data), 1)
@@ -45,7 +46,7 @@ class TestScaffold(unittest.TestCase):
 
         # Create second quest
         self.assertTrue(scaffold.create_quest("Another Quest", str(quest_file)))
-        
+
         with open(quest_file, "r") as f:
             data = json.load(f)
             self.assertEqual(len(data), 2)

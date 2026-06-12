@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 import engine.optional_arcade as optional_arcade
 
-from .common import UIElement, _draw_rectangle_filled
 from ..text_draw import TextCache, draw_text_cached
+from .common import UIElement, _draw_rectangle_filled
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow

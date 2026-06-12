@@ -8,12 +8,14 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, Iterable, Set
 
+import engine.optional_arcade as optional_arcade
+from mesh_cli.version_info import get_tool_version
+
 from .. import json_io
 from ..behaviours import list_behaviours
 from ..config import EngineConfig
 from ..input import InputManager
-from mesh_cli.version_info import get_tool_version
-import engine.optional_arcade as optional_arcade
+
 arcade_mod = optional_arcade.arcade
 from ..scene_loader import SceneLoader
 

@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import argparse
 import contextlib
-from dataclasses import dataclass
 import io
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from .shipping_policy import iter_ship_check_artifact_specs
-
 
 _SECTION_ORDER: tuple[str, ...] = ("verify", "package", "web", "perf")
 

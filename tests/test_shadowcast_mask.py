@@ -1,7 +1,10 @@
 import os
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from engine.lighting import LightManager
+
 
 @pytest.fixture
 def shadowcast_env():
@@ -30,21 +33,21 @@ def test_polygon_light_creation(shadowcast_env, light_manager, mock_layer):
     light_config = {
         "x": 100, "y": 100, "radius": 50, "color": (255, 255, 255)
     }
-    
+
     # Mock _get_light_polygon_points to return a valid polygon
     valid_points = [(100, 100), (150, 100), (150, 150), (100, 150)] # Square
-    
+
     with patch.object(light_manager, "_get_light_polygon_points", return_value=valid_points):
         light_manager.configure_scene_lights([light_config])
-        
+
         # Verify add_light_polygon was called
         assert mock_layer.add_light_polygon.called
         args, kwargs = mock_layer.add_light_polygon.call_args
-        
+
         # Check points
         points = args[0]
         assert len(points) == 4
-        
+
         # Check kwargs
         assert kwargs["x"] == 100
         assert kwargs["y"] == 100
@@ -58,9 +61,9 @@ def test_standard_light_creation_flag_off(light_manager, mock_layer):
             "x": 100, "y": 100, "radius": 50, "color": (255, 255, 255)
         }
         light_manager.configure_scene_lights([light_config])
-        
+
         # Verify add_light_polygon was NOT called
         assert not mock_layer.add_light_polygon.called
-        
+
         # Verify standard add was called
         assert mock_layer.add_light.called or mock_layer.add.called

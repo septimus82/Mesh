@@ -16,10 +16,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
-import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import _log_swallow
+
+from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_tb_rectangle_filled
-from ..text_draw import draw_text_cached, TextCache
 
 if TYPE_CHECKING:
     from engine.game import GameWindow

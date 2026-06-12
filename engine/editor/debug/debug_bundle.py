@@ -11,13 +11,12 @@ from engine.combat_constants import (
     is_combat_damage_event,
     is_combat_death_event,
 )
+from engine.editor.behaviour_inspector import build_entity_behaviour_summary
 from engine.hud_model import build_hud_view_model, merge_event_histories
 from engine.persistence_io import dumps_json_deterministic
 from engine.save_runtime.io import get_save_runtime_diagnostics_snapshot
-from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
-from engine.editor.behaviour_inspector import build_entity_behaviour_summary
 from .cutscene_debug_model import CutsceneDebugViewModel, build_cutscene_debug_view_model
 from .debug_panels_state import (
     get_cutscene_events,

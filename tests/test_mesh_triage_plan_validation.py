@@ -46,8 +46,8 @@ def test_mesh_triage_warns_and_skips_plan_artifact_on_invalid_touches(tmp_path, 
         out_plan = tmp_path / "plan.json"
         args = argparse.Namespace(world="world.json", out=str(out_plan), write_artifacts=True)
 
-        from io import StringIO
         import sys
+        from io import StringIO
 
         captured = StringIO()
         monkeypatch.setattr(sys, "stdout", captured)

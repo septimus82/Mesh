@@ -1,7 +1,9 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from engine.tooling import build_demo_command
 from tests.utils.args_factory import make_build_demo_args
+
 
 class TestBuildDemoCommand(unittest.TestCase):
     @patch("engine.content_lock.compute_content_fingerprint")
@@ -58,20 +60,20 @@ class TestBuildDemoCommand(unittest.TestCase):
             ]
         }
         mock_compute_content_fingerprint.return_value = "abc123def4567890"
-        
+
         # Run
         args = make_build_demo_args(
             strict_audit=False,
             diff_from=None
         )
         ret = build_demo_command.handle_build_demo(args)
-        
+
         # Verify
         self.assertEqual(ret, 0)
         mock_check.assert_called_once()
         mock_polish.assert_called_once()
         mock_copytree.assert_called() # Should copy assets, scenes, etc.
-        
+
         # Verify manifest write
         mock_write_json.assert_called()
 

@@ -1,7 +1,8 @@
-import json
 import pytest
+
 from engine.tooling.plan_executor import PlanExecutor
-from engine.tooling.plan_types import Plan, Action
+from engine.tooling.plan_types import Action, Plan
+
 
 def test_apply_plan_touches_match_actions_success(tmp_path):
     """Verify that if touches matches action targets, execution proceeds."""
@@ -17,7 +18,7 @@ def test_apply_plan_touches_match_actions_success(tmp_path):
             Action(type="create_scene", args={"path": "scenes/test.json", "template": "basic"}, description="test")
         ]
     )
-    
+
     executor = PlanExecutor(dry_run=True)
     # Should not raise
     executor.execute(plan, ai_safe=True)
@@ -36,12 +37,12 @@ def test_apply_plan_touches_match_actions_failure(tmp_path):
             Action(type="create_scene", args={"path": "scenes/test.json", "template": "basic"}, description="test")
         ]
     )
-    
+
     executor = PlanExecutor(dry_run=True)
-    
+
     with pytest.raises(ValueError) as excinfo:
         executor.execute(plan, ai_safe=True)
-    
+
     assert "AI-safe apply requires plan.meta.touches to include all action targets" in str(excinfo.value)
     assert "scenes/test.json" in str(excinfo.value)
 
@@ -59,7 +60,7 @@ def test_apply_plan_touches_match_actions_superset_ok(tmp_path):
             Action(type="create_scene", args={"path": "scenes/test.json", "template": "basic"}, description="test")
         ]
     )
-    
+
     executor = PlanExecutor(dry_run=True)
     # Should not raise
     executor.execute(plan, ai_safe=True)
@@ -78,7 +79,7 @@ def test_apply_plan_touches_match_actions_ignored_if_not_ai_safe(tmp_path):
             Action(type="create_scene", args={"path": "scenes/test.json", "template": "basic"}, description="test")
         ]
     )
-    
+
     executor = PlanExecutor(dry_run=True)
     # Should not raise
     executor.execute(plan, ai_safe=False)

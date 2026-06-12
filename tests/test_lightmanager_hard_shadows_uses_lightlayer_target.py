@@ -6,10 +6,11 @@ pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 
 def test_lightlayer_overlay_path_is_used_in_hard_mode(monkeypatch) -> None:
+    import arcade
+
     import engine.lighting as lighting
     import engine.lighting.shadows as shadows
     import engine.optional_arcade
-    import arcade
 
     calls: list[int] = []
 

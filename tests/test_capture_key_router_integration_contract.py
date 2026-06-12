@@ -4,9 +4,9 @@ from types import SimpleNamespace
 
 import engine.input_runtime.capture_key_router as router
 from engine.input_runtime import capture_key_router_handlers_entity_paint as entity_paint_handlers
+from engine.input_runtime import capture_key_router_handlers_global as global_handlers
 from engine.input_runtime import capture_key_router_handlers_tile_paint as tile_paint_handlers
 from engine.input_runtime import capture_key_router_handlers_ui as ui_handlers
-from engine.input_runtime import capture_key_router_handlers_global as global_handlers
 from engine.input_runtime.capture_focus_query import get_capture_focus_snapshot
 
 
@@ -208,7 +208,7 @@ def test_confirm_modal_beats_tile_paint(monkeypatch) -> None:
         is_command_palette_open=lambda: False,
     )
     controller.window.editor_controller.panels = panels
-    
+
     recorded: dict[str, str] = {}
 
     def _modal_dispatch(window, snapshot, action_id: str, **_kwargs) -> bool:
@@ -221,7 +221,7 @@ def test_confirm_modal_beats_tile_paint(monkeypatch) -> None:
 
     monkeypatch.setattr(ui_handlers, "dispatch_ui_action", _modal_dispatch)
     monkeypatch.setattr(tile_paint_handlers, "dispatch_tile_paint_action", _paint_dispatch)
-    
+
     snapshot = get_capture_focus_snapshot(controller, 0)
     # ENTER in confirm modal should confirm, not select paint slot
     assert router.route_and_dispatch(
@@ -247,7 +247,7 @@ def test_context_menu_beats_entity_paint(monkeypatch) -> None:
         is_command_palette_open=lambda: False,
     )
     controller.window.editor_controller.panels = panels
-    
+
     recorded: dict[str, str] = {}
 
     def _menu_dispatch(window, snapshot, action_id: str, **_kwargs) -> bool:
@@ -260,7 +260,7 @@ def test_context_menu_beats_entity_paint(monkeypatch) -> None:
 
     monkeypatch.setattr(ui_handlers, "dispatch_ui_action", _menu_dispatch)
     monkeypatch.setattr(entity_paint_handlers, "dispatch_entity_paint_action", _paint_dispatch)
-    
+
     snapshot = get_capture_focus_snapshot(controller, 0)
     # ESCAPE in context menu should close menu, not affect paint
     assert router.route_and_dispatch(
@@ -286,7 +286,7 @@ def test_command_palette_beats_global(monkeypatch) -> None:
         is_command_palette_open=lambda: True,
     )
     controller.window.editor_controller.panels = panels
-    
+
     recorded: dict[str, str] = {}
 
     def _palette_dispatch(window, snapshot, action_id: str, **_kwargs) -> bool:
@@ -294,7 +294,7 @@ def test_command_palette_beats_global(monkeypatch) -> None:
         return True
 
     monkeypatch.setattr(ui_handlers, "dispatch_ui_action", _palette_dispatch)
-    
+
     snapshot = get_capture_focus_snapshot(
         controller,
         0,
@@ -324,7 +324,7 @@ def test_inline_rename_beats_global(monkeypatch) -> None:
         is_inline_rename_active=lambda: True,
     )
     controller.window.editor_controller.panels = panels
-    
+
     recorded: dict[str, str] = {}
 
     def _rename_dispatch(window, snapshot, action_id: str, **_kwargs) -> bool:
@@ -332,7 +332,7 @@ def test_inline_rename_beats_global(monkeypatch) -> None:
         return True
 
     monkeypatch.setattr(ui_handlers, "dispatch_ui_action", _rename_dispatch)
-    
+
     snapshot = get_capture_focus_snapshot(controller, 0)
     result = router.route_and_dispatch(
         controller,
@@ -355,15 +355,15 @@ def test_console_beats_global_when_active(monkeypatch) -> None:
         active=True,
         process_key=lambda k, m: False,
     )
-    
+
     recorded: dict[str, str] = {}
-    
+
     def _console_dispatch(window, snapshot, action_id: str, **_kwargs) -> bool:
         recorded["action"] = action_id
         return True
 
     monkeypatch.setattr(ui_handlers, "dispatch_ui_action", _console_dispatch)
-    
+
     snapshot = get_capture_focus_snapshot(controller, 0)
     result = router.route_and_dispatch(
         controller,

@@ -11,9 +11,8 @@ All functions are pure and do not mutate inputs.
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Literal, Optional, Tuple
-
 
 # -----------------------------------------------------------------------------
 # Type Definitions
@@ -148,7 +147,7 @@ def _has_component(entity_json: Dict[str, Any], kind: ComponentKind) -> bool:
     components = _get_components_container(entity_json)
     if kind in components:
         return True
-    
+
     # Check legacy fields for back-compat
     if kind == "transform":
         # Transform is always present (implicit)
@@ -167,32 +166,32 @@ def _has_component(entity_json: Dict[str, Any], kind: ComponentKind) -> bool:
         return False
     if kind == "collider":
         return "collider" in components or "collision" in entity_json
-    
+
     return False
 
 
 def _read_legacy_transform(entity_json: Dict[str, Any], sprite_runtime: object | None) -> Dict[str, Any]:
     """Read transform values from legacy top-level fields or runtime sprite."""
     result: Dict[str, Any] = dict(TRANSFORM_DEFAULTS)
-    
+
     # From entity JSON
     if "x" in entity_json:
         result["x"] = float(entity_json.get("x", 0.0))
     elif sprite_runtime and hasattr(sprite_runtime, "center_x"):
         result["x"] = float(getattr(sprite_runtime, "center_x", 0.0))
-    
+
     if "y" in entity_json:
         result["y"] = float(entity_json.get("y", 0.0))
     elif sprite_runtime and hasattr(sprite_runtime, "center_y"):
         result["y"] = float(getattr(sprite_runtime, "center_y", 0.0))
-    
+
     if "rotation" in entity_json:
         result["rot"] = float(entity_json.get("rotation", 0.0))
     elif "rotation_deg" in entity_json:
         result["rot"] = float(entity_json.get("rotation_deg", 0.0))
     elif sprite_runtime and hasattr(sprite_runtime, "angle"):
         result["rot"] = float(getattr(sprite_runtime, "angle", 0.0))
-    
+
     return result
 
 
@@ -211,7 +210,7 @@ def _read_legacy_light(entity_json: Dict[str, Any]) -> Dict[str, Any]:
     result: Dict[str, Any] = dict(LIGHT_DEFAULTS)
     bc = entity_json.get("behaviour_config", {})
     ls = bc.get("LightSource", {})
-    
+
     if "radius" in ls:
         result["radius_px"] = float(ls.get("radius", 160.0))
     if "color" in ls:
@@ -230,7 +229,7 @@ def _read_legacy_light(entity_json: Dict[str, Any]) -> Dict[str, Any]:
         result["cookie_scale"] = float(ls.get("cookie_scale", 1.0))
     if "cookie_rotation" in ls or "cookie_rotation_deg" in ls:
         result["cookie_rotation_deg"] = float(ls.get("cookie_rotation") or ls.get("cookie_rotation_deg", 0.0))
-    
+
     return result
 
 
@@ -339,7 +338,7 @@ def _build_collider_fields(data: Dict[str, Any]) -> Tuple[InspectorField, ...]:
             editable=True, options=COLLIDER_KIND_OPTIONS
         ),
     ]
-    
+
     if kind_val == "rect":
         fields.append(InspectorField(
             key="w", label="Width", kind="float", value=data.get("w", 16.0),
@@ -354,7 +353,7 @@ def _build_collider_fields(data: Dict[str, Any]) -> Tuple[InspectorField, ...]:
             key="r", label="Radius", kind="float", value=data.get("r", 8.0),
             editable=True, min_value=1.0, step=1.0
         ))
-    
+
     return tuple(fields)
 
 
@@ -376,30 +375,30 @@ def get_component_dict(entity_json: Dict[str, Any], kind: ComponentKind) -> Opti
         Component data dict or None if component not present
     """
     components = _get_components_container(entity_json)
-    
+
     # Prefer explicit components container
     if kind in components:
         return dict(components[kind])
-    
+
     # Back-compat: read from legacy fields
     if kind == "transform":
         return _read_legacy_transform(entity_json, None)
-    
+
     if kind == "sprite":
         if "sprite" in entity_json or "asset" in entity_json:
             return _read_legacy_sprite(entity_json)
         return None
-    
+
     if kind == "light":
         if _has_component(entity_json, "light"):
             return _read_legacy_light(entity_json)
         return None
-    
+
     if kind == "collider":
         if "collision" in entity_json:
             return {"kind": entity_json.get("collision", "none")}
         return None
-    
+
     return None
 
 
@@ -435,7 +434,7 @@ def build_components(
         Tuple of InspectorComponent in stable order
     """
     components: List[InspectorComponent] = []
-    
+
     for kind in COMPONENT_ORDER:
         if kind == "transform":
             # Transform is always present
@@ -453,7 +452,7 @@ def build_components(
             comp_data = get_component_dict(entity_json, kind)
             if comp_data is None:
                 comp_data = dict(COMPONENT_DEFAULTS[kind])
-            
+
             if kind == "sprite":
                 fields = _build_sprite_fields(comp_data)
             elif kind == "light":
@@ -462,14 +461,14 @@ def build_components(
                 fields = _build_collider_fields(comp_data)
             else:
                 continue
-            
+
             components.append(InspectorComponent(
                 kind=kind,
                 title=COMPONENT_TITLES[kind],
                 fields=fields,
                 removable=True,
             ))
-    
+
     return tuple(components)
 
 
@@ -488,18 +487,18 @@ def add_component(entity_json: Dict[str, Any], kind: ComponentKind) -> Dict[str,
     if kind == "transform":
         # Transform always exists, no-op
         return _deep_copy(entity_json)
-    
+
     if _has_component(entity_json, kind):
         # Already present, no-op
         return _deep_copy(entity_json)
-    
+
     result = ensure_components_container(entity_json)
     defaults = dict(COMPONENT_DEFAULTS[kind])
-    
+
     # Add collider shape defaults based on kind
     if kind == "collider" and defaults.get("kind") == "rect":
         defaults.update(COLLIDER_RECT_DEFAULTS)
-    
+
     result["components"][kind] = defaults
     return result
 
@@ -519,13 +518,13 @@ def remove_component(entity_json: Dict[str, Any], kind: ComponentKind) -> Dict[s
     if kind == "transform":
         # Transform cannot be removed
         return _deep_copy(entity_json)
-    
+
     result = _deep_copy(entity_json)
-    
+
     # Remove from components container
     if "components" in result and kind in result["components"]:
         del result["components"][kind]
-    
+
     # Also remove legacy top-level fields for cleanliness
     if kind == "sprite":
         result.pop("sprite", None)
@@ -542,7 +541,7 @@ def remove_component(entity_json: Dict[str, Any], kind: ComponentKind) -> Dict[s
             result["behaviour_config"].pop("LightSource", None)
     elif kind == "collider":
         result.pop("collision", None)
-    
+
     return result
 
 
@@ -568,7 +567,7 @@ def set_component_field(
         New dict with field updated
     """
     result = ensure_components_container(entity_json)
-    
+
     # Ensure component exists in container
     if kind not in result["components"]:
         # Initialize from defaults or legacy values
@@ -579,10 +578,10 @@ def set_component_field(
     else:
         # Make a copy of the component dict
         result["components"][kind] = dict(result["components"][kind])
-    
+
     # Set the field value
     result["components"][kind][field_key] = new_value
-    
+
     # Special handling for collider kind changes
     if kind == "collider" and field_key == "kind":
         collider = result["components"]["collider"]
@@ -606,7 +605,7 @@ def set_component_field(
             collider.pop("w", None)
             collider.pop("h", None)
             collider.pop("r", None)
-    
+
     return result
 
 

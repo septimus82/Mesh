@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from engine.encounter_cost import MINI_BOSS_COST_MULT, BOSS_COST_MULT, get_effective_encounter_cost
+from engine.encounter_cost import BOSS_COST_MULT, MINI_BOSS_COST_MULT, get_effective_encounter_cost
 from engine.scene_controller import SceneController
 
 

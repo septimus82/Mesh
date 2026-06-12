@@ -1,6 +1,6 @@
 import pytest
-from engine.scene_loader import SceneLoader
 
+from engine.scene_loader import SceneLoader
 
 pytestmark = pytest.mark.builtin_behaviours
 
@@ -8,7 +8,7 @@ def test_apply_scene_defaults():
     loader = SceneLoader()
     raw = {"name": "Test Scene"}
     processed = loader.apply_scene_defaults(raw)
-    
+
     assert processed["name"] == "Test Scene"
     assert processed["version"] == 1
     assert "settings" in processed

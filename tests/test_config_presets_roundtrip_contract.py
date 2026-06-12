@@ -11,7 +11,6 @@ import pytest
 from engine.config import load_config
 from engine.schema_validation import SchemaValidationError
 
-
 pytestmark = [pytest.mark.fast]
 _MIRROR_FILE = "config_presets.json"
 _SLUG_FILE_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*\.json$")

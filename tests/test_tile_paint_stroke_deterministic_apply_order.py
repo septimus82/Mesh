@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 
 import arcade
+
 from tests._typing import as_any
 
 

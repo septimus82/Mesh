@@ -8,8 +8,8 @@ import pytest
 
 from engine.editor import editor_actions
 from engine.editor.editor_actions import get_editor_actions, run_editor_action
-from tests._dock_stub import make_dock_stub
 from engine.editor.menu_bar_model import build_menu_groups
+from tests._dock_stub import make_dock_stub
 
 
 def _stub_controller() -> MagicMock:
@@ -68,6 +68,7 @@ def test_panel_toggle_actions_registered_in_order() -> None:
 
 def test_panel_toggle_actions_toggle_collapsed_state() -> None:
     from types import SimpleNamespace
+
     from engine.editor.editor_actions import run_editor_action
 
     class _StubController:

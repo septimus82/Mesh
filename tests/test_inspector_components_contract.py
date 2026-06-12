@@ -11,8 +11,9 @@ Tests cover:
 
 from __future__ import annotations
 
-import pytest
 from typing import Any, Dict
+
+import pytest
 
 from engine.editor.inspector_components_model import (
     COMPONENT_SECTIONS,
@@ -30,7 +31,6 @@ from engine.editor.inspector_components_model import (
     toggle_section,
 )
 from tests._typing import as_any
-
 
 # -----------------------------------------------------------------------------
 # Test Fixtures

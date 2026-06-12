@@ -1,5 +1,6 @@
 from typing import Optional, TypedDict
 
+
 class IssueHint(TypedDict):
     issue_id: str
     category: str
@@ -10,7 +11,7 @@ class IssueHint(TypedDict):
 def map_issue_to_hint(source: str, msg: str, file_path: Optional[str]) -> Optional[IssueHint]:
     if not file_path:
         return None
-        
+
     file_path = file_path.replace("\\", "/")
     msg_lower = msg.lower()
 
@@ -33,7 +34,7 @@ def map_issue_to_hint(source: str, msg: str, file_path: Optional[str]) -> Option
             category = "missing_prefab"
         elif "variant" in msg_lower:
             category = "invalid_variant"
-            
+
         return {
             "issue_id": "validation_error",
             "category": category,
@@ -41,7 +42,7 @@ def map_issue_to_hint(source: str, msg: str, file_path: Optional[str]) -> Option
             "target": file_path,
             "confidence": 0.9
         }
-        
+
     # Check failure -> validate (if it's a scene/world)
     if source == "check" and file_path.endswith(".json"):
          return {

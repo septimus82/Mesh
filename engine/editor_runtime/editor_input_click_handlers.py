@@ -365,12 +365,13 @@ def _handle_top_bar_controls_click(controller: EditorController, x: float, y: fl
 
     Returns True if consumed, None to pass through.
     """
+    from engine.editor.editor_dock_query import get_effective_dock_widths
+
     from ..editor.editor_shell_layout import (
         compute_editor_shell_layout,
         compute_top_bar_controls,
         hit_test_top_bar_controls,
     )
-    from engine.editor.editor_dock_query import get_effective_dock_widths
 
     # Get effective dock widths for layout
     left_w, right_w = get_effective_dock_widths(controller, controller.window.width)
@@ -428,11 +429,12 @@ def _prefab_editor_should_route(controller: EditorController, prefab_editor: obj
 
 def _handle_splitter_click(controller: EditorController, x: float, y: float) -> bool | None:
     """Handle splitter click to begin dock resize. Returns True if consumed, None to pass through."""
+    from engine.editor.editor_dock_query import get_dock_collapsed, get_raw_dock_widths, get_viewport_maximized
+
     from ..editor.editor_shell_layout import (
         compute_editor_shell_layout,
         hit_test_splitter,
     )
-    from engine.editor.editor_dock_query import get_viewport_maximized, get_raw_dock_widths, get_dock_collapsed
 
     # Don't allow splitter dragging when viewport is maximized
     if get_viewport_maximized(controller):
@@ -474,13 +476,14 @@ def _handle_splitter_click(controller: EditorController, x: float, y: float) -> 
 
 def _handle_dock_tab_click(controller: EditorController, x: float, y: float) -> bool | None:
     """Handle dock tab click. Returns True if consumed, None to pass through."""
-    from ..editor.editor_shell_layout import (
-        compute_editor_shell_layout,
-        hit_test_dock_tab,
-    )
     from engine.editor.editor_dock_query import (
         get_effective_dock_widths,
         get_viewport_maximized,
+    )
+
+    from ..editor.editor_shell_layout import (
+        compute_editor_shell_layout,
+        hit_test_dock_tab,
     )
 
     # Don't allow dock tab clicks when viewport is maximized

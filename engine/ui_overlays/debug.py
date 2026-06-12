@@ -1,22 +1,24 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
+
 import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
 
 from ..animation_state import get_animation_state_snapshot
-from engine.swallowed_exceptions import _log_swallow
-from ..ui_text_cache import UiTextCache, draw_text
 from ..text_draw import TextCache
+from ..ui_text_cache import UiTextCache, draw_text
 from .common import (
     UIElement,
-    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
+    _draw_tb_rectangle_outline,
     _sprite_under_cursor,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ..game import GameWindow
     from arcade import Sprite
+
+    from ..game import GameWindow
 
 def format_encounter_debug_text(payload: dict[str, Any] | None) -> str:
     if not isinstance(payload, dict):
@@ -896,17 +898,17 @@ class PaletteOverlay(UIElement):
         item = state.selected_item
         item_str = f"{item.pack_id}/{item.id}" if item else "<none>"
         idx_str = f"{state.selected_index + 1}/{len(state.current_list)}" if state.current_list else "0/0"
-        
+
         cam_x = getattr(self.window.camera_controller, "camera_x", 0)
         cam_y = getattr(self.window.camera_controller, "camera_y", 0)
         mx = getattr(self.window.input_controller, "mouse_x", 0)
         my = getattr(self.window.input_controller, "mouse_y", 0)
-        
+
         world_x = cam_x + mx
         world_y = cam_y + my
         tx = int(world_x // 32)
         ty = int(world_y // 32)
-        
+
         layer_id = "ground" # Default
 
         lines = [
@@ -918,7 +920,7 @@ class PaletteOverlay(UIElement):
             "Enter=apply Tab=switch Up/Down=select",
             "P=preview F3=close"
         ]
-        
+
         if state.last_warnings:
             lines.append(f"WARNING: {state.last_warnings[0]}")
         return lines
@@ -927,10 +929,11 @@ class PaletteOverlay(UIElement):
         if not getattr(self.window, "show_debug", False):
             return
 
+        import json
+
         from ..palette_mode import get_state
         from ..paths import resolve_path
-        import json
-        
+
         lines = self.get_lines()
         if not lines:
             return
@@ -961,14 +964,14 @@ class PaletteOverlay(UIElement):
             anchor_y="top",
             font_name=("Consolas", "Courier New", "Courier"),
         )
-        
+
         item = state.selected_item
         if state.preview_on and item:
             preview_lines = []
             try:
                 with open(resolve_path(item.path), "r", encoding="utf-8") as f:
                     payload = json.load(f)
-                
+
                 if item.type == "stamp":
                     from ..stamps import pick_stamp_layer_id, render_stamp_layer_ascii
 
@@ -982,15 +985,15 @@ class PaletteOverlay(UIElement):
             except Exception:  # noqa: BLE001  # REASON: debug fallback isolation
                 _log_swallow("DBGO-007", "palette preview render fallback")
                 preview_lines = ["(preview error)"]
-            
+
             if preview_lines:
                 p_left = right + 10
                 p_top = top
-                
+
                 # Draw background for preview
                 p_width = 200 # Estimate
                 p_height = len(preview_lines) * 14 + 10
-                
+
                 _draw_rectangle_filled(
                     center_x=p_left + p_width/2,
                     center_y=p_top - p_height/2,
@@ -998,7 +1001,7 @@ class PaletteOverlay(UIElement):
                     height=p_height,
                     color=(0, 0, 0, 200),
                 )
-                
+
                 optional_arcade.arcade.draw_text(
                     "\n".join(preview_lines),
                     p_left + 5,

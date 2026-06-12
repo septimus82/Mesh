@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Callable
 from engine.input_runtime import capture
 from engine.swallowed_exceptions import _log_swallow
 
-
 if TYPE_CHECKING:
     from engine.input_controller import InputController
 

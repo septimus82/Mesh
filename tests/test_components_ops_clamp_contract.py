@@ -14,21 +14,20 @@ from typing import Any, Dict
 
 import pytest
 
-from engine.editor.components_ops import (
-    clamp_float,
-    clamp_int,
-    clamp_rgba,
-    wrap_deg,
-    apply_inspector_delta,
-    reset_field_to_default,
-    get_step_for_field,
-    cycle_enum_value,
-)
 from engine.editor.components_model import (
     LIGHT_DEFAULTS,
     TRANSFORM_DEFAULTS,
 )
-
+from engine.editor.components_ops import (
+    apply_inspector_delta,
+    clamp_float,
+    clamp_int,
+    clamp_rgba,
+    cycle_enum_value,
+    get_step_for_field,
+    reset_field_to_default,
+    wrap_deg,
+)
 
 # -----------------------------------------------------------------------------
 # Test clamp_float
@@ -197,7 +196,7 @@ class TestApplyInspectorDeltaConstraints:
         # Try to go below 0
         result = apply_inspector_delta(light_entity, "light", "flicker_amount", -1.0, shift=False)
         assert result["components"]["light"]["flicker_amount"] == 0.0
-        
+
         # Try to go above 1
         result2 = apply_inspector_delta(light_entity, "light", "flicker_amount", 1.0, shift=False)
         assert result2["components"]["light"]["flicker_amount"] == 1.0
@@ -222,7 +221,7 @@ class TestApplyInspectorDeltaConstraints:
         """Transform x/y should be unconstrained."""
         result = apply_inspector_delta(transform_entity, "transform", "x", -500.0, shift=False)
         assert result["components"]["transform"]["x"] == -400.0
-        
+
         result2 = apply_inspector_delta(transform_entity, "transform", "y", 10000.0, shift=False)
         assert result2["components"]["transform"]["y"] == 10100.0
 
@@ -237,7 +236,7 @@ class TestApplyInspectorDeltaConstraints:
         assert light_entity["components"]["light"]["flicker_enabled"] is False
         result = apply_inspector_delta(light_entity, "light", "flicker_enabled", 1.0, shift=False)
         assert result["components"]["light"]["flicker_enabled"] is True
-        
+
         result2 = apply_inspector_delta(result, "light", "flicker_enabled", 1.0, shift=False)
         assert result2["components"]["light"]["flicker_enabled"] is False
 
@@ -246,7 +245,7 @@ class TestApplyInspectorDeltaConstraints:
         # Normal delta of 1.0
         result = apply_inspector_delta(transform_entity, "transform", "x", 1.0, shift=False)
         assert result["components"]["transform"]["x"] == 101.0
-        
+
         # Shift delta of 1.0 should be 10.0
         result2 = apply_inspector_delta(transform_entity, "transform", "x", 1.0, shift=True)
         assert result2["components"]["transform"]["x"] == 110.0
@@ -254,15 +253,15 @@ class TestApplyInspectorDeltaConstraints:
     def test_enum_field_cycles(self):
         """Enum fields should cycle through options."""
         entity = {"id": "e", "components": {"collider": {"kind": "none"}}}
-        
+
         # Cycle forward
         result = apply_inspector_delta(entity, "collider", "kind", 1.0, shift=False)
         assert result["components"]["collider"]["kind"] == "rect"
-        
+
         # Cycle forward again
         result2 = apply_inspector_delta(result, "collider", "kind", 1.0, shift=False)
         assert result2["components"]["collider"]["kind"] == "circle"
-        
+
         # Cycle forward wraps
         result3 = apply_inspector_delta(result2, "collider", "kind", 1.0, shift=False)
         assert result3["components"]["collider"]["kind"] == "none"
@@ -270,7 +269,7 @@ class TestApplyInspectorDeltaConstraints:
     def test_enum_field_cycles_backward(self):
         """Enum fields should cycle backward with negative delta."""
         entity = {"id": "e", "components": {"collider": {"kind": "rect"}}}
-        
+
         result = apply_inspector_delta(entity, "collider", "kind", -1.0, shift=False)
         assert result["components"]["collider"]["kind"] == "none"
 

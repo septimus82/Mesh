@@ -1,9 +1,9 @@
-import pytest
 from engine.validators.variant_validator import VariantValidator
+
 
 def test_validate_variant_fields():
     validator = VariantValidator()
-    
+
     # Valid
     validator._validate_variant_fields("v1", {
         "id": "v1",
@@ -12,7 +12,7 @@ def test_validate_variant_fields():
         "sprite_override": "path.png"
     })
     assert len(validator.errors) == 0
-    
+
     # Invalid types
     validator._validate_variant_fields("v2", {
         "id": "v2",

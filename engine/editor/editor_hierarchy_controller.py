@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, List, Optional
+from typing import Any, List
 
 import engine.optional_arcade as optional_arcade
 from engine.ui_overlays.common import draw_panel_bg

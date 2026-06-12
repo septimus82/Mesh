@@ -7,6 +7,7 @@ from typing import Any
 
 from engine.swallowed_exceptions import _log_swallow
 
+
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     # Room scaffolding
     room_parser = subparsers.add_parser("room", help="Room scaffolding utilities")
@@ -48,8 +49,8 @@ def _handle_room_scaffold(args: argparse.Namespace) -> int:
     from engine.scene_serializer import compact_scene_payload
     from engine.tooling_runtime.macro_assets import load_macro_asset, parse_macro_asset, validate_macro_asset
 
-    from . import scene as scene_commands
     from . import legacy_impl as legacy_mod
+    from . import scene as scene_commands
 
     def parse_pair(spec: str, *, sep: str, label: str) -> tuple[int, int] | None:
         text = str(spec or "").strip().lower()

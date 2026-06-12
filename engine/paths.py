@@ -2,12 +2,12 @@ import os
 import sys
 from pathlib import Path
 from typing import List, Optional
+
 from engine.swallowed_exceptions import _log_swallow
 
 from .config import EngineConfig, load_config
 from .content_index import ContentIndex
 from .repo_root import find_repo_root
-
 
 _CACHED_CONFIG: Optional[EngineConfig] = None
 _CONTENT_ROOTS: Optional[List[Path]] = None

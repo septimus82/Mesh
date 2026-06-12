@@ -1,4 +1,3 @@
-from pathlib import Path
 
 def _format_placeholder_id_number(value: float) -> str:
     if float(value).is_integer():

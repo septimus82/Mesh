@@ -6,7 +6,8 @@ Handles:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+
 from engine.editor.state import EditorDirtyState
 
 if TYPE_CHECKING:
@@ -17,7 +18,7 @@ class EditorSceneOpsController:
 
     def __init__(self, controller: EditorModeController) -> None:
         self.controller = controller
-        
+
         # Dirty state
         self.scene_dirty: bool = False
         self.dirty_state = EditorDirtyState()

@@ -5,21 +5,16 @@ Tests overlay behavior with mocked arcade and controller.
 
 from __future__ import annotations
 
-from typing import Any
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from engine.editor.selection_outline_overlay import (
-    SelectionOutlineOverlay,
+    GROUP_BOUNDS_COLOR,
     OUTLINE_COLOR,
     PRIMARY_OUTLINE_COLOR,
-    GROUP_BOUNDS_COLOR,
-    OUTLINE_LINE_WIDTH,
-    PRIMARY_LINE_WIDTH,
-    GROUP_LINE_WIDTH,
+    SelectionOutlineOverlay,
 )
-
 
 # -----------------------------------------------------------------------------
 # Fixtures

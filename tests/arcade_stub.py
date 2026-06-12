@@ -5,7 +5,7 @@ where the real arcade library cannot be installed or run (e.g. CI/CD pipelines w
 """
 
 from types import SimpleNamespace
-from typing import Any, Tuple, Optional, List
+from typing import Any, List, Tuple
 
 # ----------------------------------------------------------------------------
 # CONSTANTS & NAMESPACES
@@ -32,27 +32,27 @@ key = SimpleNamespace(
     # Functions
     F1=65470, F2=65471, F3=65472, F4=65473, F5=65474, F6=65475,
     F7=65476, F8=65477, F9=65478, F10=65479, F11=65480, F12=65481,
-    
+
     # Arrows
     UP=65362, DOWN=65364, LEFT=65361, RIGHT=65363,
-    
+
     # Modifiers
     LSHIFT=65505, RSHIFT=65506, LCTRL=65507, RCTRL=65508, LALT=65513, RALT=65514,
     MOD_SHIFT=1, MOD_CTRL=2, MOD_ALT=4,
-    
+
     # Special
     ENTER=65293, RETURN=65293, ESCAPE=65307, BACKSPACE=65288, TAB=65289, SPACE=32,
     DELETE=65535, HOME=65360, END=65367, PAGEUP=65365, PAGEDOWN=65366, PAGE_UP=65365, PAGE_DOWN=65366,
-    
+
     # Numbers
     KEY_0=48, KEY_1=49, KEY_2=50, KEY_3=51, KEY_4=52,
     KEY_5=53, KEY_6=54, KEY_7=55, KEY_8=56, KEY_9=57,
-    
+
     # Letters
     A=97, B=98, C=99, D=100, E=101, F=102, G=103, H=104, I=105, J=106,
     K=107, L=108, M=109, N=110, O=111, P=112, Q=113, R=114, S=115, T=116,
     U=117, V=118, W=119, X=120, Y=121, Z=122,
-    
+
     # Symbols
     GRAVE=96, MINUS=45, EQUAL=61, LBRACKET=91, RBRACKET=93, BACKSLASH=92,
     SEMICOLON=59, APOSTROPHE=39, COMMA=44, PERIOD=46, SLASH=47
@@ -89,16 +89,16 @@ class Window:
         self.height = height
         self.title = title
         self.ctx = SimpleNamespace()
-        
+
     def show_view(self, view: Any):
         pass
-        
+
     def run(self):
         pass
-        
+
     def set_mouse_visible(self, visible: bool):
         pass
-        
+
     def set_location(self, x: int, y: int):
         pass
 
@@ -109,28 +109,28 @@ class View:
     """Stub View class."""
     def __init__(self):
         self.window = None
-        
+
     def on_show(self):
         pass
-        
+
     def on_show_view(self):
         pass
-        
+
     def on_hide_view(self):
         pass
-        
+
     def on_draw(self):
         pass
-        
+
     def on_update(self, delta_time: float):
         pass
-        
+
     def on_key_press(self, symbol: int, modifiers: int):
         pass
-        
+
     def on_key_release(self, symbol: int, modifiers: int):
         pass
-        
+
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int):
         pass
 
@@ -154,19 +154,19 @@ class Sprite:
         self.color = (255, 255, 255)
         self.visible = True
         self.texture = None
-        
+
     def draw(self):
         pass
-        
+
     def update(self):
         pass
-        
+
     def kill(self):
         pass
-        
+
     def remove_from_sprite_lists(self):
         pass
-        
+
     def collides_with_list(self, sprite_list: "SpriteList") -> List["Sprite"]:
         return []
 
@@ -175,13 +175,13 @@ class SpriteList(list):
     def __init__(self, use_spatial_hash=False):
         super().__init__()
         self.use_spatial_hash = use_spatial_hash
-        
+
     def draw(self, **kwargs):
         pass
-        
+
     def update(self):
         pass
-        
+
     def update_animation(self, delta_time: float = 1/60):
         pass
 

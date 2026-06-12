@@ -4,11 +4,10 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-
-from engine.input_runtime.capture_mouse_router_model import MouseEvent
 from engine.input_runtime.capture_mouse_router_handlers_modal_base import (
     maybe_handle_editor_mouse_press,
 )
+from engine.input_runtime.capture_mouse_router_model import MouseEvent
 
 
 def dispatch_entity_paint_mouse(controller: Any, event: MouseEvent, action_id: str) -> bool:
@@ -29,7 +28,6 @@ def dispatch_entity_paint_mouse(controller: Any, event: MouseEvent, action_id: s
 def _handle_entity_paint_mouse_press(window: Any, event: MouseEvent) -> bool:
     from engine.entity_paint_mode import (  # noqa: PLC0415
         EntityPaintState,
-        PrefabInfo,
         build_add_snippet,
         get_selected_prefab_id,
         load_prefab_infos,

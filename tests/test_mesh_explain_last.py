@@ -12,7 +12,7 @@ class TestMeshExplainLast(unittest.TestCase):
         """Test that mesh explain --last --json produces expected structure."""
         # First, ensure we have a failure artifact.
         # We can manually create one or run doctor on a bad world.
-        
+
         report = {
             "version": 1,
             "target": "worlds/bad.json",
@@ -29,7 +29,7 @@ class TestMeshExplainLast(unittest.TestCase):
             "warnings": [],
             "suggested_next_commands": ["mesh validate-all"]
         }
-        
+
         report_path = Path(".mesh/reports/doctor_last_failure.json")
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(json.dumps(report))
@@ -39,7 +39,7 @@ class TestMeshExplainLast(unittest.TestCase):
                 mesh_cli.main(["explain", "--last", "--json"])
             except SystemExit:
                 pass
-            
+
             output = fake_out.getvalue()
 
         try:
@@ -49,7 +49,7 @@ class TestMeshExplainLast(unittest.TestCase):
 
         self.assertIn("summary", data)
         self.assertIn("action_hints", data)
-        
+
         hints = data["action_hints"]
         self.assertEqual(len(hints), 1)
         self.assertEqual(hints[0]["category"], "missing_scene")
@@ -59,10 +59,10 @@ class TestMeshExplainLast(unittest.TestCase):
         self.assertIn("root_causes", data)
         self.assertIn("files", data)
         self.assertIn("suggested_fixes", data)
-        
+
         self.assertIsInstance(data["root_causes"], list)
         self.assertIsInstance(data["files"], list)
         self.assertIsInstance(data["suggested_fixes"], list)
-        
+
         # Check content based on our mock report
         self.assertIn("scenes/bad.json", data["files"])

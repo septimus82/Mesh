@@ -1,8 +1,9 @@
 import json
-import pytest
 from unittest.mock import MagicMock, patch
-from engine.save_manager import SaveManager
+
 from engine.game_state_controller import GameStateController
+from engine.save_manager import SaveManager
+
 
 class RealLogicWindow:
     def __init__(self):
@@ -25,7 +26,7 @@ class RealLogicWindow:
 
 def test_round_trip_determinism(tmp_path):
     window = RealLogicWindow()
-    
+
     # Populate Game State
     gs = window.game_state_controller.state
     gs.counters["gold"] = 100
@@ -34,31 +35,31 @@ def test_round_trip_determinism(tmp_path):
     gs.perks = ["perk_b", "perk_a"] # Unsorted
     gs.xp = 500
     gs.level = 5
-    
+
     # Save
     save_dir = tmp_path / "saves"
     manager = SaveManager(window, save_dir=str(save_dir))
     manager.save_game("test_slot")
-    
+
     save_path = save_dir / "test_slot.json"
     assert save_path.exists()
-    
+
     # Load raw JSON to check determinism
     with open(save_path, "r") as f:
         data = json.load(f)
-        
+
     # Check Version
     assert data["meta"]["version"] == 2
-    
+
     # Check Sorted Perks
     assert data["game_state"]["perks"] == ["perk_a", "perk_b"]
-    
+
     # Load into fresh window
     new_window = RealLogicWindow()
     new_manager = SaveManager(new_window, save_dir=str(save_dir))
-    
+
     new_manager.load_game("test_slot")
-    
+
     new_gs = new_window.game_state_controller.state
     assert new_gs.counters["gold"] == 100
     assert new_gs.flags["boss_defeated"] is True
@@ -82,17 +83,17 @@ def test_load_old_version(tmp_path):
         },
         "entities": []
     }
-    
+
     save_dir = tmp_path / "saves"
     save_dir.mkdir()
     with open(save_dir / "old_slot.json", "w") as f:
         json.dump(save_data, f)
-        
+
     window = RealLogicWindow()
     manager = SaveManager(window, save_dir=str(save_dir))
-    
+
     assert manager.load_game("old_slot") is True
-    
+
     gs = window.game_state_controller.state
     assert gs.counters["gold"] == 50
     assert gs.perks == ["old_perk"]
@@ -102,17 +103,17 @@ def test_file_determinism(tmp_path):
     window = RealLogicWindow()
     window.game_state_controller.state.counters["gold"] = 100
     window.game_state_controller.state.perks = ["z", "a"]
-    
+
     save_dir = tmp_path / "saves"
     manager = SaveManager(window, save_dir=str(save_dir))
-    
+
     # Mock timestamp to be constant
     with patch.object(manager, '_get_timestamp', return_value="2025-01-01T00:00:00"):
         manager.save_game("slot_det")
-        
+
     with open(save_dir / "slot_det.json", "r") as f:
         content = f.read()
-        
+
     # Check if perks are sorted in the file text
     # "perks": [
     #   "a",
@@ -122,7 +123,7 @@ def test_file_determinism(tmp_path):
     perks_index = content.find('"perks": [')
     a_index = content.find('"a"', perks_index)
     z_index = content.find('"z"', perks_index)
-    
+
     assert perks_index != -1
     assert a_index != -1
     assert z_index != -1

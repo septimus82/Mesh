@@ -9,8 +9,9 @@ from engine.behaviour_event_router_model import (
     handler_name_for_event,
     should_fallback_to_primary,
 )
-from engine.sensors_model import SensorEvent, SensorDef
 from engine.physics_model import Aabb
+from engine.sensors_model import SensorDef, SensorEvent
+
 
 def test_handler_name_mapping():
     assert handler_name_for_event("sensor_enter") == "on_sensor_enter"
@@ -22,16 +23,16 @@ def test_build_behaviour_events():
         SensorEvent("s1", "e1", "enter"),
         SensorEvent("s2", "e1", "exit"),
     )
-    
+
     s_defs = (
         SensorDef("s1", Aabb(0,0,0,0), tags=("trap", "zone")),
         SensorDef("s2", Aabb(0,0,0,0), tags=()),
     )
-    
+
     b_events = build_sensor_behaviour_events(s_events, s_defs, "scene1.json")
-    
+
     assert len(b_events) == 2
-    
+
     # Check enrichment
     e1 = b_events[0]
     assert e1.kind == "sensor_enter"
@@ -43,17 +44,17 @@ def test_build_behaviour_events():
 
 def test_compute_dispatch_targets_priority():
     event = BehaviourEvent("sensor_enter", "player", "s1")
-    
+
     # Case 1: Both handle it
     e_idx = {"player": ("on_sensor_enter",)}
     s_idx = ("on_sensor_enter",)
-    
+
     plan = compute_dispatch_targets(event, e_idx, s_idx, resolved_entity_id="player")
     assert isinstance(plan, DispatchPlan)
     assert plan.entity_handler_enabled is True
     assert plan.scene_target_enabled is True
     assert plan.resolved_entity_target_id == "player"
-    
+
     # Case 2: Only entity
     e_idx = {"player": ("on_sensor_enter",)}
     s_idx = ()

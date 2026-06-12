@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from engine.editor.editor_actions import SHORTCUT_SCOPE_INLINE_RENAME, SHORTCUT_SCOPE_PROJECT_EXPLORER
 from engine.editor.keymap_override_model import (
+    SHORTCUT_SCOPE_GLOBAL,
+    KeymapConflict,
     apply_keymap_overrides,
     compute_keymap_conflicts,
     format_keymap_conflict,
-    KeymapConflict,
     parse_keymap_overrides,
     parse_override_key,
-    SHORTCUT_SCOPE_GLOBAL,
 )
-from engine.editor.editor_actions import SHORTCUT_SCOPE_INLINE_RENAME, SHORTCUT_SCOPE_PROJECT_EXPLORER
 
 
 @dataclass(frozen=True)

@@ -10,16 +10,13 @@ from engine.persistence_io import migrate_save_payload, read_json, write_json_at
 from engine.save_runtime.errors import single_line_error
 from engine.save_runtime.normalize import normalize_save_payload
 from engine.save_runtime.restore_policy import (
-    RestorePolicy,
     SLOT_POLICY,
     SNAPSHOT_POLICY,
+    RestorePolicy,
 )
 from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from engine.save_runtime.schema import SaveValidationError, migrate_save, validate_save
-from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
-
-
 
 _LAST_LOAD_ATTEMPT: dict[str, Any] = {
     "kind": None,

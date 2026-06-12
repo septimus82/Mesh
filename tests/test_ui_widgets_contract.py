@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from engine.ui_overlays.widgets import Button, Label, Padding, Panel, Rect, VStack
-
 import pytest
+
+from engine.ui_overlays.widgets import Button, Label, Padding, Panel, Rect, VStack
 
 pytestmark = [pytest.mark.fast]
 

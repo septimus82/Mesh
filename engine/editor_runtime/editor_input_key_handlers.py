@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import engine.optional_arcade as optional_arcade
-
 from engine.editor.editor_panels_query import panels_is_open
 
 from .editor_input_menu_handlers import handle_context_menu_key, handle_menu_bar_key

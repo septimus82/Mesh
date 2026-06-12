@@ -1,3 +1,5 @@
+# ruff: noqa: F401
+
 from __future__ import annotations
 
 import argparse
@@ -20,12 +22,19 @@ from engine.save_runtime.normalize import normalize_save_payload
 from . import episode as episode_commands
 from .replay_digest_projection import (
     DIGEST_PROJECTION_POLICY,
+)
+from .replay_digest_projection import (
     project_event_for_digest as _project_event_for_golden_digest,
+)
+from .replay_digest_projection import (
     project_events_for_digest as _project_events_for_golden_digest,
+)
+from .replay_digest_projection import (
     project_final_state_for_digest as _project_final_state_for_golden_digest,
+)
+from .replay_digest_projection import (
     project_world_digests_for_digest as _project_world_digests_for_golden_digest,
 )
-
 
 SCHEMA_VERSION = 1
 GOLDEN_SCHEMA_VERSION = 1

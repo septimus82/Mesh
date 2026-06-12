@@ -4,7 +4,7 @@ import collections
 import enum
 import math
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from typing import Any, Deque
 
 
@@ -53,7 +53,7 @@ class PerfStats:
             # Complete previous frame
             total_duration = (now - self._frame_start_time) * 1000.0
             self.samples[PerfMetric.FRAME_TOTAL_MS].append(total_duration)
-        
+
         self._frame_start_time = now
         self._frame_index += 1
 
@@ -88,13 +88,13 @@ class PerfStats:
         for key, values in self.samples.items():
             if not values:
                 continue
-            
+
             data = sorted(values)
             n = len(data)
             mean = sum(data) / n
             variance = sum((x - mean) ** 2 for x in data) / n
             stddev = math.sqrt(variance)
-            
+
             metrics[key] = MetricStats(
                 count=n,
                 mean=round(mean, 3),
@@ -104,5 +104,5 @@ class PerfStats:
                 p99=round(data[int(n * 0.99)], 3),
                 max=round(data[-1], 3),
             )
-            
+
         return PerfSnapshot(metrics=metrics, meta={"counters": dict(self.counters)})

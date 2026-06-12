@@ -5,11 +5,11 @@ from types import SimpleNamespace
 import pytest
 
 import engine.optional_arcade as optional_arcade
-from engine.editor.find_everything_model import FindResult, compute_find_counts
 from engine.editor.editor_search_controller import EditorSearchController
+from engine.editor.find_everything_model import FindResult, compute_find_counts
 from engine.editor_runtime import editor_input_key_handlers
-from engine.ui_overlays.find_everything_overlay import FindEverythingOverlay
 from engine.ui_overlays import find_everything_overlay as overlay_module
+from engine.ui_overlays.find_everything_overlay import FindEverythingOverlay
 from engine.ui_overlays.widgets import Rect
 from tests._typing import as_any
 

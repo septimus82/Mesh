@@ -5,13 +5,11 @@ import shutil
 import subprocess
 import sys
 import time
-from pathlib import Path
 import tomllib
+from pathlib import Path
 
-from engine.diagnostics import clear_diagnostics
-from engine.diagnostics import diagnostics_to_json
+from engine.diagnostics import clear_diagnostics, diagnostics_to_json, get_diagnostics
 from engine.diagnostics import error as diag_error
-from engine.diagnostics import get_diagnostics
 
 
 def _read_pygbag_toml(path: Path) -> dict:

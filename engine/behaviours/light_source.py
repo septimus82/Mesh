@@ -7,11 +7,11 @@ import random
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from arcade import Sprite
+    pass
 
+from ..lighting.flicker import FlickerNoise, apply_light_flicker
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
-from ..lighting.flicker import FlickerNoise, apply_light_flicker
 
 
 @register_behaviour(

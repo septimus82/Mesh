@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import pytest
 from engine.behaviours.drop_table import DropTable
 from engine.events import MeshEvent, MeshEventBus
 from engine.game_state_controller import GameStateController
 from engine.ui import (
     begin_boss_gold_reward_tracking,
-    maybe_finish_boss_gold_reward_toast,
     maybe_enqueue_boss_defeat_toast,
-    maybe_enqueue_exit_unlocked_toast,
+    maybe_finish_boss_gold_reward_toast,
 )
+
 
 class StubHUD:
     def __init__(self) -> None:
@@ -54,14 +53,14 @@ def test_boss_defeat_exit_unlocked_toast_order() -> None:
     """
     boss_x = 600
     exit_x = 700
-    
+
     scene_data = {
         "entities": [
             {"name": "Boss", "x": boss_x, "is_boss": True},
             {"name": "Exit", "x": exit_x}
         ]
     }
-    
+
     window = StubWindow(scene_id="packs/core_regions/scenes/Ridge Outpost_dungeon.json", scene_data=scene_data)
     actor = StubActor(x=boss_x)
 
@@ -107,14 +106,14 @@ def test_boss_defeat_no_exit_unlocked_if_exit_before_boss() -> None:
     """Verify 'Exit unlocked' does NOT appear if Exit is before Boss."""
     boss_x = 600
     exit_x = 100 # Exit is before boss (e.g. entrance)
-    
+
     scene_data = {
         "entities": [
             {"name": "Boss", "x": boss_x, "is_boss": True},
             {"name": "Exit", "x": exit_x}
         ]
     }
-    
+
     window = StubWindow(scene_id="packs/core_regions/scenes/Ridge Outpost_dungeon.json", scene_data=scene_data)
     actor = StubActor(x=boss_x)
 

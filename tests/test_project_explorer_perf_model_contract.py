@@ -8,8 +8,6 @@ Verifies:
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestComputeFilterKey:
     """Tests for compute_filter_key determinism."""

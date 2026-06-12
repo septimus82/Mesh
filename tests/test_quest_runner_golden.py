@@ -9,18 +9,16 @@ These tests verify:
 """
 from __future__ import annotations
 
-import copy
-import pytest
 from typing import Any
+
+import pytest
 
 from engine.gameplay_event_bus import GameplayEvent
 from engine.quest_runtime.runner import (
     QuestRunner,
     QuestRunnerState,
-    StepCompletionDiagnostic,
 )
 from engine.save_runtime.quest_state import SavedQuestState
-
 
 # ------------------------------------------------------------------
 # Test Fixtures - Quest Definitions
@@ -182,42 +180,42 @@ class TestQuestRunnerGoldenProgression:
         runner = QuestRunner()
         errors = runner.load_definitions(simple_quest_def)
         assert errors == []
-        
+
         # Start quest
         assert runner.start_quest("simple_quest")
-        
+
         state = runner.get_quest_state("simple_quest")
         assert state is not None
         assert state.status == "active"
         assert state.current_stage == "stage_1"
-        
+
         # Event for stage 1 completion
         events = [make_event("objective_complete", 1, objective_id="obj_1")]
         emitted = runner.process_events(events)
-        
+
         # Should emit stage_completed then stage_started
         assert len(emitted) >= 2
         assert emitted[0].event_type == "quest_stage_completed"
         assert emitted[0].payload["stage_id"] == "stage_1"
         assert emitted[1].event_type == "quest_stage_started"
         assert emitted[1].payload["stage_id"] == "stage_2"
-        
+
         state = runner.get_quest_state("simple_quest")
         assert state is not None
         assert state.current_stage == "stage_2"
         assert "stage_1" in state.completed_stages
-        
+
         # Event for stage 2 completion
         events = [make_event("objective_complete", 2, objective_id="obj_2")]
         emitted = runner.process_events(events)
-        
+
         # Should emit stage_completed then quest_completed
         assert len(emitted) >= 2
         assert emitted[0].event_type == "quest_stage_completed"
         assert emitted[0].payload["stage_id"] == "stage_2"
         assert emitted[1].event_type == "quest_completed"
         assert emitted[1].payload["quest_id"] == "simple_quest"
-        
+
         state = runner.get_quest_state("simple_quest")
         assert state is not None
         assert state.status == "completed"
@@ -227,25 +225,25 @@ class TestQuestRunnerGoldenProgression:
         runner = QuestRunner()
         runner.load_definitions(gated_quest_def)
         runner.start_quest("gated_quest")
-        
+
         state = runner.get_quest_state("gated_quest")
         assert state is not None
         # First stage has start trigger, so awaiting
         assert state.awaiting_stage == "intro"
         assert state.current_stage is None
-        
+
         # Wrong event doesn't start stage
         events = [make_event("wrong_event", 1)]
         emitted = runner.process_events(events)
         assert emitted == []
-        
+
         # Correct start event
         events = [make_event("dialogue_choice", 2, choice_id="accept_quest")]
         emitted = runner.process_events(events)
-        
+
         assert len(emitted) == 1
         assert emitted[0].event_type == "quest_stage_started"
-        
+
         state = runner.get_quest_state("gated_quest")
         assert state is not None
         assert state.current_stage == "intro"
@@ -257,28 +255,28 @@ class TestQuestRunnerGoldenProgression:
             make_event("objective_complete", 1, objective_id="obj_1"),
             make_event("objective_complete", 2, objective_id="obj_2"),
         ]
-        
+
         # Run 1
         runner1 = QuestRunner(emit_sequence_start=1000)
         runner1.load_definitions(simple_quest_def)
         runner1.start_quest("simple_quest")
         emitted1 = runner1.process_events(events)
         state1 = runner1.get_state("simple_quest")
-        
+
         # Run 2 (fresh runner)
         runner2 = QuestRunner(emit_sequence_start=1000)
         runner2.load_definitions(simple_quest_def)
         runner2.start_quest("simple_quest")
         emitted2 = runner2.process_events(events)
         state2 = runner2.get_state("simple_quest")
-        
+
         # Same emitted events
         assert len(emitted1) == len(emitted2)
         for e1, e2 in zip(emitted1, emitted2):
             assert e1.event_type == e2.event_type
             assert e1.payload == e2.payload
             assert e1.sequence == e2.sequence
-        
+
         # Same final state
         assert state1 == state2
 
@@ -287,20 +285,20 @@ class TestQuestRunnerGoldenProgression:
         runner = QuestRunner()
         runner.load_definitions(counter_quest_def)
         runner.start_quest("counter_quest")
-        
+
         # Wrong payload value
         events = [make_event("enemy_killed", 1, enemy_type="orc")]
         emitted = runner.process_events(events)
         assert emitted == []
-        
+
         state = runner.get_quest_state("counter_quest")
         assert state is not None
         assert state.current_stage == "kill_enemies"
-        
+
         # Correct payload value
         events = [make_event("enemy_killed", 2, enemy_type="goblin")]
         emitted = runner.process_events(events)
-        
+
         assert len(emitted) >= 1
         assert emitted[0].event_type == "quest_stage_completed"
 
@@ -309,17 +307,17 @@ class TestQuestRunnerGoldenProgression:
         runner = QuestRunner()
         runner.load_definitions(emit_events_quest_def)
         runner.start_quest("emit_quest")
-        
+
         events = [make_event("trigger_complete", 1)]
         emitted = runner.process_events(events)
-        
+
         # Should emit: stage_completed, custom_event_1, custom_event_2, quest_completed
         event_types = [e.event_type for e in emitted]
         assert "quest_stage_completed" in event_types
         assert "custom_event_1" in event_types
         assert "custom_event_2" in event_types
         assert "quest_completed" in event_types
-        
+
         # Check custom_event_2 payload
         custom_2 = next(e for e in emitted if e.event_type == "custom_event_2")
         assert custom_2.payload.get("key") == "value"
@@ -337,29 +335,29 @@ class TestQuestRunnerSaveRestore:
         runner = QuestRunner()
         runner.load_definitions(simple_quest_def)
         runner.start_quest("simple_quest")
-        
+
         # Complete first stage
         events = [make_event("objective_complete", 1, objective_id="obj_1")]
         runner.process_events(events)
-        
+
         # Save state
         saved = runner.get_state("simple_quest")
-        
+
         # Create new runner and restore
         runner2 = QuestRunner()
         runner2.load_definitions(simple_quest_def)
         runner2.apply_state(saved)
-        
+
         state = runner2.get_quest_state("simple_quest")
         assert state is not None
         assert state.status == "active"
         assert state.current_stage == "stage_2"
         assert "stage_1" in state.completed_stages
-        
+
         # Continue from restored state
         events = [make_event("objective_complete", 2, objective_id="obj_2")]
         emitted = runner2.process_events(events)
-        
+
         assert any(e.event_type == "quest_completed" for e in emitted)
 
     def test_save_restore_preserves_counters(self, simple_quest_def):
@@ -367,19 +365,19 @@ class TestQuestRunnerSaveRestore:
         runner = QuestRunner()
         runner.load_definitions(simple_quest_def)
         runner.start_quest("simple_quest")
-        
+
         # Manually set counter
         state = runner.get_quest_state("simple_quest")
         assert state is not None
         state.counters["test_counter"] = 42
-        
+
         # Save and restore
         saved = runner.get_state("simple_quest")
-        
+
         runner2 = QuestRunner()
         runner2.load_definitions(simple_quest_def)
         runner2.apply_state(saved)
-        
+
         state2 = runner2.get_quest_state("simple_quest")
         assert state2 is not None
         assert state2.counters.get("test_counter") == 42
@@ -389,23 +387,23 @@ class TestQuestRunnerSaveRestore:
         runner = QuestRunner()
         runner.load_definitions(simple_quest_def)
         runner.start_quest("simple_quest")
-        
+
         # Complete first stage
         events = [make_event("objective_complete", 1, objective_id="obj_1")]
         runner.process_events(events)
-        
+
         # Get internal state
         state = runner.get_quest_state("simple_quest")
         assert state is not None
-        
+
         # Convert to SavedQuestState and back
         saved = state.to_saved_state()
         saved_dict = saved.to_dict()
-        
+
         # Deserialize
         restored_saved = SavedQuestState.from_dict(saved_dict)
         restored_state = QuestRunnerState.from_saved_state(restored_saved)
-        
+
         assert restored_state.quest_id == state.quest_id
         assert restored_state.status == state.status
         assert restored_state.completed_stages == state.completed_stages
@@ -423,14 +421,14 @@ class TestQuestRunnerDiagnostics:
         runner = QuestRunner()
         runner.load_definitions(simple_quest_def)
         runner.start_quest("simple_quest")
-        
+
         # Send non-matching event
         events = [make_event("wrong_event", 1, some_key="value")]
         runner.process_events(events)
-        
+
         diagnostics = runner.get_diagnostics("simple_quest")
         assert len(diagnostics) > 0
-        
+
         # Check diagnostic content
         diag = diagnostics[-1]
         assert diag.quest_id == "simple_quest"
@@ -442,13 +440,13 @@ class TestQuestRunnerDiagnostics:
         runner = QuestRunner()
         runner.load_definitions(simple_quest_def)
         runner.start_quest("simple_quest")
-        
+
         # Send matching event
         events = [make_event("objective_complete", 1, objective_id="obj_1")]
         runner.process_events(events)
-        
+
         diagnostics = runner.get_diagnostics("simple_quest")
-        
+
         # Should have at least one match
         matches = [d for d in diagnostics if d.matched]
         assert len(matches) > 0
@@ -458,11 +456,11 @@ class TestQuestRunnerDiagnostics:
         runner = QuestRunner()
         runner.load_definitions(simple_quest_def)
         runner.start_quest("simple_quest")
-        
+
         # Send non-matching event
         events = [make_event("wrong_event", 1)]
         runner.process_events(events)
-        
+
         reason = runner.get_step_completion_reason("simple_quest", "stage_1")
         assert reason is not None
         assert len(reason) > 0
@@ -485,14 +483,14 @@ class TestQuestRunnerEdgeCases:
         runner = QuestRunner()
         runner.load_definitions(simple_quest_def)
         runner.start_quest("simple_quest")
-        
+
         # Complete the quest
         events = [
             make_event("objective_complete", 1, objective_id="obj_1"),
             make_event("objective_complete", 2, objective_id="obj_2"),
         ]
         runner.process_events(events)
-        
+
         assert runner.is_quest_completed("simple_quest")
         assert runner.start_quest("simple_quest") is False
 
@@ -501,7 +499,7 @@ class TestQuestRunnerEdgeCases:
         runner = QuestRunner()
         runner.load_definitions(simple_quest_def)
         runner.start_quest("simple_quest")
-        
+
         emitted = runner.process_events([])
         assert emitted == []
 
@@ -509,20 +507,20 @@ class TestQuestRunnerEdgeCases:
         """Loading invalid JSON file returns error."""
         bad_file = tmp_path / "bad.json"
         bad_file.write_text("{invalid json")
-        
+
         runner = QuestRunner()
         errors = runner.load_definitions(bad_file)
-        
+
         assert len(errors) == 1
         assert errors[0].code == "file.invalid_json"
 
     def test_load_missing_file(self, tmp_path):
         """Loading missing file returns error."""
         missing = tmp_path / "missing.json"
-        
+
         runner = QuestRunner()
         errors = runner.load_definitions(missing)
-        
+
         assert len(errors) == 1
         assert errors[0].code == "file.not_found"
 
@@ -531,20 +529,20 @@ class TestQuestRunnerEdgeCases:
         runner = QuestRunner()
         runner.load_definitions(simple_quest_def)
         runner.start_quest("simple_quest")
-        
+
         # Events out of sequence order in list
         events = [
             make_event("objective_complete", 2, objective_id="obj_2"),  # Higher sequence
             make_event("objective_complete", 1, objective_id="obj_1"),  # Lower sequence
         ]
-        
+
         # Process all at once
         emitted = runner.process_events(events)
-        
+
         # Stage 1 should complete first (lower sequence processed first)
         completed_stages = [
-            e.payload["stage_id"] 
-            for e in emitted 
+            e.payload["stage_id"]
+            for e in emitted
             if e.event_type == "quest_stage_completed"
         ]
         assert completed_stages == ["stage_1", "stage_2"]
@@ -562,10 +560,10 @@ class TestQuestRunnerIntegration:
         runner = QuestRunner()
         runner.load_definitions(simple_quest_def)
         runner.start_quest("simple_quest")
-        
+
         events = [make_event("objective_complete", 1, objective_id="obj_1")]
         emitted = runner.process_events(events)
-        
+
         for event in emitted:
             assert isinstance(event, GameplayEvent)
             assert isinstance(event.event_type, str)
@@ -578,13 +576,13 @@ class TestQuestRunnerIntegration:
         runner = QuestRunner()
         runner.load_definitions(simple_quest_def)
         runner.start_quest("simple_quest")
-        
+
         events = [
             make_event("objective_complete", 1, objective_id="obj_1"),
             make_event("objective_complete", 2, objective_id="obj_2"),
         ]
         emitted = runner.process_events(events)
-        
+
         completed = next(e for e in emitted if e.event_type == "quest_completed")
         assert "reward" in completed.payload
         assert completed.payload["reward"]["set_flags"]["simple_quest_complete"] is True
@@ -614,16 +612,16 @@ class TestMultipleQuestsInteraction:
                 },
             ],
         }
-        
+
         runner = QuestRunner()
         runner.load_definitions(data)
         runner.start_quest("quest_a")
         runner.start_quest("quest_b")
-        
+
         # Complete quest_a only
         events = [make_event("event_a", 1)]
         runner.process_events(events)
-        
+
         assert runner.is_quest_completed("quest_a")
         assert not runner.is_quest_completed("quest_b")
         assert runner.is_quest_active("quest_b")
@@ -649,23 +647,23 @@ class TestMultipleQuestsInteraction:
                 },
             ],
         }
-        
+
         runner = QuestRunner()
         runner.load_definitions(data)
         runner.start_quest("quest_a")
         runner.start_quest("quest_b")
-        
+
         # Single event completes both
         events = [make_event("shared_event", 1)]
         emitted = runner.process_events(events)
-        
+
         assert runner.is_quest_completed("quest_a")
         assert runner.is_quest_completed("quest_b")
-        
+
         # Should have completion events for both
         completed_quests = [
-            e.payload["quest_id"] 
-            for e in emitted 
+            e.payload["quest_id"]
+            for e in emitted
             if e.event_type == "quest_completed"
         ]
         assert "quest_a" in completed_quests

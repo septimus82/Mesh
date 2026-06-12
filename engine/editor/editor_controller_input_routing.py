@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+
 def set_last_mouse_pos(self, x: float, y: float):
     """Update the last known mouse position.
 

@@ -15,8 +15,7 @@ Migration policy:
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Sequence
-
+from typing import Any, Callable
 
 # Current save schema version.
 # Increment when adding new required fields or changing semantics.
@@ -31,7 +30,7 @@ class SaveValidationError(Exception):
     path: str  # JSON path to invalid field (e.g. "game_state.flags")
     message: str  # Human-readable error
     value: Any = None  # The invalid value (for debugging)
-    
+
     def __str__(self) -> str:
         if self.path:
             return f"Save validation failed at '{self.path}': {self.message}"
@@ -65,18 +64,18 @@ def _migrate_v0_to_v1(data: dict[str, Any]) -> dict[str, Any]:
     """
     # Ensure version field exists
     data["save_schema_version"] = 1
-    
+
     # Normalize flags to dict if it's a list
     flags = data.get("flags")
     if isinstance(flags, list):
         data["flags"] = {str(f): True for f in flags if f}
     elif not isinstance(flags, dict):
         data["flags"] = {}
-    
+
     # Ensure game_state wrapper exists for slot saves
     if "game_state" not in data and "state" in data:
         data["game_state"] = data.pop("state")
-    
+
     return data
 
 
@@ -92,21 +91,21 @@ def _migrate_v1_to_v2(data: dict[str, Any]) -> dict[str, Any]:
     v1 saves without these blocks get empty defaults.
     """
     data["save_schema_version"] = 2
-    
+
     # Add empty saved_entities if missing
     if "saved_entities" not in data:
         data["saved_entities"] = {
             "schema_version": 1,
             "entities": [],
         }
-    
+
     # Add empty saved_quests if missing
     if "saved_quests" not in data:
         data["saved_quests"] = {
             "schema_version": 1,
             "quests": {},
         }
-    
+
     return data
 
 
@@ -130,18 +129,18 @@ def migrate_save(data: dict[str, Any]) -> dict[str, Any]:
             message="Save payload must be a JSON object",
             value=type(data).__name__,
         )
-    
+
     # Determine current version
     raw_version = data.get("save_schema_version")
     if raw_version is None:
         # Also check save_format_version for backward compat
         raw_version = data.get("save_format_version", 0)
-    
+
     try:
         version = int(raw_version)
     except (TypeError, ValueError):
         version = 0
-    
+
     # Reject future versions
     if version > SAVE_SCHEMA_VERSION:
         raise ValueError(
@@ -149,7 +148,7 @@ def migrate_save(data: dict[str, Any]) -> dict[str, Any]:
             f"this game supports up to v{SAVE_SCHEMA_VERSION}). "
             f"Please update your game."
         )
-    
+
     # Apply migrations sequentially
     while version < SAVE_SCHEMA_VERSION:
         migration = _MIGRATIONS.get(version)
@@ -160,11 +159,11 @@ def migrate_save(data: dict[str, Any]) -> dict[str, Any]:
         else:
             data = migration(data)
             version = data.get("save_schema_version", version + 1)
-    
+
     # Ensure save_schema_version is always present after migration
     if "save_schema_version" not in data:
         data["save_schema_version"] = SAVE_SCHEMA_VERSION
-    
+
     return data
 
 
@@ -189,7 +188,7 @@ def validate_save(data: dict[str, Any]) -> None:
             message="Save payload must be a JSON object",
             value=type(data).__name__,
         )
-    
+
     # Check version field
     version = data.get("save_schema_version")
     if version is None:
@@ -199,7 +198,7 @@ def validate_save(data: dict[str, Any]) -> None:
             path="save_schema_version",
             message="Missing version field",
         )
-    
+
     # Validate flags structure
     flags = data.get("flags")
     if flags is not None and not isinstance(flags, (dict, list)):
@@ -208,7 +207,7 @@ def validate_save(data: dict[str, Any]) -> None:
             message=f"flags must be a dict or list, got {type(flags).__name__}",
             value=flags,
         )
-    
+
     # Validate nested game_state if present
     game_state = data.get("game_state")
     if game_state is not None:
@@ -218,7 +217,7 @@ def validate_save(data: dict[str, Any]) -> None:
                 message=f"game_state must be a dict, got {type(game_state).__name__}",
                 value=game_state,
             )
-        
+
         # Check nested flags
         nested_flags = game_state.get("flags")
         if nested_flags is not None and not isinstance(nested_flags, dict):
@@ -227,7 +226,7 @@ def validate_save(data: dict[str, Any]) -> None:
                 message=f"game_state.flags must be a dict, got {type(nested_flags).__name__}",
                 value=nested_flags,
             )
-        
+
         # Check counters
         counters = game_state.get("counters")
         if counters is not None and not isinstance(counters, dict):
@@ -236,7 +235,7 @@ def validate_save(data: dict[str, Any]) -> None:
                 message=f"game_state.counters must be a dict, got {type(counters).__name__}",
                 value=counters,
             )
-    
+
     # Validate scene_id/scene_path if present
     for field in ("scene_id", "scene_path"):
         value = data.get(field)
@@ -246,7 +245,7 @@ def validate_save(data: dict[str, Any]) -> None:
                 message=f"{field} must be a string, got {type(value).__name__}",
                 value=value,
             )
-    
+
     # Validate gold/currency if present
     gold = data.get("gold")
     if gold is not None:
@@ -264,7 +263,7 @@ def validate_save(data: dict[str, Any]) -> None:
                 message=f"gold must be a number, got {type(gold).__name__}",
                 value=gold,
             )
-    
+
     # Validate saved_entities (v2)
     saved_entities = data.get("saved_entities")
     if saved_entities is not None:
@@ -281,7 +280,7 @@ def validate_save(data: dict[str, Any]) -> None:
                 message=f"saved_entities.entities must be a list, got {type(entities_list).__name__}",
                 value=entities_list,
             )
-    
+
     # Validate saved_quests (v2)
     saved_quests = data.get("saved_quests")
     if saved_quests is not None:
@@ -320,7 +319,7 @@ def load_and_validate(data: Any) -> dict[str, Any]:
             message="Save payload must be a JSON object",
             value=type(data).__name__,
         )
-    
+
     migrated = migrate_save(data)
     validate_save(migrated)
     return migrated

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 class FloodFillMaxTilesExceeded(Exception):
     def __init__(self, *, max_tiles: int, attempted: int, partial_indices: list[int]) -> None:
         super().__init__(f"max_tiles_exceeded: max_tiles={max_tiles} attempted={attempted}")

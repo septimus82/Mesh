@@ -6,8 +6,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from engine.behaviours.action_list_runner import ActionListRunnerBehaviour, validate_action_list_runner_config
-from engine.gameplay_event_bus import GameplayEventBus
 from engine.game_state_controller import GameState
+from engine.gameplay_event_bus import GameplayEventBus
 
 
 def _make_window() -> SimpleNamespace:

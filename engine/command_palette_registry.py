@@ -7,6 +7,9 @@ reduces cyclomatic complexity while maintaining identical behavior.
 The command definitions are stored in DEFAULT_COMMAND_DEFS as a deterministic
 ordered list. Each definition is converted to a CommandSpec at runtime.
 """
+
+# ruff: noqa: F401
+
 from __future__ import annotations
 
 from typing import Any, Callable
@@ -28,6 +31,7 @@ from .command_palette_registry_selection import (
 from .command_palette_registry_selection import (
     parse_float as _parse_float,
 )
+
 _list_prefab_ids_from_assets_cached = _options._list_prefab_ids_from_assets_cached
 _list_behaviour_names_cached = _options._list_behaviour_names_cached
 

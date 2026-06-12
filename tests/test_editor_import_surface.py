@@ -8,6 +8,7 @@ import sys
 
 def test_importing_editor_controller_has_no_side_effects_and_exports_surface(monkeypatch) -> None:
     import arcade  # noqa: F401
+
     import engine.editor_palette as editor_palette
     from engine.logging_tools import suppress_stdout
 

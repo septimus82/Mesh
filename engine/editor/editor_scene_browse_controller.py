@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-
 from engine.editor.scene_opening import (
     build_scene_browser_lines,
     build_scene_switcher_lines,
@@ -23,7 +22,6 @@ from engine.ui_overlays.widget_overlay_helpers import (
     apply_nav_key,
     apply_text_input,
 )
-
 
 logger = get_logger(__name__)
 

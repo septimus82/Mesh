@@ -13,10 +13,8 @@ from __future__ import annotations
 
 import copy
 from typing import Any, Dict
-from unittest.mock import patch
 
 import pytest
-
 
 pytestmark = [pytest.mark.fast]
 

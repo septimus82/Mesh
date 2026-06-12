@@ -1,9 +1,9 @@
 from pathlib import Path
 
-import mesh_cli
-import engine.tooling.verify_demo
 import pytest
 
+import engine.tooling.verify_demo
+import mesh_cli
 
 pytestmark = [pytest.mark.fast]
 

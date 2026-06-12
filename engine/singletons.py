@@ -75,8 +75,8 @@ _REGISTRY: ServiceRegistry | None = None
 
 def _load_singleton_modules() -> dict[str, ModuleType]:
     import engine.action_runtime.registry as action_registry
-    import engine.editor_runtime.input as editor_input
     import engine.behaviours as behaviours_pkg
+    import engine.editor_runtime.input as editor_input
     import engine.encounter_sets as encounter_sets
 
     return {

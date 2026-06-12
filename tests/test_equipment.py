@@ -1,10 +1,10 @@
-import pytest
 from unittest.mock import patch
-from engine.inventory import ItemDatabase, ItemDefinition
+
+import pytest
 
 from engine.config import EngineConfig
 from engine.game_state_controller import GameStateController
-from engine.inventory import get_or_create_inventory
+from engine.inventory import ItemDatabase, ItemDefinition, get_or_create_inventory
 
 
 class DummyWindow:

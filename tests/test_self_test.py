@@ -2,7 +2,6 @@ import pytest
 
 from engine.self_test import SelfTestManager
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 

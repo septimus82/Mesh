@@ -1,12 +1,12 @@
-import pytest
-import arcade
 from unittest.mock import patch
-from engine.inventory import ItemDatabase, ItemDefinition
+
+import arcade
+import pytest
 
 from engine.behaviours.drop_table import DropTable
 from engine.events import MeshEventBus
 from engine.game_state_controller import GameStateController
-from engine.inventory import get_or_create_inventory
+from engine.inventory import ItemDatabase, ItemDefinition, get_or_create_inventory
 
 
 class DummyWindow:

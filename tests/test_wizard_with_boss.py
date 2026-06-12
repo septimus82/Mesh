@@ -1,8 +1,7 @@
 import unittest
-import json
-from pathlib import Path
+
 from engine.tooling.wizard_command import WizardContext, _plan_new_region
-from engine.tooling.plan_types import Plan
+
 
 class TestWizardWithBoss(unittest.TestCase):
     def test_new_region_with_boss(self):
@@ -25,17 +24,17 @@ class TestWizardWithBoss(unittest.TestCase):
             "encounter_set": None,
             "difficulty": "normal"
         })()
-        
+
         ctx = WizardContext(args)
         _plan_new_region(ctx)
-        
+
         # Find create_scene action for dungeon
         dungeon_action = None
         for action in ctx.plan_actions:
             if action.type == "create_scene" and action.args.get("template") == "dungeon":
                 dungeon_action = action
                 break
-        
+
         self.assertIsNotNone(dungeon_action, "Dungeon scene creation action not found")
         self.assertTrue(dungeon_action.args.get("with_boss"), "with_boss arg missing in action")
         self.assertEqual(dungeon_action.args.get("region_prefix"), "test_region")

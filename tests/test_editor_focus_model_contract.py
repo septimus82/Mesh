@@ -19,8 +19,8 @@ from engine.editor.shortcut_resolver_model import (
     SHORTCUT_SCOPE_PROJECT_EXPLORER,
     SHORTCUT_SCOPE_PROJECT_EXPLORER_CONTEXT_MENU,
 )
-from tests._session_stub import make_session_stub
 from tests._dock_stub import make_dock_stub
+from tests._session_stub import make_session_stub
 
 
 def test_focus_determinism() -> None:

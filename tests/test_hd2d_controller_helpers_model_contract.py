@@ -8,8 +8,6 @@ Tests the thin wrapper functions for HD-2D controller operations:
 
 from __future__ import annotations
 
-import pytest
-
 from engine.editor.hd2d_controller_helpers_model import (
     compute_clipboard_patch_from_entity,
     compute_next_batch_radius,
@@ -19,7 +17,6 @@ from engine.editor.hd2d_controller_helpers_model import (
     validate_clipboard_patch,
 )
 from tests._typing import as_any
-
 
 # =============================================================================
 # Test compute_clipboard_patch_from_entity

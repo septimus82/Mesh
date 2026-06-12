@@ -1,10 +1,11 @@
-import pytest
-import unittest
 import json
 import tempfile
+import unittest
 from pathlib import Path
-from engine.scene_loader import SceneLoader
 
+import pytest
+
+from engine.scene_loader import SceneLoader
 
 pytestmark = pytest.mark.builtin_behaviours
 
@@ -13,7 +14,7 @@ class TestUnknownEntityFieldsValidation(unittest.TestCase):
         self.loader = SceneLoader()
         self.test_dir = tempfile.mkdtemp()
         self.scene_path = Path(self.test_dir) / "test_scene.json"
-        
+
         self.scene_data = {
             "name": "Test Scene",
             "entities": [
@@ -42,7 +43,7 @@ class TestUnknownEntityFieldsValidation(unittest.TestCase):
         # Should warn but pass
         report = self.loader.validate_scene_file(str(self.scene_path), strict=False)
         self.assertTrue(report.ok, "Non-strict validation should pass")
-        
+
         # Check for warning
         warnings = [w for w in report.warnings if "unknown field 'encoutner_group'" in w]
         self.assertTrue(len(warnings) > 0, f"Expected warning about unknown field, got: {report.warnings}")
@@ -51,7 +52,7 @@ class TestUnknownEntityFieldsValidation(unittest.TestCase):
         # Should fail
         report = self.loader.validate_scene_file(str(self.scene_path), strict=True)
         self.assertFalse(report.ok, "Strict validation should fail")
-        
+
         # Check for error
         errors = [e for e in report.errors if "unknown field 'encoutner_group'" in e]
         self.assertTrue(len(errors) > 0, f"Expected error about unknown field, got: {report.errors}")

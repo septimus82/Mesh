@@ -5,11 +5,9 @@ import shutil
 import time
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Callable, TypedDict
+from typing import Any, Callable, Dict, List, Optional, TypedDict
 
 from engine import json_io
-from engine.scene_loader import SceneLoader
-from engine.scene_serializer import compact_scene_payload
 from engine.swallowed_exceptions import _log_swallow
 from engine.tooling import plan_history, polish, scaffold
 from engine.tooling.plan_types import Action, Plan
@@ -167,14 +165,14 @@ class PlanExecutor:
         capture_mode = self._writer is not None
         self._captured_write_paths = set()
         self.captured_writes = []
-        
+
         # Enforce meta.touches for AI-safe plans
         if ai_safe:
             meta = plan.inputs.get("meta", {})
             touches = meta.get("touches")
             if not touches or not isinstance(touches, list):
                 raise ValueError("AI-safe apply requires plan.meta.touches (non-empty).")
-            
+
             # Verify touches match actions
             targets = self._collect_action_targets(plan)
             missing = sorted(list(targets - set(touches)))
@@ -347,7 +345,7 @@ class PlanExecutor:
         self._track_file(path)
         if self._writer is None:
             path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Use generate_scene_data instead of create_scene to support write seam
         scene_data = scaffold.generate_scene_data(str(path), args["template"], args)
         if scene_data:
@@ -469,10 +467,10 @@ class PlanExecutor:
             # We need to polish (compact + validate) but using our writer.
             # 1. Generate data
             compacted = polish.generate_polished_scene_data(path)
-            
+
             # 2. Write (via seam)
             self._write_file(path, self._dump_json(compacted))
-            
+
             # 3. Validate (if not dry run, or if we can validate in-memory?)
             # Validation usually reads from disk. If we are in dry-run, the file on disk is OLD.
             # So validation might fail or be incorrect.
@@ -480,11 +478,11 @@ class PlanExecutor:
             # If dry_run=True, we haven't written the file.
             # If we want to validate the RESULT, we need to validate the in-memory object or the temp file.
             # UnifiedValidator reads from disk.
-            
+
             # For now, let's skip validation in dry-run, or accept that it validates the old file (which is wrong).
             # But wait, if we are not in dry run, we wrote the file (via _write_file -> path.write_text).
             # So we can validate.
-            
+
             if not self.dry_run:
                 validator = UnifiedValidator(Path("."))
                 if not validator.validate_scene(path):
@@ -663,21 +661,21 @@ class PlanExecutor:
         targets = set()
         for action in plan.actions:
             args = action.args
-            
+
             # Common path keys
             for key in ["path", "scene_path", "world_path"]:
                 if key in args and isinstance(args[key], str):
                     targets.add(args[key].replace("\\", "/"))
-            
+
             # Specific keys
             if action.type == "add_transition" and "target_scene" in args:
                 # Note: add_transition modifies scene_path, but target_scene is just a reference.
                 # However, if we were to modify target_scene (e.g. auto-wire), it would be a target.
                 # In standard add_transition, we only modify scene_path.
                 pass
-                
+
             if action.type == "wire_world":
                 # wire_world modifies world_path (handled above) AND scene_path (handled above)
                 pass
-                
+
         return targets

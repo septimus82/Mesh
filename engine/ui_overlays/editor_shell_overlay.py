@@ -13,9 +13,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import engine.optional_arcade as optional_arcade
-
-from ..text_draw import draw_text_cached, TextCache
+from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, draw_panel_bg
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -89,8 +87,8 @@ class EditorShellOverlay(UIElement):
 
         size = (self.window.width, self.window.height)
         dock_widths = self._get_dock_widths()
-        if (self._cached_layout is None or 
-            self._cached_size != size or 
+        if (self._cached_layout is None or
+            self._cached_size != size or
             self._cached_dock_widths != dock_widths):
             self._cached_layout = compute_editor_shell_layout(
                 size[0], size[1], dock_widths[0], dock_widths[1]

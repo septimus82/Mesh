@@ -6,8 +6,10 @@ Deterministic, testable, and decoupled from runtime execution.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Tuple, Dict, Any, Optional, Set, Literal
-from .sensors_model import SensorEvent, SensorDef
+from typing import Dict, Literal, Optional, Tuple
+
+from .sensors_model import SensorDef, SensorEvent
+
 
 @dataclass(frozen=True)
 class BehaviourEvent:
@@ -61,15 +63,15 @@ def build_sensor_behaviour_events(
     """
     sensor_map = {s.id: s for s in sensors}
     result = []
-    
+
     for se in sensor_events:
         sensor = sensor_map.get(se.sensor_id)
         tags = sensor.tags if sensor else ()
-        
+
         # event.kind is "enter" or "exit" from sensors_model
         # BehaviourEvent.kind -> "sensor_enter" or "sensor_exit"
         evt_kind = f"sensor_{se.kind}"
-        
+
         result.append(BehaviourEvent(
             kind=evt_kind,
             entity_id=se.entity_id,
@@ -79,7 +81,7 @@ def build_sensor_behaviour_events(
             target_entity_id=se.entity_id,
             origin=origin,
         ))
-        
+
     return tuple(result)
 
 def should_fallback_to_primary(event: BehaviourEvent) -> bool:

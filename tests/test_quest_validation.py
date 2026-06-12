@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import json
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from engine.quest_runtime.validation import (
     QUEST_DEFINITION_SCHEMA_VERSION,
@@ -430,14 +431,14 @@ class TestQuestInspectorIntegration:
         # Create mock window
         mock_window = MagicMock()
         mock_window.game_state.values = {"quests": {}}
-        
+
         # Create QuestManager with mock data path
         with patch("engine.quests.resolve_path") as mock_resolve:
             mock_resolve.return_value = Path("nonexistent.json")
-            
+
             from engine.quests import QuestManager
             manager = QuestManager(mock_window)
-            
+
             # Manually inject a definition for testing
             manager._definitions = {
                 "test_quest": {
@@ -455,7 +456,7 @@ class TestQuestInspectorIntegration:
                     "blocks_flags": [],
                 },
             }
-            
+
             # Set up state
             mock_window.game_state.values["quests"] = {
                 "test_quest": {
@@ -465,15 +466,15 @@ class TestQuestInspectorIntegration:
                     "completed_stages": [],
                 }
             }
-            
+
             result = manager.get_inspector_state()
-            
+
             assert result["total_quests"] == 1
             assert result["active_count"] == 1
             assert result["completed_count"] == 0
             assert result["inactive_count"] == 0
             assert len(result["quests"]) == 1
-            
+
             quest_info = result["quests"][0]
             assert quest_info["id"] == "test_quest"
             assert quest_info["status"] == "active"
@@ -494,16 +495,16 @@ class TestGoldenQuestsFileValidation:
         quests_path = Path("assets/data/quests.json")
         if not quests_path.exists():
             pytest.skip("quests.json not found")
-        
+
         with open(quests_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        
+
         # Migrate first (may not have schema_version)
         data = migrate_quest_definition(data)
-        
+
         # Validate
         errors = validate_quest_file(quests_path, data)
-        
+
         # Filter out errors for quests that are known test/placeholder entries
         # These are skipped by the normalizer anyway (empty stages)
         real_errors = [
@@ -513,11 +514,11 @@ class TestGoldenQuestsFileValidation:
                 and "test_quest" in err.message
             )
         ]
-        
+
         # Print any errors for debugging
         for err in real_errors:
             print(f"Validation error: {err}")
-        
+
         # Should have no real errors
         assert real_errors == [], f"Existing quests.json has {len(real_errors)} validation errors"
 

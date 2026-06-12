@@ -6,7 +6,6 @@ headless environments.
 
 from __future__ import annotations
 
-
 PERSISTENT_UI_ATTRS: tuple[str, ...] = (
     "player_hud",
     "game_over_screen",

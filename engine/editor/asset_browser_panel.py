@@ -6,7 +6,7 @@ display data for the asset browser. State management remains in EditorModeContro
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
     from engine.asset_index import AssetRow

@@ -1,4 +1,3 @@
-import math
 
 from engine.behaviours.enemy_ai import EnemyAI
 from engine.events import MeshEventBus

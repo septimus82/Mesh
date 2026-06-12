@@ -1,7 +1,6 @@
 """Controller for safe file operations (rename, move, etc)."""
 from __future__ import annotations
 
-from engine.swallowed_exceptions import _log_swallow
 import hashlib
 import json
 import os
@@ -9,9 +8,15 @@ import posixpath
 import shutil
 import sys
 from dataclasses import dataclass
-from pathlib import Path
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+
+from engine.editor.project_explorer_power_tools_model import (
+    compute_common_parent,
+    format_paths_for_clipboard,
+)
+from engine.editor.project_explorer_reveal_model import format_copy_path_text
+from engine.swallowed_exceptions import _log_swallow
 
 from .asset_move_model import (
     compute_move_paths,
@@ -19,33 +24,25 @@ from .asset_move_model import (
     validate_destination,
 )
 from .asset_refactor_model import (
-    AssetReference,
     Replacement,
-    PreviewSummary,
-    normalize_repo_rel,
+    apply_replacements,
     compute_move_mapping,
     compute_rename_mapping,
-    build_refactor_preview,
-    format_preview_lines,
-    scan_scene_references,
-    scan_prefab_references,
     compute_replacements,
-    apply_replacements,
-    build_preview_summary,
+    normalize_repo_rel,
+    scan_prefab_references,
+    scan_scene_references,
 )
 from .asset_refactor_preview_model import format_refactor_preview
+from .asset_rename_model import (
+    Replacement as RenameReplacement,
+)
 from .asset_rename_model import (
     apply_reference_replacements,
     compute_reference_replacements,
     compute_rename_paths,
-    format_rename_undo_label,
     find_scene_asset_references,
-    Replacement as RenameReplacement,
-)
-from engine.editor.project_explorer_reveal_model import format_copy_path_text
-from engine.editor.project_explorer_power_tools_model import (
-    compute_common_parent,
-    format_paths_for_clipboard,
+    format_rename_undo_label,
 )
 
 if TYPE_CHECKING:
@@ -198,7 +195,7 @@ class EditorFileOpsController:
         plan = self._pending_refactor_plan
         if not plan:
             return
-            
+
         if self._is_web_runtime():
             self._toast(f"Refactor '{plan.op_kind}' simulated (Web Preview).")
             self._pending_refactor_plan = None
@@ -209,7 +206,7 @@ class EditorFileOpsController:
             return
 
         print(f"[Refactor] Executing {plan.op_kind}...")
-        
+
         # 1. Read Originals (Snapshot)
         original_json_contents: Dict[str, str] = {}
         try:
@@ -250,22 +247,22 @@ class EditorFileOpsController:
                 abs_path = repo_root / path_rel
                 if not abs_path.exists():
                     continue
-                    
+
                 # Load, Apply, Write
                 # We rely on 'replacements' being calculated correctly.
                 # However, we need to load the json to apply replacements unless we passed the raw new content.
                 # Ideally we load 'original_json_contents[path_rel]'
                 content_str = original_json_contents[path_rel]
                 data = json.loads(content_str)
-                
+
                 # Apply replacements
                 # We need 'apply_replacements' from model which takes (data, replacements)
                 # But 'modifications' only has replacements.
                 new_data = apply_replacements(data, replacements)
-                
+
                 write_atomic_utf8(abs_path, json.dumps(new_data, indent=2))
                 written_jsons.append(path_rel)
-                
+
         except Exception as e:
             _log_swallow("EFOC-008", "blanket exception fallback", once=False)
             print(f"[Refactor] JSON Write Error: {e}. Rolling back...")
@@ -277,14 +274,14 @@ class EditorFileOpsController:
                     _log_swallow("EFOC-009", "blanket exception fallback", once=False)
                     print("CRITICAL: Failed to restore staged deletes.")
             self._restore_jsons(written_jsons, original_json_contents, repo_root)
-            self._show_error_modal(f"Refactor Aborted", f"Reference update failed: {e}\nFiles restored.")
+            self._show_error_modal("Refactor Aborted", f"Reference update failed: {e}\nFiles restored.")
             self._pending_refactor_plan = None
             return
 
         # 4. Execute FS Steps (moves only; deletes are staged to trash)
         completed_fs_steps: List[FsStep] = []
         fs_error = None
-        
+
         for step in plan.fs_steps:
             src = repo_root / step.src_rel
             try:
@@ -293,14 +290,14 @@ class EditorFileOpsController:
                         dst = repo_root / step.dst_rel
                         dst.parent.mkdir(parents=True, exist_ok=True)
                         os.replace(src, dst)
-                        
+
                 completed_fs_steps.append(step)
-                
+
             except Exception as e:
                 _log_swallow("EFOC-010", "blanket exception fallback", once=False)
                 fs_error = e
                 break
-        
+
         if fs_error:
             print(f"[Refactor] FS Error: {fs_error}. Rolling back...")
             # Rollback FS
@@ -314,18 +311,18 @@ class EditorFileOpsController:
                     print("CRITICAL: Failed to restore staged deletes.")
             # Rollback JSONs
             self._restore_jsons(written_jsons, original_json_contents, repo_root)
-            
-            self._show_error_modal(f"File System Error", f"Operation failed: {fs_error}\nChanges reverted.")
+
+            self._show_error_modal("File System Error", f"Operation failed: {fs_error}\nChanges reverted.")
             self._pending_refactor_plan = None
             return
 
         # 5. Success - Update State
         if plan.active_scene_update:
             self._set_current_scene_payload(plan.active_scene_update)
-            
+
         if plan.undo_command and hasattr(self.controller, "_push_command"):
             self.controller._push_command(plan.undo_command)
-            
+
         self._refresh_project_tree()
 
         if plan.selection_restore:
@@ -422,12 +419,12 @@ class EditorFileOpsController:
         entry = getattr(row, "entry", None)
         if entry is None:
             return False
-        
+
         # Check if it's a directory and inside assets
         is_dir = getattr(entry, "is_dir", False)
         if not is_dir:
             return False
-            
+
         # Optional: Limit scope to within 'worlds', 'scenes', 'prefabs' etc?
         # For now, allow any folder in repo
         return True
@@ -437,23 +434,23 @@ class EditorFileOpsController:
         repo_root = getattr(self.controller.window, "repo_root", None)
         if not repo_root or not isinstance(repo_root, Path):
             return []
-            
+
         candidates = []
         # Exclude patterns
         exclude_dirs = {
-            "__pycache__", ".git", ".pytest_cache", "build", "dist", 
+            "__pycache__", ".git", ".pytest_cache", "build", "dist",
             "node_modules", "venv", ".vscode"
         }
-        
+
         # DEBUG
         # print(f"DEBUG: Scanning {repo_root} for JSONs...")
-        
+
         for dirpath, dirnames, filenames in os.walk(repo_root):
             # Prune exclusions in-place
             dirnames[:] = [d for d in dirnames if d not in exclude_dirs]
             dirnames.sort() # Deterministic walk order
             filenames.sort()
-            
+
             for fname in filenames:
                 if fname.lower().endswith(".json"):
                     # Check if it looks like a scene or prefab?
@@ -461,35 +458,35 @@ class EditorFileOpsController:
                     full_path = Path(dirpath) / fname
                     rel_path = full_path.relative_to(repo_root).as_posix()
                     candidates.append(rel_path)
-                    
+
         return sorted(candidates)
 
     def move_folder_native(self, old_rel: str, new_rel: str) -> bool:
         """Perform atomic-ish folder move on native filesystem."""
         if self._is_web_runtime():
             return False
-            
+
         repo_root = getattr(self.controller.window, "repo_root", None)
         if not isinstance(repo_root, Path):
             return False
-            
+
         old_abs = repo_root / old_rel
         new_abs = repo_root / new_rel
-        
+
         if not old_abs.exists():
             return False
         if new_abs.exists():
             return False # Collision
-            
+
         try:
             # Ensure parent exists
             new_abs.parent.mkdir(parents=True, exist_ok=True)
             # Use atomic rename if possible
             os.replace(old_abs, new_abs)
             return True
-        except Exception as e:
+        except Exception:
             _log_swallow("EFOC-015", "blanket exception fallback", once=False)
-            # Fallback for cross-device etc? 
+            # Fallback for cross-device etc?
             # os.replace handles same-filesystem.
             # shutil.move is safer generally but os.replace is atomic on POSIX/Windows recent.
             # "atomic-ish via os.replace where possible; otherwise shutil.move"
@@ -637,13 +634,13 @@ class EditorFileOpsController:
         if not is_web:
             if not self._perform_fs_rename(old_rel, new_rel):
                 return False  # Abort on move failure usually
-            
+
             # Note: The original code for rename swallows the error, but for move in validate_destination it checks logic.
             # But the original code for move actually doesn't have the try/except block shown in my rename read?
             # Wait, I didn't verify the move implementation fully. Let's assume consistent behavior.
             # Original code for rename continues on FS fail.
             # Original code for move: I need to check exactly what it does.
-        
+
         if replacements:
             new_scene = apply_reference_replacements(scene, replacements)
             self._set_current_scene_payload(new_scene)
@@ -862,12 +859,12 @@ class EditorFileOpsController:
         row = self._get_selected_project_row()
         if not row:
             return False
-            
+
         entry = getattr(row, "entry", None)
         # Must be a file entry (not None and not a directory)
         if entry is None or getattr(entry, "is_dir", False):
             return False
-            
+
         return True
 
     def can_safe_move_selected_asset(self) -> bool:
@@ -1005,17 +1002,17 @@ class EditorFileOpsController:
         path_str = getattr(entry, "path", None)
         if not path_str:
             return False
-        
+
         repo_root = getattr(self.controller.window, "repo_root", None)
         if not repo_root:
             return False
-        
+
         old_full = Path(path_str)
         try:
             old_rel = old_full.relative_to(repo_root).as_posix()
         except ValueError:
             return False
-        
+
         # 2. Paths
         parent_dir = old_full.parent
         new_full = parent_dir / new_name
@@ -1025,20 +1022,20 @@ class EditorFileOpsController:
             return False
         if old_rel == new_rel:
             return False
-        
+
         # 3. Plan Data
         mapping = compute_rename_mapping(old_rel, new_rel)
         modifications, all_replacements = self._scan_and_compute_replacements(mapping)
-        
+
         # 4. Build Plan
         # Rename is effectively a move
         fs_step = FsStep(src_rel=old_rel, dst_rel=new_rel, kind="move")
-        
+
         fs_summary = f"Rename: {old_rel} -> {new_name}"
         preview_lines = format_refactor_preview(
             "Confirm Rename", "rename", fs_summary, modifications
         )
-        
+
         undo_cmd = {
             "type": "safe_rename_refactor",
             "label": f"Rename {old_rel} -> {new_name}",
@@ -1058,7 +1055,7 @@ class EditorFileOpsController:
             undo_command=undo_cmd,
             selection_restore=[new_rel]
         )
-        
+
         self.controller.confirm_modal.request_confirmation(
             title="Confirm Safe Rename",
             message_lines=preview_lines,
@@ -1072,10 +1069,10 @@ class EditorFileOpsController:
         project = getattr(self.controller, "project_explorer", None)
         if not project:
             return False
-            
+
         if hasattr(project, "ensure_rows"):
             project.ensure_rows()
-            
+
         paths = project.selected_paths(getattr(project, "selectable_rows", []))
         if not isinstance(paths, (list, tuple)):
             paths = []
@@ -1107,7 +1104,7 @@ class EditorFileOpsController:
         repo_root = getattr(self.controller.window, "repo_root", None)
         if not repo_root:
             return False
-        
+
         dest_norm = normalize_repo_rel(dest_folder)
         full_mapping: dict[str, str] = {}
         fs_steps: list[FsStep] = []
@@ -1117,35 +1114,35 @@ class EditorFileOpsController:
              # Normalize
              old_rel_norm = normalize_repo_rel(p_str)
              basename = posixpath.basename(old_rel_norm)
-             
+
              if dest_norm:
                  new_rel = f"{dest_norm}/{basename}"
              else:
                  new_rel = basename
-                 
+
              if old_rel_norm == new_rel:
                  continue
-                 
+
              sub_map = compute_move_mapping(old_rel_norm, new_rel)
              full_mapping.update(sub_map)
-             
+
              fs_steps.append(FsStep(src_rel=old_rel_norm, dst_rel=new_rel, kind="move"))
              new_rels.append(new_rel)
 
         if not fs_steps:
              return False
-        
+
         modifications, all_replacements = self._scan_and_compute_replacements(full_mapping)
-        
+
         if len(fs_steps) == 1:
             fs_summary = f"Move: {fs_steps[0].src_rel} -> {fs_steps[0].dst_rel}"
         else:
             fs_summary = f"Move {len(fs_steps)} items to {dest_norm or 'root'}"
-            
+
         preview_lines = format_refactor_preview(
              "Confirm Move", "move", fs_summary, modifications
         )
-        
+
         # We store the list of moves for undo
         undo_cmd = {
             "type": "safe_move_refactor",
@@ -1155,7 +1152,7 @@ class EditorFileOpsController:
             "new_path": fs_steps[0].dst_rel if len(fs_steps) == 1 else "",
         }
         op_id = self._compute_refactor_op_id("move", fs_steps, modifications)
-        
+
         self._pending_refactor_plan = PendingRefactorPlan(
             op_kind="move",
             op_id=op_id,
@@ -1167,7 +1164,7 @@ class EditorFileOpsController:
             undo_command=undo_cmd,
             selection_restore=new_rels
         )
-        
+
         self.controller.confirm_modal.request_confirmation(
             title=f"Confirm Move ({len(fs_steps)} items)",
             message_lines=preview_lines,
@@ -1184,45 +1181,45 @@ class EditorFileOpsController:
         repo_root = getattr(self.controller.window, "repo_root", None)
         if not repo_root:
             return False
-        
+
         # Build mapping for all paths -> delete (None)
         # Note: compute_move_mapping handles singular paths.
         # We need to compute delete replacements specifically.
         # But our helper '_scan_and_compute_replacements' takes a mapping.
         # Let's construct a mapping where value is "" (empty string) to clear references.
-        
+
         mapping = {}
         fs_steps = []
-        
+
         sorted_paths = sorted(paths)
         for p in sorted_paths:
             # For each path, if it's a folder, we mapping implicitly covers children via 'compute_move_mapping' prefix logic?
             # No, 'compute_move_mapping' handles prefix.
-            # Does 'compute_replacements' handle prefix logic for deletion? 
+            # Does 'compute_replacements' handle prefix logic for deletion?
             # It checks if ref.asset_path starts with?
             # asset_refactor_model.compute_replacements relies on exact match or prefix if folder.
             # So mapping[p] = "" should work if the model supports it.
             # Assuming model treats empty string as "replace with empty".
-            mapping[p] = "" 
+            mapping[p] = ""
             fs_steps.append(FsStep(src_rel=p, dst_rel=None, kind="delete"))
-            
+
         modifications, all_replacements = self._scan_and_compute_replacements(mapping)
-        
+
         fs_summary = f"Delete {len(sorted_paths)} items:\n" + "\n".join([f"  - {p}" for p in sorted_paths[:5]])
         if len(sorted_paths) > 5:
             fs_summary += f"\n  ...and {len(sorted_paths)-5} more."
         fs_summary += "\n(Staged to .mesh_trash)"
-        
+
         preview_lines = format_refactor_preview(
              "Confirm Delete", "delete", fs_summary, modifications
         )
-        
+
         undo_cmd = {
              "type": "safe_delete_batch",
              "label": f"Delete {len(sorted_paths)} items",
              "paths": sorted_paths
         }
-        
+
         op_id = self._compute_refactor_op_id("delete", fs_steps, modifications)
         trash_moves = self._build_trash_moves(repo_root, fs_steps, op_id)
         self._pending_refactor_plan = PendingRefactorPlan(
@@ -1236,7 +1233,7 @@ class EditorFileOpsController:
             undo_command=undo_cmd,
             selection_restore=None
         )
-        
+
         self.controller.confirm_modal.request_confirmation(
             title="Confirm Delete",
             message_lines=preview_lines,
@@ -1251,10 +1248,10 @@ class EditorFileOpsController:
         repo_root = getattr(self.controller.window, "repo_root", None)
         if not repo_root:
             return {}, []
-        
+
         modifications: Dict[str, List[Replacement]] = {}
         all_refs: List[Replacement] = []
-        
+
         for c_rel in candidates:
             c_full = repo_root / c_rel
             if not c_full.exists():
@@ -1262,7 +1259,7 @@ class EditorFileOpsController:
             try:
                 with open(c_full, "r", encoding="utf-8") as f:
                     payload = json.load(f)
-                
+
                 refs = scan_scene_references(payload) if "entities" in payload else scan_prefab_references(payload)
                 file_replacements = compute_replacements(refs, mapping)
                 if file_replacements:

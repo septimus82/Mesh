@@ -1,38 +1,39 @@
-import json
-import pytest
 import argparse
+import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
 from engine.tooling import assist_command
+
 
 def test_mesh_assist_end_to_end(tmp_path, monkeypatch):
     # 1. Setup workspace
     monkeypatch.chdir(tmp_path)
-    
+
     # Create config
     (tmp_path / "config.json").write_text("{}", encoding="utf-8")
-    
+
     # Create artifacts dir
     (tmp_path / "artifacts").mkdir()
-    
+
     # Mock triage, apply, and test-ai to avoid running full stack
     with patch("engine.tooling.triage_command.run_triage_command") as mock_triage, \
          patch("engine.tooling.plan_apply.apply_plan") as mock_apply, \
          patch("engine.tooling.plan_tester.run_test_ai") as mock_test:
-         
+
         # Scenario 1: Triage produces actionable plan
         mock_triage.side_effect = lambda args: _mock_triage_success(args, tmp_path)
         mock_apply.return_value = 0
         mock_test.return_value = 0
-        
+
         args = argparse.Namespace(world="worlds/broken.json", dry_run=False, diff=False)
         exit_code = assist_command.run_assist_command(args)
-        
+
         assert exit_code == 0
         assert mock_triage.called
         assert mock_apply.called
         assert mock_test.called
-        
+
         # Verify triage args
         triage_call_args = mock_triage.call_args[0][0]
         assert triage_call_args.world == "worlds/broken.json"
@@ -42,38 +43,38 @@ def test_mesh_assist_end_to_end(tmp_path, monkeypatch):
 def test_mesh_assist_no_actions(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "artifacts").mkdir()
-    
+
     with patch("engine.tooling.triage_command.run_triage_command") as mock_triage:
         # Scenario 2: Triage produces empty plan
         mock_triage.side_effect = lambda args: _mock_triage_empty(args, tmp_path)
-        
+
         args = argparse.Namespace(world="worlds/clean.json", dry_run=False, diff=False)
         exit_code = assist_command.run_assist_command(args)
-        
+
         assert exit_code == 2 # Non-zero but specific code for "no actions"
 
 def test_mesh_assist_refuse_mismatch(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "artifacts").mkdir()
-    
+
     with patch("engine.tooling.triage_command.run_triage_command") as mock_triage, \
          patch("engine.tooling.plan_apply.apply_plan") as mock_apply:
-        
+
         # Scenario 3: Triage produces plan but output has warnings
         mock_triage.side_effect = lambda args: _mock_triage_mismatch(args, tmp_path)
-        
+
         args = argparse.Namespace(world="worlds/mismatch.json", dry_run=False, diff=False)
-        
+
         # Capture stdout to verify refusal message
-        from io import StringIO
         import sys
+        from io import StringIO
         captured_out = StringIO()
         monkeypatch.setattr(sys, "stdout", captured_out)
-        
+
         exit_code = assist_command.run_assist_command(args)
-        
+
         output = captured_out.getvalue()
-        
+
         assert exit_code == 3
         lines = output.splitlines()
         assert len(lines) == 1
@@ -102,8 +103,8 @@ def test_mesh_assist_refuse_plan_invalid_warning(tmp_path, monkeypatch):
 
         args = argparse.Namespace(world="worlds/invalid.json", dry_run=False, diff=False)
 
-        from io import StringIO
         import sys
+        from io import StringIO
         captured_out = StringIO()
         monkeypatch.setattr(sys, "stdout", captured_out)
 
@@ -148,8 +149,8 @@ def test_mesh_assist_legacy_string_warnings_still_refuse(tmp_path, monkeypatch):
 
         args = argparse.Namespace(world="worlds/legacy.json", dry_run=False, diff=False)
 
-        from io import StringIO
         import sys
+        from io import StringIO
         captured_out = StringIO()
         monkeypatch.setattr(sys, "stdout", captured_out)
 
@@ -168,24 +169,24 @@ def test_mesh_assist_legacy_string_warnings_still_refuse(tmp_path, monkeypatch):
 def test_mesh_assist_dry_run(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "artifacts").mkdir()
-    
+
     with patch("engine.tooling.triage_command.run_triage_command") as mock_triage, \
          patch("engine.tooling.plan_apply.apply_plan") as mock_apply:
-        
+
         # Scenario 4: Dry run
         mock_triage.side_effect = lambda args: _mock_triage_success(args, tmp_path)
-        
+
         args = argparse.Namespace(world="worlds/dry.json", dry_run=True, diff=False)
-        
-        from io import StringIO
+
         import sys
+        from io import StringIO
         captured_out = StringIO()
         monkeypatch.setattr(sys, "stdout", captured_out)
-        
+
         exit_code = assist_command.run_assist_command(args)
-        
+
         output = captured_out.getvalue()
-        
+
         assert exit_code == 0
         assert "[ASSIST] Dry run" in output
         assert "[ASSIST] Actions: 1" in output

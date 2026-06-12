@@ -1,8 +1,5 @@
-import pytest
-from engine.behaviours.dialogue import Dialogue
-from engine.behaviours.scene_transition import SceneTransition
-from engine.behaviours.patrol import PatrolBehaviour
 from engine.behaviours.registry import get_behaviour_info
+
 
 def test_dialogue_schema_has_role():
     info = get_behaviour_info("Dialogue")

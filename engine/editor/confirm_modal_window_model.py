@@ -4,6 +4,7 @@ Pure model helpers for confirm modal scrolling/windowing.
 
 from typing import List, Tuple
 
+
 def clamp_scroll(scroll_y: int, total_rows: int, visible_rows: int) -> int:
     """Clamp scroll position to valid range."""
     max_scroll = max(0, total_rows - visible_rows)

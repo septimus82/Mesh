@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from ..text_draw import draw_text_cached, TextCache
+from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline
 from .widgets import Rect, ScrollList
 
@@ -55,10 +55,10 @@ class ProblemsPanelOverlay(UIElement):
 
         # Use Stateless Provider
         from .providers import problems_panel_provider
-        
+
         viewport_h = int(panel.list_rect.height)
         data = problems_panel_provider(self.window, viewport_h, PROBLEMS_LINE_HEIGHT)
-        
+
         rows = data.get("rows", [])
         start_idx = data.get("start_index", 0)
         total_count = data.get("total_count", 0)
@@ -254,7 +254,7 @@ class ProblemsPanelOverlay(UIElement):
         issue = None
         if selected_index >= start_idx and selected_index < start_idx + len(rows):
             issue = rows[selected_index - start_idx]
-            
+
         detail_lines = build_problems_preview_lines(issue, preview_open)
 
         for line in detail_lines:

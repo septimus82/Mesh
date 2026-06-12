@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import os
-import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -14,6 +13,7 @@ from tooling.pytest_runner_common import (
     format_xdist,
     write_runner_log,
 )
+
 
 def _xdist_available() -> bool:
     return importlib.util.find_spec("xdist") is not None
@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     repo_root = Path(
         args.repo_root or env_repo_root or Path(__file__).resolve().parents[1]
     ).resolve()
-    
+
     # Clean output for log, capture fd to handle C-level output if any
     cmd = [
         sys.executable,
@@ -59,7 +59,7 @@ def main(argv: list[str] | None = None) -> int:
             ]
         ),
     ]
-    
+
     xdist_enabled = False
     if args.xdist:
         if _xdist_available():

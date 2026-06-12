@@ -8,7 +8,6 @@ from engine.swallowed_exceptions import _log_swallow
 
 from .logging_tools import get_logger
 
-
 _MARKERS: tuple[str, ...] = ("pyproject.toml", "config.json")
 _LOG = get_logger("engine.repo_root")
 

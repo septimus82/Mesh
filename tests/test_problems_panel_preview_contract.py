@@ -5,16 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-import pytest
-
 from engine import optional_arcade
 from engine.editor.scene_lint_model import SceneLintIssue
+from engine.editor.state import EditorDirtyState
+from engine.editor_controller import EditorModeController
 from engine.ui_overlays.problems_panel_overlay import (
     build_problems_preview_lines,
     format_problem_row_label,
 )
-from engine.editor.state import EditorDirtyState
-from engine.editor_controller import EditorModeController
 from tests._dock_stub import make_dock_stub
 from tests._search_stub import attach_search_stub
 from tests._session_stub import make_session_stub
@@ -52,10 +50,10 @@ class StubController:
         self.active = True
         self.dock = make_dock_stub(left_tab="Outliner", right_tab="Problems")
         self.session = make_session_stub()
-        
+
         from engine.editor.editor_problems_controller import ProblemsController
         self.problems = ProblemsController()
-        
+
         self._repo_root_override = repo_root
         self.undo_stack: list[dict] = []
         self.redo_stack: list[dict] = []
@@ -75,12 +73,12 @@ class StubController:
         from types import SimpleNamespace
         self.unsaved_confirm = SimpleNamespace(is_open=False)
         self.search = attach_search_stub(self)
-        
+
         # Stub for _selection_ctl needed by problems_jump_to_selected
         class StubSelectionCtl:
             primary_selected_id: str | None = None
         self._selection_ctl = StubSelectionCtl()
-        
+
         # Stub for project_explorer needed by _reveal_in_project_explorer
         class StubProjectExplorer:
             def reveal_path(self, path: str, viewport_height: int, row_height: int) -> bool:
@@ -106,7 +104,7 @@ class StubController:
     @_problems_search.setter
     def _problems_search(self, value: str):
         self.problems.set_query(value)
-        
+
     def _get_repo_root(self):
         return self._repo_root_override
 

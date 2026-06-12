@@ -5,8 +5,8 @@ from typing import Any
 
 import pytest
 
-import engine.editor_controller as editor_module
 import engine.editor.editor_inspector_controller as inspector_module
+import engine.editor_controller as editor_module
 from engine.editor_controller import EditorModeController
 from tests._typing import as_any
 

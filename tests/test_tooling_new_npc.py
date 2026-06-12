@@ -2,7 +2,9 @@ import json
 import shutil
 import unittest
 from pathlib import Path
+
 from engine.tooling import scaffold
+
 
 class TestToolingNewNPC(unittest.TestCase):
     def setUp(self):
@@ -20,9 +22,9 @@ class TestToolingNewNPC(unittest.TestCase):
         data = {"name": "Scene", "version": 1, "entities": [], "layers": []}
         with open(scene_path, "w") as f:
             json.dump(data, f)
-            
+
         self.assertTrue(scaffold.create_npc("guard", str(scene_path), x=100, y=200))
-        
+
         with open(scene_path, "r") as f:
             data = json.load(f)
             self.assertEqual(len(data["entities"]), 1)

@@ -1,16 +1,15 @@
 """Validation & QA commands for Mesh Engine."""
 
 import argparse
-import sys
 import subprocess
-from typing import Optional
+import sys
 
 from engine.tooling import (
     check,
-    validate_all,
-    event_validator,
     doctor_command,
+    event_validator,
     explain,
+    validate_all,
 )
 
 

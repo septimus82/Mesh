@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import math
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
 from engine.constants import EVENT_ANIMATION_EVENT
-
 
 pytestmark = [pytest.mark.fast]
 

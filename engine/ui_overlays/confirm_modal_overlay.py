@@ -1,9 +1,11 @@
-from typing import List, Optional
+from typing import List
+
 import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import _log_swallow
-from engine.ui_overlays.common import _draw_tb_rectangle_filled, draw_panel_bg, draw_outline_centered
-from engine.ui_text_cache import UiTextCache, draw_text
 from engine.text_draw import TextCache
+from engine.ui_overlays.common import _draw_tb_rectangle_filled, draw_outline_centered, draw_panel_bg
+from engine.ui_text_cache import UiTextCache, draw_text
+
 
 class ConfirmModalOverlay:
     def __init__(self, window: optional_arcade.arcade.Window):
@@ -14,20 +16,20 @@ class ConfirmModalOverlay:
         """Draw a centered modal with message lines."""
         viewport_width = self.window.width
         viewport_height = self.window.height
-        
+
         # Dimensions
         panel_w = 600
         line_height = 20
         # Title + padding + lines + padding + prompt + padding
         content_height = 40 + (len(message_lines) * line_height) + 40
         panel_h = max(200, content_height)
-        
+
         cx, cy = viewport_width // 2, viewport_height // 2
-        
+
         # Background
         draw_panel_bg(cx - panel_w//2, cy - panel_h//2, panel_w, panel_h)
         draw_outline_centered(cx, cy, panel_w, panel_h, (100, 100, 100))
-        
+
         # Title
         draw_text(
             self._ui_cache,
@@ -39,7 +41,7 @@ class ConfirmModalOverlay:
             anchor_x="center",
             bold=True,
         )
-        
+
         # Content
         start_y = cy + panel_h//2 - 60
         for i, line in enumerate(message_lines):
@@ -50,7 +52,7 @@ class ConfirmModalOverlay:
                 color = optional_arcade.arcade.color.GREEN
             elif line.startswith("-"): # Remove
                 color = optional_arcade.arcade.color.RED
-                
+
             draw_text(
                 self._ui_cache,
                 text=line,
@@ -86,7 +88,7 @@ class ConfirmModalOverlay:
         except Exception:
             _log_swallow("CONF-001", "engine/ui_overlays/confirm_modal_overlay.py pass-only blanket swallow")
             pass
-            
+
         # Prompts (Bottom)
         draw_text(
             self._ui_cache,

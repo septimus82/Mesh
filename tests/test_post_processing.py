@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import types
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -58,14 +57,13 @@ def _make_window(width=800, height=600):
 # ---------------------------------------------------------------------------
 
 from engine.post_processing import (
+    ColorGrading,
+    CRTEffect,
     PostProcessEffect,
     PostProcessPipeline,
-    Vignette,
-    ColorGrading,
     ScreenFade,
-    CRTEffect,
+    Vignette,
 )
-
 
 # ===========================================================================
 # PostProcessEffect base

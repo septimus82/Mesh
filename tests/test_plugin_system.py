@@ -13,10 +13,9 @@ pytestmark = [pytest.mark.fast]
 from engine.plugin_system import (
     MeshPlugin,
     PluginContext,
-    PluginManifest,
     PluginManager,
+    PluginManifest,
 )
-
 
 # ---------------------------------------------------------------------------
 # PluginManifest

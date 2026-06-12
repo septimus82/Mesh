@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..logging_tools import get_logger
-from .. import json_io
 from engine.swallowed_exceptions import _log_swallow
 
+from .. import json_io
+from ..logging_tools import get_logger
 
 logger = get_logger(__name__)
 

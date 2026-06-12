@@ -16,7 +16,6 @@ from __future__ import annotations
 import argparse
 import io
 import sys
-import time
 from contextlib import redirect_stdout
 from pathlib import Path
 from typing import Any, Callable
@@ -27,7 +26,6 @@ from engine.persistence_io import (
     write_text_atomic,
 )
 from engine.provenance import (
-    format_provenance_text,
     get_provenance,
     provenance_to_dict,
 )

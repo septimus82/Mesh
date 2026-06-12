@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 
 from engine.log_utils import normalize_path
 
-
 logger = logging.getLogger(__name__)
 
 

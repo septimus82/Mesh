@@ -1,7 +1,6 @@
 import pytest
+
 from engine.scene_loader import SceneLoader
-
-
 
 pytestmark = pytest.mark.builtin_behaviours
 

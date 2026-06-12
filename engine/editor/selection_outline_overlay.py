@@ -11,26 +11,23 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
+
 from ..logging_tools import get_logger
 from ..ui_overlays.common import UIElement
+from .editor_hover_query import get_hovered_entity_id, get_hovered_entity_rect
 from .selection_outline import (
-    RectF,
-    SelectionOutline,
-    StyledSelectionOutline,
-    GroupBounds,
-    build_selection_outlines,
-    build_selection_outlines_with_styles,
-    compute_group_bounds,
-    rect_to_border_segments,
-    rect_to_corner_markers,
-    resolve_selection_styles,
-    resolve_primary_for_alt_dup,
+    STYLE_DUPLICATE,
     STYLE_NORMAL,
     STYLE_ORIGINAL,
-    STYLE_DUPLICATE,
-    STYLE_HOVER,
+    GroupBounds,
+    RectF,
+    StyledSelectionOutline,
+    build_selection_outlines_with_styles,
+    rect_to_border_segments,
+    rect_to_corner_markers,
+    resolve_primary_for_alt_dup,
+    resolve_selection_styles,
 )
-from .editor_hover_query import get_hovered_entity_id, get_hovered_entity_rect
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController

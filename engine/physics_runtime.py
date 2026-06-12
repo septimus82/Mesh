@@ -4,11 +4,11 @@ Connects pure physics_model to Arcade/SceneController state.
 """
 from __future__ import annotations
 
-from typing import Any, List, Tuple, Optional
-from dataclasses import dataclass
+from typing import Any, List, Optional, Tuple
 
 import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
+from engine.physics_broadphase_key_model import BroadphaseKeyInputs, compute_broadphase_cache_key
 from engine.physics_model import (
     Aabb,
     Circle,
@@ -18,9 +18,8 @@ from engine.physics_model import (
     circle_circle_overlap,
     sweep_axis_separate,
 )
-from engine.swallowed_exceptions import _log_swallow
 from engine.spatial_hash_model import SpatialHashConfig, SpatialHashIndex, build_spatial_hash, query_aabb
-from engine.physics_broadphase_key_model import BroadphaseKeyInputs, compute_broadphase_cache_key
+from engine.swallowed_exceptions import _log_swallow
 
 logger = get_logger(__name__)
 
@@ -36,7 +35,7 @@ class PhysicsProxySprite:
         # Some arcade versions check .position or ._hit_box_shape
         # We assume standard sprite behavior where center_x/y/width/height is enough for AABB check
         # if using Simple Hitbox.
-        
+
     # Properties for AABB access if Arcade reads them directly
     @property
     def left(self): return self.center_x - self.width / 2
@@ -489,10 +488,10 @@ def move_entity_with_physics(
         delta=delta,
         aabb=start_aabb
     )
-    
+
     # 2. Define Query Adapter
     check_collision = getattr(optional_arcade.arcade, "check_for_collision_with_list", None)
-    
+
     def query_tiles(aabb: Aabb) -> List[Aabb]:
         if check_collision is None or not solid_sprites:
             _BROADPHASE_CACHE.last_candidate_count = 0
@@ -583,9 +582,9 @@ def move_entity_with_physics(
 
     # 3. Execute Pure Model
     result = sweep_axis_separate(req, query_tiles)
-    
+
     # 4. Apply Side Effects
     entity.center_x = result.final_pos[0]
     entity.center_y = result.final_pos[1]
-    
+
     return result

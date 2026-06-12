@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import mesh_cli
-
 from engine.editor.debug_bundle import DebugBundle
 
 

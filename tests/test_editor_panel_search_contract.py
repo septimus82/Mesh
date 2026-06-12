@@ -9,20 +9,20 @@ import pytest
 
 from engine import optional_arcade
 from engine.asset_index import AssetRow
-from engine.editor_entity_ops import EntitySummary
 from engine.editor.asset_browser_panel import filter_assets_for_browser
-from engine.editor.entity_panels import filter_entity_panels_items
 from engine.editor.editor_history_controller import EditorHistoryController
+from engine.editor.entity_panels import filter_entity_panels_items
 from engine.editor.undo_history_model import (
     build_undo_history_entries,
     filter_undo_history_entries,
 )
-from engine.editor_runtime import input as editor_input
 from engine.editor_controller import EditorModeController
-from tests._typing import as_any
+from engine.editor_entity_ops import EntitySummary
+from engine.editor_runtime import input as editor_input
+from tests._dock_stub import make_dock_stub
 from tests._search_stub import attach_search_stub
 from tests._session_stub import make_session_stub
-from tests._dock_stub import make_dock_stub
+from tests._typing import as_any
 
 
 @dataclass

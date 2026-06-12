@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 # Stable, reviewable projection policy used before hashing replay digest inputs.
 # Keep this literal deterministically ordered; update ratchet tests when changed.
 DIGEST_PROJECTION_POLICY: dict[str, tuple[str, ...]] = {

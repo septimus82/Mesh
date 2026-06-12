@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
+
 from tests._typing import as_any
 
 
@@ -68,8 +69,8 @@ def test_title_menu_continue_visibility(tmp_path: Path, monkeypatch) -> None:
 
 def test_title_menu_selection_clamps_and_start_game(tmp_path: Path, monkeypatch) -> None:
     _patch_arcade(monkeypatch)
-    from engine.ui import MainMenuOverlay
     import engine.optional_arcade as optional_arcade
+    from engine.ui import MainMenuOverlay
 
     monkeypatch.setenv("MESH_REPO_ROOT", str(tmp_path))
     window = _Window()

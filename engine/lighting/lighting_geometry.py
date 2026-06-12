@@ -20,7 +20,6 @@ from .shadow_geometry import (
     compute_shadow_hulls,
 )
 from .shadow_geometry_adapter import (
-    occluder_config_to_polygon,
     occluder_configs_to_polygons,
 )
 

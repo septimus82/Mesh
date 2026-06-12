@@ -10,22 +10,18 @@ Tests the pure model functions for batch applying HD-2D overrides:
 from __future__ import annotations
 
 import copy
-from typing import Any
 
-import pytest
-
+from engine.editor.hd2d_entity_overrides_model import (
+    apply_hd2d_entity_override_patch,
+    clear_all_overrides,
+)
 from engine.editor.hd2d_override_batch_apply_model import (
     compute_batch_apply_targets,
     list_entities_with_positions,
     select_entities_in_radius,
     select_entities_same_render_layer,
 )
-from engine.editor.hd2d_entity_overrides_model import (
-    apply_hd2d_entity_override_patch,
-    clear_all_overrides,
-)
 from tests._typing import as_any
-
 
 # =============================================================================
 # Test list_entities_with_positions

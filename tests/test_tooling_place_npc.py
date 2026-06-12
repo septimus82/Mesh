@@ -1,8 +1,10 @@
-import unittest
-import shutil
 import json
+import shutil
+import unittest
 from pathlib import Path
+
 from engine.tooling import scaffold
+
 
 class TestToolingPlaceNPC(unittest.TestCase):
     def setUp(self):
@@ -10,14 +12,14 @@ class TestToolingPlaceNPC(unittest.TestCase):
         if self.test_dir.exists():
             shutil.rmtree(self.test_dir)
         self.test_dir.mkdir()
-        
+
     def tearDown(self):
         if self.test_dir.exists():
             shutil.rmtree(self.test_dir)
 
     def test_place_npc(self):
         scene_path = self.test_dir / "scene.json"
-        
+
         # Create scene file
         scene_data = {
             "name": "Scene",
@@ -27,15 +29,15 @@ class TestToolingPlaceNPC(unittest.TestCase):
         }
         with open(scene_path, "w") as f:
             json.dump(scene_data, f)
-            
+
         # Place NPC
         self.assertTrue(scaffold.create_npc(
-            "guard", 
-            str(scene_path), 
-            100, 
+            "guard",
+            str(scene_path),
+            100,
             200
         ))
-        
+
         # Verify
         with open(scene_path, "r") as f:
             data = json.load(f)

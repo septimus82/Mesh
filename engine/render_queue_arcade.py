@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+
 import engine.optional_arcade as optional_arcade
 from engine.paths import resolve_path
 from engine.render_queue import BatchKey, DrawSpriteCmd, RenderQueueStats, SpriteDrawList

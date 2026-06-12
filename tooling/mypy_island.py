@@ -21,7 +21,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 # ---------------------------------------------------------------------------
 # Typed Island Modules - strict typing required, zero errors allowed
 # ---------------------------------------------------------------------------
@@ -131,10 +130,10 @@ def _run_mypy_on_island(repo_root: Path) -> tuple[int, list[str]]:
         m for m in TYPED_ISLAND_MODULES
         if (repo_root / m).exists()
     ]
-    
+
     if not existing_modules:
         return 0, []
-    
+
     cmd = [
         sys.executable, "-m", "mypy",
         "--ignore-missing-imports",
@@ -146,10 +145,10 @@ def _run_mypy_on_island(repo_root: Path) -> tuple[int, list[str]]:
         "--no-implicit-optional",
         *existing_modules,
     ]
-    
+
     result = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True)
     output = (result.stdout or "") + (result.stderr or "")
-    
+
     errors = []
     for line in output.splitlines():
         line = line.strip()
@@ -157,7 +156,7 @@ def _run_mypy_on_island(repo_root: Path) -> tuple[int, list[str]]:
             continue
         if " error: " in line:
             errors.append(line)
-    
+
     return result.returncode, errors
 
 
@@ -173,9 +172,9 @@ def main(argv: list[str] | None = None) -> int:
         help="List island modules and exit",
     )
     args = parser.parse_args(argv)
-    
+
     repo_root = _repo_root()
-    
+
     if args.list:
         print("Typed Island Modules:")
         print("=" * 60)
@@ -191,13 +190,13 @@ def main(argv: list[str] | None = None) -> int:
         print("  2. Add the module path to TYPED_ISLAND_MODULES in this file")
         print("  3. Run `python -m tooling.mypy_island` to verify")
         return 0
-    
+
     print("[mypy-island] checking typed island modules...")
     code, errors = _run_mypy_on_island(repo_root)
-    
+
     # Filter allowed errors
     filtered_errors = _filter_island_errors(errors)
-    
+
     if filtered_errors:
         print(f"[mypy-island] FAILED - {len(filtered_errors)} error(s) in typed island:")
         for error in filtered_errors[:20]:
@@ -209,7 +208,7 @@ def main(argv: list[str] | None = None) -> int:
         print("  1. Address the type errors in the listed modules")
         print("  2. If error is expected, add to ALLOWED_ISLAND_ERRORS with reason")
         return 1
-    
+
     print(f"[mypy-island] ok - {len(TYPED_ISLAND_MODULES)} modules clean")
     return 0
 

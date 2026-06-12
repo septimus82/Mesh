@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 from engine import json_io
+
 ASSETS_DIR = Path("assets")
 SPRITES_DIR = ASSETS_DIR / "sprites"
 PREFABS_FILE = ASSETS_DIR / "prefabs.json"

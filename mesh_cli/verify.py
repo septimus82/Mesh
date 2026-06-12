@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import argparse
 import ast
-from engine.swallowed_exceptions import _log_swallow
 import json
 import os
 from pathlib import Path
 from typing import Any, Callable, TypedDict
 
+from engine.swallowed_exceptions import _log_swallow
+from mesh_cli.shipping_policy import build_verify_summary_key_artifacts
 from mesh_cli.verify_steps import STEP_ORDER as VERIFY_ALL_STEPS
 from mesh_cli.verify_steps import VerifyStepContext, run_verify_steps
-from mesh_cli.shipping_policy import build_verify_summary_key_artifacts
+
 
 class _VerifyStepDurationRow(TypedDict):
     name: str
@@ -1799,7 +1800,6 @@ def _handle_verify_local(args: argparse.Namespace) -> int:
 def _build_verify_all_payload(args: argparse.Namespace):
     import sys
     from pathlib import Path
-    from typing import Any
 
     from . import legacy_impl as legacy_mod
 

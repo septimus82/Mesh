@@ -3,13 +3,11 @@ from __future__ import annotations
 import copy
 from typing import Any, Dict, Optional, cast
 
-from engine.editor.editor_dock_query import get_dock_snapshot
-
 import engine.optional_arcade as optional_arcade
 from engine.behaviours import get_behaviour_param_defs
+from engine.editor.editor_dock_query import get_dock_snapshot
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
-
 
 logger = get_logger(__name__)
 
@@ -49,9 +47,9 @@ class EditorInspectorController:
             return False
 
         from engine.editor.inspector_components_model import (
-            InspectorCursor,
             NUMERIC_STEP_NORMAL,
             NUMERIC_STEP_SHIFT,
+            InspectorCursor,
             apply_inspector_edit,
             build_inspector_sections,
             clamp_inspector_cursor,
@@ -520,9 +518,7 @@ class EditorInspectorController:
             return False
 
         from engine.editor.components_model import (
-            COMPONENT_TITLES,
             ComponentKind,
-            add_component,
             build_components,
             get_addable_components,
             remove_component,

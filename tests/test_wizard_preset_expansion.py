@@ -1,8 +1,9 @@
 import argparse
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from engine.tooling import wizard_command
+
 
 class TestWizardPresetExpansion(unittest.TestCase):
     @patch("engine.tooling.wizard_command._load_config")

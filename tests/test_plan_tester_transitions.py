@@ -13,7 +13,7 @@ class TestPlanTesterTransitions(unittest.TestCase):
     def setUp(self) -> None:
         self.test_dir = Path(tempfile.mkdtemp())
         self.tester = PlanTester(self.test_dir)
-        
+
         # Create dummy source scene
         self.source_scene_path = self.test_dir / "source.json"
         with open(self.source_scene_path, "w") as f:
@@ -44,7 +44,7 @@ class TestPlanTesterTransitions(unittest.TestCase):
         self.assertEqual(len(tests), 1)
         self.assertEqual(tests[0].type, "transition")
         self.assertEqual(tests[0].name, "Transition: source.json -> target.json")
-        
+
         assertions = tests[0].assertions
         self.assertEqual(len(assertions), 2)
         self.assertEqual(assertions[0]["type"], "scene_loadable")

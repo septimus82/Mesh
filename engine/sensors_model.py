@@ -6,8 +6,10 @@ Deterministic, data-driven, and decoupled from runtime/rendering.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Tuple, List, Mapping
+from typing import List, Mapping, Tuple
+
 from .physics_model import Aabb
+
 
 @dataclass(frozen=True)
 class SensorDef:
@@ -45,23 +47,23 @@ def parse_sensors(scene_payload: Mapping[str, object]) -> Tuple[SensorDef, ...]:
         sid = str(s.get("id", ""))
         if not sid:
             continue
-            
+
         rect_data = s.get("rect")
         if not isinstance(rect_data, list) or len(rect_data) != 4:
             continue
-            
+
         x, y, w, h = rect_data
         aabb = Aabb(float(x), float(y), float(w), float(h))
-        
+
         raw_tags = s.get("tags", [])
         if isinstance(raw_tags, list):
             tags = tuple(sorted(str(t) for t in raw_tags))
         else:
             tags = ()
         enabled = bool(s.get("enabled", True))
-        
+
         parsed.append(SensorDef(sid, aabb, tags, enabled))
-    
+
     # Sort by ID for stability
     parsed.sort(key=lambda x: x.id)
     return tuple(parsed)
@@ -76,13 +78,13 @@ def overlaps_for_entity(entity_aabb: Aabb, sensors: Tuple[SensorDef, ...]) -> Tu
             continue
         if s.aabb.intersection(entity_aabb):
             hits.append(s.id)
-    return tuple(hits) # sensors are already sorted by ID, so iteration order is stable? 
-                       # Yes, but strictly speaking intersection doesn't guarantee output order 
+    return tuple(hits) # sensors are already sorted by ID, so iteration order is stable?
+                       # Yes, but strictly speaking intersection doesn't guarantee output order
                        # unless we rely on input order. Since sensors is sorted, hits will be sorted.
 
 def diff_overlaps(
     entity_id: str,
-    prev_ids: Tuple[str, ...], 
+    prev_ids: Tuple[str, ...],
     next_ids: Tuple[str, ...]
 ) -> Tuple[SensorEvent, ...]:
     """
@@ -94,16 +96,16 @@ def diff_overlaps(
     """
     prev_set = set(prev_ids)
     next_set = set(next_ids)
-    
+
     exited = sorted(list(prev_set - next_set))
     entered = sorted(list(next_set - prev_set))
-    
+
     events: List[SensorEvent] = []
-    
+
     for sensor_id in exited:
         events.append(SensorEvent(sensor_id, entity_id, "exit"))
-        
+
     for sensor_id in entered:
         events.append(SensorEvent(sensor_id, entity_id, "enter"))
-        
+
     return tuple(events)

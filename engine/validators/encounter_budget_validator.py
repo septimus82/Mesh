@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from engine.config import load_config
+from engine.encounter_cost import get_base_encounter_cost
 from engine.encounter_presets import load_encounter_presets
 from engine.paths import resolve_path
-from engine.encounter_cost import get_base_encounter_cost
 from engine.prefabs import get_prefab_manager
 
 

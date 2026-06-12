@@ -5,7 +5,8 @@ navigation, preview hooks, and commitment.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List
+
 from engine.editor.editor_protocols import EditorUiFlowHost
 
 if TYPE_CHECKING:
@@ -13,18 +14,18 @@ if TYPE_CHECKING:
     pass
 
 # Import models
+from engine.editor.editor_actions import run_editor_action
 from engine.editor.find_everything_model import (
-    filter_find_items,
+    build_find_groups,
     clamp_selection,
     compute_find_counts,
-    build_find_groups,
+    filter_find_items,
     flatten_find_groups,
 )
 from engine.editor.hd2d_preset_preview_model import (
-    is_hd2d_preset_command,
     extract_preset_id_from_command,
+    is_hd2d_preset_command,
 )
-from engine.editor.editor_actions import run_editor_action
 from engine.ui_overlays.widget_overlay_helpers import resolve_preserved_selection_index
 
 
@@ -33,7 +34,7 @@ class EditorUIFlowController:
 
     def __init__(self, controller: EditorUiFlowHost) -> None:
         self.controller = controller
-        
+
         # Palette State
         self.is_open: bool = False
         self.query: str = ""
@@ -63,7 +64,7 @@ class EditorUIFlowController:
         self.query = ""
         self.selection_index = 0
         self.cached_results = []
-        
+
         if cancel_preview:
             self.controller.ui_hd2d_cancel_preview()
 
@@ -97,7 +98,7 @@ class EditorUIFlowController:
         """Move selection index by delta."""
         if not self.cached_results:
             return
-            
+
         self.selection_index += delta
         self.selection_index = clamp_selection(self.selection_index, len(self.cached_results))
         self.maybe_preview_from_selection()
@@ -112,11 +113,11 @@ class EditorUIFlowController:
         all_results = filter_find_items(items, self.query, limit=None)
         groups = build_find_groups(all_results)
         flattened = flatten_find_groups(groups)
-        
+
         # Cache full results
         self.all_results = list(flattened)
         self.counts = compute_find_counts(all_results, include_zero=True)
-        
+
         # Cache view results (limited)
         results = list(flattened[:8])
         self.cached_results = results
@@ -161,46 +162,46 @@ class EditorUIFlowController:
         """
         if not self.cached_results:
             return False
-            
+
         self.clamp_selection_index()
         if self.selection_index < 0 or self.selection_index >= len(self.cached_results):
             return False
-            
+
         item = self.cached_results[self.selection_index]
         kind = str(getattr(item, "kind", "") or "")
         item_id = str(getattr(item, "item_id", "") or "")
-        
+
         # Close first
         self.close_palette(cancel_preview=False)
-        
+
         # Handle specific commit types
         if kind == "command":
             # Delegate to controller to handle command activation
             if self.controller.ui_activate_command(item_id):
                  return True
-                 
+
             # Special case: HD2D Presets
             if is_hd2d_preset_command(item_id):
                  preset_id = extract_preset_id_from_command(item_id)
                  if preset_id:
                      return self.controller.ui_hd2d_commit(preset_id)
-            
+
             # General Command
             # Use property 'window' if available or explicit cast?
             # Implemented 'window' on Protocol for this exact compat reason.
             win = getattr(self.controller, "window", None)
             return run_editor_action(item_id, self.controller, win)
-            
+
         elif kind == "asset":
             return self.controller.ui_activate_asset(item_id)
-            
+
         elif kind == "scene":
             return self.controller.ui_activate_scene(item_id)
-                
+
         elif kind == "entity":
             return self.controller.ui_activate_entity(item_id)
-                
+
         elif kind == "problem":
              return self.controller.ui_activate_problem(item_id)
-                
+
         return False

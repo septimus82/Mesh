@@ -19,9 +19,7 @@ from typing import Any, Optional, Tuple
 
 from engine.parallax_model import (
     BackgroundPlane,
-    background_planes_to_payloads,
     parse_background_planes,
-    sort_background_planes,
 )
 
 

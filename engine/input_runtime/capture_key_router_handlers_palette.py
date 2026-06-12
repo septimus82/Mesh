@@ -29,7 +29,7 @@ def _set_editor_session_flag(window: Any, setter_name: str, value: bool) -> None
 # PALETTE MODE handlers
 
 def _handle_palette_mode_action(window: Any, action_id: str, snapshot: CaptureFocusSnapshot) -> bool:
-    from engine.palette_mode import get_state, toggle_mode, move_selection, toggle_preview, apply_at  # noqa: PLC0415
+    from engine.palette_mode import apply_at, get_state, move_selection, toggle_mode, toggle_preview  # noqa: PLC0415
 
     if action_id == "capture.palette_mode.toggle_mode":
         toggle_mode()
@@ -134,8 +134,8 @@ def _handle_capture_mode_action(window: Any, action_id: str, snapshot: CaptureFo
 
 def _handle_capture_mode_execute(window: Any, capture_state: Any, *, validate_only: bool) -> bool:
     from engine.capture_mode import build_capture_payload  # noqa: PLC0415
-    from engine.tooling_runtime.clipboard import try_copy_to_clipboard  # noqa: PLC0415
     from engine.tooling_runtime.capture_persist import persist_capture_payload, validate_brush_payload, validate_stamp_payload  # noqa: PLC0415
+    from engine.tooling_runtime.clipboard import try_copy_to_clipboard  # noqa: PLC0415
 
     sc = getattr(window, "scene_controller", None)
     scene_payload = getattr(sc, "_loaded_scene_data", None) if sc is not None else None

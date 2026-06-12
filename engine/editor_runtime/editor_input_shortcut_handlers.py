@@ -1,20 +1,19 @@
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
-from engine.swallowed_exceptions import _log_swallow
+from typing import TYPE_CHECKING, Any
 
 from engine.editor.editor_actions import get_editor_actions, run_editor_action
-from engine.editor.shortcut_resolver_model import (
-    build_shortcut_map_by_scope,
-    normalize_shortcut_event,
-    resolve_shortcut_scoped,
-)
 from engine.editor.editor_focus_model import (
     compute_active_shortcut_scopes,
     derive_focus_target_for_controller,
     is_text_input_active_for_controller,
 )
-
+from engine.editor.shortcut_resolver_model import (
+    build_shortcut_map_by_scope,
+    normalize_shortcut_event,
+    resolve_shortcut_scoped,
+)
+from engine.swallowed_exceptions import _log_swallow
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController as EditorController

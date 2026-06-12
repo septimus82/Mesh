@@ -15,7 +15,6 @@ import importlib
 import inspect
 import pkgutil
 from pathlib import Path
-from typing import Any
 
 import pytest
 

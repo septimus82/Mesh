@@ -5,7 +5,6 @@ import pytest
 
 from engine.scene_controller import SceneController
 
-
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 class TestThemeRuntimeApplication(unittest.TestCase):
@@ -19,22 +18,22 @@ class TestThemeRuntimeApplication(unittest.TestCase):
         # Setup Theme Manager
         mock_tm = MagicMock()
         mock_get_tm.return_value = mock_tm
-        
-        from engine.encounter_sets import RegionTheme, EncounterSet
+
+        from engine.encounter_sets import EncounterSet, RegionTheme
         mock_tm.get_theme.return_value = RegionTheme(id="moss", description="")
         mock_tm.resolve_encounter_set_for_theme.return_value = EncounterSet(
-            id="moss_encounters", 
+            id="moss_encounters",
             ambient_audio_key="forest_ambience"
         )
-        
+
         scene_data = {
             "settings": {
                 "region_theme": "moss"
             }
         }
-        
+
         self.controller._apply_theme_runtime(scene_data)
-        
+
         self.assertIn("music", scene_data["settings"])
         self.assertEqual(scene_data["settings"]["music"], "assets/music/forest_ambience.mp3")
 
@@ -42,19 +41,19 @@ class TestThemeRuntimeApplication(unittest.TestCase):
     def test_apply_theme_lighting(self, mock_get_tm):
         mock_tm = MagicMock()
         mock_get_tm.return_value = mock_tm
-        
-        from engine.encounter_sets import RegionTheme, EncounterSet
+
+        from engine.encounter_sets import EncounterSet, RegionTheme
         mock_tm.get_theme.return_value = RegionTheme(id="moss", description="", lighting_hint="green_dim")
         mock_tm.resolve_encounter_set_for_theme.return_value = EncounterSet(id="moss_encounters")
-        
+
         scene_data = {
             "settings": {
                 "region_theme": "moss"
             }
         }
-        
+
         self.controller._apply_theme_runtime(scene_data)
-        
+
         self.assertIn("lights", scene_data)
         self.assertEqual(scene_data["lights"][0]["color"], [50, 100, 50])
 
@@ -62,14 +61,14 @@ class TestThemeRuntimeApplication(unittest.TestCase):
     def test_apply_theme_spawns(self, mock_get_tm):
         mock_tm = MagicMock()
         mock_get_tm.return_value = mock_tm
-        
-        from engine.encounter_sets import RegionTheme, EncounterSet
+
+        from engine.encounter_sets import EncounterSet, RegionTheme
         mock_tm.get_theme.return_value = RegionTheme(id="moss", description="")
         mock_tm.resolve_encounter_set_for_theme.return_value = EncounterSet(
             id="moss_encounters",
             enemy_prefab_ids=["plant_minion"]
         )
-        
+
         scene_data = {
             "settings": {
                 "region_theme": "moss",
@@ -80,8 +79,8 @@ class TestThemeRuntimeApplication(unittest.TestCase):
                 {"prefab_id": "other"}
             ]
         }
-        
+
         self.controller._apply_theme_runtime(scene_data)
-        
+
         self.assertEqual(scene_data["entities"][0]["prefab_id"], "plant_minion")
         self.assertEqual(scene_data["entities"][1]["prefab_id"], "other")

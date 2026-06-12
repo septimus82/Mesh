@@ -10,7 +10,6 @@ from engine.editor.state import TRANSFORM_MODE_ROTATE
 from engine.editor_controller import EditorModeController
 from tests._editor_window_stub import EditorWindowStub, as_game_window
 
-
 pytestmark = [pytest.mark.fast]
 
 

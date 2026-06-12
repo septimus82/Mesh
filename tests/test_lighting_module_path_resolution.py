@@ -6,7 +6,6 @@ import pytest
 
 import engine.lighting as lighting
 
-
 pytestmark = [pytest.mark.fast]
 
 

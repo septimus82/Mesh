@@ -5,7 +5,6 @@ import pytest
 import engine.swallowed_exceptions as swallowed_exceptions
 from engine.ui import PlayerHUD
 
-
 pytestmark = [pytest.mark.fast]
 
 

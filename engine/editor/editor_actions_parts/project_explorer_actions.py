@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any
 
 from engine.editor.editor_actions_parts._shared import _get_editor
@@ -280,11 +279,11 @@ def _enabled_safe_move_refactor(controller: Any, window: Any) -> bool:
     editor = _get_editor(window)
     if not editor:
         return False
-    
+
     from engine.editor.project_explorer_power_tools_model import should_handle_project_explorer_shortcut  # noqa: PLC0415
     if not should_handle_project_explorer_shortcut(editor):
         return False
-        
+
     ops = editor.file_ops
     return bool(ops.can_safe_move_selected_asset() or ops.can_safe_move_selected_assets_folder())
 
@@ -294,16 +293,16 @@ def _safe_move_refactor_wrapper(window: Any) -> None:
     editor = _get_editor(window)
     if not editor:
         return
-    
+
     ops = editor.file_ops
     use_v2 = ops.can_safe_move_selected_assets_folder()
     # Check multi-select too?
     project_ctrl = getattr(editor, "project_explorer", None)
     if project_ctrl and getattr(project_ctrl, "selection_count", lambda: 0)() > 1:
         use_v2 = True
-        
+
     prompter = getattr(editor, "prompt_project_explorer_move_destination", None)
-    if not callable(prompter): 
+    if not callable(prompter):
         # Toast fallback?
         return
 

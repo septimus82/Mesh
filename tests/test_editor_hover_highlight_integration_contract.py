@@ -6,16 +6,12 @@ and the overlay produces correct highlight specs.
 
 from __future__ import annotations
 
-from typing import Any, Tuple, TYPE_CHECKING, cast
 from types import SimpleNamespace
+from typing import TYPE_CHECKING, Any, Tuple, cast
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController
 
-import pytest
-from tests._session_stub import make_session_stub
-from tests._dock_stub import make_dock_stub
-from engine.editor.editor_hover_state_controller import EditorHoverStateController
 from engine.editor.editor_hover_dock_tab_query import (
     get_hovered_dock_tab,
     get_hovered_dock_tab_rect,
@@ -26,6 +22,9 @@ from engine.editor.editor_hover_query import (
     get_hovered_splitter,
     get_hovered_splitter_rect,
 )
+from engine.editor.editor_hover_state_controller import EditorHoverStateController
+from tests._dock_stub import make_dock_stub
+from tests._session_stub import make_session_stub
 
 
 class MockWindow:
@@ -163,8 +162,8 @@ class TestHoverDetectionDockTab:
     def test_hover_left_dock_tab_scene(self) -> None:
         """Test hovering over left dock 'Scene' tab."""
         from engine.editor.editor_shell_layout import (  # noqa: PLC0415
-            compute_editor_shell_layout,
             compute_dock_tab_rects,
+            compute_editor_shell_layout,
         )
 
         window, controller = _setup()
@@ -190,8 +189,8 @@ class TestHoverDetectionDockTab:
     def test_hover_right_dock_tab_inspector(self) -> None:
         """Test hovering over right dock 'Inspector' tab."""
         from engine.editor.editor_shell_layout import (  # noqa: PLC0415
-            compute_editor_shell_layout,
             compute_dock_tab_rects,
+            compute_editor_shell_layout,
         )
 
         window, controller = _setup()
@@ -403,8 +402,8 @@ class TestHoverHighlightModel:
     def test_resolve_highlights_with_dock_tab_hover(self) -> None:
         """Test that resolve_hover_highlights produces DOCK_TAB spec."""
         from engine.editor_hover_highlight_model import (
-            resolve_hover_highlights,
             HoverHighlightKind,
+            resolve_hover_highlights,
         )
 
         result = resolve_hover_highlights(
@@ -435,8 +434,8 @@ class TestHoverHighlightModel:
     def test_resolve_highlights_with_top_bar_hover(self) -> None:
         """Test that resolve_hover_highlights produces TOPBAR_CONTROL spec."""
         from engine.editor_hover_highlight_model import (
-            resolve_hover_highlights,
             HoverHighlightKind,
+            resolve_hover_highlights,
         )
 
         result = resolve_hover_highlights(
@@ -467,8 +466,8 @@ class TestHoverHighlightModel:
     def test_resolve_highlights_with_splitter_hover(self) -> None:
         """Test that resolve_hover_highlights produces SPLITTER spec."""
         from engine.editor_hover_highlight_model import (
-            resolve_hover_highlights,
             HoverHighlightKind,
+            resolve_hover_highlights,
         )
 
         result = resolve_hover_highlights(
@@ -526,8 +525,8 @@ class TestHoverHighlightModel:
     def test_entity_hover_is_world_space(self) -> None:
         """Test that entity hover highlight has is_world_space=True."""
         from engine.editor_hover_highlight_model import (
-            resolve_hover_highlights,
             HoverHighlightKind,
+            resolve_hover_highlights,
         )
 
         result = resolve_hover_highlights(
@@ -562,8 +561,8 @@ class TestHoverHighlightPriority:
     def test_context_menu_priority_over_splitter(self) -> None:
         """Test that context menu has higher priority than splitter."""
         from engine.editor_hover_highlight_model import (
-            resolve_hover_highlights,
             HoverHighlightKind,
+            resolve_hover_highlights,
         )
 
         result = resolve_hover_highlights(
@@ -595,8 +594,8 @@ class TestHoverHighlightPriority:
     def test_splitter_priority_over_dock_tab(self) -> None:
         """Test that splitter has higher priority than dock tab."""
         from engine.editor_hover_highlight_model import (
-            resolve_hover_highlights,
             HoverHighlightKind,
+            resolve_hover_highlights,
         )
 
         result = resolve_hover_highlights(

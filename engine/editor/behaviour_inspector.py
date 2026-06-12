@@ -6,14 +6,14 @@ and development purposes. Uses the get_inspector_state() method on behaviours.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass(frozen=True, slots=True)
 class BehaviourInspectorRow:
     """A single row in the behaviour inspector."""
-    
+
     kind: str  # "header", "field", "separator"
     key: str
     label: str
@@ -24,7 +24,7 @@ class BehaviourInspectorRow:
 @dataclass(frozen=True, slots=True)
 class BehaviourInspectorSection:
     """A section showing one behaviour's state."""
-    
+
     behaviour_name: str
     behaviour_type: str
     entity_id: str
@@ -93,12 +93,12 @@ def build_behaviour_inspector_rows(
         List of inspector rows.
     """
     rows = []
-    
+
     # Sort keys for consistent display
     for key in sorted(state.keys()):
         value = state[key]
         formatted, value_type = format_value_for_display(value)
-        
+
         rows.append(BehaviourInspectorRow(
             kind="field",
             key=key,
@@ -106,7 +106,7 @@ def build_behaviour_inspector_rows(
             value=formatted,
             value_type=value_type,
         ))
-    
+
     return rows
 
 
@@ -128,17 +128,17 @@ def build_behaviour_inspector_section(
     state = get_behaviour_inspector_state(behaviour)
     if state is None:
         return None
-    
+
     # Get behaviour type name
     behaviour_type = type(behaviour).__name__
-    
+
     # Get behaviour name from config or type
     behaviour_name = behaviour_type
     if hasattr(behaviour, "config") and isinstance(behaviour.config, dict):
         behaviour_name = behaviour.config.get("name", behaviour_type)
-    
+
     rows = build_behaviour_inspector_rows(state)
-    
+
     return BehaviourInspectorSection(
         behaviour_name=behaviour_name,
         behaviour_type=behaviour_type,
@@ -163,29 +163,29 @@ def build_entity_behaviour_summary(
     """
     sections = []
     expand_states = expand_states or {}
-    
+
     # Get behaviours from entity
     behaviours = []
     if hasattr(entity, "behaviours"):
         behaviours = entity.behaviours
     elif hasattr(entity, "_behaviours"):
         behaviours = entity._behaviours
-    
+
     entity_id = getattr(entity, "mesh_id", "")
-    
+
     for behaviour in behaviours:
         behaviour_type = type(behaviour).__name__
         is_expanded = expand_states.get(behaviour_type, True)
-        
+
         section = build_behaviour_inspector_section(
             behaviour,
             entity_id=entity_id,
             is_expanded=is_expanded,
         )
-        
+
         if section is not None:
             sections.append(section)
-    
+
     return sections
 
 
@@ -201,17 +201,17 @@ def format_behaviour_summary_text(
         Formatted text string.
     """
     lines = []
-    
+
     for section in sections:
         lines.append(f"[{section.behaviour_type}]")
-        
+
         if section.is_expanded:
             for row in section.rows:
                 if row.kind == "field":
                     lines.append(f"  {row.label}: {row.value}")
-        
+
         lines.append("")
-    
+
     return "\n".join(lines)
 
 
@@ -222,7 +222,7 @@ def format_behaviour_summary_text(
 @dataclass(frozen=True, slots=True)
 class EventLogRow:
     """A single row in the event log."""
-    
+
     sequence: int
     event_type: str
     source_entity: str
@@ -233,7 +233,7 @@ class EventLogRow:
 @dataclass(frozen=True, slots=True)
 class EventLogSection:
     """Event log inspector section."""
-    
+
     title: str
     entity_id: str  # Empty for global log
     rows: Tuple[EventLogRow, ...] = ()
@@ -254,7 +254,7 @@ def build_event_log_rows(
         List of event log rows.
     """
     rows = []
-    
+
     for event in events[-limit:]:
         # Build payload preview
         payload_keys = list(event.payload.keys())[:3]
@@ -264,7 +264,7 @@ def build_event_log_rows(
                 payload_preview += f" (+{len(event.payload) - 3})"
         else:
             payload_preview = "(empty)"
-        
+
         rows.append(EventLogRow(
             sequence=event.sequence,
             event_type=event.event_type,
@@ -272,7 +272,7 @@ def build_event_log_rows(
             source_behaviour=event.source_behaviour,
             payload_preview=payload_preview,
         ))
-    
+
     return rows
 
 
@@ -295,7 +295,7 @@ def build_event_log_section(
     """
     if event_bus is None:
         return None
-    
+
     if entity_id:
         if hasattr(event_bus, "get_entity_history"):
             events = event_bus.get_entity_history(entity_id, limit)
@@ -308,12 +308,12 @@ def build_event_log_section(
         else:
             return None
         title = "Event Log (Global)"
-    
+
     if not events:
         return None
-    
+
     rows = build_event_log_rows(events, limit)
-    
+
     return EventLogSection(
         title=title,
         entity_id=entity_id,
@@ -334,11 +334,11 @@ def format_event_log_text(
         Formatted text string.
     """
     lines = [f"[{section.title}]"]
-    
+
     if section.is_expanded:
         for row in section.rows:
             src = f"{row.source_entity}:{row.source_behaviour}" if row.source_entity else row.source_behaviour
             lines.append(f"  #{row.sequence} {row.event_type} <- {src}")
             lines.append(f"       {row.payload_preview}")
-    
+
     return "\n".join(lines)

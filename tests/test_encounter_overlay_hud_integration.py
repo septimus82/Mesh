@@ -22,7 +22,7 @@ def mock_window():
         # Mock set_size and get_size to avoid calculation errors
         window.set_size = MagicMock()
         window.get_size = MagicMock(return_value=(800, 600))
-        
+
         # Manually set attributes that __init__ would set
         window.width = 800
         window.height = 600
@@ -34,7 +34,7 @@ def mock_window():
         window.text_cache = MagicMock()
         window._debug_text = MagicMock()
         window.event_bus = MagicMock()
-        
+
         mock_draw = MagicMock()
         with patch("engine.text_draw.draw_text_cached", mock_draw):
             yield window, mock_draw
@@ -56,9 +56,9 @@ def test_overlay_draws_when_enabled(mock_window):
 def test_overlay_hidden_when_disabled(mock_window):
     window, mock_draw_text = mock_window
     window.encounter_debug_overlay = False
-    
+
     with patch("engine.encounter_debug.get_encounter_debug_lines", return_value=["EncLine1"]):
         window.draw_debug_overlay()
-        
+
     calls = [args[0] for args, _ in mock_draw_text.call_args_list]
     assert "EncLine1" not in calls

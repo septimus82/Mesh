@@ -11,7 +11,6 @@ from engine.game_parts.ui_dispatcher import init_ui_dispatcher
 from engine.ui_contract import PERSISTENT_UI_ATTRS
 from engine.ui_controller import UIController
 
-
 pytestmark = pytest.mark.fast
 
 

@@ -9,10 +9,7 @@ These tests verify that:
 """
 from __future__ import annotations
 
-import pytest
-
 from engine.rng_service import RNGService, RNGStream, get_rng, rng_service
-
 
 # ============================================================================
 # RNGStream tests

@@ -1,10 +1,6 @@
-import pytest
-from engine.editor.asset_refactor_preview_model import (
-    group_modifications_by_file,
-    flatten_examples,
-    format_refactor_preview
-)
 from engine.editor.asset_refactor_model import Replacement
+from engine.editor.asset_refactor_preview_model import flatten_examples, format_refactor_preview, group_modifications_by_file
+
 
 def test_group_modifications_by_file_deterministic():
     mods = {
@@ -12,9 +8,9 @@ def test_group_modifications_by_file_deterministic():
         "a.json": [Replacement("e2", "p", "a", "b", 0), Replacement("e3", "p", "a", "b", 0)],
         "c.json": []
     }
-    
+
     groups = group_modifications_by_file(mods)
-    
+
     assert len(groups) == 3
     assert groups[0] == ("a.json", 2)
     assert groups[1] == ("b.json", 1)
@@ -27,7 +23,7 @@ def test_flatten_examples_deterministic():
             Replacement("e2", "f2", "path/old", "path/new", 0)
         ]
     }
-    
+
     examples = flatten_examples(mods, limit=5)
     assert len(examples) == 2
     # Replacements are sorted by entity_id/field_path inside flatten_examples if we implemented sorting properly
@@ -44,7 +40,7 @@ def test_truncation():
 def test_format_refactor_preview():
     mods = {"scene.json": [Replacement("e1", "sprite", "assets/old", "assets/new", 0)]}
     lines = format_refactor_preview("Title", "rename", "Rename A -> B", mods)
-    
+
     assert "Operation: RENAME" in lines
     assert "Rename A -> B" in lines
     assert "Updating References: 1 changes in 1 files." in lines

@@ -9,7 +9,6 @@ This mirrors the structure of mouse router boundary tests.
 """
 from __future__ import annotations
 
-import ast
 from pathlib import Path
 from typing import Iterator
 
@@ -62,22 +61,22 @@ def test_per_scope_key_handlers_only_imported_by_router() -> None:
     """
     engine_root = _get_input_runtime_path().parent
     violations: list[str] = []
-    
+
     for filepath in _iter_python_files(engine_root):
         filename = filepath.name
-        
+
         # Tests are always allowed
         if filename.startswith("test_"):
             continue
         # Allowed importers
         if filename in ALLOWED_KEY_HANDLER_IMPORTERS:
             continue
-        
+
         try:
             content = filepath.read_text(encoding="utf-8")
         except Exception:
             continue
-        
+
         # Check each line for imports
         for lineno, line in enumerate(content.splitlines(), 1):
             for handler_module in PER_SCOPE_KEY_HANDLER_MODULES:
@@ -95,7 +94,7 @@ def test_per_scope_key_handlers_only_imported_by_router() -> None:
                         f"    imports:  {handler_module}\n"
                         f"    allowed:  Only {', '.join(ALLOWED_KEY_HANDLER_IMPORTERS)}"
                     )
-    
+
     if violations:
         pytest.fail(
             "Import boundary violation: per-scope key handlers imported outside router:\n\n"
@@ -118,7 +117,7 @@ ROUTER_PUBLIC_API: tuple[str, ...] = (
 def test_key_router_has_route_and_dispatch() -> None:
     """Key router must expose the main dispatch function."""
     from engine.input_runtime import capture_key_router
-    
+
     assert hasattr(capture_key_router, "route_and_dispatch"), (
         "capture_key_router.py must have route_and_dispatch() function"
     )
@@ -131,12 +130,12 @@ def test_key_router_has_route_and_dispatch() -> None:
 def test_key_router_uses_model_for_routing() -> None:
     """Key router must use the model for route resolution."""
     source = Path("engine/input_runtime/capture_key_router.py").read_text(encoding="utf-8")
-    
+
     # Must import from capture_key_router_model
     assert "capture_key_router_model" in source, (
         "Key router must import from capture_key_router_model"
     )
-    
+
     # Must use resolve_route or build_route_table
     assert "resolve_route" in source or "build_route_table" in source, (
         "Key router must use resolve_route or build_route_table from model"
@@ -151,21 +150,21 @@ def test_key_router_uses_model_for_routing() -> None:
 def test_handler_modules_have_dispatch_function() -> None:
     """Each handler module should have a dispatch_* or _handle_* function pattern."""
     input_runtime = _get_input_runtime_path()
-    
+
     missing_dispatch: list[str] = []
-    
+
     for handler_module in PER_SCOPE_KEY_HANDLER_MODULES:
         filepath = input_runtime / f"{handler_module}.py"
         if not filepath.exists():
             continue
-        
+
         source = filepath.read_text(encoding="utf-8")
-        
+
         # Check for dispatch pattern
         has_dispatch = "def dispatch_" in source or "def _handle_" in source
         if not has_dispatch:
             missing_dispatch.append(handler_module)
-    
+
     if missing_dispatch:
         pytest.fail(
             f"Handler modules missing dispatch functions: {missing_dispatch}\n"
@@ -181,37 +180,37 @@ def test_handler_modules_no_direct_window_mutation() -> None:
     New code should avoid these patterns - use actions instead.
     """
     input_runtime = _get_input_runtime_path()
-    
+
     # Known existing patterns - these are grandfathered in
     # New code should not add more of these
     KNOWN_MUTATIONS: dict[str, list[str]] = {
         "capture_key_router_handlers_ui": ["window.command_palette_enabled = "],
         "capture_key_router_handlers_global": ["window.show_debug = "],
     }
-    
+
     suspicious_patterns = [
         "window.show_debug = ",  # Direct debug toggle
         "window.command_palette_enabled = ",  # Direct palette toggle
     ]
-    
+
     new_violations: list[str] = []
-    
+
     for handler_module in PER_SCOPE_KEY_HANDLER_MODULES:
         filepath = input_runtime / f"{handler_module}.py"
         if not filepath.exists():
             continue
-        
+
         source = filepath.read_text(encoding="utf-8")
         known_for_module = KNOWN_MUTATIONS.get(handler_module, [])
-        
+
         for pattern in suspicious_patterns:
             if pattern in source and pattern not in known_for_module:
                 new_violations.append(f"{handler_module}: contains '{pattern}'")
-    
+
     # Fail only on NEW violations
     if new_violations:
         pytest.fail(
-            f"New direct state mutation patterns found:\n"
+            "New direct state mutation patterns found:\n"
             + "\n".join(new_violations)
             + "\n\nHint: Use actions instead of direct state mutation."
         )
@@ -242,22 +241,22 @@ def test_handler_module_size_ratchets() -> None:
     """
     input_runtime = _get_input_runtime_path()
     oversized: list[str] = []
-    
+
     for handler_module, max_lines in HANDLER_SIZE_LIMITS.items():
         filepath = input_runtime / f"{handler_module}.py"
         if not filepath.exists():
             continue
-        
+
         lines = [
             line for line in filepath.read_text(encoding="utf-8").splitlines()
             if line.strip()  # Non-empty lines
         ]
-        
+
         if len(lines) > max_lines:
             oversized.append(
                 f"  {handler_module}.py: {len(lines)} lines > {max_lines} limit"
             )
-    
+
     if oversized:
         pytest.fail(
             "Handler modules exceed size limits:\n" + "\n".join(oversized)
@@ -278,7 +277,7 @@ def test_model_has_no_handler_imports() -> None:
     """
     model_path = Path("engine/input_runtime/capture_key_router_model.py")
     source = model_path.read_text(encoding="utf-8")
-    
+
     for handler_module in PER_SCOPE_KEY_HANDLER_MODULES:
         assert handler_module not in source, (
             f"Model imports handler module {handler_module}. "

@@ -12,18 +12,17 @@ from engine.editor.project_explorer.project_explorer_model import (
     format_project_row_label,
 )
 from engine.ui_overlays import asset_browser_overlay as asset_overlay_module
+from engine.ui_overlays import scene_browser_overlay as scene_overlay_module
 from engine.ui_overlays.asset_browser_overlay import AssetBrowserOverlay
 from engine.ui_overlays.entity_panels_overlay import EntityPanelsOverlay
 from engine.ui_overlays.project_explorer_overlay import (
     ProjectExplorerOverlay,
     _build_project_explorer_scrolllist,
 )
-from engine.ui_overlays import scene_browser_overlay as scene_overlay_module
 from engine.ui_overlays.scene_browser_overlay import SceneBrowserOverlay
 from engine.ui_overlays.widgets import Rect
 from engine.workspace_settings import WorkspaceSettings
 from tests._dock_stub import DockStub
-
 
 pytestmark = pytest.mark.fast
 

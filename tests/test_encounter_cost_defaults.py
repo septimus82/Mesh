@@ -1,6 +1,6 @@
-import pytest
-from engine.prefabs import PrefabManager
 from engine.encounter_cost import BOSS_COST_MULT, ELITE_COST_MULT, get_effective_encounter_cost
+from engine.prefabs import PrefabManager
+
 
 def test_encounter_cost_defaults():
     pm = PrefabManager()
@@ -12,11 +12,11 @@ def test_encounter_cost_defaults():
         "override": {"base": "base", "entity": {"encounter_cost": 10}}
     }
     pm._loaded = True
-    
+
     # Check explicit cost
     p1 = pm.get_prefab("base")
     assert p1["entity"]["encounter_cost"] == 5
-    
+
     # Check default cost
     p2 = pm.get_prefab("default")
     assert p2["entity"].get("encounter_cost", 1) == 1
@@ -38,13 +38,13 @@ def test_encounter_cost_defaults():
         "both": {"cost_mult": 0.5, "cost_add": 2}
     }
     pm._loaded = True
-    
+
     # Mult
     v1 = pm.resolve_with_variant("base", "mult")
     assert v1["entity"]["encounter_cost"] == 20.0
     v2 = pm.resolve_with_variant("base", "add")
     assert v2["entity"]["encounter_cost"] == 15.0 # 10 * 1.0 + 5
-    
+
     # Both
     v3 = pm.resolve_with_variant("base", "both")
     assert v3["entity"]["encounter_cost"] == 7.0 # 10 * 0.5 + 2

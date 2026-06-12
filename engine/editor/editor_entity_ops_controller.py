@@ -5,9 +5,7 @@ for the Vertical Slice Diet V2.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional
-
-import engine.optional_arcade as optional_arcade
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController

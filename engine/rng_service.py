@@ -29,7 +29,6 @@ from __future__ import annotations
 import random
 from typing import Any, Sequence, TypeVar
 
-
 T = TypeVar("T")
 
 
@@ -193,7 +192,7 @@ class RNGService:
         """
         self._global_seed = value
         self._default.seed(value)
-        
+
         # Reset all named streams with derived seeds
         for name, stream in self._streams.items():
             # Derive stream seed from global seed + stream name
@@ -246,11 +245,11 @@ class RNGService:
             state: State dict from get_state()
         """
         self._global_seed = state.get("global_seed")
-        
+
         default_state = state.get("default")
         if default_state:
             self._default.set_state(default_state)
-        
+
         streams_state = state.get("streams", {})
         for name, stream_state in streams_state.items():
             stream = self.get_stream(name)

@@ -1,5 +1,7 @@
-import pytest
 from pathlib import Path
+
+import pytest
+
 
 def test_agent_rules_content():
     """
@@ -31,5 +33,5 @@ def test_readme_links_rules():
         pytest.fail(f"{readme_path} not found in repo root")
 
     content = readme_path.read_text(encoding="utf-8")
-    
+
     assert "AGENT_RULES.md" in content, "README.md must reference AGENT_RULES.md"

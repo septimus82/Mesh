@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable
 
-
 DEFAULT_INTERACT_MAX_DIST = 72.0
 
 

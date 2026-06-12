@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import pytest
+
 from engine.geometry_tools import sanitize_poly
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
-
-
 
 pytestmark = pytest.mark.builtin_behaviours
 

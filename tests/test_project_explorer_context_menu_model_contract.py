@@ -1,14 +1,15 @@
 from dataclasses import dataclass
+
 from engine.editor.project_explorer_context_menu_model import (
-    build_project_explorer_context_menu,
-    clamp_menu_position,
-    hit_test_menu_item,
-    first_selectable_index,
-    find_index_by_action_id,
-    ProjectExplorerSelectionPayload,
-    CONTEXT_MENU_WIDTH,
     CONTEXT_MENU_ITEM_HEIGHT,
     CONTEXT_MENU_PADDING_Y,
+    CONTEXT_MENU_WIDTH,
+    ProjectExplorerSelectionPayload,
+    build_project_explorer_context_menu,
+    clamp_menu_position,
+    find_index_by_action_id,
+    first_selectable_index,
+    hit_test_menu_item,
 )
 
 

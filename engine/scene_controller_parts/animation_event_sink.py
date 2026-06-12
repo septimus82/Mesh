@@ -5,7 +5,6 @@ import math
 from typing import Any, Dict
 
 import engine.optional_arcade as optional_arcade
-
 from engine.constants import EVENT_ANIMATION_EVENT
 
 

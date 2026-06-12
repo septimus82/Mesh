@@ -1,5 +1,5 @@
 from typing import Any
-import engine.optional_arcade as optional_arcade
+
 from engine.events import MeshEvent
 from engine.ui import (
     begin_boss_gold_reward_tracking,
@@ -7,6 +7,7 @@ from engine.ui import (
     maybe_enqueue_miniboss_defeat_toast,
     maybe_finish_boss_gold_reward_toast,
 )
+
 
 def on_entity_died(window: Any, event: MeshEvent) -> None:
     actor = event.payload.get("actor")

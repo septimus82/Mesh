@@ -14,7 +14,7 @@ All functions are pure (no I/O, no side effects) for easy testing.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 __all__ = [
     "is_renameable_path",
@@ -104,11 +104,11 @@ def is_renameable_path(path: str, is_dir: bool = False) -> bool:
     norm = _normalize_path(path)
     if not norm:
         return False
-    
+
     # If it is a directory path ending with /, strip it
     if norm.endswith("/"):
         norm = norm[:-1]
-        
+
     if not norm: # Was just a root slash
         return False
 
@@ -137,7 +137,7 @@ def split_basename_ext(filename: str) -> Tuple[str, str]:
     """
     if not filename:
         return ("", "")
-    
+
     # Handle dotfiles: if starts with dot and no other dots, keep whole name
     if filename.startswith("."):
         # Find dot after the leading dot
@@ -151,13 +151,13 @@ def split_basename_ext(filename: str) -> Tuple[str, str]:
             stem = filename[:1 + dot_pos]  # "." + chars before last dot
             ext = filename[1 + dot_pos:]    # last dot and after
             return (stem, ext)
-    
+
     # Normal file: split on last dot
     dot_pos = filename.rfind(".")
     if dot_pos == -1 or dot_pos == 0:
         # No extension
         return (filename, "")
-    
+
     stem = filename[:dot_pos]
     ext = filename[dot_pos:]
     return (stem, ext)
@@ -179,20 +179,20 @@ def compute_initial_rename_text(path: str, is_dir: bool = False) -> Tuple[str, s
     norm = _normalize_path(path)
     if not norm:
         return ("", "", "")
-    
+
     # Strip trailing slash if present for directories
     if norm.endswith("/"):
         norm = norm[:-1]
-    
+
     # Extract filename
     basename = norm.rsplit("/", 1)[-1] if "/" in norm else norm
-    
+
     if is_dir:
         # Directories don't have extensions logic for rename
         return (basename, "", basename)
-    
+
     stem, ext = split_basename_ext(basename)
-    
+
     return (stem, ext, basename)
 
 
@@ -223,7 +223,7 @@ def sanitize_rename_input(text: str) -> str:
     """
     if not text:
         return ""
-    
+
     result = []
     for ch in text:
         if ch in INVALID_FILENAME_CHARS:
@@ -234,7 +234,7 @@ def sanitize_rename_input(text: str) -> str:
         if ch == "/" or ch == "\\":
             continue
         result.append(ch)
-    
+
     return "".join(result)
 
 
@@ -305,7 +305,7 @@ def should_commit_rename(
     # Reject empty stem after sanitization/normalization
     if not stem_normalized:
         return (False, None, "Filename cannot be empty")
-    
+
     # Build candidate name
     if is_dir:
         # Directories use stem as-is (no extension append)
@@ -313,7 +313,7 @@ def should_commit_rename(
     else:
         # Files append extension
         candidate = apply_extension_preservation(stem_normalized, original_ext)
-        
+
     normalized = normalize_committed_filename(candidate)
 
     # Cannot be empty or reserved after normalization
@@ -364,7 +364,7 @@ def build_new_path(original_path: str, new_basename: str) -> str:
     norm = _normalize_path(original_path)
     if not norm:
         return new_basename
-    
+
     if "/" in norm:
         directory = norm.rsplit("/", 1)[0]
         return f"{directory}/{new_basename}"
@@ -385,11 +385,11 @@ def compute_committed_name_for_path(original_path: str, edited_text: str, is_dir
     """
     if is_dir:
         return normalize_committed_filename(edited_text)
-        
+
     # Recompute extension
     _, _, basename = compute_initial_rename_text(original_path, is_dir=False)
     _, ext = split_basename_ext(basename)
-    
+
     candidate = apply_extension_preservation(normalize_committed_filename(edited_text), ext)
     return normalize_committed_filename(candidate)
 
@@ -459,11 +459,11 @@ def append_rename_text(state: InlineRenameState, text: str) -> InlineRenameState
     sanitized = sanitize_rename_input(text)
     if not sanitized:
         return state
-    
+
     current = state.current_text
     sel_start = state.selection_start
     sel_end = state.selection_end
-    
+
     # Replace selection or insert at cursor
     if sel_start != sel_end:
         # Replace selection
@@ -473,7 +473,7 @@ def append_rename_text(state: InlineRenameState, text: str) -> InlineRenameState
         # Insert at cursor position
         new_text = current[:sel_start] + sanitized + current[sel_start:]
         new_cursor = sel_start + len(sanitized)
-    
+
     return InlineRenameState(
         original_path=state.original_path,
         original_basename=state.original_basename,
@@ -499,7 +499,7 @@ def handle_rename_backspace(state: InlineRenameState) -> InlineRenameState:
     current = state.current_text
     sel_start = state.selection_start
     sel_end = state.selection_end
-    
+
     if sel_start != sel_end:
         # Delete selection
         new_text = current[:sel_start] + current[sel_end:]
@@ -511,7 +511,7 @@ def handle_rename_backspace(state: InlineRenameState) -> InlineRenameState:
     else:
         # At start, nothing to delete
         return state
-    
+
     return InlineRenameState(
         original_path=state.original_path,
         original_basename=state.original_basename,
@@ -537,7 +537,7 @@ def handle_rename_delete(state: InlineRenameState) -> InlineRenameState:
     current = state.current_text
     sel_start = state.selection_start
     sel_end = state.selection_end
-    
+
     if sel_start != sel_end:
         # Delete selection
         new_text = current[:sel_start] + current[sel_end:]
@@ -549,7 +549,7 @@ def handle_rename_delete(state: InlineRenameState) -> InlineRenameState:
     else:
         # At end, nothing to delete
         return state
-    
+
     return InlineRenameState(
         original_path=state.original_path,
         original_basename=state.original_basename,
@@ -655,7 +655,7 @@ def move_cursor_left(state: InlineRenameState, shift: bool = False) -> InlineRen
     """
     text_len = len(state.current_text)
     caret = _get_caret_position(state)
-    
+
     if shift:
         # Extend selection: set anchor if not set, move caret left
         anchor = state.anchor_idx if state.anchor_idx is not None else caret
@@ -703,7 +703,7 @@ def move_cursor_right(state: InlineRenameState, shift: bool = False) -> InlineRe
     """
     text_len = len(state.current_text)
     caret = _get_caret_position(state)
-    
+
     if shift:
         # Extend selection: set anchor if not set, move caret right
         anchor = state.anchor_idx if state.anchor_idx is not None else caret
@@ -750,7 +750,7 @@ def move_cursor_home(state: InlineRenameState, shift: bool = False) -> InlineRen
         New InlineRenameState with updated cursor/selection.
     """
     caret = _get_caret_position(state)
-    
+
     if shift:
         # Extend selection from anchor to start
         anchor = state.anchor_idx if state.anchor_idx is not None else caret
@@ -792,7 +792,7 @@ def move_cursor_end(state: InlineRenameState, shift: bool = False) -> InlineRena
     """
     text_len = len(state.current_text)
     caret = _get_caret_position(state)
-    
+
     if shift:
         # Extend selection from anchor to end
         anchor = state.anchor_idx if state.anchor_idx is not None else caret

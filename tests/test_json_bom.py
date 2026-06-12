@@ -9,13 +9,11 @@ from __future__ import annotations
 
 import json
 import logging
-import tempfile
 from pathlib import Path
 
 import pytest
 
-from engine.json_io import read_json, loads_safe, _strip_bom
-
+from engine.json_io import _strip_bom, loads_safe, read_json
 
 # ---------------------------------------------------------------------------
 # _strip_bom unit tests

@@ -6,7 +6,6 @@ import pytest
 
 from engine.camera_controller import CameraController
 
-
 pytestmark = pytest.mark.fast
 
 

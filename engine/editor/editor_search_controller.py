@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, List
 
 import engine.optional_arcade as optional_arcade
-
 from engine.editor.find_everything_model import build_find_items
 from engine.editor_commands import get_all_commands
 from engine.editor_entity_ops import list_entities
@@ -311,6 +310,7 @@ class EditorSearchController:
             return []
 
         from pathlib import Path  # noqa: PLC0415
+
         from engine.editor.scene_lint_model import build_scene_lint_issues  # noqa: PLC0415
 
         repo_root = getattr(window, "repo_root", None) if window else None

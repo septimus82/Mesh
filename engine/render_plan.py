@@ -52,7 +52,7 @@ class Transform:
     scale_x: float = 1.0
     scale_y: float = 1.0
     rotation: float = 0.0  # Degrees
-    
+
     def is_valid(self) -> bool:
         """Check if all values are finite (no NaN/Inf)."""
         return (
@@ -62,7 +62,7 @@ class Transform:
             and math.isfinite(self.scale_y)
             and math.isfinite(self.rotation)
         )
-    
+
     def to_tuple(self) -> tuple[float, float, float, float, float]:
         """Convert to tuple for hashing/comparison."""
         return (self.x, self.y, self.scale_x, self.scale_y, self.rotation)
@@ -75,10 +75,10 @@ class Color:
     g: int = 255
     b: int = 255
     a: int = 255
-    
+
     def to_tuple(self) -> tuple[int, int, int, int]:
         return (self.r, self.g, self.b, self.a)
-    
+
     @classmethod
     def from_tuple(cls, t: tuple[int, ...] | None) -> "Color":
         if t is None:
@@ -119,11 +119,11 @@ class DrawCall:
     shader_id: str | None = None
     entity_id: str | None = None
     order_hint: str = ""
-    
+
     def sort_key(self) -> tuple[int, float, str, str]:
         """Key for stable sorting within a render plan."""
         return (self.layer, self.depth_z, self.call_type.value, self.order_hint)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Serialize to JSON-friendly dict."""
         return {
@@ -144,13 +144,13 @@ class DrawCall:
             "entity_id": self.entity_id,
             "order_hint": self.order_hint,
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "DrawCall":
         """Deserialize from dict."""
         transform_data = data.get("transform", {})
         color_data = data.get("color", [255, 255, 255, 255])
-        
+
         return cls(
             call_type=DrawCallType(data.get("call_type", "sprite")),
             layer=int(data.get("layer", 0)),
@@ -183,21 +183,21 @@ class RenderPlan:
     calls: tuple[DrawCall, ...]
     frame: int = 0
     scene_id: str = ""
-    
+
     def __len__(self) -> int:
         return len(self.calls)
-    
+
     def __iter__(self):
         return iter(self.calls)
-    
+
     def __getitem__(self, index: int) -> DrawCall:
         return self.calls[index]
-    
+
     def digest(self) -> str:
         """Compute SHA-256 digest of the plan for quick comparison."""
         data = json.dumps(self.to_dict(), sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(data.encode("utf-8")).hexdigest()
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Serialize to JSON-friendly dict."""
         return {
@@ -206,7 +206,7 @@ class RenderPlan:
             "call_count": len(self.calls),
             "calls": [c.to_dict() for c in self.calls],
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "RenderPlan":
         """Deserialize from dict."""
@@ -216,7 +216,7 @@ class RenderPlan:
             frame=int(data.get("frame", 0)),
             scene_id=str(data.get("scene_id", "")),
         )
-    
+
     def by_layer(self) -> dict[int, list[DrawCall]]:
         """Group calls by layer."""
         result: dict[int, list[DrawCall]] = {}
@@ -225,7 +225,7 @@ class RenderPlan:
                 result[call.layer] = []
             result[call.layer].append(call)
         return result
-    
+
     def by_type(self) -> dict[DrawCallType, list[DrawCall]]:
         """Group calls by type."""
         result: dict[DrawCallType, list[DrawCall]] = {}
@@ -234,7 +234,7 @@ class RenderPlan:
                 result[call.call_type] = []
             result[call.call_type].append(call)
         return result
-    
+
     def filter_type(self, call_type: DrawCallType) -> "RenderPlan":
         """Return new plan with only calls of given type."""
         return RenderPlan(
@@ -242,7 +242,7 @@ class RenderPlan:
             frame=self.frame,
             scene_id=self.scene_id,
         )
-    
+
     def filter_layer(self, layer: int) -> "RenderPlan":
         """Return new plan with only calls in given layer."""
         return RenderPlan(
@@ -278,7 +278,7 @@ def validate_render_plan(plan: RenderPlan) -> RenderPlanValidationResult:
     """
     errors: list[str] = []
     warnings: list[str] = []
-    
+
     # Check for NaN/Inf in transforms
     for i, call in enumerate(plan.calls):
         if not call.transform.is_valid():
@@ -286,7 +286,7 @@ def validate_render_plan(plan: RenderPlan) -> RenderPlanValidationResult:
                 f"Call {i} ({call.entity_id or 'unknown'}): "
                 f"Invalid transform values (NaN/Inf)"
             )
-    
+
     # Check monotonic depth within layers
     by_layer = plan.by_layer()
     for layer_idx, layer_calls in sorted(by_layer.items()):
@@ -297,7 +297,7 @@ def validate_render_plan(plan: RenderPlan) -> RenderPlanValidationResult:
                     f"Layer {layer_idx}: Non-monotonic depth at index {i} "
                     f"({depths[i - 1]} -> {depths[i]})"
                 )
-    
+
     # Check texture resolution
     for i, call in enumerate(plan.calls):
         if call.texture_id == "missing":
@@ -310,7 +310,7 @@ def validate_render_plan(plan: RenderPlan) -> RenderPlanValidationResult:
                 f"Call {i} ({call.entity_id or 'unknown'}): "
                 f"Empty texture ID"
             )
-    
+
     # Check layer indices
     for i, call in enumerate(plan.calls):
         if call.layer < -1000 or call.layer > 1000:
@@ -318,7 +318,7 @@ def validate_render_plan(plan: RenderPlan) -> RenderPlanValidationResult:
                 f"Call {i} ({call.entity_id or 'unknown'}): "
                 f"Unusual layer index {call.layer}"
             )
-    
+
     return RenderPlanValidationResult(
         valid=len(errors) == 0,
         errors=errors,
@@ -362,7 +362,7 @@ def build_render_plan_from_draw_plan(
         RenderPlan suitable for golden testing
     """
     calls: list[DrawCall] = []
-    
+
     # Background operations
     bg_ops = getattr(draw_plan, "background_ops", []) or []
     for i, bg_op in enumerate(bg_ops):
@@ -371,7 +371,7 @@ def build_render_plan_from_draw_plan(
         # Use render_layer for layer ordering, not z (BackgroundPlane has render_layer)
         plane_render_layer = getattr(plane, "render_layer", 0) if plane else 0
         parallax = getattr(plane, "parallax", 1.0) if plane else 1.0
-        
+
         calls.append(DrawCall(
             call_type=DrawCallType.BACKGROUND,
             layer=-1000 + plane_render_layer,  # Backgrounds are always behind everything
@@ -385,7 +385,7 @@ def build_render_plan_from_draw_plan(
             entity_id=f"bg_{i}",
             order_hint=f"parallax_{parallax:.2f}",
         ))
-    
+
     # Shadow operations
     shadow_ops = getattr(draw_plan, "shadow_ops", []) or []
     for i, sh_op in enumerate(shadow_ops):
@@ -405,30 +405,30 @@ def build_render_plan_from_draw_plan(
             entity_id=f"shadow_{i}",
             order_hint=str(i),
         ))
-    
+
     # Sprite operations
     sprite_ops = getattr(draw_plan, "sprite_ops", []) or []
     for i, sp_op in enumerate(sprite_ops):
         sprite = getattr(sp_op, "sprite", None)
         if sprite is None:
             continue
-        
+
         # Extract sprite properties
         entity_data = getattr(sprite, "mesh_entity_data", {}) or {}
         entity_id = entity_data.get("id") or getattr(sprite, "mesh_name", None) or f"sprite_{i}"
-        
+
         render_layer = 0
         try:
             render_layer = int(entity_data.get("render_layer", 0))
         except (TypeError, ValueError):
             pass
-        
+
         depth_z = 0.0
         try:
             depth_z = float(entity_data.get("depth_z", 0.0))
         except (TypeError, ValueError):
             pass
-        
+
         # Texture ID
         texture_key = getattr(sprite, "mesh_texture_key", None)
         texture = getattr(sprite, "texture", None)
@@ -438,7 +438,7 @@ def build_render_plan_from_draw_plan(
             texture_id = getattr(texture, "name", None) or str(id(texture))
         else:
             texture_id = "missing"
-        
+
         # Transform
         scale = getattr(sprite, "scale", 1.0)
         if isinstance(scale, tuple):
@@ -446,7 +446,7 @@ def build_render_plan_from_draw_plan(
             scale_y = float(scale[1]) if len(scale) > 1 else scale_x
         else:
             scale_x = scale_y = float(scale) if scale else 1.0
-        
+
         transform = Transform(
             x=float(getattr(sprite, "center_x", 0.0)),
             y=float(getattr(sprite, "center_y", 0.0)),
@@ -454,7 +454,7 @@ def build_render_plan_from_draw_plan(
             scale_y=scale_y,
             rotation=float(getattr(sprite, "angle", 0.0)),
         )
-        
+
         # Color
         sprite_color = getattr(sprite, "color", (255, 255, 255, 255))
         tint = getattr(sp_op, "tint", None)
@@ -464,7 +464,7 @@ def build_render_plan_from_draw_plan(
             color = Color.from_tuple(sprite_color)
         else:
             color = Color()
-        
+
         # Add outline calls first (they go behind the sprite)
         outline_calls = getattr(sp_op, "outline_draw_calls", []) or []
         for j, outline in enumerate(outline_calls):
@@ -484,7 +484,7 @@ def build_render_plan_from_draw_plan(
                 entity_id=f"{entity_id}_outline_{j}",
                 order_hint=f"{i:06d}_{j:03d}",
             ))
-        
+
         # Main sprite call
         calls.append(DrawCall(
             call_type=DrawCallType.SPRITE,
@@ -496,10 +496,10 @@ def build_render_plan_from_draw_plan(
             entity_id=str(entity_id),
             order_hint=f"{i:06d}",
         ))
-    
+
     # Sort calls by layer, then depth, then type, then order_hint
     sorted_calls = sorted(calls, key=lambda c: c.sort_key())
-    
+
     return RenderPlan(
         calls=tuple(sorted_calls),
         frame=frame,
@@ -527,25 +527,25 @@ def build_render_plan_from_sprites(
         RenderPlan
     """
     from engine.render_sort_model import compute_sprite_render_sort_key
-    
+
     # Sort sprites
     sorted_sprites = sorted(
         sprites,
         key=lambda s: compute_sprite_render_sort_key(s, sort_mode=sort_mode),
     )
-    
+
     calls: list[DrawCall] = []
-    
+
     for i, sprite in enumerate(sorted_sprites):
         entity_data = getattr(sprite, "mesh_entity_data", {}) or {}
         entity_id = entity_data.get("id") or getattr(sprite, "mesh_name", None) or f"sprite_{i}"
-        
+
         render_layer = 0
         try:
             render_layer = int(entity_data.get("render_layer", 0))
         except (TypeError, ValueError):
             pass
-        
+
         depth_z = 0.0
         try:
             depth_z = float(entity_data.get("depth_z", 0.0))
@@ -553,7 +553,7 @@ def build_render_plan_from_sprites(
             # For y_sort, use y position as depth
             if sort_mode == "y_sort":
                 depth_z = float(getattr(sprite, "center_y", 0.0))
-        
+
         texture_key = getattr(sprite, "mesh_texture_key", None)
         texture = getattr(sprite, "texture", None)
         if texture_key:
@@ -562,14 +562,14 @@ def build_render_plan_from_sprites(
             texture_id = getattr(texture, "name", None) or str(id(texture))
         else:
             texture_id = "missing"
-        
+
         scale = getattr(sprite, "scale", 1.0)
         if isinstance(scale, tuple):
             scale_x = float(scale[0]) if scale else 1.0
             scale_y = float(scale[1]) if len(scale) > 1 else scale_x
         else:
             scale_x = scale_y = float(scale) if scale else 1.0
-        
+
         transform = Transform(
             x=float(getattr(sprite, "center_x", 0.0)),
             y=float(getattr(sprite, "center_y", 0.0)),
@@ -577,10 +577,10 @@ def build_render_plan_from_sprites(
             scale_y=scale_y,
             rotation=float(getattr(sprite, "angle", 0.0)),
         )
-        
+
         sprite_color = getattr(sprite, "color", (255, 255, 255, 255))
         color = Color.from_tuple(sprite_color) if sprite_color else Color()
-        
+
         calls.append(DrawCall(
             call_type=DrawCallType.SPRITE,
             layer=render_layer,
@@ -591,7 +591,7 @@ def build_render_plan_from_sprites(
             entity_id=str(entity_id),
             order_hint=f"{i:06d}",
         ))
-    
+
     return RenderPlan(
         calls=tuple(calls),
         frame=frame,

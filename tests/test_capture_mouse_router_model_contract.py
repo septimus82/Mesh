@@ -17,14 +17,13 @@ from engine.input_runtime.capture_mouse_router_model import (
     MouseRouteAuditReport,
     MouseRouteSpec,
     RouteTableValidationError,
-    audit_mouse_routes,
+    _when_always,
     assert_no_conflicts_or_duplicates,
+    audit_mouse_routes,
     build_mouse_routes,
     dedupe_mouse_routes,
     format_audit_issues,
     validate_route_table,
-    _when_always,
-    _when_debug,
 )
 from engine.input_runtime.capture_runtime_focus_model import (
     SCOPE_CAPTURE_MODE,
@@ -37,7 +36,6 @@ from engine.input_runtime.capture_runtime_focus_model import (
     SCOPE_TILE_PAINT,
 )
 from tests._typing import as_any
-
 
 # ---------------------------------------------------------------------------
 # Determinism tests
@@ -88,26 +86,26 @@ def test_build_audit_dedupe_produces_clean_routes() -> None:
     # Step 1: Build routes
     routes = build_mouse_routes()
     assert len(routes) > 0, "build_mouse_routes() must return at least one route"
-    
+
     # Step 2: Audit before dedupe
     report_before = audit_mouse_routes(routes)
-    
+
     # Step 3: Dedupe
     deduped_routes = dedupe_mouse_routes(routes)
-    
-    # Step 4: Re-audit after dedupe  
+
+    # Step 4: Re-audit after dedupe
     report_after = audit_mouse_routes(deduped_routes)
-    
+
     # Verify: no conflicts remain (aliases are OK)
     assert len(report_after.conflicts) == 0, (
         f"Conflicts remain after dedupe:\n{format_audit_issues(report_after)}"
     )
-    
+
     # Verify: no duplicates remain
     assert len(report_after.duplicates) == 0, (
         f"Duplicates remain after dedupe:\n{format_audit_issues(report_after)}"
     )
-    
+
     # Verify: routes are identical (build_mouse_routes already dedupes)
     assert routes == deduped_routes, (
         "build_mouse_routes() should already return deduped routes"
@@ -127,31 +125,31 @@ def test_build_audit_dedupe_is_idempotent() -> None:
     routes_1 = build_mouse_routes()
     report_1 = audit_mouse_routes(routes_1)
     deduped_1 = dedupe_mouse_routes(routes_1)
-    
+
     # Second run (independent)
     routes_2 = build_mouse_routes()
     report_2 = audit_mouse_routes(routes_2)
     deduped_2 = dedupe_mouse_routes(routes_2)
-    
+
     # Assert: raw builds are identical
     assert routes_1 == routes_2, (
         f"build_mouse_routes() is not idempotent.\n"
         f"First run: {len(routes_1)} routes\n"
         f"Second run: {len(routes_2)} routes"
     )
-    
+
     # Assert: deduped outputs are identical (including order)
     assert deduped_1 == deduped_2, (
         f"dedupe_mouse_routes() is not idempotent.\n"
         f"First run: {len(deduped_1)} routes\n"
         f"Second run: {len(deduped_2)} routes"
     )
-    
+
     # Assert: audit reports are identical (same issues found)
     assert report_1.conflicts == report_2.conflicts, "Audit conflicts differ between runs"
     assert report_1.duplicates == report_2.duplicates, "Audit duplicates differ between runs"
     assert report_1.aliases == report_2.aliases, "Audit aliases differ between runs"
-    
+
     # Assert: ordering is preserved (not just set equality)
     for i, (r1, r2) in enumerate(zip(deduped_1, deduped_2)):
         assert r1 == r2, (
@@ -191,7 +189,7 @@ def test_audit_detects_conflict() -> None:
         MouseRouteSpec(SCOPE_GLOBAL, "press", None, "action.two", _when_always),
     ]
     report = audit_mouse_routes(routes)
-    
+
     assert len(report.conflicts) == 1
     conflict = report.conflicts[0]
     assert conflict.kind == "conflict"
@@ -207,7 +205,7 @@ def test_audit_detects_duplicate() -> None:
     route = MouseRouteSpec(SCOPE_GLOBAL, "press", None, "test.action", _when_always)
     routes = [route, route]
     report = audit_mouse_routes(routes)
-    
+
     assert len(report.duplicates) == 1
     dup = report.duplicates[0]
     assert dup.kind == "duplicate"
@@ -230,7 +228,7 @@ def test_audit_categorizes_allowed_aliases() -> None:
     # If we have allowed alias pairs, test them
     if not ALLOWED_ALIAS_PAIRS:
         pytest.skip("No allowed alias pairs defined")
-    
+
     # Pick first allowed pair and create routes
     pair = next(iter(ALLOWED_ALIAS_PAIRS))
     action_ids = list(pair)
@@ -239,7 +237,7 @@ def test_audit_categorizes_allowed_aliases() -> None:
         MouseRouteSpec(SCOPE_GLOBAL, "press", None, action_ids[1], _when_always),
     ]
     report = audit_mouse_routes(routes)
-    
+
     assert len(report.aliases) == 1
     assert len(report.conflicts) == 0
 
@@ -264,19 +262,19 @@ SCOPE_MIN_ROUTES: dict[str, int] = {
 def test_coverage_floor_per_scope() -> None:
     """Each high-impact scope has minimum number of routes."""
     routes = build_mouse_routes()
-    
+
     scope_counts: dict[str, int] = {}
     for route in routes:
         scope_counts[route.scope] = scope_counts.get(route.scope, 0) + 1
-    
+
     missing: list[str] = []
     for scope, min_count in SCOPE_MIN_ROUTES.items():
         actual = scope_counts.get(scope, 0)
         if actual < min_count:
             missing.append(f"{scope}: expected >= {min_count}, got {actual}")
-    
+
     if missing:
-        pytest.fail(f"Coverage floor violations:\n" + "\n".join(missing))
+        pytest.fail("Coverage floor violations:\n" + "\n".join(missing))
 
 
 @pytest.mark.fast
@@ -285,7 +283,7 @@ def test_all_scopes_in_priority() -> None:
     routes = build_mouse_routes()
     scopes_used = {route.scope for route in routes}
     scopes_defined = set(SCOPE_PRIORITY)
-    
+
     unknown = scopes_used - scopes_defined
     if unknown:
         pytest.fail(f"Routes use scopes not in SCOPE_PRIORITY: {unknown}")
@@ -317,7 +315,7 @@ def test_format_audit_issues_truncation() -> None:
         for i in range(15)
     )
     report = MouseRouteAuditReport(conflicts=conflicts, duplicates=(), aliases=())
-    
+
     output = format_audit_issues(report, max_issues=5)
     assert "... and 10 more" in output
 
@@ -337,7 +335,7 @@ def test_route_table_is_tuple() -> None:
 def test_all_routes_have_required_fields() -> None:
     """All routes have valid scope, kind, action_id, and when."""
     routes = build_mouse_routes()
-    
+
     for route in routes:
         assert route.scope, f"Route missing scope: {route}"
         assert route.kind in ("press", "release", "scroll"), f"Invalid kind: {route.kind}"
@@ -349,7 +347,7 @@ def test_all_routes_have_required_fields() -> None:
 def test_route_table_sorted_by_scope_priority() -> None:
     """Routes are sorted by scope priority order."""
     routes = build_mouse_routes()
-    
+
     # Extract scope indices in order they appear
     scope_indices: list[int] = []
     for route in routes:
@@ -358,7 +356,7 @@ def test_route_table_sorted_by_scope_priority() -> None:
         except ValueError:
             idx = len(SCOPE_PRIORITY)
         scope_indices.append(idx)
-    
+
     # Check indices are non-decreasing (sorted)
     for i in range(1, len(scope_indices)):
         if scope_indices[i] < scope_indices[i - 1]:

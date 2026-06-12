@@ -6,7 +6,7 @@ Contains pure helpers for scene switching and browsing.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, List
+from typing import TYPE_CHECKING, Callable, List
 
 if TYPE_CHECKING:
     from engine.scene_index import SceneRow
@@ -29,12 +29,12 @@ def build_scene_switcher_rows(
     """
     if not cached_options:
         return []
-    
+
     query = str(query or "").strip()
     if query:
         from engine.command_palette import filter_options  # noqa: PLC0415
         return filter_options(cached_options, query)
-    
+
     # No query - show recents first, then rest
     label_by_path = {value: label for value, label in cached_options}
     recent_list: list[tuple[str, str]] = []
@@ -167,22 +167,22 @@ def compute_scene_browser_hit_index(
     right = layout["right"]
     top = layout["top"]
     bottom = layout["bottom"]
-    
+
     # Check if click is within browser bounds
     if x < left or x > right or y < bottom or y > top:
         return None
-    
+
     if visible_count <= 0:
         return None
-    
+
     row_start_y = layout["row_start_y"]
     line_height = layout["line_height"]
     list_top = row_start_y + line_height * 0.6
     list_bottom = row_start_y - line_height * visible_count
-    
+
     if y > list_top or y < list_bottom:
         return None
-    
+
     offset = int((row_start_y - y) // line_height)
     if 0 <= offset < visible_count:
         return start_idx + offset
@@ -210,23 +210,23 @@ def build_scene_switcher_lines(
     """
     if not active:
         return []
-    
+
     lines = ["SCENE SWITCHER", "--------------"]
     filter_line = f"Filter: {query}"
     if active:
         filter_line += "_"
     lines.append(filter_line)
     lines.append("--------------")
-    
+
     if not options:
         lines.append("  (No scenes)")
         return lines
-    
+
     recent_set = set(recent_scenes)
     selection_index = clamp_scene_selection_index(selection_index, len(options))
-    
+
     start_idx, end_idx = compute_scene_window(selection_index, len(options))
-    
+
     for idx in range(start_idx, end_idx):
         path, label = options[idx]
         if idx == selection_index:
@@ -236,7 +236,7 @@ def build_scene_switcher_lines(
         else:
             prefix = "  "
         lines.append(f"{prefix}{label} [{path}]")
-    
+
     return lines
 
 
@@ -259,16 +259,16 @@ def build_scene_browser_lines(
     """
     if not active:
         return []
-    
+
     selection_index = clamp_scene_selection_index(selection_index, len(rows))
     lines = ["SCENE BROWSER", f"Search: {query}_", "--------------"]
-    
+
     if not rows:
         lines.append("  (No scenes)")
         return lines
-    
+
     start_idx, end_idx = compute_scene_window(selection_index, len(rows))
-    
+
     for idx in range(start_idx, end_idx):
         row = rows[idx]
         if idx == selection_index:
@@ -279,7 +279,7 @@ def build_scene_browser_lines(
             prefix = "  "
         pack_label = row.pack_name or "root"
         lines.append(f"{prefix}{row.display_name} [{pack_label}]")
-    
+
     return lines
 
 
@@ -305,19 +305,19 @@ def open_scene_by_id(
         True if scene was opened, False if deferred or failed.
     """
     from engine.path_norm import normalize_scene_path  # noqa: PLC0415
-    
+
     normalized = normalize_scene_path(scene_id)
     if not normalized:
         return False
-    
+
     def _apply() -> None:
         close_panels_fn()
         if request_scene_change_fn is not None:
             request_scene_change_fn(normalized)
         record_recent_fn(normalized)
-    
+
     if confirm_unsaved_fn("Switch Scene", _apply):
         return False
-    
+
     _apply()
     return True

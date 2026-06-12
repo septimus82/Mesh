@@ -5,10 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
+from engine.editor.editor_shell_layout import TAB_HEADER_HEIGHT
+
 from .cutscene_debug_model import CutsceneDebugViewModel, build_cutscene_debug_lines
 from .event_monitor_model import EventLogViewModel, EventMonitorLine, build_event_monitor_entries
 from .quest_debug_model import QuestDebugViewModel, build_quest_debug_lines
-from engine.editor.editor_shell_layout import TAB_HEADER_HEIGHT
 
 DEBUG_PANEL_PADDING = 8.0
 DEBUG_PANEL_LINE_HEIGHT = 16.0

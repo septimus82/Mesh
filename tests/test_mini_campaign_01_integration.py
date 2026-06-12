@@ -17,11 +17,10 @@ from unittest.mock import MagicMock
 
 from engine.behaviours.health import Health
 from engine.events import MeshEventBus
-from engine.gameplay_event_bus import GameplayEventBus
 from engine.game_state_controller import GameState
+from engine.gameplay_event_bus import GameplayEventBus
 from engine.quest_runtime.runner import QuestRunner
 from engine.state_runtime import flags as state_flags
-
 
 # ---------------------------------------------------------------------------
 # Paths

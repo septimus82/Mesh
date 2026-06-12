@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any, Literal, Protocol
 
 from engine.diagnostics import Diagnostic, DiagnosticLevel, sort_diagnostics
@@ -10,15 +9,16 @@ from engine.migrations import migrate_payload
 from engine.paths import resolve_path
 from engine.persistence_io import SAVE_FORMAT_VERSION
 from engine.save_runtime import constants
-from engine.save_runtime.entity_state import serialize_entities, apply_entities
+from engine.save_runtime.entity_state import apply_entities, serialize_entities
 from engine.save_runtime.errors import single_line_error
 from engine.save_runtime.normalize import normalize_save_payload
-from engine.save_runtime.quest_state import serialize_quests, apply_quests
-from engine.save_runtime.restore_policy import RestorePolicy, SLOT_POLICY, SNAPSHOT_POLICY
+from engine.save_runtime.quest_state import apply_quests, serialize_quests
+from engine.save_runtime.restore_policy import SLOT_POLICY, SNAPSHOT_POLICY, RestorePolicy
 from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from engine.save_runtime.schema import SAVE_SCHEMA_VERSION
 from engine.swallowed_exceptions import _log_swallow
 from engine.world_controller import WorldController
+
 
 def _diagnostic(
     *,

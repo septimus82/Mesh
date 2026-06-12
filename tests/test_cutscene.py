@@ -1,13 +1,12 @@
 import json
 from pathlib import Path
 
-import engine.optional_arcade as optional_arcade
 import pytest
 
+import engine.optional_arcade as optional_arcade
 from engine.cutscene_controller import CutsceneController
 from engine.events import MeshEventBus
 from engine.schema_validation import SchemaValidationError
-
 
 pytestmark = [pytest.mark.fast]
 

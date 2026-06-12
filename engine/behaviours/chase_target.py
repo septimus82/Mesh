@@ -16,11 +16,10 @@ Save/restore:
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Dict, Optional, cast
 
-from ..gameplay_event_bus import EventConfigError
-from ..pathfinding import NavGrid, line_of_sight_clear
 from ..event_emit import emit_gameplay_event
+from ..pathfinding import NavGrid, line_of_sight_clear
 from .base import Behaviour, ParamDef
 from .follow_path import FollowPathBehaviour
 from .registry import register_behaviour
@@ -116,9 +115,9 @@ class ChaseTargetBehaviour(Behaviour):
     Implements SaveableBehaviour for deterministic save/restore.
     Emits events for GameplayEventBus integration.
     """
-    
+
     STATE_VERSION = 1
-    
+
     PARAM_DEFS = {
         "target_entity_id": ParamDef(str, default="", description="Authored entity id to chase"),
         "target_tag": ParamDef(str, default="", description="Fallback mesh_tag to chase"),
@@ -139,7 +138,7 @@ class ChaseTargetBehaviour(Behaviour):
         # Initialize private state before super().__init__
         self._enabled: bool = True
         self._target_id: Optional[str] = None
-        
+
         super().__init__(entity, window, **config)
         self.target_entity_id = str(self.config.get("target_entity_id") or "").strip() or None
         self.target_tag = str(self.config.get("target_tag") or "").strip() or None
@@ -161,30 +160,30 @@ class ChaseTargetBehaviour(Behaviour):
         self._target = None
         self._target_id = None
         self._follow: FollowPathBehaviour | None = None
-    
+
     @property
     def enabled(self) -> bool:
         """Whether chase behaviour is active."""
         return self._enabled
-    
+
     @enabled.setter
     def enabled(self, value: bool) -> None:
         self._enabled = bool(value)
-    
+
     @property
     def is_chasing(self) -> bool:
         """Whether actively chasing a target."""
         return self.state == "chase"
-    
+
     @property
     def current_target_id(self) -> Optional[str]:
         """ID of current target, if any."""
         return self._target_id
-    
+
     def _emit_event(self, event_type: str, **kwargs) -> None:
         """Emit a gameplay event."""
         my_id = getattr(self.entity, "mesh_id", "")
-        
+
         payload = {
             "entity": my_id,
             "entity_name": getattr(self.entity, "mesh_name", ""),
@@ -192,7 +191,7 @@ class ChaseTargetBehaviour(Behaviour):
             "state": self.state,
             **kwargs,
         }
-        
+
         emit_gameplay_event(
             self.window,
             event_type,
@@ -249,7 +248,7 @@ class ChaseTargetBehaviour(Behaviour):
         follow.goal_x = float(getattr(target, "center_x", 0.0))
         follow.goal_y = float(getattr(target, "center_y", 0.0))
         follow.update(dt)
-        
+
         # Emit chase_step if configured
         if self.emit_chase_step:
             self._emit_event(
@@ -379,7 +378,7 @@ class ChaseTargetBehaviour(Behaviour):
             arrive_dist=2.0,
             diag=False,
         )
-        
+
         # Emit target_acquired event
         self._emit_event(
             "target_acquired",
@@ -394,7 +393,7 @@ class ChaseTargetBehaviour(Behaviour):
         self._target_id = None
         self._follow = None
         self._no_path_ticks = 0
-        
+
         # Emit target_lost event
         if old_target_id:
             self._emit_event(
@@ -411,7 +410,7 @@ class ChaseTargetBehaviour(Behaviour):
         self._target_id = None
         self._follow = None
         self._no_path_ticks = 0
-        
+
         # Emit target_lost event
         if old_target_id:
             self._emit_event(
@@ -419,11 +418,11 @@ class ChaseTargetBehaviour(Behaviour):
                 former_target_id=old_target_id,
                 reason=reason,
             )
-    
+
     # =========================================================================
     # SaveableBehaviour Protocol
     # =========================================================================
-    
+
     def saveable_state(self) -> Dict[str, Any]:
         """Return JSON-serializable state dict."""
         follow_state = None
@@ -433,7 +432,7 @@ class ChaseTargetBehaviour(Behaviour):
                 "path_index": self._follow._path_index,
                 "repath_count": self._follow.repath_count,
             }
-        
+
         return {
             "_version": self.STATE_VERSION,
             "state": self.state,
@@ -442,14 +441,14 @@ class ChaseTargetBehaviour(Behaviour):
             "no_path_ticks": self._no_path_ticks,
             "follow_state": follow_state,
         }
-    
+
     def restore_state(self, state: Dict[str, Any]) -> None:
         """Apply previously saved state."""
         self.state = str(state.get("state", "idle"))
         self._target_id = state.get("target_id")
         self._cooldown_remaining = int(state.get("cooldown_remaining", 0))
         self._no_path_ticks = int(state.get("no_path_ticks", 0))
-        
+
         # Re-acquire target if we were chasing
         if self.state == "chase" and self._target_id:
             target = self._resolve_target_by_id(self._target_id)
@@ -482,11 +481,11 @@ class ChaseTargetBehaviour(Behaviour):
         else:
             self._target = None
             self._follow = None
-    
+
     # =========================================================================
     # Inspector Support
     # =========================================================================
-    
+
     def get_inspector_state(self) -> Dict[str, Any]:
         """Return state for editor inspector."""
         target_pos = None
@@ -495,7 +494,7 @@ class ChaseTargetBehaviour(Behaviour):
                 float(getattr(self._target, "center_x", 0.0)),
                 float(getattr(self._target, "center_y", 0.0)),
             )
-        
+
         return {
             "state": self.state,
             "target_id": self._target_id,

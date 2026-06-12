@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import MagicMock
 
 from engine.behaviours.health import Health
 from engine.game_state_controller import GameState
 from tooling.campaign_replay import load_campaign_script_from_path, run_campaign_replay
-from unittest.mock import MagicMock
 
 SCRIPT_PATH = Path("replays/campaign02.json")
 EVENTS_PATH = Path("assets/data/events.json")

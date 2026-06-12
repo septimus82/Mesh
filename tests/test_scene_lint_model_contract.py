@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from engine.editor.scene_lint_model import (
-    build_scene_lint_issues,
     build_problems_panel_lines,
+    build_scene_lint_issues,
     clamp_issue_index,
     filter_lint_issues,
 )

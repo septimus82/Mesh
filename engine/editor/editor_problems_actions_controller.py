@@ -5,7 +5,7 @@ for the Vertical Slice Diet V2.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController
@@ -19,7 +19,7 @@ class EditorProblemsActionsController:
 
     def jump_to_selected(self) -> bool:
         """Jump to the selected problem (load scene, select entity, reveal in explorer)."""
-        from engine.editor.problems_jump_model import is_jump_supported, format_location_text  # noqa: PLC0415
+        from engine.editor.problems_jump_model import format_location_text, is_jump_supported  # noqa: PLC0415
 
         editor = self._editor
         target = editor.problems.get_selected_jump_target()

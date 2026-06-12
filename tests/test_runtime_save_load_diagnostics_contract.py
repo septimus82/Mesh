@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from engine import savegame
 from engine.diagnostics import clear_diagnostics, get_diagnostics_payload
 from engine.persistence_io import SAVE_FORMAT_VERSION
 from engine.save_manager import SaveManager
@@ -18,8 +19,6 @@ from engine.save_runtime.ux_codes import (
     SAVE_SLOT_INVALID,
     SAVE_WRITE_FAILED,
 )
-from engine import savegame
-
 
 pytestmark = [pytest.mark.fast]
 

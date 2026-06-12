@@ -2,7 +2,9 @@ import argparse
 import json
 from typing import Any
 
+from engine.logging_tools import suppress_stdout
 from engine.paths import resolve_path
+from engine.persistence_io import write_json_atomic
 from engine.prefab_overrides import (
     FieldOverride,
     compute_prefab_overrides,
@@ -12,8 +14,6 @@ from engine.prefab_overrides import (
 from engine.prefabs import get_prefab_manager
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
-from engine.persistence_io import write_json_atomic
-from engine.logging_tools import suppress_stdout
 
 
 def _load_scene_payload(scene_path: str) -> tuple[dict[str, Any], Any] | tuple[None, None]:

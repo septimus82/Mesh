@@ -13,14 +13,14 @@ Symbols exported here are covered by the engine's semver promise.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 # ---------------------------------------------------------------------------
 # Lazy imports — editor modules are heavy; defer until actually used.
 # ---------------------------------------------------------------------------
 
 if TYPE_CHECKING:
-    from engine.editor_controller import EditorModeController
+    pass
 
 
 def get_editor_controller_class() -> type:

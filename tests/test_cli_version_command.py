@@ -1,8 +1,8 @@
 """Tests for ``mesh_cli version`` command."""
 from __future__ import annotations
 
-import json
 import argparse
+import json
 
 import pytest
 

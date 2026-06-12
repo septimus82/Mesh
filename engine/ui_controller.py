@@ -56,7 +56,7 @@ class UIController:
             self.shop_panel.close()
         if self.character_panel:
             self.character_panel.close()
-        
+
         # Handle PauseMenu via window if available
         pause_menu = getattr(self.window, "pause_menu", None)
         if pause_menu:

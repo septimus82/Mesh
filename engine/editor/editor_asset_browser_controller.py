@@ -3,19 +3,26 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-
 from engine.asset_index import AssetRow, scan_assets
-from engine.logging_tools import get_logger
-from engine.editor_asset_ops import spawn_entity_from_asset
 from engine.editor.asset_browser_panel import (
     clamp_asset_selection_index as _clamp_asset_selection_index_impl,
+)
+from engine.editor.asset_browser_panel import (
     cycle_asset_browser_kind as _cycle_asset_browser_kind_impl,
+)
+from engine.editor.asset_browser_panel import (
     filter_assets_for_browser as _filter_assets_for_browser_impl,
+)
+from engine.editor.asset_browser_panel import (
     move_asset_selection as _move_asset_selection_impl,
+)
+from engine.editor.asset_browser_panel import (
     resolve_asset_activation as _resolve_asset_activation_impl,
 )
-from engine.swallowed_exceptions import _log_swallow
+from engine.editor_asset_ops import spawn_entity_from_asset
 from engine.editor_light_occluder_ops import snap_world_point
+from engine.logging_tools import get_logger
+from engine.swallowed_exceptions import _log_swallow
 from engine.ui_overlays.widget_overlay_helpers import (
     apply_backspace,
     apply_enter,
@@ -25,7 +32,6 @@ from engine.ui_overlays.widget_overlay_helpers import (
     apply_text_input,
     resolve_preserved_selection_index,
 )
-
 
 logger = get_logger(__name__)
 

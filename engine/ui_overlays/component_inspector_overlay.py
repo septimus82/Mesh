@@ -16,10 +16,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-import engine.optional_arcade as optional_arcade
-
-from ..text_draw import draw_text_cached, TextCache
+from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, draw_panel_bg
+
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 

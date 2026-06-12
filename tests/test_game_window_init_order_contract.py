@@ -10,7 +10,6 @@ import pytest
 from engine.config import EngineConfig
 from engine.game import GameWindow
 
-
 pytestmark = pytest.mark.fast
 
 

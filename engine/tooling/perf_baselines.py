@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
-import json
 
 from engine.paths import resolve_path
-
 
 PERF_SCENE_CAPTURE_SCHEMA_VERSION = 1
 PERF_COMPARE_SCHEMA_VERSION = 1

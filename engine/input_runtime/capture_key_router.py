@@ -7,31 +7,32 @@ enablement, and dispatches actions.
 The router does NOT contain any key handling logic - it only resolves
 routes and dispatches them. All logic lives in the model or action handlers.
 """
+
+# ruff: noqa: F401
+
 from __future__ import annotations
 
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-
-from engine.input_runtime.capture_runtime_focus_model import (
-    CaptureFocusSnapshot,
-    compute_active_scopes,
-)
+from engine.input_runtime import capture_key_router_handlers_authoring as authoring_handlers
+from engine.input_runtime import capture_key_router_handlers_editor as editor_handlers
+from engine.input_runtime import capture_key_router_handlers_entity_paint as entity_paint_handlers
+from engine.input_runtime import capture_key_router_handlers_entity_select as entity_select_handlers
+from engine.input_runtime import capture_key_router_handlers_global as global_handlers
+from engine.input_runtime import capture_key_router_handlers_palette as palette_handlers
+from engine.input_runtime import capture_key_router_handlers_tile_paint as tile_paint_handlers
+from engine.input_runtime import capture_key_router_handlers_ui as ui_handlers
 from engine.input_runtime.capture_key_router_model import (
     KeyCombo,
     RouteSpec,
     build_route_table,
     resolve_route,
 )
-from engine.input_runtime import capture_key_router_handlers_ui as ui_handlers
-from engine.input_runtime import capture_key_router_handlers_palette as palette_handlers
-from engine.input_runtime import capture_key_router_handlers_tile_paint as tile_paint_handlers
-from engine.input_runtime import capture_key_router_handlers_entity_paint as entity_paint_handlers
-from engine.input_runtime import capture_key_router_handlers_entity_select as entity_select_handlers
-from engine.input_runtime import capture_key_router_handlers_authoring as authoring_handlers
-from engine.input_runtime import capture_key_router_handlers_editor as editor_handlers
-from engine.input_runtime import capture_key_router_handlers_global as global_handlers
-
+from engine.input_runtime.capture_runtime_focus_model import (
+    CaptureFocusSnapshot,
+    compute_active_scopes,
+)
 
 # Cache the route table for performance
 _ROUTE_TABLE: tuple[RouteSpec, ...] | None = None

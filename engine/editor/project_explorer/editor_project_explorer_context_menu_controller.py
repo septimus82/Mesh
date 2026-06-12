@@ -6,7 +6,8 @@ and handles input routing.
 
 from __future__ import annotations
 
-from typing import Optional, TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Tuple
+
 from engine.editor.shortcut_resolver_model import SHORTCUT_SCOPE_GLOBAL, SHORTCUT_SCOPE_PROJECT_EXPLORER
 
 if TYPE_CHECKING:

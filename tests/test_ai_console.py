@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import engine.console_runtime.handlers_ai as ai_handler_module
 from engine.console_controller import ConsoleController

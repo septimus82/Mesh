@@ -14,9 +14,8 @@ from __future__ import annotations
 
 import platform as _platform
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Version — single source of truth

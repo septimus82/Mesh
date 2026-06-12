@@ -12,7 +12,6 @@ from typing import Any
 
 from mesh_cli.release_bundle import DEFAULT_CAMPAIGN, DEFAULT_SEED, handle
 
-
 _WINDOWS_ABS_RE = re.compile(r"[A-Za-z]:[\\/]")
 _UNIX_ABS_RE = re.compile(r"(^|[\\s\"'])/(home|users|tmp|var|etc)/", re.IGNORECASE)
 _HOST_KEYS = {"cwd", "home", "host", "hostname", "machine", "repo_root", "user", "username"}

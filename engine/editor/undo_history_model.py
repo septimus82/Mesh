@@ -9,7 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable
 
-
 HISTORY_LINE_HEIGHT = 18.0
 HISTORY_PADDING = 8.0
 

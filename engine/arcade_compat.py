@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+
 from engine.swallowed_exceptions import _log_swallow
 
 

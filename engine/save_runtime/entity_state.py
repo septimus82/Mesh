@@ -109,16 +109,16 @@ class SavedEntityState:
             "x": float(self.x),
             "y": float(self.y),
         }
-        
+
         if self.prefab_id:
             result["prefab_id"] = self.prefab_id
-        
+
         if self.tags:
             result["tags"] = sorted(list(self.tags))
-        
+
         if self.animation_state:
             result["animation_state"] = self.animation_state
-        
+
         if self.behaviour_state:
             # Only include non-empty behaviour state
             clean_behaviour = {
@@ -127,13 +127,13 @@ class SavedEntityState:
             }
             if clean_behaviour:
                 result["behaviour_state"] = clean_behaviour
-        
+
         # Preserve unknown fields under x_ namespace
         if self.x_extra:
             for k, v in sorted(self.x_extra.items()):
                 if k.startswith("x_"):
                     result[k] = v
-        
+
         return result
 
     @classmethod
@@ -141,25 +141,25 @@ class SavedEntityState:
         """Deserialize from dict with safe defaults."""
         if not isinstance(data, dict):
             return cls(entity_id="unknown")
-        
+
         entity_id = str(data.get("entity_id", "") or "").strip()
         if not entity_id:
             entity_id = str(data.get("id", "") or "").strip() or "unknown"
-        
+
         prefab_id = data.get("prefab_id")
         if prefab_id is not None:
             prefab_id = str(prefab_id).strip() or None
-        
+
         try:
             x = float(data.get("x", 0.0))
         except (TypeError, ValueError):
             x = 0.0
-        
+
         try:
             y = float(data.get("y", 0.0))
         except (TypeError, ValueError):
             y = 0.0
-        
+
         tags_raw = data.get("tags", [])
         tags: list[str] = []
         if isinstance(tags_raw, list):
@@ -171,22 +171,22 @@ class SavedEntityState:
             tag_str = tags_raw.strip()
             if tag_str:
                 tags.append(tag_str)
-        
+
         animation_state = data.get("animation_state")
         if animation_state is not None:
             animation_state = str(animation_state).strip() or None
-        
+
         behaviour_state_raw = data.get("behaviour_state", {})
         behaviour_state: dict[str, Any] = {}
         if isinstance(behaviour_state_raw, dict):
             behaviour_state = dict(behaviour_state_raw)
-        
+
         # Collect x_ extension fields
         x_extra: dict[str, Any] = {}
         for k, v in data.items():
             if isinstance(k, str) and k.startswith("x_"):
                 x_extra[k] = v
-        
+
         return cls(
             entity_id=entity_id,
             prefab_id=prefab_id,
@@ -225,9 +225,9 @@ def serialize_entity(
             entity_id = entity_data.get("id") or entity_data.get("name")
         if not isinstance(entity_id, str) or not entity_id.strip():
             return None
-    
+
     entity_id = entity_id.strip()
-    
+
     # Get prefab ID
     prefab_id = None
     entity_data = getattr(sprite, "mesh_entity_data", {})
@@ -235,18 +235,18 @@ def serialize_entity(
         prefab_id = entity_data.get("prefab_id")
         if prefab_id is not None:
             prefab_id = str(prefab_id).strip() or None
-    
+
     # Get position
     try:
         x = float(getattr(sprite, "center_x", 0.0))
     except (TypeError, ValueError):
         x = 0.0
-    
+
     try:
         y = float(getattr(sprite, "center_y", 0.0))
     except (TypeError, ValueError):
         y = 0.0
-    
+
     # Get tags
     tags: list[str] = []
     mesh_tag = getattr(sprite, "mesh_tag", None)
@@ -258,7 +258,7 @@ def serialize_entity(
             tag_str = str(t or "").strip()
             if tag_str and tag_str not in tags:
                 tags.append(tag_str)
-    
+
     # Get animation state
     animation_state = None
     animator = getattr(sprite, "mesh_animator", None)
@@ -266,7 +266,7 @@ def serialize_entity(
         current_anim = getattr(animator, "current_animation", None)
         if isinstance(current_anim, str) and current_anim.strip():
             animation_state = current_anim.strip()
-    
+
     # Get safe behaviour state
     behaviour_state: dict[str, Any] = {}
     behaviours_runtime = getattr(sprite, "mesh_behaviours_runtime", [])
@@ -300,7 +300,7 @@ def serialize_entity(
                         errors.append(msg)
                     if strict:
                         raise SaveSerializationError(msg) from exc
-    
+
     return SavedEntityState(
         entity_id=entity_id,
         prefab_id=prefab_id,
@@ -332,7 +332,7 @@ def serialize_entities(
     sprites = getattr(scene_controller, "all_sprites", [])
     if not sprites:
         return []
-    
+
     errors: list[str] = []
     states: list[SavedEntityState] = []
     for sprite in sprites:
@@ -345,10 +345,10 @@ def serialize_entities(
         )
         if state is not None:
             states.append(state)
-    
+
     # Sort by entity_id for deterministic output
     states.sort(key=lambda s: s.entity_id)
-    
+
     return [s.to_dict() for s in states]
 
 
@@ -399,13 +399,13 @@ def apply_entity_state(
         # Apply position
         sprite.center_x = float(state.x)
         sprite.center_y = float(state.y)
-        
+
         # Update entity data dict
         entity_data = getattr(sprite, "mesh_entity_data", None)
         if isinstance(entity_data, dict):
             entity_data["x"] = float(state.x)
             entity_data["y"] = float(state.y)
-        
+
         # Apply tags
         if state.tags:
             # Set primary tag
@@ -414,7 +414,7 @@ def apply_entity_state(
             # Set all tags
             if hasattr(sprite, "mesh_tags"):
                 sprite.mesh_tags = list(state.tags)
-        
+
         # Apply animation state
         if state.animation_state:
             animator = getattr(sprite, "mesh_animator", None)
@@ -440,7 +440,7 @@ def apply_entity_state(
                     )
                     if strict:
                         return False
-        
+
         # Apply behaviour state
         if state.behaviour_state:
             behaviours_runtime = getattr(sprite, "mesh_behaviours_runtime", [])
@@ -521,7 +521,7 @@ def apply_entities(
     """
     if not saved_entities:
         return (0, 0)
-    
+
     # Build lookup for existing entities
     sprites = getattr(scene_controller, "all_sprites", [])
     sprite_by_id: dict[str, Any] = {}
@@ -529,14 +529,14 @@ def apply_entities(
         entity_id = getattr(sprite, "mesh_name", None)
         if isinstance(entity_id, str) and entity_id.strip():
             sprite_by_id[entity_id.strip()] = sprite
-    
+
     applied = 0
     missing = 0
-    
+
     for entity_dict in saved_entities:
         state = SavedEntityState.from_dict(entity_dict)
         sprite = sprite_by_id.get(state.entity_id)
-        
+
         if sprite is None:
             missing += 1
             _append_diagnostic(
@@ -562,7 +562,7 @@ def apply_entities(
             applied += 1
         else:
             missing += 1
-    
+
     return (applied, missing)
 
 
@@ -577,15 +577,15 @@ def migrate_entity_state_v0(data: dict[str, Any]) -> dict[str, Any]:
     # Normalize entity_id
     if "entity_id" not in data and "id" in data:
         data["entity_id"] = data.pop("id")
-    
+
     # Normalize tags
     if "tags" not in data and "tag" in data:
         tag = data.pop("tag")
         if isinstance(tag, str) and tag.strip():
             data["tags"] = [tag.strip()]
-    
+
     # Ensure behaviour_state exists
     if "behaviour_state" not in data:
         data["behaviour_state"] = {}
-    
+
     return data

@@ -11,7 +11,6 @@ from typing import Any, Iterable, List, Optional
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
-
 # Keep logger name stable (historically this lived in engine.tooling.verify_demo)
 # so stderr messaging remains identical across the refactor.
 _LOG = get_logger("engine.tooling.verify_demo")

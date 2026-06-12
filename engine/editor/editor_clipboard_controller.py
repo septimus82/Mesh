@@ -7,12 +7,12 @@ copy/paste operations for entities.
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from engine.logging_tools import get_logger
 
 if TYPE_CHECKING:
-    import engine.optional_arcade as optional_arcade
+    pass
 
 logger = get_logger(__name__)
 

@@ -1,5 +1,7 @@
 import unittest
+
 from engine.prefabs import PrefabManager
+
 
 class TestPrefabInheritance(unittest.TestCase):
     def setUp(self):

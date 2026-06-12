@@ -4,7 +4,6 @@ import pytest
 
 from engine.schema_validation import SchemaValidationError, validate
 
-
 pytestmark = [pytest.mark.fast]
 
 

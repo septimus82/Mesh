@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import sys
 from typing import Any
-from unittest import mock
 
 import pytest
+
 from tests._typing import as_any
 
 

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from collections import deque
 import hashlib
 import os
+from collections import deque
 from pathlib import Path
 from typing import Optional
+
 from engine.swallowed_exceptions import _log_swallow
 
 from .logging_tools import get_logger
 from .paths import resolve_path
 from .repo_root import get_repo_root
-
 
 _LOG = get_logger("engine.editor_palette.thumbs")
 

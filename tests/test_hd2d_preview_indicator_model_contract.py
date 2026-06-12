@@ -5,10 +5,7 @@ Tests the pure formatting function and provider behavior.
 
 from __future__ import annotations
 
-import pytest
-
 from tests._typing import as_any
-
 
 # =============================================================================
 # Pure Model Tests - format_hd2d_preview_indicator_text
@@ -239,8 +236,9 @@ class TestHd2dPreviewIndicatorOverlay:
 
     def test_accepts_provider_kwarg(self) -> None:
         """Overlay constructor accepts provider kwarg."""
-        from engine.ui_overlays.debug import HD2DPreviewIndicatorOverlay
         import inspect
+
+        from engine.ui_overlays.debug import HD2DPreviewIndicatorOverlay
 
         sig = inspect.signature(HD2DPreviewIndicatorOverlay.__init__)
         params = list(sig.parameters.keys())
@@ -258,8 +256,8 @@ class TestHd2dPreviewIndicatorIntegration:
 
     def test_provider_and_formatter_work_together(self) -> None:
         """Provider output works with formatter."""
-        from engine.ui_overlays.providers import hd2d_preview_indicator_provider
         from engine.editor.hd2d_preview_indicator_model import format_hd2d_preview_indicator_text
+        from engine.ui_overlays.providers import hd2d_preview_indicator_provider
 
         class FakeEditor:
             _hd2d_preview_active = True
@@ -277,8 +275,8 @@ class TestHd2dPreviewIndicatorIntegration:
 
     def test_format_returns_empty_when_provider_says_not_visible(self) -> None:
         """When provider returns not visible, formatter returns empty for None."""
-        from engine.ui_overlays.providers import hd2d_preview_indicator_provider
         from engine.editor.hd2d_preview_indicator_model import format_hd2d_preview_indicator_text
+        from engine.ui_overlays.providers import hd2d_preview_indicator_provider
 
         class FakeEditor:
             _hd2d_preview_active = False

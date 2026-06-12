@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+
 import engine.optional_arcade as optional_arcade
 
-from ..text_draw import draw_text_cached, TextCache
+from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline
 from .widgets import Rect, ScrollList
 

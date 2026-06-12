@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import logging
 import sys
-
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
-
 
 DEFAULT_SMOKE_SCENE = "scenes/runtime_smoke_scene.json"
 DEFAULT_SMOKE_TICKS = 3
@@ -204,9 +202,11 @@ def _run_headless_smoke(
     print_diagnostics_on_exit: bool = False,
 ) -> int:
     from engine.config import load_config  # noqa: PLC0415
-    from engine.diagnostics import clear_diagnostics  # noqa: PLC0415
+    from engine.diagnostics import (
+        clear_diagnostics,  # noqa: PLC0415
+        get_diagnostics_payload,  # noqa: PLC0415
+    )
     from engine.diagnostics import error as diag_error  # noqa: PLC0415
-    from engine.diagnostics import get_diagnostics_payload  # noqa: PLC0415
     from engine.game_state_controller import GameStateController  # noqa: PLC0415
     from engine.logging_tools import suppress_stdout  # noqa: PLC0415
     from engine.persistence_io import write_json_atomic  # noqa: PLC0415

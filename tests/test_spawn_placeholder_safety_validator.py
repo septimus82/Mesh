@@ -5,7 +5,6 @@ import json
 
 def test_spawn_placeholder_safety_validator_main_world_passes() -> None:
     import mesh_cli
-
     from engine.validators.spawn_placeholder_safety_validator import validate_spawn_placeholder_safety
 
     scene_paths = mesh_cli._resolve_scene_paths("worlds/main_world.json")

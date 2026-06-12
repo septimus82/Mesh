@@ -21,7 +21,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
 # --------------------------------------------------------------------------- #
 # Asset Types
 # --------------------------------------------------------------------------- #
@@ -604,7 +603,7 @@ def _cmd_audit(args: argparse.Namespace) -> int:
             print(f"  - {err}")
         return 1
 
-    print(f"[asset-audit] ok - all dependencies resolved")
+    print("[asset-audit] ok - all dependencies resolved")
     return 0
 
 

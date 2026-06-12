@@ -1,5 +1,6 @@
 import os
 
+
 def test_capture_is_thin_facade():
     """
     Enforce that engine/input_runtime/capture.py remains a thin facade
@@ -14,7 +15,7 @@ def test_capture_is_thin_facade():
     # 1. Line count check (excluding empty lines)
     non_empty_lines = [line for line in lines if line.strip()]
     line_count = len(non_empty_lines)
-    
+
     # Current count is ~40. Setting budget to 60 to allow for some imports but prevent logic regrowth.
     # User suggested <= 250, but since we know it's ~40, 100 is a safe upper bound that is still strict.
     BUDGET = 100
@@ -33,7 +34,7 @@ def test_capture_is_thin_facade():
         "def ui_blocks_input",
         "def player_input_blocked",
     ]
-    
+
     for forbidden in forbidden_defs:
         assert forbidden not in content, (
             f"Found forbidden definition '{forbidden}' in capture.py. "
@@ -60,6 +61,6 @@ def test_capture_is_thin_facade():
         "from engine.input_runtime.capture_io import",
         "from engine.input_runtime.capture_runtime import",
     ]
-    
+
     for req in required_imports:
         assert req in content, f"capture.py must import from {req.split(' ')[1]}"

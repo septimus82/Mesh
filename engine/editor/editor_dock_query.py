@@ -5,7 +5,6 @@ from typing import Any, cast
 from engine.editor.editor_dock_model import DockStateSnapshot
 from engine.editor.editor_shell_layout import DOCK_WIDTH
 
-
 DEFAULT_DOCK_WIDTH = int(DOCK_WIDTH)
 
 

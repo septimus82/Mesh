@@ -10,11 +10,11 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
-from typing import Any, Sequence, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .lighting_config import LightConfig, LightingSceneConfig, OccluderConfig
-    from .lighting_geometry import LightGeometry, SceneGeometry
+    from .lighting_config import LightingSceneConfig
+    from .lighting_geometry import SceneGeometry
 
 
 @dataclass(slots=True, frozen=True)

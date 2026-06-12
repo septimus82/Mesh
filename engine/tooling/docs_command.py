@@ -2,7 +2,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, cast
+from typing import Dict, cast
 
 from engine.tooling.metadata import get_command_metadata
 from engine.tooling.recipes_command import RECIPES

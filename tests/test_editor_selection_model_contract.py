@@ -9,9 +9,6 @@ Tests the pure functions for extracting selection information:
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import MagicMock
-
-import pytest
 
 from engine.editor.editor_selection_model import (
     is_entity_selected,
@@ -23,7 +20,6 @@ from engine.editor.editor_selection_model import (
     selection_summary,
 )
 from tests._typing import as_any
-
 
 # =============================================================================
 # Test Fixtures

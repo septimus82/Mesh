@@ -8,19 +8,19 @@ from types import SimpleNamespace
 import pytest
 
 from engine import optional_arcade
-from engine.gameplay_event_bus import GameplayEventBus
-from engine.workspace_settings import WorkspaceSettings
-from engine.editor.editor_debug_panels_controller import EditorDebugPanelsController
-from engine.editor.editor_shell_layout import compute_editor_shell_layout
 from engine.editor.debug_panels_model import (
     DEBUG_PANEL_LINE_HEIGHT,
     DEBUG_PANEL_PADDING,
     compute_debug_panel_content_bounds,
 )
-from tests._typing import as_any
+from engine.editor.editor_debug_panels_controller import EditorDebugPanelsController
+from engine.editor.editor_shell_layout import compute_editor_shell_layout
+from engine.gameplay_event_bus import GameplayEventBus
+from engine.workspace_settings import WorkspaceSettings
 from tests._dock_stub import make_dock_stub
 from tests._search_stub import attach_search_stub
 from tests._session_stub import make_session_stub
+from tests._typing import as_any
 
 
 @dataclass

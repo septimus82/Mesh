@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import re
+from pathlib import Path
 
 
 def test_hover_dock_tab_reads_are_centralized() -> None:

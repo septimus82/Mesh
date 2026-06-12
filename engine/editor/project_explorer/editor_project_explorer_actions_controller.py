@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-
 from engine.editor.editor_dock_query import get_dock_snapshot, get_effective_dock_widths
 from engine.i18n import tr
 from engine.swallowed_exceptions import _log_swallow
@@ -134,14 +133,15 @@ class EditorProjectExplorerActionsController:
         from engine.editor.editor_shell_layout import (  # noqa: PLC0415
             compute_editor_shell_layout,
         )
-        from .project_explorer_model import (  # noqa: PLC0415
-            PROJECT_LINE_HEIGHT,
-            compute_project_explorer_layout,
-        )
         from engine.ui.widgets import Rect  # noqa: PLC0415
         from engine.ui_overlays.project_explorer_overlay import (  # noqa: PLC0415
             _build_project_explorer_scrolllist,
             _selected_project_row_from_scrolllist,
+        )
+
+        from .project_explorer_model import (  # noqa: PLC0415
+            PROJECT_LINE_HEIGHT,
+            compute_project_explorer_layout,
         )
 
         window_w = int(getattr(self._editor.window, "width", 1280) or 1280)
@@ -231,16 +231,17 @@ class EditorProjectExplorerActionsController:
         from engine.editor.editor_shell_layout import (  # noqa: PLC0415
             compute_editor_shell_layout,
         )
+        from engine.ui.widgets import Rect  # noqa: PLC0415
+        from engine.ui_overlays.project_explorer_overlay import (  # noqa: PLC0415
+            _build_project_explorer_scrolllist,
+        )
+
         from .project_explorer_model import (  # noqa: PLC0415
             PROJECT_LINE_HEIGHT,
             compute_project_explorer_layout,
             format_project_action_label,
             format_project_recent_label,
             format_project_row_label,
-        )
-        from engine.ui.widgets import Rect  # noqa: PLC0415
-        from engine.ui_overlays.project_explorer_overlay import (  # noqa: PLC0415
-            _build_project_explorer_scrolllist,
         )
 
         window_w = int(getattr(self._editor.window, "width", 1280) or 1280)
@@ -307,15 +308,16 @@ class EditorProjectExplorerActionsController:
         from engine.editor.editor_shell_layout import (  # noqa: PLC0415
             compute_editor_shell_layout,
         )
+        from engine.editor.shortcut_resolver_model import (  # noqa: PLC0415
+            SHORTCUT_SCOPE_GLOBAL,
+            SHORTCUT_SCOPE_PROJECT_EXPLORER,
+        )
+
         from .project_explorer_model import (  # noqa: PLC0415
             PROJECT_LINE_HEIGHT,
             compute_project_explorer_layout,
             compute_project_window,
             display_index_from_selectable_index,
-        )
-        from engine.editor.shortcut_resolver_model import (  # noqa: PLC0415
-            SHORTCUT_SCOPE_GLOBAL,
-            SHORTCUT_SCOPE_PROJECT_EXPLORER,
         )
 
         window_w = int(getattr(self._editor.window, "width", 1280) or 1280)

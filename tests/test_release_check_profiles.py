@@ -1,10 +1,12 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from engine.tooling import release_command
 from tests.utils.args_factory import make_release_args
 
+
 class TestReleaseCheckProfiles(unittest.TestCase):
-    
+
     @patch("engine.tooling.release_command.get_content_index")
     @patch("engine.tooling.release_command.audit_world")
     @patch("engine.tooling.release_command.build_lock")
@@ -23,13 +25,13 @@ class TestReleaseCheckProfiles(unittest.TestCase):
                 "unused_quests_count": 0
             }
         }
-        
+
         # Mock packs
         mock_pack = MagicMock()
         mock_pack.id = "wip_pack"
         mock_pack.wip = True
         mock_get_index.return_value.packs = [mock_pack]
-        
+
         # Mock args
         args = make_release_args(
             world_path="worlds/main.json",
@@ -45,13 +47,13 @@ class TestReleaseCheckProfiles(unittest.TestCase):
             diff_from=None,
             emit_changelog=None
         )
-        
+
         # Run command - should pass because 50 < 100
         try:
             release_command.release_check_command(args)
         except SystemExit as e:
             self.fail(f"Command failed with {e}")
-            
+
         # Verify audit_world called with wip_pack in allow_packs
         call_args = mock_audit.call_args
         allow_packs = call_args[1].get("allow_packs") or call_args[0][2] if len(call_args[0]) > 2 else []

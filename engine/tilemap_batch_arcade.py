@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-from engine.tilemap_batch import TilemapBatchState, TilemapBatchStats
 from engine.swallowed_exceptions import _log_swallow
+from engine.tilemap_batch import TilemapBatchState, TilemapBatchStats
 
 
 class TilemapBatcher:

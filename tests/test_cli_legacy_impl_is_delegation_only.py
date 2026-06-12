@@ -1,6 +1,7 @@
 import ast
-import pytest
 from pathlib import Path
+
+import pytest
 
 TARGET_FUNCTIONS = {
     "_handle_scene_create",
@@ -28,9 +29,9 @@ def test_legacy_impl_is_delegation_only():
         pytest.skip("mesh_cli/legacy_impl.py not found")
 
     tree = ast.parse(file_path.read_text(encoding="utf-8"))
-    
+
     functions_found = set()
-    
+
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
             if node.name in TARGET_FUNCTIONS:
@@ -47,17 +48,17 @@ def check_function_body(node: ast.FunctionDef):
         if isinstance(stmt, ast.Return):
             return_stmt_index = i
             break
-    
+
     # If no return statement, that's suspicious for a delegation wrapper (unless it's void, but these return int)
-    # But maybe it just calls something and returns implicitly None? 
+    # But maybe it just calls something and returns implicitly None?
     # The wrappers we saw return int.
-    
+
     if return_stmt_index == -1:
         # It might be that the function is empty or just has a docstring?
         # But we expect a delegation call.
         # Let's check if it has any body statements other than docstring.
         non_docstring_stmts = [
-            s for s in node.body 
+            s for s in node.body
             if not (isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant) and isinstance(s.value.value, str))
         ]
         if not non_docstring_stmts:
@@ -71,16 +72,16 @@ def check_function_body(node: ast.FunctionDef):
     #   imports
     #   return ...
     #   <nothing else>
-    
+
     # So if return_stmt_index is not the last statement, fail.
     if return_stmt_index < len(node.body) - 1:
         # Check if subsequent statements are just comments? AST doesn't have comments.
         # AST has nodes.
         # If there are nodes after return, it's dead code.
-        
+
         # Exception: maybe a second return? (unreachable)
         # Exception: maybe pass?
-        
+
         extra_stmts = node.body[return_stmt_index+1:]
         if extra_stmts:
             pytest.fail(f"Function {node.name} has dead code after return statement: {extra_stmts}")

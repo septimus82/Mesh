@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from engine.input_runtime.capture_runtime_focus_model import CaptureFocusSnapshot
 from engine.command_palette_controller import (
     handle_command_palette_activate,
     handle_command_palette_cancel_or_close,
     handle_command_palette_history_navigate,
     handle_command_palette_navigate,
-    handle_command_palette_toggle_help,
     handle_command_palette_toggle,
+    handle_command_palette_toggle_help,
 )
+from engine.input_runtime.capture_runtime_focus_model import CaptureFocusSnapshot
 
 
 def dispatch_ui_action(

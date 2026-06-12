@@ -10,7 +10,6 @@ from engine.editor.editor_problems_actions_controller import EditorProblemsActio
 from engine.editor.editor_problems_controller import ProblemsController
 from engine.editor_controller import EditorModeController
 
-
 pytestmark = [pytest.mark.fast]
 
 

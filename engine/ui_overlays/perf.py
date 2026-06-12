@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
+
 import engine.optional_arcade as optional_arcade
 
 from .common import UIElement
@@ -26,7 +27,7 @@ class PerfOverlay(UIElement):
         counters = snapshot.meta.get("counters", {}) if isinstance(snapshot.meta, dict) else {}
 
         lines = ["PERFORMANCE (P)"]
-        
+
         # FPS
         fps = optional_arcade.arcade.get_fps()
         lines.append(f"FPS: {fps:.1f}")
@@ -59,12 +60,12 @@ class PerfOverlay(UIElement):
         start_y = self.window.height - 100
         for line in lines:
             draw_text_cached(
-                line, 
-                self.window.width - 220, 
-                start_y, 
-                color=optional_arcade.arcade.color.GREEN, 
-                font_size=12, 
-                width=200, 
+                line,
+                self.window.width - 220,
+                start_y,
+                color=optional_arcade.arcade.color.GREEN,
+                font_size=12,
+                width=200,
                 align="left",
                 bold=True,
                 cache=cache

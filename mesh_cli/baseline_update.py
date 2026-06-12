@@ -18,11 +18,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
-import tomllib
 
 # ---------------------------------------------------------------------------
 # Constants

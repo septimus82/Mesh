@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +10,6 @@ from engine.editor.dock_tab_registry import LEFT_DOCK_TABS, RIGHT_DOCK_TABS
 from engine.logging_tools import get_logger
 from engine.repo_root import get_repo_root
 from engine.swallowed_exceptions import _log_swallow
-
 
 _LOG = get_logger(__name__)
 

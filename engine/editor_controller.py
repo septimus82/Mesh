@@ -1,3 +1,5 @@
+# ruff: noqa: F401
+
 from __future__ import annotations
 
 import copy
@@ -38,10 +40,13 @@ if TYPE_CHECKING:
     from engine.editor.editor_entity_panels_controller import EditorEntityPanelsController
     from engine.editor.editor_find_actions_controller import EditorFindActionsController
     from engine.workspace_settings import WorkspaceSettings
+
+    from .editor.editor_duplicate_controller import EditorDuplicateController
+    from .editor.editor_entity_ops_controller import EditorEntityOpsController
     from .editor.editor_gizmo_feedback import GizmoFeedbackState
     from .editor.editor_hd2d_controller import EditorHd2dController
-    from .editor.editor_history_controller import EditorHistoryController
     from .editor.editor_hierarchy_controller import EditorHierarchyController
+    from .editor.editor_history_controller import EditorHistoryController
     from .editor.editor_inspector_controller import EditorInspectorController
     from .editor.editor_keymap_controller import EditorKeymapController
     from .editor.editor_lights_controller import EditorLightsController
@@ -58,12 +63,11 @@ if TYPE_CHECKING:
     from .editor.editor_shape_controller import EditorShapeController
     from .editor.editor_tile_controller import EditorTileController
     from .editor.editor_undo_controller import EditorUndoController
-    from .editor.editor_entity_ops_controller import EditorEntityOpsController
-    from .editor.editor_duplicate_controller import EditorDuplicateController
     from .editor.keymap_override_model import ScopedOverrides
     from .game import GameWindow
 
 # Import from extracted modules
+from .editor import state as _editor_state
 from .editor.editor_controller_bootstrap import (
     bootstrap_browser_state as _bootstrap_browser_state,
 )
@@ -118,7 +122,6 @@ from .editor.selection_clipboard import (
 from .editor.state import (
     EditorDirtyState,
 )
-from .editor import state as _editor_state
 
 logger = get_logger(__name__)
 

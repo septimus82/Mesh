@@ -14,7 +14,6 @@ from typing import Any
 
 from .hd2d_look_presets_model import get_hd2d_preset_name, get_hd2d_preset_patch
 
-
 # All keys that HD2D presets can set
 HD2D_SETTING_KEYS: frozenset[str] = frozenset({
     "depth_tint_enabled",

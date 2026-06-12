@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 from engine.validators.schema_validation import (
-    ValidationError,
     validate_prefab,
     validate_prefab_file,
 )
@@ -19,7 +18,7 @@ def test_validate_prefab_valid_minimal() -> None:
         "id": "test_prefab",
         "entity": {"sprite": "assets/test.png"},
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert errors == []
 
@@ -30,7 +29,7 @@ def test_validate_prefab_missing_id() -> None:
     prefab = {
         "entity": {"sprite": "assets/test.png"},
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert len(errors) == 1
     assert errors[0].code == "prefab.id.required"
@@ -43,7 +42,7 @@ def test_validate_prefab_invalid_id_format() -> None:
         "id": "Invalid-ID",  # Uppercase and hyphen not allowed
         "entity": {},
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert any(e.code == "prefab.id.format" for e in errors)
 
@@ -54,7 +53,7 @@ def test_validate_prefab_missing_entity() -> None:
     prefab = {
         "id": "test_prefab",
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert len(errors) == 1
     assert errors[0].code == "prefab.entity.required"
@@ -67,7 +66,7 @@ def test_validate_prefab_invalid_entity_type() -> None:
         "id": "test_prefab",
         "entity": "not a dict",
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert any(e.code == "prefab.entity.type" for e in errors)
 
@@ -81,7 +80,7 @@ def test_validate_prefab_invalid_behaviours_type() -> None:
             "behaviours": "not a list",
         },
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert any(e.code == "prefab.entity.behaviours.type" for e in errors)
 
@@ -95,7 +94,7 @@ def test_validate_prefab_invalid_behaviour_entry() -> None:
             "behaviours": [123],  # Not string or dict
         },
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert any(e.code == "prefab.entity.behaviours.entry_type" for e in errors)
 
@@ -109,7 +108,7 @@ def test_validate_prefab_invalid_behaviour_config_type() -> None:
             "behaviour_config": ["list"],
         },
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert any(e.code == "prefab.entity.behaviour_config.type" for e in errors)
 
@@ -123,7 +122,7 @@ def test_validate_prefab_invalid_collision_poly() -> None:
             "collision_poly": [[0, 0], [1, 1]],  # Only 2 points
         },
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert any(e.code == "prefab.entity.collision_poly.min_points" for e in errors)
 
@@ -137,7 +136,7 @@ def test_validate_prefab_invalid_tags() -> None:
             "tags": "not a list",
         },
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert any(e.code == "prefab.entity.tags.type" for e in errors)
 
@@ -151,7 +150,7 @@ def test_validate_prefab_invalid_tag_entry() -> None:
             "tags": [123],
         },
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert any(e.code == "prefab.entity.tags.entry_type" for e in errors)
 
@@ -175,7 +174,7 @@ def test_validate_prefab_valid_with_all_fields() -> None:
             "tags": ["targetable"],
         },
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab)
     assert errors == []
 
@@ -190,7 +189,7 @@ def test_validate_prefab_extension_fields_allowed() -> None:
             "x_custom_entity": "also allowed",
         },
     }
-    
+
     errors = validate_prefab(Path("prefabs.json"), prefab, strict=True)
     # Should not have errors for x_ prefixed fields
     assert not any("x_custom" in e.message for e in errors)
@@ -203,7 +202,7 @@ def test_validate_prefab_file_valid() -> None:
         {"id": "prefab_a", "entity": {}},
         {"id": "prefab_b", "entity": {"sprite": "test.png"}},
     ]
-    
+
     errors = validate_prefab_file(Path("prefabs.json"), data)
     assert errors == []
 
@@ -212,7 +211,7 @@ def test_validate_prefab_file_valid() -> None:
 def test_validate_prefab_file_not_list() -> None:
     """Prefab file that isn't a list fails validation."""
     data = {"id": "prefab_a", "entity": {}}
-    
+
     errors = validate_prefab_file(Path("prefabs.json"), data)
     assert len(errors) == 1
     assert errors[0].code == "prefab_file.type"
@@ -225,7 +224,7 @@ def test_validate_prefab_file_duplicate_ids() -> None:
         {"id": "same_id", "entity": {}},
         {"id": "same_id", "entity": {}},
     ]
-    
+
     errors = validate_prefab_file(Path("prefabs.json"), data)
     assert any(e.code == "prefab_file.duplicate_id" for e in errors)
 
@@ -237,9 +236,9 @@ def test_validate_prefab_error_includes_path() -> None:
         {"id": "valid", "entity": {}},
         {"id": "invalid", "entity": {"tags": "not a list"}},
     ]
-    
+
     errors = validate_prefab_file(Path("prefabs.json"), data)
-    
+
     # Find the tags error
     tags_error = next((e for e in errors if "tags" in e.path), None)
     assert tags_error is not None

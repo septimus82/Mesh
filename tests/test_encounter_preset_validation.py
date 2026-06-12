@@ -13,9 +13,9 @@ def _write_presets(tmp_path: Path, payload) -> Path:
 
 
 def test_preset_file_shape_validation_is_deterministic() -> None:
-    from engine.validators.encounter_budget_validator import EncounterBudgetValidator
-
     import tempfile
+
+    from engine.validators.encounter_budget_validator import EncounterBudgetValidator
 
     with tempfile.TemporaryDirectory() as td:
         tmp_path = Path(td)
@@ -30,9 +30,9 @@ def test_preset_file_shape_validation_is_deterministic() -> None:
 
 
 def test_unknown_preset_keys_warn_or_error_based_on_strict() -> None:
-    from engine.validators.encounter_budget_validator import EncounterBudgetValidator
-
     import tempfile
+
+    from engine.validators.encounter_budget_validator import EncounterBudgetValidator
 
     with tempfile.TemporaryDirectory() as td:
         tmp_path = Path(td)
@@ -57,9 +57,9 @@ def test_unknown_preset_keys_warn_or_error_based_on_strict() -> None:
 
 
 def test_unknown_preset_id_is_error() -> None:
-    from engine.validators.encounter_budget_validator import EncounterBudgetValidator
-
     import tempfile
+
+    from engine.validators.encounter_budget_validator import EncounterBudgetValidator
 
     with tempfile.TemporaryDirectory() as td:
         tmp_path = Path(td)

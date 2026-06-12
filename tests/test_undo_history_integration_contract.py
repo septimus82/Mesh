@@ -8,10 +8,10 @@ import pytest
 
 from engine import optional_arcade
 from engine.editor.editor_history_controller import EditorHistoryController
-from tests._typing import as_any
 from tests._dock_stub import make_dock_stub
 from tests._search_stub import attach_search_stub
 from tests._session_stub import make_session_stub
+from tests._typing import as_any
 
 
 @dataclass
@@ -87,7 +87,7 @@ def test_jump_calls_undo(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_mouse_click_triggers_jump(monkeypatch: pytest.MonkeyPatch) -> None:
     from engine import arcade_fallback as arcade_stub
-    from engine.editor.editor_shell_layout import compute_editor_shell_layout, TAB_HEADER_HEIGHT
+    from engine.editor.editor_shell_layout import TAB_HEADER_HEIGHT, compute_editor_shell_layout
     from engine.editor.undo_history_model import HISTORY_LINE_HEIGHT, HISTORY_PADDING
 
     monkeypatch.setattr(optional_arcade, "arcade", arcade_stub)

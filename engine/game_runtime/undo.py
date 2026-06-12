@@ -1,6 +1,7 @@
+import copy
 from dataclasses import dataclass
 from typing import Any
-import copy
+
 
 @dataclass(slots=True)
 class UndoFrame:

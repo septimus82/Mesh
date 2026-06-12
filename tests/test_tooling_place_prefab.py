@@ -1,8 +1,10 @@
-import unittest
-import shutil
 import json
+import shutil
+import unittest
 from pathlib import Path
+
 from engine.tooling import scaffold
+
 
 class TestToolingPlacePrefab(unittest.TestCase):
     def setUp(self):
@@ -10,7 +12,7 @@ class TestToolingPlacePrefab(unittest.TestCase):
         if self.test_dir.exists():
             shutil.rmtree(self.test_dir)
         self.test_dir.mkdir()
-        
+
     def tearDown(self):
         if self.test_dir.exists():
             shutil.rmtree(self.test_dir)
@@ -18,7 +20,7 @@ class TestToolingPlacePrefab(unittest.TestCase):
     def test_place_prefab(self):
         scene_path = self.test_dir / "scene.json"
         prefabs_path = self.test_dir / "prefabs.json"
-        
+
         # Create prefabs file
         prefabs_data = [
             {
@@ -31,7 +33,7 @@ class TestToolingPlacePrefab(unittest.TestCase):
         ]
         with open(prefabs_path, "w") as f:
             json.dump(prefabs_data, f)
-        
+
         # Create scene file
         scene_data = {
             "name": "Scene",
@@ -41,22 +43,22 @@ class TestToolingPlacePrefab(unittest.TestCase):
         }
         with open(scene_path, "w") as f:
             json.dump(scene_data, f)
-            
+
         # Place prefab
         # We need to mock UnifiedValidator because it will fail on missing sprite/assets
         from unittest.mock import patch
         with patch("engine.tooling.validate_all.UnifiedValidator") as MockValidator:
             instance = MockValidator.return_value
             instance.validate_scene.return_value = True
-            
+
             self.assertTrue(scaffold.place_prefab(
-                "test_prefab", 
-                str(scene_path), 
-                100, 
-                200, 
+                "test_prefab",
+                str(scene_path),
+                100,
+                200,
                 prefabs_file=str(prefabs_path)
             ))
-            
+
         # Verify
         with open(scene_path, "r") as f:
             data = json.load(f)

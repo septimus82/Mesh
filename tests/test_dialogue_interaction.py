@@ -1,5 +1,4 @@
 import engine.optional_arcade as optional_arcade
-
 from engine.behaviours.dialogue import Dialogue
 from engine.input import InputManager
 

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import pytest
 import json
 from pathlib import Path
 
+import pytest
+
 from engine.scene_loader import SceneLoader
-
-
 
 pytestmark = pytest.mark.builtin_behaviours
 

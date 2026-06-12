@@ -140,11 +140,11 @@ def _handle_export(args: argparse.Namespace) -> int:
 
 def _handle_diff(args: argparse.Namespace) -> int:
     """Diff two debug bundle snapshots."""
-    from engine.persistence_io import dumps_json_deterministic, read_json  # noqa: PLC0415
     from engine.editor.debug_bundle_diff_model import (  # noqa: PLC0415
         diff_debug_bundles,
         format_debug_bundle_diff_text,
     )
+    from engine.persistence_io import dumps_json_deterministic, read_json  # noqa: PLC0415
 
     path_a = Path(str(getattr(args, "a", "") or ""))
     path_b = Path(str(getattr(args, "b", "") or ""))

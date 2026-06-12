@@ -1,26 +1,27 @@
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List, Optional, cast
 
 import engine.optional_arcade as optional_arcade
-
-import os
-
 from engine.editor.editor_palette_constants import (
     PALETTE_LINE_HEIGHT,
     PALETTE_THUMB_DRAW_SIZE,
     PALETTE_THUMB_SIZE,
 )
-from engine.editor_palette_thumbs import request_thumb, tick_thumb_generation
 from engine.editor.prefab_palette_panel import (
     filter_prefab_palette_items as _filter_prefab_palette_items,
-    parse_palette_filter as _parse_palette_filter,
+)
+from engine.editor.prefab_palette_panel import (
     palette_tag_frequencies as _palette_tag_frequencies,
 )
-from engine.ui_overlays.common import draw_outline_centered, draw_panel_bg
-from engine.logging_tools import get_logger
-
+from engine.editor.prefab_palette_panel import (
+    parse_palette_filter as _parse_palette_filter,
+)
+from engine.editor_palette_thumbs import request_thumb, tick_thumb_generation
 from engine.editor_runtime import ops as editor_ops
+from engine.logging_tools import get_logger
+from engine.ui_overlays.common import draw_outline_centered, draw_panel_bg
 
 logger = get_logger(__name__)
 

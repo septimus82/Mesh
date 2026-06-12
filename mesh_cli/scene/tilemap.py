@@ -1,17 +1,16 @@
 import argparse
 import json
-import sys
 from pathlib import Path
 from typing import Any, Literal
 
+from engine.path_norm import normalize_scene_path
 from engine.paths import resolve_path
 from engine.persistence_io import write_json_atomic
 from engine.scene_loader import SceneLoader
 from engine.scene_serializer import compact_scene_payload
-from engine.path_norm import normalize_scene_path
+from engine.swallowed_exceptions import _log_swallow
 from engine.tilemap_brush import apply_brush, validate_brush
 from engine.tilemap_flood_fill import FloodFillMaxTilesExceeded, apply_flood_fill, flood_fill_indices
-from engine.swallowed_exceptions import _log_swallow
 
 
 class BrushLoader:
@@ -418,27 +417,27 @@ def _handle_scene_tilemap_init(args: argparse.Namespace) -> int:
 
     # Ensure all requested layers exist and have correct size
     existing_map = {L.get("id"): L for L in layers if isinstance(L, dict) and L.get("id")}
-    
+
     # Rebuild layers list to preserve order of existing, append new
-    # Actually, user might want to enforce order from args? 
-    # The command says "Initialize ... (idempotent)". 
+    # Actually, user might want to enforce order from args?
+    # The command says "Initialize ... (idempotent)".
     # Let's just ensure they exist.
 
     for p in parsed_layers:
         lid = p["id"]
         lz = p["z"]
         lpar = p["parallax"]
-        
+
         layer_obj = existing_map.get(lid)
         if layer_obj is None:
             layer_obj = {"id": lid, "z": lz, "parallax": lpar, "tiles": [0] * (width * height)}
             layers.append(layer_obj)
             existing_map[lid] = layer_obj
-        
+
         # Update props
         layer_obj["z"] = lz
         layer_obj["parallax"] = lpar
-        
+
         # Resize tiles if needed
         current_tiles = layer_obj.get("tiles")
         if not isinstance(current_tiles, list) or len(current_tiles) != width * height:
@@ -529,7 +528,7 @@ def _handle_scene_tilemap_resize(args: argparse.Namespace) -> int:
     # tr: (old_w, 0) -> (new_w, 0) => offset_x = new_w - old_w
     # bl: (0, old_h) -> (0, new_h) => offset_y = new_h - old_h
     # br: (old_w, old_h) -> (new_w, new_h) => offset_x = ..., offset_y = ...
-    
+
     offset_x = 0
     offset_y = 0
     if "r" in anchor:
@@ -543,11 +542,11 @@ def _handle_scene_tilemap_resize(args: argparse.Namespace) -> int:
         lid = layer.get("id")
         if only_layers and lid not in only_layers:
             continue
-        
+
         tiles = layer.get("tiles")
         if not isinstance(tiles, list):
             tiles = []
-        
+
         # Reconstruct 2D
         # If old_w/h are 0, treat as empty
         src_grid = {}
@@ -557,14 +556,14 @@ def _handle_scene_tilemap_resize(args: argparse.Namespace) -> int:
                 y = i // old_w
                 x = i % old_w
                 src_grid[(x, y)] = t
-        
+
         new_tiles = [fill_tile] * (new_w * new_h)
-        
+
         # Map src to dst
         # dst_x = src_x + offset_x
         # dst_y = src_y + offset_y
         # So src_x = dst_x - offset_x
-        
+
         for dy in range(new_h):
             for dx in range(new_w):
                 sx = dx - offset_x
@@ -572,7 +571,7 @@ def _handle_scene_tilemap_resize(args: argparse.Namespace) -> int:
                 if 0 <= sx < old_w and 0 <= sy < old_h:
                     val = src_grid.get((sx, sy), fill_tile)
                     new_tiles[dy * new_w + dx] = val
-        
+
         layer["tiles"] = new_tiles
 
     if _scene_validate_scene_payload(scene_path, data) != 0:
@@ -609,7 +608,7 @@ def _handle_scene_tilemap_flood_fill(args: argparse.Namespace) -> int:
 
     tilemap = data.get("tilemap")
     if not isinstance(tilemap, dict):
-        print(f"[Mesh][CLI] Error: tilemap missing")
+        print("[Mesh][CLI] Error: tilemap missing")
         return 1
     width = tilemap.get("width")
     height = tilemap.get("height")
@@ -618,15 +617,15 @@ def _handle_scene_tilemap_flood_fill(args: argparse.Namespace) -> int:
         print("[Mesh][CLI] Hint: run `scene tilemap init` to set tilemap width/height.")
         return 1
     layers = tilemap.get("tile_layers", [])
-    
+
     layer = next((L for L in layers if isinstance(L, dict) and L.get("id") == layer_id), None)
     if not layer:
         print(f"[Mesh][CLI] Error: layer not found: {layer_id}")
         return 1
-    
+
     tiles = layer.get("tiles")
     if not isinstance(tiles, list) or len(tiles) != int(width) * int(height):
-        print(f"[Mesh][CLI] Error: layer tiles invalid size")
+        print("[Mesh][CLI] Error: layer tiles invalid size")
         return 1
 
     if not (0 <= start_x < int(width) and 0 <= start_y < int(height)):
@@ -640,7 +639,7 @@ def _handle_scene_tilemap_flood_fill(args: argparse.Namespace) -> int:
         target = int(target_tile)
     else:
         target = int(start_value)
-    
+
     if target == new_tile:
         return 0
 
@@ -697,7 +696,7 @@ def _handle_scene_tilemap_fill_rect(args: argparse.Namespace) -> int:
 
     tilemap = data.get("tilemap")
     if not isinstance(tilemap, dict):
-        print(f"[Mesh][CLI] Error: tilemap missing")
+        print("[Mesh][CLI] Error: tilemap missing")
         return 1
 
     dims = _tilemap_resolve_dims_for_edit(scene_path_display=scene_path, scene_path=resolved, tilemap=tilemap)
@@ -707,15 +706,15 @@ def _handle_scene_tilemap_fill_rect(args: argparse.Namespace) -> int:
 
     _scene_tilemap_maybe_migrate_layers(tilemap)
     layers = tilemap.get("tile_layers", [])
-    
+
     layer = next((L for L in layers if isinstance(L, dict) and L.get("id") == layer_id), None)
     if not layer:
         print(f"[Mesh][CLI] Error: layer not found: {layer_id}")
         return 1
-    
+
     tiles = layer.get("tiles")
     if not isinstance(tiles, list) or len(tiles) != width * height:
-        print(f"[Mesh][CLI] Error: layer tiles invalid size")
+        print("[Mesh][CLI] Error: layer tiles invalid size")
         return 1
 
     if x0 < 0 or y0 < 0 or x1 < 0 or y1 < 0:
@@ -768,7 +767,7 @@ def _handle_scene_tilemap_paint(args: argparse.Namespace) -> int:
 
     tilemap = data.get("tilemap")
     if not isinstance(tilemap, dict):
-        print(f"[Mesh][CLI] Error: tilemap missing")
+        print("[Mesh][CLI] Error: tilemap missing")
         return 1
 
     dims = _tilemap_resolve_dims_for_edit(scene_path_display=scene_path, scene_path=resolved, tilemap=tilemap)
@@ -778,22 +777,22 @@ def _handle_scene_tilemap_paint(args: argparse.Namespace) -> int:
 
     _scene_tilemap_maybe_migrate_layers(tilemap)
     layers = tilemap.get("tile_layers", [])
-    
+
     layer = next((L for L in layers if isinstance(L, dict) and L.get("id") == layer_id), None)
     if not layer:
         print(f"[Mesh][CLI] Error: layer not found: {layer_id}")
         return 1
-    
+
     tiles = layer.get("tiles")
     if tiles is None:
         tiles = [0] * (width * height)
         layer["tiles"] = tiles
     if not isinstance(tiles, list) or len(tiles) != width * height:
-        print(f"[Mesh][CLI] Error: layer tiles invalid size")
+        print("[Mesh][CLI] Error: layer tiles invalid size")
         return 1
 
     if not (0 <= x < width and 0 <= y < height):
-        print(f"[Mesh][CLI] Error: coordinates out of bounds")
+        print("[Mesh][CLI] Error: coordinates out of bounds")
         return 1
 
     idx = y * width + x
@@ -830,20 +829,20 @@ def _handle_scene_tilemap_brush(args: argparse.Namespace) -> int:
 
     tilemap = data.get("tilemap")
     if not isinstance(tilemap, dict):
-        print(f"[Mesh][CLI] Error: tilemap missing")
+        print("[Mesh][CLI] Error: tilemap missing")
         return 1
     width = tilemap.get("width", 0)
     height = tilemap.get("height", 0)
     layers = tilemap.get("tile_layers", [])
-    
+
     layer = next((L for L in layers if isinstance(L, dict) and L.get("id") == layer_id), None)
     if not layer:
         print(f"[Mesh][CLI] Error: layer not found: {layer_id}")
         return 1
-    
+
     tiles = layer.get("tiles")
     if not isinstance(tiles, list) or len(tiles) != width * height:
-        print(f"[Mesh][CLI] Error: layer tiles invalid size")
+        print("[Mesh][CLI] Error: layer tiles invalid size")
         return 1
 
     # Load brush
@@ -858,13 +857,13 @@ def _handle_scene_tilemap_brush(args: argparse.Namespace) -> int:
     # Apply brush
     # We need to adapt apply_brush to work with our data structure or just do it manually.
     # engine.brushes.apply_brush takes (tiles, width, height, brush, x, y, anchor, clip)
-    
+
     try:
         new_tiles = apply_brush(tiles, width=width, height=height, x=x, y=y, brush=brush, anchor=anchor, clip=clip)
     except (ValueError, IndexError) as e:
         print(f"[Mesh][CLI] Error applying brush: {e}")
         return 1
-        
+
     layer["tiles"] = new_tiles
 
     compacted = compact_scene_payload(data)

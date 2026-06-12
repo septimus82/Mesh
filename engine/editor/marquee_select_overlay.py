@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
+
 from ..logging_tools import get_logger
 from ..ui_overlays.common import UIElement
 from .selection_outline import RectF, rect_to_border_segments

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from engine.ui_overlays import providers as ui_providers
 from engine import physics_runtime
+from engine.ui_overlays import providers as ui_providers
 
 
 def test_physics_broadphase_provider_payload(monkeypatch) -> None:

@@ -3,29 +3,33 @@ from __future__ import annotations
 import copy
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import engine.optional_arcade as optional_arcade
-
 from engine.editor_prefab_variant_ops import (
     DiffRow,
-    apply_override_delta as _apply_override_delta,
-    clear_all_overrides as _clear_all_overrides,
     compute_prefab_override_diff,
+)
+from engine.editor_prefab_variant_ops import (
+    apply_override_delta as _apply_override_delta,
+)
+from engine.editor_prefab_variant_ops import (
+    clear_all_overrides as _clear_all_overrides,
+)
+from engine.editor_prefab_variant_ops import (
     revert_override_key as _revert_override_key,
 )
 from engine.logging_tools import get_logger
 from engine.prefab_overrides import compute_prefab_overrides
 from engine.swallowed_exceptions import _log_swallow
 
-
 logger = get_logger(__name__)
 
 
 def invalidate_prefab_editor_caches() -> None:
-    from engine.prefabs import get_prefab_manager  # noqa: PLC0415
-    from engine.command_palette import _list_prefab_ids_from_assets  # noqa: PLC0415
     from engine import editor_controller  # noqa: PLC0415
+    from engine.command_palette import _list_prefab_ids_from_assets  # noqa: PLC0415
+    from engine.prefabs import get_prefab_manager  # noqa: PLC0415
 
     get_prefab_manager().load(force=True)
     _list_prefab_ids_from_assets.cache_clear()

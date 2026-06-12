@@ -14,8 +14,7 @@ import copy
 from types import SimpleNamespace
 from typing import Any
 
-import pytest
-
+from engine.editor.hd2d_look_presets_model import get_hd2d_preset_patch
 from engine.editor.hd2d_preset_preview_model import (
     HD2D_PRESET_KEYS,
     PreviewSnapshot,
@@ -25,7 +24,6 @@ from engine.editor.hd2d_preset_preview_model import (
     is_hd2d_preset_command,
     update_preset_preview,
 )
-from engine.editor.hd2d_look_presets_model import get_hd2d_preset_patch
 
 
 class TestPreviewSnapshotKeys:

@@ -6,8 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-from engine import ai_history
-from engine import json_io
+from engine import ai_history, json_io
 from engine.ai_audit import run_ai_audit
 from engine.ai_bundle import build_ai_bundle
 from engine.tooling import ai_plan_command, plan_history, plan_linter
@@ -92,7 +91,7 @@ def _handle_apply_plan(args: argparse.Namespace) -> int:
         else:
             print("Error: No triage plan found at artifacts/triage_last_plan.json")
             return 1
-        
+
         args.ai_safe = True
         print(f"[Mesh][CLI] Using triage plan: {args.plan_path}")
 

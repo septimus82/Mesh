@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import pytest
 from engine.behaviours.drop_table import DropTable
 from engine.events import MeshEvent, MeshEventBus
 from engine.game_state_controller import GameStateController
 from engine.ui import (
     begin_boss_gold_reward_tracking,
-    maybe_finish_boss_gold_reward_toast,
     maybe_enqueue_boss_defeat_toast,
+    maybe_finish_boss_gold_reward_toast,
 )
+
 
 class StubHUD:
     def __init__(self) -> None:
@@ -61,10 +61,10 @@ def test_boss_defeat_reward_toast_order() -> None:
     def on_entity_died(event: MeshEvent) -> None:
         actor = event.payload.get("actor")
         scene_id = window.scene_controller.current_scene_path
-        
+
         # Snapshot gold
         begin_boss_gold_reward_tracking(window, actor, scene_id)
-        
+
         # Enqueue defeat toast
         maybe_enqueue_boss_defeat_toast(window, actor, scene_id, seconds=3.0)
 
@@ -97,7 +97,7 @@ def test_boss_defeat_reward_toast_order() -> None:
     # Assert
     # 1. Gold was granted
     assert window.get_counter("gold") == 10.0
-    
+
     # 2. Toasts are in correct order
     assert len(window.player_hud.toasts) == 2
     assert window.player_hud.toasts[0] == "Boss defeated!"

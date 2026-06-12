@@ -16,19 +16,16 @@ from typing import Any
 
 import pytest
 
+from mesh_cli.bundle_verify import MANIFEST_SEAL_NAME
 from mesh_cli.release_bundle import (
     DEFAULT_CAMPAIGN,
     DEFAULT_SEED,
     FileEntry,
-    PackageManifest,
     ReleaseBundlePlan,
-    build_package_manifest,
     build_release_bundle_zip,
     handle,
     self_verify_and_embed,
 )
-from mesh_cli.bundle_verify import MANIFEST_SEAL_NAME
-
 
 # ---------------------------------------------------------------------------
 # Helpers — identical pattern to existing release bundle tests

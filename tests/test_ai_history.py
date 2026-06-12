@@ -1,10 +1,10 @@
-import json
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from engine import ai_history
+
 
 class TestAIHistory(unittest.TestCase):
     def setUp(self):
@@ -34,7 +34,7 @@ class TestAIHistory(unittest.TestCase):
         ai_history.append_history_entry("plan3.json", ["scene1", "scene2"])
 
         entries = ai_history.load_history()
-        
+
         # Filter by scene
         s1 = ai_history.filter_history(entries, scene="scene1")
         self.assertEqual(len(s1), 2)
@@ -64,7 +64,7 @@ class TestAIHistory(unittest.TestCase):
             def __init__(self, type, args):
                 self.type = type
                 self.args = args
-        
+
         actions = [
             MockAction("create_scene", {"path": "scenes/new_scene.json"}),
             MockAction("add_npc", {"scene_path": "scenes/hub.json"})

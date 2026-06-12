@@ -14,6 +14,7 @@ from tooling.pytest_runner_common import (
     write_runner_log,
 )
 
+
 @dataclass(frozen=True)
 class TierDef:
     pytest_mark: str | None

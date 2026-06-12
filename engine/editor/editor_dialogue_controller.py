@@ -4,20 +4,27 @@ import copy
 from typing import Any, Dict, List, Optional, cast
 
 import engine.optional_arcade as optional_arcade
-
+from engine.behaviours.utils import parse_flag_list
 from engine.editor.dialogue_panel import (
-    apply_dialogue_edit_to_root as _apply_dialogue_edit_to_root_impl,
-    build_dialogue_nodes_list as _build_dialogue_nodes_list_impl,
     collect_dialogue_warnings as _collect_dialogue_warnings_impl,
+)
+from engine.editor.dialogue_panel import (
     entity_has_dialogue as _entity_has_dialogue_impl,
+)
+from engine.editor.dialogue_panel import (
     get_dialogue_edit_value as _get_dialogue_edit_value_impl,
+)
+from engine.editor.dialogue_panel import (
     get_entity_dialogue_config as _get_entity_dialogue_config_impl,
+)
+from engine.editor.dialogue_panel import (
     next_dialogue_field as _next_dialogue_field_impl,
+)
+from engine.editor.dialogue_panel import (
     prev_dialogue_field as _prev_dialogue_field_impl,
 )
 from engine.logging_tools import get_logger
 from engine.ui_overlays.common import draw_panel_bg
-from engine.behaviours.utils import parse_flag_list
 
 logger = get_logger(__name__)
 

@@ -10,8 +10,6 @@ from engine.fx_presets import FxPresetRegistry
 from engine.paths import resolve_path
 from engine.swallowed_exceptions import _log_swallow
 from engine.tooling_runtime.pack_manifest import load_all_manifests, resolve_pack_order
-from engine.logging_tools import get_logger
-
 
 
 @dataclass(frozen=True)

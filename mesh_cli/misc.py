@@ -8,11 +8,12 @@ import sys
 from pathlib import Path
 
 from engine.config import load_config
-from engine.persistence_io import write_json_atomic, dumps_json_deterministic
 from engine.logging_tools import suppress_stdout
-from engine.tooling import wizard_command, state_dump
+from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 from engine.swallowed_exceptions import _log_swallow
+from engine.tooling import state_dump, wizard_command
 from mesh_cli import scene as scene_commands
+
 
 def handle(args: argparse.Namespace) -> int:
     if args.command == "play":
@@ -397,7 +398,7 @@ def _handle_wizard(args: argparse.Namespace) -> int:
     if args.preset: cmd_args.extend(["--preset", args.preset])
     if args.with_boss: cmd_args.append("--with-boss")
     if args.with_puzzle: cmd_args.append("--with-puzzle")
-    
+
     return wizard_command.main(cmd_args)
 
 def _handle_docs(args: argparse.Namespace) -> int:
@@ -406,7 +407,7 @@ def _handle_docs(args: argparse.Namespace) -> int:
     tool_argv = []
     if args.verify:
         tool_argv.append("--verify")
-    
+
     from engine.tooling import generate_docs as docs_generator
     return docs_generator.main(tool_argv)
 
@@ -432,10 +433,10 @@ def _handle_dump_state(args: argparse.Namespace) -> int:
         if out_path:
             with suppress_stdout():
                 write_json_atomic(Path(out_path), payload, indent=2, sort_keys=True, trailing_newline=True)
-        
+
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
         return 0
-    except Exception as exc:  # noqa: BLE001  # REASON: dump-state CLI should emit a deterministic failure payload when runtime state export fails unexpectedly
+    except Exception:  # noqa: BLE001  # REASON: dump-state CLI should emit a deterministic failure payload when runtime state export fails unexpectedly
         payload = {"ok": False, "code": 1, "error": "dump_state.failed"}
         sys.stdout.write(dumps_json_deterministic(payload, indent=2, sort_keys=True, trailing_newline=True))
         return 1

@@ -3,17 +3,19 @@ from __future__ import annotations
 import math
 import os
 from dataclasses import dataclass
-from typing import Any, Sequence, Iterable
+from typing import Any, Sequence
+
 import engine.optional_arcade as optional_arcade
-from .occluders import Rect
-from engine.geometry_tools import sanitize_poly
-from engine.swallowed_exceptions import _log_swallow, record_swallowed
 from engine.arcade_compat import (
     capture_active_framebuffer,
     clear_framebuffer,
     close_framebuffer_activation,
     restore_framebuffer,
 )
+from engine.geometry_tools import sanitize_poly
+from engine.swallowed_exceptions import _log_swallow, record_swallowed
+
+from .occluders import Rect
 from .shadow_backend import (
     ShadowBackendDecision,
     build_shadow_pipeline,

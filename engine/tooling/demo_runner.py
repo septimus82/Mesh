@@ -9,10 +9,10 @@ def launch_demo(start_scene: str | None = None, world_path: str | None = None) -
     try:
         config = load_config()
         config.debug_mode = True
-        
+
         if start_scene:
             config.start_scene = start_scene
-        
+
         if world_path:
             config.world_file = world_path
 
@@ -26,7 +26,7 @@ def launch_demo(start_scene: str | None = None, world_path: str | None = None) -
             config_path="config.json",
         )
         window.load_scene(config.start_scene)
-        
+
         # Close the main menu for demo mode (it's auto-opened in GameWindow.__init__)
         if hasattr(window, "main_menu_overlay"):
             window.main_menu_overlay.close()

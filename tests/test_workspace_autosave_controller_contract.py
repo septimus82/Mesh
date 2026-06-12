@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from engine.editor.editor_workspace_controller import EditorWorkspaceController
 from engine.editor.workspace_autosave_model import mark_flushed
 from engine.editor_controller import WORKSPACE_AUTOSAVE_DELAY_NS
-from engine.editor.editor_workspace_controller import EditorWorkspaceController
 from engine.editor_runtime import input as editor_input
 
 

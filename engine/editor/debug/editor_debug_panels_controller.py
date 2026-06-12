@@ -5,7 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
+from engine.editor.editor_dock_query import get_dock_snapshot, get_effective_dock_widths
+from engine.editor.editor_shell_layout import compute_editor_shell_layout
 
+from .cutscene_debug_model import build_cutscene_debug_view_model, format_cutscene_summary_text
 from .debug_panels_model import (
     DebugPanelLine,
     build_debug_panel_lines,
@@ -19,15 +22,11 @@ from .debug_panels_state import (
     get_quest_diagnostics,
     get_quest_inspector_state,
 )
-from .cutscene_debug_model import build_cutscene_debug_view_model, format_cutscene_summary_text
 from .event_monitor_model import (
     build_event_log_view_model_from_settings,
     format_event_rows_text,
 )
 from .quest_debug_model import build_quest_debug_view_model
-from engine.editor.editor_dock_query import get_dock_snapshot, get_effective_dock_widths
-from engine.editor.editor_shell_layout import compute_editor_shell_layout
-
 
 _FILTER_FIELDS: tuple[str, ...] = ("event_type", "entity_id", "limit")
 
@@ -270,11 +269,11 @@ class EditorDebugPanelsController:
         return getattr(self._editor, "workspace_data", None)
 
     def _input_blocked(self) -> bool:
+        from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
         from engine.editor_tooltips_model import (  # noqa: PLC0415
             _is_modal_open_state,
             _is_text_input_active_state,
         )
-        from engine.editor.editor_panels_query import panels_is_open  # noqa: PLC0415
 
         if panels_is_open(self._editor, "unsaved_confirm"):
             return True

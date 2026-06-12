@@ -7,12 +7,14 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Sequence, cast
-import engine.optional_arcade as optional_arcade
+
 from PIL import Image
+
+import engine.optional_arcade as optional_arcade
+from engine.swallowed_exceptions import _log_swallow
 
 from .assets import AssetManager
 from .paths import resolve_path
-from engine.swallowed_exceptions import _log_swallow
 
 
 def _read_json_dict(path: Path, *, tag: str, context: str) -> dict[str, Any] | None:

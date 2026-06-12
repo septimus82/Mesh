@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from ..logging_tools import get_logger
 from ..editor.state import (
     TRANSFORM_MODE_MOVE,
     TRANSFORM_MODE_ROTATE,
     TRANSFORM_MODE_SCALE,
 )
+from ..logging_tools import get_logger
 
 logger = get_logger(__name__)
 
@@ -24,7 +24,7 @@ def apply_selection(
         selected_entity: The clicked entity (or None to clear).
         shift: Whether Shift was held (for multi-select toggle).
     """
-    from ..editor.editor_multiselect_ops import toggle_selection, select_single  # noqa: PLC0415
+    from ..editor.editor_multiselect_ops import select_single, toggle_selection  # noqa: PLC0415
     from ..editor.editor_transform_ops import resolve_entity_id_for_sprite  # noqa: PLC0415
 
     if getattr(controller, "shape_edit_mode", None) and selected_entity is not getattr(
@@ -184,7 +184,6 @@ def _init_rotate_drag(controller: Any) -> None:
     Sets up pivot (primary entity position), mouse start position,
     and start rotations for all selected entities.
     """
-    from ..editor.editor_transform_ops import resolve_entity_id_for_sprite  # noqa: PLC0415
 
     selected_ids: List[str] = getattr(controller, "_selected_entity_ids", [])
     primary_id = getattr(controller, "_primary_entity_id", None)
@@ -224,7 +223,6 @@ def _init_scale_drag(controller: Any) -> None:
     Sets up pivot (primary entity position), mouse start position,
     and start scales for all selected entities.
     """
-    from ..editor.editor_transform_ops import resolve_entity_id_for_sprite  # noqa: PLC0415
 
     selected_ids: List[str] = getattr(controller, "_selected_entity_ids", [])
     primary_id = getattr(controller, "_primary_entity_id", None)

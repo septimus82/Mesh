@@ -6,7 +6,7 @@ from typing import Any
 
 from engine.editor import editor_actions_camera as _camera_actions
 from engine.editor import editor_actions_entities as _entity_actions
-from engine.editor.editor_actions_parts._shared import _get_editor, _is_web_runtime
+from engine.editor.editor_actions_parts._shared import _get_editor
 from engine.editor.editor_dock_query import get_dock_snapshot
 from engine.runtime_settings import ensure_runtime_settings
 

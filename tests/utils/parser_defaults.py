@@ -1,7 +1,8 @@
 import argparse
-import sys
 from unittest.mock import patch
+
 from mesh_cli import create_parser
+
 
 def get_default_args(command_parts: list[str], required_args: list[str] = None) -> argparse.Namespace:
     """
@@ -13,7 +14,7 @@ def get_default_args(command_parts: list[str], required_args: list[str] = None) 
     """
     parser = create_parser()
     argv = command_parts + (required_args or [])
-    
+
     # We need to suppress stdout/stderr during parsing to avoid noise
     with patch('sys.stdout'), patch('sys.stderr'):
         try:

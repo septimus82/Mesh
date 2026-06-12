@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import FrozenSet, Tuple, Dict
+from typing import Dict, FrozenSet, Tuple
 
 __all__ = [
     "SelectionState",

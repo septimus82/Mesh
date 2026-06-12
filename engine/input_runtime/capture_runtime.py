@@ -15,13 +15,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
-from engine.swallowed_exceptions import _log_swallow
-
 from engine.input_runtime import capture_key_router as router
 from engine.input_runtime import capture_mouse_router as mouse_router
 from engine.input_runtime.capture_focus_query import get_capture_focus_snapshot
 from engine.input_runtime.capture_mouse_router_model import MouseEvent
-
+from engine.swallowed_exceptions import _log_swallow
 
 if TYPE_CHECKING:
     from engine.input_controller import InputController
@@ -256,23 +254,23 @@ def handle_mouse_motion(controller: "InputController", x: float, y: float, dx: f
     controller._mouse_y = float(y)
     setattr(controller.window, "_mouse_x", float(x))
     setattr(controller.window, "_mouse_y", float(y))
-    
+
     editor_controller = getattr(controller.window, "editor_controller", None)
     if editor_controller is not None and getattr(editor_controller, "active", False):
-        from engine.editor_runtime.input import handle_menu_bar_motion, handle_context_menu_motion  # noqa: PLC0415
         from engine.editor_runtime.hover_detection import update_hover_state  # noqa: PLC0415
-        
+        from engine.editor_runtime.input import handle_context_menu_motion, handle_menu_bar_motion  # noqa: PLC0415
+
         handle_menu_bar_motion(editor_controller, x, y)
         handle_context_menu_motion(editor_controller, x, y)
-        
+
         window_w = getattr(controller.window, "width", 1280)
         window_h = getattr(controller.window, "height", 720)
         update_hover_state(editor_controller, x, y, window_w, window_h)
-        
+
         set_mouse_pos = getattr(editor_controller, "set_last_mouse_pos", None)
         if callable(set_mouse_pos):
             set_mouse_pos(x, y)
-        
+
         try:
             from engine.editor.editor_cursor_apply import apply_editor_cursor  # noqa: PLC0415
             get_kind = getattr(editor_controller, "get_cursor_hint_kind", None)
@@ -303,16 +301,16 @@ def handle_mouse_drag(
     except Exception:  # noqa: BLE001  # REASON: capture runtime fallback isolation
         _log_swallow("CAPT-005", "engine/input_runtime/capture_runtime.py pass-only blanket swallow")
         pass
-    
+
     window = controller.window
-    
+
     if window.editor_controller.active:
         if window.editor_controller.handle_mouse_drag(x, y, dx, dy, buttons, modifiers):
             return
-    
+
     if bool(getattr(window, "show_debug", False)) and getattr(window, "command_palette_enabled", False) is True:
         return
-    
+
     # Capture mode drag
     from engine.capture_mode import CaptureState  # noqa: PLC0415
     capture_state = getattr(window, "capture_state", None)
@@ -321,7 +319,7 @@ def handle_mouse_drag(
             return
         _handle_capture_drag(window, capture_state, x, y)
         return
-    
+
     # Tile paint drag
     from engine.tile_paint_mode import TilePaintState  # noqa: PLC0415
     tile_paint_state = getattr(window, "tile_paint_state", None)
@@ -335,7 +333,7 @@ def handle_mouse_drag(
             return
         _handle_tile_paint_drag(window, tile_paint_state, x, y)
         return
-    
+
     # Entity select drag
     if bool(getattr(window, "show_debug", False)) and (int(buttons) & int(optional_arcade.arcade.MOUSE_BUTTON_LEFT)):
         from engine.entity_select_mode import EntitySelectState, other_authoring_modes_active  # noqa: PLC0415
@@ -413,16 +411,16 @@ def _handle_tile_paint_drag(window: Any, tile_paint_state: Any, x: float, y: flo
 def _handle_entity_select_drag(window: Any, state: Any, x: float, y: float) -> None:
     """Handle drag in entity select mode."""
     from engine.entity_select_mode import update_drag_rect  # noqa: PLC0415
-    
+
     try:
         world_x, world_y = window.screen_to_world(float(x), float(y))
     except Exception:  # noqa: BLE001  # REASON: capture runtime fallback isolation
         return
-    
+
     if str(getattr(state, "drag_mode", "") or "") == "marquee":
         update_drag_rect(state, world_x=float(world_x), world_y=float(world_y))
         return
-    
+
     if str(getattr(state, "drag_mode", "") or "") != "move":
         return
 

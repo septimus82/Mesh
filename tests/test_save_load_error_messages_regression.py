@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from engine.persistence_io import SAVE_FORMAT_VERSION
 from engine.save_runtime import io as save_io

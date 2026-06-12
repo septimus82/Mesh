@@ -35,9 +35,9 @@ class _Controller:
 
 
 def test_interact_uses_configured_keybind(monkeypatch) -> None:
+    import engine.interaction
     from engine.input import InputManager
     from engine.input_runtime import capture as input_capture
-    import engine.interaction
 
     monkeypatch.setattr(engine.interaction, "perform_interaction", lambda *_a, **_k: True)
 

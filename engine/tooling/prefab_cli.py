@@ -6,8 +6,8 @@ import sys
 from pathlib import Path
 from typing import Any, List
 
-from engine.prefabs import get_prefab_manager
 from engine.paths import resolve_path
+from engine.prefabs import get_prefab_manager
 from engine.validators.prefab_validator import PrefabValidator
 from engine.validators.variant_validator import VariantValidator
 

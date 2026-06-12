@@ -7,6 +7,7 @@ import pytest
 from engine.editor.editor_asset_browser_controller import EditorAssetBrowserController
 from engine.editor.editor_clipboard_controller import EditorClipboardController
 from engine.editor.editor_lights_controller import EditorLightsController
+
 pytestmark = [pytest.mark.fast]
 
 

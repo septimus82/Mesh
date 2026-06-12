@@ -1,9 +1,9 @@
 """Scan repo for tech-debt markers with deterministic output."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
-import re
 from typing import Iterable
 
 MARKERS = ("TO" + "DO", "FIX" + "ME", "HA" + "CK")

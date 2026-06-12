@@ -1,6 +1,8 @@
 import argparse
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
 from engine.tooling.wizard_command import wizard_command
+
 
 def test_wizard_adds_autowire_action_in_safe_profile():
     args = argparse.Namespace(
@@ -31,14 +33,14 @@ def test_wizard_adds_autowire_action_in_safe_profile():
         run=None,
         list=False,
     )
-    
+
     with patch("engine.tooling.wizard_command._write_plan") as mock_write, patch("engine.tooling.wizard_command._print_plan") as mock_print:
         mock_write.return_value = None
         wizard_command(args)
-        
+
         plan = mock_print.call_args[0][0]
         actions = plan.actions
-        
+
         # Check for auto_wire_transitions action
         autowire_actions = [a for a in actions if a.type == "auto_wire_transitions"]
         assert len(autowire_actions) == 1
@@ -73,13 +75,13 @@ def test_wizard_skips_autowire_in_fast_profile():
         run=None,
         list=False,
     )
-    
+
     with patch("engine.tooling.wizard_command._write_plan") as mock_write, patch("engine.tooling.wizard_command._print_plan") as mock_print:
         mock_write.return_value = None
         wizard_command(args)
-        
+
         plan = mock_print.call_args[0][0]
         actions = plan.actions
-        
+
         autowire_actions = [a for a in actions if a.type == "auto_wire_transitions"]
         assert len(autowire_actions) == 0

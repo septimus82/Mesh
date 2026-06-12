@@ -1,8 +1,9 @@
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch, mock_open
-import sys
 import json
+import sys
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Mock engine.optional_arcade locally for test to avoid dependency issues if it's missing or complex
 mock_arcade = Mock()
@@ -18,6 +19,7 @@ sys.modules['engine.optional_arcade'] = mock_arcade
 
 from engine.editor.editor_keybinds_controller import EditorKeybindsController
 from engine.editor.keybinds_ui_model import KeybindsState
+
 
 class MockEditor:
     def __init__(self):
@@ -56,7 +58,7 @@ def test_recording_flow(controller):
     controller._cached_rows = (Mock(scope="global", action_id="test.action", shortcut=""),)
     controller._rows_dirty = False
     controller.state = KeybindsState(visible=True, staged_overrides={})
-    
+
     # Start recording
     # No patching needed if we prepopulated cache and cleared dirty
     controller.start_recording_selected()
@@ -65,9 +67,9 @@ def test_recording_flow(controller):
 
     # Simulate input
     # Note: We need to mock arcade keys.
-    # We can't easily run handle_input without real arcade constant logic unless we mock the import in the controller module 
+    # We can't easily run handle_input without real arcade constant logic unless we mock the import in the controller module
     # or use the real constants.
-    pass 
+    pass
 
 def test_save_persists_overrides(controller):
     controller.state = KeybindsState(
@@ -76,18 +78,18 @@ def test_save_persists_overrides(controller):
 
     with patch("engine.editor.editor_keybinds_controller.get_repo_root") as mock_root, \
          patch("engine.editor.editor_keybinds_controller.write_atomic_utf8") as mock_write:
-        
+
         mock_path = MagicMock()
         mock_root.return_value = mock_path
         target_file = Mock()
         mock_path.__truediv__.return_value = target_file
-        
+
         # Act
         controller.apply_changes()
-        
+
         # Assert checks editor state
         assert controller._editor._keymap_overrides == {("global", "test.action"): "Ctrl+X"}
-        
+
         # Assert file write to the resolved file path
         mock_write.assert_called_once()
         args, _ = mock_write.call_args

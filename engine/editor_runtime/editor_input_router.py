@@ -3,26 +3,34 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-from engine.editor.editor_panels_query import panels_is_open
+from engine.editor.editor_command_palette_controller import (
+    activate as command_palette_activate,
+)
+from engine.editor.editor_command_palette_controller import (
+    backspace as command_palette_backspace,
+)
+from engine.editor.editor_command_palette_controller import (
+    close_palette as command_palette_close,
+)
+from engine.editor.editor_command_palette_controller import (
+    move_down as command_palette_down,
+)
+from engine.editor.editor_command_palette_controller import (
+    move_up as command_palette_up,
+)
 from engine.editor.editor_focus_model import (
     FOCUS_COMMAND_PALETTE,
     compute_active_shortcut_scopes,
     derive_focus_target_for_controller,
     is_text_input_active_for_controller,
 )
+from engine.editor.editor_panels_query import panels_is_open
 from engine.editor.editor_session_query import get_session_snapshot
-from engine.editor.editor_command_palette_controller import (
-    activate as command_palette_activate,
-    backspace as command_palette_backspace,
-    close_palette as command_palette_close,
-    move_down as command_palette_down,
-    move_up as command_palette_up,
-)
 
 from .editor_input_router_model import (
-    KeyCombo,
     SCOPE_COMMAND_PALETTE,
     SCOPE_KEYBINDS,
+    KeyCombo,
     build_route_table,
     resolve_route,
 )

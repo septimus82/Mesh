@@ -232,7 +232,6 @@ class PrefabManager:
 
     def get_prefab_sources(self) -> list["Path"]:
         """Return prefab source files in merge order (base first, then pack prefabs)."""
-        from pathlib import Path
 
         base = resolve_path("assets/prefabs.json")
         sources: list[Path] = [base]

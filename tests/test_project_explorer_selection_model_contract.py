@@ -3,14 +3,14 @@ from __future__ import annotations
 
 from engine.editor.project_explorer_selection_model import (
     SelectionState,
-    select_single,
-    toggle_index,
-    select_range,
-    select_all,
     clear_selection,
     move_primary,
+    select_all,
+    select_range,
+    select_single,
     selected_indices_sorted,
     selection_summary,
+    toggle_index,
 )
 
 

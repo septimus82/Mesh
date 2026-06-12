@@ -19,10 +19,10 @@ def handle_menu_bar_click(controller: EditorController, x: float, y: float) -> b
     from ..editor.menu_bar_model import (
         build_menu_groups,
         compute_menu_bar_layout,
-        hit_test_menu_title,
-        hit_test_menu_item,
-        hit_test_menu_bar,
         get_dropdown_bounds,
+        hit_test_menu_bar,
+        hit_test_menu_item,
+        hit_test_menu_title,
     )
 
     active_menu = get_active_menu_id(controller)
@@ -87,8 +87,8 @@ def handle_menu_bar_motion(controller: EditorController, x: float, y: float) -> 
     from ..editor.menu_bar_model import (
         build_menu_groups,
         compute_menu_bar_layout,
-        hit_test_menu_title,
         hit_test_menu_item,
+        hit_test_menu_title,
     )
 
     menu_groups = build_menu_groups(controller, controller.window)

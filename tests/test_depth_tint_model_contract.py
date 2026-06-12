@@ -13,17 +13,17 @@ from __future__ import annotations
 import pytest
 
 from engine.depth_tint_model import (
-    DepthTintSettings,
     DEFAULT_DEPTH_TINT_SETTINGS,
-    compute_depth_factor,
-    lerp_color,
-    compute_tint_rgba,
+    DepthTintSettings,
     apply_tint_to_color,
+    apply_tint_to_sprite_color,
+    compute_depth_factor,
+    compute_sprite_tint,
+    compute_tint_rgba,
+    get_entity_tint_strength_override,
+    lerp_color,
     parse_depth_tint_settings,
     should_apply_depth_tint,
-    get_entity_tint_strength_override,
-    compute_sprite_tint,
-    apply_tint_to_sprite_color,
 )
 from tests._typing import as_any
 

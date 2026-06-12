@@ -19,11 +19,6 @@ Determinism guarantees:
 from __future__ import annotations
 
 import argparse
-
-from engine.provenance import (
-    get_provenance,
-    provenance_to_dict,
-)
 import hashlib
 import io
 import json
@@ -40,8 +35,16 @@ from typing import Any, Callable
 
 from engine.persistence_io import (
     dumps_json_deterministic,
+)
+from engine.persistence_io import (
     write_json_atomic as _base_write_json_atomic,
+)
+from engine.persistence_io import (
     write_text_atomic as _base_write_text_atomic,
+)
+from engine.provenance import (
+    get_provenance,
+    provenance_to_dict,
 )
 from engine.swallowed_exceptions import _log_swallow
 from mesh_cli.release_notes import (
@@ -165,7 +168,8 @@ class PackageManifest:
         if self.git_hash:
             lines.append(f"Git: {self.git_hash}")
         if self.provenance:
-            from engine.provenance import Provenance, format_provenance_text as _fmt
+            from engine.provenance import Provenance
+            from engine.provenance import format_provenance_text as _fmt
 
             try:
                 lines.append("")

@@ -8,11 +8,12 @@ import re
 from pathlib import Path
 from typing import Any, Dict
 
+from engine.swallowed_exceptions import _log_swallow
+
 from .. import json_io
 from ..encounter_sets import get_theme_manager
 from ..scene_loader import SceneLoader
 from ..scene_serializer import compact_scene_payload
-from engine.swallowed_exceptions import _log_swallow
 
 # Template definitions for new scenes
 TEMPLATES: Dict[str, Dict[str, Any]] = {

@@ -10,9 +10,6 @@ from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-
 # -----------------------------------------------------------------------------
 # Fixtures
 # -----------------------------------------------------------------------------
@@ -633,7 +630,6 @@ class TestAltDragDuplicateRightClickCancel:
 
     def test_right_click_cancels_alt_dup(self) -> None:
         """Right-click during alt-dup should cancel and remove duplicates."""
-        from unittest.mock import patch
         from engine import arcade_fallback as arcade_stub
 
         scene = make_minimal_scene()
@@ -692,7 +688,6 @@ class TestAltDragDuplicateRightClickCancel:
 
     def test_right_click_does_not_push_undo_on_cancel(self) -> None:
         """Right-click cancel should not push an undo command."""
-        from unittest.mock import patch
         from engine import arcade_fallback as arcade_stub
 
         scene = make_minimal_scene()
@@ -729,7 +724,6 @@ class TestAltDragDuplicateRightClickCancel:
 
     def test_right_click_blocks_context_menu_during_alt_dup(self) -> None:
         """Right-click should not open context menu when alt-dup is active."""
-        from unittest.mock import patch
         from engine import arcade_fallback as arcade_stub
 
         scene = make_minimal_scene()
@@ -764,7 +758,6 @@ class TestAltDragDuplicateRightClickCancel:
 
     def test_right_click_opens_context_menu_when_alt_dup_inactive(self) -> None:
         """Right-click should open context menu normally when alt-dup is NOT active."""
-        from unittest.mock import patch
         from engine import arcade_fallback as arcade_stub
 
         scene = make_minimal_scene()

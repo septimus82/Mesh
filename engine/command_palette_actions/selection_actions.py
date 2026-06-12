@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from ._shared import (
@@ -13,6 +12,7 @@ from ._shared import (
     _parse_snap_args,
     _set_last_props_action,
 )
+
 
 def action_batch_rename(w: Any, arg: str | None) -> None:
     """Batch rename selected entities with prefix/suffix.

@@ -13,7 +13,6 @@ from engine.editor.editor_cursor_model import (
 )
 from tests._typing import as_any
 
-
 # -----------------------------------------------------------------------------
 # CursorHintResult dataclass
 # -----------------------------------------------------------------------------

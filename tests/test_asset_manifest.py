@@ -10,11 +10,11 @@ Tests cover:
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 
 import pytest
 
+from tests._typing import as_any
 from tooling.asset_manifest import (
     AssetReference,
     DependencyReport,
@@ -25,10 +25,7 @@ from tooling.asset_manifest import (
     compute_sha256,
     extract_dependencies,
     get_asset_type,
-    scan_asset_roots,
 )
-from tests._typing import as_any
-
 
 # --------------------------------------------------------------------------- #
 # Fixtures
@@ -180,7 +177,7 @@ class TestManifestBuilding:
         test_file.write_bytes(b"hello world")
 
         manifest = build_manifest(temp_repo)
-        
+
         # Find the test.txt entry
         txt_asset = next((a for a in manifest["assets"] if a["id"].endswith("test.txt")), None)
         assert txt_asset is not None

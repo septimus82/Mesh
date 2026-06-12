@@ -25,10 +25,9 @@ from mesh_cli.demo import (
     PIPELINE,
     StepFn,
     _format_report_text,
-    run_demo,
     handle,
+    run_demo,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

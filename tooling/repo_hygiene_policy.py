@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Iterable
-import os
-
 
 DEFAULT_ALLOWLIST_GLOBS: tuple[str, ...] = (
     ".git/**",

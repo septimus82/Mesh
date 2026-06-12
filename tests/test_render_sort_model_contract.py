@@ -10,15 +10,12 @@ Tests cover:
 
 from __future__ import annotations
 
-import pytest
-
 from engine.render_sort_model import (
     compute_render_sort_key,
     compute_sprite_render_sort_key,
     sort_entities_for_render,
     sort_sprites_for_render,
 )
-
 
 # -----------------------------------------------------------------------------
 # Test compute_render_sort_key

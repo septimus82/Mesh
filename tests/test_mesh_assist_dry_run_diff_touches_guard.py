@@ -3,8 +3,8 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-from engine.tooling import assist_command
 import engine.paths
+from engine.tooling import assist_command
 
 
 def test_mesh_assist_dry_run_diff_touches_guard(tmp_path, monkeypatch, capsys):

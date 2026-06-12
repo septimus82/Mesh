@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from typing import Callable, Dict, Iterable, Set
-import engine.optional_arcade as optional_arcade
 
+import engine.optional_arcade as optional_arcade
 from engine.input import InputManager
 
 ACTION_SHOW_CHARACTER = "show_character"

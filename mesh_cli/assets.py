@@ -9,23 +9,21 @@ from pathlib import Path
 from typing import Any
 
 from engine.logging_tools import is_json_mode, suppress_stdout
-from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 from engine.paths import reset_path_caches, set_content_roots
+from engine.persistence_io import dumps_json_deterministic, write_json_atomic
 from engine.repo_root import get_repo_root
-from engine.tooling import (
-    doctor_command,
-    migrate_command,
-    polish,
-    project_index,
-    schema_fix_ids,
-)
 from engine.sprite_sheet_math import (
     SpriteSheetSliceSpec,
     iter_sprite_sheet_frame_boxes,
     parse_anim_spec,
 )
 from engine.swallowed_exceptions import _log_swallow
-
+from engine.tooling import (
+    migrate_command,
+    polish,
+    project_index,
+    schema_fix_ids,
+)
 
 _SWALLOW_ONCE_TAGS: set[str] = set()
 _ASSETS_PATH_FALLBACK_EXCEPTIONS: tuple[type[Exception], ...] = (

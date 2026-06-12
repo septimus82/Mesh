@@ -1,8 +1,8 @@
 
+from unittest.mock import MagicMock
+
 import pytest
-import sys
-from unittest.mock import MagicMock, patch
-from typing import Any
+
 
 # Define fake arcade structures
 class FakeText:
@@ -38,13 +38,13 @@ def tripwire_environment(monkeypatch):
     mock_arcade.Text = FakeText
     mock_arcade.draw_text = fake_draw_text
     mock_arcade.get_fps = fake_get_fps
-    
+
     # Must define Window as a class so subclasses aren't treated as Mocks
     class FakeWindow:
         def __init__(self, *args, **kwargs):
             pass
     mock_arcade.Window = FakeWindow
-    
+
     # Needs color constants
     mock_arcade.color = MagicMock()
     mock_arcade.color.GREEN = (0, 255, 0, 255)
@@ -60,7 +60,7 @@ def tripwire_environment(monkeypatch):
     try:
         # Patch the canonical reference
         monkeypatch.setattr(engine.optional_arcade, "arcade", mock_arcade)
-        
+
         yield mock_arcade
 
     finally:
@@ -71,48 +71,46 @@ def tripwire_environment(monkeypatch):
 
 
 def test_perf_overlay_draw_uses_cached_text(tripwire_environment):
-    from engine.ui_overlays.perf import PerfOverlay
     from engine.text_draw import TextCache
-    
+    from engine.ui_overlays.perf import PerfOverlay
+
     # Setup window mock
     window = MagicMock()
     window.width = 800
     window.height = 600
     window.text_cache = TextCache()
-    
+
     # Setup stats mock
     stats = MagicMock()
     stats.snapshot.return_value.metrics = {"frame_total_ms": MagicMock(p95=16, max=20)}
     stats.snapshot.return_value.meta = {"counters": {"render_sprites_submitted": 100}}
     window.perf_stats = stats
-    
+
     overlay = PerfOverlay(window)
     overlay.visible = True
-    
+
     # Act
     overlay.draw()
-    
+
     # Assert
     # 1. No assertions raised by fake_draw_text (implicit)
     # 2. FakeText was instantiated
     assert FakeText.instantiation_count > 0, "No text objects created"
-    
+
     initial_instantiation_count = FakeText.instantiation_count
-    
+
     # Act 2 - Redraw
     overlay.draw()
-    
+
     # Assert 2
     assert FakeText.instantiation_count == initial_instantiation_count, "Text objects should be reused (cached)"
     assert FakeText.draw_count > initial_instantiation_count, "Text should be drawn multiple times"
 
 
 def test_game_debug_overlay_uses_cached_text(tripwire_environment):
+    # Verify patching worked
     from engine.game import GameWindow
     from engine.text_draw import TextCache
-
-    # Verify patching worked
-    import engine.game
     # assert engine.game.arcade is tripwire_environment
 
     if hasattr(GameWindow, "_draw_debug_output"):
@@ -120,23 +118,23 @@ def test_game_debug_overlay_uses_cached_text(tripwire_environment):
     else:
         pytest.fail("DEBUG: _draw_debug_output MISSING")
 
-    # We can't really instantiate GameWindow easily because of super().__init__, 
+    # We can't really instantiate GameWindow easily because of super().__init__,
     # so let's patch GameWindow explicitly or just import the class and call the method unbound?
     # Calling unbound method with mock self is easiest.
-    
+
     mock_self = MagicMock()
     mock_self.height = 600
     mock_self.width = 800
     mock_self.text_cache = TextCache()
     mock_self.encounter_debug_overlay = False
-    
+
     # Act
     lines = ["Debug Line 1", "Debug Line 2"]
     GameWindow._draw_debug_output(mock_self, lines)
-    
+
     # Assert
     assert FakeText.instantiation_count == 2
-    
+
     # Redraw
     GameWindow._draw_debug_output(mock_self, lines)
     assert FakeText.instantiation_count == 2, "Should reuse text objects"

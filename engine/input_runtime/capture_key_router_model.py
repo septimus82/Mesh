@@ -11,7 +11,6 @@ from dataclasses import dataclass
 from typing import Callable, Sequence
 
 import engine.optional_arcade as optional_arcade
-
 from engine.input_runtime.capture_runtime_focus_model import (
     SCOPE_AUTHORING_SELECTED,
     SCOPE_CAPTURE_MODE,
@@ -186,9 +185,9 @@ def _when_editor_ctrl(snapshot: CaptureFocusSnapshot) -> bool:
 def _when_debug_undo(snapshot: CaptureFocusSnapshot) -> bool:
     """Enabled for undo/redo when debug, not editor, not UI blocked, and CTRL."""
     return (
-        snapshot.show_debug 
-        and not snapshot.editor_active 
-        and not snapshot.ui_blocked 
+        snapshot.show_debug
+        and not snapshot.editor_active
+        and not snapshot.ui_blocked
         and snapshot.ctrl
     )
 
@@ -346,7 +345,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
     """
     key = optional_arcade.arcade.key
     routes: list[RouteSpec] = []
-    
+
     # -------------------------------------------------------------------------
     # CONFIRM MODAL scope - highest priority, blocks everything
     # -------------------------------------------------------------------------
@@ -412,7 +411,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_always,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # CONTEXT MENU scope
     # -------------------------------------------------------------------------
@@ -448,7 +447,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_always,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # KEYBINDS scope - keybind editor
     # -------------------------------------------------------------------------
@@ -496,7 +495,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_always,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # INLINE RENAME scope - text input during rename
     # -------------------------------------------------------------------------
@@ -520,7 +519,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_always,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # COMMAND PALETTE scope
     # -------------------------------------------------------------------------
@@ -586,7 +585,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_ctrl,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # CONSOLE scope
     # -------------------------------------------------------------------------
@@ -600,7 +599,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_always,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # PROJECT EXPLORER scope
     # -------------------------------------------------------------------------
@@ -685,7 +684,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_always,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # PROBLEMS scope
     # -------------------------------------------------------------------------
@@ -721,7 +720,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_ctrl,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # PALETTE MODE scope
     # -------------------------------------------------------------------------
@@ -788,7 +787,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_always,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # CAPTURE MODE scope
     # -------------------------------------------------------------------------
@@ -854,7 +853,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_ctrl,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # TILE PAINT scope
     # -------------------------------------------------------------------------
@@ -873,7 +872,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             action_id=f"capture.tile_paint.slot_assign_{i}",
             when=_when_alt,
         ))
-    
+
     # -------------------------------------------------------------------------
     # ENTITY PAINT scope
     # -------------------------------------------------------------------------
@@ -974,7 +973,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_shift,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # ENTITY SELECT scope
     # -------------------------------------------------------------------------
@@ -1076,7 +1075,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_ctrl,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # AUTHORING SELECTED scope - F12 selection nudge
     # Step sizes: 1px (Shift), 8px (default), 32px (Ctrl)
@@ -1158,7 +1157,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_ctrl,
         ),
     ])
-    
+
     # -------------------------------------------------------------------------
     # GLOBAL scope - lowest priority, always available
     # -------------------------------------------------------------------------
@@ -1400,7 +1399,7 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             when=_when_always,
         ),
     ])
-    
+
     return tuple(_dedupe_routes(routes))
 
 
@@ -1426,15 +1425,15 @@ def resolve_route(
     """
     # Ensure scopes are in priority order
     ordered_scopes = [s for s in SCOPE_PRIORITY if s in active_scopes]
-    
+
     # Always include global if not present
     if SCOPE_GLOBAL not in ordered_scopes:
         ordered_scopes.append(SCOPE_GLOBAL)
-    
+
     for scope in ordered_scopes:
         matches = [
-            r for r in routes 
-            if r.scope == scope 
+            r for r in routes
+            if r.scope == scope
             and r.combo.key == combo.key
             and r.combo.mods == combo.mods
             and (r.when is None or r.when(snapshot))
@@ -1444,7 +1443,7 @@ def resolve_route(
         # Deterministic tie-breaker: sort by action_id
         matches.sort(key=lambda r: r.action_id)
         return matches[0].action_id
-    
+
     return None
 
 

@@ -8,6 +8,7 @@ import sys
 
 def test_importing_ui_overlays_does_not_touch_disk_or_print(monkeypatch) -> None:
     import arcade  # noqa: F401
+
     from engine.logging_tools import suppress_stdout
 
     def guarded_open(*_a, **_k):

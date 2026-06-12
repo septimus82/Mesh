@@ -1,8 +1,8 @@
 import unittest
-import json
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+
 from engine.tooling.auto_wire import AutoWireController
+
 
 class TestAutoWireMetadata(unittest.TestCase):
     def setUp(self):
@@ -27,23 +27,23 @@ class TestAutoWireMetadata(unittest.TestCase):
                 "entities": []
             }
         }
-        
+
         changes = self.controller.process(dry_run=True)
-        
+
         # Verify links
         # Hub <-> Path
         self.controller._add_transition.assert_any_call("Ruins_hub", "Ruins_path")
         self.controller._add_transition.assert_any_call("Ruins_path", "Ruins_hub")
-        
+
         # Path <-> Dungeon
         self.controller._add_transition.assert_any_call("Ruins_path", "Ruins_dungeon")
         self.controller._add_transition.assert_any_call("Ruins_dungeon", "Ruins_path")
-        
+
         # Ensure NO direct Hub <-> Dungeon link (unless path missing, but here it exists)
         # The logic I wrote doesn't explicitly forbid it, but it only adds what's in the rules.
         # Ruins rules: Hub <-> Path, Path <-> Dungeon.
         # So Hub <-> Dungeon should NOT be called.
-        
+
         # We can check calls.
         calls = [c[0] for c in self.controller._add_transition.call_args_list]
         self.assertNotIn(("Ruins_hub", "Ruins_dungeon"), calls)
@@ -60,9 +60,9 @@ class TestAutoWireMetadata(unittest.TestCase):
                 "entities": []
             }
         }
-        
+
         self.controller.process(dry_run=True)
-        
+
         self.controller._add_transition.assert_any_call("Deep_entry", "Deep_depths")
         self.controller._add_transition.assert_any_call("Deep_depths", "Deep_entry")
 
@@ -72,9 +72,9 @@ class TestAutoWireMetadata(unittest.TestCase):
             "Legacy_hub": {"settings": {}, "entities": []},
             "Legacy_interior": {"settings": {}, "entities": []}
         }
-        
+
         self.controller.process(dry_run=True)
-        
+
         self.controller._add_transition.assert_any_call("Legacy_hub", "Legacy_interior")
         self.controller._add_transition.assert_any_call("Legacy_interior", "Legacy_hub")
 

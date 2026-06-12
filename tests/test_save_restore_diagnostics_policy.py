@@ -5,12 +5,10 @@ import re
 from pathlib import Path
 
 import mesh_cli
-
 from engine.diagnostics import Diagnostic, DiagnosticLevel
 from engine.save_runtime.io import write_diagnostics_sidecars
 from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from mesh_cli import replays as replays_module
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SAVE_RUNTIME_DIR = ROOT / "engine" / "save_runtime"

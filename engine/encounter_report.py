@@ -9,14 +9,12 @@ from pathlib import Path
 from typing import Any, Dict, List, cast
 from unittest.mock import MagicMock
 
-from engine.encounter_sets import get_theme_manager
 from engine.encounter_cost import get_effective_encounter_cost, is_boss_payload, is_elite_payload, is_mini_boss_payload
+from engine.encounter_sets import get_theme_manager
+from engine.path_norm import normalize_scene_path
 from engine.prefabs import get_prefab_manager
 from engine.scene_loader import SceneLoader
-from engine.path_norm import normalize_scene_path
-from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
-
 
 
 @dataclass

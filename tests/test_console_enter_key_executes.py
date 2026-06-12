@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import engine.optional_arcade as optional_arcade
-
 from engine.console_controller import ConsoleController
 from engine.input import InputManager
 

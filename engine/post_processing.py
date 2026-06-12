@@ -18,13 +18,12 @@ Usage::
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from engine.arcade_compat import activate_framebuffer, clear_framebuffer, close_framebuffer_activation
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
-
 
 logger = get_logger(__name__)
 

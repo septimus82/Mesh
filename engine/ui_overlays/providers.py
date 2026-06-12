@@ -1,6 +1,7 @@
 from threading import Lock
 from time import perf_counter
-from typing import Any, Sequence, Dict, List, Tuple, cast
+from typing import Any, Dict, Sequence, cast
+
 import engine.optional_arcade as optional_arcade
 from engine.asset_hot_reload_watcher import is_hot_reload_enabled
 from engine.logging_tools import get_logger
@@ -757,6 +758,7 @@ def command_palette_provider(window: Any) -> dict[str, Any]:
         return payload
 
     import json
+
     from engine.command_palette import build_default_commands, filter_commands, filter_options
     from engine.command_palette_controller import get_command_palette_recent_command_ids
     from engine.command_palette_preview import build_arg_preview, build_arg_suggestions
@@ -1387,9 +1389,9 @@ def project_explorer_provider(window: Any, viewport_h: int, row_h: float, oversc
     explorer = getattr(editor, "project_explorer", None)
     if not explorer:
         return {}
-    
+
     # We call get_provider_payload
-    # Note: If the method doesn't exist on the stub during partial refactor, this might fail, 
+    # Note: If the method doesn't exist on the stub during partial refactor, this might fail,
     # but we added it to the class in Step 1.
     if hasattr(explorer, "get_provider_payload"):
         return cast(Dict[str, Any], explorer.get_provider_payload(viewport_h, row_h, overscan))

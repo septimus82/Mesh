@@ -1,5 +1,7 @@
 """UI overlay primitives for Mesh Engine."""
 
+# ruff: noqa: F401
+
 from __future__ import annotations
 
 import json
@@ -7,6 +9,7 @@ import logging
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence, TypeAlias
+
 import engine.optional_arcade as optional_arcade
 
 from .animation_state import get_animation_state_snapshot
@@ -51,11 +54,21 @@ def _sprite_under_cursor(window: "GameWindow") -> "Sprite | None":
     return candidates[-1]
 
 
+from .ui_contract import (
+    PERSISTENT_UI_ATTRS,
+    REQUIRED_PERSISTENT_UI_ATTRS,
+    missing_persistent_ui_attrs,
+)
+from .ui_overlays.command_palette import (
+    CommandPaletteOverlay,
+    format_command_palette_overlay_lines,
+)
 from .ui_overlays.common import (
     UIElement,
-    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
+    _draw_tb_rectangle_outline,
     _sprite_under_cursor,
+    load_config_json,
 )
 from .ui_overlays.debug import (
     AnimationStateOverlay,
@@ -73,8 +86,14 @@ from .ui_overlays.debug import (
     format_scene_dirty_overlay_lines,
     format_scene_inspector_text,
 )
-from .ui_overlays.hd2d_settings_panel_overlay import (
-    Hd2dSettingsPanelOverlay,
+from .ui_overlays.dev_browser import (
+    DEV_BROWSER_MAX_FILTER_CHARS,
+    DEV_BROWSER_MAX_ITEMS,
+    DEV_BROWSER_NO_RESULTS_MESSAGE,
+    DevBrowserOverlay,
+    build_dev_browser_scene_source,
+    build_dev_browser_world_source,
+    filter_dev_browser_items,
 )
 from .ui_overlays.editors import (
     CaptureOverlay,
@@ -86,7 +105,21 @@ from .ui_overlays.editors import (
     format_entity_select_overlay_lines,
     format_tile_paint_overlay_lines,
 )
-
+from .ui_overlays.golden_slice import (
+    GOLDEN_SLICE_DEMO_HUD_MAX_CHARS,
+    GoldenSliceDemoHUDStripOverlay,
+    GoldenSliceVariantPickerOverlay,
+    build_act1_demo_hud_status_line,
+    build_golden_slice_demo_hud_status_line,
+    build_golden_slice_variant_picker_presets,
+    build_golden_slice_variant_picker_presets_from_file,
+    build_golden_slice_variant_picker_source,
+    is_act1_demo_context,
+    is_golden_slice_demo_context,
+)
+from .ui_overlays.hd2d_settings_panel_overlay import (
+    Hd2dSettingsPanelOverlay,
+)
 from .ui_overlays.hud import (
     DEMO_INTERIOR_HINT_SECONDS,
     DEMO_INTERIOR_HINT_TOAST,
@@ -112,7 +145,13 @@ from .ui_overlays.hud import (
     maybe_enqueue_shadowmask_enabled_toast,
     maybe_finish_boss_gold_reward_toast,
 )
-
+from .ui_overlays.inspector import (
+    INSPECTOR_MAX_LINE_CHARS,
+    INSPECTOR_MAX_LINES,
+    INSPECTOR_MAX_LIST_ITEMS,
+    InspectorOverlay,
+    build_inspector_lines,
+)
 from .ui_overlays.menus import (
     DEMO_COMPLETE_ENDCAP_SECONDS,
     CharacterPanel,
@@ -127,51 +166,6 @@ from .ui_overlays.menus import (
     maybe_trigger_demo_complete_endcap,
 )
 
-from .ui_overlays.command_palette import (
-    CommandPaletteOverlay,
-    format_command_palette_overlay_lines,
-)
-
-
-from .ui_contract import (
-    PERSISTENT_UI_ATTRS,
-    REQUIRED_PERSISTENT_UI_ATTRS,
-    missing_persistent_ui_attrs,
-)
-
-
-from .ui_overlays.inspector import (
-    INSPECTOR_MAX_LINE_CHARS,
-    INSPECTOR_MAX_LINES,
-    INSPECTOR_MAX_LIST_ITEMS,
-    InspectorOverlay,
-    build_inspector_lines,
-)
-
-
-from .ui_overlays.common import load_config_json
-from .ui_overlays.dev_browser import (
-    DEV_BROWSER_MAX_FILTER_CHARS,
-    DEV_BROWSER_MAX_ITEMS,
-    DEV_BROWSER_NO_RESULTS_MESSAGE,
-    DevBrowserOverlay,
-    build_dev_browser_scene_source,
-    build_dev_browser_world_source,
-    filter_dev_browser_items,
-)
-
-from .ui_overlays.golden_slice import (
-    GOLDEN_SLICE_DEMO_HUD_MAX_CHARS,
-    GoldenSliceDemoHUDStripOverlay,
-    GoldenSliceVariantPickerOverlay,
-    build_act1_demo_hud_status_line,
-    build_golden_slice_demo_hud_status_line,
-    build_golden_slice_variant_picker_presets,
-    build_golden_slice_variant_picker_presets_from_file,
-    build_golden_slice_variant_picker_source,
-    is_act1_demo_context,
-    is_golden_slice_demo_context,
-)
 
 class InventoryOverlay(UIElement):
     """Text-only overlay that lists current inventory contents."""

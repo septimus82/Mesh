@@ -15,24 +15,15 @@ from typing import Any, Dict
 import pytest
 
 from engine.editor.components_model import (
-    ComponentKind,
-    InspectorField,
-    InspectorComponent,
-    COMPONENT_ORDER,
-    COMPONENT_TITLES,
-    COMPONENT_DEFAULTS,
-    TRANSFORM_DEFAULTS,
     LIGHT_DEFAULTS,
-    COLLIDER_KIND_OPTIONS,
-    build_components,
-    get_component_dict,
-    ensure_components_container,
     add_component,
+    build_components,
+    ensure_components_container,
+    get_addable_components,
+    get_component_dict,
     remove_component,
     set_component_field,
-    get_addable_components,
 )
-
 
 # -----------------------------------------------------------------------------
 # Test Fixtures
@@ -131,10 +122,10 @@ class TestLegacyFlatFields:
         """Should read x/y from top-level fields."""
         components = build_components(minimal_entity)
         transform = components[0]
-        
+
         x_field = next(f for f in transform.fields if f.key == "x")
         y_field = next(f for f in transform.fields if f.key == "y")
-        
+
         assert x_field.value == 100.0
         assert y_field.value == 200.0
 
@@ -142,7 +133,7 @@ class TestLegacyFlatFields:
         """Should read rotation from top-level field."""
         components = build_components(minimal_entity)
         transform = components[0]
-        
+
         rot_field = next(f for f in transform.fields if f.key == "rot")
         assert rot_field.value == 45.0
 
@@ -158,22 +149,22 @@ class TestLegacyFlatFields:
         """Should read sprite from top-level field."""
         entity = {"id": "e", "sprite": "path/to/sprite.png"}
         components = build_components(entity)
-        
+
         sprite_comps = [c for c in components if c.kind == "sprite"]
         assert len(sprite_comps) == 1
         sprite = sprite_comps[0]
-        
+
         asset_field = next(f for f in sprite.fields if f.key == "asset")
         assert asset_field.value == "path/to/sprite.png"
 
     def test_read_legacy_light(self, entity_with_legacy_light: Dict[str, Any]):
         """Should read light from behaviour_config.LightSource."""
         components = build_components(entity_with_legacy_light)
-        
+
         light_comps = [c for c in components if c.kind == "light"]
         assert len(light_comps) == 1
         light = light_comps[0]
-        
+
         radius_field = next(f for f in light.fields if f.key == "radius_px")
         assert radius_field.value == 256.0
 
@@ -189,7 +180,7 @@ class TestSetComponentField:
         """set_component_field should not mutate input."""
         original = copy.deepcopy(minimal_entity)
         result = set_component_field(minimal_entity, "transform", "x", 999.0)
-        
+
         # Original should be unchanged
         assert minimal_entity == original
         # Result should be different
@@ -198,7 +189,7 @@ class TestSetComponentField:
     def test_writes_to_components_container(self, minimal_entity: Dict[str, Any]):
         """set_component_field should write into components dict."""
         result = set_component_field(minimal_entity, "transform", "x", 500.0)
-        
+
         assert "components" in result
         assert "transform" in result["components"]
         assert result["components"]["transform"]["x"] == 500.0
@@ -206,14 +197,14 @@ class TestSetComponentField:
     def test_preserves_unrelated_keys(self, minimal_entity: Dict[str, Any]):
         """set_component_field should preserve all unrelated keys."""
         result = set_component_field(minimal_entity, "transform", "x", 500.0)
-        
+
         assert result["id"] == minimal_entity["id"]
         assert result["name"] == minimal_entity["name"]
 
     def test_migrates_legacy_to_components(self, minimal_entity: Dict[str, Any]):
         """When updating legacy entity, values should be in components container."""
         result = set_component_field(minimal_entity, "transform", "y", 300.0)
-        
+
         # Should have y in components
         assert result["components"]["transform"]["y"] == 300.0
         # Should also have x (migrated from legacy)
@@ -222,7 +213,7 @@ class TestSetComponentField:
     def test_updates_existing_component(self, entity_with_components: Dict[str, Any]):
         """Should update existing component field."""
         result = set_component_field(entity_with_components, "transform", "x", 999.0)
-        
+
         assert result["components"]["transform"]["x"] == 999.0
         # Other fields unchanged
         assert result["components"]["transform"]["y"] == 60.0
@@ -230,13 +221,13 @@ class TestSetComponentField:
     def test_collider_kind_change_adds_defaults(self):
         """Changing collider kind should add shape-specific defaults."""
         entity = {"id": "e", "components": {"collider": {"kind": "none"}}}
-        
+
         # Change to rect
         result = set_component_field(entity, "collider", "kind", "rect")
         assert result["components"]["collider"]["kind"] == "rect"
         assert "w" in result["components"]["collider"]
         assert "h" in result["components"]["collider"]
-        
+
         # Change to circle
         result2 = set_component_field(result, "collider", "kind", "circle")
         assert result2["components"]["collider"]["kind"] == "circle"
@@ -255,7 +246,7 @@ class TestAddRemoveComponent:
     def test_add_component_creates_with_defaults(self, minimal_entity: Dict[str, Any]):
         """add_component should add component with defaults."""
         result = add_component(minimal_entity, "light")
-        
+
         assert "components" in result
         assert "light" in result["components"]
         light = result["components"]["light"]
@@ -265,7 +256,7 @@ class TestAddRemoveComponent:
         """add_component should be no-op if already present."""
         original_light = entity_with_components["components"]["light"].copy()
         result = add_component(entity_with_components, "light")
-        
+
         # Light should be unchanged
         assert result["components"]["light"]["radius_px"] == original_light["radius_px"]
 
@@ -280,20 +271,20 @@ class TestAddRemoveComponent:
     def test_add_component_preserves_keys(self, minimal_entity: Dict[str, Any]):
         """add_component should preserve all existing keys."""
         result = add_component(minimal_entity, "sprite")
-        
+
         assert result["id"] == minimal_entity["id"]
         assert result["x"] == minimal_entity["x"]
 
     def test_remove_component(self, entity_with_components: Dict[str, Any]):
         """remove_component should remove the component."""
         result = remove_component(entity_with_components, "light")
-        
+
         assert "light" not in result["components"]
 
     def test_remove_transform_is_noop(self, entity_with_components: Dict[str, Any]):
         """remove_component for transform should be no-op."""
         result = remove_component(entity_with_components, "transform")
-        
+
         # Transform should still be readable
         components = build_components(result)
         assert components[0].kind == "transform"
@@ -301,14 +292,14 @@ class TestAddRemoveComponent:
     def test_remove_preserves_keys(self, entity_with_components: Dict[str, Any]):
         """remove_component should preserve unrelated keys."""
         result = remove_component(entity_with_components, "light")
-        
+
         assert result["id"] == entity_with_components["id"]
         assert result["components"]["sprite"] == entity_with_components["components"]["sprite"]
 
     def test_remove_legacy_light(self, entity_with_legacy_light: Dict[str, Any]):
         """remove_component should clean up legacy light data."""
         result = remove_component(entity_with_legacy_light, "light")
-        
+
         # Should remove from behaviours
         assert "LightSource" not in result.get("behaviours", [])
         # Should clean behaviour_config
@@ -327,10 +318,10 @@ class TestComponentOrder:
         # Add collider
         entity = copy.deepcopy(entity_with_components)
         entity["components"]["collider"] = {"kind": "rect", "w": 16, "h": 16}
-        
+
         components = build_components(entity)
         kinds = [c.kind for c in components]
-        
+
         assert kinds == ["transform", "sprite", "light", "collider"]
 
     def test_order_stable_with_missing_components(self):
@@ -342,10 +333,10 @@ class TestComponentOrder:
                 "transform": {"x": 0, "y": 0, "rot": 0},
             }
         }
-        
+
         components = build_components(entity)
         kinds = [c.kind for c in components]
-        
+
         # Transform then collider, no sprite or light
         assert kinds == ["transform", "collider"]
 
@@ -360,7 +351,7 @@ class TestGetAddableComponents:
     def test_minimal_entity_can_add_all(self, minimal_entity: Dict[str, Any]):
         """Minimal entity can add sprite, light, collider."""
         addable = get_addable_components(minimal_entity)
-        
+
         assert "sprite" in addable
         assert "light" in addable
         assert "collider" in addable
@@ -371,7 +362,7 @@ class TestGetAddableComponents:
         """Entity with sprite cannot add sprite."""
         entity = {"id": "e", "sprite": "test.png"}
         addable = get_addable_components(entity)
-        
+
         assert "sprite" not in addable
 
     def test_full_entity_has_none_addable(self, entity_with_components: Dict[str, Any]):
@@ -379,9 +370,9 @@ class TestGetAddableComponents:
         # Add collider too
         entity = copy.deepcopy(entity_with_components)
         entity["components"]["collider"] = {"kind": "none"}
-        
+
         addable = get_addable_components(entity)
-        
+
         assert len(addable) == 0
 
 
@@ -395,19 +386,19 @@ class TestEnsureComponentsContainer:
     def test_adds_components_key(self, minimal_entity: Dict[str, Any]):
         """Should add components key if missing."""
         result = ensure_components_container(minimal_entity)
-        
+
         assert "components" in result
         assert isinstance(result["components"], dict)
 
     def test_preserves_existing_components(self, entity_with_components: Dict[str, Any]):
         """Should preserve existing components."""
         result = ensure_components_container(entity_with_components)
-        
+
         assert result["components"]["transform"] == entity_with_components["components"]["transform"]
 
     def test_does_not_mutate_input(self, minimal_entity: Dict[str, Any]):
         """Should not mutate input."""
         original = copy.deepcopy(minimal_entity)
         ensure_components_container(minimal_entity)
-        
+
         assert minimal_entity == original

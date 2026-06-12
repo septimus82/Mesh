@@ -225,7 +225,7 @@ def _handle_export_diff(args: argparse.Namespace) -> int:
         print(f"[Mesh][Export] ERROR: bundle_b not found: {bundle_b}")
         return 1
 
-    print(f"[Mesh][Export] comparing bundles...")
+    print("[Mesh][Export] comparing bundles...")
     print(f"  A: {bundle_a}")
     print(f"  B: {bundle_b}")
 

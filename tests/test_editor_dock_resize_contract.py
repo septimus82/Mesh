@@ -10,10 +10,6 @@ Tests for:
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from unittest.mock import MagicMock
-
-import pytest
 
 from engine.editor.editor_shell_layout import (
     DOCK_MAX_W,
@@ -22,7 +18,6 @@ from engine.editor.editor_shell_layout import (
     SPLITTER_W,
     VIEWPORT_MIN_W,
     DockSizing,
-    EditorShellLayout,
     Rect,
     clamp_dock_width,
     compute_editor_shell_layout,
@@ -33,7 +28,6 @@ from engine.workspace_settings import (
     load_workspace,
     save_workspace,
 )
-
 
 # ------------------------------------------------------------------------------
 # Constants Tests

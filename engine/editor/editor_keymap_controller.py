@@ -7,8 +7,7 @@ loading, parsing, and application.
 from __future__ import annotations
 
 import os
-from pathlib import Path
-from typing import Any, Dict, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from engine.logging_tools import get_logger
 
@@ -45,14 +44,14 @@ class EditorKeymapController:
             self._keymap_overrides = {}
             return
 
+        from engine import json_io  # noqa: PLC0415
         from engine.editor.editor_actions import get_editor_actions  # noqa: PLC0415
         from engine.editor.keymap_override_model import (  # noqa: PLC0415
-            compute_keymap_conflicts,
             apply_keymap_overrides,
-            parse_keymap_overrides,
+            compute_keymap_conflicts,
             format_keymap_conflict,
+            parse_keymap_overrides,
         )
-        from engine import json_io  # noqa: PLC0415
 
         keymap_path = editor._get_repo_root() / "keymap.json"
         if not keymap_path.exists():

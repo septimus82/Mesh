@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING, Any, Dict
 if TYPE_CHECKING:
     from arcade import Sprite
 
+import engine.optional_arcade as optional_arcade
+
 from ..events import MeshEvent
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
-import engine.optional_arcade as optional_arcade
 
 
 @register_behaviour(

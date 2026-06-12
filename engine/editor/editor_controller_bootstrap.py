@@ -10,7 +10,6 @@ from .editor_align_controller import EditorAlignController
 from .editor_animation_controller import EditorAnimationController
 from .editor_asset_browser_controller import EditorAssetBrowserController
 from .editor_build_controller import EditorBuildController
-from .editor_first_launch_tour_controller import EditorTourController
 from .editor_clipboard_controller import EditorClipboardController
 from .editor_command_dispatch_controller import EditorCommandDispatchController
 from .editor_cursor_controller import EditorCursorController
@@ -25,6 +24,7 @@ from .editor_entity_panels_controller import EditorEntityPanelsController
 from .editor_feedback_controller import EditorFeedbackController
 from .editor_file_ops_controller import EditorFileOpsController
 from .editor_find_actions_controller import EditorFindActionsController
+from .editor_first_launch_tour_controller import EditorTourController
 from .editor_hd2d_controller import EditorHd2dController
 from .editor_hierarchy_controller import EditorHierarchyController
 from .editor_history_controller import EditorHistoryController

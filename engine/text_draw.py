@@ -3,8 +3,8 @@ Cached text drawing wrapper to avoid Arcade PerformanceWarning on hot paths.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, NamedTuple, OrderedDict
 from collections import OrderedDict
+from typing import TYPE_CHECKING, NamedTuple, Optional, OrderedDict, Tuple
 
 import engine.optional_arcade
 
@@ -93,13 +93,13 @@ def draw_text_cached(
         normalized_color = (*color, 255)
     else:
         normalized_color = color
-    
+
     if cache is None or not hasattr(engine.optional_arcade.arcade, "Text"):
         # Fallback if no cache provided or Text class not available
         engine.optional_arcade.arcade.draw_text(
-            text, 
-            x, 
-            y, 
+            text,
+            x,
+            y,
             normalized_color,
             font_size,
             width=width,
@@ -128,7 +128,7 @@ def draw_text_cached(
         bold=bold,
         italic=italic
     )
-    
+
     text_obj = cache.get(key)
     if text_obj is None:
         text_obj = engine.optional_arcade.arcade.Text(
@@ -148,7 +148,7 @@ def draw_text_cached(
             multiline=multiline
         )
         cache.put(key, text_obj)
-    
+
     text_obj.position = (x, y)
     text_obj.rotation = rotation
     text_obj.draw()

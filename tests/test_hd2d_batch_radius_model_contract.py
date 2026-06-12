@@ -8,8 +8,6 @@ Tests the pure model functions for HD-2D batch radius:
 
 from __future__ import annotations
 
-import pytest
-
 from engine.editor.hd2d_batch_radius_model import (
     HD2D_BATCH_RADIUS_DEFAULT,
     HD2D_BATCH_RADIUS_MAX,
@@ -20,7 +18,6 @@ from engine.editor.hd2d_batch_radius_model import (
     nudge_batch_radius,
 )
 from tests._typing import as_any
-
 
 # =============================================================================
 # Test Constants

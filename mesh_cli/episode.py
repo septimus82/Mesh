@@ -16,10 +16,10 @@ from pathlib import Path
 from typing import Any, cast
 from unittest.mock import MagicMock
 
-from engine.diagnostics import Diagnostic, DiagnosticLevel
 from engine.cutscene_runtime.runner import CutsceneRunner
-from engine.gameplay_event_bus import GameplayEvent, GameplayEventBus
+from engine.diagnostics import Diagnostic, DiagnosticLevel
 from engine.game_state_controller import GameState
+from engine.gameplay_event_bus import GameplayEvent, GameplayEventBus
 from engine.logging_tools import suppress_stdout
 from engine.persistence_io import (
     dumps_json_deterministic,
@@ -28,17 +28,21 @@ from engine.persistence_io import (
 )
 from engine.provenance import get_provenance, provenance_to_dict
 from engine.quest_runtime.runner import QuestRunner
-from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from engine.save_runtime.digest import compute_world_digest
 from engine.save_runtime.normalize import normalize_save_payload
 from engine.save_runtime.restore_policy import REPLAY_POLICY, RestorePolicy
+from engine.save_runtime.save_diagnostics import SaveDiagnosticsAggregator
 from engine.state_runtime import flags as state_flags
+
 from .replay_digest_projection import (
     project_event_for_digest as _project_event_for_digest,
+)
+from .replay_digest_projection import (
     project_final_state_for_digest as _project_final_state_for_digest,
+)
+from .replay_digest_projection import (
     project_world_digests_for_digest as _project_world_digests_for_digest,
 )
-
 
 SCHEMA_VERSION = 1
 DEFAULT_SEED = 123

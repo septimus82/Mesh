@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from engine.brushes import validate_brush as validate_brush_codes
+from engine.paths import get_content_roots, resolve_path
 from engine.persistence_io import write_json_atomic
 from engine.prefabs import get_prefab_manager
 from engine.stamps import validate_stamp as validate_stamp_issues
-from engine.paths import get_content_roots, resolve_path
 
 CapturePersistMode = Literal["stamp", "brush"]
 

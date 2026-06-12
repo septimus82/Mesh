@@ -6,7 +6,7 @@ operations: begin, update, end, cancel, and apply command.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
 from engine.logging_tools import get_logger
 
@@ -232,8 +232,8 @@ class EditorDuplicateController:
     def cancel(self) -> None:
         """Cancel alt-drag duplicate and remove duplicated entities."""
         from engine.editor.editor_alt_drag_duplicate_ops import (  # noqa: PLC0415
-            remove_alt_drag_duplicates,
             AltDragDuplicateCommand,
+            remove_alt_drag_duplicates,
         )
         from engine.editor_runtime.state import get_sprite_for_entity_id  # noqa: PLC0415
 

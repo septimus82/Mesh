@@ -7,7 +7,7 @@ commit, and auto-apply operations.
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from engine.logging_tools import get_logger
 
@@ -164,8 +164,8 @@ class EditorHd2dController:
             return False
 
         from .hd2d_defaults_model import (  # noqa: PLC0415
-            should_auto_apply_default,
             apply_safe_merge,
+            should_auto_apply_default,
         )
 
         sc = getattr(editor.window, "scene_controller", None)
@@ -201,10 +201,10 @@ class EditorHd2dController:
             return False
 
         from .hd2d_defaults_model import (  # noqa: PLC0415
-            is_valid_default_preset_id,
-            compute_safe_merge_patch,
             apply_safe_merge,
+            compute_safe_merge_patch,
             format_upgrade_undo_label,
+            is_valid_default_preset_id,
         )
 
         if not is_valid_default_preset_id(default_preset_id):

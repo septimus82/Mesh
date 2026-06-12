@@ -1,9 +1,11 @@
-import unittest
 import shutil
 import tempfile
+import unittest
 from pathlib import Path
+
 from engine.tooling.plan_executor import PlanExecutor
-from engine.tooling.plan_types import Plan, Action
+from engine.tooling.plan_types import Plan
+
 
 class TestPlanSafePaths(unittest.TestCase):
     def setUp(self):
@@ -17,7 +19,7 @@ class TestPlanSafePaths(unittest.TestCase):
     def test_unsafe_path(self):
         # Path outside allowed areas
         unsafe_path = self.test_dir / "unsafe.txt"
-        
+
         with self.assertRaises(Exception) as cm:
             self.executor._check_safety(unsafe_path)
         self.assertIn("Safety Violation", str(cm.exception))
@@ -25,10 +27,10 @@ class TestPlanSafePaths(unittest.TestCase):
     def test_safe_pack_path(self):
         # Mock pack input
         self.executor.current_plan.inputs["pack"] = "my_pack"
-        
+
         # Path inside pack
         safe_path = Path.cwd() / "packs/my_pack/file.json"
-        
+
         # Should not raise
         self.executor._check_safety(safe_path)
 

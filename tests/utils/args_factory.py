@@ -1,6 +1,7 @@
-from typing import Any
-from tests.utils.parser_defaults import get_default_args
 import argparse
+
+from tests.utils.parser_defaults import get_default_args
+
 
 def update_namespace(ns: argparse.Namespace, **kwargs) -> argparse.Namespace:
     """Update a namespace with kwargs, ensuring keys exist."""
@@ -25,7 +26,7 @@ def make_check_args(**overrides) -> argparse.Namespace:
 
 def make_audit_args(**overrides) -> argparse.Namespace:
     # audit-content requires world_path
-    defaults = get_default_args(["audit-content"], ["dummy_world.json"]) 
+    defaults = get_default_args(["audit-content"], ["dummy_world.json"])
     return update_namespace(defaults, **overrides)
 
 def make_plan_test_args(**overrides) -> argparse.Namespace:

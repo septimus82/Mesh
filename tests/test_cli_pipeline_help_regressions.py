@@ -52,6 +52,6 @@ def test_pipeline_help_output(command, expected_substrings):
     )
     assert result.returncode == 0
     output = _normalize_whitespace(result.stdout)
-    
+
     for substring in expected_substrings:
         assert _normalize_whitespace(substring) in output

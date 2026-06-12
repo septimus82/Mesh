@@ -8,7 +8,6 @@ from typing import Any, Mapping
 
 from engine.singletons import get_registry
 
-
 _CONFIGURED = False
 _LEVEL = logging.INFO
 _JSON_MODE = False

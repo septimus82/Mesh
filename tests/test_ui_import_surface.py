@@ -37,8 +37,8 @@ def test_ui_overlay_class_identities_match_reexports() -> None:
     assert ui.format_entity_select_overlay_lines is editors.format_entity_select_overlay_lines
     assert ui.format_capture_overlay_lines is editors.format_capture_overlay_lines
 
-    import engine.ui_overlays.menus as menus
     import engine.ui_overlays.command_palette as command_palette
+    import engine.ui_overlays.menus as menus
 
     # Menus
     assert ui.PauseMenu is menus.PauseMenu

@@ -2,7 +2,6 @@ import types
 from unittest.mock import MagicMock
 
 import engine.optional_arcade as optional_arcade
-
 from engine.input_controller import InputController
 from engine.ui import (
     DEV_BROWSER_NO_RESULTS_MESSAGE,

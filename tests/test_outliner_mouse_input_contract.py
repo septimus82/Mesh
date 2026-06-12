@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
 
 import pytest
 
@@ -12,7 +11,6 @@ from engine.editor.editor_shell_layout import DOCK_WIDTH, TAB_HEADER_HEIGHT, com
 from engine.editor_entity_ops import EntitySummary
 from engine.editor_runtime import editor_input_click_handlers, editor_input_key_handlers
 from tests._dock_stub import make_dock_stub
-
 
 pytestmark = [pytest.mark.fast]
 

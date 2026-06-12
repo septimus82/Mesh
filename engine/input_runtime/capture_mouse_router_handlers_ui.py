@@ -8,14 +8,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from engine.input_runtime.capture_mouse_router_model import MouseEvent
-
 # Re-export from modal_base for backward compatibility
 from engine.input_runtime.capture_mouse_router_handlers_modal_base import (
+    dispatch_modal_mouse_base,
     maybe_handle_editor_mouse_press,
     maybe_handle_editor_mouse_release,
-    dispatch_modal_mouse_base,
 )
+from engine.input_runtime.capture_mouse_router_model import MouseEvent
 
 
 def dispatch_ui_mouse(controller: Any, event: MouseEvent, action_id: str) -> bool:

@@ -3,11 +3,10 @@ from __future__ import annotations
 import json
 from collections import deque
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
-from engine.paths import resolve_path
 from engine.path_norm import normalize_scene_path
+from engine.paths import resolve_path
 
 
 @dataclass(frozen=True)

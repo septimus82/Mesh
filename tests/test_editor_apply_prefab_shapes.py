@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-from unittest.mock import MagicMock
-
 import engine.editor_controller as editor_module
 from engine.editor_controller import EditorModeController
 from tests._editor_window_stub import EditorWindowStub, as_game_window

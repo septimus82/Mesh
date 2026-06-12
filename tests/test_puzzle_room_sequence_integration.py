@@ -7,11 +7,10 @@ from pathlib import Path
 from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
-from engine.gameplay_event_bus import GameplayEventBus
 from engine.game_state_controller import GameState
+from engine.gameplay_event_bus import GameplayEventBus
 from engine.quest_runtime.runner import QuestRunner
 from engine.state_runtime import flags as state_flags
-
 
 SCENE_PATH = Path("scenes/puzzle_room_01.json")
 PREFABS_PATH = Path("assets/prefabs.json")

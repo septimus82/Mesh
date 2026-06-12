@@ -10,7 +10,6 @@ if TYPE_CHECKING:
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
-    from ..game import GameWindow
 
 def _get_arcade() -> Any:
     return importlib.import_module("engine.optional_arcade").arcade

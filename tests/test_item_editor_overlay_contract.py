@@ -5,8 +5,8 @@ from types import SimpleNamespace
 import pytest
 
 import engine.editor.widgets.panel_primitives as panel_primitives
-from engine.inventory import ItemDefinition
 from engine.editor.item_editor_model import ItemEditorModel
+from engine.inventory import ItemDefinition
 from engine.ui_overlays.item_editor_overlay import ItemEditorOverlay
 from engine.ui_overlays.widgets import TextInput
 from tests._dock_stub import make_dock_stub

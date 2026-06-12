@@ -35,11 +35,11 @@ def parse_ascii_map(ascii_map: str) -> tuple[NavGrid, tuple[int, int], tuple[int
     lines = [line for line in ascii_map.strip().split("\n")]
     height = len(lines)
     width = max(len(line) for line in lines) if lines else 0
-    
+
     blocked: set[int] = set()
     start: tuple[int, int] | None = None
     goal: tuple[int, int] | None = None
-    
+
     for y, line in enumerate(lines):
         for x, ch in enumerate(line):
             idx = y * width + x
@@ -58,12 +58,12 @@ def parse_ascii_map(ascii_map: str) -> tuple[NavGrid, tuple[int, int], tuple[int
             else:
                 # Unknown char treated as walkable
                 pass
-    
+
     if start is None:
         raise ValueError("No start 'S' or 'X' found in map")
     if goal is None:
         raise ValueError("No goal 'G' or 'X' found in map")
-    
+
     grid = NavGrid(
         width=width,
         height=height,
@@ -188,11 +188,11 @@ S##
 def test_astar_golden(case: AsciiMapCase) -> None:
     """Test A* against golden expected paths."""
     grid, start, goal = parse_ascii_map(case.ascii_map)
-    
+
     # For same_position case, S is also G
     if case.name == "same_position":
         goal = start
-    
+
     path = astar(start, goal, grid, diag=case.diag)
     assert path == case.expected_path, (
         f"Path mismatch for {case.name}:\n"
@@ -248,13 +248,13 @@ S.#.G
 def test_astar_unreachable(name: str, ascii_map: str, diag: bool) -> None:
     """Test that A* returns empty path for unreachable goals."""
     grid, start, goal = parse_ascii_map(ascii_map)
-    
+
     # For blocked_goal/blocked_start, the S or G is on a '#'
     if name == "blocked_goal":
         goal = (2, 2)  # The '#' position
     elif name == "blocked_start":
         start = (0, 0)  # The '#' position
-    
+
     path = astar(start, goal, grid, diag=diag)
     assert path == [], f"Expected empty path for unreachable case '{name}', got {path}"
 

@@ -32,11 +32,12 @@ Architecture:
 
 from __future__ import annotations
 
-import math
 import builtins
+import math
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Optional
+
 from engine.swallowed_exceptions import _log_swallow
 
 

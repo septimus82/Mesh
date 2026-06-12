@@ -10,8 +10,6 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from mesh_cli.version_info import get_tool_version
-
 
 def _repo_root_from_module() -> Path:
     return Path(__file__).resolve().parent.parent

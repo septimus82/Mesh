@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import engine.optional_arcade
-
 from engine.encounter_debug import get_encounter_debug_lines
 from engine.game_runtime import tick as game_tick
 from engine.logging_tools import get_logger
@@ -11,7 +10,6 @@ from engine.logging_tools import get_logger
 logger = get_logger(__name__)
 
 if TYPE_CHECKING:
-    from typing import Any
     from engine.game import GameWindow
 
 

@@ -36,8 +36,8 @@ def try_copy_to_clipboard(text: str, *, is_web: bool = False, is_headless: bool 
 
     # Only import tkinter when we're actually going to use it
     try:
-        import warnings  # noqa: PLC0415
         import tkinter  # noqa: PLC0415
+        import warnings  # noqa: PLC0415
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")

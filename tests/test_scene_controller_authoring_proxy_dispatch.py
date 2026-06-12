@@ -15,6 +15,7 @@ import inspect
 from typing import Any
 
 import pytest
+
 from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]

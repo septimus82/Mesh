@@ -6,9 +6,8 @@ without any arcade/pygame dependencies (pure unit tests).
 
 from __future__ import annotations
 
-import pytest
-from unittest.mock import MagicMock
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 from engine.editor.editor_clipboard_ops import (
     clone_entity_payload,
@@ -16,7 +15,6 @@ from engine.editor.editor_clipboard_ops import (
     generate_copy_entity_id,
     get_entity_id_from_data,
 )
-
 
 # ------------------------------------------------------------------------------
 # generate_copy_entity_id tests

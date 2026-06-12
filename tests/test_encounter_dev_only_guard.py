@@ -1,7 +1,9 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
+
 from engine.console_controller import ConsoleController
 from engine.console_runtime.commands import dispatch_command
+
 
 class TestEncounterDevOnlyGuard(unittest.TestCase):
     def setUp(self):
@@ -36,7 +38,7 @@ class TestEncounterDevOnlyGuard(unittest.TestCase):
     def test_allowed_in_dev(self):
         self.mock_window.engine_config.profile = "dev"
         self.mock_window.scene_controller.scene_settings = {}
-        
+
         # Reroll should proceed
         self._dispatch_encounter(["reroll"])
         # Should log "Rerolling..." not "Error..."

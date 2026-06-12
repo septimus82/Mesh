@@ -3,10 +3,10 @@ Overlay provider for Keybinds UI.
 """
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from engine.editor.editor_keybinds_controller import EditorKeybindsController
+    pass
 
 # Visual constants (can be overridden by caller but defaults useful for stateless calculation)
 DEFAULT_ROW_HEIGHT = 24
@@ -35,7 +35,7 @@ def get_keybinds_ui_data(
     total_rows = len(rows)
 
     # Calculate optimal scroll to keep selection in view
-    # Note: We return the *target* scroll. The UI overlay usually consumes this 
+    # Note: We return the *target* scroll. The UI overlay usually consumes this
     # and interpolates or snaps its internal scroll variable.
     target_scroll_y = auto_scroll_to_selection(
         current_scroll_y,
@@ -43,7 +43,7 @@ def get_keybinds_ui_data(
         float(row_height),
         float(viewport_height)
     )
-    
+
     # Clamp just in case inputs were wild
     target_scroll_y = clamp_scroll(target_scroll_y, total_rows, float(row_height), float(viewport_height))
 
@@ -67,11 +67,11 @@ def get_keybinds_ui_data(
             "has_override": row.has_override,
             "is_selected": abs_index == state.selected_index,
             "is_recording": (
-                state.recording 
+                state.recording
                 and state.recording_target == (row.scope, row.action_id)
             )
         })
-    
+
     # Check persistence capability
     from engine.editor.editor_actions import _is_web_runtime
     is_web = _is_web_runtime()
@@ -83,22 +83,22 @@ def get_keybinds_ui_data(
         "recording_target": state.recording_target, # (scope, id) tuple or None
         "pending_record_shortcut": state.pending_record_shortcut,
         "pending_conflicts": state.pending_conflicts,
-        
+
         "scope_filter": state.scope_filter,
         "show_conflicts_only": state.show_conflicts_only,
-        
+
         "rows_total": total_rows,
         "rows_visible": row_data,
         "row_height": row_height,
-        
+
         # Scroll state
         "scroll_y": target_scroll_y,
         "start_index": start_idx,
-        
+
         # Selected details (for side panel)
         "selected_index": state.selected_index,
         "selected_item": _get_selected_details(rows, state.selected_index),
-        
+
         # Runtime flags
         "is_web": is_web,
         "hint_text": _get_hint_text(state, is_web)
@@ -122,18 +122,13 @@ def _get_hint_text(state: Any, is_web: bool) -> str:
     """Return context-sensitive hints."""
     if state.recording:
         return "RECORDING... Press key combo. ESC: Cancel."
-        
+
     hints = ["Arrows: Nav", "Enter: Record", "Del: Reset", "F1: Scope", "F2: Conflicts"]
-    
+
     if not is_web:
         hints.append("Ctrl+S: Apply & Save")
     else:
         hints.append("(Preview Only)")
-        
+
     return " | ".join(hints)
 
-    from engine.editor.keybinds_window_model import (
-        auto_scroll_to_selection,
-        clamp_scroll,
-        slice_visible_rows,
-    )

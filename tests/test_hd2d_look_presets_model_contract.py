@@ -13,6 +13,7 @@ import copy
 from types import SimpleNamespace
 from typing import Any
 
+from engine.editor.editor_actions import get_editor_actions, run_editor_action
 from engine.editor.hd2d_look_presets_model import (
     Hd2dLookPreset,
     apply_hd2d_preset,
@@ -20,7 +21,6 @@ from engine.editor.hd2d_look_presets_model import (
     get_hd2d_preset_patch,
     list_hd2d_presets,
 )
-from engine.editor.editor_actions import get_editor_actions, run_editor_action
 
 
 class TestPresetListStability:

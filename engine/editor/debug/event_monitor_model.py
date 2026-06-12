@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
 from engine.editor.behaviour_inspector import EventLogRow, build_event_log_rows
 

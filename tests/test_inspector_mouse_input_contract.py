@@ -14,7 +14,6 @@ from engine.editor_runtime import editor_input_click_handlers
 from engine.editor_runtime.editor_database_form_input import dispatch_database_form_click
 from tests._dock_stub import make_dock_stub
 
-
 pytestmark = [pytest.mark.fast]
 
 

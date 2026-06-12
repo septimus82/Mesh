@@ -15,7 +15,6 @@ from typing import Any
 from engine.cutscene_runtime.runner import CutsceneRunner
 from engine.cutscene_runtime.schema import CUTSCENE_SCHEMA_VERSION
 
-
 # ---------------------------------------------------------------------------
 # Mock doubles
 # ---------------------------------------------------------------------------

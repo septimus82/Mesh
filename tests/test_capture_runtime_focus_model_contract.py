@@ -10,22 +10,22 @@ from __future__ import annotations
 import pytest
 
 from engine.input_runtime.capture_runtime_focus_model import (
+    SCOPE_AUTHORING_SELECTED,
     SCOPE_CAPTURE_MODE,
     SCOPE_COMMAND_PALETTE,
     SCOPE_CONFIRM_MODAL,
     SCOPE_CONSOLE,
     SCOPE_CONTEXT_MENU,
-    SCOPE_AUTHORING_SELECTED,
     SCOPE_ENTITY_PAINT,
     SCOPE_ENTITY_SELECT,
     SCOPE_GLOBAL,
     SCOPE_INLINE_RENAME,
     SCOPE_KEYBINDS,
     SCOPE_PALETTE_MODE,
+    SCOPE_PRIORITY,
     SCOPE_PROBLEMS,
     SCOPE_PROJECT_EXPLORER,
     SCOPE_TILE_PAINT,
-    SCOPE_PRIORITY,
     CaptureFocusSnapshot,
     compute_active_scopes,
 )

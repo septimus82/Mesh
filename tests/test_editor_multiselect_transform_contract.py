@@ -7,6 +7,7 @@ correctly without any arcade/pygame dependencies (pure unit tests).
 from __future__ import annotations
 
 import copy
+
 import pytest
 
 from engine.editor.editor_multiselect_ops import (
@@ -17,14 +18,13 @@ from engine.editor.editor_multiselect_ops import (
     toggle_selection,
 )
 from engine.editor.editor_transform_ops import (
-    MoveEntityCommand,
     MoveEntitiesCommand,
+    MoveEntityCommand,
     apply_group_move_command,
     apply_snap_to_xy,
     create_group_move_command_from_drag,
     invert_group_move_command,
 )
-
 
 # ------------------------------------------------------------------------------
 # Multiselect ops tests

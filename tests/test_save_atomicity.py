@@ -2,10 +2,8 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
-from engine.save_manager import SaveManager
 from engine import savegame
+from engine.save_manager import SaveManager
 
 
 class _SaveManagerWindow:

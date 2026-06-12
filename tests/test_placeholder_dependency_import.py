@@ -1,6 +1,9 @@
-import unittest
+# ruff: noqa: F401
+
 import sys
+import unittest
 from unittest.mock import MagicMock
+
 
 class TestPlaceholderDependencyImport(unittest.TestCase):
     def test_pillow_import(self):

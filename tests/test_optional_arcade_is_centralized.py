@@ -39,7 +39,7 @@ def test_optional_arcade_is_only_try_import_location() -> None:
             continue
         if path.name in allowed_exceptions:
             continue
-            
+
         text = path.read_text(encoding="utf-8")
         if _has_try_import_arcade(text):
             offenders.append(str(path))

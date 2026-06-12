@@ -1,6 +1,7 @@
 
 import os
 import re
+
 import pytest
 
 pytestmark = [pytest.mark.fast]
@@ -38,7 +39,7 @@ def get_indentation(line):
 def test_no_arcade_imports():
     root_dir = os.getcwd()
     violations = []
-    
+
     files_to_scan = []
     for d in SCAN_DIRS:
         start_dir = os.path.join(root_dir, d)
@@ -61,26 +62,26 @@ def test_no_arcade_imports():
 
         in_type_checking = False
         type_checking_indent = -1
-        
+
         for i, line in enumerate(lines):
             stripped_line = line.strip()
             if not stripped_line:
                 continue
-            
+
             current_indent = get_indentation(line)
-            
+
             # Check if we are exiting a TYPE_CHECKING block
             if in_type_checking:
                 if current_indent <= type_checking_indent:
                     in_type_checking = False
-            
+
             # Check if we are entering a TYPE_CHECKING block
             if "TYPE_CHECKING" in line and stripped_line.startswith("if"):
                 # Rough check for 'if TYPE_CHECKING:' or 'if typing.TYPE_CHECKING:'
                 in_type_checking = True
                 type_checking_indent = current_indent
                 continue
-            
+
             if in_type_checking:
                 continue
 
@@ -95,7 +96,7 @@ def test_no_arcade_imports():
                     line_pre_match = line[:start_idx]
                     if '#' in line_pre_match:
                         continue # It's in a comment
-                    
+
                     violations.append(f"{rel_path}:{i+1}: {msg} -> {stripped_line}")
                     break
 

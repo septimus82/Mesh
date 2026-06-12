@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from engine import command_palette_registry_defs as _defs
 
-
 _STRUCTURED_ARG_FORMS: dict[str, tuple[str, ...]] = {
     "selection.align": (
         "token: left|center|right|top|middle|bottom",

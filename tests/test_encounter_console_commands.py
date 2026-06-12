@@ -1,7 +1,9 @@
 import unittest
 from unittest.mock import MagicMock, patch
+
 from engine.console_controller import ConsoleController
 from engine.console_runtime.commands import dispatch_command
+
 
 class TestEncounterConsoleCommands(unittest.TestCase):
     def setUp(self):
@@ -31,7 +33,7 @@ class TestEncounterConsoleCommands(unittest.TestCase):
         self._dispatch_encounter(["reroll", "123"])
         self.assertEqual(self.mock_window.scene_controller.scene_settings["encounter_seed"], 123)
         self.mock_window.request_scene_reload.assert_called()
-        
+
         # Test deterministic fallback
         self.mock_window.scene_controller.current_scene_id = "test_scene"
         expected_seed = sum(ord(c) for c in "test_scene") * 12345 % 1000000

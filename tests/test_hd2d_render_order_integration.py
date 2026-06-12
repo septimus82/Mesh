@@ -8,10 +8,7 @@ Tests verify that entities are sorted deterministically even when:
 
 from __future__ import annotations
 
-import pytest
-
 from engine.render_sort_model import (
-    compute_sprite_render_sort_key,
     sort_sprites_for_render,
 )
 

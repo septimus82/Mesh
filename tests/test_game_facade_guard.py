@@ -1,6 +1,8 @@
 import re
 from pathlib import Path
+
 import pytest
+
 
 def test_game_py_facade_guard():
     """
@@ -18,7 +20,7 @@ def test_game_py_facade_guard():
     content = game_py.read_text(encoding="utf-8")
     lines = content.splitlines()
     non_empty_lines = [line for line in lines if line.strip()]
-    
+
     # 1. Budget check
     # Current is ~1100. Set limit to 1200.
     assert len(non_empty_lines) < 1200, f"engine/game.py has {len(non_empty_lines)} non-empty lines, exceeding limit of 1200"
@@ -36,7 +38,7 @@ def test_game_py_facade_guard():
 
     # 4. Logic checks
     # Ensure specific logic is delegated
-    
+
     # mark_scene_dirty logic
     if "self.scene_dirty = True" in content:
         # It might be in a comment or string, but unlikely in this file structure.
@@ -52,7 +54,7 @@ def test_game_py_facade_guard():
     # So if we see 'begin_boss_gold_reward_tracking(' inside a def, that's bad.
     # But it is imported at top level.
     # Let's check if it appears indented (usage) rather than 'from ... import ...'
-    
+
     usage_matches = re.findall(r"^\s+begin_boss_gold_reward_tracking\(", content, re.MULTILINE)
     assert not usage_matches, "Found usage of begin_boss_gold_reward_tracking in game.py. Should be delegated."
 

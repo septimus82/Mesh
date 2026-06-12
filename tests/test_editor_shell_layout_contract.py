@@ -1,15 +1,13 @@
 """Tests for Editor Shell Layout contract."""
 
-import pytest
 from engine.editor.editor_shell_layout import (
-    TOP_BAR_HEIGHT,
     BOTTOM_BAR_HEIGHT,
     DOCK_WIDTH,
-    Rect,
-    EditorShellLayout,
+    TOP_BAR_HEIGHT,
     DockTabState,
-    compute_editor_shell_layout,
+    Rect,
     clamp_rects_to_window,
+    compute_editor_shell_layout,
     get_dock_tab_options,
 )
 
@@ -55,7 +53,7 @@ class TestComputeEditorShellLayout:
         assert layout.viewport.height > 0
 
         # All rects should be within window bounds
-        for rect in [layout.top_bar, layout.bottom_bar, layout.left_dock, 
+        for rect in [layout.top_bar, layout.bottom_bar, layout.left_dock,
                      layout.right_dock, layout.viewport]:
             assert rect.left >= 0
             assert rect.right <= 1920

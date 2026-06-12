@@ -19,7 +19,7 @@ class TestMeshDoctorJson(unittest.TestCase):
                 pass  # Doctor might exit with non-zero if there are issues, which is fine
 
             output = fake_out.getvalue()
-            
+
         # Parse JSON
         try:
             data = json.loads(output)
@@ -31,7 +31,7 @@ class TestMeshDoctorJson(unittest.TestCase):
         self.assertIn("checks", data)
         self.assertIn("next", data)
         self.assertIn("artifacts", data)
-        
+
         self.assertIsInstance(data["checks"], list)
         if data["checks"]:
             check = data["checks"][0]

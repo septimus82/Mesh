@@ -11,7 +11,6 @@ import pytest
 from engine.config import EngineConfig, load_config
 from engine.game import GameWindow
 
-
 pytestmark = pytest.mark.fast
 
 

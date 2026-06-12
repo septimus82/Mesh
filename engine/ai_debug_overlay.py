@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Any
+
 import engine.optional_arcade as optional_arcade
 
 if TYPE_CHECKING:

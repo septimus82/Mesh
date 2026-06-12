@@ -4,20 +4,20 @@ import json
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from engine.behaviours.particle_emitter import validate_particle_emitter_config
 from engine.fx_presets import FxPresetRegistry, collect_presets_and_errors
+from engine.particles_core import normalize_rect
 from engine.paths import reset_path_caches, resolve_path, set_content_roots
 from engine.prefabs import get_prefab_manager
 from engine.swallowed_exceptions import _log_swallow
 from engine.tooling.content_contract import (
-    find_particle_emitters,
     _build_prefab_index,
     _resolve_prefab_ref,
+    find_particle_emitters,
 )
 from engine.tooling_runtime.pack_manifest import load_all_manifests, resolve_pack_order
-from engine.particles_core import normalize_rect
 
 
 @dataclass(frozen=True)

@@ -5,6 +5,7 @@ import types
 
 import pytest
 
+from engine.game_runtime import tick
 from engine.swallowed_exceptions import (
     format_swallowed_summary,
     get_and_reset_counts,
@@ -14,7 +15,6 @@ from engine.swallowed_exceptions import (
     reset,
     should_log,
 )
-from engine.game_runtime import tick
 
 pytestmark = [pytest.mark.fast]
 

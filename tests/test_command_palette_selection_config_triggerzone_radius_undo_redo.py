@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import engine.optional_arcade as optional_arcade
 from tests._command_palette_window_stub import CommandPaletteWindowStub, as_game_window
 
 

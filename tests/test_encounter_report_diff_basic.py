@@ -1,8 +1,10 @@
 """Basic tests for encounter report diffing."""
 
 import unittest
-from engine.encounter_report import EncounterReport, EncounterSceneReport, EncounterGroupReport
+
+from engine.encounter_report import EncounterGroupReport, EncounterReport, EncounterSceneReport
 from engine.encounter_report_diff import diff_reports
+
 
 class TestEncounterReportDiffBasic(unittest.TestCase):
     def setUp(self):
@@ -55,14 +57,14 @@ class TestEncounterReportDiffBasic(unittest.TestCase):
             ]
         )
         new_report = EncounterReport(scenes=[new_scene])
-        
+
         diff = diff_reports(self.old_report, new_report)
         s = diff.scene_diffs[0]
-        
+
         self.assertEqual(s.spawn_count_delta, 2)
         self.assertEqual(s.elite_count_delta, 1)
         self.assertEqual(s.total_spawn_cost_delta, 4.0)
-        
+
         # Overrun check
         # Old: 8.0 cost, 10.0 budget -> 0 overrun
         # New: 12.0 cost, 10.0 budget -> 2.0 overrun

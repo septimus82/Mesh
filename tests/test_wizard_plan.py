@@ -1,7 +1,5 @@
 from unittest.mock import patch
 
-import pytest
-
 from engine.tooling import wizard_command
 from engine.tooling.tool_result import ToolResult
 

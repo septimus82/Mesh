@@ -5,9 +5,8 @@ from __future__ import annotations
 from typing import Any, Optional
 
 import engine.optional_arcade as optional_arcade
-
-from engine.editor_runtime import input as editor_input
 from engine.editor_light_occluder_ops import snap_world_point
+from engine.editor_runtime import input as editor_input
 
 
 def handle_mouse_click(self: Any, x: float, y: float, button: int, modifiers: int) -> bool:

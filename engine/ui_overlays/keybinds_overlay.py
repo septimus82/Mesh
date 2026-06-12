@@ -11,9 +11,9 @@ from ..text_draw import TextCache
 from ..ui_text_cache import UiTextCache, draw_text
 from .common import (
     UIElement,
+    _draw_rectangle_outline,
     _draw_tb_rectangle_filled,
     _draw_tb_rectangle_outline,
-    _draw_rectangle_outline,
 )
 from .keybinds_provider import get_keybinds_ui_data
 from .widget_overlay_helpers import OverlayFocusModel, build_empty_row, build_status_row, compose_list_rows

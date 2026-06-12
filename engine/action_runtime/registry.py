@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable
-
+from engine import savegame
 from engine.action_runtime.constants import ActionHandler
 from engine.constants import (
     EVENT_INVENTORY_OVERLAY_CLOSED,
@@ -11,7 +10,6 @@ from engine.constants import (
 )
 from engine.swallowed_exceptions import _log_swallow
 from engine.ui import maybe_enqueue_lighting_toggle_tip
-from engine import savegame
 
 
 def _noop(_window: object) -> None:

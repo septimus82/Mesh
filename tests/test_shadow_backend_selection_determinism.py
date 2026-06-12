@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
+import engine.lighting.shadows as shadows_mod
 from engine.lighting.shadow_backend import choose_shadow_backend, decision_to_diagnostics
 from engine.lighting.shadows import get_shadow_backend_diagnostics
-import engine.lighting.shadows as shadows_mod
 
 pytestmark = [pytest.mark.fast]
 

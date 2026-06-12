@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 _DEFAULT_TREND_FILE = "tooling/metrics/weekly_trends.json"
 
 

@@ -1,9 +1,10 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
+from engine.input_controller import InputController
 from engine.ui import UIElement
 from engine.ui_controller import UIController
-from engine.input_controller import InputController
+
 
 class BlockingElement(UIElement):
     @property
@@ -21,7 +22,7 @@ class TestModalInputFocus(unittest.TestCase):
         self.ui_controller = UIController(self.window)
         self.window.ui_controller = self.ui_controller
         self.input_controller = InputController(self.window)
-        
+
         # Mock InputManager
         self.input_controller.manager = MagicMock()
         self.input_controller.manager.was_action_pressed = MagicMock(return_value=False)
@@ -48,21 +49,21 @@ class TestModalInputFocus(unittest.TestCase):
     def test_input_controller_update_blocked(self):
         # Setup an action that would normally fire
         self.input_controller.manager.was_action_pressed.return_value = True
-        
+
         # Mock dispatch_action to verify it's NOT called
         with patch('engine.input_controller.dispatch_action') as mock_dispatch:
             # Case 1: Input NOT blocked
             # Ensure no blocking elements
             self.ui_controller.clear_ui_elements()
-            
+
             self.input_controller.update(0.1)
             mock_dispatch.assert_called()
-            
+
             mock_dispatch.reset_mock()
-            
+
             # Case 2: Input BLOCKED
             element = BlockingElement(self.window)
             self.ui_controller.register_ui_element(element)
-            
+
             self.input_controller.update(0.1)
             mock_dispatch.assert_not_called()

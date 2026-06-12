@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
 
 import engine.editor_controller as editor_module
 from engine.editor_controller import EditorModeController

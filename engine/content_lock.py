@@ -13,7 +13,6 @@ from engine.paths import get_content_index, resolve_path
 from engine.swallowed_exceptions import record_swallowed, should_log
 from engine.version import ENGINE_VERSION
 
-
 _log = get_logger(__name__)
 
 def _mesh_lock_log_sampled(key: str, exc: Exception, *, context: str = "") -> None:

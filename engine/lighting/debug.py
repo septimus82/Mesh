@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from typing import Any, Iterable, Sequence
+
 import engine.optional_arcade as optional_arcade
+
 from .occluders import Rect
 
 Point = tuple[float, float]

@@ -6,11 +6,11 @@ from typing import Any, cast
 
 from engine import optional_arcade
 from engine.background_layers import parse_background_layers
-from engine.parallax_model import parse_background_planes
 from engine.depth_tint_model import parse_depth_tint_settings
 from engine.editor.sprite_outline_model import parse_outline_settings
-from engine.scene_runtime.index_build import build_scene_index_from_sprites
+from engine.parallax_model import parse_background_planes
 from engine.scene_lifecycle_model import SceneLoadInputs, build_scene_load_plan
+from engine.scene_runtime.index_build import build_scene_index_from_sprites
 from engine.swallowed_exceptions import _log_swallow
 from engine.ui import (
     maybe_enqueue_controls_hint_toast,

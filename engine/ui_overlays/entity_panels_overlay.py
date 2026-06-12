@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+
 import engine.optional_arcade as optional_arcade
 
 from .common import UIElement, draw_panel_bg
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ..game import GameWindow
+    pass
 
 
 def _line_color(line: str) -> Any:

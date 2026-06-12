@@ -4,16 +4,16 @@ This module extracts draw_world from EditorModeController for the Vertical Slice
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, List, Tuple
+from typing import TYPE_CHECKING, Any, Tuple
 
 import engine.optional_arcade as optional_arcade
-from engine.ui_overlays.common import _draw_tb_rectangle_filled, draw_outline_centered
+from engine.asset_place_overlay import draw_asset_placement_ghost
 from engine.editor.state import (
     TOOL_MODE_PATH,
     TOOL_MODE_ZONE,
 )
 from engine.editor_light_occluder_ops import snap_world_point
-from engine.asset_place_overlay import draw_asset_placement_ghost
+from engine.ui_overlays.common import _draw_tb_rectangle_filled, draw_outline_centered
 
 if TYPE_CHECKING:
     from engine.editor_controller import EditorModeController

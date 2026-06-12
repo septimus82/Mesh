@@ -12,8 +12,6 @@ from __future__ import annotations
 
 import copy
 
-import pytest
-
 
 class TestComputeRenamePaths:
     """Tests for compute_rename_paths."""

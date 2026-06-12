@@ -6,7 +6,6 @@ import pytest
 
 import engine.assets_reload as assets_reload
 
-
 pytestmark = [pytest.mark.fast]
 
 

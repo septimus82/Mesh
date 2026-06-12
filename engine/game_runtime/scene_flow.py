@@ -8,7 +8,6 @@ from engine.scene_transition_policy_model import (
     decide_scene_transition,
 )
 
-
 if TYPE_CHECKING:
     from engine.game import GameWindow
 

@@ -17,7 +17,6 @@ from .repo_root import find_repo_root
 from .schema_validation import validate
 from .swallowed_exceptions import record_swallowed, should_log
 
-
 _log = get_logger(__name__)
 
 

@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from engine.persistence_io import dumps_json_deterministic, read_json, write_json_atomic
+from engine.persistence_io import read_json, write_json_atomic
 
 
 def _repo_root_from_module() -> Path:

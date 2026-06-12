@@ -2,6 +2,7 @@ from typing import Any
 
 from engine.swallowed_exceptions import _log_swallow
 
+
 def mark_scene_dirty(window: Any, reason: str) -> None:
     reason_text = str(reason or "").strip()
     window.scene_dirty = True
@@ -91,6 +92,7 @@ def persist_scene_to_disk(window: Any) -> Any:
 
 def save_scene_as(window: Any, new_scene_path: str) -> Any:
     from pathlib import Path as _Path
+
     from engine.path_norm import normalize_scene_path
     from engine.tooling_runtime.entity_persist import PersistResult, persist_scene_payload
 

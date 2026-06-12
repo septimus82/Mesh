@@ -12,8 +12,6 @@ Tests cover:
 
 from __future__ import annotations
 
-import pytest
-
 from engine.editor.background_planes_edit_model import (
     add_background_plane,
     compute_tiling_mode,

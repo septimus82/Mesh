@@ -1,4 +1,3 @@
-from pathlib import Path
 
 import mesh_cli
 from engine.tooling.tool_result import ToolResult

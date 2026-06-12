@@ -5,8 +5,8 @@ import json
 from types import SimpleNamespace
 
 import pytest
-from tests._command_palette_window_stub import CommandPaletteWindowStub, as_game_window
 
+from tests._command_palette_window_stub import CommandPaletteWindowStub, as_game_window
 
 pytestmark = pytest.mark.fast
 

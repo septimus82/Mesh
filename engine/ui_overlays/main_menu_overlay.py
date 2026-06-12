@@ -12,13 +12,12 @@ import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
+from ._settings_data import SETTINGS_ROWS
 from .common import (
     UIElement,
-    _draw_tb_rectangle_outline,
     _draw_rectangle_filled,
+    _draw_tb_rectangle_outline,
 )
-from ..input_hints import get_action_hint, set_keyboard_hints
-from ._settings_data import SETTINGS_ROWS
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -224,9 +223,10 @@ class MainMenuOverlay(UIElement):
     def _reload_project_config(self) -> None:
         """Reload the engine config and world controller from the current project root."""
         import json
+
         from ..config import load_config  # noqa: PLC0415
-        from ..paths import resolve_path  # noqa: PLC0415
         from ..migrations import migrate_payload  # noqa: PLC0415
+        from ..paths import resolve_path  # noqa: PLC0415
         from ..world_controller import WorldController  # noqa: PLC0415
 
         new_config = load_config()
@@ -597,7 +597,7 @@ class MainMenuOverlay(UIElement):
         return True
 
     def _remove_selected_project(self) -> None:
-        from ..projects import remove_recent_project, get_repo_root  # noqa: PLC0415
+        from ..projects import remove_recent_project  # noqa: PLC0415
 
         items = self._project_items()
         if not items:

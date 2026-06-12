@@ -5,6 +5,7 @@ from typing import Any
 
 from ._shared import _log_swallow, _parse_planes_move_to_args, _parse_planes_select_args, _parse_planes_toggle_repeat_args, _set_selected_plane_id
 
+
 def _run_editor_action_from_impl(w: Any, action_id: str) -> bool:
     impl = import_module("engine.command_palette_registry_actions_impl")
     runner = getattr(impl, "_run_editor_action", None)

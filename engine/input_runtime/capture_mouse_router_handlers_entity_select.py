@@ -4,12 +4,11 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-
-from engine.input_runtime.capture_mouse_router_model import MouseEvent
 from engine.input_runtime.capture_mouse_router_handlers_modal_base import (
     maybe_handle_editor_mouse_press,
     maybe_handle_editor_mouse_release,
 )
+from engine.input_runtime.capture_mouse_router_model import MouseEvent
 from engine.swallowed_exceptions import _log_swallow
 
 
@@ -34,7 +33,7 @@ def dispatch_entity_select_mouse(controller: Any, event: MouseEvent, action_id: 
 
 
 def _handle_entity_select_mouse_press(window: Any, event: MouseEvent) -> bool:
-    from engine.entity_select_mode import EntitySelectState, clear_drag, update_drag_rect, set_selection  # noqa: PLC0415
+    from engine.entity_select_mode import EntitySelectState, clear_drag, set_selection, update_drag_rect  # noqa: PLC0415
 
     state = getattr(window, "entity_select_state", None)
     if not (
@@ -104,8 +103,8 @@ def _handle_entity_select_mouse_release(window: Any, event: MouseEvent) -> bool:
     from engine.entity_select_mode import (  # noqa: PLC0415
         EntitySelectState,
         clear_drag,
-        set_selection,
         iter_entity_ids_in_world_rect,
+        set_selection,
     )
 
     state = getattr(window, "entity_select_state", None)
@@ -131,7 +130,7 @@ def _handle_entity_select_mouse_release(window: Any, event: MouseEvent) -> bool:
         ctrl_held = bool(event.modifiers & optional_arcade.arcade.key.MOD_CTRL)
         ids = list(iter_entity_ids_in_world_rect(window, rect))
         existing = list(state.selected_ids or [])
-        
+
         if shift_held:
             # Union: add marquee entities to existing selection
             for eid in ids:

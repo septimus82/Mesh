@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
-import copy
 
 _MISSING = object()
 

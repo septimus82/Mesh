@@ -10,7 +10,6 @@ These tests verify that:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
@@ -26,7 +25,6 @@ from engine.behaviours.saveable import (
     validate_saveable_state,
 )
 from tests._typing import as_any
-
 
 # ============================================================================
 # Mock behaviours for testing
@@ -557,7 +555,6 @@ class TestProtocolStructure:
 
     def test_protocol_is_runtime_checkable(self) -> None:
         """Protocols should be runtime checkable."""
-        from typing import runtime_checkable
 
         # The @runtime_checkable decorator should be applied
         assert getattr(SaveableBehaviour, "__protocol_attrs__", None) is not None or hasattr(

@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-from types import SimpleNamespace
-
 import engine.optional_arcade as optional_arcade
 from engine.editor.shortcut_resolver_model import (
     SHORTCUT_SCOPE_GLOBAL,

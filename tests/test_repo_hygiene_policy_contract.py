@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tooling.repo_hygiene_policy import scan_repo_hygiene, format_hygiene_failure
+from tooling.repo_hygiene_policy import format_hygiene_failure, scan_repo_hygiene
 
 
 def _touch(path: Path, text: str = "x") -> None:

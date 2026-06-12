@@ -1,12 +1,11 @@
 import types
 
 import pytest
-from tests._typing import as_any
 
 from engine.scene_controller import SceneController
 from engine.ui import GameOverScreen, HelpOverlay, PauseMenu, PlayerHUD
 from engine.ui_controller import UIController
-
+from tests._typing import as_any
 
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
