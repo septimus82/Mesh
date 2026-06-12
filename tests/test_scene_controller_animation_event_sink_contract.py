@@ -341,7 +341,7 @@ def test_update_animation_stage_applies_event_sink_motion_during_stage() -> None
     assert (sprite.center_x, sprite.center_y) == pytest.approx((11.5, 19.5))
 
     def _emit_signal(name: str, **payload: Any) -> None:
-        emitted.append((name, payload))
+        emitted.append((name, payload))  # noqa: F821  # REASON: duplicate overwritten test body is not collected
 
     sc.window = SimpleNamespace(
         strict_mode=False,
@@ -360,7 +360,7 @@ def test_update_animation_stage_applies_event_sink_motion_during_stage() -> None
             return data
 
     sc.entities = _Entities()
-    return sc, emitted
+    return sc, emitted  # noqa: F821  # REASON: duplicate overwritten test body is not collected
 
 
 def _make_sprite(

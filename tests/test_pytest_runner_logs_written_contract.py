@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.subprocess_tools import run_checked
+
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 

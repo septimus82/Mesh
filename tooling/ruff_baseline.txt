@@ -1,0 +1,952 @@
+engine/ai_audit.py: F841 Local variable `has_tags` is assigned to but never used
+engine/ai_history.py: F841 Local variable `type_` is assigned to but never used
+engine/behaviour_event_router_model.py: W291 Trailing whitespace
+engine/behaviours/action_list_runner.py: W293 Blank line contains whitespace
+engine/behaviours/action_list_runner.py: W293 Blank line contains whitespace
+engine/behaviours/action_list_runner.py: W293 Blank line contains whitespace
+engine/behaviours/action_list_runner.py: W293 Blank line contains whitespace
+engine/behaviours/action_list_runner.py: W293 Blank line contains whitespace
+engine/behaviours/action_list_runner.py: W293 Blank line contains whitespace
+engine/behaviours/action_list_runner.py: W293 Blank line contains whitespace
+engine/behaviours/action_list_runner.py: W293 Blank line contains whitespace
+engine/behaviours/action_list_runner.py: W293 Blank line contains whitespace
+engine/behaviours/action_list_runner.py: W293 Blank line contains whitespace
+engine/behaviours/base.py: W293 Blank line contains whitespace
+engine/behaviours/base.py: W293 Blank line contains whitespace
+engine/behaviours/base.py: W293 Blank line contains whitespace
+engine/behaviours/base.py: W293 Blank line contains whitespace
+engine/behaviours/base.py: W293 Blank line contains whitespace
+engine/behaviours/base.py: W293 Blank line contains whitespace
+engine/behaviours/base.py: W293 Blank line contains whitespace
+engine/behaviours/chase_target.py: W293 Blank line contains whitespace
+engine/behaviours/dialogue_runner.py: W293 Blank line contains whitespace
+engine/behaviours/dialogue_runner.py: W293 Blank line contains whitespace
+engine/behaviours/dialogue_runner.py: W293 Blank line contains whitespace
+engine/behaviours/dialogue_runner.py: W293 Blank line contains whitespace
+engine/behaviours/dialogue_runner.py: W293 Blank line contains whitespace
+engine/behaviours/dialogue_runner.py: W293 Blank line contains whitespace
+engine/behaviours/dialogue_runner.py: W293 Blank line contains whitespace
+engine/behaviours/dialogue_runner.py: W293 Blank line contains whitespace
+engine/behaviours/dialogue_runner.py: W293 Blank line contains whitespace
+engine/behaviours/dialogue_runner.py: W293 Blank line contains whitespace
+engine/behaviours/dialogue_runner.py: W293 Blank line contains whitespace
+engine/behaviours/flee_from_target.py: W293 Blank line contains whitespace
+engine/behaviours/flee_from_target.py: W293 Blank line contains whitespace
+engine/behaviours/flee_from_target.py: W293 Blank line contains whitespace
+engine/behaviours/flee_from_target.py: W293 Blank line contains whitespace
+engine/behaviours/interactable.py: W293 Blank line contains whitespace
+engine/behaviours/interactable.py: W293 Blank line contains whitespace
+engine/behaviours/interactable.py: W293 Blank line contains whitespace
+engine/behaviours/interactable.py: W293 Blank line contains whitespace
+engine/behaviours/patrol_path.py: W293 Blank line contains whitespace
+engine/behaviours/patrol_path.py: W293 Blank line contains whitespace
+engine/behaviours/patrol_path.py: W293 Blank line contains whitespace
+engine/behaviours/patrol_path.py: W293 Blank line contains whitespace
+engine/behaviours/patrol_path.py: W293 Blank line contains whitespace
+engine/behaviours/quest_hook.py: W293 Blank line contains whitespace
+engine/behaviours/quest_hook.py: W293 Blank line contains whitespace
+engine/behaviours/quest_hook.py: W293 Blank line contains whitespace
+engine/behaviours/quest_hook.py: W293 Blank line contains whitespace
+engine/behaviours/quest_hook.py: W293 Blank line contains whitespace
+engine/behaviours/quest_hook.py: W293 Blank line contains whitespace
+engine/behaviours/quest_hook.py: W293 Blank line contains whitespace
+engine/behaviours/quest_hook.py: W293 Blank line contains whitespace
+engine/behaviours/quest_hook.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/saveable.py: W293 Blank line contains whitespace
+engine/behaviours/timer.py: W293 Blank line contains whitespace
+engine/behaviours/timer.py: W293 Blank line contains whitespace
+engine/behaviours/timer.py: W293 Blank line contains whitespace
+engine/behaviours/trigger_volume.py: W293 Blank line contains whitespace
+engine/behaviours/trigger_volume.py: W293 Blank line contains whitespace
+engine/behaviours/trigger_volume.py: W293 Blank line contains whitespace
+engine/behaviours/wander.py: W293 Blank line contains whitespace
+engine/behaviours/wander.py: W293 Blank line contains whitespace
+engine/behaviours/wander.py: W293 Blank line contains whitespace
+engine/behaviours/wander.py: W293 Blank line contains whitespace
+engine/command_palette_actions/__init__.py: F405 `action_align_selection` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_batch_rename` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_config_sgs_add_forbid_flag` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_config_sgs_add_require_flag` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_config_sgs_set_flag_true` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_config_sgs_set_toast` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_config_st_set_spawn_id` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_config_st_set_target_scene` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_config_tz_set_radius` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_config_tz_set_zone_id` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_distribute_selection` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_duplicate_along_path` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_duplicate_to_grid` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_go_to_scene` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_group_selection` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_macro_dialogue_choice_flag` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_macro_door_transition` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_macro_objective_zone` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_mirror_selection` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_nudge_selection` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_palette_clear_recent` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_palette_reset_ui_layout` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_add` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_duplicate` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_move_bottom` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_move_down` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_move_to` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_move_top` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_move_up` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_remove` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_select_next` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_select_prev` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_select` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_toggle_repeat_x` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_toggle_repeat_y` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_planes_toggle_repeat` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_props_add_behaviour` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_props_add_tag` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_props_remove_behaviour` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_props_remove_tag` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_props_set_name` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_props_set_prefab_id` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_props_toggle_tag` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_recent_scene` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_rotate_selection` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_scatter_selection` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_scene_create` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_scene_persist` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_scene_reload` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_scene_save_as` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_scene_toggle_persist_armed` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_set_names` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_snap_to_grid` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_toggle_capture` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_toggle_entity_paint` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_toggle_ghost_originals` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_toggle_palette_mode` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_toggle_tile_paint` may be undefined, or defined from star imports
+engine/command_palette_actions/__init__.py: F405 `action_ungroup_selection` may be undefined, or defined from star imports
+engine/cutscene_runtime/runner.py: F841 Local variable `event_data` is assigned to but never used
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/runner.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/schema.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/schema.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/schema.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/schema.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/schema.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/schema.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/schema.py: W293 Blank line contains whitespace
+engine/cutscene_runtime/schema.py: W293 Blank line contains whitespace
+engine/editor/asset_ops/asset_refactor_model.py: W291 Trailing whitespace
+engine/editor/asset_ops/asset_refactor_model.py: W293 Blank line contains whitespace
+engine/editor/asset_ops/asset_refactor_model.py: W293 Blank line contains whitespace
+engine/editor/asset_ops/asset_refactor_model.py: W293 Blank line contains whitespace
+engine/editor/asset_ops/asset_refactor_model.py: W293 Blank line contains whitespace
+engine/editor/asset_ops/asset_refactor_model.py: W293 Blank line contains whitespace
+engine/editor/asset_ops/asset_refactor_model.py: W293 Blank line contains whitespace
+engine/editor/asset_ops/asset_refactor_model.py: W293 Blank line contains whitespace
+engine/editor/asset_ops/editor_file_ops_controller.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/behaviour_inspector.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_model.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/components_ops.py: W293 Blank line contains whitespace
+engine/editor/confirm_modal_preview_model.py: W293 Blank line contains whitespace
+engine/editor/confirm_modal_preview_model.py: W293 Blank line contains whitespace
+engine/editor/debug/editor_debug_panels_controller.py: F841 Local variable `search` is assigned to but never used
+engine/editor/editor_actions_parts/hd2d_actions.py: F841 Local variable `field_count` is assigned to but never used
+engine/editor/editor_actions_parts/project_explorer_actions.py: W293 Blank line contains whitespace
+engine/editor/editor_actions_parts/project_explorer_actions.py: W293 Blank line contains whitespace
+engine/editor/editor_problems_controller.py: W293 Blank line contains whitespace
+engine/editor/editor_problems_controller.py: W293 Blank line contains whitespace
+engine/editor/editor_ui_flow_controller.py: W293 Blank line contains whitespace
+engine/editor/editor_undo_controller.py: E701 Multiple statements on one line (colon)
+engine/editor/editor_undo_controller.py: E701 Multiple statements on one line (colon)
+engine/editor/editor_undo_controller.py: E701 Multiple statements on one line (colon)
+engine/editor/editor_undo_controller.py: E701 Multiple statements on one line (colon)
+engine/editor/entity_panels.py: W293 Blank line contains whitespace
+engine/editor/entity_panels.py: W293 Blank line contains whitespace
+engine/editor/entity_panels.py: W293 Blank line contains whitespace
+engine/editor/entity_panels.py: W293 Blank line contains whitespace
+engine/editor/entity_panels.py: W293 Blank line contains whitespace
+engine/editor/entity_panels.py: W293 Blank line contains whitespace
+engine/editor/entity_panels.py: W293 Blank line contains whitespace
+engine/editor/keybinds_ui_model.py: W293 Blank line contains whitespace
+engine/editor/keybinds_ui_model.py: W293 Blank line contains whitespace
+engine/editor/persistence_utils.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_context_menu_controller.py: W291 Trailing whitespace
+engine/editor/project_explorer/editor_project_explorer_context_menu_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/editor_project_explorer_controller.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_context_menu_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_context_menu_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_context_menu_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: F841 Local variable `text_len` is assigned to but never used
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_inline_rename_model.py: W293 Blank line contains whitespace
+engine/editor/project_explorer/project_explorer_rank_model.py: W291 Trailing whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/scene_opening.py: W293 Blank line contains whitespace
+engine/editor/shortcut_resolver_model.py: W293 Blank line contains whitespace
+engine/editor/shortcut_resolver_model.py: W293 Blank line contains whitespace
+engine/editor/shortcut_resolver_model.py: W293 Blank line contains whitespace
+engine/editor/shortcut_resolver_model.py: W293 Blank line contains whitespace
+engine/editor/shortcut_resolver_model.py: W293 Blank line contains whitespace
+engine/editor_asset_ops.py: W293 Blank line contains whitespace
+engine/editor_asset_ops.py: W293 Blank line contains whitespace
+engine/editor_hover_highlight_overlay.py: W291 Trailing whitespace
+engine/editor_hover_highlight_overlay.py: W293 Blank line contains whitespace
+engine/editor_hover_highlight_overlay.py: W293 Blank line contains whitespace
+engine/editor_hover_highlight_overlay.py: W293 Blank line contains whitespace
+engine/editor_hover_highlight_overlay.py: W293 Blank line contains whitespace
+engine/editor_hover_highlight_overlay.py: W293 Blank line contains whitespace
+engine/editor_hover_highlight_overlay.py: W293 Blank line contains whitespace
+engine/editor_hover_highlight_overlay.py: W293 Blank line contains whitespace
+engine/editor_hover_highlight_overlay.py: W293 Blank line contains whitespace
+engine/editor_hover_highlight_overlay.py: W293 Blank line contains whitespace
+engine/editor_tooltips_model.py: F841 Local variable `field_kind` is assigned to but never used
+engine/encounter_report.py: F841 Local variable `settings` is assigned to but never used
+engine/entity_view.py: W293 Blank line contains whitespace
+engine/entity_view.py: W293 Blank line contains whitespace
+engine/entity_view.py: W293 Blank line contains whitespace
+engine/entity_view.py: W293 Blank line contains whitespace
+engine/entity_view.py: W293 Blank line contains whitespace
+engine/entity_view.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/gameplay_event_bus.py: W293 Blank line contains whitespace
+engine/input_controller.py: E402 Module level import not at top of file
+engine/input_controller.py: E402 Module level import not at top of file
+engine/input_runtime/capture_key_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_key_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_key_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_key_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_key_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_key_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_authoring_selected.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_command_palette.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_confirm_modal.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_console.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_context_menu.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_global.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_inline_rename.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_modal_base.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_modal_base.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_modal_base.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_paint.py: W291 Trailing whitespace
+engine/input_runtime/capture_mouse_router_handlers_paint_base.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_paint_base.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_problems.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_project_explorer.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_handlers_ui.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_mouse_router_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_runtime.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_runtime_focus_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_runtime_focus_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_runtime_focus_model.py: W293 Blank line contains whitespace
+engine/input_runtime/capture_runtime_focus_model.py: W293 Blank line contains whitespace
+engine/lighting/__init__.py: E402 Module level import not at top of file
+engine/lighting/__init__.py: E402 Module level import not at top of file
+engine/lighting/__init__.py: E402 Module level import not at top of file
+engine/lighting/__init__.py: E402 Module level import not at top of file
+engine/lighting/__init__.py: E402 Module level import not at top of file
+engine/lighting/__init__.py: E402 Module level import not at top of file
+engine/lighting/__init__.py: E402 Module level import not at top of file
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry_adapter.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry_adapter.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry_adapter.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry_adapter.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry_adapter.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry_adapter.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry_adapter.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry_adapter.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry_adapter.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry_adapter.py: W293 Blank line contains whitespace
+engine/lighting/shadow_geometry_adapter.py: W293 Blank line contains whitespace
+engine/migrations.py: W293 Blank line contains whitespace
+engine/migrations.py: W293 Blank line contains whitespace
+engine/project_scaffold.py: W293 Blank line contains whitespace
+engine/project_templates.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/runner.py: W293 Blank line contains whitespace
+engine/quest_runtime/validation.py: W293 Blank line contains whitespace
+engine/quest_runtime/validation.py: W293 Blank line contains whitespace
+engine/quest_runtime/validation.py: W293 Blank line contains whitespace
+engine/quest_runtime/validation.py: W293 Blank line contains whitespace
+engine/quest_runtime/validation.py: W293 Blank line contains whitespace
+engine/quest_runtime/validation.py: W293 Blank line contains whitespace
+engine/quest_runtime/validation.py: W293 Blank line contains whitespace
+engine/quest_runtime/validation.py: W293 Blank line contains whitespace
+engine/quests.py: W293 Blank line contains whitespace
+engine/quests.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/render_plan.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/rng_service.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/digest.py: W293 Blank line contains whitespace
+engine/save_runtime/entity_state.py: W293 Blank line contains whitespace
+engine/save_runtime/entity_state.py: W293 Blank line contains whitespace
+engine/save_runtime/entity_state.py: W293 Blank line contains whitespace
+engine/save_runtime/entity_state.py: W293 Blank line contains whitespace
+engine/save_runtime/entity_state.py: W293 Blank line contains whitespace
+engine/save_runtime/entity_state.py: W293 Blank line contains whitespace
+engine/save_runtime/entity_state.py: W293 Blank line contains whitespace
+engine/save_runtime/entity_state.py: W293 Blank line contains whitespace
+engine/save_runtime/entity_state.py: W293 Blank line contains whitespace
+engine/save_runtime/entity_state.py: W293 Blank line contains whitespace
+engine/save_runtime/quest_state.py: W293 Blank line contains whitespace
+engine/save_runtime/quest_state.py: W293 Blank line contains whitespace
+engine/save_runtime/quest_state.py: W293 Blank line contains whitespace
+engine/save_runtime/quest_state.py: W293 Blank line contains whitespace
+engine/save_runtime/quest_state.py: W293 Blank line contains whitespace
+engine/save_runtime/quest_state.py: W293 Blank line contains whitespace
+engine/save_runtime/quest_state.py: W293 Blank line contains whitespace
+engine/save_runtime/quest_state.py: W293 Blank line contains whitespace
+engine/save_runtime/quest_state.py: W293 Blank line contains whitespace
+engine/save_runtime/quest_state.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/save_runtime/schema.py: W293 Blank line contains whitespace
+engine/scene_controller_parts/encounter_resolution.py: E702 Multiple statements on one line (semicolon)
+engine/scene_controller_parts/encounter_resolution.py: F841 Local variable `settings` is assigned to but never used
+engine/scene_loader.py: F402 Import `field` from line <line> shadowed by loop variable
+engine/scene_render_pipeline.py: E402 Module level import not at top of file
+engine/scene_render_pipeline.py: E402 Module level import not at top of file
+engine/scene_render_pipeline.py: E402 Module level import not at top of file
+engine/scene_render_pipeline.py: E402 Module level import not at top of file
+engine/scene_render_pipeline.py: E402 Module level import not at top of file
+engine/scene_render_pipeline.py: E402 Module level import not at top of file
+engine/scene_render_pipeline.py: E402 Module level import not at top of file
+engine/scene_render_pipeline.py: E402 Module level import not at top of file
+engine/sensors_model.py: W293 Blank line contains whitespace
+engine/sensors_model.py: W293 Blank line contains whitespace
+engine/text_draw.py: F811 Redefinition of unused `OrderedDict` from line <line>: `OrderedDict` redefined here
+engine/tooling/assist_command.py: F841 Local variable `unfixable` is assigned to but never used
+engine/tooling/auto_wire.py: F841 Local variable `existing` is assigned to but never used
+engine/tooling/generate_docs.py: E402 Module level import not at top of file
+engine/tooling/project_index.py: E402 Module level import not at top of file
+engine/tooling/wizard_command.py: F841 Local variable `shrine_key` is assigned to but never used
+engine/tooling_runtime/macro_apply_report.py: F841 Local variable `diff` is assigned to but never used
+engine/ui.py: E402 Module level import not at top of file
+engine/ui.py: E402 Module level import not at top of file
+engine/ui.py: E402 Module level import not at top of file
+engine/ui.py: E402 Module level import not at top of file
+engine/ui.py: E402 Module level import not at top of file
+engine/ui.py: E402 Module level import not at top of file
+engine/ui.py: E402 Module level import not at top of file
+engine/ui.py: E402 Module level import not at top of file
+engine/ui.py: E402 Module level import not at top of file
+engine/ui.py: E402 Module level import not at top of file
+engine/ui.py: E402 Module level import not at top of file
+engine/ui_layer_stack_model.py: W293 Blank line contains whitespace
+engine/ui_overlays/editor_feedback_overlay.py: E501 Line too long (163 > 160)
+engine/ui_overlays/hd2d_settings_panel_overlay.py: F841 Local variable `current_section_key` is assigned to but never used
+engine/ui_overlays/hd2d_settings_panel_overlay.py: F841 Local variable `current_section_key` is assigned to but never used
+engine/ui_overlays/hd2d_settings_panel_overlay.py: F841 Local variable `has_overrides` is assigned to but never used
+engine/ui_overlays/hud.py: F841 Local variable `name` is assigned to but never used
+engine/ui_overlays/hud.py: I001 Import block is un-sorted or un-formatted
+engine/ui_overlays/hud.py: W293 Blank line contains whitespace
+engine/ui_overlays/hud.py: W293 Blank line contains whitespace
+engine/ui_overlays/hud.py: W293 Blank line contains whitespace
+engine/ui_overlays/hud.py: W293 Blank line contains whitespace
+engine/ui_overlays/hud.py: W293 Blank line contains whitespace
+engine/ui_overlays/hud.py: W293 Blank line contains whitespace
+engine/ui_overlays/hud.py: W293 Blank line contains whitespace
+engine/ui_overlays/keybinds_provider.py: W293 Blank line contains whitespace
+engine/ui_overlays/project_explorer_overlay.py: W293 Blank line contains whitespace
+engine/ui_overlays/project_explorer_overlay.py: W293 Blank line contains whitespace
+engine/validators/encounter_budget_validator.py: F841 Local variable `difficulty` is assigned to but never used
+engine/validators/schema_validation.py: W293 Blank line contains whitespace
+engine/validators/schema_validation.py: W293 Blank line contains whitespace
+engine/validators/schema_validation.py: W293 Blank line contains whitespace
+engine/validators/schema_validation.py: W293 Blank line contains whitespace
+main.py: E402 Module level import not at top of file
+main.py: E402 Module level import not at top of file
+mesh_cli/ai.py: E501 Line too long (166 > 160)
+mesh_cli/assets.py: F841 Local variable `json_out` is assigned to but never used
+mesh_cli/content_integrity.py: E501 Line too long (161 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (162 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (162 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (162 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (165 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (168 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (168 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (169 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (172 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (192 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (193 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (198 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (202 > 160)
+mesh_cli/content_integrity.py: E501 Line too long (217 > 160)
+mesh_cli/episode.py: E501 Line too long (241 > 160)
+mesh_cli/legacy_impl.py: E402 Module level import not at top of file
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/misc.py: E701 Multiple statements on one line (colon)
+mesh_cli/pipeline.py: F841 Local variable `recipes_parser` is assigned to but never used
+mesh_cli/release_bundle.py: F841 Local variable `manifest` is assigned to but never used
+mesh_cli/scene.py: F403 `from mesh_cli.scene.backgrounds import *` used; unable to detect undefined names
+mesh_cli/scene.py: F403 `from mesh_cli.scene.common import *` used; unable to detect undefined names
+mesh_cli/scene.py: F403 `from mesh_cli.scene.entities import *` used; unable to detect undefined names
+mesh_cli/scene.py: F403 `from mesh_cli.scene.entrypoints import *` used; unable to detect undefined names
+mesh_cli/scene.py: F403 `from mesh_cli.scene.macro import *` used; unable to detect undefined names
+mesh_cli/scene.py: F403 `from mesh_cli.scene.ops import *` used; unable to detect undefined names
+mesh_cli/scene.py: F403 `from mesh_cli.scene.stamp import *` used; unable to detect undefined names
+mesh_cli/scene.py: F403 `from mesh_cli.scene.tilemap import *` used; unable to detect undefined names
+mesh_cli/scene/backgrounds.py: E501 Line too long (166 > 160)
+mesh_cli/scene/backgrounds.py: E501 Line too long (168 > 160)
+mesh_cli/scene/backgrounds.py: E501 Line too long (170 > 160)
+mesh_cli/scene/macro.py: E501 Line too long (166 > 160)
+mesh_cli/scene/macro.py: E501 Line too long (167 > 160)
+mesh_cli/scene/ops.py: E501 Line too long (174 > 160)
+mesh_cli/scene/prefab_overrides.py: E501 Line too long (174 > 160)
+mesh_cli/scene/tilemap.py: E701 Multiple statements on one line (colon)
+mesh_cli/stamps.py: E501 Line too long (161 > 160)
+mesh_cli/stamps.py: E501 Line too long (163 > 160)
+mesh_cli/stamps.py: E501 Line too long (165 > 160)
+mesh_cli/stamps.py: E501 Line too long (165 > 160)
+mesh_cli/stamps.py: E501 Line too long (195 > 160)
+mesh_cli/verify_steps/pipeline.py: F402 Import `field` from line <line> shadowed by loop variable
+mesh_cli/verify_steps/pipeline.py: F841 Local variable `steps` is assigned to but never used
+mesh_cli/verify_steps/pipeline.py: I001 Import block is un-sorted or un-formatted
+mesh_cli/verify_steps/pipeline.py: I001 Import block is un-sorted or un-formatted
+mesh_cli/verify_steps/pipeline.py: I001 Import block is un-sorted or un-formatted
+mesh_cli/verify_steps/pipeline.py: I001 Import block is un-sorted or un-formatted
+mesh_cli/verify_steps/pipeline.py: I001 Import block is un-sorted or un-formatted
+mesh_cli/verify_steps/pipeline.py: I001 Import block is un-sorted or un-formatted
+mesh_cli/world.py: E501 Line too long (162 > 160)
+mesh_cli/world.py: E501 Line too long (164 > 160)
+mesh_cli/world.py: E501 Line too long (167 > 160)
+tests/test_ai_behaviours.py: F841 Local variable `initial_index` is assigned to but never used
+tests/test_ai_integration.py: F841 Local variable `action` is assigned to but never used
+tests/test_ai_ops_cutscenes.py: F841 Local variable `payload` is assigned to but never used
+tests/test_animation_determinism_contract.py: F841 Local variable `cursor_a` is assigned to but never used
+tests/test_animation_determinism_contract.py: W293 Blank line contains whitespace
+tests/test_animation_determinism_contract.py: W293 Blank line contains whitespace
+tests/test_apply_plan_from_triage.py: E712 Avoid equality comparisons to `True`; use `args.ai_safe:` for truth checks
+tests/test_apply_plan_lint_integration.py: F841 Local variable `mock_print` is assigned to but never used
+tests/test_arcade_window_harness_guard.py: W291 Trailing whitespace
+tests/test_arcade_window_harness_guard.py: W293 Blank line contains whitespace
+tests/test_autowire_metadata.py: F841 Local variable `changes` is assigned to but never used
+tests/test_baseline_update_command.py: F841 Local variable `baseline` is assigned to but never used
+tests/test_baseline_update_command.py: F841 Local variable `runner` is assigned to but never used
+tests/test_behaviour_loading_contract.py: I001 Import block is un-sorted or un-formatted
+tests/test_boss_defeat_reward_toast_order.py: W293 Blank line contains whitespace
+tests/test_brush_audit_ordering_stable.py: E402 Module level import not at top of file
+tests/test_budget_elite_cap.py: F841 Local variable `grunts` is assigned to but never used
+tests/test_capture_key_router_import_boundary_contract.py: W293 Blank line contains whitespace
+tests/test_capture_key_router_import_boundary_contract.py: W293 Blank line contains whitespace
+tests/test_capture_key_router_import_boundary_contract.py: W293 Blank line contains whitespace
+tests/test_capture_key_router_import_boundary_contract.py: W293 Blank line contains whitespace
+tests/test_capture_key_router_import_boundary_contract.py: W293 Blank line contains whitespace
+tests/test_capture_key_router_model_contract.py: F841 Local variable `key` is assigned to but never used
+tests/test_capture_key_router_model_contract.py: F841 Local variable `key` is assigned to but never used
+tests/test_capture_key_router_model_contract.py: F841 Local variable `key` is assigned to but never used
+tests/test_capture_key_router_model_contract.py: F841 Local variable `report_before` is assigned to but never used
+tests/test_capture_key_router_model_contract.py: W293 Blank line contains whitespace
+tests/test_capture_key_router_model_contract.py: W293 Blank line contains whitespace
+tests/test_capture_key_router_model_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_model_contract.py: F841 Local variable `report_before` is assigned to but never used
+tests/test_capture_mouse_router_model_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_model_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_ui_handlers_policy_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_ui_handlers_policy_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_ui_handlers_policy_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_ui_handlers_policy_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_ui_handlers_policy_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_ui_handlers_policy_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_ui_handlers_policy_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_ui_handlers_policy_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_ui_handlers_policy_contract.py: W293 Blank line contains whitespace
+tests/test_capture_mouse_router_ui_handlers_policy_contract.py: W293 Blank line contains whitespace
+tests/test_cli_release_bundle_command.py: F841 Local variable `captured` is assigned to but never used
+tests/test_cli_world_help_regressions.py: F841 Local variable `normalized` is assigned to but never used
+tests/test_combat_vignette_01_integration.py: F841 Local variable `events` is assigned to but never used
+tests/test_command_palette_filter_scoring.py: E731 Do not assign a `lambda` expression, use a `def`
+tests/test_command_palette_filter_scoring.py: E731 Do not assign a `lambda` expression, use a `def`
+tests/test_command_palette_registry_parse_contract.py: E731 Do not assign a `lambda` expression, use a `def`
+tests/test_console_facade_guard.py: W291 Trailing whitespace
+tests/test_controllers.py: F841 Local variable `center_y` is assigned to but never used
+tests/test_controllers.py: F841 Local variable `max_y` is assigned to but never used
+tests/test_controllers.py: F841 Local variable `min_y` is assigned to but never used
+tests/test_cutscene_wait_contract.py: F841 Local variable `events` is assigned to but never used
+tests/test_cutscene_wait_contract.py: F841 Local variable `events` is assigned to but never used
+tests/test_demo_smoke_sequence.py: F841 Local variable `game` is assigned to but never used
+tests/test_dock_overlay_geometry_contract.py: E731 Do not assign a `lambda` expression, use a `def`
+tests/test_drop_table.py: F841 Local variable `behaviour` is assigned to but never used
+tests/test_drop_table.py: F841 Local variable `behaviour` is assigned to but never used
+tests/test_drop_table.py: F841 Local variable `behaviour` is assigned to but never used
+tests/test_editor_actions_subcontroller_routing.py: F841 Local variable `result` is assigned to but never used
+tests/test_editor_batch_tag_rename.py: F841 Local variable `call_order` is assigned to but never used
+tests/test_editor_controller_policy_ratchet_v1.py: W293 Blank line contains whitespace
+tests/test_editor_controller_policy_ratchet_v1.py: W293 Blank line contains whitespace
+tests/test_editor_dock_collapse_maximize_contract.py: F841 Local variable `normal` is assigned to but never used
+tests/test_editor_duplicate_along_path.py: F841 Local variable `result_a` is assigned to but never used
+tests/test_editor_duplicate_along_path.py: F841 Local variable `result_b` is assigned to but never used
+tests/test_editor_hover_highlight_integration_contract.py: F841 Local variable `layout` is assigned to but never used
+tests/test_editor_keybinds_controller.py: E402 Module level import not at top of file
+tests/test_editor_keybinds_controller.py: E402 Module level import not at top of file
+tests/test_editor_tooltip_overlay_smoke.py: W293 Blank line contains whitespace
+tests/test_editor_tooltips_model_contract.py: F841 Local variable `result` is assigned to but never used
+tests/test_editor_ui_flow_controller_contract.py: E402 Module level import not at top of file
+tests/test_editor_ui_flow_controller_contract.py: F811 Redefinition of unused `commit_hd2d_preset` from line <line>: `commit_hd2d_preset` redefined here
+tests/test_encounter_audit_compact_golden.py: E402 Module level import not at top of file
+tests/test_encounter_coverage_matrix_artifact.py: E402 Module level import not at top of file
+tests/test_encounter_headroom_artifact.py: E402 Module level import not at top of file
+tests/test_encounter_headroom_golden.py: E402 Module level import not at top of file
+tests/test_entity_view_policy_contract.py: W293 Blank line contains whitespace
+tests/test_entity_view_policy_contract.py: W293 Blank line contains whitespace
+tests/test_entity_view_policy_contract.py: W293 Blank line contains whitespace
+tests/test_entity_view_policy_contract.py: W293 Blank line contains whitespace
+tests/test_experience.py: F841 Local variable `behaviour` is assigned to but never used
+tests/test_export_bundle.py: W293 Blank line contains whitespace
+tests/test_find_everything_integration_contract.py: E402 Module level import not at top of file
+tests/test_find_everything_integration_contract.py: E402 Module level import not at top of file
+tests/test_find_everything_integration_contract.py: E402 Module level import not at top of file
+tests/test_find_everything_integration_contract.py: E402 Module level import not at top of file
+tests/test_find_everything_integration_contract.py: E402 Module level import not at top of file
+tests/test_find_everything_integration_contract.py: E402 Module level import not at top of file
+tests/test_game_facade_guard.py: W293 Blank line contains whitespace
+tests/test_gameplay_integration.py: F841 Local variable `result2_from_mid` is assigned to but never used
+tests/test_golden_slice_lighting_showcase_intent.py: W293 Blank line contains whitespace
+tests/test_golden_slice_lighting_showcase_intent.py: W293 Blank line contains whitespace
+tests/test_hd2d_preset_preview_model_contract.py: F841 Local variable `original_settings` is assigned to but never used
+tests/test_hd2d_settings_panel_model_contract.py: F841 Local variable `original_settings` is assigned to but never used
+tests/test_lighting_occluder_application.py: F841 Local variable `found_poly` is assigned to but never used
+tests/test_lighting_occluder_application.py: F841 Local variable `found_rect` is assigned to but never used
+tests/test_lighting_occluders_override_precedence.py: E402 Module level import not at top of file
+tests/test_lighting_test_harness_guard.py: F841 Local variable `safe_layer` is assigned to but never used
+tests/test_lighting_test_harness_guard.py: F841 Local variable `safe_light` is assigned to but never used
+tests/test_mesh_assist_dry_run_diff_add_npc.py: F841 Local variable `mock_apply` is assigned to but never used
+tests/test_mesh_assist_dry_run_diff_add_puzzle.py: F841 Local variable `mock_apply` is assigned to but never used
+tests/test_mesh_assist_dry_run_diff_transition.py: F841 Local variable `mock_apply` is assigned to but never used
+tests/test_mesh_cli_headless_imports.py: I001 Import block is un-sorted or un-formatted
+tests/test_occluder_cache_invalidation_on_tilemap_clear.py: E402 Module level import not at top of file
+tests/test_occluder_cache_invalidation_on_tilemap_clear.py: E402 Module level import not at top of file
+tests/test_pathfinding_astar_golden.py: W293 Blank line contains whitespace
+tests/test_pathfinding_astar_invariants.py: W293 Blank line contains whitespace
+tests/test_pathfinding_astar_perf.py: F841 Local variable `path` is assigned to but never used
+tests/test_pathfinding_astar_perf.py: W293 Blank line contains whitespace
+tests/test_plan_action_classification_guard.py: W293 Blank line contains whitespace
+tests/test_plan_action_classification_guard.py: W293 Blank line contains whitespace
+tests/test_plan_schema_sync_guard.py: W293 Blank line contains whitespace
+tests/test_plan_test_sandbox_minimal.py: F841 Local variable `mock_copy` is assigned to but never used
+tests/test_plugin_system.py: E402 Module level import not at top of file
+tests/test_plugin_system.py: F841 Local variable `calls` is assigned to but never used
+tests/test_polish_update_lock_audit.py: F841 Local variable `mock_exists` is assigned to but never used
+tests/test_post_processing.py: E402 Module level import not at top of file
+tests/test_prefab_variant_consistency_gate.py: W293 Blank line contains whitespace
+tests/test_prefab_variant_resolution.py: F841 Local variable `mock_resolve` is assigned to but never used
+tests/test_preset_header_toast.py: F841 Local variable `window` is assigned to but never used
+tests/test_preset_header_toast.py: F841 Local variable `window` is assigned to but never used
+tests/test_preset_header_toast.py: F841 Local variable `window` is assigned to but never used
+tests/test_project_browser_extended.py: E702 Multiple statements on one line (semicolon)
+tests/test_project_explorer_context_menu_integration_contract.py: F841 Local variable `runner` is assigned to but never used
+tests/test_project_explorer_integration_contract.py: E402 Module level import not at top of file
+tests/test_project_explorer_recents_integration_contract.py: E402 Module level import not at top of file
+tests/test_project_explorer_recents_integration_contract.py: E402 Module level import not at top of file
+tests/test_puzzle_room_02_integration.py: F841 Local variable `rune_a` is assigned to but never used
+tests/test_puzzle_room_02_integration.py: F841 Local variable `rune_c` is assigned to but never used
+tests/test_puzzle_room_03_integration.py: F841 Local variable `reset_events` is assigned to but never used
+tests/test_quest_runner_integration.py: W291 Trailing whitespace
+tests/test_quest_runner_integration.py: W291 Trailing whitespace
+tests/test_quest_runner_integration.py: W293 Blank line contains whitespace
+tests/test_quest_validation.py: W293 Blank line contains whitespace
+tests/test_release_check_plan_policy.py: F841 Local variable `bl` is assigned to but never used
+tests/test_release_check_plan_policy.py: F841 Local variable `rl` is assigned to but never used
+tests/test_room_audit_ordering_stable.py: E402 Module level import not at top of file
+tests/test_runtime_editor_import_boundary.py: W293 Blank line contains whitespace
+tests/test_runtime_editor_import_boundary.py: W293 Blank line contains whitespace
+tests/test_runtime_editor_import_boundary.py: W293 Blank line contains whitespace
+tests/test_runtime_editor_import_boundary.py: W293 Blank line contains whitespace
+tests/test_safe_refactor_ops_rollback_matrix_contract.py: F841 Local variable `mock_replace` is assigned to but never used
+tests/test_save_quick_actions.py: F841 Local variable `mock_path` is assigned to but never used
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_attach_animator_passes_event_sink_that_routes_to_handle_animation_event` from line <line>: `test_attach_animator_passes_event_sink_that_routes_to_handle_animation_event` redefined here
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_handle_animation_event_emits_expected_payload_keys_and_root_motion_when_applied` from line <line>: `test_handle_animation_event_emits_expected_payload_keys_and_root_motion_when_applied` redefined here
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_handle_animation_event_omits_root_motion_when_no_motion_applies` from line <line>: `test_handle_animation_event_omits_root_motion_when_no_motion_applies` redefined here
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_resolve_root_motion_config_normalizes_and_caches_current_behavior` from line <line>: `test_resolve_root_motion_config_normalizes_and_caches_current_behavior` redefined here
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_labels_gate_applies_matching_events` from line <line>: `test_root_motion_labels_gate_applies_matching_events` redefined here
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_labels_gate_ignores_non_matching_events` from line <line>: `test_root_motion_labels_gate_ignores_non_matching_events` redefined here
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_local_space_rotates_by_sprite_angle` from line <line>: `test_root_motion_local_space_rotates_by_sprite_angle` redefined here
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_payload_parsing_precedence` from line <line>: `test_root_motion_payload_parsing_precedence` redefined here
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_uses_collision_helper_when_collision_enabled` from line <line>: `test_root_motion_uses_collision_helper_when_collision_enabled` redefined here
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_uses_direct_position_mutation_when_collision_disabled` from line <line>: `test_root_motion_uses_direct_position_mutation_when_collision_disabled` redefined here
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_world_space_applies_directly` from line <line>: `test_root_motion_world_space_applies_directly` redefined here
+tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_update_animation_stage_applies_event_sink_motion_during_stage` from line <line>: `test_update_animation_stage_applies_event_sink_motion_during_stage` redefined here
+tests/test_scene_controller_facade_guard.py: F841 Local variable `mock_pm` is assigned to but never used
+tests/test_shadow_geometry_integration.py: W293 Blank line contains whitespace
+tests/test_shadow_geometry_integration.py: W293 Blank line contains whitespace
+tests/test_spawn_zone_anchor.py: E402 Module level import not at top of file
+tests/test_spawn_zone_anchor.py: E402 Module level import not at top of file
+tests/test_spawn_zone_anchor.py: E402 Module level import not at top of file
+tests/test_spawn_zone_anchor.py: E402 Module level import not at top of file
+tests/test_spawn_zone_anchor.py: E402 Module level import not at top of file
+tests/test_spawn_zone_anchor.py: E402 Module level import not at top of file
+tests/test_stamp_audit_ordering_stable.py: E402 Module level import not at top of file
+tests/test_toggle_scene_lights.py: F841 Local variable `beh_off` is assigned to but never used
+tests/test_toggle_scene_lights.py: F841 Local variable `beh` is assigned to but never used
+tests/test_toggle_scene_lights.py: F841 Local variable `beh` is assigned to but never used
+tests/test_toggle_scene_lights.py: F841 Local variable `beh` is assigned to but never used
+tests/test_tooling_imports_without_arcade.py: W293 Blank line contains whitespace
+tests/test_town_schedule_01_integration.py: F841 Local variable `events` is assigned to but never used
+tests/test_validate_all_headless_no_arcade.py: I001 Import block is un-sorted or un-formatted
+tests/test_verify_all_brush_audit_artifact.py: E402 Module level import not at top of file
+tests/test_verify_all_encounter_audit_nonempty.py: E402 Module level import not at top of file
+tests/test_verify_all_macro_audit_artifact.py: E402 Module level import not at top of file
+tests/test_verify_all_macro_audit_includes_new_objective_macro_case.py: E402 Module level import not at top of file
+tests/test_verify_all_room_audit_artifact_json_valid_and_sorted.py: E402 Module level import not at top of file
+tests/test_verify_all_room_audit_includes_micro_dungeon_cases.py: E402 Module level import not at top of file
+tests/test_verify_all_stamp_audit_artifact.py: E402 Module level import not at top of file
+tests/test_vertical_slice_smoke.py: F841 Local variable `world` is assigned to but never used
+tests/utils/parser_defaults.py: W293 Blank line contains whitespace
+tooling/capture_budget_trace.py: F841 Local variable `f` is assigned to but never used
+tooling/capture_gauntlet_trace.py: F841 Local variable `f` is assigned to but never used
+tooling/release_web_demo.py: W293 Blank line contains whitespace
+tooling/release_web_demo.py: W293 Blank line contains whitespace
+tooling/web_preview.py: W293 Blank line contains whitespace

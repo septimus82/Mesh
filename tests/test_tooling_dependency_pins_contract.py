@@ -21,3 +21,13 @@ def test_pre_commit_mypy_mirror_is_aligned_to_dev_pin() -> None:
 
     assert "repo: https://github.com/pre-commit/mirrors-mypy" in text
     assert "rev: v1.19.1" in text
+
+
+def test_pre_commit_ruff_hook_is_aligned_to_dev_pin() -> None:
+    pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    dev_deps = pyproject["project"]["optional-dependencies"]["dev"]
+    text = Path(".pre-commit-config.yaml").read_text(encoding="utf-8")
+
+    assert "ruff==0.15.16" in dev_deps
+    assert "repo: https://github.com/astral-sh/ruff-pre-commit" in text
+    assert "rev: v0.15.16" in text
