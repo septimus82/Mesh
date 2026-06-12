@@ -22,7 +22,8 @@
       "$ref": "#/$defs/nonEmptyStringArray"
     },
     "day_length_seconds": {
-      "type": "number"
+      "type": "number",
+      "deprecated": true
     },
     "day_night_cycle_length_seconds": {
       "type": "number"
@@ -34,7 +35,8 @@
       "type": "number"
     },
     "day_start_hour": {
-      "type": "number"
+      "type": "number",
+      "deprecated": true
     },
     "debug_mode": {
       "type": "boolean"

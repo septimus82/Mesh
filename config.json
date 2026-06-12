@@ -27,11 +27,9 @@
   "content_roots": [
     "."
   ],
-  "day_length_seconds": 600.0,
   "day_night_cycle_length_seconds": 600.0,
   "day_night_enabled": false,
   "day_night_start_hour": 20.0,
-  "day_start_hour": 20.0,
   "debug_mode": false,
   "debug_on_start": false,
   "debug_page": 0,

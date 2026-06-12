@@ -130,7 +130,9 @@ def test_config_load_roundtrip_presets_and_day_night_keys_stable() -> None:
     assert sorted(cfg.presets.keys()) == sorted(split.keys())
     config_doc = _load_json("config.json")
     assert isinstance(config_doc.get("day_night_start_hour"), (int, float))
-    assert isinstance(config_doc.get("day_start_hour"), (int, float))
+    assert isinstance(config_doc.get("day_night_cycle_length_seconds"), (int, float))
+    assert "day_start_hour" not in config_doc
+    assert "day_length_seconds" not in config_doc
 
 
 def test_split_presets_are_primary_source_over_inline(tmp_path: Path) -> None:
