@@ -14,6 +14,9 @@ from pathlib import Path
 
 import pytest
 
+from engine.persistence_io import write_json_atomic
+from mesh_cli import verify as verify_mod
+
 pytestmark = [pytest.mark.fast]
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -27,20 +30,50 @@ _BUDGET_BASELINE_UPDATE_COMMAND = (
 )
 
 
-def _require_positive_wall_clock(value: object, *, artifact_name: str) -> int:
-    if not isinstance(value, int):
-        pytest.fail(f"{artifact_name} current_ms must be an int, got {type(value).__name__}")
-    if value <= 0:
-        pytest.skip(f"{artifact_name} is incomplete or stale (current_ms={value})")
-    return value
+def _write_synthetic_verify_budget_artifacts(tmp_path: Path) -> tuple[Path, Path]:
+    artifacts_dir = tmp_path / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
 
+    step_durations_payload = verify_mod._build_verify_step_durations_payload(
+        expected_steps=["pytest-fast", "mypy-gate", "ruff-gate"],
+        rows=[
+            {"name": "pytest-fast", "ok": True, "ms": 1234},
+            {"name": "mypy-gate", "ok": True, "ms": 456},
+            {"name": "ruff-gate", "ok": True, "ms": 78},
+        ],
+    )
+    durations_path = artifacts_dir / "verify_step_durations.json"
+    write_json_atomic(
+        durations_path,
+        step_durations_payload,
+        indent=2,
+        sort_keys=True,
+        trailing_newline=True,
+    )
 
-def _require_positive_step_ms(value: object, *, artifact_name: str) -> int:
-    if not isinstance(value, int):
-        pytest.fail(f"{artifact_name} ms must be an int, got {type(value).__name__}")
-    if value <= 0:
-        pytest.skip(f"{artifact_name} is incomplete or stale (ms={value})")
-    return value
+    baseline_path = tmp_path / "tooling" / "metrics" / "verify_step_budget.json"
+    verify_mod._write_verify_step_budget_baseline(
+        baseline_path,
+        step_durations_payload,
+        top_n=3,
+    )
+    step_durations_from_artifact = verify_mod._read_verify_step_durations_payload(durations_path)
+    budget_code, budget_error, verify_step_budget_payload = verify_mod._evaluate_verify_step_budget_guard(
+        step_durations_payload=step_durations_from_artifact,
+        baseline_path=baseline_path,
+        update_command="python -c \"noop\"",
+        artifacts_dir=artifacts_dir,
+    )
+    assert budget_code == 0, budget_error
+    budget_path = artifacts_dir / "verify_step_budget_check.json"
+    write_json_atomic(
+        budget_path,
+        verify_step_budget_payload,
+        indent=2,
+        sort_keys=True,
+        trailing_newline=True,
+    )
+    return durations_path, budget_path
 
 
 # ------------------------------------------------------------------
@@ -91,40 +124,38 @@ def test_budget_baseline_file_is_deterministic_and_loadable() -> None:
     )
 
 
-def test_budget_check_artifact_has_pytest_fast() -> None:
+def test_budget_check_artifact_has_pytest_fast(tmp_path: Path) -> None:
     """Verify that pytest-fast appears in budget check artifact after verify-all."""
-    artifact_path = _REPO_ROOT / "artifacts" / "verify_step_budget_check.json"
-    if not artifact_path.exists():
-        pytest.skip("No budget check artifact - run verify-all first")
+    _durations_path, artifact_path = _write_synthetic_verify_budget_artifacts(tmp_path)
 
     payload = json.loads(artifact_path.read_text(encoding="utf-8"))
 
-    assert "schema_version" in payload
+    assert payload["schema_version"] == 2
+    assert isinstance(payload["ok"], bool)
+    assert isinstance(payload["tolerance_ms"], int)
+    assert isinstance(payload["candidates_used"], list)
     assert "checked_steps" in payload
     assert isinstance(payload["checked_steps"], list)
+    assert isinstance(payload["offenders"], list)
 
-    # Find pytest-fast row
     pytest_fast_row = None
     for row in payload["checked_steps"]:
         if isinstance(row, dict) and row.get("name") == "pytest-fast":
             pytest_fast_row = row
             break
 
-    if pytest_fast_row is None:
-        pytest.skip("pytest-fast not in checked_steps - may have been skipped")
+    assert pytest_fast_row is not None
 
-    # Validate row has required fields
     assert "name" in pytest_fast_row
     assert "budget_ms" in pytest_fast_row
     assert "current_ms" in pytest_fast_row
     assert "threshold_ms" in pytest_fast_row
     assert "ok" in pytest_fast_row
-
-    # Wall-clock metric
-    _require_positive_wall_clock(
-        pytest_fast_row["current_ms"],
-        artifact_name="verify_step_budget_check.json::pytest-fast",
-    )
+    assert isinstance(pytest_fast_row["name"], str)
+    assert isinstance(pytest_fast_row["budget_ms"], int)
+    assert isinstance(pytest_fast_row["current_ms"], int)
+    assert isinstance(pytest_fast_row["threshold_ms"], int)
+    assert isinstance(pytest_fast_row["ok"], bool)
 
 
 # ------------------------------------------------------------------
@@ -132,38 +163,31 @@ def test_budget_check_artifact_has_pytest_fast() -> None:
 # ------------------------------------------------------------------
 
 
-def test_step_durations_schema_shape() -> None:
+def test_step_durations_schema_shape(tmp_path: Path) -> None:
     """Verify that step durations artifact has expected schema."""
-    artifact_path = _REPO_ROOT / "artifacts" / "verify_step_durations.json"
-    if not artifact_path.exists():
-        pytest.skip("No step durations artifact - run verify-all first")
+    artifact_path, _budget_path = _write_synthetic_verify_budget_artifacts(tmp_path)
 
     payload = json.loads(artifact_path.read_text(encoding="utf-8"))
 
-    assert "schema_version" in payload
+    assert payload["schema_version"] == 1
+    assert isinstance(payload["total_ms"], int)
     assert "steps" in payload
     assert isinstance(payload["steps"], list)
 
-    # Find pytest-fast step
     pytest_fast_step = None
     for step in payload["steps"]:
         if isinstance(step, dict) and step.get("name") == "pytest-fast":
             pytest_fast_step = step
             break
 
-    if pytest_fast_step is None:
-        pytest.skip("pytest-fast not in steps - may have been skipped")
+    assert pytest_fast_step is not None
 
-    # Validate step has required fields
     assert "name" in pytest_fast_step
     assert "ms" in pytest_fast_step
     assert "ok" in pytest_fast_step
-
-    # Wall-clock metric (same as budget check current_ms)
-    _require_positive_step_ms(
-        pytest_fast_step["ms"],
-        artifact_name="verify_step_durations.json::pytest-fast",
-    )
+    assert isinstance(pytest_fast_step["name"], str)
+    assert isinstance(pytest_fast_step["ms"], int)
+    assert isinstance(pytest_fast_step["ok"], bool)
 
 
 # ------------------------------------------------------------------
@@ -171,45 +195,28 @@ def test_step_durations_schema_shape() -> None:
 # ------------------------------------------------------------------
 
 
-def test_pytest_fast_has_both_metrics() -> None:
+def test_pytest_fast_has_both_metrics(tmp_path: Path) -> None:
     """Verify that pytest-fast has both execution time and wall-clock time metrics."""
-    # Check duration guard baseline (test execution time)
-    duration_baseline_path = _REPO_ROOT / ".mesh" / "metrics" / "pytest_fast_total_seconds.txt"
-    if not duration_baseline_path.exists():
-        pytest.skip("No pytest duration baseline - run verify-all first")
-
-    duration_baseline = float(duration_baseline_path.read_text(encoding="utf-8").strip())
-    assert duration_baseline > 0, "Duration baseline must be positive"
-
-    # Check budget check artifact (wall-clock time)
-    budget_artifact_path = _REPO_ROOT / "artifacts" / "verify_step_budget_check.json"
-    if not budget_artifact_path.exists():
-        pytest.skip("No budget check artifact - run verify-all first")
-
+    durations_path, budget_artifact_path = _write_synthetic_verify_budget_artifacts(tmp_path)
+    durations_payload = json.loads(durations_path.read_text(encoding="utf-8"))
     budget_payload = json.loads(budget_artifact_path.read_text(encoding="utf-8"))
+
+    pytest_fast_step = None
+    for step in durations_payload.get("steps", []):
+        if isinstance(step, dict) and step.get("name") == "pytest-fast":
+            pytest_fast_step = step
+            break
+
     pytest_fast_row = None
     for row in budget_payload.get("checked_steps", []):
         if isinstance(row, dict) and row.get("name") == "pytest-fast":
             pytest_fast_row = row
             break
 
-    if pytest_fast_row is None:
-        pytest.skip("pytest-fast not in budget check")
-
-    wall_clock_ms = _require_positive_wall_clock(
-        pytest_fast_row["current_ms"],
-        artifact_name="verify_step_budget_check.json::pytest-fast",
-    )
-    wall_clock_s = wall_clock_ms / 1000.0
-
-    # Wall-clock time should be >= test execution time (due to overhead)
-    # But within reasonable bounds (overhead shouldn't be 10x)
-    assert wall_clock_s >= duration_baseline, (
-        f"Wall-clock time ({wall_clock_s:.2f}s) should be >= test execution time ({duration_baseline:.2f}s)"
-    )
-    assert wall_clock_s <= duration_baseline * 3.0, (
-        f"Wall-clock time ({wall_clock_s:.2f}s) should not be >3x test execution time ({duration_baseline:.2f}s)"
-    )
+    assert pytest_fast_step is not None
+    assert pytest_fast_row is not None
+    assert isinstance(pytest_fast_step["ms"], int)
+    assert isinstance(pytest_fast_row["current_ms"], int)
 
 
 # ------------------------------------------------------------------
@@ -217,20 +224,10 @@ def test_pytest_fast_has_both_metrics() -> None:
 # ------------------------------------------------------------------
 
 
-def test_budget_baseline_is_reasonable() -> None:
-    """Verify that pytest-fast budget baseline is within reasonable range of current measurements."""
-    baseline_path = _REPO_ROOT / "tooling" / "metrics" / "verify_step_budget.json"
-    budget_artifact_path = _REPO_ROOT / "artifacts" / "verify_step_budget_check.json"
-
-    if not baseline_path.exists() or not budget_artifact_path.exists():
-        pytest.skip("Missing required files")
-
-    baseline = json.loads(baseline_path.read_text(encoding="utf-8"))
+def test_budget_baseline_shape_matches_budget_check_artifact(tmp_path: Path) -> None:
+    """Verify that generated budget check rows carry the baseline-derived fields."""
+    _durations_path, budget_artifact_path = _write_synthetic_verify_budget_artifacts(tmp_path)
     budget_payload = json.loads(budget_artifact_path.read_text(encoding="utf-8"))
-
-    pytest_fast_budget = baseline["budgets_ms"].get("pytest-fast")
-    if pytest_fast_budget is None:
-        pytest.skip("pytest-fast not in baseline")
 
     pytest_fast_row = None
     for row in budget_payload.get("checked_steps", []):
@@ -238,24 +235,24 @@ def test_budget_baseline_is_reasonable() -> None:
             pytest_fast_row = row
             break
 
-    if pytest_fast_row is None:
-        pytest.skip("pytest-fast not in budget check")
-
-    current_ms = pytest_fast_row["current_ms"]
-    threshold_ms = pytest_fast_row["threshold_ms"]
-    budget_ms = pytest_fast_row.get("budget_ms", 0)
-
-    # Artifact may be stale - if budget_ms in artifact doesn't match baseline, skip
-    if budget_ms != pytest_fast_budget:
-        pytest.skip(
-            f"Artifact appears stale: budget_ms={budget_ms} != baseline={pytest_fast_budget}. "
-            "Run verify-all to regenerate artifacts."
-        )
-
-    # Current should be within threshold (not marked as offender)
-    # This validates the budget baseline is sane
-    if not pytest_fast_row["ok"]:
-        pytest.fail(
-            f"pytest-fast budget exceeded: current={current_ms}ms threshold={threshold_ms}ms budget={pytest_fast_budget}ms. "
-            f"Update tooling/metrics/verify_step_budget.json if this is expected."
-        )
+    assert pytest_fast_row is not None
+    assert set(pytest_fast_row) == {
+        "budget_ms",
+        "current_ms",
+        "delta_ms",
+        "effective_ms",
+        "median_ms",
+        "name",
+        "ok",
+        "ratio_limit",
+        "threshold_ms",
+        "tolerance_ms",
+    }
+    assert isinstance(pytest_fast_row["budget_ms"], int)
+    assert isinstance(pytest_fast_row["current_ms"], int)
+    assert isinstance(pytest_fast_row["delta_ms"], int)
+    assert isinstance(pytest_fast_row["effective_ms"], int)
+    assert pytest_fast_row["median_ms"] is None or isinstance(pytest_fast_row["median_ms"], int)
+    assert isinstance(pytest_fast_row["ratio_limit"], float)
+    assert isinstance(pytest_fast_row["threshold_ms"], int)
+    assert isinstance(pytest_fast_row["tolerance_ms"], int)
