@@ -9,6 +9,8 @@ from engine.editor.editor_database_form_controller import EditorDatabaseFormCont
 _OPTIONAL_SCALAR_FIELDS = ("description", "type", "start_toast", "complete_toast")
 STAGE_ADD_ACTION = "stage.add"
 STAGE_DELETE_ACTION = "stage.delete"
+STAGE_MOVE_UP_ACTION = "stage.move_up"
+STAGE_MOVE_DOWN_ACTION = "stage.move_down"
 
 
 class EditorQuestEditorController(EditorDatabaseFormController):
@@ -64,6 +66,10 @@ class EditorQuestEditorController(EditorDatabaseFormController):
                 return self._add_stage()
             if stage_action == STAGE_DELETE_ACTION:
                 return self._delete_stage()
+            if stage_action == STAGE_MOVE_UP_ACTION:
+                return self._move_stage(-1)
+            if stage_action == STAGE_MOVE_DOWN_ACTION:
+                return self._move_stage(1)
         return self.handle_mouse_click(float(x), float(y))
 
     def _copy_record(self, record: dict[str, Any]) -> dict[str, Any]:
@@ -160,6 +166,25 @@ class EditorQuestEditorController(EditorDatabaseFormController):
         self._rebuild_text_inputs(next_index if next_stage_id is not None else None, self.edit_buffer)
         self._sync_widgets_from_buffer()
         self._focus_field(None)
+        return True
+
+    def _move_stage(self, delta: int) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        stages = self.edit_buffer.get("stages")
+        if not isinstance(stages, list):
+            return False
+        stage_index = self._selected_stage_index(self.edit_buffer)
+        if stage_index is None:
+            return False
+        target_index = stage_index + int(delta)
+        if not 0 <= stage_index < len(stages) or not 0 <= target_index < len(stages):
+            return False
+        self.sync_widgets_to_buffer()
+        stages[stage_index], stages[target_index] = stages[target_index], stages[stage_index]
+        self._rebuild_text_inputs(target_index, self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(f"stages.{target_index}.title")
         return True
 
     def _target_path(self) -> Path:
