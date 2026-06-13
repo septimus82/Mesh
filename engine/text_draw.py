@@ -4,7 +4,7 @@ Cached text drawing wrapper to avoid Arcade PerformanceWarning on hot paths.
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import TYPE_CHECKING, NamedTuple, Optional, OrderedDict, Tuple
+from typing import TYPE_CHECKING, NamedTuple, Optional, Tuple
 
 import engine.optional_arcade
 

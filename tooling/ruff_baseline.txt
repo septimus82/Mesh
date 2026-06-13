@@ -651,7 +651,6 @@ engine/scene_render_pipeline.py: E402 Module level import not at top of file
 engine/scene_render_pipeline.py: E402 Module level import not at top of file
 engine/sensors_model.py: W293 Blank line contains whitespace
 engine/sensors_model.py: W293 Blank line contains whitespace
-engine/text_draw.py: F811 Redefinition of unused `OrderedDict` from line <line>: `OrderedDict` redefined here
 engine/tooling/assist_command.py: F841 Local variable `unfixable` is assigned to but never used
 engine/tooling/auto_wire.py: F841 Local variable `existing` is assigned to but never used
 engine/tooling/generate_docs.py: E402 Module level import not at top of file
@@ -835,7 +834,6 @@ tests/test_editor_keybinds_controller.py: E402 Module level import not at top of
 tests/test_editor_tooltip_overlay_smoke.py: W293 Blank line contains whitespace
 tests/test_editor_tooltips_model_contract.py: F841 Local variable `result` is assigned to but never used
 tests/test_editor_ui_flow_controller_contract.py: E402 Module level import not at top of file
-tests/test_editor_ui_flow_controller_contract.py: F811 Redefinition of unused `commit_hd2d_preset` from line <line>: `commit_hd2d_preset` redefined here
 tests/test_encounter_audit_compact_golden.py: E402 Module level import not at top of file
 tests/test_encounter_coverage_matrix_artifact.py: E402 Module level import not at top of file
 tests/test_encounter_headroom_artifact.py: E402 Module level import not at top of file
@@ -907,18 +905,6 @@ tests/test_runtime_editor_import_boundary.py: W293 Blank line contains whitespac
 tests/test_runtime_editor_import_boundary.py: W293 Blank line contains whitespace
 tests/test_safe_refactor_ops_rollback_matrix_contract.py: F841 Local variable `mock_replace` is assigned to but never used
 tests/test_save_quick_actions.py: F841 Local variable `mock_path` is assigned to but never used
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_attach_animator_passes_event_sink_that_routes_to_handle_animation_event` from line <line>: `test_attach_animator_passes_event_sink_that_routes_to_handle_animation_event` redefined here
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_handle_animation_event_emits_expected_payload_keys_and_root_motion_when_applied` from line <line>: `test_handle_animation_event_emits_expected_payload_keys_and_root_motion_when_applied` redefined here
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_handle_animation_event_omits_root_motion_when_no_motion_applies` from line <line>: `test_handle_animation_event_omits_root_motion_when_no_motion_applies` redefined here
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_resolve_root_motion_config_normalizes_and_caches_current_behavior` from line <line>: `test_resolve_root_motion_config_normalizes_and_caches_current_behavior` redefined here
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_labels_gate_applies_matching_events` from line <line>: `test_root_motion_labels_gate_applies_matching_events` redefined here
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_labels_gate_ignores_non_matching_events` from line <line>: `test_root_motion_labels_gate_ignores_non_matching_events` redefined here
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_local_space_rotates_by_sprite_angle` from line <line>: `test_root_motion_local_space_rotates_by_sprite_angle` redefined here
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_payload_parsing_precedence` from line <line>: `test_root_motion_payload_parsing_precedence` redefined here
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_uses_collision_helper_when_collision_enabled` from line <line>: `test_root_motion_uses_collision_helper_when_collision_enabled` redefined here
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_uses_direct_position_mutation_when_collision_disabled` from line <line>: `test_root_motion_uses_direct_position_mutation_when_collision_disabled` redefined here
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_root_motion_world_space_applies_directly` from line <line>: `test_root_motion_world_space_applies_directly` redefined here
-tests/test_scene_controller_animation_event_sink_contract.py: F811 Redefinition of unused `test_update_animation_stage_applies_event_sink_motion_during_stage` from line <line>: `test_update_animation_stage_applies_event_sink_motion_during_stage` redefined here
 tests/test_scene_controller_facade_guard.py: F841 Local variable `mock_pm` is assigned to but never used
 tests/test_shadow_geometry_integration.py: W293 Blank line contains whitespace
 tests/test_shadow_geometry_integration.py: W293 Blank line contains whitespace
