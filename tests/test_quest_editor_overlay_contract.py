@@ -489,6 +489,59 @@ def test_quest_editor_overlay_edit_mode_delete_stage_action_requires_selection(
     assert [action for action, _row in overlay._stage_action_hits] == ["stage.add"]
 
 
+def test_quest_editor_overlay_edit_mode_move_stage_actions_are_boundary_gated(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    quest_editor = _QuestEditorStub(edit_mode=True)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests", quest_editor))
+    overlay._model = _model(
+        tmp_path,
+        [
+            {
+                "id": "multi_stage",
+                "title": "Multi Stage",
+                "stages": [
+                    {"id": "alpha", "title": "First"},
+                    {"id": "beta", "title": "Second"},
+                    {"id": "gamma", "title": "Third"},
+                ],
+            }
+        ],
+    )
+
+    overlay.set_selected_stage_id("alpha")
+    overlay.draw()
+    assert [action for action, _row in overlay._stage_action_hits] == [
+        "stage.add",
+        "stage.move_down",
+        "stage.delete",
+    ]
+
+    overlay.set_selected_stage_id("beta")
+    overlay.draw()
+    assert [action for action, _row in overlay._stage_action_hits] == [
+        "stage.add",
+        "stage.move_up",
+        "stage.move_down",
+        "stage.delete",
+    ]
+
+    overlay.set_selected_stage_id("gamma")
+    overlay.draw()
+    assert [action for action, _row in overlay._stage_action_hits] == [
+        "stage.add",
+        "stage.move_up",
+        "stage.delete",
+    ]
+
+    overlay._model = _model(tmp_path, [{"id": "single", "title": "Single", "stages": [{"id": "only", "title": "Only"}]}])
+    overlay.set_selected_stage_id("only")
+    overlay.draw()
+    assert [action for action, _row in overlay._stage_action_hits] == ["stage.add", "stage.delete"]
+
+
 def test_quest_editor_overlay_stage_actions_do_not_pollute_stage_row_identity(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

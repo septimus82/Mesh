@@ -1,13 +1,20 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 import engine.optional_arcade as optional_arcade
-from engine.editor.editor_quest_editor_controller import EditorQuestEditorController, _next_stage_id
+from engine.editor.editor_quest_editor_controller import (
+    STAGE_MOVE_DOWN_ACTION,
+    STAGE_MOVE_UP_ACTION,
+    EditorQuestEditorController,
+    _next_stage_id,
+)
+from engine.quests import QuestManager
 
 pytestmark = [pytest.mark.fast]
 
@@ -572,3 +579,217 @@ def test_quest_editor_controller_stage_add_and_delete_leave_siblings_byte_identi
     assert controller._delete_stage() is True
 
     assert controller.edit_buffer["stages"] == [alpha, beta]
+
+
+def test_quest_editor_controller_move_down_reorders_selection_and_focus(tmp_path: Path) -> None:
+    selected_stages: list[str | None] = ["alpha"]
+    overlay = SimpleNamespace(
+        selected_stage_id=lambda: selected_stages[-1],
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+    )
+    stages = [
+        {"id": "alpha", "title": "First"},
+        {"id": "beta", "title": "Second"},
+        {"id": "gamma", "title": "Third"},
+    ]
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id", stages=copy.deepcopy(stages)))
+
+    assert controller._move_stage(1) is True
+
+    assert controller.edit_buffer is not None
+    assert [stage["id"] for stage in controller.edit_buffer["stages"]] == ["beta", "alpha", "gamma"]
+    assert selected_stages[-1] == "alpha"
+    assert controller._selected_stage_index(controller.edit_buffer) == 1
+    assert controller.focused_field() == "stages.1.title"
+
+
+def test_quest_editor_controller_edit_click_dispatches_stage_move_actions(tmp_path: Path) -> None:
+    selected_stages: list[str | None] = ["alpha"]
+    stage_actions = [STAGE_MOVE_DOWN_ACTION, STAGE_MOVE_UP_ACTION]
+    overlay = SimpleNamespace(
+        selected_stage_id=lambda: selected_stages[-1],
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+        stage_action_at=lambda _x, _y: stage_actions.pop(0),
+    )
+    stages = [
+        {"id": "alpha", "title": "First"},
+        {"id": "beta", "title": "Second"},
+    ]
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id", stages=copy.deepcopy(stages)))
+
+    assert controller.handle_quest_editor_mouse_click(10.0, 20.0) is True
+    assert controller.edit_buffer is not None
+    assert [stage["id"] for stage in controller.edit_buffer["stages"]] == ["beta", "alpha"]
+    assert controller.handle_quest_editor_mouse_click(10.0, 20.0) is True
+    assert controller.edit_buffer["stages"] == stages
+
+
+def test_quest_editor_controller_move_up_reorders_selection_and_focus(tmp_path: Path) -> None:
+    selected_stages: list[str | None] = ["gamma"]
+    overlay = SimpleNamespace(
+        selected_stage_id=lambda: selected_stages[-1],
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+    )
+    stages = [
+        {"id": "alpha", "title": "First"},
+        {"id": "beta", "title": "Second"},
+        {"id": "gamma", "title": "Third"},
+    ]
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id", stages=copy.deepcopy(stages)))
+
+    assert controller._move_stage(-1) is True
+
+    assert controller.edit_buffer is not None
+    assert [stage["id"] for stage in controller.edit_buffer["stages"]] == ["alpha", "gamma", "beta"]
+    assert selected_stages[-1] == "gamma"
+    assert controller._selected_stage_index(controller.edit_buffer) == 1
+    assert controller.focused_field() == "stages.1.title"
+
+
+def test_quest_editor_controller_move_stage_boundaries_are_noops(tmp_path: Path) -> None:
+    selected_stages: list[str | None] = ["alpha"]
+    overlay = SimpleNamespace(
+        selected_stage_id=lambda: selected_stages[-1],
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+    )
+    stages = [
+        {"id": "alpha", "title": "First"},
+        {"id": "beta", "title": "Second"},
+    ]
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id", stages=copy.deepcopy(stages)))
+
+    assert controller._move_stage(-1) is False
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["stages"] == stages
+
+    selected_stages.append("beta")
+    assert controller._move_stage(1) is False
+    assert controller.edit_buffer["stages"] == stages
+
+
+def test_quest_editor_controller_move_stage_preserves_stage_dicts_and_quest_keys(tmp_path: Path) -> None:
+    selected_stages: list[str | None] = ["beta"]
+    overlay = SimpleNamespace(
+        selected_stage_id=lambda: selected_stages[-1],
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+    )
+    alpha = {
+        "id": "alpha",
+        "title": "First",
+        "text": "First text.",
+        "complete_on": {"type": "dialogue_choice", "payload": {"choice_id": "done"}},
+        "start_on_event": {"type": "scene_loaded"},
+        "requirements": {"counters": {"visits": 1}},
+        "emit_events_on_complete": [{"type": "quest_stage_done"}],
+    }
+    beta = {"id": "beta", "title": "Second", "complete_on": {"type": "talked"}}
+    gamma = {"id": "gamma", "title": "Third", "text": "Third text."}
+    quest = _quest("old_id", stages=[copy.deepcopy(alpha), copy.deepcopy(beta), copy.deepcopy(gamma)])
+    original = copy.deepcopy(quest)
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(quest)
+
+    assert controller._move_stage(1) is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["stages"] == [alpha, gamma, beta]
+    without_stages = {key: value for key, value in controller.edit_buffer.items() if key != "stages"}
+    original_without_stages = {key: value for key, value in original.items() if key != "stages"}
+    assert without_stages == original_without_stages
+    assert sorted(controller.edit_buffer["stages"], key=lambda stage: stage["id"]) == sorted(
+        original["stages"],
+        key=lambda stage: stage["id"],
+    )
+
+
+def test_quest_editor_controller_move_stage_round_trip_restores_and_saves_valid(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[list[dict[str, object]]] = []
+    selected_stages: list[str | None] = ["beta"]
+    from engine.editor import quest_editor_model
+
+    monkeypatch.setattr(quest_editor_model, "save_quests", lambda quests, _target: saved.append(quests))
+    overlay = SimpleNamespace(
+        selected_stage_id=lambda: selected_stages[-1],
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+    )
+    stages = [
+        {"id": "alpha", "title": "First"},
+        {"id": "beta", "title": "Second"},
+        {"id": "gamma", "title": "Third"},
+    ]
+    quest = _quest("old_id", stages=copy.deepcopy(stages))
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(quest)
+
+    assert controller._move_stage(1) is True
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["stages"] != stages
+    assert controller._move_stage(-1) is True
+
+    assert controller.edit_buffer["stages"] == stages
+    assert controller.commit_save([quest], tmp_path / "assets" / "data" / "quests.json") is True
+    assert saved[0][0]["stages"] == stages
+
+
+def test_quest_editor_controller_reordered_stage_zero_is_runtime_start(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    selected_stages: list[str | None] = ["beta"]
+    overlay = SimpleNamespace(
+        selected_stage_id=lambda: selected_stages[-1],
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+    )
+    quest = _quest(
+        "order_probe",
+        auto_start=True,
+        requires_flags=[],
+        stages=[
+            {"id": "alpha", "title": "First"},
+            {"id": "beta", "title": "Second"},
+        ],
+    )
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(quest)
+
+    assert controller._move_stage(-1) is True
+    assert controller.edit_buffer is not None
+    assert [stage["id"] for stage in controller.edit_buffer["stages"]] == ["beta", "alpha"]
+
+    quest_path = tmp_path / "quests.json"
+    quest_path.write_text(json.dumps({"quests": [controller.edit_buffer]}), encoding="utf-8")
+
+    class _State:
+        def __init__(self) -> None:
+            self.values: dict[str, object] = {}
+
+    class _Window:
+        def __init__(self) -> None:
+            self.game_state = _State()
+            self.game_state_controller = SimpleNamespace(get_perk_bonus=lambda _name: 0.0, add_xp=lambda _xp: None)
+
+        def emit_signal(self, *args: object, **kwargs: object) -> None:  # noqa: ARG002
+            return None
+
+        def get_flag(self, _name: str, default: bool = False) -> bool:
+            return default
+
+        def set_flag(self, name: str, value: bool) -> None:
+            self.game_state.values[name] = value
+
+        def inc_counter(self, name: str, amount: float) -> None:
+            self.game_state.values[name] = float(self.game_state.values.get(name, 0.0)) + amount
+
+    monkeypatch.setattr("engine.quests.resolve_path", lambda raw: Path(raw))
+    manager = QuestManager(_Window(), data_path=str(quest_path))
+
+    current_stage = manager.get_current_stage("order_probe")
+    assert current_stage is not None
+    assert current_stage["id"] == "beta"

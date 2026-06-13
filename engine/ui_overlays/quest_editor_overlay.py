@@ -334,6 +334,45 @@ class QuestEditorOverlay(UIElement):
                     )
                 )
                 if selected_stage is not None:
+                    selected_stage_index = _selected_stage_index(quest, self._selected_stage_id)
+                    stages = quest.get("stages")
+                    stage_count = len(stages) if isinstance(stages, list) else 0
+                    if selected_stage_index is not None and selected_stage_index > 0:
+                        self._stage_action_hits.append(
+                            (
+                                "stage.move_up",
+                                detail_panel.add_row(
+                                    PanelRow(
+                                        PanelField(
+                                            "Move up",
+                                            "",
+                                            label_color=QUEST_EDITOR_BUTTON_COLOR,
+                                            value_color=QUEST_EDITOR_DIM_COLOR,
+                                        ),
+                                        height=QUEST_EDITOR_ROW_HEIGHT,
+                                        padding_x=QUEST_EDITOR_ROW_PADDING_X,
+                                    )
+                                ),
+                            )
+                        )
+                    if selected_stage_index is not None and selected_stage_index < stage_count - 1:
+                        self._stage_action_hits.append(
+                            (
+                                "stage.move_down",
+                                detail_panel.add_row(
+                                    PanelRow(
+                                        PanelField(
+                                            "Move down",
+                                            "",
+                                            label_color=QUEST_EDITOR_BUTTON_COLOR,
+                                            value_color=QUEST_EDITOR_DIM_COLOR,
+                                        ),
+                                        height=QUEST_EDITOR_ROW_HEIGHT,
+                                        padding_x=QUEST_EDITOR_ROW_PADDING_X,
+                                    )
+                                ),
+                            )
+                        )
                     self._stage_action_hits.append(
                         (
                             "stage.delete",
