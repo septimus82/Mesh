@@ -79,14 +79,6 @@ class StubEditorController:
     def ui_hd2d_commit(self, preset_id: str) -> bool:
         return self.commit_hd2d_preset(preset_id)
 
-
-    def commit_hd2d_preset(self, preset_id: str) -> bool:
-        self.commit_called_with = preset_id
-        return True
-
-    def _cancel_hd2d_preview(self) -> None:
-        self.cancel_preview_called = True
-
     def run_action(self, action_id: str) -> bool:
         self.run_action_called_with = action_id
         return True
