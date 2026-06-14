@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,10 @@ class EditorQuestEditorController(EditorDatabaseFormController):
         ("start_toast", "Start toast"),
         ("complete_toast", "Complete toast"),
     )
+
+    def __init__(self, editor: Any) -> None:
+        super().__init__(editor)
+        self.stage_reference_scan_roots: tuple[Path, ...] | None = None
 
     def enter_edit_mode(self, record: dict[str, Any]) -> None:
         stage_index = self._selected_stage_index(record)
@@ -86,12 +91,32 @@ class EditorQuestEditorController(EditorDatabaseFormController):
 
     def _set_field_value(self, record: dict[str, Any], field: str, value: Any) -> None:
         next_value = str(value or "")
+        if str(field).endswith(".id"):
+            next_value = next_value.strip()
         if "." in str(field):
             _set_path(record, field, next_value)
             return
         if field == self.ID_FIELD:
             next_value = next_value.strip()
         record[field] = next_value
+
+    def sync_widgets_to_buffer(self) -> None:
+        if not isinstance(self.edit_buffer, dict):
+            return
+        overlay = self._get_overlay()
+        selected_stage_getter = getattr(overlay, "selected_stage_id", None) if overlay is not None else None
+        selected_stage_id = selected_stage_getter() if callable(selected_stage_getter) else None
+        selected_index = self._selected_stage_index(self.edit_buffer)
+        super().sync_widgets_to_buffer()
+        stages = self.edit_buffer.get("stages")
+        if not isinstance(stages, list) or selected_index is None or not 0 <= selected_index < len(stages):
+            return
+        stage_id = _stage_id_at(stages, selected_index)
+        if stage_id == selected_stage_id:
+            return
+        setter = getattr(overlay, "set_selected_stage_id", None) if overlay is not None else None
+        if callable(setter):
+            setter(stage_id)
 
     def _selected_stage_index(self, record: dict[str, Any]) -> int | None:
         overlay = self._get_overlay()
@@ -118,6 +143,7 @@ class EditorQuestEditorController(EditorDatabaseFormController):
         stages = record.get("stages") if isinstance(record, dict) else None
         stage = stages[stage_index] if isinstance(stages, list) and stage_index is not None and 0 <= stage_index < len(stages) else None
         if isinstance(stage, dict):
+            specs.append((f"stages.{stage_index}.id", "Stage id"))
             specs.append((f"stages.{stage_index}.title", "Stage title"))
             if "text" in stage:
                 specs.append((f"stages.{stage_index}.text", "Stage text"))
@@ -208,6 +234,68 @@ class EditorQuestEditorController(EditorDatabaseFormController):
         from engine.editor.quest_editor_model import save_quests  # noqa: PLC0415
 
         save_quests(records, target_path)
+        candidate = self._record_for_save(self._copy_record(self.edit_buffer)) if isinstance(self.edit_buffer, dict) else None
+        for warning in self._orphan_stage_reference_warnings(candidate or {}):
+            self._emit_feedback_warning(warning)
+
+    def _orphan_stage_reference_warnings(self, candidate: dict[str, Any]) -> list[str]:
+        if not isinstance(self._original_record, dict):
+            return []
+        quest_id = str(candidate.get("id") or "").strip()
+        if not quest_id:
+            return []
+        removed = _stage_ids(self._original_record) - _stage_ids(candidate)
+        if not removed:
+            return []
+        return [
+            f"Quest stage '{quest_id}/{stage_id}' is still referenced by {scene_path} entity '{entity_name}'."
+            for scene_path, entity_name, stage_id in self._find_stage_reference_hits(quest_id, removed)
+        ]
+
+    def _find_stage_reference_hits(self, quest_id: str, stage_ids: set[str]) -> list[tuple[str, str, str]]:
+        hits: list[tuple[str, str, str]] = []
+        for root in self._scan_roots():
+            if not root.exists():
+                continue
+            for path in root.rglob("*.json"):
+                try:
+                    payload = json.loads(path.read_text(encoding="utf-8-sig"))
+                except Exception:  # noqa: BLE001  # REASON: malformed scene data must not block quest saves
+                    continue
+                self._collect_stage_reference_hits(payload, path, quest_id, stage_ids, hits)
+        return hits
+
+    def _scan_roots(self) -> tuple[Path, ...]:
+        if self.stage_reference_scan_roots is not None:
+            return tuple(Path(root) for root in self.stage_reference_scan_roots)
+        root_getter = getattr(self._editor, "_get_repo_root", None)
+        root = Path(root_getter()) if callable(root_getter) else Path.cwd()
+        return (root / "assets", root / "packs")
+
+    def _collect_stage_reference_hits(
+        self,
+        value: Any,
+        path: Path,
+        quest_id: str,
+        stage_ids: set[str],
+        hits: list[tuple[str, str, str]],
+        entity_name: str | None = None,
+    ) -> None:
+        if isinstance(value, list):
+            for item in value:
+                self._collect_stage_reference_hits(item, path, quest_id, stage_ids, hits, entity_name)
+            return
+        if not isinstance(value, dict):
+            return
+        name = str(value.get("name") or value.get("id") or entity_name or "unknown")
+        cfg_root = value.get("behaviour_config")
+        cfg = cfg_root.get("QuestProgressOnEvent") if isinstance(cfg_root, dict) else None
+        if isinstance(cfg, dict) and str(cfg.get("quest_id") or "").strip() == quest_id:
+            stage_id = str(cfg.get("stage_id") or "").strip()
+            if stage_id in stage_ids:
+                hits.append((path.as_posix(), name, stage_id))
+        for item in value.values():
+            self._collect_stage_reference_hits(item, path, quest_id, stage_ids, hits, name)
 
     def _overlay_selected_record(self, overlay: Any | None) -> dict[str, Any] | None:
         getter = getattr(overlay, "selected_quest_dict", None) if overlay is not None else None
@@ -228,6 +316,14 @@ class EditorQuestEditorController(EditorDatabaseFormController):
             if isinstance(value, str) and value.strip() == "":
                 record.pop(field, None)
         return record
+
+    def _emit_feedback_warning(self, message: str) -> None:
+        feedback = getattr(self._editor, "feedback", None)
+        reporter = getattr(feedback, "warning", None) if feedback is not None else None
+        if callable(reporter):
+            reporter(str(message))
+            return
+        self._emit_feedback_info(str(message))
 
 
 def _next_stage_id(stages: list[Any]) -> str:
@@ -254,3 +350,14 @@ def _stage_id_for_collision(stage: Any, index: int) -> str | None:
     if not isinstance(stage, dict):
         return None
     return str(stage.get("id") or "").strip() or f"stage_{index}"
+
+
+def _stage_ids(record: dict[str, Any]) -> set[str]:
+    stages = record.get("stages")
+    if not isinstance(stages, list):
+        return set()
+    return {
+        stage_id
+        for index, stage in enumerate(stages)
+        if (stage_id := _stage_id_for_collision(stage, index))
+    }

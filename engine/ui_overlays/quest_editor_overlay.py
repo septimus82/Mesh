@@ -285,16 +285,10 @@ class QuestEditorOverlay(UIElement):
                 detail_panel.add_header(
                     PanelHeader("Selected stage", self._selected_stage_id, title_color=QUEST_EDITOR_DIM_COLOR)
                 )
-                detail_panel.add_row(
-                    PanelRow(
-                        PanelField("ID", self._selected_stage_id or "", label_color=QUEST_EDITOR_TEXT_COLOR, value_color=QUEST_EDITOR_DIM_COLOR),
-                        height=QUEST_EDITOR_ROW_HEIGHT,
-                        padding_x=QUEST_EDITOR_ROW_PADDING_X,
-                    )
-                )
                 selected_stage_index = _selected_stage_index(quest, self._selected_stage_id)
                 selected_stage_fields: list[tuple[str, str, str]] = []
                 if selected_stage_index is not None:
+                    selected_stage_fields.append(("ID", f"stages.{selected_stage_index}.id", str(selected_stage.get("id") or "")))
                     selected_stage_fields.append(("Title", f"stages.{selected_stage_index}.title", str(selected_stage.get("title") or "")))
                     if "text" in selected_stage:
                         selected_stage_fields.append(("Text", f"stages.{selected_stage_index}.text", str(selected_stage.get("text") or "")))

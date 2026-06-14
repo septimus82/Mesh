@@ -26,6 +26,7 @@ def _editor(tmp_path: Path, overlay: object | None = None) -> SimpleNamespace:
         feedback=SimpleNamespace(
             error=lambda message: feedback_calls.append(("error", str(message))),
             info=lambda message: feedback_calls.append(("info", str(message))),
+            warning=lambda message: feedback_calls.append(("warning", str(message))),
         ),
         _get_repo_root=lambda: tmp_path,
         feedback_calls=feedback_calls,
@@ -385,6 +386,174 @@ def test_quest_editor_controller_stage_title_and_text_edit_persist_through_save(
 
     assert saved[0][0]["stages"][0]["title"] == "Updated Talk"
     assert saved[0][0]["stages"][0]["text"] == "Updated directions."
+
+
+def test_quest_editor_controller_stage_id_edit_persists_and_keeps_selection_focus(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[list[dict[str, object]]] = []
+    selected_stages: list[str | None] = ["intro"]
+    from engine.editor import quest_editor_model
+
+    monkeypatch.setattr(quest_editor_model, "save_quests", lambda quests, _target: saved.append(quests))
+    overlay = SimpleNamespace(
+        selected_stage_id=lambda: selected_stages[-1],
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+    )
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id"))
+    controller._focus_field("stages.0.id")
+    controller.text_input("stages.0.id").text = " renamed_intro "
+
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["stages"][0]["id"] == "renamed_intro"
+    assert selected_stages[-1] == "renamed_intro"
+    assert controller._selected_stage_index(controller.edit_buffer) == 0
+    assert controller.focused_field() == "stages.0.id"
+
+    assert controller.commit_save([_quest("old_id")], tmp_path / "assets" / "data" / "quests.json") is True
+
+    assert saved[0][0]["stages"][0]["id"] == "renamed_intro"
+
+
+def test_quest_editor_controller_empty_stage_id_is_blocked_by_existing_validator(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[object] = []
+    from engine.editor import quest_editor_model
+
+    monkeypatch.setattr(quest_editor_model, "save_quests", lambda *args, **kwargs: saved.append((args, kwargs)))
+    overlay = SimpleNamespace(selected_stage_id=lambda: "intro", set_selected_stage_id=lambda _stage_id: None)
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id"))
+    controller.text_input("stages.0.id").text = ""
+
+    assert controller.commit_save([_quest("old_id")], tmp_path / "assets" / "data" / "quests.json") is False
+
+    assert "must have a non-empty 'id'" in (controller.last_error_message() or "")
+    assert saved == []
+
+
+def test_quest_editor_controller_duplicate_stage_id_is_blocked_by_existing_validator(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[object] = []
+    from engine.editor import quest_editor_model
+
+    monkeypatch.setattr(quest_editor_model, "save_quests", lambda *args, **kwargs: saved.append((args, kwargs)))
+    stages = [{"id": "intro", "title": "Talk"}, {"id": "followup", "title": "Follow Up"}]
+    overlay = SimpleNamespace(selected_stage_id=lambda: "followup", set_selected_stage_id=lambda _stage_id: None)
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id", stages=stages))
+    controller.text_input("stages.1.id").text = "intro"
+
+    assert controller.commit_save([_quest("old_id", stages=stages)], tmp_path / "assets" / "data" / "quests.json") is False
+
+    assert "duplicate stage id 'intro'" in (controller.last_error_message() or "")
+    assert saved == []
+
+
+def test_quest_editor_controller_stage_id_rename_only_changes_that_stage(tmp_path: Path) -> None:
+    selected_stages: list[str | None] = ["beta"]
+    overlay = SimpleNamespace(
+        selected_stage_id=lambda: selected_stages[-1],
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+    )
+    alpha = {"id": "alpha", "title": "First", "complete_on": {"type": "talked"}}
+    beta = {"id": "beta", "title": "Second", "text": "Second text."}
+    gamma = {"id": "gamma", "title": "Third", "requirements": {"flags": {"visited": True}}}
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id", stages=[copy.deepcopy(alpha), copy.deepcopy(beta), copy.deepcopy(gamma)]))
+    original_alpha = copy.deepcopy(alpha)
+    original_gamma = copy.deepcopy(gamma)
+
+    controller.text_input("stages.1.id").text = "renamed_beta"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["stages"][0] == original_alpha
+    assert controller.edit_buffer["stages"][1] == {"id": "renamed_beta", "title": "Second", "text": "Second text."}
+    assert controller.edit_buffer["stages"][2] == original_gamma
+    assert selected_stages[-1] == "renamed_beta"
+
+
+def test_quest_editor_controller_idless_stage_edit_materializes_real_id(tmp_path: Path) -> None:
+    selected_stages: list[str | None] = ["stage_0"]
+    overlay = SimpleNamespace(
+        selected_stage_id=lambda: selected_stages[-1],
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+    )
+    controller = EditorQuestEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_quest("old_id", stages=[{"title": "Fallback"}]))
+
+    controller.text_input("stages.0.id").text = "assigned_id"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["stages"][0] == {"id": "assigned_id", "title": "Fallback"}
+    assert selected_stages[-1] == "assigned_id"
+
+
+@pytest.mark.parametrize("operation", ("rename", "delete"))
+def test_quest_editor_controller_orphan_warning_for_stage_id_rename_and_delete(
+    tmp_path: Path,
+    operation: str,
+) -> None:
+    selected_stages: list[str | None] = ["old_id"]
+    scan_root = tmp_path / "scan"
+    scan_root.mkdir()
+    (scan_root / "scene.json").write_text(
+        json.dumps(
+            {
+                "entities": [
+                    {
+                        "id": "hook_entity",
+                        "name": "Hook Entity",
+                        "behaviour_config": {
+                            "QuestProgressOnEvent": {
+                                "quest_id": "quest_with_refs",
+                                "stage_id": "old_id",
+                                "action": "complete_stage",
+                            }
+                        },
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (scan_root / "malformed.json").write_text("{", encoding="utf-8")
+    overlay = SimpleNamespace(
+        selected_stage_id=lambda: selected_stages[-1],
+        set_selected_stage_id=lambda stage_id: selected_stages.append(stage_id),
+    )
+    editor = _editor(tmp_path, overlay)
+    controller = EditorQuestEditorController(editor)
+    controller.stage_reference_scan_roots = (scan_root,)
+    quest = _quest(
+        "quest_with_refs",
+        stages=[{"id": "old_id", "title": "Old"}, {"id": "keep", "title": "Keep"}],
+    )
+    controller.enter_edit_mode(quest)
+
+    if operation == "rename":
+        controller.text_input("stages.0.id").text = "new_id"
+    else:
+        assert controller._delete_stage() is True
+
+    assert controller.commit_save([quest], tmp_path / "assets" / "data" / "quests.json") is True
+
+    warnings = [message for level, message in editor.feedback_calls if level == "warning"]
+    assert len(warnings) == 1
+    assert "quest_with_refs/old_id" in warnings[0]
+    assert "scene.json" in warnings[0]
+    assert "Hook Entity" in warnings[0]
+    assert editor.feedback_calls[-1] == ("info", "Quest saved")
 
 
 def test_quest_editor_controller_no_edit_save_preserves_stage_dicts_byte_identical(
