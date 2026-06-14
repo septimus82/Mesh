@@ -447,6 +447,36 @@ def test_quest_editor_overlay_edit_mode_stage_title_text_widgets_respect_selecte
     assert {"id", "title", "description", "type", "start_toast", "complete_toast"} <= set(overlay._widget_rows)
 
 
+def test_quest_editor_overlay_selected_stage_id_is_widget_only_in_edit_mode(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    quest_editor = _QuestEditorStub(edit_mode=True)
+    quest_editor.edit_buffer["stages"] = [{"id": "intro", "title": "Talk", "text": "Talk to the guide."}]
+    quest_editor._text_inputs["stages.0.id"] = TextInput(text="intro", focused=False, font_size=12, height=18.0)
+    quest_editor._text_inputs["stages.0.title"] = TextInput(text="Talk", focused=False, font_size=12, height=18.0)
+    quest_editor._text_inputs["stages.0.text"] = TextInput(text="Talk to the guide.", focused=False, font_size=12, height=18.0)
+    overlay = QuestEditorOverlay(_window_for_tab("Quests", quest_editor))
+    overlay._model = _model(tmp_path)
+
+    overlay.draw()
+
+    assert "stages.0.id" in overlay._widget_rows
+    selected_index = captured.index("Selected stage")
+    assert captured[selected_index + 1] == "intro"
+    assert captured[selected_index + 2 : selected_index + 7 : 2] == ["ID", "Title", "Text"]
+
+    captured.clear()
+    view_overlay = QuestEditorOverlay(_window_for_tab("Quests"))
+    view_overlay._model = _model(tmp_path)
+    view_overlay.draw()
+
+    assert "stages.0.id" not in view_overlay._widget_rows
+    selected_index = captured.index("Selected stage")
+    assert captured[selected_index + 1 : selected_index + 6] == ["intro", "ID", "intro", "Title", "Talk"]
+
+
 def test_quest_editor_overlay_edit_mode_stage_add_action_row_hit_tests(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
