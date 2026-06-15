@@ -99,6 +99,7 @@ class ItemEditorOverlay(UIElement):
         if not self._is_visible_for_controller(controller):
             return
 
+        from engine.editor.item_editor_model import effect_rows, tag_rows
         from engine.editor.widgets.panel_primitives import EditorPanelBase, PanelField, PanelHeader, PanelRow
 
         list_rect, detail_rect = compute_database_form_layout(self.window, controller, ITEM_EDITOR_PANEL_GAP)
@@ -156,6 +157,23 @@ class ItemEditorOverlay(UIElement):
             inner_padding_x=0.0,
             inner_padding_y=0.0,
         )
+
+        def add_detail_row(label: str, value: str) -> None:
+            detail_panel.add_row(
+                PanelRow(
+                    PanelField(label, value, label_color=ITEM_EDITOR_TEXT_COLOR, value_color=ITEM_EDITOR_DIM_COLOR),
+                    height=ITEM_EDITOR_ROW_HEIGHT,
+                    padding_x=ITEM_EDITOR_ROW_PADDING_X,
+                )
+            )
+
+        def add_complex_entry_rows(label: str) -> None:
+            if item is None:
+                return
+            rows = tag_rows(item) if label == "Tags" else effect_rows(item) if label == "Effects" else []
+            for entry_label, entry_value in rows:
+                add_detail_row(entry_label, entry_value)
+
         item = model.selected_item if model is not None else None
         button_rows: dict[str, object] = {}
         self._widget_rows = {}
@@ -199,25 +217,15 @@ class ItemEditorOverlay(UIElement):
                         )
                     )
                     continue
-                detail_panel.add_row(
-                    PanelRow(
-                        PanelField(label, value, label_color=ITEM_EDITOR_TEXT_COLOR, value_color=ITEM_EDITOR_DIM_COLOR),
-                        height=ITEM_EDITOR_ROW_HEIGHT,
-                        padding_x=ITEM_EDITOR_ROW_PADDING_X,
-                    )
-                )
+                add_detail_row(label, value)
+                add_complex_entry_rows(label)
             if edit_mode:
                 for label, value in model.selected_detail_rows():
                     field_name = _field_name_for_label(label)
                     if field_name in ITEM_EDITOR_EDITABLE_SCALAR_FIELDS:
                         continue
-                    detail_panel.add_row(
-                        PanelRow(
-                            PanelField(label, value, label_color=ITEM_EDITOR_TEXT_COLOR, value_color=ITEM_EDITOR_DIM_COLOR),
-                            height=ITEM_EDITOR_ROW_HEIGHT,
-                            padding_x=ITEM_EDITOR_ROW_PADDING_X,
-                        )
-                    )
+                    add_detail_row(label, value)
+                    add_complex_entry_rows(label)
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,

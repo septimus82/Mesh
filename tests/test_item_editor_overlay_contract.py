@@ -246,6 +246,102 @@ def test_item_editor_overlay_edit_mode_shows_max_stack_when_default(monkeypatch:
     assert item_editor.text_input("max_stack").text == "1"
 
 
+def test_item_editor_overlay_renders_tag_rows_after_tags_blob(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = ItemEditorOverlay(_window_for_tab("Items"))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    tags_index = captured.index("Tags")
+    assert captured[tags_index : tags_index + 6] == [
+        "Tags",
+        "consumable, potion",
+        "Tag 0",
+        "consumable",
+        "Tag 1",
+        "potion",
+    ]
+
+
+def test_item_editor_overlay_renders_effect_rows_after_effects_blob(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = ItemEditorOverlay(_window_for_tab("Items"))
+    overlay._model = ItemEditorModel(
+        items=[
+            ItemDefinition(
+                id="mixed_item",
+                name="Mixed Item",
+                description="",
+                icon=None,
+                stackable=False,
+                max_stack=1,
+                tags=[],
+                effects={"quest_flag": "field_supplies_crate", "heal": 2.0, "tier": 1},
+            )
+        ]
+    )
+
+    overlay.draw()
+
+    effects_index = captured.index("Effects")
+    assert captured[effects_index : effects_index + 8] == [
+        "Effects",
+        "heal=2.0, quest_flag=field_supplies_crate, tier=1",
+        "heal",
+        "2.0",
+        "quest_flag",
+        "field_supplies_crate",
+        "tier",
+        "1",
+    ]
+
+
+def test_item_editor_overlay_edit_mode_renders_complex_entry_rows_read_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=True)
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    tags_index = captured.index("Tags")
+    effects_index = captured.index("Effects")
+    assert captured[tags_index : tags_index + 6] == [
+        "Tags",
+        "consumable, potion",
+        "Tag 0",
+        "consumable",
+        "Tag 1",
+        "potion",
+    ]
+    assert captured[effects_index : effects_index + 4] == ["Effects", "heal=25", "heal", "25"]
+    assert "tags" not in overlay._widget_rows
+    assert "effects" not in overlay._widget_rows
+
+
+def test_item_editor_overlay_complex_blob_rows_coexist_with_entry_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = ItemEditorOverlay(_window_for_tab("Items"))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    assert "Tags" in captured
+    assert "consumable, potion" in captured
+    assert "Tag 0" in captured
+    assert "consumable" in captured
+    assert "Effects" in captured
+    assert "heal=25" in captured
+    assert "heal" in captured
+    assert captured.index("Tags") < captured.index("Tag 0")
+    assert captured.index("Effects") < captured.index("heal")
+
+
 def test_item_editor_overlay_dirty_marker_and_error_row(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = _capture_panel_text(monkeypatch)
     item_editor = _ItemEditorStub(edit_mode=True, dirty=True, error="id is required")

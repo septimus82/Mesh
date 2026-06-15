@@ -99,6 +99,26 @@ def _format_effects(effects: dict[str, Any]) -> str:
     return ", ".join(f"{key}={effects[key]}" for key in sorted(effects))
 
 
+def tag_rows(item: object) -> list[tuple[str, str]]:
+    tags = _complex_field(item, "tags")
+    if not isinstance(tags, list):
+        return []
+    return [(f"Tag {index}", tag) for index, tag in enumerate(tags) if isinstance(tag, str)]
+
+
+def effect_rows(item: object) -> list[tuple[str, str]]:
+    effects = _complex_field(item, "effects")
+    if not isinstance(effects, dict):
+        return []
+    return [(key, str(effects[key])) for key in sorted(effects)]
+
+
+def _complex_field(item: object, field_name: str) -> object:
+    if isinstance(item, dict):
+        return item.get(field_name)
+    return getattr(item, field_name, None)
+
+
 def validate_item(item: dict[str, Any], all_items: list[dict[str, Any]]) -> list[str]:
     """Return validation errors for one editable item payload."""
     errors: list[str] = []

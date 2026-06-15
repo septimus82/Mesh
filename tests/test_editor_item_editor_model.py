@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from engine.editor.item_editor_model import ItemEditorModel, validate_item
+from engine.editor.item_editor_model import ItemEditorModel, effect_rows, tag_rows, validate_item
 
 pytestmark = [pytest.mark.fast]
 
@@ -82,6 +82,31 @@ def test_item_editor_model_detail_rows_skip_empty_default_fields(tmp_path) -> No
         ("ID", "plain_key"),
         ("Name", "Plain Key"),
     ]
+
+
+def test_item_editor_tag_rows_preserve_raw_positions_and_skip_non_strings() -> None:
+    item = {"tags": ["currency", 7, "quest"]}
+
+    assert tag_rows(item) == [("Tag 0", "currency"), ("Tag 2", "quest")]
+
+
+def test_item_editor_effect_rows_sort_keys_and_format_scalar_values() -> None:
+    item = {"effects": {"quest_flag": "field_supplies_crate", "heal": 2.0, "tier": 1}}
+
+    assert effect_rows(item) == [
+        ("heal", "2.0"),
+        ("quest_flag", "field_supplies_crate"),
+        ("tier", "1"),
+    ]
+
+
+def test_item_editor_complex_rows_degrade_on_empty_missing_or_wrong_shapes() -> None:
+    assert tag_rows({"tags": []}) == []
+    assert tag_rows({}) == []
+    assert tag_rows({"tags": "consumable"}) == []
+    assert effect_rows({"effects": {}}) == []
+    assert effect_rows({}) == []
+    assert effect_rows({"effects": ["heal"]}) == []
 
 
 def test_validate_item_rejects_empty_id() -> None:
