@@ -449,6 +449,121 @@ def test_dialogue_editor_controller_delete_choice_action_ignored_in_view_mode(tm
     assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is False
 
 
+def test_dialogue_editor_controller_move_choice_down_swaps_and_focuses_target(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    source["script"]["start"]["choices"].extend(
+        [
+            {"next": "start", "text": "Again"},
+            {"next": "end", "text": "Later"},
+        ]
+    )
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+    controller.text_input("script.start.choices.0.text").text = "Edited OK"
+
+    assert controller._move_choice(0, 1) is True
+
+    assert controller.edit_buffer["script"]["start"]["choices"] == [
+        {"next": "start", "text": "Again"},
+        {"next": "end", "text": "Edited OK"},
+        {"next": "end", "text": "Later"},
+    ]
+    assert controller.text_input("script.start.choices.1.text").text == "Edited OK"
+    assert controller.text_input("script.start.choices.1.next").text == "end"
+    assert controller.focused_field() == "script.start.choices.1.text"
+
+
+def test_dialogue_editor_controller_move_choice_up_swaps_and_focuses_target(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    source["script"]["start"]["choices"].append({"next": "start", "text": "Again"})
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+
+    assert controller._move_choice(1, -1) is True
+
+    assert controller.edit_buffer["script"]["start"]["choices"] == [
+        {"next": "start", "text": "Again"},
+        {"next": "end", "text": "OK"},
+    ]
+    assert controller.text_input("script.start.choices.0.text").text == "Again"
+    assert controller.focused_field() == "script.start.choices.0.text"
+
+
+def test_dialogue_editor_controller_move_choice_boundary_noops(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    source["script"]["start"]["choices"].append({"next": "start", "text": "Again"})
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+    before = json.dumps(controller.edit_buffer, sort_keys=True)
+
+    assert controller._move_choice(0, -1) is False
+    assert controller._move_choice(1, 1) is False
+
+    assert json.dumps(controller.edit_buffer, sort_keys=True) == before
+
+
+def test_dialogue_editor_controller_move_choice_preserves_siblings_and_round_trips(tmp_path: Path) -> None:
+    source = _dialogue("ep02_intro")
+    source["script"]["start"]["mood"] = "calm"
+    source["script"]["start"]["choices"].extend(
+        [
+            {"next": "start", "text": "Again", "require_flags": ["seen"]},
+            {"next": "end", "text": "Later", "set_flags": {"done": True}},
+        ]
+    )
+    original_dialogue = json.loads(json.dumps(source))
+    original_choices = json.loads(json.dumps(source["script"]["start"]["choices"]))
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=_SelectedNodeOverlay("start")))
+    controller.enter_edit_mode(source)
+
+    assert controller._move_choice(1, 1) is True
+    moved_choices = controller.edit_buffer["script"]["start"]["choices"]
+
+    assert moved_choices[0] == original_choices[0]
+    assert moved_choices[1] == original_choices[2]
+    assert moved_choices[2] == original_choices[1]
+    assert controller.edit_buffer["script"]["start"]["speaker"] == original_dialogue["script"]["start"]["speaker"]
+    assert controller.edit_buffer["script"]["start"]["text"] == original_dialogue["script"]["start"]["text"]
+    assert controller.edit_buffer["script"]["start"]["mood"] == "calm"
+    assert controller.edit_buffer["id"] == original_dialogue["id"]
+    assert controller.edit_buffer["start_node"] == original_dialogue["start_node"]
+    assert controller.edit_buffer["schema_version"] == original_dialogue["schema_version"]
+
+    assert controller._move_choice(2, -1) is True
+    assert controller.edit_buffer["script"]["start"]["choices"] == original_choices
+
+
+def test_dialogue_editor_controller_move_choice_routes_from_edit_mode_actions(tmp_path: Path) -> None:
+    class _ChoiceActionOverlay(_SelectedNodeOverlay):
+        def __init__(self, node_id: str | None, actions: list[str]) -> None:
+            super().__init__(node_id)
+            self._actions = actions
+
+        def choice_action_at(self, x: float, y: float) -> str | None:  # noqa: ARG002
+            return self._actions.pop(0)
+
+    source = _dialogue("ep02_intro")
+    source["script"]["start"]["choices"].append({"next": "start", "text": "Again"})
+    overlay = _ChoiceActionOverlay("start", ["choice.0.move_down", "choice.1.move_up", "choice.1.delete"])
+    controller = EditorDialogueEditorController(_editor(tmp_path, overlay=overlay))
+    controller.enter_edit_mode(source)
+
+    assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is True
+    assert controller.edit_buffer["script"]["start"]["choices"] == [
+        {"next": "start", "text": "Again"},
+        {"next": "end", "text": "OK"},
+    ]
+
+    assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is True
+    assert controller.edit_buffer["script"]["start"]["choices"] == [
+        {"next": "end", "text": "OK"},
+        {"next": "start", "text": "Again"},
+    ]
+
+    assert controller.handle_dialogue_editor_mouse_click(10.0, 20.0) is True
+    assert controller.edit_buffer["script"]["start"]["choices"] == [{"next": "end", "text": "OK"}]
+
+
 def test_dialogue_editor_controller_add_node_generates_collision_free_ids(tmp_path: Path) -> None:
     source = _dialogue("ep02_intro")
     source["script"]["node_1"] = {"speaker": "A", "text": "Existing.", "next": ""}
