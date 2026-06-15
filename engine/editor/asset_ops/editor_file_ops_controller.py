@@ -461,43 +461,6 @@ class EditorFileOpsController:
 
         return sorted(candidates)
 
-    def move_folder_native(self, old_rel: str, new_rel: str) -> bool:
-        """Perform atomic-ish folder move on native filesystem."""
-        if self._is_web_runtime():
-            return False
-
-        repo_root = getattr(self.controller.window, "repo_root", None)
-        if not isinstance(repo_root, Path):
-            return False
-
-        old_abs = repo_root / old_rel
-        new_abs = repo_root / new_rel
-
-        if not old_abs.exists():
-            return False
-        if new_abs.exists():
-            return False # Collision
-
-        try:
-            # Ensure parent exists
-            new_abs.parent.mkdir(parents=True, exist_ok=True)
-            # Use atomic rename if possible
-            os.replace(old_abs, new_abs)
-            return True
-        except Exception:
-            _log_swallow("EFOC-015", "blanket exception fallback", once=False)
-            # Fallback for cross-device etc?
-            # os.replace handles same-filesystem.
-            # shutil.move is safer generally but os.replace is atomic on POSIX/Windows recent.
-            # "atomic-ish via os.replace where possible; otherwise shutil.move"
-            try:
-                shutil.move(str(old_abs), str(new_abs))
-                return True
-            except Exception:
-                _log_swallow("EFOC-016", "blanket exception fallback", once=False)
-                return False
-
-
     def rename_selected_asset(self, new_name: str) -> bool:
         """Rename the selected Project Explorer asset and update scene references.
 
