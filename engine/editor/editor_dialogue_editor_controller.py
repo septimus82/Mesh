@@ -9,8 +9,7 @@ from engine.editor.editor_database_form_controller import EditorDatabaseFormCont
 CHOICE_ADD_ACTION = "choice.add"
 NODE_ADD_ACTION = "node.add"
 NODE_DELETE_ACTION = "node.delete"
-_CHOICE_DELETE_PREFIX = "choice."
-_CHOICE_DELETE_SUFFIX = ".delete"
+_CHOICE_ACTION_PREFIX = "choice."
 
 
 class EditorDialogueEditorController(EditorDatabaseFormController):
@@ -53,10 +52,18 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
             if action == CHOICE_ADD_ACTION:
                 self._add_choice()
                 return True
-            choice_index = _choice_delete_index(action)
-            if choice_index is not None:
-                self._delete_choice(choice_index)
-                return True
+            choice_action = _choice_action_parts(action)
+            if choice_action is not None:
+                choice_index, choice_verb = choice_action
+                if choice_verb == "delete":
+                    self._delete_choice(choice_index)
+                    return True
+                if choice_verb == "move_up":
+                    self._move_choice(choice_index, -1)
+                    return True
+                if choice_verb == "move_down":
+                    self._move_choice(choice_index, 1)
+                    return True
             node_action_picker = getattr(overlay, "node_action_at", None) if overlay is not None else None
             node_action = node_action_picker(float(x), float(y)) if callable(node_action_picker) else None
             if node_action == NODE_ADD_ACTION:
@@ -183,6 +190,23 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
         self._focus_field(None)
         return True
 
+    def _move_choice(self, index: int, delta: int) -> bool:
+        if not self.edit_mode_active or not isinstance(self.edit_buffer, dict):
+            return False
+        node_id = self.selected_node_id()
+        script = self.edit_buffer.get("script")
+        node = script.get(node_id) if isinstance(script, dict) and node_id in script else None
+        choices = node.get("choices") if isinstance(node, dict) else None
+        target = int(index) + int(delta)
+        if not isinstance(choices, list) or not 0 <= int(index) < len(choices) or not 0 <= target < len(choices):
+            return False
+        self.sync_widgets_to_buffer()
+        choices[int(index)], choices[target] = choices[target], choices[int(index)]
+        self._rebuild_text_inputs(node_id, self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(f"script.{node_id}.choices.{target}.text")
+        return True
+
     def _add_node(self) -> bool:
         if not self.edit_mode_active or not isinstance(self.edit_buffer, dict):
             return False
@@ -257,13 +281,20 @@ class EditorDialogueEditorController(EditorDatabaseFormController):
 
 
 def _choice_delete_index(action: object) -> int | None:
+    parts = _choice_action_parts(action)
+    if parts is None or parts[1] != "delete":
+        return None
+    return parts[0]
+
+
+def _choice_action_parts(action: object) -> tuple[int, str] | None:
     text = str(action or "")
-    if not text.startswith(_CHOICE_DELETE_PREFIX) or not text.endswith(_CHOICE_DELETE_SUFFIX):
+    if not text.startswith(_CHOICE_ACTION_PREFIX):
         return None
-    index_text = text[len(_CHOICE_DELETE_PREFIX) : -len(_CHOICE_DELETE_SUFFIX)]
-    if not index_text.isdigit():
+    pieces = text[len(_CHOICE_ACTION_PREFIX) :].split(".")
+    if len(pieces) != 2 or not pieces[0].isdigit() or not pieces[1]:
         return None
-    return int(index_text)
+    return int(pieces[0]), pieces[1]
 
 
 def _next_node_id(script: dict[str, Any]) -> str:

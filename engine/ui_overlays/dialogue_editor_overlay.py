@@ -335,6 +335,42 @@ class DialogueEditorOverlay(UIElement):
                         for i, choice in enumerate(choices):
                             if not isinstance(choice, dict):
                                 continue
+                            if i > 0:
+                                self._choice_action_hits.append(
+                                    (
+                                        f"choice.{i}.move_up",
+                                        detail_panel.add_row(
+                                            PanelRow(
+                                                PanelField(
+                                                    f"Move up choice {i}",
+                                                    "",
+                                                    label_color=DIALOGUE_EDITOR_BUTTON_COLOR,
+                                                    value_color=DIALOGUE_EDITOR_DIM_COLOR,
+                                                ),
+                                                height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                                                padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                                            )
+                                        ),
+                                    )
+                                )
+                            if i < len(choices) - 1:
+                                self._choice_action_hits.append(
+                                    (
+                                        f"choice.{i}.move_down",
+                                        detail_panel.add_row(
+                                            PanelRow(
+                                                PanelField(
+                                                    f"Move down choice {i}",
+                                                    "",
+                                                    label_color=DIALOGUE_EDITOR_BUTTON_COLOR,
+                                                    value_color=DIALOGUE_EDITOR_DIM_COLOR,
+                                                ),
+                                                height=DIALOGUE_EDITOR_ROW_HEIGHT,
+                                                padding_x=DIALOGUE_EDITOR_ROW_PADDING_X,
+                                            )
+                                        ),
+                                    )
+                                )
                             self._choice_action_hits.append(
                                 (
                                     f"choice.{i}.delete",

@@ -600,6 +600,29 @@ class TestDialogueRunner:
         choice_events = [e for e in events if e.event_type == "dialogue_choice"]
         assert len(choice_events) == 1
 
+    @pytest.mark.fast
+    def test_choice_order_follows_reordered_choice_list(self, mock_window, mock_entity, sample_script):
+        """Dialogue choices are presented and selected in list order."""
+        from engine.behaviours.dialogue_runner import DialogueRunnerBehaviour
+
+        reordered = dict(sample_script)
+        reordered["start"] = dict(sample_script["start"])
+        reordered["start"]["choices"] = [
+            {"text": "Goodbye", "next": "farewell"},
+            {"text": "Hi!", "next": "greet_response"},
+        ]
+        behaviour = DialogueRunnerBehaviour(
+            mock_entity,
+            mock_window,
+            script=reordered,
+            start_node="start",
+        )
+
+        assert behaviour.start() is True
+        assert [choice["text"] for choice in behaviour.current_choices] == ["Goodbye", "Hi!"]
+        assert behaviour.choose(0) is True
+        assert behaviour.current_node == "farewell"
+
     def test_auto_advance(self, mock_window, mock_entity, sample_script):
         """Auto-advance mode progresses automatically."""
         from engine.behaviours.dialogue_runner import DialogueRunnerBehaviour
