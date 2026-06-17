@@ -7,6 +7,8 @@ from typing import Any
 from engine.editor.editor_database_form_controller import EditorDatabaseFormController
 
 _FOCUS_CYCLE = ("id", "name", "description", "icon", "max_stack")
+_TAG_ACTION_KIND = "tag"
+_EFFECT_ACTION_KIND = "effect"
 
 
 class EditorItemEditorController(EditorDatabaseFormController):
@@ -40,6 +42,17 @@ class EditorItemEditorController(EditorDatabaseFormController):
             if idx is not None:
                 overlay.set_selected_index(int(idx))
                 return True
+        else:
+            overlay = self._get_overlay()
+            action_at = getattr(overlay, "complex_entry_action_at", None) if overlay is not None else None
+            action = action_at(float(x), float(y)) if callable(action_at) else None
+            parsed_action = _complex_entry_action_parts(action)
+            if parsed_action is not None:
+                kind, ref, verb = parsed_action
+                if kind == _TAG_ACTION_KIND and verb == "delete" and isinstance(ref, int):
+                    return self._delete_tag(ref)
+                if kind == _EFFECT_ACTION_KIND and verb == "delete" and isinstance(ref, str):
+                    return self._delete_effect(ref)
         return self.handle_mouse_click(float(x), float(y))
 
     def _record_for_edit(self, record: dict[str, Any]) -> dict[str, Any]:
@@ -109,6 +122,26 @@ class EditorItemEditorController(EditorDatabaseFormController):
         self._focus_field(None)
         return True
 
+    def _delete_tag(self, index: int) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        tags = self.edit_buffer.get("tags")
+        if not isinstance(tags, list) or not 0 <= int(index) < len(tags):
+            return False
+        self.sync_widgets_to_buffer()
+        tags.pop(int(index))
+        return True
+
+    def _delete_effect(self, key: str) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        effects = self.edit_buffer.get("effects")
+        if not isinstance(effects, dict) or key not in effects:
+            return False
+        self.sync_widgets_to_buffer()
+        del effects[key]
+        return True
+
     def _normalized_buffer(self, item: dict[str, Any]) -> dict[str, Any]:
         normalized = dict(item)
         normalized["id"] = str(normalized.get("id", "") or "").strip()
@@ -139,3 +172,22 @@ def item_definition_to_dict(item: Any) -> dict[str, Any]:
         "tags": list(getattr(item, "tags", []) or []),
         "effects": dict(getattr(item, "effects", {}) or {}),
     }
+
+
+def _complex_entry_action_parts(action: object) -> tuple[str, int | str, str] | None:
+    text = str(action or "")
+    pieces = text.split(".")
+    if len(pieces) < 3:
+        return None
+    kind = pieces[0]
+    verb = pieces[-1]
+    ref_text = ".".join(pieces[1:-1])
+    if not ref_text or not verb:
+        return None
+    if kind == _TAG_ACTION_KIND:
+        if not ref_text.isdigit():
+            return None
+        return kind, int(ref_text), verb
+    if kind == _EFFECT_ACTION_KIND:
+        return kind, ref_text, verb
+    return None

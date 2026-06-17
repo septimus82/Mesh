@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from engine.ui_overlays.common import UIElement
 from engine.ui_overlays.editor_database_form_helpers import (
@@ -48,6 +48,7 @@ class ItemEditorOverlay(UIElement):
         self._load_error: str | None = None
         self._stackable_toggle = Toggle(label="stackable", value=False, height=ITEM_EDITOR_ROW_HEIGHT)
         self._row_hits: list[tuple[int, object]] = []
+        self._complex_entry_action_hits: list[tuple[str, Any]] = []
         self._widget_rows: dict[str, object] = {}
 
     def _get_controller(self) -> object | None:
@@ -118,6 +119,7 @@ class ItemEditorOverlay(UIElement):
         )
         list_panel.add_header(PanelHeader("Items", str(model.item_count) if model is not None else "0"))
         self._row_hits = []
+        self._complex_entry_action_hits = []
 
         if model is None:
             list_panel.add_row(
@@ -158,8 +160,8 @@ class ItemEditorOverlay(UIElement):
             inner_padding_y=0.0,
         )
 
-        def add_detail_row(label: str, value: str) -> None:
-            detail_panel.add_row(
+        def add_detail_row(label: str, value: str) -> object:
+            return detail_panel.add_row(
                 PanelRow(
                     PanelField(label, value, label_color=ITEM_EDITOR_TEXT_COLOR, value_color=ITEM_EDITOR_DIM_COLOR),
                     height=ITEM_EDITOR_ROW_HEIGHT,
@@ -170,9 +172,33 @@ class ItemEditorOverlay(UIElement):
         def add_complex_entry_rows(label: str) -> None:
             if item is None:
                 return
-            rows = tag_rows(item) if label == "Tags" else effect_rows(item) if label == "Effects" else []
+            kind = "tag" if label == "Tags" else "effect" if label == "Effects" else ""
+            rows = tag_rows(item) if kind == "tag" else effect_rows(item) if kind == "effect" else []
             for entry_label, entry_value in rows:
                 add_detail_row(entry_label, entry_value)
+            if not edit_mode:
+                return
+            for entry_label, _entry_value in rows:
+                ref = entry_label.removeprefix("Tag ") if kind == "tag" else entry_label
+                action = f"{kind}.{ref}.delete"
+                delete_label = f"Delete tag {ref}" if kind == "tag" else f"Delete effect {ref}"
+                self._complex_entry_action_hits.append(
+                    (
+                        action,
+                        detail_panel.add_row(
+                            PanelRow(
+                                PanelField(
+                                    delete_label,
+                                    "",
+                                    label_color=ITEM_EDITOR_BUTTON_COLOR,
+                                    value_color=ITEM_EDITOR_DIM_COLOR,
+                                ),
+                                height=ITEM_EDITOR_ROW_HEIGHT,
+                                padding_x=ITEM_EDITOR_ROW_PADDING_X,
+                            )
+                        ),
+                    )
+                )
 
         item = model.selected_item if model is not None else None
         button_rows: dict[str, object] = {}
@@ -243,6 +269,12 @@ class ItemEditorOverlay(UIElement):
         for index, row in self._row_hits:
             if row.hit_test(float(x), float(y)):
                 return index
+        return None
+
+    def complex_entry_action_at(self, x: float, y: float) -> str | None:
+        for action, row in self._complex_entry_action_hits:
+            if row.hit_test(float(x), float(y)):
+                return action
         return None
 
     def set_selected_index(self, index: int) -> bool:
