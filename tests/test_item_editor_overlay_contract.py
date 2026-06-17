@@ -342,6 +342,49 @@ def test_item_editor_overlay_complex_blob_rows_coexist_with_entry_rows(
     assert captured.index("Effects") < captured.index("heal")
 
 
+def test_item_editor_overlay_edit_mode_renders_complex_delete_actions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=True)
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    assert "Delete tag 0" in captured
+    assert "Delete tag 1" in captured
+    assert "Delete effect heal" in captured
+    hit_rows = dict(overlay._complex_entry_action_hits)
+    for action in ("tag.0.delete", "tag.1.delete", "effect.heal.delete"):
+        row = hit_rows[action]
+        rect = row.last_rect
+        assert rect is not None
+        assert overlay.complex_entry_action_at(rect.left + 1.0, rect.center_y) == action
+    assert overlay.complex_entry_action_at(-10.0, -10.0) is None
+
+
+def test_item_editor_overlay_view_mode_keeps_read_only_complex_rows_without_delete_actions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = ItemEditorOverlay(_window_for_tab("Items"))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    assert "Tags" in captured
+    assert "consumable, potion" in captured
+    assert "Tag 0" in captured
+    assert "consumable" in captured
+    assert "Effects" in captured
+    assert "heal=25" in captured
+    assert "heal" in captured
+    assert not any(text.startswith("Delete tag") or text.startswith("Delete effect") for text in captured)
+    assert overlay._complex_entry_action_hits == []
+    assert overlay.complex_entry_action_at(0.0, 0.0) is None
+
+
 def test_item_editor_overlay_dirty_marker_and_error_row(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = _capture_panel_text(monkeypatch)
     item_editor = _ItemEditorStub(edit_mode=True, dirty=True, error="id is required")

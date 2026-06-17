@@ -6,7 +6,8 @@ from types import SimpleNamespace
 import pytest
 
 import engine.optional_arcade as optional_arcade
-from engine.editor.editor_item_editor_controller import EditorItemEditorController
+from engine.editor.editor_item_editor_controller import EditorItemEditorController, _complex_entry_action_parts
+from engine.editor.item_editor_model import validate_item
 
 pytestmark = [pytest.mark.fast]
 
@@ -246,3 +247,79 @@ def test_item_editor_controller_empty_view_mode_click_falls_through(tmp_path: Pa
 
     assert selected == []
     assert controller.is_edit_mode_active() is False
+
+
+def test_item_editor_controller_delete_tag_removes_only_target_and_stays_save_valid(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["description"] = "Keep me"
+    item["tags"] = ["consumable", "quest", "rare"]
+    item["effects"] = {"heal": 25, "tier": 1}
+    controller.enter_edit_mode(item)
+    assert controller.edit_buffer is not None
+    before = dict(controller.edit_buffer)
+    before["tags"] = list(controller.edit_buffer["tags"])
+    before["effects"] = dict(controller.edit_buffer["effects"])
+
+    assert controller._delete_tag(1) is True
+
+    assert controller.edit_buffer["tags"] == ["consumable", "rare"]
+    assert controller.edit_buffer["effects"] == before["effects"]
+    for field in ("id", "name", "description", "icon", "stackable", "max_stack"):
+        assert controller.edit_buffer[field] == before[field]
+    assert validate_item(controller.edit_buffer, [controller.edit_buffer]) == []
+
+
+def test_item_editor_controller_delete_effect_removes_only_target_and_stays_save_valid(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["tags"] = ["consumable", "quest"]
+    item["effects"] = {"heal": 25, "tier": 1, "quest.flag": "done"}
+    controller.enter_edit_mode(item)
+    assert controller.edit_buffer is not None
+    before_tags = list(controller.edit_buffer["tags"])
+
+    assert controller._delete_effect("tier") is True
+
+    assert controller.edit_buffer["effects"] == {"heal": 25, "quest.flag": "done"}
+    assert controller.edit_buffer["tags"] == before_tags
+    for field in ("id", "name", "description", "icon", "stackable", "max_stack"):
+        assert controller.edit_buffer[field] == controller._original_record[field]
+    assert validate_item(controller.edit_buffer, [controller.edit_buffer]) == []
+    assert validate_item({**controller.edit_buffer, "tags": [], "effects": {}}, [controller.edit_buffer]) == []
+
+
+def test_item_editor_controller_effect_key_with_dot_routes_through_action(tmp_path: Path) -> None:
+    overlay = SimpleNamespace(complex_entry_action_at=lambda _x, _y: "effect.quest.flag.delete")
+    controller = EditorItemEditorController(_editor(tmp_path, overlay))
+    item = _item()
+    item["effects"] = {"quest.flag": "done", "heal": 25}
+    controller.enter_edit_mode(item)
+
+    assert controller.handle_item_editor_mouse_click(10.0, 20.0) is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["effects"] == {"heal": 25}
+
+
+def test_item_editor_controller_complex_entry_action_parser() -> None:
+    assert _complex_entry_action_parts("tag.2.delete") == ("tag", 2, "delete")
+    assert _complex_entry_action_parts("effect.quest.flag.delete") == ("effect", "quest.flag", "delete")
+
+    for action in ("", "tag.delete", "tag.two.delete", "effect..delete", "unknown.1.delete", "tag.1."):
+        assert _complex_entry_action_parts(action) is None
+
+
+def test_item_editor_controller_complex_delete_guards(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+
+    assert controller._delete_tag(0) is False
+    assert controller._delete_effect("heal") is False
+
+    controller.enter_edit_mode(_item())
+
+    assert controller._delete_tag(9) is False
+    assert controller._delete_effect("missing") is False
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["tags"] == ["consumable"]
+    assert controller.edit_buffer["effects"] == {"heal": 25}
