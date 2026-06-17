@@ -36,6 +36,8 @@ class _ItemEditorStub:
             "description": TextInput(text="Restores HP.", focused=False, font_size=12, height=18.0),
             "icon": TextInput(text="assets/items/healing_potion.png", focused=False, font_size=12, height=18.0),
             "max_stack": TextInput(text="5", focused=False, font_size=12, height=18.0),
+            "tags.0": TextInput(text="consumable", focused=False, font_size=12, height=18.0),
+            "tags.1": TextInput(text="potion", focused=False, font_size=12, height=18.0),
         }
         self.button_rects: dict[str, object] = {}
 
@@ -309,17 +311,17 @@ def test_item_editor_overlay_edit_mode_renders_complex_entry_rows_read_only(
 
     tags_index = captured.index("Tags")
     effects_index = captured.index("Effects")
-    assert captured[tags_index : tags_index + 6] == [
+    assert captured[tags_index : tags_index + 2] == [
         "Tags",
         "consumable, potion",
-        "Tag 0",
-        "consumable",
-        "Tag 1",
-        "potion",
     ]
     assert captured[effects_index : effects_index + 4] == ["Effects", "heal=25", "heal", "25"]
-    assert "tags" not in overlay._widget_rows
+    assert "tags.0" in overlay._widget_rows
+    assert "tags.1" in overlay._widget_rows
+    assert item_editor.text_input("tags.0").text == "consumable"
+    assert item_editor.text_input("tags.1").text == "potion"
     assert "effects" not in overlay._widget_rows
+    assert "effects.heal" not in overlay._widget_rows
 
 
 def test_item_editor_overlay_complex_blob_rows_coexist_with_entry_rows(
@@ -383,6 +385,52 @@ def test_item_editor_overlay_view_mode_keeps_read_only_complex_rows_without_dele
     assert not any(text.startswith("Delete tag") or text.startswith("Delete effect") for text in captured)
     assert overlay._complex_entry_action_hits == []
     assert overlay.complex_entry_action_at(0.0, 0.0) is None
+
+
+def test_item_editor_overlay_edit_mode_tag_rows_are_widgets_and_delete_rows_remain(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=True)
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    assert "Tags" in captured
+    assert "consumable, potion" in captured
+    assert "tags.0" in overlay._widget_rows
+    assert "tags.1" in overlay._widget_rows
+    assert item_editor.text_input("tags.0").text == "consumable"
+    assert item_editor.text_input("tags.1").text == "potion"
+    assert "Delete tag 0" in captured
+    assert "Delete tag 1" in captured
+    assert {"tag.0.delete", "tag.1.delete"} <= {action for action, _row in overlay._complex_entry_action_hits}
+
+
+def test_item_editor_overlay_view_mode_complex_rows_remain_plain_text(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=False)
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    tags_index = captured.index("Tags")
+    effects_index = captured.index("Effects")
+    assert captured[tags_index : tags_index + 6] == [
+        "Tags",
+        "consumable, potion",
+        "Tag 0",
+        "consumable",
+        "Tag 1",
+        "potion",
+    ]
+    assert captured[effects_index : effects_index + 4] == ["Effects", "heal=25", "heal", "25"]
+    assert "tags.0" not in overlay._widget_rows
+    assert "tags.1" not in overlay._widget_rows
 
 
 def test_item_editor_overlay_dirty_marker_and_error_row(monkeypatch: pytest.MonkeyPatch) -> None:
