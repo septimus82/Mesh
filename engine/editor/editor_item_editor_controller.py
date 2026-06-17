@@ -4,7 +4,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from engine.editor.editor_database_form_controller import EditorDatabaseFormController
+from engine.editor.editor_database_form_controller import EditorDatabaseFormController, _get_path, _set_path
 
 _FOCUS_CYCLE = ("id", "name", "description", "icon", "max_stack")
 _TAG_ACTION_KIND = "tag"
@@ -55,6 +55,14 @@ class EditorItemEditorController(EditorDatabaseFormController):
                     return self._delete_effect(ref)
         return self.handle_mouse_click(float(x), float(y))
 
+    def enter_edit_mode(self, record: dict[str, Any]) -> None:
+        self._rebuild_text_inputs(record)
+        super().enter_edit_mode(record)
+
+    def cancel_edit_mode(self) -> None:
+        super().cancel_edit_mode()
+        self._rebuild_text_inputs(None)
+
     def _record_for_edit(self, record: dict[str, Any]) -> dict[str, Any]:
         return self._normalized_buffer(dict(record))
 
@@ -62,6 +70,9 @@ class EditorItemEditorController(EditorDatabaseFormController):
         return dict(record)
 
     def _set_field_value(self, record: dict[str, Any], field: str, value: Any) -> None:
+        if "." in field:
+            _set_path(record, field, str(value or ""))
+            return
         if field == "id":
             record[field] = str(value or "").strip()
         elif field == "icon":
@@ -73,9 +84,29 @@ class EditorItemEditorController(EditorDatabaseFormController):
             record[field] = str(value or "")
 
     def _get_field_value(self, record: dict[str, Any], field: str) -> Any:
+        if "." in field:
+            return _get_path(record, field)
         if field == "max_stack":
             return record.get(field, 1)
         return record.get(field)
+
+    def _rebuild_text_inputs(self, record: dict[str, Any] | None) -> None:
+        from engine.ui_overlays.widgets import TextInput  # noqa: PLC0415
+
+        specs = list(self.TEXT_INPUT_SPECS)
+        tags = record.get("tags") if isinstance(record, dict) else None
+        if isinstance(tags, list):
+            specs.extend((f"tags.{index}", f"Tag {index}") for index, _tag in enumerate(tags))
+        self._text_inputs = {}
+        for field, placeholder in specs:
+            value = self._get_field_value(record or {}, field)
+            self._text_inputs[field] = TextInput(
+                text="" if value is None else str(value),
+                placeholder=placeholder,
+                focused=False,
+                font_size=12,
+                height=18.0,
+            )
 
     def _target_path(self) -> Path:
         from engine.editor.item_editor_model import DEFAULT_ITEMS_FILE_PATH  # noqa: PLC0415
@@ -130,6 +161,8 @@ class EditorItemEditorController(EditorDatabaseFormController):
             return False
         self.sync_widgets_to_buffer()
         tags.pop(int(index))
+        self._rebuild_text_inputs(self.edit_buffer)
+        self._sync_widgets_from_buffer()
         return True
 
     def _delete_effect(self, key: str) -> bool:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -323,3 +324,77 @@ def test_item_editor_controller_complex_delete_guards(tmp_path: Path) -> None:
     assert controller.edit_buffer is not None
     assert controller.edit_buffer["tags"] == ["consumable"]
     assert controller.edit_buffer["effects"] == {"heal": 25}
+
+
+def test_item_editor_controller_rebuild_text_inputs_adds_tag_specs(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["tags"] = ["consumable", "potion"]
+
+    controller.enter_edit_mode(item)
+
+    text_inputs = controller.text_inputs()
+    assert "tags.0" in text_inputs
+    assert "tags.1" in text_inputs
+    assert text_inputs["tags.0"].text == "consumable"
+    assert text_inputs["tags.1"].text == "potion"
+
+    controller._rebuild_text_inputs({"tags": "not-a-list"})
+
+    assert not any(field.startswith("tags.") for field in controller.text_inputs())
+
+
+def test_item_editor_controller_tag_value_edit_updates_only_target(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["tags"] = ["consumable", "potion", "rare"]
+    item["effects"] = {"heal": 25, "tier": 1}
+    controller.enter_edit_mode(item)
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("tags.1").text = "elixir"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer["tags"] == ["consumable", "elixir", "rare"]
+    assert controller.edit_buffer["effects"] == before["effects"]
+    for field in ("id", "name", "description", "icon", "stackable", "max_stack"):
+        assert controller.edit_buffer[field] == before[field]
+
+
+def test_item_editor_controller_tag_value_edit_persists_through_save(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    saved: list[tuple[list[dict[str, object]], Path]] = []
+    from engine.editor import item_editor_model
+
+    monkeypatch.setattr(item_editor_model, "save_items", lambda items, target: saved.append((items, target)))
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["tags"] = ["consumable", "potion"]
+    controller.enter_edit_mode(item)
+    controller.text_input("tags.1").text = "elixir"
+
+    assert controller.commit_save([item], tmp_path / "assets" / "data" / "items.json") is True
+
+    assert saved[0][0][0]["tags"] == ["consumable", "elixir"]
+
+
+def test_item_editor_controller_tag_edit_pollution_keeps_siblings_byte_identical(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["tags"] = ["consumable", "potion", "rare"]
+    item["effects"] = {"heal": 25, "tier": 1}
+    controller.enter_edit_mode(item)
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("tags.0").text = "usable"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer["tags"][0] == "usable"
+    assert controller.edit_buffer["tags"][1:] == before["tags"][1:]
+    assert controller.edit_buffer["effects"] == before["effects"]
+    for field in ("id", "name", "description", "icon", "stackable", "max_stack"):
+        assert controller.edit_buffer[field] == before[field]

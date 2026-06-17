@@ -39,6 +39,20 @@ _ITEM_FORM_COLORS = FormColors(
 )
 
 
+def _field_value(record: dict[str, object], field_path: str) -> object:
+    current: object = record
+    for part in field_path.split("."):
+        if isinstance(current, dict):
+            current = current.get(part)
+            continue
+        if isinstance(current, list) and part.isdigit():
+            index = int(part)
+            current = current[index] if 0 <= index < len(current) else None
+            continue
+        return None
+    return current
+
+
 class ItemEditorOverlay(UIElement):
     """Read-only item database view hosted in the editor right dock."""
 
@@ -175,6 +189,21 @@ class ItemEditorOverlay(UIElement):
             kind = "tag" if label == "Tags" else "effect" if label == "Effects" else ""
             rows = tag_rows(item) if kind == "tag" else effect_rows(item) if kind == "effect" else []
             for entry_label, entry_value in rows:
+                ref = entry_label.removeprefix("Tag ") if kind == "tag" else entry_label
+                if edit_mode and kind == "tag":
+                    self._widget_rows[f"tags.{ref}"] = detail_panel.add_row(
+                        PanelRow(
+                            PanelField(
+                                entry_label,
+                                "",
+                                label_color=ITEM_EDITOR_TEXT_COLOR,
+                                value_color=ITEM_EDITOR_DIM_COLOR,
+                            ),
+                            height=ITEM_EDITOR_ROW_HEIGHT,
+                            padding_x=ITEM_EDITOR_ROW_PADDING_X,
+                        )
+                    )
+                    continue
                 add_detail_row(entry_label, entry_value)
             if not edit_mode:
                 return
@@ -296,7 +325,7 @@ class ItemEditorOverlay(UIElement):
             sync_text_inputs(
                 text_inputs,
                 focused_field,
-                lambda field: edit_buffer.get(field),
+                lambda field: _field_value(edit_buffer, str(field)),
             )
         self._stackable_toggle.value = bool(edit_buffer.get("stackable", False))
 
