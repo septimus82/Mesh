@@ -435,6 +435,48 @@ def test_item_editor_overlay_view_mode_complex_rows_remain_plain_text(
     assert "tags.1" not in overlay._widget_rows
 
 
+def test_item_editor_overlay_edit_mode_renders_add_rows_from_live_empty_buffer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=True)
+    item_editor.edit_buffer["tags"] = []
+    item_editor.edit_buffer["effects"] = {}
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+    overlay._model.select_index(1)
+
+    overlay.draw()
+
+    assert "Tags" in captured
+    assert "Effects" in captured
+    assert "Tag 0" not in captured
+    assert "heal" not in captured
+    assert "Add tag" in captured
+    assert "Add effect" in captured
+    hit_rows = dict(overlay._complex_entry_action_hits)
+    for action in ("tag.add", "effect.add"):
+        row = hit_rows[action]
+        rect = row.last_rect
+        assert rect is not None
+        assert overlay.complex_entry_action_at(rect.left + 1.0, rect.center_y) == action
+
+
+def test_item_editor_overlay_view_mode_does_not_render_add_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=False)
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    assert "Add tag" not in captured
+    assert "Add effect" not in captured
+    assert all(action not in {"tag.add", "effect.add"} for action, _row in overlay._complex_entry_action_hits)
+
+
 def test_item_editor_overlay_dirty_marker_and_error_row(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = _capture_panel_text(monkeypatch)
     item_editor = _ItemEditorStub(edit_mode=True, dirty=True, error="id is required")

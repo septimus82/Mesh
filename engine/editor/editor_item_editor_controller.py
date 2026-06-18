@@ -7,6 +7,8 @@ from typing import Any
 from engine.editor.editor_database_form_controller import EditorDatabaseFormController, _get_path, _set_path
 
 _FOCUS_CYCLE = ("id", "name", "description", "icon", "max_stack")
+TAG_ADD_ACTION = "tag.add"
+EFFECT_ADD_ACTION = "effect.add"
 _TAG_ACTION_KIND = "tag"
 _EFFECT_ACTION_KIND = "effect"
 _EFFECT_FIELD_PREFIX = "effects."
@@ -47,6 +49,10 @@ class EditorItemEditorController(EditorDatabaseFormController):
             overlay = self._get_overlay()
             action_at = getattr(overlay, "complex_entry_action_at", None) if overlay is not None else None
             action = action_at(float(x), float(y)) if callable(action_at) else None
+            if action == TAG_ADD_ACTION:
+                return self._add_tag()
+            if action == EFFECT_ADD_ACTION:
+                return self._add_effect()
             parsed_action = _complex_entry_action_parts(action)
             if parsed_action is not None:
                 kind, ref, verb = parsed_action
@@ -176,6 +182,36 @@ class EditorItemEditorController(EditorDatabaseFormController):
         self._focus_field(None)
         return True
 
+    def _add_tag(self) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        self.sync_widgets_to_buffer()
+        tags = self.edit_buffer.get("tags")
+        if not isinstance(tags, list):
+            tags = []
+            self.edit_buffer["tags"] = tags
+        new_index = len(tags)
+        tags.append("new_tag")
+        self._rebuild_text_inputs(self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(f"tags.{new_index}")
+        return True
+
+    def _add_effect(self) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        self.sync_widgets_to_buffer()
+        effects = self.edit_buffer.get("effects")
+        if not isinstance(effects, dict):
+            effects = {}
+            self.edit_buffer["effects"] = effects
+        key = _next_effect_key(effects)
+        effects[key] = 0
+        self._rebuild_text_inputs(self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(f"effects.{key}")
+        return True
+
     def _delete_tag(self, index: int) -> bool:
         if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
             return False
@@ -240,6 +276,17 @@ def _coerce_effect_value(original: Any, text: str) -> int | float | str:
     if isinstance(original, float):
         return float(text)
     return text
+
+
+def _next_effect_key(effects: dict[str, Any]) -> str:
+    existing_keys = set(effects)
+    candidate_index = 1
+    while True:
+        suffix = "" if candidate_index == 1 else f"_{candidate_index}"
+        candidate = f"new_effect{suffix}"
+        if candidate not in existing_keys:
+            return candidate
+        candidate_index += 1
 
 
 def _complex_entry_action_parts(action: object) -> tuple[str, int | str, str] | None:

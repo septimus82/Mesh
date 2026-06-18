@@ -187,11 +187,51 @@ class ItemEditorOverlay(UIElement):
                 )
             )
 
-        def add_complex_entry_rows(label: str) -> None:
-            if item is None:
-                return
+        def complex_source() -> object | None:
+            edit_buffer = getattr(item_editor, "edit_buffer", None) if item_editor is not None else None
+            return edit_buffer if edit_mode and isinstance(edit_buffer, dict) else item
+
+        def complex_blob_value(label: str) -> str:
+            rows = complex_entry_rows(label)
+            if label == "Tags":
+                return ", ".join(value for _entry_label, value in rows)
+            if label == "Effects":
+                return ", ".join(f"{entry_label}={entry_value}" for entry_label, entry_value in rows)
+            return ""
+
+        def complex_entry_rows(label: str) -> list[tuple[str, str]]:
+            source = complex_source()
+            if source is None:
+                return []
             kind = "tag" if label == "Tags" else "effect" if label == "Effects" else ""
-            rows = tag_rows(item) if kind == "tag" else effect_rows(item) if kind == "effect" else []
+            return tag_rows(source) if kind == "tag" else effect_rows(source) if kind == "effect" else []
+
+        def add_complex_action(action: str, label: str) -> None:
+            self._complex_entry_action_hits.append(
+                (
+                    action,
+                    detail_panel.add_row(
+                        PanelRow(
+                            PanelField(
+                                label,
+                                "",
+                                label_color=ITEM_EDITOR_BUTTON_COLOR,
+                                value_color=ITEM_EDITOR_DIM_COLOR,
+                            ),
+                            height=ITEM_EDITOR_ROW_HEIGHT,
+                            padding_x=ITEM_EDITOR_ROW_PADDING_X,
+                        )
+                    ),
+                )
+            )
+
+        def add_complex_section(label: str) -> None:
+            add_detail_row(label, complex_blob_value(label))
+            add_complex_entry_rows(label)
+
+        def add_complex_entry_rows(label: str) -> None:
+            kind = "tag" if label == "Tags" else "effect" if label == "Effects" else ""
+            rows = complex_entry_rows(label)
             for entry_label, entry_value in rows:
                 ref = entry_label.removeprefix("Tag ") if kind == "tag" else entry_label
                 if edit_mode and kind in {"tag", "effect"}:
@@ -216,23 +256,11 @@ class ItemEditorOverlay(UIElement):
                 ref = entry_label.removeprefix("Tag ") if kind == "tag" else entry_label
                 action = f"{kind}.{ref}.delete"
                 delete_label = f"Delete tag {ref}" if kind == "tag" else f"Delete effect {ref}"
-                self._complex_entry_action_hits.append(
-                    (
-                        action,
-                        detail_panel.add_row(
-                            PanelRow(
-                                PanelField(
-                                    delete_label,
-                                    "",
-                                    label_color=ITEM_EDITOR_BUTTON_COLOR,
-                                    value_color=ITEM_EDITOR_DIM_COLOR,
-                                ),
-                                height=ITEM_EDITOR_ROW_HEIGHT,
-                                padding_x=ITEM_EDITOR_ROW_PADDING_X,
-                            )
-                        ),
-                    )
-                )
+                add_complex_action(action, delete_label)
+            if kind == "tag":
+                add_complex_action("tag.add", "Add tag")
+            elif kind == "effect":
+                add_complex_action("effect.add", "Add effect")
 
         item = model.selected_item if model is not None else None
         button_rows: dict[str, object] = {}
@@ -280,12 +308,20 @@ class ItemEditorOverlay(UIElement):
                 add_detail_row(label, value)
                 add_complex_entry_rows(label)
             if edit_mode:
+                rendered_complex_labels: set[str] = set()
                 for label, value in model.selected_detail_rows():
                     field_name = _field_name_for_label(label)
                     if field_name in ITEM_EDITOR_EDITABLE_SCALAR_FIELDS:
                         continue
+                    if field_name in ITEM_EDITOR_READ_ONLY_COMPLEX_FIELDS:
+                        add_complex_section(label)
+                        rendered_complex_labels.add(label)
+                        continue
                     add_detail_row(label, value)
                     add_complex_entry_rows(label)
+                for label in ("Tags", "Effects"):
+                    if label not in rendered_complex_labels:
+                        add_complex_section(label)
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,
