@@ -7,7 +7,13 @@ from types import SimpleNamespace
 import pytest
 
 import engine.optional_arcade as optional_arcade
-from engine.editor.editor_item_editor_controller import EditorItemEditorController, _complex_entry_action_parts
+from engine.editor.editor_item_editor_controller import (
+    EFFECT_ADD_ACTION,
+    TAG_ADD_ACTION,
+    EditorItemEditorController,
+    _complex_entry_action_parts,
+    _next_effect_key,
+)
 from engine.editor.item_editor_model import validate_item
 
 pytestmark = [pytest.mark.fast]
@@ -518,3 +524,110 @@ def test_item_editor_controller_effect_edit_pollution_and_existing_tag_delete_pa
     assert "damage" not in controller.edit_buffer["effects"]
     assert controller._delete_tag(0) is True
     assert controller.edit_buffer["tags"] == ["elixir"]
+
+
+def test_item_editor_controller_add_tag_appends_focuses_widget_and_stays_save_valid(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["tags"] = ["consumable"]
+    controller.enter_edit_mode(item)
+
+    assert controller._add_tag() is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["tags"] == ["consumable", "new_tag"]
+    assert "tags.1" in controller.text_inputs()
+    assert controller.text_input("tags.1").text == "new_tag"
+    assert controller.focused_field() == "tags.1"
+    assert controller.text_input("tags.1").focused is True
+    assert validate_item(controller.edit_buffer, [controller.edit_buffer]) == []
+
+
+def test_item_editor_controller_add_tag_normalizes_missing_or_non_list_tags(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item.pop("tags")
+    controller.enter_edit_mode(item)
+
+    assert controller._add_tag() is True
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["tags"] == ["new_tag"]
+
+    controller.edit_buffer["tags"] = "not-a-list"
+    controller._rebuild_text_inputs(controller.edit_buffer)
+
+    assert controller._add_tag() is True
+    assert controller.edit_buffer["tags"] == ["new_tag"]
+
+
+def test_item_editor_controller_add_effect_adds_unique_int_widget_and_stays_save_valid(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["effects"] = {"heal": 25}
+    controller.enter_edit_mode(item)
+
+    assert controller._add_effect() is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["effects"]["new_effect"] == 0
+    assert isinstance(controller.edit_buffer["effects"]["new_effect"], int)
+    assert "effects.new_effect" in controller.text_inputs()
+    assert controller.text_input("effects.new_effect").text == "0"
+    assert controller.focused_field() == "effects.new_effect"
+    assert validate_item(controller.edit_buffer, [controller.edit_buffer]) == []
+
+    controller.text_input("effects.new_effect").text = "7"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer["effects"]["new_effect"] == 7
+    assert isinstance(controller.edit_buffer["effects"]["new_effect"], int)
+
+
+def test_item_editor_controller_next_effect_key_skips_existing_names() -> None:
+    assert _next_effect_key({}) == "new_effect"
+    assert _next_effect_key({"new_effect": 0}) == "new_effect_2"
+    assert _next_effect_key({"new_effect": 0, "new_effect_2": 1}) == "new_effect_3"
+
+
+def test_item_editor_controller_add_complex_entries_are_append_only(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["name"] = "Keep Name"
+    item["tags"] = ["consumable", "potion"]
+    item["effects"] = {"heal": 25, "quest.flag": "done"}
+    controller.enter_edit_mode(item)
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    assert controller._add_tag() is True
+    assert controller._add_effect() is True
+
+    assert controller.edit_buffer["tags"][:-1] == before["tags"]
+    assert controller.edit_buffer["tags"][-1] == "new_tag"
+    for key, value in before["effects"].items():
+        assert controller.edit_buffer["effects"][key] == value
+    assert controller.edit_buffer["effects"]["new_effect"] == 0
+    for field in ("id", "name", "description", "icon", "stackable", "max_stack"):
+        assert controller.edit_buffer[field] == before[field]
+
+
+def test_item_editor_controller_add_routing_coexists_with_delete_routing(tmp_path: Path) -> None:
+    actions = iter([TAG_ADD_ACTION, EFFECT_ADD_ACTION, "tag.0.delete", "effect.heal.delete"])
+    overlay = SimpleNamespace(complex_entry_action_at=lambda _x, _y: next(actions))
+    controller = EditorItemEditorController(_editor(tmp_path, overlay))
+    item = _item()
+    item["tags"] = ["consumable"]
+    item["effects"] = {"heal": 25}
+    controller.enter_edit_mode(item)
+
+    assert controller.handle_item_editor_mouse_click(1.0, 1.0) is True
+    assert controller.handle_item_editor_mouse_click(1.0, 1.0) is True
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["tags"] == ["consumable", "new_tag"]
+    assert controller.edit_buffer["effects"] == {"heal": 25, "new_effect": 0}
+
+    assert controller.handle_item_editor_mouse_click(1.0, 1.0) is True
+    assert controller.handle_item_editor_mouse_click(1.0, 1.0) is True
+
+    assert controller.edit_buffer["tags"] == ["new_tag"]
+    assert controller.edit_buffer["effects"] == {"new_effect": 0}
