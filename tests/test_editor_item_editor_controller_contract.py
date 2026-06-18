@@ -398,3 +398,123 @@ def test_item_editor_controller_tag_edit_pollution_keeps_siblings_byte_identical
     assert controller.edit_buffer["effects"] == before["effects"]
     for field in ("id", "name", "description", "icon", "stackable", "max_stack"):
         assert controller.edit_buffer[field] == before[field]
+
+
+def test_item_editor_controller_rebuild_text_inputs_adds_effect_specs(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["effects"] = {"heal": 25, "quest.flag": "done"}
+
+    controller.enter_edit_mode(item)
+
+    text_inputs = controller.text_inputs()
+    assert "effects.heal" in text_inputs
+    assert "effects.quest.flag" in text_inputs
+    assert text_inputs["effects.heal"].text == "25"
+    assert text_inputs["effects.quest.flag"].text == "done"
+
+
+def test_item_editor_controller_effect_value_edit_preserves_int(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["effects"] = {"heal": 25}
+    controller.enter_edit_mode(item)
+
+    controller.text_input("effects.heal").text = "30"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["effects"]["heal"] == 30
+    assert isinstance(controller.edit_buffer["effects"]["heal"], int)
+    assert not isinstance(controller.edit_buffer["effects"]["heal"], bool)
+
+
+def test_item_editor_controller_effect_value_edit_preserves_float(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["effects"] = {"speed": 1.25}
+    controller.enter_edit_mode(item)
+
+    controller.text_input("effects.speed").text = "2.5"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["effects"]["speed"] == 2.5
+    assert isinstance(controller.edit_buffer["effects"]["speed"], float)
+
+
+def test_item_editor_controller_effect_value_edit_keeps_string(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["effects"] = {"quest_flag": "field_supplies_crate"}
+    controller.enter_edit_mode(item)
+
+    controller.text_input("effects.quest_flag").text = "supply_cache"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["effects"]["quest_flag"] == "supply_cache"
+    assert isinstance(controller.edit_buffer["effects"]["quest_flag"], str)
+
+
+def test_item_editor_controller_effect_value_dotted_key_addresses_literal_key(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["effects"] = {"quest.flag": "old", "quest": "nested"}
+    controller.enter_edit_mode(item)
+
+    controller.text_input("effects.quest.flag").text = "new"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["effects"]["quest.flag"] == "new"
+    assert controller.edit_buffer["effects"]["quest"] == "nested"
+
+
+def test_item_editor_controller_invalid_numeric_effect_value_is_rejected(tmp_path: Path) -> None:
+    editor = _editor(tmp_path)
+    controller = EditorItemEditorController(editor)
+    item = _item()
+    item["effects"] = {"heal": 25, "speed": 1.25}
+    controller.enter_edit_mode(item)
+
+    controller.text_input("effects.heal").text = "not-a-number"
+    controller.text_input("effects.speed").text = "also-not-a-number"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["effects"]["heal"] == 25
+    assert isinstance(controller.edit_buffer["effects"]["heal"], int)
+    assert controller.edit_buffer["effects"]["speed"] == 1.25
+    assert isinstance(controller.edit_buffer["effects"]["speed"], float)
+    assert controller.last_error_message() == "Invalid numeric value for effects.speed: also-not-a-number"
+    assert editor.feedback_calls[-1] == ("error", "Invalid numeric value for effects.speed: also-not-a-number")
+
+
+def test_item_editor_controller_effect_edit_pollution_and_existing_tag_delete_paths(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["name"] = "Keep Name"
+    item["tags"] = ["consumable", "potion"]
+    item["effects"] = {"heal": 25, "damage": 4, "quest.flag": "done"}
+    controller.enter_edit_mode(item)
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("effects.heal").text = "30"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer["effects"]["heal"] == 30
+    assert controller.edit_buffer["effects"]["damage"] == before["effects"]["damage"]
+    assert controller.edit_buffer["effects"]["quest.flag"] == before["effects"]["quest.flag"]
+    assert controller.edit_buffer["tags"] == before["tags"]
+    for field in ("id", "name", "description", "icon", "stackable", "max_stack"):
+        assert controller.edit_buffer[field] == before[field]
+
+    controller.text_input("tags.1").text = "elixir"
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer["tags"] == ["consumable", "elixir"]
+    assert controller._delete_effect("damage") is True
+    assert "damage" not in controller.edit_buffer["effects"]
+    assert controller._delete_tag(0) is True
+    assert controller.edit_buffer["tags"] == ["elixir"]

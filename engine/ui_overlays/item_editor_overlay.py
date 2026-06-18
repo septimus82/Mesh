@@ -40,6 +40,10 @@ _ITEM_FORM_COLORS = FormColors(
 
 
 def _field_value(record: dict[str, object], field_path: str) -> object:
+    if field_path.startswith("effects."):
+        effects = record.get("effects")
+        key = field_path.removeprefix("effects.")
+        return effects.get(key) if isinstance(effects, dict) else None
     current: object = record
     for part in field_path.split("."):
         if isinstance(current, dict):
@@ -190,8 +194,9 @@ class ItemEditorOverlay(UIElement):
             rows = tag_rows(item) if kind == "tag" else effect_rows(item) if kind == "effect" else []
             for entry_label, entry_value in rows:
                 ref = entry_label.removeprefix("Tag ") if kind == "tag" else entry_label
-                if edit_mode and kind == "tag":
-                    self._widget_rows[f"tags.{ref}"] = detail_panel.add_row(
+                if edit_mode and kind in {"tag", "effect"}:
+                    field_path = f"tags.{ref}" if kind == "tag" else f"effects.{ref}"
+                    self._widget_rows[field_path] = detail_panel.add_row(
                         PanelRow(
                             PanelField(
                                 entry_label,

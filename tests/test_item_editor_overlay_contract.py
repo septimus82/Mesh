@@ -38,6 +38,7 @@ class _ItemEditorStub:
             "max_stack": TextInput(text="5", focused=False, font_size=12, height=18.0),
             "tags.0": TextInput(text="consumable", focused=False, font_size=12, height=18.0),
             "tags.1": TextInput(text="potion", focused=False, font_size=12, height=18.0),
+            "effects.heal": TextInput(text="25", focused=False, font_size=12, height=18.0),
         }
         self.button_rects: dict[str, object] = {}
 
@@ -315,13 +316,14 @@ def test_item_editor_overlay_edit_mode_renders_complex_entry_rows_read_only(
         "Tags",
         "consumable, potion",
     ]
-    assert captured[effects_index : effects_index + 4] == ["Effects", "heal=25", "heal", "25"]
+    assert captured[effects_index : effects_index + 2] == ["Effects", "heal=25"]
     assert "tags.0" in overlay._widget_rows
     assert "tags.1" in overlay._widget_rows
     assert item_editor.text_input("tags.0").text == "consumable"
     assert item_editor.text_input("tags.1").text == "potion"
+    assert "effects.heal" in overlay._widget_rows
+    assert item_editor.text_input("effects.heal").text == "25"
     assert "effects" not in overlay._widget_rows
-    assert "effects.heal" not in overlay._widget_rows
 
 
 def test_item_editor_overlay_complex_blob_rows_coexist_with_entry_rows(

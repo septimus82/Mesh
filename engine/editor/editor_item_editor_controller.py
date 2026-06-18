@@ -9,6 +9,7 @@ from engine.editor.editor_database_form_controller import EditorDatabaseFormCont
 _FOCUS_CYCLE = ("id", "name", "description", "icon", "max_stack")
 _TAG_ACTION_KIND = "tag"
 _EFFECT_ACTION_KIND = "effect"
+_EFFECT_FIELD_PREFIX = "effects."
 
 
 class EditorItemEditorController(EditorDatabaseFormController):
@@ -70,6 +71,9 @@ class EditorItemEditorController(EditorDatabaseFormController):
         return dict(record)
 
     def _set_field_value(self, record: dict[str, Any], field: str, value: Any) -> None:
+        if field.startswith(_EFFECT_FIELD_PREFIX):
+            self._set_effect_field_value(record, field, value)
+            return
         if "." in field:
             _set_path(record, field, str(value or ""))
             return
@@ -84,11 +88,27 @@ class EditorItemEditorController(EditorDatabaseFormController):
             record[field] = str(value or "")
 
     def _get_field_value(self, record: dict[str, Any], field: str) -> Any:
+        if field.startswith(_EFFECT_FIELD_PREFIX):
+            effects = record.get("effects")
+            key = field.removeprefix(_EFFECT_FIELD_PREFIX)
+            return effects.get(key) if isinstance(effects, dict) else None
         if "." in field:
             return _get_path(record, field)
         if field == "max_stack":
             return record.get(field, 1)
         return record.get(field)
+
+    def _set_effect_field_value(self, record: dict[str, Any], field: str, value: Any) -> None:
+        effects = record.get("effects")
+        key = field.removeprefix(_EFFECT_FIELD_PREFIX)
+        if not isinstance(effects, dict) or key not in effects:
+            return
+        original = effects[key]
+        text = str(value or "")
+        try:
+            effects[key] = _coerce_effect_value(original, text)
+        except ValueError:
+            self._set_save_error(f"Invalid numeric value for {field}: {text}")
 
     def _rebuild_text_inputs(self, record: dict[str, Any] | None) -> None:
         from engine.ui_overlays.widgets import TextInput  # noqa: PLC0415
@@ -97,6 +117,9 @@ class EditorItemEditorController(EditorDatabaseFormController):
         tags = record.get("tags") if isinstance(record, dict) else None
         if isinstance(tags, list):
             specs.extend((f"tags.{index}", f"Tag {index}") for index, _tag in enumerate(tags))
+        effects = record.get("effects") if isinstance(record, dict) else None
+        if isinstance(effects, dict):
+            specs.extend((f"effects.{key}", f"Effect {key}") for key in sorted(effects))
         self._text_inputs = {}
         for field, placeholder in specs:
             value = self._get_field_value(record or {}, field)
@@ -173,6 +196,8 @@ class EditorItemEditorController(EditorDatabaseFormController):
             return False
         self.sync_widgets_to_buffer()
         del effects[key]
+        self._rebuild_text_inputs(self.edit_buffer)
+        self._sync_widgets_from_buffer()
         return True
 
     def _normalized_buffer(self, item: dict[str, Any]) -> dict[str, Any]:
@@ -205,6 +230,16 @@ def item_definition_to_dict(item: Any) -> dict[str, Any]:
         "tags": list(getattr(item, "tags", []) or []),
         "effects": dict(getattr(item, "effects", {}) or {}),
     }
+
+
+def _coerce_effect_value(original: Any, text: str) -> int | float | str:
+    if isinstance(original, bool):
+        return text
+    if isinstance(original, int):
+        return int(text)
+    if isinstance(original, float):
+        return float(text)
+    return text
 
 
 def _complex_entry_action_parts(action: object) -> tuple[str, int | str, str] | None:
