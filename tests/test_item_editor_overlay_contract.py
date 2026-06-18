@@ -38,6 +38,7 @@ class _ItemEditorStub:
             "max_stack": TextInput(text="5", focused=False, font_size=12, height=18.0),
             "tags.0": TextInput(text="consumable", focused=False, font_size=12, height=18.0),
             "tags.1": TextInput(text="potion", focused=False, font_size=12, height=18.0),
+            "effect_key.heal": TextInput(text="heal", focused=False, font_size=12, height=18.0),
             "effects.heal": TextInput(text="25", focused=False, font_size=12, height=18.0),
         }
         self.button_rects: dict[str, object] = {}
@@ -408,6 +409,37 @@ def test_item_editor_overlay_edit_mode_tag_rows_are_widgets_and_delete_rows_rema
     assert "Delete tag 0" in captured
     assert "Delete tag 1" in captured
     assert {"tag.0.delete", "tag.1.delete"} <= {action for action, _row in overlay._complex_entry_action_hits}
+
+
+def test_item_editor_overlay_edit_mode_effect_rows_have_key_value_widgets_and_delete_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    item_editor = _ItemEditorStub(edit_mode=True)
+    overlay = ItemEditorOverlay(_window_for_tab("Items", item_editor))
+    overlay._model = _model()
+
+    overlay.draw()
+
+    assert "Effects" in captured
+    assert "heal=25" in captured
+    assert "effect_key.heal" in overlay._widget_rows
+    assert "effects.heal" in overlay._widget_rows
+    assert item_editor.text_input("effect_key.heal").text == "heal"
+    assert item_editor.text_input("effects.heal").text == "25"
+    assert "Delete effect heal" in captured
+    assert "effect.heal.delete" in {action for action, _row in overlay._complex_entry_action_hits}
+
+    view_captured = _capture_panel_text(monkeypatch)
+    view_editor = _ItemEditorStub(edit_mode=False)
+    view_overlay = ItemEditorOverlay(_window_for_tab("Items", view_editor))
+    view_overlay._model = _model()
+    view_overlay.draw()
+
+    assert "heal=25" in view_captured
+    assert "effect_key.heal" not in view_overlay._widget_rows
+    assert "effects.heal" not in view_overlay._widget_rows
+    assert "Delete effect heal" not in view_captured
 
 
 def test_item_editor_overlay_view_mode_complex_rows_remain_plain_text(
