@@ -199,6 +199,36 @@ def _collider_sample_sigs(solid_sprites: Any, *, limit: int = 8) -> tuple[int, .
     return tuple(sigs)
 
 
+def _collider_freshness_signature(solid_sprites: Any) -> tuple[tuple[int, float, float, float, float], ...]:
+    if not solid_sprites:
+        return ()
+    sigs: list[tuple[int, float, float, float, float]] = []
+    for obj in solid_sprites:
+        left = getattr(obj, "left", None)
+        right = getattr(obj, "right", None)
+        bottom = getattr(obj, "bottom", None)
+        top = getattr(obj, "top", None)
+        if left is None or right is None or bottom is None or top is None:
+            try:
+                cx = float(getattr(obj, "center_x", 0.0))
+                cy = float(getattr(obj, "center_y", 0.0))
+                w = float(getattr(obj, "width", 0.0))
+                h = float(getattr(obj, "height", 0.0))
+                left = cx - w / 2.0
+                right = cx + w / 2.0
+                bottom = cy - h / 2.0
+                top = cy + h / 2.0
+            except Exception:
+                _log_swallow("PHRT-017", "engine.physics_runtime freshness signature fallback")
+                left = right = bottom = top = 0.0
+        try:
+            sigs.append((id(obj), float(left), float(right), float(bottom), float(top)))
+        except Exception:
+            _log_swallow("PHRT-018", "engine.physics_runtime freshness signature fallback")
+            sigs.append((id(obj), 0.0, 0.0, 0.0, 0.0))
+    return tuple(sigs)
+
+
 def compute_runtime_broadphase_cache_key(
     *,
     scene_payload: Any = None,
@@ -244,11 +274,13 @@ class _BroadphaseCache:
         self._index: Optional[SpatialHashIndex] = None
         self._sprites: list[Any] = []
         self._cache_key: str | None = None
+        self._freshness_signature: tuple[tuple[int, float, float, float, float], ...] = ()
         self._source_sprites_obj: Any = None
         self.build_count: int = 0
         self.perf_enabled: bool = False
         self.candidate_count: int = 0
         self.exact_checks_count: int = 0
+        self.move_sweep_fallback_count: int = 0
         self.last_candidate_count: int = 0
         self.last_exact_checks_count: int = 0
 
@@ -256,10 +288,12 @@ class _BroadphaseCache:
         self._index = None
         self._sprites = []
         self._cache_key = None
+        self._freshness_signature = ()
         self._source_sprites_obj = None
         self.build_count = 0
         self.candidate_count = 0
         self.exact_checks_count = 0
+        self.move_sweep_fallback_count = 0
         self.last_candidate_count = 0
         self.last_exact_checks_count = 0
 
@@ -267,20 +301,28 @@ class _BroadphaseCache:
         self.perf_enabled = bool(enabled)
         self.candidate_count = 0
         self.exact_checks_count = 0
+        self.move_sweep_fallback_count = 0
         self.last_candidate_count = 0
         self.last_exact_checks_count = 0
 
     def reset_counters(self) -> None:
         self.candidate_count = 0
         self.exact_checks_count = 0
+        self.move_sweep_fallback_count = 0
         self.last_candidate_count = 0
         self.last_exact_checks_count = 0
 
-    def _build(self, solid_sprites: Any, cache_key: str) -> None:
-        sprites = list(solid_sprites) if solid_sprites else []
+    def _build(
+        self,
+        solid_sprites: Any,
+        cache_key: str,
+        sprites: list[Any],
+        freshness_signature: tuple[tuple[int, float, float, float, float], ...],
+    ) -> None:
         self._sprites = sprites
         self._index = build_spatial_hash(sprites, _sprite_to_aabb, self.cfg)
         self._cache_key = cache_key
+        self._freshness_signature = freshness_signature
         self._source_sprites_obj = solid_sprites
         self.build_count += 1
 
@@ -288,8 +330,15 @@ class _BroadphaseCache:
         if not solid_sprites:
             self.last_candidate_count = 0
             return []
-        if self._index is None or self._cache_key != cache_key or self._source_sprites_obj is not solid_sprites:
-            self._build(solid_sprites, cache_key)
+        sprites = list(solid_sprites)
+        freshness_signature = _collider_freshness_signature(sprites)
+        if (
+            self._index is None
+            or self._cache_key != cache_key
+            or self._source_sprites_obj is not solid_sprites
+            or self._freshness_signature != freshness_signature
+        ):
+            self._build(solid_sprites, cache_key, sprites, freshness_signature)
         if self._index is None:
             self.last_candidate_count = 0
             return []
@@ -337,6 +386,7 @@ def get_broadphase_stats() -> dict[str, int | bool]:
         "build_count": int(_BROADPHASE_CACHE.build_count),
         "candidate_count": int(_BROADPHASE_CACHE.last_candidate_count),
         "exact_checks_count": int(_BROADPHASE_CACHE.last_exact_checks_count),
+        "move_sweep_fallback_count": int(_BROADPHASE_CACHE.move_sweep_fallback_count),
     }
 
 
@@ -502,15 +552,9 @@ def move_entity_with_physics(
         proxy = PhysicsProxySprite(aabb.x, aabb.y, aabb.w, aabb.h)
 
         candidates = solid_sprites
-        used_broadphase_candidates = False
         if _BROADPHASE_ENABLED:
             cache_key = compute_runtime_broadphase_cache_key(solid_sprites=solid_sprites)
             candidates = _BROADPHASE_CACHE.get_candidates(aabb, solid_sprites, cache_key)
-            used_broadphase_candidates = True
-            # Broadphase is an optimization only; never allow false negatives.
-            if not candidates:
-                candidates = list(solid_sprites)
-                used_broadphase_candidates = False
         else:
             try:
                 _BROADPHASE_CACHE.last_candidate_count = len(candidates) if candidates else 0
@@ -566,17 +610,6 @@ def move_entity_with_physics(
                     except Exception:
                         _log_swallow("PHRT-015", "engine.physics_runtime blanket exception fallback")
                         continue
-
-        # Guard against stale broadphase candidate sets; if narrowed candidates
-        # produced no hits, retry exact overlap on the full collider list.
-        if not hits and used_broadphase_candidates:
-            for s in solid_sprites:
-                try:
-                    if _shapes_overlap(proxy_shape, _sprite_to_shape(s)):
-                        hits.append(s)
-                except Exception:
-                    _log_swallow("PHRT-016", "engine.physics_runtime blanket exception fallback")
-                    continue
 
         return [_sprite_to_aabb(s) for s in hits]
 

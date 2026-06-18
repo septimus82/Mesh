@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+
 import engine.optional_arcade as optional_arcade
 from engine import physics_runtime
 from engine.physics_model import Aabb
+
+fast = pytest.mark.fast
 
 
 class _Sprite:
@@ -90,3 +94,71 @@ def test_broadphase_candidate_reduction_and_counters(monkeypatch) -> None:
     stats_after = physics_runtime.get_broadphase_stats()
     assert stats_after.get("candidate_count") == 0
     assert stats_after.get("exact_checks_count") == 0
+
+
+@fast
+def test_broadphase_no_collision_candidate_does_not_full_scan(monkeypatch) -> None:
+    colliders = [_Sprite(16 + x * 32, 30, 8, 8) for x in range(200)]
+    entity = _Sprite(16, 15, 16, 16)
+    monkeypatch.setattr(
+        optional_arcade.arcade,
+        "check_for_collision_with_list",
+        _fake_collision,
+    )
+
+    physics_runtime.set_broadphase_enabled(True)
+    physics_runtime.reset_broadphase_cache()
+    physics_runtime.enable_broadphase_counters(True)
+
+    result = physics_runtime.move_entity_with_physics(entity, (1, 0), colliders)
+    stats = physics_runtime.get_broadphase_stats()
+
+    assert result.hits == ()
+    assert stats["candidate_count"] == 1
+    assert stats["exact_checks_count"] == 1
+    assert stats["move_sweep_fallback_count"] == 0
+    assert physics_runtime._BROADPHASE_CACHE.exact_checks_count == 1
+
+
+@fast
+def test_broadphase_empty_candidate_region_does_not_full_scan(monkeypatch) -> None:
+    colliders = [_Sprite(x * 32, 0, 8, 8) for x in range(200)]
+    entity = _Sprite(-1000, -1000, 16, 16)
+    monkeypatch.setattr(
+        optional_arcade.arcade,
+        "check_for_collision_with_list",
+        _fake_collision,
+    )
+
+    physics_runtime.set_broadphase_enabled(True)
+    physics_runtime.reset_broadphase_cache()
+    physics_runtime.enable_broadphase_counters(True)
+
+    result = physics_runtime.move_entity_with_physics(entity, (1, 0), colliders)
+    stats = physics_runtime.get_broadphase_stats()
+
+    assert result.hits == ()
+    assert result.final_pos == (-999, -1000)
+    assert stats["candidate_count"] == 0
+    assert stats["exact_checks_count"] == 0
+    assert stats["move_sweep_fallback_count"] == 0
+    assert physics_runtime._BROADPHASE_CACHE.exact_checks_count == 0
+
+
+@fast
+def test_move_sweep_fallback_counter_resets_with_broadphase_counters(monkeypatch) -> None:
+    monkeypatch.setattr(
+        optional_arcade.arcade,
+        "check_for_collision_with_list",
+        _fake_collision,
+    )
+
+    physics_runtime.set_broadphase_enabled(True)
+    physics_runtime.reset_broadphase_cache()
+    physics_runtime.enable_broadphase_counters(True)
+    physics_runtime._BROADPHASE_CACHE.move_sweep_fallback_count = 3
+
+    physics_runtime.reset_broadphase_counters()
+    stats = physics_runtime.get_broadphase_stats()
+
+    assert stats["move_sweep_fallback_count"] == 0

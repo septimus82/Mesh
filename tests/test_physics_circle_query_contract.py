@@ -133,6 +133,26 @@ def test_query_overlaps_circle_fallback_full_scan_increments_perf_counter(
     assert counters.get("physics.circle_query.fallback_full_scan.count") == 1
 
 
+def test_query_overlaps_circle_candidate_no_hit_does_not_full_scan(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    colliders = [
+        _Sprite("near_cell", 16.0, 30.0, 8.0, 8.0),
+        _Sprite("far", 100.0, 100.0, 8.0, 8.0),
+    ]
+    _prepare_query_state(monkeypatch, colliders)
+    perf_stats = PerfStats()
+    window = type("Window", (), {"perf_stats": perf_stats})()
+    monkeypatch.setattr(optional_arcade.arcade, "get_window", lambda: window)
+
+    hits = physics_runtime.query_overlaps_circle(16.0, 15.0, 8.0)
+    counters = perf_stats.snapshot().meta.get("counters", {})
+
+    assert hits == []
+    assert physics_runtime.get_broadphase_stats()["candidate_count"] == 1
+    assert counters.get("physics.circle_query.fallback_full_scan.count", 0) == 0
+
+
 def test_aabb_only_collision_smoke_unchanged() -> None:
     wall = Aabb(20.0, 0.0, 10.0, 100.0)
 
