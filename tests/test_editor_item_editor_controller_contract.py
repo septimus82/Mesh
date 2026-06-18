@@ -26,6 +26,7 @@ def _editor(tmp_path: Path, overlay: object | None = None) -> SimpleNamespace:
         feedback=SimpleNamespace(
             error=lambda message: feedback_calls.append(("error", str(message))),
             info=lambda message: feedback_calls.append(("info", str(message))),
+            warning=lambda message: feedback_calls.append(("warning", str(message))),
         ),
         _get_repo_root=lambda: tmp_path,
         feedback_calls=feedback_calls,
@@ -420,6 +421,20 @@ def test_item_editor_controller_rebuild_text_inputs_adds_effect_specs(tmp_path: 
     assert text_inputs["effects.quest.flag"].text == "done"
 
 
+def test_item_editor_controller_rebuild_text_inputs_adds_effect_key_specs(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["effects"] = {"heal": 25, "quest.flag": "done"}
+
+    controller.enter_edit_mode(item)
+
+    text_inputs = controller.text_inputs()
+    assert "effect_key.heal" in text_inputs
+    assert "effect_key.quest.flag" in text_inputs
+    assert text_inputs["effect_key.heal"].text == "heal"
+    assert text_inputs["effect_key.quest.flag"].text == "quest.flag"
+
+
 def test_item_editor_controller_effect_value_edit_preserves_int(tmp_path: Path) -> None:
     controller = EditorItemEditorController(_editor(tmp_path))
     item = _item()
@@ -475,6 +490,113 @@ def test_item_editor_controller_effect_value_dotted_key_addresses_literal_key(tm
     assert controller.edit_buffer is not None
     assert controller.edit_buffer["effects"]["quest.flag"] == "new"
     assert controller.edit_buffer["effects"]["quest"] == "nested"
+
+
+def test_item_editor_controller_effect_key_rename_preserves_value_type_and_focus(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["effects"] = {"heal": 25}
+    controller.enter_edit_mode(item)
+
+    controller._focus_field("effect_key.heal")
+    controller.text_input("effect_key.heal").text = "damage"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["effects"] == {"damage": 25}
+    assert isinstance(controller.edit_buffer["effects"]["damage"], int)
+    assert "effect_key.damage" in controller.text_inputs()
+    assert "effects.damage" in controller.text_inputs()
+    assert "effects.heal" not in controller.text_inputs()
+    assert controller.focused_field() == "effect_key.damage"
+
+
+def test_item_editor_controller_effect_key_rename_treats_dotted_key_as_literal(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["effects"] = {"quest.flag": "old", "heal": 25}
+    controller.enter_edit_mode(item)
+
+    controller.text_input("effect_key.quest.flag").text = "quest.flag.done"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["effects"] == {"quest.flag.done": "old", "heal": 25}
+    assert "effect_key.quest.flag.done" in controller.text_inputs()
+    assert "effects.quest.flag.done" in controller.text_inputs()
+
+
+def test_item_editor_controller_duplicate_effect_key_rename_is_rejected(tmp_path: Path) -> None:
+    editor = _editor(tmp_path)
+    controller = EditorItemEditorController(editor)
+    item = _item()
+    item["effects"] = {"heal": 25, "damage": 4}
+    controller.enter_edit_mode(item)
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("effect_key.heal").text = "damage"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer == before
+    assert controller.last_error_message() == "Effect key 'damage' already exists"
+    assert editor.feedback_calls[-1] == ("error", "Effect key 'damage' already exists")
+
+
+def test_item_editor_controller_empty_effect_key_rename_is_rejected(tmp_path: Path) -> None:
+    editor = _editor(tmp_path)
+    controller = EditorItemEditorController(editor)
+    item = _item()
+    item["effects"] = {"heal": 25}
+    controller.enter_edit_mode(item)
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("effect_key.heal").text = "  "
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer == before
+    assert controller.last_error_message() == "Effect key for heal cannot be empty"
+    assert editor.feedback_calls[-1] == ("error", "Effect key for heal cannot be empty")
+
+
+def test_item_editor_controller_unknown_effect_key_warns_but_renames(tmp_path: Path) -> None:
+    editor = _editor(tmp_path)
+    controller = EditorItemEditorController(editor)
+    item = _item()
+    item["effects"] = {"heal": 25}
+    controller.enter_edit_mode(item)
+
+    controller.text_input("effect_key.heal").text = "custom_mod"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["effects"] == {"custom_mod": 25}
+    assert controller.last_error_message() is None
+    assert editor.feedback_calls[-1] == ("warning", "Unknown item effect key 'custom_mod'")
+
+
+def test_item_editor_controller_effect_key_rename_pollution_preserves_siblings_and_order(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["name"] = "Keep Name"
+    item["tags"] = ["consumable", "potion"]
+    item["effects"] = {"heal": 25, "tier": 1, "speed": 1.25}
+    controller.enter_edit_mode(item)
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("effect_key.tier").text = "damage_bonus"
+    controller.sync_widgets_to_buffer()
+
+    assert list(controller.edit_buffer["effects"]) == ["heal", "damage_bonus", "speed"]
+    assert controller.edit_buffer["effects"]["damage_bonus"] == before["effects"]["tier"]
+    assert isinstance(controller.edit_buffer["effects"]["damage_bonus"], int)
+    assert controller.edit_buffer["effects"]["heal"] == before["effects"]["heal"]
+    assert controller.edit_buffer["effects"]["speed"] == before["effects"]["speed"]
+    assert controller.edit_buffer["tags"] == before["tags"]
+    for field in ("id", "name", "description", "icon", "stackable", "max_stack"):
+        assert controller.edit_buffer[field] == before[field]
 
 
 def test_item_editor_controller_invalid_numeric_effect_value_is_rejected(tmp_path: Path) -> None:
@@ -581,6 +703,24 @@ def test_item_editor_controller_add_effect_adds_unique_int_widget_and_stays_save
 
     assert controller.edit_buffer["effects"]["new_effect"] == 7
     assert isinstance(controller.edit_buffer["effects"]["new_effect"], int)
+
+
+def test_item_editor_controller_added_effect_can_be_renamed_to_runtime_damage_key(tmp_path: Path) -> None:
+    controller = EditorItemEditorController(_editor(tmp_path))
+    item = _item()
+    item["effects"] = {}
+    controller.enter_edit_mode(item)
+
+    assert controller._add_effect() is True
+    assert controller.edit_buffer is not None
+    controller.text_input("effect_key.new_effect").text = "damage"
+    controller.sync_widgets_to_buffer()
+    controller.text_input("effects.damage").text = "7"
+    controller.sync_widgets_to_buffer()
+
+    effects = controller.edit_buffer["effects"]
+    assert effects == {"damage": 7}
+    assert float(effects.get("damage", effects.get("attack", 0)) or 0) == 7.0
 
 
 def test_item_editor_controller_next_effect_key_skips_existing_names() -> None:

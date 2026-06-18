@@ -12,6 +12,29 @@ EFFECT_ADD_ACTION = "effect.add"
 _TAG_ACTION_KIND = "tag"
 _EFFECT_ACTION_KIND = "effect"
 _EFFECT_FIELD_PREFIX = "effects."
+_EFFECT_KEY_FIELD_PREFIX = "effect_key."
+# Curated soft-warning vocabulary for runtime-known effects; custom keys remain allowed.
+_KNOWN_EFFECT_KEYS = frozenset(
+    {
+        "attack",
+        "attack_bonus",
+        "damage",
+        "damage_bonus",
+        "damage_pct",
+        "defense",
+        "defense_bonus",
+        "gold_bonus_pct",
+        "heal",
+        "hp_bonus",
+        "max_hp",
+        "max_hp_bonus",
+        "quest_flag",
+        "speed",
+        "speed_bonus",
+        "tier",
+        "xp_bonus_pct",
+    }
+)
 
 
 class EditorItemEditorController(EditorDatabaseFormController):
@@ -30,6 +53,10 @@ class EditorItemEditorController(EditorDatabaseFormController):
         ("icon", "assets/..."),
         ("max_stack", "1"),
     )
+
+    def __init__(self, editor: Any) -> None:
+        super().__init__(editor)
+        self._pending_effect_key_focus: str | None = None
 
     def handle_item_editor_text_input(self, text: str) -> bool:
         return self.handle_text_input(text)
@@ -77,6 +104,9 @@ class EditorItemEditorController(EditorDatabaseFormController):
         return dict(record)
 
     def _set_field_value(self, record: dict[str, Any], field: str, value: Any) -> None:
+        if field.startswith(_EFFECT_KEY_FIELD_PREFIX):
+            self._set_effect_key_field_value(record, field, value)
+            return
         if field.startswith(_EFFECT_FIELD_PREFIX):
             self._set_effect_field_value(record, field, value)
             return
@@ -94,6 +124,8 @@ class EditorItemEditorController(EditorDatabaseFormController):
             record[field] = str(value or "")
 
     def _get_field_value(self, record: dict[str, Any], field: str) -> Any:
+        if field.startswith(_EFFECT_KEY_FIELD_PREFIX):
+            return field.removeprefix(_EFFECT_KEY_FIELD_PREFIX)
         if field.startswith(_EFFECT_FIELD_PREFIX):
             effects = record.get("effects")
             key = field.removeprefix(_EFFECT_FIELD_PREFIX)
@@ -116,6 +148,30 @@ class EditorItemEditorController(EditorDatabaseFormController):
         except ValueError:
             self._set_save_error(f"Invalid numeric value for {field}: {text}")
 
+    def _set_effect_key_field_value(self, record: dict[str, Any], field: str, value: Any) -> None:
+        effects = record.get("effects")
+        old_key = field.removeprefix(_EFFECT_KEY_FIELD_PREFIX)
+        if not isinstance(effects, dict) or old_key not in effects:
+            return
+        new_key = str(value or "").strip()
+        if new_key == old_key:
+            return
+        if not new_key:
+            self._set_save_error(f"Effect key for {old_key} cannot be empty")
+            return
+        if new_key in effects:
+            self._set_save_error(f"Effect key '{new_key}' already exists")
+            return
+        renamed = {
+            (new_key if key == old_key else key): effect_value
+            for key, effect_value in effects.items()
+        }
+        effects.clear()
+        effects.update(renamed)
+        self._pending_effect_key_focus = f"{_EFFECT_KEY_FIELD_PREFIX}{new_key}"
+        if new_key not in _KNOWN_EFFECT_KEYS:
+            self._emit_feedback_warning(f"Unknown item effect key '{new_key}'")
+
     def _rebuild_text_inputs(self, record: dict[str, Any] | None) -> None:
         from engine.ui_overlays.widgets import TextInput  # noqa: PLC0415
 
@@ -125,7 +181,9 @@ class EditorItemEditorController(EditorDatabaseFormController):
             specs.extend((f"tags.{index}", f"Tag {index}") for index, _tag in enumerate(tags))
         effects = record.get("effects") if isinstance(record, dict) else None
         if isinstance(effects, dict):
-            specs.extend((f"effects.{key}", f"Effect {key}") for key in sorted(effects))
+            for key in sorted(effects):
+                specs.append((f"{_EFFECT_KEY_FIELD_PREFIX}{key}", "Effect key"))
+                specs.append((f"effects.{key}", f"Effect {key}"))
         self._text_inputs = {}
         for field, placeholder in specs:
             value = self._get_field_value(record or {}, field)
@@ -136,6 +194,17 @@ class EditorItemEditorController(EditorDatabaseFormController):
                 font_size=12,
                 height=18.0,
             )
+
+    def sync_widgets_to_buffer(self) -> None:
+        self._pending_effect_key_focus = None
+        super().sync_widgets_to_buffer()
+        if self.edit_buffer is None or self._pending_effect_key_focus is None:
+            return
+        focus_field = self._pending_effect_key_focus
+        self._pending_effect_key_focus = None
+        self._rebuild_text_inputs(self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(focus_field)
 
     def _target_path(self) -> Path:
         from engine.editor.item_editor_model import DEFAULT_ITEMS_FILE_PATH  # noqa: PLC0415
@@ -248,6 +317,14 @@ class EditorItemEditorController(EditorDatabaseFormController):
         normalized["tags"] = list(normalized.get("tags", []) or [])
         normalized["effects"] = dict(normalized.get("effects", {}) or {})
         return normalized
+
+    def _emit_feedback_warning(self, message: str) -> None:
+        feedback = getattr(self._editor, "feedback", None)
+        reporter = getattr(feedback, "warning", None) if feedback is not None else None
+        if not callable(reporter):
+            reporter = getattr(feedback, "info", None) if feedback is not None else None
+        if callable(reporter):
+            reporter(message)
 
 
 def item_definition_to_dict(item: Any) -> dict[str, Any]:
