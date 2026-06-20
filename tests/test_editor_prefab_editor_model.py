@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from engine.editor.prefab_editor_model import PrefabEditorModel, validate_prefab_entries
+from engine.editor.prefab_editor_model import PrefabEditorModel, complex_entry_rows, validate_prefab_entries
 
 pytestmark = [pytest.mark.fast]
 
@@ -80,6 +80,66 @@ def test_prefab_editor_model_detail_rows_split_scalar_and_complex_fields() -> No
     assert ("Behaviours", "EnemyAI") in model.complex_detail_rows()
     assert ("Behaviour config", '{"Health":{"max":8}}') in model.complex_detail_rows()
     assert ("Metadata", '{"author":"core"}') in model.complex_detail_rows()
+
+
+def test_prefab_editor_complex_entry_rows_list_family_preserves_order_and_skips_non_strings() -> None:
+    prefab = {
+        "tags": ["enemy", 3, "fire"],
+        "require_flags": ["flag_a"],
+        "forbid_flags": ["flag_b"],
+        "entity": {
+            "behaviours": ["EnemyAI", object(), "Health"],
+            "require_flags": ["entity_flag"],
+        },
+    }
+
+    assert complex_entry_rows(prefab, "tags") == [("Tag 0", "enemy"), ("Tag 2", "fire")]
+    assert complex_entry_rows(prefab, "require_flags") == [("Require flag 0", "flag_a")]
+    assert complex_entry_rows(prefab, "forbid_flags") == [("Forbid flag 0", "flag_b")]
+    assert complex_entry_rows(prefab, "entity.behaviours") == [
+        ("Behaviour 0", "EnemyAI"),
+        ("Behaviour 2", "Health"),
+    ]
+    assert complex_entry_rows(prefab, "entity.require_flags") == [("Entity require flag 0", "entity_flag")]
+
+
+def test_prefab_editor_complex_entry_rows_metadata_are_sorted() -> None:
+    prefab = {"metadata": {"zeta": "last", "author": "core"}}
+
+    assert complex_entry_rows(prefab, "metadata") == [("author", "core"), ("zeta", "last")]
+
+
+def test_prefab_editor_complex_entry_rows_behaviour_config_are_top_level_compact_json() -> None:
+    prefab = {
+        "entity": {
+            "behaviour_config": {
+                "Health": {"max": 8, "regen": False},
+                "EnemyAI": {"speed": 1.5},
+            }
+        }
+    }
+
+    assert complex_entry_rows(prefab, "entity.behaviour_config") == [
+        ("EnemyAI", '{"speed":1.5}'),
+        ("Health", '{"max":8,"regen":false}'),
+    ]
+
+
+def test_prefab_editor_complex_entry_rows_degrade_on_empty_missing_or_wrong_shapes() -> None:
+    prefab = {
+        "tags": "enemy",
+        "metadata": [],
+        "entity": {
+            "behaviours": None,
+            "behaviour_config": "Health",
+        },
+    }
+
+    assert complex_entry_rows(prefab, "tags") == []
+    assert complex_entry_rows(prefab, "missing") == []
+    assert complex_entry_rows(prefab, "metadata") == []
+    assert complex_entry_rows(prefab, "entity.behaviours") == []
+    assert complex_entry_rows(prefab, "entity.behaviour_config") == []
 
 
 def test_prefab_editor_model_empty_manager_has_no_selection() -> None:

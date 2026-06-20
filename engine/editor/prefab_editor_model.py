@@ -138,6 +138,24 @@ def save_prefabs(entries: list[dict[str, Any]], target_path: str | Path) -> None
     write_prefabs(Path(target_path), entries)
 
 
+def complex_entry_rows(prefab: dict[str, Any], field_path: str) -> list[tuple[str, str]]:
+    value = _get_path(prefab, field_path)
+    if field_path in _LIST_ENTRY_LABELS:
+        if not isinstance(value, list):
+            return []
+        label_prefix = _LIST_ENTRY_LABELS[field_path]
+        return [(f"{label_prefix} {index}", item) for index, item in enumerate(value) if isinstance(item, str)]
+    if field_path == "metadata":
+        if not isinstance(value, dict):
+            return []
+        return [(str(key), str(value[key])) for key in sorted(value)]
+    if field_path == "entity.behaviour_config":
+        if not isinstance(value, dict):
+            return []
+        return [(str(key), _format_value(value[key])) for key in sorted(value)]
+    return []
+
+
 def _get_path(payload: dict[str, Any], field_path: str) -> Any:
     current: Any = payload
     for part in field_path.split("."):
@@ -186,3 +204,12 @@ def _string_value(value: Any) -> str:
 
 def _is_empty_complex_value(value: Any) -> bool:
     return value is None or value == [] or value == {}
+
+
+_LIST_ENTRY_LABELS = {
+    "tags": "Tag",
+    "require_flags": "Require flag",
+    "forbid_flags": "Forbid flag",
+    "entity.behaviours": "Behaviour",
+    "entity.require_flags": "Entity require flag",
+}
