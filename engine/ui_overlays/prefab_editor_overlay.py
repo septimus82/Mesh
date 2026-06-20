@@ -276,6 +276,19 @@ class PrefabEditorOverlay(UIElement):
                             delete_label = f"Delete {entry_label[:1].lower()}{entry_label[1:]}"
                             add_complex_action(action, delete_label)
                             continue
+                        if edit_mode and complex_field_path == "metadata":
+                            self._widget_rows[f"metadata_key.{entry_label}"] = detail_panel.add_row(
+                                PanelRow(
+                                    PanelField(
+                                        "Metadata key",
+                                        "",
+                                        label_color=PREFAB_EDITOR_TEXT_COLOR,
+                                        value_color=PREFAB_EDITOR_DIM_COLOR,
+                                    ),
+                                    height=PREFAB_EDITOR_ROW_HEIGHT,
+                                    padding_x=PREFAB_EDITOR_ROW_PADDING_X,
+                                )
+                            )
                         entry_row = detail_panel.add_row(
                             PanelRow(
                                 PanelField(
@@ -378,6 +391,8 @@ def _add_label_for_list_field(field_path: str) -> str:
 
 
 def _edit_widget_value(edit_buffer: dict[str, Any], field_path: str) -> Any:
+    if field_path.startswith("metadata_key."):
+        return field_path.removeprefix("metadata_key.")
     if field_path.startswith("metadata."):
         metadata = edit_buffer.get("metadata")
         key = field_path.removeprefix("metadata.")
