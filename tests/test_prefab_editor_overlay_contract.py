@@ -324,7 +324,7 @@ def test_prefab_editor_overlay_edit_mode_keeps_complex_rows_read_only_and_scalar
         "entity.behaviours.1",
         "entity.require_flags.0",
     } <= set(overlay._widget_rows)
-    assert {"metadata.author", "metadata.zeta"} <= set(overlay._widget_rows)
+    assert {"metadata_key.author", "metadata_key.zeta", "metadata.author", "metadata.zeta"} <= set(overlay._widget_rows)
     assert not any(field.startswith("entity.behaviour_config.") for field in overlay._widget_rows)
 
 
@@ -510,16 +510,42 @@ def test_prefab_editor_overlay_edit_mode_renders_metadata_value_widgets_with_del
     captured = _capture_panel_text(monkeypatch)
     prefab_editor = _PrefabEditorStub(edit_mode=True)
     prefab_editor.edit_buffer = _complex_prefab()
+    prefab_editor._text_inputs.update(  # noqa: SLF001 - contract test controls the editor stub.
+        {
+            "metadata_key.author": TextInput(text="author", focused=False, font_size=12, height=18.0),
+            "metadata.author": TextInput(text="core", focused=False, font_size=12, height=18.0),
+        }
+    )
     overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
     overlay._model = _complex_model()
 
     overlay.draw()
 
-    assert {"metadata.author", "metadata.zeta"} <= set(overlay._widget_rows)
+    assert {"metadata_key.author", "metadata_key.zeta", "metadata.author", "metadata.zeta"} <= set(overlay._widget_rows)
+    assert overlay._widget_rows["metadata_key.author"] is not overlay._widget_rows["metadata.author"]
+    key_rect = overlay._widget_rows["metadata_key.author"].last_rect
+    value_rect = overlay._widget_rows["metadata.author"].last_rect
+    assert key_rect is not None
+    assert value_rect is not None
+    assert overlay.try_click_widget(key_rect.left + 100.0, key_rect.center_y) == "metadata_key.author"
+    assert overlay.try_click_widget(value_rect.left + 100.0, value_rect.center_y) == "metadata.author"
     assert "author" in captured
     assert "zeta" in captured
     actions = {action for action, _row in overlay._complex_entry_action_hits}
     assert {"metadata#author#delete", "metadata#zeta#delete"} <= actions
+
+
+def test_prefab_editor_overlay_view_mode_has_no_metadata_key_or_value_widgets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert not any(field.startswith("metadata_key.") for field in overlay._widget_rows)
+    assert not any(field.startswith("metadata.") for field in overlay._widget_rows)
 
 
 def test_prefab_editor_overlay_metadata_dotted_key_widget_and_behaviour_config_read_only(
@@ -534,6 +560,7 @@ def test_prefab_editor_overlay_metadata_dotted_key_widget_and_behaviour_config_r
 
     overlay.draw()
 
+    assert "metadata_key.a.b" in overlay._widget_rows
     assert "metadata.a.b" in overlay._widget_rows
     assert "a.b" in captured
     assert not any(field.startswith("entity.behaviour_config.") for field in overlay._widget_rows)

@@ -9,6 +9,7 @@ from engine.editor.prefab_editor_model import PREFAB_LIST_COMPLEX_FIELDS
 
 _BEHAVIOUR_FIELD_PREFIX = "entity.behaviours."
 _METADATA_FIELD_PREFIX = "metadata."
+_METADATA_KEY_FIELD_PREFIX = "metadata_key."
 PREFAB_DICT_COMPLEX_FIELDS = ("metadata", "entity.behaviour_config")
 
 
@@ -31,6 +32,7 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
     def __init__(self, editor: Any) -> None:
         super().__init__(editor)
         self._warned_unknown_behaviours: set[tuple[str, str]] = set()
+        self._pending_metadata_key_focus: str | None = None
 
     def handle_prefab_editor_text_input(self, text: str) -> bool:
         return self.handle_text_input(text)
@@ -96,6 +98,8 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         return candidate
 
     def _get_field_value(self, record: dict[str, Any], field: str) -> Any:
+        if field.startswith(_METADATA_KEY_FIELD_PREFIX):
+            return field.removeprefix(_METADATA_KEY_FIELD_PREFIX)
         if field.startswith(_METADATA_FIELD_PREFIX):
             metadata = record.get("metadata")
             key = field.removeprefix(_METADATA_FIELD_PREFIX)
@@ -106,6 +110,9 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         next_value = str(value or "")
         if field == "id":
             next_value = next_value.strip()
+        if field.startswith(_METADATA_KEY_FIELD_PREFIX):
+            self._set_metadata_key_field_value(record, field, value)
+            return
         if field.startswith(_METADATA_FIELD_PREFIX):
             metadata = record.get("metadata")
             key = field.removeprefix(_METADATA_FIELD_PREFIX)
@@ -137,7 +144,9 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
                     )
             metadata = record.get("metadata")
             if isinstance(metadata, dict):
-                specs.extend((f"metadata.{key}", f"Metadata {key}") for key in sorted(metadata))
+                for key in sorted(metadata):
+                    specs.append((f"{_METADATA_KEY_FIELD_PREFIX}{key}", "Metadata key"))
+                    specs.append((f"metadata.{key}", f"Metadata {key}"))
         self._text_inputs = {}
         for field, placeholder in specs:
             value = self._get_field_value(record or {}, field)
@@ -148,6 +157,17 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
                 font_size=12,
                 height=18.0,
             )
+
+    def sync_widgets_to_buffer(self) -> None:
+        self._pending_metadata_key_focus = None
+        super().sync_widgets_to_buffer()
+        if self.edit_buffer is None or self._pending_metadata_key_focus is None:
+            return
+        focus_field = self._pending_metadata_key_focus
+        self._pending_metadata_key_focus = None
+        self._rebuild_text_inputs(self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(focus_field)
 
     def _target_path(self) -> Path:
         from engine.editor.prefab_editor_model import DEFAULT_PREFAB_FILE_PATH  # noqa: PLC0415
@@ -269,6 +289,28 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         self._sync_widgets_from_buffer()
         self._focus_field(f"metadata.{key}")
         return True
+
+    def _set_metadata_key_field_value(self, record: dict[str, Any], field: str, value: Any) -> None:
+        metadata = record.get("metadata")
+        old_key = field.removeprefix(_METADATA_KEY_FIELD_PREFIX)
+        if not isinstance(metadata, dict) or old_key not in metadata:
+            return
+        new_key = str(value or "").strip()
+        if new_key == old_key:
+            return
+        if not new_key:
+            self._set_save_error(f"Metadata key for {old_key} cannot be empty")
+            return
+        if new_key in metadata:
+            self._set_save_error(f"Metadata key '{new_key}' already exists")
+            return
+        renamed = {
+            (new_key if key == old_key else key): metadata_value
+            for key, metadata_value in metadata.items()
+        }
+        metadata.clear()
+        metadata.update(renamed)
+        self._pending_metadata_key_focus = f"{_METADATA_KEY_FIELD_PREFIX}{new_key}"
 
     def _warn_for_unknown_behaviour(self, field: str, value: str) -> None:
         known = _known_behaviour_names()

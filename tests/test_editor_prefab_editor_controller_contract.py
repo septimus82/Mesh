@@ -357,8 +357,154 @@ def test_prefab_editor_controller_rebuild_text_inputs_adds_metadata_key_specs(tm
 
     text_inputs = controller.text_inputs()
     assert {"metadata.author", "metadata.zeta"} <= set(text_inputs)
+    assert {"metadata_key.author", "metadata_key.zeta"} <= set(text_inputs)
+    assert text_inputs["metadata_key.author"].text == "author"
+    assert text_inputs["metadata_key.zeta"].text == "zeta"
     assert text_inputs["metadata.author"].text == "core"
     assert text_inputs["metadata.zeta"].text == "last"
+
+
+def test_prefab_editor_controller_metadata_key_field_value_is_literal_suffix(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+
+    assert controller._get_field_value({"metadata": {"a.b": "value"}}, "metadata_key.a.b") == "a.b"
+
+
+def test_prefab_editor_controller_metadata_key_rename_preserves_value_type_order_and_focus(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    prefab = _prefab()
+    prefab["metadata"] = {"author": "core", "count": 3, "blob": "kept"}
+    controller.enter_edit_mode(prefab)
+
+    controller.text_input("metadata_key.count").text = "rank"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert list(controller.edit_buffer["metadata"]) == ["author", "rank", "blob"]
+    assert controller.edit_buffer["metadata"]["rank"] == 3
+    assert isinstance(controller.edit_buffer["metadata"]["rank"], int)
+    assert controller.edit_buffer["metadata"]["blob"] == "kept"
+    assert "metadata_key.rank" in controller.text_inputs()
+    assert "metadata.rank" in controller.text_inputs()
+    assert "metadata_key.count" not in controller.text_inputs()
+    assert "metadata.count" not in controller.text_inputs()
+    assert controller.focused_field() == "metadata_key.rank"
+
+
+def test_prefab_editor_controller_metadata_key_dotted_old_key_is_literal(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    prefab = _prefab()
+    prefab["metadata"] = {"a.b": "literal", "other": "same"}
+    controller.enter_edit_mode(prefab)
+
+    controller.text_input("metadata_key.a.b").text = "c.d"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["metadata"] == {"c.d": "literal", "other": "same"}
+    assert "a" not in controller.edit_buffer["metadata"]
+    assert "metadata_key.c.d" in controller.text_inputs()
+    assert "metadata.c.d" in controller.text_inputs()
+
+
+def test_prefab_editor_controller_duplicate_metadata_key_rename_is_rejected(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    prefab = _prefab()
+    prefab["metadata"] = {"author": "core", "source": "test"}
+    controller.enter_edit_mode(prefab)
+    controller.sync_widgets_to_buffer()
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("metadata_key.author").text = "source"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer == before
+    assert controller.last_error_message() == "Metadata key 'source' already exists"
+    assert "metadata_key.author" in controller.text_inputs()
+    assert "metadata_key.source" in controller.text_inputs()
+
+
+def test_prefab_editor_controller_empty_metadata_key_rename_is_rejected(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+    controller.sync_widgets_to_buffer()
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("metadata_key.author").text = "  "
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer == before
+    assert controller.last_error_message() == "Metadata key for author cannot be empty"
+    assert "metadata_key.author" in controller.text_inputs()
+
+
+def test_prefab_editor_controller_metadata_key_rename_does_not_warn(tmp_path: Path) -> None:
+    editor = _editor(tmp_path)
+    controller = EditorPrefabEditorController(editor)
+    controller.enter_edit_mode(_prefab())
+
+    controller.text_input("metadata_key.author").text = "custom_metadata_key"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["metadata"] == {"custom_metadata_key": "core"}
+    assert not any(call[0] == "warning" for call in editor.feedback_calls)
+
+
+def test_prefab_editor_controller_metadata_key_reconciliation_preserves_value_widget_edit(
+    tmp_path: Path,
+) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+
+    controller.text_input("metadata_key.author").text = "designer"
+    controller.text_input("metadata.author").text = "ignored-stale"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["metadata"] == {"designer": "core"}
+    assert "metadata.author" not in controller.text_inputs()
+    assert "metadata.designer" in controller.text_inputs()
+    assert controller.text_input("metadata.designer").text == "core"
+    assert controller.focused_field() == "metadata_key.designer"
+
+
+def test_prefab_editor_controller_metadata_key_rename_pollution_and_save_valid(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    prefab = _prefab()
+    prefab["metadata"] = {"author": "core", "source": "test", "zeta": "last"}
+    controller.enter_edit_mode(prefab)
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("metadata_key.source").text = "origin"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["metadata"] == {"author": "core", "origin": "test", "zeta": "last"}
+    for key, value in before.items():
+        if key != "metadata":
+            assert controller.edit_buffer[key] == value
+    assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
+
+
+def test_prefab_editor_controller_metadata_add_then_rename_keeps_value_widget(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+
+    assert controller._add_dict_entry("metadata") is True
+    controller.text_input("metadata.new_key").text = "new value"
+    controller.sync_widgets_to_buffer()
+    controller.text_input("metadata_key.new_key").text = "designer"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["metadata"] == {"author": "core", "designer": "new value"}
+    assert "metadata.designer" in controller.text_inputs()
+    assert "metadata_key.designer" in controller.text_inputs()
+    assert controller.text_input("metadata.designer").text == "new value"
+    assert controller.focused_field() == "metadata_key.designer"
 
 
 def test_prefab_editor_controller_metadata_value_edit_writes_string_value(tmp_path: Path) -> None:
