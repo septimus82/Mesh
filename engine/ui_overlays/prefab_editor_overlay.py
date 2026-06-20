@@ -296,6 +296,8 @@ class PrefabEditorOverlay(UIElement):
                             )
                     if edit_mode and complex_field_path in PREFAB_LIST_COMPLEX_FIELDS:
                         add_complex_action(f"{complex_field_path}#add", f"Add {_add_label_for_list_field(complex_field_path)}")
+                    if edit_mode and complex_field_path == "metadata":
+                        add_complex_action("metadata#add", "Add metadata")
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,

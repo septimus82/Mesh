@@ -11,9 +11,11 @@ import engine.optional_arcade as optional_arcade
 from engine.editor.editor_prefab_editor_controller import (
     EditorPrefabEditorController,
     _complex_dict_action_parts,
+    _complex_dict_add_action,
     _complex_list_action_parts,
     _complex_list_add_action,
     _get_path,
+    _next_metadata_key,
     _set_path,
 )
 from engine.editor.prefab_editor_model import validate_prefab_entries
@@ -195,6 +197,22 @@ def test_prefab_editor_complex_list_add_action_parser_accepts_and_rejects_action
         "entity.behaviours#delete",
     ):
         assert _complex_list_add_action(action) is None
+
+
+def test_prefab_editor_complex_dict_add_action_parser_accepts_metadata_only() -> None:
+    assert _complex_dict_add_action("metadata#add") == "metadata"
+
+    for action in (
+        None,
+        "",
+        "metadata.add",
+        "metadata#author#add",
+        "tags#add",
+        "entity.behaviour_config#add",
+        "unknown#add",
+        "metadata#delete",
+    ):
+        assert _complex_dict_add_action(action) is None
 
 
 def test_prefab_editor_complex_dict_action_parser_round_trips_metadata_delete() -> None:
@@ -401,6 +419,82 @@ def test_prefab_editor_controller_metadata_edit_preserves_siblings_and_lists(tmp
         if key not in {"metadata", "tags"}:
             assert controller.edit_buffer[key] == value
     assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
+
+
+def test_prefab_editor_next_metadata_key_skips_existing_names() -> None:
+    assert _next_metadata_key({}) == "new_key"
+    assert _next_metadata_key({"new_key": ""}) == "new_key_2"
+    assert _next_metadata_key({"new_key": "", "new_key_2": ""}) == "new_key_3"
+
+
+def test_prefab_editor_controller_add_dict_entry_initializes_metadata_and_focuses(
+    tmp_path: Path,
+) -> None:
+    for initial in (None, "not-a-dict"):
+        controller = EditorPrefabEditorController(_editor(tmp_path))
+        prefab = _prefab()
+        if initial is None:
+            prefab.pop("metadata", None)
+        else:
+            prefab["metadata"] = initial
+        controller.enter_edit_mode(prefab)
+
+        assert controller._add_dict_entry("metadata") is True
+
+        assert controller.edit_buffer is not None
+        assert controller.edit_buffer["metadata"] == {"new_key": ""}
+        assert controller.focused_field() == "metadata.new_key"
+        assert controller.text_input("metadata.new_key").text == ""
+        assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
+
+
+def test_prefab_editor_controller_add_dict_entry_inserts_unique_key_and_preserves_siblings(
+    tmp_path: Path,
+) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    prefab = _prefab()
+    prefab["metadata"] = {"new_key": "old", "source": "test"}
+    controller.enter_edit_mode(prefab)
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    assert controller._add_dict_entry("metadata") is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["metadata"] == {"new_key": "old", "source": "test", "new_key_2": ""}
+    assert controller.focused_field() == "metadata.new_key_2"
+    for key, value in before.items():
+        if key != "metadata":
+            assert controller.edit_buffer[key] == value
+    assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
+
+
+def test_prefab_editor_controller_add_dict_entry_routes_and_interops_with_edit_delete(
+    tmp_path: Path,
+) -> None:
+    overlay = SimpleNamespace(complex_entry_action_at=lambda _x, _y: "metadata#add")
+    controller = EditorPrefabEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_prefab())
+
+    assert controller.handle_prefab_editor_mouse_click(10.0, 20.0) is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["metadata"]["new_key"] == ""
+    controller.text_input("metadata.new_key").text = "designer"
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer["metadata"]["new_key"] == "designer"
+    assert controller._delete_dict_entry("metadata", "new_key") is True
+    assert controller.edit_buffer["metadata"] == {"author": "core"}
+
+
+def test_prefab_editor_controller_add_dict_entry_guards_non_metadata(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    assert controller._add_dict_entry("metadata") is False
+
+    controller.enter_edit_mode(_prefab())
+    assert controller._add_dict_entry("entity.behaviour_config") is False
+    assert controller._add_dict_entry("tags") is False
 
 
 def test_prefab_editor_controller_add_list_entry_appends_seed_for_all_fields(
