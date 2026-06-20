@@ -473,7 +473,6 @@ def test_prefab_editor_overlay_dict_complex_rows_have_no_delete_actions(
     assert "Health" in captured
     assert "Delete author" not in captured
     assert "Delete Health" not in captured
-    assert "Add metadata" not in captured
     assert "Add behaviour config" not in captured
     actions = {action for action, _row in overlay._complex_entry_action_hits}
     assert not any(action.startswith("entity.behaviour_config#") for action in actions)
@@ -539,6 +538,38 @@ def test_prefab_editor_overlay_metadata_dotted_key_widget_and_behaviour_config_r
     assert "a.b" in captured
     assert not any(field.startswith("entity.behaviour_config.") for field in overlay._widget_rows)
     assert "Health" in captured
+
+
+def test_prefab_editor_overlay_edit_mode_renders_metadata_add_action_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert "Add metadata" not in captured
+    assert overlay._complex_entry_action_hits == []
+
+    captured.clear()
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert "Add metadata" in captured
+    assert "Add behaviour config" not in captured
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert "metadata#add" in actions
+    assert "entity.behaviour_config#add" not in actions
+    hit_rows = dict(overlay._complex_entry_action_hits)
+    row = hit_rows["metadata#add"]
+    rect = row.last_rect
+    assert rect is not None
+    assert overlay.complex_entry_action_at(rect.left + 1.0, rect.center_y) == "metadata#add"
 
 
 def test_prefab_editor_overlay_dict_delete_is_metadata_only_and_edit_mode_only(
