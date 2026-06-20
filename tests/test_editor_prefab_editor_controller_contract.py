@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
+import engine.editor.editor_prefab_editor_controller as prefab_controller_module
 import engine.optional_arcade as optional_arcade
 from engine.editor.editor_prefab_editor_controller import (
     EditorPrefabEditorController,
@@ -25,6 +26,7 @@ def _editor(tmp_path: Path, overlay: object | None = None) -> SimpleNamespace:
         feedback=SimpleNamespace(
             error=lambda message: feedback_calls.append(("error", str(message))),
             info=lambda message: feedback_calls.append(("info", str(message))),
+            warning=lambda message: feedback_calls.append(("warning", str(message))),
         ),
         _get_repo_root=lambda: tmp_path,
         feedback_calls=feedback_calls,
@@ -241,6 +243,126 @@ def test_prefab_editor_controller_delete_list_entry_preserves_siblings_order_and
     assert controller.edit_buffer["tags"] == []
     for key in ("id", "display_name", "entity", "require_flags", "forbid_flags", "metadata"):
         assert controller.edit_buffer[key] == before[key]
+    assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
+
+
+def test_prefab_editor_controller_rebuild_text_inputs_adds_list_entry_specs(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+
+    text_inputs = controller.text_inputs()
+
+    assert {
+        "tags.0",
+        "tags.1",
+        "require_flags.0",
+        "require_flags.1",
+        "forbid_flags.0",
+        "forbid_flags.1",
+        "entity.behaviours.0",
+        "entity.behaviours.1",
+        "entity.require_flags.0",
+        "entity.require_flags.1",
+    } <= set(text_inputs)
+    assert text_inputs["entity.behaviours.1"].text == "Health"
+
+
+@pytest.mark.parametrize(
+    ("field_path", "replacement", "expected"),
+    [
+        ("tags.1", "ice", ["enemy", "ice"]),
+        ("require_flags.1", "flag_done", ["flag_a", "flag_done"]),
+        ("forbid_flags.1", "flag_blocked", ["flag_c", "flag_blocked"]),
+        ("entity.behaviours.1", "Combat", ["EnemyAI", "Combat"]),
+        ("entity.require_flags.1", "entity_ready_done", ["entity_ready", "entity_ready_done"]),
+    ],
+)
+def test_prefab_editor_controller_list_entry_edits_round_trip_through_generalized_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    field_path: str,
+    replacement: str,
+    expected: list[str],
+) -> None:
+    monkeypatch.setattr(prefab_controller_module, "_known_behaviour_names", lambda: frozenset({"EnemyAI", "Combat"}))
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+    controller.sync_widgets_to_buffer()
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input(field_path).text = replacement
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    parent_path = field_path.rsplit(".", 1)[0]
+    assert _get_path(controller.edit_buffer, parent_path) == expected
+    changed_root = parent_path.split(".")[0]
+    for key, value in before.items():
+        if key != changed_root:
+            assert controller.edit_buffer[key] == value
+
+
+def test_prefab_editor_controller_unknown_behaviour_warns_once_and_still_edits(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(prefab_controller_module, "_known_behaviour_names", lambda: frozenset({"EnemyAI"}))
+    editor = _editor(tmp_path)
+    controller = EditorPrefabEditorController(editor)
+    controller.enter_edit_mode(_prefab())
+
+    controller.text_input("entity.behaviours.1").text = "CustomBehaviour"
+    controller.sync_widgets_to_buffer()
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["entity"]["behaviours"] == ["EnemyAI", "CustomBehaviour"]
+    assert editor.feedback_calls.count(("warning", "Unknown prefab behaviour 'CustomBehaviour'")) == 1
+
+
+def test_prefab_editor_controller_known_behaviour_freeform_lists_and_empty_registry_do_not_warn(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    editor = _editor(tmp_path)
+    controller = EditorPrefabEditorController(editor)
+    monkeypatch.setattr(prefab_controller_module, "_known_behaviour_names", lambda: frozenset({"EnemyAI", "Combat"}))
+    controller.enter_edit_mode(_prefab())
+
+    controller.text_input("entity.behaviours.1").text = "Combat"
+    controller.text_input("tags.1").text = "custom_tag"
+    controller.text_input("require_flags.1").text = "custom_flag"
+    controller.text_input("forbid_flags.1").text = "custom_forbid"
+    controller.text_input("entity.require_flags.1").text = "custom_entity_flag"
+    controller.sync_widgets_to_buffer()
+
+    monkeypatch.setattr(prefab_controller_module, "_known_behaviour_names", lambda: frozenset())
+    controller.text_input("entity.behaviours.1").text = "UnknownButRegistryUnavailable"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["entity"]["behaviours"] == ["EnemyAI", "UnknownButRegistryUnavailable"]
+    assert not any(call[0] == "warning" for call in editor.feedback_calls)
+
+
+def test_prefab_editor_controller_empty_list_entry_is_rejected_without_pollution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(prefab_controller_module, "_known_behaviour_names", lambda: frozenset({"EnemyAI", "Health"}))
+    editor = _editor(tmp_path)
+    controller = EditorPrefabEditorController(editor)
+    controller.enter_edit_mode(_prefab())
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("tags.1").text = ""
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer == before
+    assert controller.last_error_message() == "tags.1 cannot be empty"
+    assert editor.feedback_calls[-1] == ("error", "tags.1 cannot be empty")
     assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
 
 

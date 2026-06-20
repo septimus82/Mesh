@@ -7,6 +7,8 @@ from typing import Any
 from engine.editor.editor_database_form_controller import EditorDatabaseFormController, _get_path, _set_path  # noqa: F401
 from engine.editor.prefab_editor_model import PREFAB_LIST_COMPLEX_FIELDS
 
+_BEHAVIOUR_FIELD_PREFIX = "entity.behaviours."
+
 
 class EditorPrefabEditorController(EditorDatabaseFormController):
     """Edit-mode controller for the Prefab Editor dock tab."""
@@ -23,6 +25,10 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         ("entity.sprite", "assets/..."),
         ("entity.encounter_cost", "1"),
     )
+
+    def __init__(self, editor: Any) -> None:
+        super().__init__(editor)
+        self._warned_unknown_behaviours: set[tuple[str, str]] = set()
 
     def handle_prefab_editor_text_input(self, text: str) -> bool:
         return self.handle_text_input(text)
@@ -48,6 +54,16 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
                     return self._delete_list_entry(field_path, index)
         return self.handle_mouse_click(float(x), float(y))
 
+    def enter_edit_mode(self, record: dict[str, Any]) -> None:
+        self._warned_unknown_behaviours.clear()
+        self._rebuild_text_inputs(record)
+        super().enter_edit_mode(record)
+
+    def cancel_edit_mode(self) -> None:
+        super().cancel_edit_mode()
+        self._warned_unknown_behaviours.clear()
+        self._rebuild_text_inputs(None)
+
     def _copy_record(self, record: dict[str, Any]) -> dict[str, Any]:
         return copy.deepcopy(record)
 
@@ -69,7 +85,39 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         next_value = str(value or "")
         if field == "id":
             next_value = next_value.strip()
+        if _is_prefab_list_entry_field(field):
+            if next_value == "":
+                self._set_save_error(f"{field} cannot be empty")
+                return
+            _set_path(record, field, next_value)
+            if field.startswith(_BEHAVIOUR_FIELD_PREFIX):
+                self._warn_for_unknown_behaviour(field, next_value)
+            return
         _set_path(record, field, next_value)
+
+    def _rebuild_text_inputs(self, record: dict[str, Any] | None) -> None:
+        from engine.ui_overlays.widgets import TextInput  # noqa: PLC0415
+
+        specs = list(self.TEXT_INPUT_SPECS)
+        if isinstance(record, dict):
+            for field_path in PREFAB_LIST_COMPLEX_FIELDS:
+                value = _get_path(record, field_path)
+                if isinstance(value, list):
+                    specs.extend(
+                        (f"{field_path}.{index}", f"{_list_entry_placeholder(field_path)} {index}")
+                        for index, item in enumerate(value)
+                        if isinstance(item, str)
+                    )
+        self._text_inputs = {}
+        for field, placeholder in specs:
+            value = self._get_field_value(record or {}, field)
+            self._text_inputs[field] = TextInput(
+                text="" if value is None else str(value),
+                placeholder=placeholder,
+                focused=False,
+                font_size=12,
+                height=18.0,
+            )
 
     def _target_path(self) -> Path:
         from engine.editor.prefab_editor_model import DEFAULT_PREFAB_FILE_PATH  # noqa: PLC0415
@@ -116,8 +164,27 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         if not isinstance(items, list) or not 0 <= int(index) < len(items):
             return False
         items.pop(int(index))
+        self._rebuild_text_inputs(self.edit_buffer)
         self._sync_widgets_from_buffer()
         return True
+
+    def _warn_for_unknown_behaviour(self, field: str, value: str) -> None:
+        known = _known_behaviour_names()
+        if not known or value in known:
+            return
+        warning_key = (field, value)
+        if warning_key in self._warned_unknown_behaviours:
+            return
+        self._warned_unknown_behaviours.add(warning_key)
+        self._emit_feedback_warning(f"Unknown prefab behaviour '{value}'")
+
+    def _emit_feedback_warning(self, message: str) -> None:
+        feedback = getattr(self._editor, "feedback", None)
+        reporter = getattr(feedback, "warning", None) if feedback is not None else None
+        if not callable(reporter):
+            reporter = getattr(feedback, "info", None) if feedback is not None else None
+        if callable(reporter):
+            reporter(message)
 
     def _coerce_encounter_cost(self, candidate: dict[str, Any]) -> bool:
         value = _get_path(candidate, "entity.encounter_cost")
@@ -161,3 +228,36 @@ def _complex_list_action_parts(action: object) -> tuple[str, int, str] | None:
     if not index_text.isdigit() or not verb:
         return None
     return field_path, int(index_text), verb
+
+
+def _is_prefab_list_entry_field(field: str) -> bool:
+    for field_path in PREFAB_LIST_COMPLEX_FIELDS:
+        prefix = f"{field_path}."
+        if field.startswith(prefix):
+            index_text = field.removeprefix(prefix)
+            return index_text.isdigit()
+    return False
+
+
+def _list_entry_placeholder(field_path: str) -> str:
+    return {
+        "tags": "Tag",
+        "require_flags": "Require flag",
+        "forbid_flags": "Forbid flag",
+        "entity.behaviours": "Behaviour",
+        "entity.require_flags": "Entity require flag",
+    }.get(field_path, field_path)
+
+
+def _known_behaviour_names() -> frozenset[str]:
+    try:
+        from engine.behaviours import BEHAVIOUR_REGISTRY, load_builtin_behaviours  # noqa: PLC0415
+
+        load_builtin_behaviours()
+        return frozenset(
+            str(name).strip()
+            for name in BEHAVIOUR_REGISTRY
+            if isinstance(name, str) and str(name).strip()
+        )
+    except Exception:  # noqa: BLE001  # REASON: behaviour registry may be unavailable in editor tests/runtime
+        return frozenset()
