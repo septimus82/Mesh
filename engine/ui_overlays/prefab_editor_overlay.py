@@ -276,6 +276,8 @@ class PrefabEditorOverlay(UIElement):
                                 padding_x=PREFAB_EDITOR_ROW_PADDING_X,
                             )
                         )
+                    if edit_mode and complex_field_path in PREFAB_LIST_COMPLEX_FIELDS:
+                        add_complex_action(f"{complex_field_path}#add", f"Add {_add_label_for_list_field(complex_field_path)}")
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,
@@ -344,5 +346,15 @@ def _label_for_field(field_path: str) -> str:
         "display_name": "Display name",
         "entity.sprite": "Entity sprite",
         "entity.encounter_cost": "Entity encounter cost",
+    }.get(field_path, field_path)
+
+
+def _add_label_for_list_field(field_path: str) -> str:
+    return {
+        "tags": "tag",
+        "require_flags": "require flag",
+        "forbid_flags": "forbid flag",
+        "entity.behaviours": "behaviour",
+        "entity.require_flags": "entity require flag",
     }.get(field_path, field_path)
 

@@ -47,6 +47,9 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
             overlay = self._get_overlay()
             action_at = getattr(overlay, "complex_entry_action_at", None) if overlay is not None else None
             action = action_at(float(x), float(y)) if callable(action_at) else None
+            add_field_path = _complex_list_add_action(action)
+            if add_field_path is not None:
+                return self._add_list_entry(add_field_path)
             parsed_action = _complex_list_action_parts(action)
             if parsed_action is not None:
                 field_path, index, verb = parsed_action
@@ -168,6 +171,28 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         self._sync_widgets_from_buffer()
         return True
 
+    def _add_list_entry(self, field_path: str) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        if field_path not in PREFAB_LIST_COMPLEX_FIELDS:
+            return False
+        self.sync_widgets_to_buffer()
+        items = _get_path(self.edit_buffer, field_path)
+        if not isinstance(items, list):
+            _set_path(self.edit_buffer, field_path, [])
+            items = _get_path(self.edit_buffer, field_path)
+        if not isinstance(items, list):
+            return False
+        new_index = len(items)
+        seed = _list_entry_seed(field_path)
+        items.append(seed)
+        if field_path == "entity.behaviours":
+            self._warned_unknown_behaviours.add((f"{field_path}.{new_index}", seed))
+        self._rebuild_text_inputs(self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(f"{field_path}.{new_index}")
+        return True
+
     def _warn_for_unknown_behaviour(self, field: str, value: str) -> None:
         known = _known_behaviour_names()
         if not known or value in known:
@@ -218,6 +243,16 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
             return
 
 
+def _complex_list_add_action(action: object) -> str | None:
+    parts = str(action or "").split("#")
+    if len(parts) != 2:
+        return None
+    field_path, verb = parts
+    if verb != "add" or field_path not in PREFAB_LIST_COMPLEX_FIELDS:
+        return None
+    return field_path
+
+
 def _complex_list_action_parts(action: object) -> tuple[str, int, str] | None:
     parts = str(action or "").split("#")
     if len(parts) != 3:
@@ -247,6 +282,14 @@ def _list_entry_placeholder(field_path: str) -> str:
         "entity.behaviours": "Behaviour",
         "entity.require_flags": "Entity require flag",
     }.get(field_path, field_path)
+
+
+def _list_entry_seed(field_path: str) -> str:
+    if field_path == "tags":
+        return "new_tag"
+    if field_path == "entity.behaviours":
+        return "NewBehaviour"
+    return "new_flag"
 
 
 def _known_behaviour_names() -> frozenset[str]:

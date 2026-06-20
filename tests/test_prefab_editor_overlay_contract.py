@@ -375,6 +375,38 @@ def test_prefab_editor_overlay_edit_mode_renders_list_delete_actions_and_hits(
     assert overlay.complex_entry_action_at(-10.0, -10.0) is None
 
 
+def test_prefab_editor_overlay_edit_mode_renders_list_add_actions_and_hits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert "Add tag" in captured
+    assert "Add require flag" in captured
+    assert "Add forbid flag" in captured
+    assert "Add behaviour" in captured
+    assert "Add entity require flag" in captured
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert {
+        "tags#add",
+        "require_flags#add",
+        "forbid_flags#add",
+        "entity.behaviours#add",
+        "entity.require_flags#add",
+    } <= actions
+
+    hit_rows = dict(overlay._complex_entry_action_hits)
+    row = hit_rows["entity.behaviours#add"]
+    rect = row.last_rect
+    assert rect is not None
+    assert overlay.complex_entry_action_at(rect.left + 1.0, rect.center_y) == "entity.behaviours#add"
+
+
 def test_prefab_editor_overlay_view_mode_has_no_delete_actions(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = _capture_panel_text(monkeypatch)
     overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
@@ -402,6 +434,8 @@ def test_prefab_editor_overlay_dict_complex_rows_have_no_delete_actions(
     assert "Health" in captured
     assert "Delete author" not in captured
     assert "Delete Health" not in captured
+    assert "Add metadata" not in captured
+    assert "Add behaviour config" not in captured
     actions = {action for action, _row in overlay._complex_entry_action_hits}
     assert not any(action.startswith("metadata#") for action in actions)
     assert not any(action.startswith("entity.behaviour_config#") for action in actions)
