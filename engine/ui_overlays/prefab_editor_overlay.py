@@ -206,6 +206,8 @@ class PrefabEditorOverlay(UIElement):
             complex_rows = model.complex_detail_rows()
             if complex_rows:
                 detail_panel.add_header(PanelHeader("Complex fields (read-only)", None, title_color=PREFAB_EDITOR_DIM_COLOR))
+                from engine.editor.prefab_editor_model import complex_entry_rows  # noqa: PLC0415
+
                 for label, value in complex_rows:
                     detail_panel.add_row(
                         PanelRow(
@@ -214,6 +216,22 @@ class PrefabEditorOverlay(UIElement):
                             padding_x=PREFAB_EDITOR_ROW_PADDING_X,
                         )
                     )
+                    complex_field_path = _complex_field_path_for_label(label)
+                    if complex_field_path is None:
+                        continue
+                    for entry_label, entry_value in complex_entry_rows(prefab, complex_field_path):
+                        detail_panel.add_row(
+                            PanelRow(
+                                PanelField(
+                                    entry_label,
+                                    entry_value,
+                                    label_color=PREFAB_EDITOR_TEXT_COLOR,
+                                    value_color=PREFAB_EDITOR_DIM_COLOR,
+                                ),
+                                height=PREFAB_EDITOR_ROW_HEIGHT,
+                                padding_x=PREFAB_EDITOR_ROW_PADDING_X,
+                            )
+                        )
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,
@@ -277,4 +295,16 @@ def _label_for_field(field_path: str) -> str:
         "entity.sprite": "Entity sprite",
         "entity.encounter_cost": "Entity encounter cost",
     }.get(field_path, field_path)
+
+
+def _complex_field_path_for_label(label: str) -> str | None:
+    return {
+        "Tags": "tags",
+        "Require flags": "require_flags",
+        "Forbid flags": "forbid_flags",
+        "Behaviours": "entity.behaviours",
+        "Behaviour config": "entity.behaviour_config",
+        "Entity require flags": "entity.require_flags",
+        "Metadata": "metadata",
+    }.get(label)
 

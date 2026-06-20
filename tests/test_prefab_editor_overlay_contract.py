@@ -98,6 +98,32 @@ def _model() -> PrefabEditorModel:
     )
 
 
+def _complex_model() -> PrefabEditorModel:
+    return PrefabEditorModel.load(
+        _FakePrefabManager(
+            {
+                "complex": {
+                    "id": "complex",
+                    "display_name": "Complex",
+                    "entity": {
+                        "sprite": "assets/placeholder.png",
+                        "behaviours": ["EnemyAI", "Health"],
+                        "behaviour_config": {
+                            "Health": {"max": 8},
+                            "EnemyAI": {"speed": 1.5},
+                        },
+                        "require_flags": ["entity_ready"],
+                    },
+                    "metadata": {"zeta": "last", "author": "core"},
+                    "tags": ["enemy", "fire"],
+                    "require_flags": ["flag_a", "flag_b"],
+                    "forbid_flags": ["flag_c"],
+                }
+            }
+        )
+    )
+
+
 def _capture_panel_text(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     captured: list[str] = []
     monkeypatch.setattr(panel_primitives, "draw_panel_bg", lambda *args, **kwargs: None)
@@ -185,6 +211,121 @@ def test_prefab_editor_overlay_renders_complex_field_section(monkeypatch: pytest
     assert '{"Health":{"max":8}}' in captured
     assert "Metadata" in captured
     assert '{"author":"core"}' in captured
+
+
+def test_prefab_editor_overlay_renders_list_entry_rows_after_their_blobs(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    tags_index = captured.index("Tags")
+    assert captured[tags_index : tags_index + 6] == [
+        "Tags",
+        "enemy, fire",
+        "Tag 0",
+        "enemy",
+        "Tag 1",
+        "fire",
+    ]
+    require_index = captured.index("Require flags")
+    assert captured[require_index : require_index + 6] == [
+        "Require flags",
+        "flag_a, flag_b",
+        "Require flag 0",
+        "flag_a",
+        "Require flag 1",
+        "flag_b",
+    ]
+    forbid_index = captured.index("Forbid flags")
+    assert captured[forbid_index : forbid_index + 4] == ["Forbid flags", "flag_c", "Forbid flag 0", "flag_c"]
+    behaviour_index = captured.index("Behaviours")
+    assert captured[behaviour_index : behaviour_index + 6] == [
+        "Behaviours",
+        "EnemyAI, Health",
+        "Behaviour 0",
+        "EnemyAI",
+        "Behaviour 1",
+        "Health",
+    ]
+    entity_require_index = captured.index("Entity require flags")
+    assert captured[entity_require_index : entity_require_index + 4] == [
+        "Entity require flags",
+        "entity_ready",
+        "Entity require flag 0",
+        "entity_ready",
+    ]
+
+
+def test_prefab_editor_overlay_renders_metadata_rows_sorted_after_blob(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    metadata_index = captured.index("Metadata")
+    assert captured[metadata_index : metadata_index + 6] == [
+        "Metadata",
+        '{"author":"core","zeta":"last"}',
+        "author",
+        "core",
+        "zeta",
+        "last",
+    ]
+
+
+def test_prefab_editor_overlay_renders_behaviour_config_rows_after_blob(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    config_index = captured.index("Behaviour config")
+    assert captured[config_index : config_index + 6] == [
+        "Behaviour config",
+        '{"EnemyAI":{"speed":1.5},"Health":{"max":8}}',
+        "EnemyAI",
+        '{"speed":1.5}',
+        "Health",
+        '{"max":8}',
+    ]
+
+
+def test_prefab_editor_overlay_edit_mode_keeps_complex_rows_read_only_and_scalar_widgets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert {"id", "display_name", "entity.sprite", "entity.encounter_cost"} <= set(overlay._widget_rows)
+    assert "Tag 0" in captured
+    assert "Behaviour 0" in captured
+    assert "author" in captured
+    assert "Health" in captured
+    assert not any(field.startswith("tags.") for field in overlay._widget_rows)
+    assert not any(field.startswith("metadata.") for field in overlay._widget_rows)
+    assert not any(field.startswith("entity.behaviour_config.") for field in overlay._widget_rows)
+
+
+def test_prefab_editor_overlay_complex_rows_are_read_only_and_do_not_mutate_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    model = _complex_model()
+    before = model.prefabs()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
+    overlay._model = model
+
+    overlay.draw()
+
+    assert model.prefabs() == before
 
 
 def test_prefab_editor_overlay_view_mode_shows_edit_button(monkeypatch: pytest.MonkeyPatch) -> None:
