@@ -55,6 +55,10 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
                 field_path, index, verb = parsed_action
                 if verb == "delete":
                     return self._delete_list_entry(field_path, index)
+                if verb == "move_up":
+                    return self._move_list_entry(field_path, index, -1)
+                if verb == "move_down":
+                    return self._move_list_entry(field_path, index, 1)
         return self.handle_mouse_click(float(x), float(y))
 
     def enter_edit_mode(self, record: dict[str, Any]) -> None:
@@ -169,6 +173,23 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         items.pop(int(index))
         self._rebuild_text_inputs(self.edit_buffer)
         self._sync_widgets_from_buffer()
+        return True
+
+    def _move_list_entry(self, field_path: str, index: int, delta: int) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        if field_path not in PREFAB_LIST_COMPLEX_FIELDS:
+            return False
+        self.sync_widgets_to_buffer()
+        items = _get_path(self.edit_buffer, field_path)
+        source = int(index)
+        target = source + int(delta)
+        if not isinstance(items, list) or not 0 <= source < len(items) or not 0 <= target < len(items):
+            return False
+        items[source], items[target] = items[target], items[source]
+        self._rebuild_text_inputs(self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        self._focus_field(f"{field_path}.{target}")
         return True
 
     def _add_list_entry(self, field_path: str) -> bool:

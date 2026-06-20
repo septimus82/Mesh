@@ -407,6 +407,45 @@ def test_prefab_editor_overlay_edit_mode_renders_list_add_actions_and_hits(
     assert overlay.complex_entry_action_at(rect.left + 1.0, rect.center_y) == "entity.behaviours#add"
 
 
+def test_prefab_editor_overlay_edit_mode_renders_behaviour_move_actions_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert "Move up behaviour 0" not in captured
+    assert "Move down behaviour 0" in captured
+    assert "Move up behaviour 1" in captured
+    assert "Move down behaviour 1" not in captured
+    assert not any(text.startswith("Move up tag") or text.startswith("Move down tag") for text in captured)
+    assert not any(text.startswith("Move up require flag") or text.startswith("Move down require flag") for text in captured)
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert {
+        "entity.behaviours#0#move_down",
+        "entity.behaviours#1#move_up",
+    } <= actions
+    assert not any(action.startswith("tags#") and "#move_" in action for action in actions)
+    assert not any(action.startswith("metadata#") for action in actions)
+
+    hit_rows = dict(overlay._complex_entry_action_hits)
+    row = hit_rows["entity.behaviours#1#move_up"]
+    rect = row.last_rect
+    assert rect is not None
+    assert overlay.complex_entry_action_at(rect.left + 1.0, rect.center_y) == "entity.behaviours#1#move_up"
+
+    captured.clear()
+    prefab_editor.edit_buffer["entity"]["behaviours"] = ["Health"]
+    overlay.draw()
+
+    assert "Move up behaviour 0" not in captured
+    assert "Move down behaviour 0" not in captured
+
+
 def test_prefab_editor_overlay_view_mode_has_no_delete_actions(monkeypatch: pytest.MonkeyPatch) -> None:
     captured = _capture_panel_text(monkeypatch)
     overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))

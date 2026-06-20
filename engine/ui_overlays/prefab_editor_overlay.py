@@ -248,6 +248,8 @@ class PrefabEditorOverlay(UIElement):
                         index_text = entry_label.rsplit(" ", 1)[-1]
                         list_entry_widget_field = f"{complex_field_path}.{index_text}"
                         if edit_mode and complex_field_path in PREFAB_LIST_COMPLEX_FIELDS:
+                            entry_index = int(index_text) if index_text.isdigit() else -1
+                            entry_count = _list_entry_count(complex_source, complex_field_path)
                             self._widget_rows[list_entry_widget_field] = detail_panel.add_row(
                                 PanelRow(
                                     PanelField(
@@ -260,6 +262,16 @@ class PrefabEditorOverlay(UIElement):
                                     padding_x=PREFAB_EDITOR_ROW_PADDING_X,
                                 )
                             )
+                            if complex_field_path == "entity.behaviours" and entry_index > 0:
+                                add_complex_action(
+                                    f"{complex_field_path}#{index_text}#move_up",
+                                    f"Move up behaviour {index_text}",
+                                )
+                            if complex_field_path == "entity.behaviours" and 0 <= entry_index < entry_count - 1:
+                                add_complex_action(
+                                    f"{complex_field_path}#{index_text}#move_down",
+                                    f"Move down behaviour {index_text}",
+                                )
                             action = f"{complex_field_path}#{index_text}#delete"
                             delete_label = f"Delete {entry_label[:1].lower()}{entry_label[1:]}"
                             add_complex_action(action, delete_label)
@@ -357,4 +369,13 @@ def _add_label_for_list_field(field_path: str) -> str:
         "entity.behaviours": "behaviour",
         "entity.require_flags": "entity require flag",
     }.get(field_path, field_path)
+
+
+def _list_entry_count(prefab: dict[str, Any], field_path: str) -> int:
+    current: Any = prefab
+    for part in field_path.split("."):
+        if not isinstance(current, dict):
+            return 0
+        current = current.get(part)
+    return len(current) if isinstance(current, list) else 0
 
