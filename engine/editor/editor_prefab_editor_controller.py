@@ -8,6 +8,7 @@ from engine.editor.editor_database_form_controller import EditorDatabaseFormCont
 from engine.editor.prefab_editor_model import PREFAB_LIST_COMPLEX_FIELDS
 
 _BEHAVIOUR_FIELD_PREFIX = "entity.behaviours."
+_METADATA_FIELD_PREFIX = "metadata."
 PREFAB_DICT_COMPLEX_FIELDS = ("metadata", "entity.behaviour_config")
 
 
@@ -92,12 +93,22 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         return candidate
 
     def _get_field_value(self, record: dict[str, Any], field: str) -> Any:
+        if field.startswith(_METADATA_FIELD_PREFIX):
+            metadata = record.get("metadata")
+            key = field.removeprefix(_METADATA_FIELD_PREFIX)
+            return metadata.get(key) if isinstance(metadata, dict) else None
         return _get_path(record, field)
 
     def _set_field_value(self, record: dict[str, Any], field: str, value: Any) -> None:
         next_value = str(value or "")
         if field == "id":
             next_value = next_value.strip()
+        if field.startswith(_METADATA_FIELD_PREFIX):
+            metadata = record.get("metadata")
+            key = field.removeprefix(_METADATA_FIELD_PREFIX)
+            if isinstance(metadata, dict) and key in metadata:
+                metadata[key] = next_value
+            return
         if _is_prefab_list_entry_field(field):
             if next_value == "":
                 self._set_save_error(f"{field} cannot be empty")
@@ -121,6 +132,9 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
                         for index, item in enumerate(value)
                         if isinstance(item, str)
                     )
+            metadata = record.get("metadata")
+            if isinstance(metadata, dict):
+                specs.extend((f"metadata.{key}", f"Metadata {key}") for key in sorted(metadata))
         self._text_inputs = {}
         for field, placeholder in specs:
             value = self._get_field_value(record or {}, field)
