@@ -245,6 +245,25 @@ class PrefabEditorOverlay(UIElement):
                         )
                     )
                     for entry_label, entry_value in complex_entry_rows(complex_source, complex_field_path):
+                        index_text = entry_label.rsplit(" ", 1)[-1]
+                        list_entry_widget_field = f"{complex_field_path}.{index_text}"
+                        if edit_mode and complex_field_path in PREFAB_LIST_COMPLEX_FIELDS:
+                            self._widget_rows[list_entry_widget_field] = detail_panel.add_row(
+                                PanelRow(
+                                    PanelField(
+                                        entry_label,
+                                        entry_value,
+                                        label_color=PREFAB_EDITOR_TEXT_COLOR,
+                                        value_color=PREFAB_EDITOR_DIM_COLOR,
+                                    ),
+                                    height=PREFAB_EDITOR_ROW_HEIGHT,
+                                    padding_x=PREFAB_EDITOR_ROW_PADDING_X,
+                                )
+                            )
+                            action = f"{complex_field_path}#{index_text}#delete"
+                            delete_label = f"Delete {entry_label[:1].lower()}{entry_label[1:]}"
+                            add_complex_action(action, delete_label)
+                            continue
                         detail_panel.add_row(
                             PanelRow(
                                 PanelField(
@@ -257,11 +276,6 @@ class PrefabEditorOverlay(UIElement):
                                 padding_x=PREFAB_EDITOR_ROW_PADDING_X,
                             )
                         )
-                        if edit_mode and complex_field_path in PREFAB_LIST_COMPLEX_FIELDS:
-                            index_text = entry_label.rsplit(" ", 1)[-1]
-                            action = f"{complex_field_path}#{index_text}#delete"
-                            delete_label = f"Delete {entry_label[:1].lower()}{entry_label[1:]}"
-                            add_complex_action(action, delete_label)
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,

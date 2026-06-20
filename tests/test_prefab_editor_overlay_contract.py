@@ -314,7 +314,16 @@ def test_prefab_editor_overlay_edit_mode_keeps_complex_rows_read_only_and_scalar
     assert "Behaviour 0" in captured
     assert "author" in captured
     assert "Health" in captured
-    assert not any(field.startswith("tags.") for field in overlay._widget_rows)
+    assert {
+        "tags.0",
+        "tags.1",
+        "require_flags.0",
+        "require_flags.1",
+        "forbid_flags.0",
+        "entity.behaviours.0",
+        "entity.behaviours.1",
+        "entity.require_flags.0",
+    } <= set(overlay._widget_rows)
     assert not any(field.startswith("metadata.") for field in overlay._widget_rows)
     assert not any(field.startswith("entity.behaviour_config.") for field in overlay._widget_rows)
 
