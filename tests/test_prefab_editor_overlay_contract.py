@@ -324,7 +324,7 @@ def test_prefab_editor_overlay_edit_mode_keeps_complex_rows_read_only_and_scalar
         "entity.behaviours.1",
         "entity.require_flags.0",
     } <= set(overlay._widget_rows)
-    assert not any(field.startswith("metadata.") for field in overlay._widget_rows)
+    assert {"metadata.author", "metadata.zeta"} <= set(overlay._widget_rows)
     assert not any(field.startswith("entity.behaviour_config.") for field in overlay._widget_rows)
 
 
@@ -503,6 +503,42 @@ def test_prefab_editor_overlay_edit_mode_renders_metadata_delete_actions_and_hit
     rect = row.last_rect
     assert rect is not None
     assert overlay.complex_entry_action_at(rect.left + 1.0, rect.center_y) == "metadata#author#delete"
+
+
+def test_prefab_editor_overlay_edit_mode_renders_metadata_value_widgets_with_delete(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert {"metadata.author", "metadata.zeta"} <= set(overlay._widget_rows)
+    assert "author" in captured
+    assert "zeta" in captured
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert {"metadata#author#delete", "metadata#zeta#delete"} <= actions
+
+
+def test_prefab_editor_overlay_metadata_dotted_key_widget_and_behaviour_config_read_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    prefab_editor.edit_buffer["metadata"] = {"a.b": "literal"}
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert "metadata.a.b" in overlay._widget_rows
+    assert "a.b" in captured
+    assert not any(field.startswith("entity.behaviour_config.") for field in overlay._widget_rows)
+    assert "Health" in captured
 
 
 def test_prefab_editor_overlay_dict_delete_is_metadata_only_and_edit_mode_only(

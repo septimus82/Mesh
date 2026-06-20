@@ -276,7 +276,7 @@ class PrefabEditorOverlay(UIElement):
                             delete_label = f"Delete {entry_label[:1].lower()}{entry_label[1:]}"
                             add_complex_action(action, delete_label)
                             continue
-                        detail_panel.add_row(
+                        entry_row = detail_panel.add_row(
                             PanelRow(
                                 PanelField(
                                     entry_label,
@@ -289,6 +289,7 @@ class PrefabEditorOverlay(UIElement):
                             )
                         )
                         if edit_mode and complex_field_path == "metadata":
+                            self._widget_rows[f"metadata.{entry_label}"] = entry_row
                             add_complex_action(
                                 f"{complex_field_path}#{entry_label}#delete",
                                 f"Delete metadata {entry_label}",
@@ -329,8 +330,6 @@ class PrefabEditorOverlay(UIElement):
         draw_text_input(text_input, rect, _PREFAB_FORM_COLORS)
 
     def _sync_edit_widgets(self, prefab_editor: object) -> None:
-        from engine.editor.editor_prefab_editor_controller import _get_path
-
         edit_buffer = getattr(prefab_editor, "edit_buffer", None)
         if not isinstance(edit_buffer, dict):
             return
@@ -341,7 +340,7 @@ class PrefabEditorOverlay(UIElement):
             sync_text_inputs(
                 text_inputs,
                 focused_field,
-                lambda field: _get_path(edit_buffer, str(field)),
+                lambda field: _edit_widget_value(edit_buffer, str(field)),
             )
 
     def _draw_edit_widgets(self, prefab_editor: object) -> None:
@@ -374,6 +373,16 @@ def _add_label_for_list_field(field_path: str) -> str:
         "entity.behaviours": "behaviour",
         "entity.require_flags": "entity require flag",
     }.get(field_path, field_path)
+
+
+def _edit_widget_value(edit_buffer: dict[str, Any], field_path: str) -> Any:
+    if field_path.startswith("metadata."):
+        metadata = edit_buffer.get("metadata")
+        key = field_path.removeprefix("metadata.")
+        return metadata.get(key) if isinstance(metadata, dict) else None
+    from engine.editor.editor_prefab_editor_controller import _get_path  # noqa: PLC0415
+
+    return _get_path(edit_buffer, field_path)
 
 
 def _list_entry_count(prefab: dict[str, Any], field_path: str) -> int:
