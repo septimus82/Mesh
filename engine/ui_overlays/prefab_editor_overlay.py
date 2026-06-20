@@ -288,6 +288,11 @@ class PrefabEditorOverlay(UIElement):
                                 padding_x=PREFAB_EDITOR_ROW_PADDING_X,
                             )
                         )
+                        if edit_mode and complex_field_path == "metadata":
+                            add_complex_action(
+                                f"{complex_field_path}#{entry_label}#delete",
+                                f"Delete metadata {entry_label}",
+                            )
                     if edit_mode and complex_field_path in PREFAB_LIST_COMPLEX_FIELDS:
                         add_complex_action(f"{complex_field_path}#add", f"Add {_add_label_for_list_field(complex_field_path)}")
             button_rows = add_form_buttons(

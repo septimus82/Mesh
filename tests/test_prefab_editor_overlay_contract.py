@@ -430,7 +430,7 @@ def test_prefab_editor_overlay_edit_mode_renders_behaviour_move_actions_only(
         "entity.behaviours#1#move_up",
     } <= actions
     assert not any(action.startswith("tags#") and "#move_" in action for action in actions)
-    assert not any(action.startswith("metadata#") for action in actions)
+    assert not any(action.startswith("metadata#") and "#move_" in action for action in actions)
 
     hit_rows = dict(overlay._complex_entry_action_hits)
     row = hit_rows["entity.behaviours#1#move_up"]
@@ -476,8 +476,59 @@ def test_prefab_editor_overlay_dict_complex_rows_have_no_delete_actions(
     assert "Add metadata" not in captured
     assert "Add behaviour config" not in captured
     actions = {action for action, _row in overlay._complex_entry_action_hits}
-    assert not any(action.startswith("metadata#") for action in actions)
     assert not any(action.startswith("entity.behaviour_config#") for action in actions)
+
+
+def test_prefab_editor_overlay_edit_mode_renders_metadata_delete_actions_and_hits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert "Delete metadata author" in captured
+    assert "Delete metadata zeta" in captured
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert {
+        "metadata#author#delete",
+        "metadata#zeta#delete",
+    } <= actions
+
+    hit_rows = dict(overlay._complex_entry_action_hits)
+    row = hit_rows["metadata#author#delete"]
+    rect = row.last_rect
+    assert rect is not None
+    assert overlay.complex_entry_action_at(rect.left + 1.0, rect.center_y) == "metadata#author#delete"
+
+
+def test_prefab_editor_overlay_dict_delete_is_metadata_only_and_edit_mode_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert "Delete metadata author" not in captured
+    assert overlay._complex_entry_action_hits == []
+
+    captured.clear()
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert not any(action.startswith("entity.behaviour_config#") for action in actions)
+    assert not any(action.startswith("tags#") and action.endswith("#delete") and not action.split("#")[1].isdigit() for action in actions)
+    assert "Delete Health" not in captured
 
 
 def test_prefab_editor_overlay_edit_mode_complex_rows_source_live_buffer(
