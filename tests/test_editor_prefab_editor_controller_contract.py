@@ -10,6 +10,7 @@ import engine.editor.editor_prefab_editor_controller as prefab_controller_module
 import engine.optional_arcade as optional_arcade
 from engine.editor.editor_prefab_editor_controller import (
     EditorPrefabEditorController,
+    _complex_dict_action_parts,
     _complex_list_action_parts,
     _complex_list_add_action,
     _get_path,
@@ -196,6 +197,26 @@ def test_prefab_editor_complex_list_add_action_parser_accepts_and_rejects_action
         assert _complex_list_add_action(action) is None
 
 
+def test_prefab_editor_complex_dict_action_parser_round_trips_metadata_delete() -> None:
+    assert _complex_dict_action_parts("metadata#author#delete") == ("metadata", "author", "delete")
+
+
+def test_prefab_editor_complex_dict_action_parser_preserves_digit_like_and_special_keys() -> None:
+    assert _complex_dict_action_parts("metadata#123#delete") == ("metadata", "123", "delete")
+    assert _complex_dict_action_parts("metadata#a#b.c key#delete") == ("metadata", "a#b.c key", "delete")
+    assert _complex_list_action_parts("metadata#123#delete") is None
+
+    for action in (
+        None,
+        "",
+        "metadata#author",
+        "metadata##delete",
+        "metadata#author#",
+        "tags#author#delete",
+    ):
+        assert _complex_dict_action_parts(action) is None
+
+
 @pytest.mark.parametrize(
     ("field_path", "expected"),
     [
@@ -261,6 +282,51 @@ def test_prefab_editor_controller_delete_list_entry_preserves_siblings_order_and
     assert controller.edit_buffer["tags"] == []
     for key in ("id", "display_name", "entity", "require_flags", "forbid_flags", "metadata"):
         assert controller.edit_buffer[key] == before[key]
+    assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
+
+
+def test_prefab_editor_controller_delete_dict_entry_removes_target_metadata_key(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    prefab = _prefab()
+    prefab["metadata"] = {"author": "core", "source": "test"}
+    controller.enter_edit_mode(prefab)
+
+    assert controller._delete_dict_entry("metadata", "author") is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["metadata"] == {"source": "test"}
+
+
+def test_prefab_editor_controller_delete_dict_entry_guards_invalid_cases(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+
+    assert controller._delete_dict_entry("metadata", "author") is False
+
+    controller.enter_edit_mode(_prefab())
+    assert controller._delete_dict_entry("metadata", "missing") is False
+    assert controller.edit_buffer is not None
+    controller.edit_buffer["metadata"] = "not-a-dict"
+    assert controller._delete_dict_entry("metadata", "author") is False
+
+
+def test_prefab_editor_controller_delete_dict_entry_preserves_siblings_and_empty_save_valid(
+    tmp_path: Path,
+) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    prefab = _prefab()
+    prefab["metadata"] = {"author": "core"}
+    controller.enter_edit_mode(prefab)
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    assert controller._delete_dict_entry("metadata", "author") is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["metadata"] == {}
+    for key, value in before.items():
+        if key != "metadata":
+            assert controller.edit_buffer[key] == value
     assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
 
 

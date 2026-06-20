@@ -8,6 +8,7 @@ from engine.editor.editor_database_form_controller import EditorDatabaseFormCont
 from engine.editor.prefab_editor_model import PREFAB_LIST_COMPLEX_FIELDS
 
 _BEHAVIOUR_FIELD_PREFIX = "entity.behaviours."
+PREFAB_DICT_COMPLEX_FIELDS = ("metadata", "entity.behaviour_config")
 
 
 class EditorPrefabEditorController(EditorDatabaseFormController):
@@ -59,6 +60,11 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
                     return self._move_list_entry(field_path, index, -1)
                 if verb == "move_down":
                     return self._move_list_entry(field_path, index, 1)
+            parsed_dict_action = _complex_dict_action_parts(action)
+            if parsed_dict_action is not None:
+                field_path, key, verb = parsed_dict_action
+                if verb == "delete":
+                    return self._delete_dict_entry(field_path, key)
         return self.handle_mouse_click(float(x), float(y))
 
     def enter_edit_mode(self, record: dict[str, Any]) -> None:
@@ -175,6 +181,20 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         self._sync_widgets_from_buffer()
         return True
 
+    def _delete_dict_entry(self, field_path: str, key: str) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        if field_path not in PREFAB_DICT_COMPLEX_FIELDS:
+            return False
+        self.sync_widgets_to_buffer()
+        mapping = _get_path(self.edit_buffer, field_path)
+        if not isinstance(mapping, dict) or key not in mapping:
+            return False
+        del mapping[key]
+        self._rebuild_text_inputs(self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        return True
+
     def _move_list_entry(self, field_path: str, index: int, delta: int) -> bool:
         if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
             return False
@@ -284,6 +304,20 @@ def _complex_list_action_parts(action: object) -> tuple[str, int, str] | None:
     if not index_text.isdigit() or not verb:
         return None
     return field_path, int(index_text), verb
+
+
+def _complex_dict_action_parts(action: object) -> tuple[str, str, str] | None:
+    text = str(action or "")
+    for field_path in PREFAB_DICT_COMPLEX_FIELDS:
+        prefix = f"{field_path}#"
+        if not text.startswith(prefix):
+            continue
+        tail = text.removeprefix(prefix)
+        key, separator, verb = tail.rpartition("#")
+        if not separator or not key or not verb:
+            return None
+        return field_path, key, verb
+    return None
 
 
 def _is_prefab_list_entry_field(field: str) -> bool:
