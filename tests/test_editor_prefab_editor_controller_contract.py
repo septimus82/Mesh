@@ -11,6 +11,7 @@ import engine.optional_arcade as optional_arcade
 from engine.editor.editor_prefab_editor_controller import (
     EditorPrefabEditorController,
     _complex_list_action_parts,
+    _complex_list_add_action,
     _get_path,
     _set_path,
 )
@@ -178,6 +179,23 @@ def test_prefab_editor_complex_list_action_parser_rejects_malformed_actions() ->
         assert _complex_list_action_parts(action) is None
 
 
+def test_prefab_editor_complex_list_add_action_parser_accepts_and_rejects_actions() -> None:
+    assert _complex_list_add_action("entity.behaviours#add") == "entity.behaviours"
+    assert _complex_list_add_action("tags#add") == "tags"
+    assert _complex_list_action_parts("entity.behaviours#add") is None
+
+    for action in (
+        None,
+        "",
+        "tags.add",
+        "tags#0#add",
+        "metadata#add",
+        "entity.behaviour_config#add",
+        "entity.behaviours#delete",
+    ):
+        assert _complex_list_add_action(action) is None
+
+
 @pytest.mark.parametrize(
     ("field_path", "expected"),
     [
@@ -244,6 +262,117 @@ def test_prefab_editor_controller_delete_list_entry_preserves_siblings_order_and
     for key in ("id", "display_name", "entity", "require_flags", "forbid_flags", "metadata"):
         assert controller.edit_buffer[key] == before[key]
     assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
+
+
+def test_prefab_editor_controller_add_list_entry_appends_seed_for_all_fields(
+    tmp_path: Path,
+) -> None:
+    for field_path, seed in (
+        ("tags", "new_tag"),
+        ("require_flags", "new_flag"),
+        ("forbid_flags", "new_flag"),
+        ("entity.behaviours", "NewBehaviour"),
+        ("entity.require_flags", "new_flag"),
+    ):
+        controller = EditorPrefabEditorController(_editor(tmp_path))
+        controller.enter_edit_mode(_prefab())
+        controller.sync_widgets_to_buffer()
+        assert controller.edit_buffer is not None
+        before = copy.deepcopy(controller.edit_buffer)
+        original = list(_get_path(before, field_path))
+
+        assert controller._add_list_entry(field_path) is True
+
+        assert controller.edit_buffer is not None
+        assert _get_path(controller.edit_buffer, field_path) == [*original, seed]
+        assert seed
+        assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
+        assert controller.focused_field() == f"{field_path}.{len(original)}"
+        assert f"{field_path}.{len(original)}" in controller.text_inputs()
+        for key, value in before.items():
+            if key != field_path.split(".")[0]:
+                assert controller.edit_buffer[key] == value
+
+
+@pytest.mark.parametrize(
+    ("field_path", "container_path", "entry_key"),
+    [
+        ("tags", "", "tags"),
+        ("entity.behaviours", "entity", "behaviours"),
+        ("entity.require_flags", "entity", "require_flags"),
+    ],
+)
+def test_prefab_editor_controller_add_list_entry_initializes_absent_and_non_list_fields(
+    tmp_path: Path,
+    field_path: str,
+    container_path: str,
+    entry_key: str,
+) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    prefab = _prefab()
+    if container_path:
+        prefab[container_path].pop(entry_key, None)
+    else:
+        prefab.pop(entry_key, None)
+    controller.enter_edit_mode(prefab)
+
+    assert controller._add_list_entry(field_path) is True
+    assert isinstance(_get_path(controller.edit_buffer or {}, field_path), list)
+
+    if container_path:
+        controller.edit_buffer[container_path][entry_key] = "not-a-list"
+    else:
+        controller.edit_buffer[entry_key] = "not-a-list"
+    assert controller._add_list_entry(field_path) is True
+    assert isinstance(_get_path(controller.edit_buffer or {}, field_path), list)
+
+
+def test_prefab_editor_controller_behaviour_add_seed_does_not_warn_until_real_unknown_edit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(prefab_controller_module, "_known_behaviour_names", lambda: frozenset({"EnemyAI", "Health"}))
+    editor = _editor(tmp_path)
+    controller = EditorPrefabEditorController(editor)
+    controller.enter_edit_mode(_prefab())
+
+    assert controller._add_list_entry("entity.behaviours") is True
+    controller.sync_widgets_to_buffer()
+
+    assert not any(call[0] == "warning" for call in editor.feedback_calls)
+    assert controller.edit_buffer is not None
+    new_index = len(controller.edit_buffer["entity"]["behaviours"]) - 1
+    field_path = f"entity.behaviours.{new_index}"
+    controller.text_input(field_path).text = "CustomBehaviour"
+    controller.sync_widgets_to_buffer()
+
+    assert editor.feedback_calls[-1] == ("warning", "Unknown prefab behaviour 'CustomBehaviour'")
+
+
+def test_prefab_editor_controller_add_list_entry_routes_before_delete_parser(tmp_path: Path) -> None:
+    overlay = SimpleNamespace(complex_entry_action_at=lambda _x, _y: "entity.require_flags#add")
+    controller = EditorPrefabEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_prefab())
+
+    assert controller.handle_prefab_editor_mouse_click(10.0, 20.0) is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["entity"]["require_flags"] == ["entity_ready", "entity_done", "new_flag"]
+
+
+def test_prefab_editor_controller_add_edit_delete_interop(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+
+    assert controller._add_list_entry("tags") is True
+    assert controller.edit_buffer is not None
+    added_index = len(controller.edit_buffer["tags"]) - 1
+    controller.text_input(f"tags.{added_index}").text = "edited_tag"
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer["tags"][-1] == "edited_tag"
+
+    assert controller._delete_list_entry("tags", added_index) is True
+    assert controller.edit_buffer["tags"] == ["enemy", "fire"]
 
 
 def test_prefab_editor_controller_rebuild_text_inputs_adds_list_entry_specs(tmp_path: Path) -> None:
