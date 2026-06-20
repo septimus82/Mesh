@@ -375,6 +375,97 @@ def test_prefab_editor_controller_add_edit_delete_interop(tmp_path: Path) -> Non
     assert controller.edit_buffer["tags"] == ["enemy", "fire"]
 
 
+def test_prefab_editor_controller_move_action_parser_and_routing(tmp_path: Path) -> None:
+    assert _complex_list_action_parts("entity.behaviours#1#move_up") == ("entity.behaviours", 1, "move_up")
+    assert _complex_list_action_parts("entity.behaviours#0#move_down") == ("entity.behaviours", 0, "move_down")
+
+    overlay = SimpleNamespace(complex_entry_action_at=lambda _x, _y: "entity.behaviours#1#move_up")
+    controller = EditorPrefabEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_prefab())
+
+    assert controller.handle_prefab_editor_mouse_click(10.0, 20.0) is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["entity"]["behaviours"] == ["Health", "EnemyAI"]
+
+
+def test_prefab_editor_controller_move_behaviour_down_swaps_and_focuses_target(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+
+    assert controller._move_list_entry("entity.behaviours", 0, 1) is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["entity"]["behaviours"] == ["Health", "EnemyAI"]
+    assert controller.focused_field() == "entity.behaviours.1"
+    assert controller.text_input("entity.behaviours.0").text == "Health"
+    assert controller.text_input("entity.behaviours.1").text == "EnemyAI"
+
+
+def test_prefab_editor_controller_move_behaviour_up_swaps_and_focuses_target(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+
+    assert controller._move_list_entry("entity.behaviours", 1, -1) is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["entity"]["behaviours"] == ["Health", "EnemyAI"]
+    assert controller.focused_field() == "entity.behaviours.0"
+
+
+def test_prefab_editor_controller_move_behaviour_boundaries_are_noops(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer["entity"]["behaviours"])
+
+    assert controller._move_list_entry("entity.behaviours", 0, -1) is False
+    assert controller._move_list_entry("entity.behaviours", 1, 1) is False
+
+    assert controller.edit_buffer["entity"]["behaviours"] == before
+
+
+def test_prefab_editor_controller_move_behaviour_preserves_siblings_and_round_trips(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+    original_behaviours = list(controller.edit_buffer["entity"]["behaviours"])
+
+    assert controller._move_list_entry("entity.behaviours", 0, 1) is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["entity"]["behaviours"] == [original_behaviours[1], original_behaviours[0]]
+    for key, value in before.items():
+        if key != "entity":
+            assert controller.edit_buffer[key] == value
+    for key, value in before["entity"].items():
+        if key != "behaviours":
+            assert controller.edit_buffer["entity"][key] == value
+
+    assert controller._move_list_entry("entity.behaviours", 1, -1) is True
+
+    assert controller.edit_buffer["entity"]["behaviours"] == original_behaviours
+    assert controller.edit_buffer == before
+
+
+def test_prefab_editor_controller_move_interops_with_add_edit_and_delete(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+
+    assert controller._add_list_entry("entity.behaviours") is True
+    assert controller.edit_buffer is not None
+    added_index = len(controller.edit_buffer["entity"]["behaviours"]) - 1
+    controller.text_input(f"entity.behaviours.{added_index}").text = "PatrolPath"
+    controller.sync_widgets_to_buffer()
+
+    assert controller._move_list_entry("entity.behaviours", added_index, -1) is True
+    assert controller.edit_buffer["entity"]["behaviours"] == ["EnemyAI", "PatrolPath", "Health"]
+    assert controller._delete_list_entry("entity.behaviours", 1) is True
+    assert controller.edit_buffer["entity"]["behaviours"] == ["EnemyAI", "Health"]
+
+
 def test_prefab_editor_controller_rebuild_text_inputs_adds_list_entry_specs(tmp_path: Path) -> None:
     controller = EditorPrefabEditorController(_editor(tmp_path))
     controller.enter_edit_mode(_prefab())
