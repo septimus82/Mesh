@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from engine.ui_overlays.common import UIElement
 from engine.ui_overlays.editor_database_form_helpers import (
@@ -55,6 +55,7 @@ class PrefabEditorOverlay(UIElement):
         self._model: object | None = None
         self._load_error: str | None = None
         self._row_hits: list[tuple[int, object]] = []
+        self._complex_entry_action_hits: list[tuple[str, Any]] = []
         self._widget_rows: dict[str, object] = {}
 
     def _get_controller(self) -> object | None:
@@ -96,6 +97,8 @@ class PrefabEditorOverlay(UIElement):
         return [dict(prefab) for prefab in prefabs if isinstance(prefab, dict)]
 
     def draw(self) -> None:
+        self._row_hits = []
+        self._complex_entry_action_hits = []
         controller = self._get_controller()
         if not self._is_visible_for_controller(controller):
             return
@@ -117,7 +120,6 @@ class PrefabEditorOverlay(UIElement):
             inner_padding_y=0.0,
         )
         list_panel.add_header(PanelHeader("Prefabs", str(model.prefab_count) if model is not None else "0"))
-        self._row_hits = []
 
         if model is None:
             list_panel.add_row(
@@ -203,12 +205,38 @@ class PrefabEditorOverlay(UIElement):
                         padding_x=PREFAB_EDITOR_ROW_PADDING_X,
                     )
                 )
-            complex_rows = model.complex_detail_rows()
+            from engine.editor.prefab_editor_model import (  # noqa: PLC0415
+                PREFAB_LIST_COMPLEX_FIELDS,
+                complex_detail_rows_for_prefab,
+                complex_entry_rows,
+            )
+
+            edit_buffer = getattr(prefab_editor, "edit_buffer", None) if prefab_editor is not None else None
+            complex_source = edit_buffer if edit_mode and isinstance(edit_buffer, dict) else prefab
+            complex_rows = complex_detail_rows_for_prefab(complex_source)
             if complex_rows:
                 detail_panel.add_header(PanelHeader("Complex fields (read-only)", None, title_color=PREFAB_EDITOR_DIM_COLOR))
-                from engine.editor.prefab_editor_model import complex_entry_rows  # noqa: PLC0415
 
-                for label, value in complex_rows:
+                def add_complex_action(action: str, label: str) -> None:
+                    self._complex_entry_action_hits.append(
+                        (
+                            action,
+                            detail_panel.add_row(
+                                PanelRow(
+                                    PanelField(
+                                        label,
+                                        "",
+                                        label_color=PREFAB_EDITOR_BUTTON_COLOR,
+                                        value_color=PREFAB_EDITOR_DIM_COLOR,
+                                    ),
+                                    height=PREFAB_EDITOR_ROW_HEIGHT,
+                                    padding_x=PREFAB_EDITOR_ROW_PADDING_X,
+                                )
+                            ),
+                        )
+                    )
+
+                for complex_field_path, label, value in complex_rows:
                     detail_panel.add_row(
                         PanelRow(
                             PanelField(label, value, label_color=PREFAB_EDITOR_TEXT_COLOR, value_color=PREFAB_EDITOR_DIM_COLOR),
@@ -216,10 +244,7 @@ class PrefabEditorOverlay(UIElement):
                             padding_x=PREFAB_EDITOR_ROW_PADDING_X,
                         )
                     )
-                    complex_field_path = _complex_field_path_for_label(label)
-                    if complex_field_path is None:
-                        continue
-                    for entry_label, entry_value in complex_entry_rows(prefab, complex_field_path):
+                    for entry_label, entry_value in complex_entry_rows(complex_source, complex_field_path):
                         detail_panel.add_row(
                             PanelRow(
                                 PanelField(
@@ -232,6 +257,11 @@ class PrefabEditorOverlay(UIElement):
                                 padding_x=PREFAB_EDITOR_ROW_PADDING_X,
                             )
                         )
+                        if edit_mode and complex_field_path in PREFAB_LIST_COMPLEX_FIELDS:
+                            index_text = entry_label.rsplit(" ", 1)[-1]
+                            action = f"{complex_field_path}#{index_text}#delete"
+                            delete_label = f"Delete {entry_label[:1].lower()}{entry_label[1:]}"
+                            add_complex_action(action, delete_label)
             button_rows = add_form_buttons(
                 detail_panel,
                 edit_mode=edit_mode,
@@ -249,6 +279,12 @@ class PrefabEditorOverlay(UIElement):
         for index, row in self._row_hits:
             if row.hit_test(float(x), float(y)):
                 return index
+        return None
+
+    def complex_entry_action_at(self, x: float, y: float) -> str | None:
+        for action, row in self._complex_entry_action_hits:
+            if row.hit_test(float(x), float(y)):
+                return action
         return None
 
     def set_selected_index(self, index: int) -> bool:
@@ -295,16 +331,4 @@ def _label_for_field(field_path: str) -> str:
         "entity.sprite": "Entity sprite",
         "entity.encounter_cost": "Entity encounter cost",
     }.get(field_path, field_path)
-
-
-def _complex_field_path_for_label(label: str) -> str | None:
-    return {
-        "Tags": "tags",
-        "Require flags": "require_flags",
-        "Forbid flags": "forbid_flags",
-        "Behaviours": "entity.behaviours",
-        "Behaviour config": "entity.behaviour_config",
-        "Entity require flags": "entity.require_flags",
-        "Metadata": "metadata",
-    }.get(label)
 

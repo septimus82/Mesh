@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from engine.editor.editor_database_form_controller import EditorDatabaseFormController, _get_path, _set_path  # noqa: F401
+from engine.editor.prefab_editor_model import PREFAB_LIST_COMPLEX_FIELDS
 
 
 class EditorPrefabEditorController(EditorDatabaseFormController):
@@ -36,6 +37,15 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
             if idx is not None:
                 overlay.set_selected_index(int(idx))
                 return True
+        else:
+            overlay = self._get_overlay()
+            action_at = getattr(overlay, "complex_entry_action_at", None) if overlay is not None else None
+            action = action_at(float(x), float(y)) if callable(action_at) else None
+            parsed_action = _complex_list_action_parts(action)
+            if parsed_action is not None:
+                field_path, index, verb = parsed_action
+                if verb == "delete":
+                    return self._delete_list_entry(field_path, index)
         return self.handle_mouse_click(float(x), float(y))
 
     def _copy_record(self, record: dict[str, Any]) -> dict[str, Any]:
@@ -96,6 +106,19 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
             return [self._copy_record(prefab) for prefab in getter()]
         return []
 
+    def _delete_list_entry(self, field_path: str, index: int) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        if field_path not in PREFAB_LIST_COMPLEX_FIELDS:
+            return False
+        self.sync_widgets_to_buffer()
+        items = _get_path(self.edit_buffer, field_path)
+        if not isinstance(items, list) or not 0 <= int(index) < len(items):
+            return False
+        items.pop(int(index))
+        self._sync_widgets_from_buffer()
+        return True
+
     def _coerce_encounter_cost(self, candidate: dict[str, Any]) -> bool:
         value = _get_path(candidate, "entity.encounter_cost")
         if isinstance(value, str):
@@ -126,3 +149,15 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
             _set_path(candidate, "entity.encounter_cost", int(stripped))
         except ValueError:
             return
+
+
+def _complex_list_action_parts(action: object) -> tuple[str, int, str] | None:
+    parts = str(action or "").split("#")
+    if len(parts) != 3:
+        return None
+    field_path, index_text, verb = parts
+    if field_path not in PREFAB_LIST_COMPLEX_FIELDS:
+        return None
+    if not index_text.isdigit() or not verb:
+        return None
+    return field_path, int(index_text), verb
