@@ -98,27 +98,31 @@ def _model() -> PrefabEditorModel:
     )
 
 
+def _complex_prefab() -> dict[str, object]:
+    return {
+        "id": "complex",
+        "display_name": "Complex",
+        "entity": {
+            "sprite": "assets/placeholder.png",
+            "behaviours": ["EnemyAI", "Health"],
+            "behaviour_config": {
+                "Health": {"max": 8},
+                "EnemyAI": {"speed": 1.5},
+            },
+            "require_flags": ["entity_ready"],
+        },
+        "metadata": {"zeta": "last", "author": "core"},
+        "tags": ["enemy", "fire"],
+        "require_flags": ["flag_a", "flag_b"],
+        "forbid_flags": ["flag_c"],
+    }
+
+
 def _complex_model() -> PrefabEditorModel:
     return PrefabEditorModel.load(
         _FakePrefabManager(
             {
-                "complex": {
-                    "id": "complex",
-                    "display_name": "Complex",
-                    "entity": {
-                        "sprite": "assets/placeholder.png",
-                        "behaviours": ["EnemyAI", "Health"],
-                        "behaviour_config": {
-                            "Health": {"max": 8},
-                            "EnemyAI": {"speed": 1.5},
-                        },
-                        "require_flags": ["entity_ready"],
-                    },
-                    "metadata": {"zeta": "last", "author": "core"},
-                    "tags": ["enemy", "fire"],
-                    "require_flags": ["flag_a", "flag_b"],
-                    "forbid_flags": ["flag_c"],
-                }
+                "complex": _complex_prefab()
             }
         )
     )
@@ -299,6 +303,7 @@ def test_prefab_editor_overlay_edit_mode_keeps_complex_rows_read_only_and_scalar
 ) -> None:
     captured = _capture_panel_text(monkeypatch)
     prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
     overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
     overlay._model = _complex_model()
 
@@ -326,6 +331,92 @@ def test_prefab_editor_overlay_complex_rows_are_read_only_and_do_not_mutate_mode
     overlay.draw()
 
     assert model.prefabs() == before
+
+
+def test_prefab_editor_overlay_edit_mode_renders_list_delete_actions_and_hits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert "Delete tag 0" in captured
+    assert "Delete require flag 0" in captured
+    assert "Delete forbid flag 0" in captured
+    assert "Delete behaviour 0" in captured
+    assert "Delete entity require flag 0" in captured
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert {
+        "tags#0#delete",
+        "require_flags#0#delete",
+        "forbid_flags#0#delete",
+        "entity.behaviours#0#delete",
+        "entity.require_flags#0#delete",
+    } <= actions
+
+    hit_rows = dict(overlay._complex_entry_action_hits)
+    row = hit_rows["entity.behaviours#1#delete"]
+    rect = row.last_rect
+    assert rect is not None
+    assert overlay.complex_entry_action_at(rect.left + 1.0, rect.center_y) == "entity.behaviours#1#delete"
+    assert overlay.complex_entry_action_at(-10.0, -10.0) is None
+
+
+def test_prefab_editor_overlay_view_mode_has_no_delete_actions(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert not any(text.startswith("Delete ") for text in captured)
+    assert overlay._complex_entry_action_hits == []
+    assert overlay.complex_entry_action_at(0.0, 0.0) is None
+
+
+def test_prefab_editor_overlay_dict_complex_rows_have_no_delete_actions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert "author" in captured
+    assert "Health" in captured
+    assert "Delete author" not in captured
+    assert "Delete Health" not in captured
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert not any(action.startswith("metadata#") for action in actions)
+    assert not any(action.startswith("entity.behaviour_config#") for action in actions)
+
+
+def test_prefab_editor_overlay_edit_mode_complex_rows_source_live_buffer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    prefab_editor.edit_buffer["tags"] = ["enemy"]
+    prefab_editor.edit_buffer["entity"]["behaviours"] = ["Health"]
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    tags_index = captured.index("Tags")
+    assert captured[tags_index : tags_index + 4] == ["Tags", "enemy", "Tag 0", "enemy"]
+    behaviour_index = captured.index("Behaviours")
+    assert captured[behaviour_index : behaviour_index + 4] == ["Behaviours", "Health", "Behaviour 0", "Health"]
+    assert "Tag 1" not in captured
+    assert "EnemyAI, Health" not in captured
 
 
 def test_prefab_editor_overlay_view_mode_shows_edit_button(monkeypatch: pytest.MonkeyPatch) -> None:

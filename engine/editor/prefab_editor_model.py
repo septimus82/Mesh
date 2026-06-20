@@ -25,6 +25,14 @@ PREFAB_COMPLEX_FIELD_ORDER = (
     "metadata",
 )
 
+PREFAB_LIST_COMPLEX_FIELDS = (
+    "tags",
+    "require_flags",
+    "forbid_flags",
+    "entity.behaviours",
+    "entity.require_flags",
+)
+
 
 class PrefabEditorModel:
     """Read-only view model for authoring prefabs from assets/prefabs.json."""
@@ -154,6 +162,16 @@ def complex_entry_rows(prefab: dict[str, Any], field_path: str) -> list[tuple[st
             return []
         return [(str(key), _format_value(value[key])) for key in sorted(value)]
     return []
+
+
+def complex_detail_rows_for_prefab(prefab: dict[str, Any]) -> list[tuple[str, str, str]]:
+    rows: list[tuple[str, str, str]] = []
+    for field_path in PREFAB_COMPLEX_FIELD_ORDER:
+        value = _get_path(prefab, field_path)
+        if _is_empty_complex_value(value):
+            continue
+        rows.append((field_path, _label_for_field(field_path), _format_value(value)))
+    return rows
 
 
 def _get_path(payload: dict[str, Any], field_path: str) -> Any:

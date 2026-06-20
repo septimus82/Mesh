@@ -1,12 +1,19 @@
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 import engine.optional_arcade as optional_arcade
-from engine.editor.editor_prefab_editor_controller import EditorPrefabEditorController, _get_path, _set_path
+from engine.editor.editor_prefab_editor_controller import (
+    EditorPrefabEditorController,
+    _complex_list_action_parts,
+    _get_path,
+    _set_path,
+)
+from engine.editor.prefab_editor_model import validate_prefab_entries
 
 pytestmark = [pytest.mark.fast]
 
@@ -32,9 +39,12 @@ def _prefab(prefab_id: str = "torch_wisp") -> dict[str, object]:
         "entity": {
             "sprite": "assets/placeholder.png",
             "encounter_cost": 2,
-            "behaviours": ["EnemyAI"],
+            "behaviours": ["EnemyAI", "Health"],
+            "require_flags": ["entity_ready", "entity_done"],
         },
-        "tags": ["enemy"],
+        "tags": ["enemy", "fire"],
+        "require_flags": ["flag_a", "flag_b"],
+        "forbid_flags": ["flag_c", "flag_d"],
         "metadata": {"author": "core"},
     }
 
@@ -145,6 +155,93 @@ def test_prefab_editor_path_helpers_dict_round_trip_unchanged() -> None:
 
     assert _get_path(payload, "a.b.c") == "value"
     assert payload == {"a": {"b": {"c": "value"}}}
+
+
+def test_prefab_editor_complex_list_action_parser_round_trips_dotted_field_path() -> None:
+    assert _complex_list_action_parts("entity.behaviours#1#delete") == ("entity.behaviours", 1, "delete")
+    assert _complex_list_action_parts("tags#0#delete") == ("tags", 0, "delete")
+
+
+def test_prefab_editor_complex_list_action_parser_rejects_malformed_actions() -> None:
+    for action in (
+        None,
+        "",
+        "tags.0.delete",
+        "tags#0",
+        "tags#x#delete",
+        "metadata#0#delete",
+        "entity.behaviour_config#0#delete",
+        "entity.behaviours#0#",
+    ):
+        assert _complex_list_action_parts(action) is None
+
+
+@pytest.mark.parametrize(
+    ("field_path", "expected"),
+    [
+        ("tags", ["enemy"]),
+        ("require_flags", ["flag_a"]),
+        ("forbid_flags", ["flag_c"]),
+        ("entity.behaviours", ["EnemyAI"]),
+        ("entity.require_flags", ["entity_ready"]),
+    ],
+)
+def test_prefab_editor_controller_delete_list_entry_removes_target_for_all_list_fields(
+    tmp_path: Path,
+    field_path: str,
+    expected: list[str],
+) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab())
+
+    assert controller._delete_list_entry(field_path, 1) is True
+
+    assert controller.edit_buffer is not None
+    assert _get_path(controller.edit_buffer, field_path) == expected
+
+
+def test_prefab_editor_controller_delete_list_entry_guards_invalid_cases(tmp_path: Path) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+
+    assert controller._delete_list_entry("tags", 0) is False
+
+    controller.enter_edit_mode(_prefab())
+    assert controller._delete_list_entry("metadata", 0) is False
+    assert controller._delete_list_entry("tags", 99) is False
+    assert controller.edit_buffer is not None
+    controller.edit_buffer["tags"] = "enemy"
+    assert controller._delete_list_entry("tags", 0) is False
+
+
+def test_prefab_editor_controller_mouse_click_routes_complex_list_delete(tmp_path: Path) -> None:
+    overlay = SimpleNamespace(complex_entry_action_at=lambda _x, _y: "entity.behaviours#1#delete")
+    controller = EditorPrefabEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_prefab())
+
+    assert controller.handle_prefab_editor_mouse_click(10.0, 20.0) is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["entity"]["behaviours"] == ["EnemyAI"]
+
+
+def test_prefab_editor_controller_delete_list_entry_preserves_siblings_order_and_save_valid(
+    tmp_path: Path,
+) -> None:
+    prefab = _prefab()
+    prefab["tags"] = ["only"]
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(prefab)
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    assert controller._delete_list_entry("tags", 0) is True
+
+    assert controller.edit_buffer is not None
+    assert controller.edit_buffer["tags"] == []
+    for key in ("id", "display_name", "entity", "require_flags", "forbid_flags", "metadata"):
+        assert controller.edit_buffer[key] == before[key]
+    assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
 
 
 def test_prefab_editor_controller_enter_unfocuses_without_saving(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from engine.editor.prefab_editor_model import PrefabEditorModel, complex_entry_rows, validate_prefab_entries
+from engine.editor.prefab_editor_model import (
+    PrefabEditorModel,
+    complex_detail_rows_for_prefab,
+    complex_entry_rows,
+    validate_prefab_entries,
+)
 
 pytestmark = [pytest.mark.fast]
 
@@ -140,6 +145,20 @@ def test_prefab_editor_complex_entry_rows_degrade_on_empty_missing_or_wrong_shap
     assert complex_entry_rows(prefab, "metadata") == []
     assert complex_entry_rows(prefab, "entity.behaviours") == []
     assert complex_entry_rows(prefab, "entity.behaviour_config") == []
+
+
+def test_prefab_editor_complex_detail_rows_for_prefab_include_field_paths() -> None:
+    prefab = {
+        "tags": ["enemy"],
+        "metadata": {"author": "core"},
+        "entity": {"behaviours": ["EnemyAI"]},
+    }
+
+    assert complex_detail_rows_for_prefab(prefab) == [
+        ("tags", "Tags", "enemy"),
+        ("entity.behaviours", "Behaviours", "EnemyAI"),
+        ("metadata", "Metadata", '{"author":"core"}'),
+    ]
 
 
 def test_prefab_editor_model_empty_manager_has_no_selection() -> None:
