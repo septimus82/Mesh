@@ -231,6 +231,14 @@ def test_prefab_editor_complex_dict_action_parser_round_trips_metadata_delete() 
     assert _complex_dict_action_parts("metadata#author#delete") == ("metadata", "author", "delete")
 
 
+def test_prefab_editor_complex_dict_action_parser_round_trips_behaviour_config_delete() -> None:
+    assert _complex_dict_action_parts("entity.behaviour_config#Health#max#delete") == (
+        "entity.behaviour_config",
+        "Health#max",
+        "delete",
+    )
+
+
 def test_prefab_editor_complex_dict_action_parser_preserves_digit_like_and_special_keys() -> None:
     assert _complex_dict_action_parts("metadata#123#delete") == ("metadata", "123", "delete")
     assert _complex_dict_action_parts("metadata#a#b.c key#delete") == ("metadata", "a#b.c key", "delete")
@@ -337,6 +345,84 @@ def test_prefab_editor_controller_delete_dict_entry_guards_invalid_cases(tmp_pat
     assert controller.edit_buffer is not None
     controller.edit_buffer["metadata"] = "not-a-dict"
     assert controller._delete_dict_entry("metadata", "author") is False
+
+
+def test_prefab_editor_controller_delete_behaviour_config_entry_removes_target_scalar(
+    tmp_path: Path,
+) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab_with_behaviour_config())
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    assert controller._delete_behaviour_config_entry("Health", "max") is True
+
+    config = controller.edit_buffer["entity"]["behaviour_config"]
+    assert config["Health"] == {
+        "enabled": before["entity"]["behaviour_config"]["Health"]["enabled"],
+        "hp": before["entity"]["behaviour_config"]["Health"]["hp"],
+        "none": before["entity"]["behaviour_config"]["Health"]["none"],
+    }
+    assert config["DialogueRunner"] == before["entity"]["behaviour_config"]["DialogueRunner"]
+    assert config["TriggerVolume"] == before["entity"]["behaviour_config"]["TriggerVolume"]
+    for key in ("id", "display_name", "tags", "require_flags", "forbid_flags", "metadata"):
+        assert controller.edit_buffer[key] == before[key]
+    assert "entity.behaviour_config.Health.max" not in controller.text_inputs()
+
+
+def test_prefab_editor_controller_delete_last_behaviour_config_key_leaves_empty_config_save_valid(
+    tmp_path: Path,
+) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    prefab = _prefab()
+    prefab["entity"]["behaviour_config"] = {"Health": {"max": 8}}
+    controller.enter_edit_mode(prefab)
+    controller.sync_widgets_to_buffer()
+
+    assert controller._delete_behaviour_config_entry("Health", "max") is True
+
+    assert controller.edit_buffer["entity"]["behaviour_config"] == {"Health": {}}
+    assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
+
+
+def test_prefab_editor_controller_delete_behaviour_config_entry_guards_invalid_cases(
+    tmp_path: Path,
+) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    assert controller._delete_behaviour_config_entry("Health", "max") is False
+
+    controller.enter_edit_mode(_prefab_with_behaviour_config())
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    assert controller._delete_behaviour_config_entry("Missing", "max") is False
+    assert controller._delete_behaviour_config_entry("Health", "missing") is False
+    assert controller._delete_behaviour_config_entry("DialogueRunner", "script") is False
+    assert controller._delete_behaviour_config_entry("Health", "none") is False
+    controller.edit_buffer["entity"]["behaviour_config"]["Health"] = "not-a-dict"
+    assert controller._delete_behaviour_config_entry("Health", "max") is False
+    assert controller.edit_buffer["entity"]["behaviour_config"]["DialogueRunner"] == before["entity"]["behaviour_config"][
+        "DialogueRunner"
+    ]
+    assert controller.edit_buffer["entity"]["behaviour_config"]["TriggerVolume"] == before["entity"]["behaviour_config"][
+        "TriggerVolume"
+    ]
+
+
+def test_prefab_editor_controller_routes_behaviour_config_delete_action_before_flat_dict_delete(
+    tmp_path: Path,
+) -> None:
+    overlay = SimpleNamespace(complex_entry_action_at=lambda _x, _y: "entity.behaviour_config#Health#max#delete")
+    controller = EditorPrefabEditorController(_editor(tmp_path, overlay))
+    controller.enter_edit_mode(_prefab_with_behaviour_config())
+
+    assert controller.handle_prefab_editor_mouse_click(10.0, 20.0) is True
+
+    assert controller.edit_buffer is not None
+    assert "max" not in controller.edit_buffer["entity"]["behaviour_config"]["Health"]
+    assert "Health" in controller.edit_buffer["entity"]["behaviour_config"]
 
 
 def test_prefab_editor_controller_delete_dict_entry_preserves_siblings_and_empty_save_valid(
