@@ -1,7 +1,10 @@
+from __future__ import annotations
 
+import ast
 import importlib
 import importlib.abc
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -14,6 +17,54 @@ class ArcadeBlocker(importlib.abc.MetaPathFinder):
         if fullname == "arcade" or fullname.startswith("arcade."):
              raise ModuleNotFoundError(f"Arcade is purposely blocked for headless testing: {fullname}")
         return None
+
+
+_PREVIOUSLY_MISSING_BEHAVIOURS = {
+    "ActionListRunner",
+    "DialogueRunner",
+    "FleeFromTarget",
+    "Interactable",
+    "ListenForEvent",
+    "MessageOnZoneEnter",
+    "NpcSchedule",
+    "PatrolPath",
+    "QuestHook",
+    "Timer",
+    "TriggerVolume",
+    "Wander",
+}
+
+
+def _calls_register_behaviour(path: Path) -> bool:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        func = node.func
+        if isinstance(func, ast.Name) and func.id == "register_behaviour":
+            return True
+        if isinstance(func, ast.Attribute) and func.attr == "register_behaviour":
+            return True
+    return False
+
+
+def _register_behaviour_modules() -> set[str]:
+    behaviours_dir = Path(engine.behaviours.__file__).resolve().parent
+    infrastructure = {"__init__.py", "base.py", "registry.py", "saveable.py", "utils.py"}
+    modules: set[str] = set()
+    for path in behaviours_dir.glob("*.py"):
+        if path.name in infrastructure:
+            continue
+        if _calls_register_behaviour(path):
+            modules.add(f"engine.behaviours.{path.stem}")
+    return modules
+
+
+@pytest.mark.fast
+def test_builtin_modules_cover_every_register_behaviour_module() -> None:
+    missing = _register_behaviour_modules() - set(engine.behaviours._BUILTIN_MODULES)
+    assert missing == set()
+
 
 def test_builtin_behaviours_import_headless_sweep():
     """
@@ -76,6 +127,13 @@ def test_builtin_behaviours_import_headless_sweep():
         # Check for stable/common behaviours
         assert "TriggerZone" in names, "TriggerZone should be present"
         assert "Animator" in names, "Animator should be present"
+        assert _PREVIOUSLY_MISSING_BEHAVIOURS <= names
+
+        # force=True should remain safe after modules have already been imported
+        # directly or indirectly.
+        engine.behaviours.load_builtin_behaviours(force=True)
+        names_after_force = {b.name for b in list_behaviours()}
+        assert names_after_force == names
 
     finally:
         # Restore environment
