@@ -4,6 +4,7 @@ import pytest
 
 from engine.editor.prefab_editor_model import (
     PrefabEditorModel,
+    behaviour_config_inner_rows,
     complex_detail_rows_for_prefab,
     complex_entry_rows,
     validate_prefab_entries,
@@ -128,6 +129,45 @@ def test_prefab_editor_complex_entry_rows_behaviour_config_are_top_level_compact
         ("EnemyAI", '{"speed":1.5}'),
         ("Health", '{"max":8,"regen":false}'),
     ]
+
+
+def test_prefab_editor_behaviour_config_inner_rows_scalars_are_sorted_and_formatted() -> None:
+    prefab = {
+        "entity": {
+            "behaviour_config": {
+                "Health": {"max": 8, "regen": False},
+                "EnemyAI": {"speed": 1.5},
+            }
+        }
+    }
+
+    assert behaviour_config_inner_rows(prefab) == [
+        ("EnemyAI.speed", "1.5"),
+        ("Health.max", "8"),
+        ("Health.regen", "false"),
+    ]
+
+
+def test_prefab_editor_behaviour_config_inner_rows_compact_structured_values() -> None:
+    prefab = {
+        "entity": {
+            "behaviour_config": {
+                "DialogueRunner": {"script": {"start": {"text": "Hello"}}},
+                "TriggerVolume": {"target_tags": ["player", "ally"]},
+            }
+        }
+    }
+
+    assert behaviour_config_inner_rows(prefab) == [
+        ("DialogueRunner.script", '{"start":{"text":"Hello"}}'),
+        ("TriggerVolume.target_tags", '["player","ally"]'),
+    ]
+
+
+def test_prefab_editor_behaviour_config_inner_rows_degrade_on_missing_or_wrong_shapes() -> None:
+    assert behaviour_config_inner_rows({}) == []
+    assert behaviour_config_inner_rows({"entity": {"behaviour_config": "Health"}}) == []
+    assert behaviour_config_inner_rows({"entity": {"behaviour_config": {"Health": "max=8"}}}) == []
 
 
 def test_prefab_editor_complex_entry_rows_degrade_on_empty_missing_or_wrong_shapes() -> None:
