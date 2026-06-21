@@ -1,14 +1,80 @@
 """Tests for prefab schema validation."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 
+from engine.behaviours import load_builtin_behaviours
+from engine.behaviours.registry import get_behaviour_info
 from engine.validators.schema_validation import (
     validate_prefab,
     validate_prefab_file,
 )
+
+_FIXED_HEALTH_MAX_HP = {
+    "plant_minion": 10,
+    "slime_blob": 5,
+    "fire_imp": 8,
+    "magma_cube": 15,
+    "shadow_stalker": 12,
+    "void_wisp": 4,
+    "rat_scurrier": 6,
+    "bone_dart": 10,
+    "torch_wisp": 8,
+    "ember_imp": 7,
+    "anvil_guard": 14,
+    "glass_spitter": 9,
+    "rust_drone": 11,
+    "cinder_larva": 6,
+    "rift_leech": 7,
+}
+
+_ALREADY_CORRECT_HEALTH_CONFIGS = {
+    "sentry_archer": {"hp": 10, "max_hp": 10},
+    "ep04_sentry": {"hp": 10, "max_hp": 10},
+    "ep04_sentry_hard": {"hp": 12, "max_hp": 12},
+    "ep06_fight_sentry": {"hp": 12, "max_hp": 12},
+    "ep06_puzzle_sentry": {"hp": 8, "max_hp": 8},
+}
+
+
+def _prefab_files() -> list[Path]:
+    files = [Path("assets/prefabs.json")]
+    packs = Path("packs")
+    if packs.exists():
+        files.extend(sorted(packs.rglob("prefabs.json")))
+    return files
+
+
+@pytest.mark.fast
+def test_prefab_health_configs_use_declared_health_fields() -> None:
+    load_builtin_behaviours()
+    health_info = get_behaviour_info("Health")
+    assert health_info is not None
+    allowed = {str(field["name"]) for field in health_info.config_fields}
+    assert allowed == {"hp", "max_hp", "invulnerable"}
+
+    seen_fixed: dict[str, int] = {}
+    seen_correct: dict[str, dict[str, int]] = {}
+    for path in _prefab_files():
+        prefabs = json.loads(path.read_text(encoding="utf-8"))
+        for prefab in prefabs:
+            health_config = prefab.get("entity", {}).get("behaviour_config", {}).get("Health")
+            if not isinstance(health_config, dict):
+                continue
+            assert set(health_config) <= allowed, f"{path}:{prefab.get('id')} has invalid Health keys"
+            prefab_id = str(prefab["id"])
+            if prefab_id in _FIXED_HEALTH_MAX_HP:
+                assert health_config == {"max_hp": _FIXED_HEALTH_MAX_HP[prefab_id]}
+                seen_fixed[prefab_id] = health_config["max_hp"]
+            if prefab_id in _ALREADY_CORRECT_HEALTH_CONFIGS:
+                assert health_config == _ALREADY_CORRECT_HEALTH_CONFIGS[prefab_id]
+                seen_correct[prefab_id] = dict(health_config)
+
+    assert seen_fixed == _FIXED_HEALTH_MAX_HP
+    assert seen_correct == _ALREADY_CORRECT_HEALTH_CONFIGS
 
 
 @pytest.mark.fast
