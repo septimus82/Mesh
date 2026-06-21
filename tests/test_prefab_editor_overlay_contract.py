@@ -369,6 +369,11 @@ def test_prefab_editor_overlay_edit_mode_renders_behaviour_config_scalar_inner_w
         "entity.behaviour_config.EnemyAI.speed",
         "entity.behaviour_config.Health.max",
     } <= set(overlay._widget_rows)
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert {
+        "entity.behaviour_config#EnemyAI#speed#delete",
+        "entity.behaviour_config#Health#max#delete",
+    } <= actions
 
 
 def test_prefab_editor_overlay_behaviour_config_structured_and_none_rows_stay_read_only(
@@ -397,9 +402,15 @@ def test_prefab_editor_overlay_behaviour_config_structured_and_none_rows_stay_re
     assert "entity.behaviour_config.DialogueRunner.script" not in overlay._widget_rows
     assert "entity.behaviour_config.Health.none" not in overlay._widget_rows
     assert "entity.behaviour_config.TriggerVolume.target_tags" not in overlay._widget_rows
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert "entity.behaviour_config#DialogueRunner#start_node#delete" in actions
+    assert "entity.behaviour_config#Health#enabled#delete" in actions
+    assert "entity.behaviour_config#DialogueRunner#script#delete" not in actions
+    assert "entity.behaviour_config#Health#none#delete" not in actions
+    assert "entity.behaviour_config#TriggerVolume#target_tags#delete" not in actions
 
 
-def test_prefab_editor_overlay_behaviour_config_inner_rows_have_no_actions(
+def test_prefab_editor_overlay_behaviour_config_scalar_inner_rows_have_delete_actions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _capture_panel_text(monkeypatch)
@@ -411,8 +422,66 @@ def test_prefab_editor_overlay_behaviour_config_inner_rows_have_no_actions(
     overlay.draw()
 
     actions = {action for action, _row in overlay._complex_entry_action_hits}
-    assert not any(action.startswith("entity.behaviour_config#") for action in actions)
+    assert {
+        "entity.behaviour_config#EnemyAI#speed#delete",
+        "entity.behaviour_config#Health#max#delete",
+    } <= actions
     assert overlay.complex_entry_action_at(-10.0, -10.0) is None
+
+
+def test_prefab_editor_overlay_behaviour_config_scalar_delete_hit_returns_action(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    hit_rows = dict(overlay._complex_entry_action_hits)
+    row = hit_rows["entity.behaviour_config#Health#max#delete"]
+    rect = row.last_rect
+    assert rect is not None
+    assert overlay.complex_entry_action_at(rect.left + 1.0, rect.center_y) == "entity.behaviour_config#Health#max#delete"
+
+
+def test_prefab_editor_overlay_behaviour_config_delete_is_edit_mode_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert "entity.behaviour_config#Health#max#delete" not in actions
+
+
+def test_prefab_editor_overlay_behaviour_config_delete_coexists_with_scalar_widget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    prefab_editor._text_inputs.update(  # noqa: SLF001 - contract test controls the editor stub.
+        {
+            "entity.behaviour_config.Health.max": TextInput(text="8", focused=False, font_size=12, height=18.0),
+        }
+    )
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    widget_row = overlay._widget_rows["entity.behaviour_config.Health.max"]
+    widget_rect = widget_row.last_rect
+    assert widget_rect is not None
+    assert overlay.try_click_widget(widget_rect.left + 100.0, widget_rect.center_y) == "entity.behaviour_config.Health.max"
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert "entity.behaviour_config#Health#max#delete" in actions
 
 
 def test_prefab_editor_overlay_edit_mode_keeps_complex_rows_read_only_and_scalar_widgets(
@@ -446,7 +515,11 @@ def test_prefab_editor_overlay_edit_mode_keeps_complex_rows_read_only_and_scalar
         "entity.behaviour_config.EnemyAI.speed",
         "entity.behaviour_config.Health.max",
     } <= set(overlay._widget_rows)
-    assert not any(action.startswith("entity.behaviour_config#") for action, _row in overlay._complex_entry_action_hits)
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert {
+        "entity.behaviour_config#EnemyAI#speed#delete",
+        "entity.behaviour_config#Health#max#delete",
+    } <= actions
 
 
 def test_prefab_editor_overlay_complex_rows_are_read_only_and_do_not_mutate_model(
@@ -579,7 +652,7 @@ def test_prefab_editor_overlay_view_mode_has_no_delete_actions(monkeypatch: pyte
     assert overlay.complex_entry_action_at(0.0, 0.0) is None
 
 
-def test_prefab_editor_overlay_dict_complex_rows_have_no_delete_actions(
+def test_prefab_editor_overlay_metadata_top_level_and_behaviour_config_scalar_delete_actions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured = _capture_panel_text(monkeypatch)
@@ -593,10 +666,10 @@ def test_prefab_editor_overlay_dict_complex_rows_have_no_delete_actions(
     assert "author" in captured
     assert "Health" in captured
     assert "Delete author" not in captured
-    assert "Delete Health" not in captured
+    assert "Delete behaviour config Health.max" in captured
     assert "Add behaviour config" not in captured
     actions = {action for action, _row in overlay._complex_entry_action_hits}
-    assert not any(action.startswith("entity.behaviour_config#") for action in actions)
+    assert "entity.behaviour_config#Health#max#delete" in actions
 
 
 def test_prefab_editor_overlay_edit_mode_renders_metadata_delete_actions_and_hits(
@@ -685,7 +758,8 @@ def test_prefab_editor_overlay_metadata_dotted_key_widget_and_behaviour_config_r
     assert "metadata.a.b" in overlay._widget_rows
     assert "a.b" in captured
     assert "entity.behaviour_config.Health.max" in overlay._widget_rows
-    assert not any(action.startswith("entity.behaviour_config#") for action, _row in overlay._complex_entry_action_hits)
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert "entity.behaviour_config#Health#max#delete" in actions
     assert "Health" in captured
 
 
@@ -764,9 +838,9 @@ def test_prefab_editor_overlay_dict_delete_is_metadata_only_and_edit_mode_only(
     overlay.draw()
 
     actions = {action for action, _row in overlay._complex_entry_action_hits}
-    assert not any(action.startswith("entity.behaviour_config#") for action in actions)
+    assert "entity.behaviour_config#Health#max#delete" in actions
     assert not any(action.startswith("tags#") and action.endswith("#delete") and not action.split("#")[1].isdigit() for action in actions)
-    assert "Delete Health" not in captured
+    assert "Delete behaviour config Health.max" in captured
 
 
 def test_prefab_editor_overlay_edit_mode_complex_rows_source_live_buffer(

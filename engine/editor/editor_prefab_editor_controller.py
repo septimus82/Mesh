@@ -70,6 +70,10 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
             parsed_dict_action = _complex_dict_action_parts(action)
             if parsed_dict_action is not None:
                 field_path, key, verb = parsed_dict_action
+                if field_path == "entity.behaviour_config" and verb == "delete":
+                    behaviour, separator, config_key = key.partition("#")
+                    if separator:
+                        return self._delete_behaviour_config_entry(behaviour, config_key)
                 if verb == "delete":
                     return self._delete_dict_entry(field_path, key)
         return self.handle_mouse_click(float(x), float(y))
@@ -235,6 +239,25 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         if not isinstance(mapping, dict) or key not in mapping:
             return False
         del mapping[key]
+        self._rebuild_text_inputs(self.edit_buffer)
+        self._sync_widgets_from_buffer()
+        return True
+
+    def _delete_behaviour_config_entry(self, behaviour: str, config_key: str) -> bool:
+        if not self.is_edit_mode_active() or not isinstance(self.edit_buffer, dict):
+            return False
+        self.sync_widgets_to_buffer()
+        root = _get_path(self.edit_buffer, "entity.behaviour_config")
+        if not isinstance(root, dict):
+            return False
+        config = root.get(behaviour)
+        if not isinstance(config, dict) or config_key not in config:
+            return False
+        from engine.editor.prefab_editor_model import _is_behaviour_config_scalar  # noqa: PLC0415
+
+        if not _is_behaviour_config_scalar(config[config_key]):
+            return False
+        del config[config_key]
         self._rebuild_text_inputs(self.edit_buffer)
         self._sync_widgets_from_buffer()
         return True

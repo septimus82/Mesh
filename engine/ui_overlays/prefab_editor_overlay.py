@@ -330,6 +330,12 @@ class PrefabEditorOverlay(UIElement):
                             )
                             if field_path in behaviour_config_scalar_paths:
                                 self._widget_rows[field_path] = entry_row
+                                behaviour, separator, config_key = entry_label.partition(".")
+                                if separator:
+                                    add_complex_action(
+                                        f"entity.behaviour_config#{behaviour}#{config_key}#delete",
+                                        f"Delete behaviour config {entry_label}",
+                                    )
                     if edit_mode and complex_field_path in PREFAB_LIST_COMPLEX_FIELDS:
                         add_complex_action(f"{complex_field_path}#add", f"Add {_add_label_for_list_field(complex_field_path)}")
                     if edit_mode and complex_field_path == "metadata":
