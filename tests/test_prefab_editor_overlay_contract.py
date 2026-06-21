@@ -298,6 +298,92 @@ def test_prefab_editor_overlay_renders_behaviour_config_rows_after_blob(monkeypa
     ]
 
 
+def test_prefab_editor_overlay_renders_behaviour_config_inner_rows_after_top_level_rows(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    config_index = captured.index("Behaviour config")
+    assert captured[config_index : config_index + 10] == [
+        "Behaviour config",
+        '{"EnemyAI":{"speed":1.5},"Health":{"max":8}}',
+        "EnemyAI",
+        '{"speed":1.5}',
+        "Health",
+        '{"max":8}',
+        "EnemyAI.speed",
+        "1.5",
+        "Health.max",
+        "8",
+    ]
+
+
+def test_prefab_editor_overlay_renders_behaviour_config_inner_structured_values_compact(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab = _complex_prefab()
+    prefab["entity"]["behaviour_config"] = {
+        "DialogueRunner": {"script": {"start": {"text": "Hello"}}},
+        "TriggerVolume": {"target_tags": ["player", "ally"]},
+    }
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs"))
+    overlay._model = PrefabEditorModel.load(_FakePrefabManager({"complex": prefab}))
+
+    overlay.draw()
+
+    config_index = captured.index("Behaviour config")
+    assert captured[config_index + 1].startswith('{"DialogueRunner":{"script":{"start":{"text":"Hello"}}}')
+    assert captured[config_index + 2 : config_index + 10] == [
+        "DialogueRunner",
+        '{"script":{"start":{"text":"Hello"}}}',
+        "TriggerVolume",
+        '{"target_tags":["player","ally"]}',
+        "DialogueRunner.script",
+        '{"start":{"text":"Hello"}}',
+        "TriggerVolume.target_tags",
+        '["player","ally"]',
+    ]
+
+
+def test_prefab_editor_overlay_edit_mode_renders_behaviour_config_inner_rows_read_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert "EnemyAI.speed" in captured
+    assert "Health.max" in captured
+    assert {"id", "display_name", "entity.sprite", "entity.encounter_cost"} <= set(overlay._widget_rows)
+    assert {"metadata_key.author", "metadata.author"} <= set(overlay._widget_rows)
+    assert not any(field.startswith("entity.behaviour_config.") for field in overlay._widget_rows)
+
+
+def test_prefab_editor_overlay_behaviour_config_inner_rows_have_no_actions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    actions = {action for action, _row in overlay._complex_entry_action_hits}
+    assert not any(action.startswith("entity.behaviour_config#") for action in actions)
+    assert overlay.complex_entry_action_at(-10.0, -10.0) is None
+
+
 def test_prefab_editor_overlay_edit_mode_keeps_complex_rows_read_only_and_scalar_widgets(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

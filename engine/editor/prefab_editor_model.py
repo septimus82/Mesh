@@ -164,6 +164,29 @@ def complex_entry_rows(prefab: dict[str, Any], field_path: str) -> list[tuple[st
     return []
 
 
+def behaviour_config_inner_rows(prefab: dict[str, Any]) -> list[tuple[str, str]]:
+    value = _get_path(prefab, "entity.behaviour_config")
+    if not isinstance(value, dict):
+        return []
+    rows: list[tuple[str, str]] = []
+    for behaviour_name in sorted(value):
+        config = value[behaviour_name]
+        if not isinstance(config, dict):
+            continue
+        for config_key in sorted(config):
+            rows.append((f"{behaviour_name}.{config_key}", _format_behaviour_config_inner_value(config[config_key])))
+    return rows
+
+
+def _format_behaviour_config_inner_value(value: Any) -> str:
+    if isinstance(value, (dict, list)):
+        try:
+            return _format_structured_value(value, sort_keys=True, separators=(",", ":"))
+        except TypeError:
+            return repr(value)
+    return _format_value(value)
+
+
 def complex_detail_rows_for_prefab(prefab: dict[str, Any]) -> list[tuple[str, str, str]]:
     rows: list[tuple[str, str, str]] = []
     for field_path in PREFAB_COMPLEX_FIELD_ORDER:

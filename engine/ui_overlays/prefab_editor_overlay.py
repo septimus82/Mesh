@@ -207,6 +207,7 @@ class PrefabEditorOverlay(UIElement):
                 )
             from engine.editor.prefab_editor_model import (  # noqa: PLC0415
                 PREFAB_LIST_COMPLEX_FIELDS,
+                behaviour_config_inner_rows,
                 complex_detail_rows_for_prefab,
                 complex_entry_rows,
             )
@@ -306,6 +307,20 @@ class PrefabEditorOverlay(UIElement):
                             add_complex_action(
                                 f"{complex_field_path}#{entry_label}#delete",
                                 f"Delete metadata {entry_label}",
+                            )
+                    if complex_field_path == "entity.behaviour_config":
+                        for entry_label, entry_value in behaviour_config_inner_rows(complex_source):
+                            detail_panel.add_row(
+                                PanelRow(
+                                    PanelField(
+                                        entry_label,
+                                        entry_value,
+                                        label_color=PREFAB_EDITOR_TEXT_COLOR,
+                                        value_color=PREFAB_EDITOR_DIM_COLOR,
+                                    ),
+                                    height=PREFAB_EDITOR_ROW_HEIGHT,
+                                    padding_x=PREFAB_EDITOR_ROW_PADDING_X,
+                                )
                             )
                     if edit_mode and complex_field_path in PREFAB_LIST_COMPLEX_FIELDS:
                         add_complex_action(f"{complex_field_path}#add", f"Add {_add_label_for_list_field(complex_field_path)}")
