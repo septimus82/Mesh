@@ -350,7 +350,7 @@ def test_prefab_editor_overlay_renders_behaviour_config_inner_structured_values_
     ]
 
 
-def test_prefab_editor_overlay_edit_mode_renders_behaviour_config_inner_rows_read_only(
+def test_prefab_editor_overlay_edit_mode_renders_behaviour_config_scalar_inner_widgets(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured = _capture_panel_text(monkeypatch)
@@ -365,7 +365,38 @@ def test_prefab_editor_overlay_edit_mode_renders_behaviour_config_inner_rows_rea
     assert "Health.max" in captured
     assert {"id", "display_name", "entity.sprite", "entity.encounter_cost"} <= set(overlay._widget_rows)
     assert {"metadata_key.author", "metadata.author"} <= set(overlay._widget_rows)
-    assert not any(field.startswith("entity.behaviour_config.") for field in overlay._widget_rows)
+    assert {
+        "entity.behaviour_config.EnemyAI.speed",
+        "entity.behaviour_config.Health.max",
+    } <= set(overlay._widget_rows)
+
+
+def test_prefab_editor_overlay_behaviour_config_structured_and_none_rows_stay_read_only(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured = _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    prefab_editor.edit_buffer["entity"]["behaviour_config"] = {
+        "DialogueRunner": {"script": {"start": {}}, "start_node": "start"},
+        "Health": {"enabled": True, "none": None},
+        "TriggerVolume": {"target_tags": ["player"]},
+    }
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    assert "DialogueRunner.script" in captured
+    assert "Health.none" in captured
+    assert "TriggerVolume.target_tags" in captured
+    assert {
+        "entity.behaviour_config.DialogueRunner.start_node",
+        "entity.behaviour_config.Health.enabled",
+    } <= set(overlay._widget_rows)
+    assert "entity.behaviour_config.DialogueRunner.script" not in overlay._widget_rows
+    assert "entity.behaviour_config.Health.none" not in overlay._widget_rows
+    assert "entity.behaviour_config.TriggerVolume.target_tags" not in overlay._widget_rows
 
 
 def test_prefab_editor_overlay_behaviour_config_inner_rows_have_no_actions(
@@ -411,7 +442,11 @@ def test_prefab_editor_overlay_edit_mode_keeps_complex_rows_read_only_and_scalar
         "entity.require_flags.0",
     } <= set(overlay._widget_rows)
     assert {"metadata_key.author", "metadata_key.zeta", "metadata.author", "metadata.zeta"} <= set(overlay._widget_rows)
-    assert not any(field.startswith("entity.behaviour_config.") for field in overlay._widget_rows)
+    assert {
+        "entity.behaviour_config.EnemyAI.speed",
+        "entity.behaviour_config.Health.max",
+    } <= set(overlay._widget_rows)
+    assert not any(action.startswith("entity.behaviour_config#") for action, _row in overlay._complex_entry_action_hits)
 
 
 def test_prefab_editor_overlay_complex_rows_are_read_only_and_do_not_mutate_model(
@@ -649,8 +684,31 @@ def test_prefab_editor_overlay_metadata_dotted_key_widget_and_behaviour_config_r
     assert "metadata_key.a.b" in overlay._widget_rows
     assert "metadata.a.b" in overlay._widget_rows
     assert "a.b" in captured
-    assert not any(field.startswith("entity.behaviour_config.") for field in overlay._widget_rows)
+    assert "entity.behaviour_config.Health.max" in overlay._widget_rows
+    assert not any(action.startswith("entity.behaviour_config#") for action, _row in overlay._complex_entry_action_hits)
     assert "Health" in captured
+
+
+def test_prefab_editor_overlay_click_behaviour_config_scalar_widget_returns_field_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _capture_panel_text(monkeypatch)
+    prefab_editor = _PrefabEditorStub(edit_mode=True)
+    prefab_editor.edit_buffer = _complex_prefab()
+    prefab_editor._text_inputs.update(  # noqa: SLF001 - contract test controls the editor stub.
+        {
+            "entity.behaviour_config.Health.max": TextInput(text="8", focused=False, font_size=12, height=18.0),
+        }
+    )
+    overlay = PrefabEditorOverlay(_window_for_tab("Prefabs", prefab_editor))
+    overlay._model = _complex_model()
+
+    overlay.draw()
+
+    row = overlay._widget_rows["entity.behaviour_config.Health.max"]
+    rect = row.last_rect
+    assert rect is not None
+    assert overlay.try_click_widget(rect.left + 100.0, rect.center_y) == "entity.behaviour_config.Health.max"
 
 
 def test_prefab_editor_overlay_edit_mode_renders_metadata_add_action_only(

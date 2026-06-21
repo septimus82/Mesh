@@ -208,6 +208,7 @@ class PrefabEditorOverlay(UIElement):
             from engine.editor.prefab_editor_model import (  # noqa: PLC0415
                 PREFAB_LIST_COMPLEX_FIELDS,
                 behaviour_config_inner_rows,
+                behaviour_config_scalar_value_paths,
                 complex_detail_rows_for_prefab,
                 complex_entry_rows,
             )
@@ -215,6 +216,10 @@ class PrefabEditorOverlay(UIElement):
             edit_buffer = getattr(prefab_editor, "edit_buffer", None) if prefab_editor is not None else None
             complex_source = edit_buffer if edit_mode and isinstance(edit_buffer, dict) else prefab
             complex_rows = complex_detail_rows_for_prefab(complex_source)
+            behaviour_config_scalar_paths = {
+                field_path
+                for field_path, _label in behaviour_config_scalar_value_paths(complex_source)
+            } if edit_mode else set()
             if complex_rows:
                 detail_panel.add_header(PanelHeader("Complex fields (read-only)", None, title_color=PREFAB_EDITOR_DIM_COLOR))
 
@@ -310,7 +315,8 @@ class PrefabEditorOverlay(UIElement):
                             )
                     if complex_field_path == "entity.behaviour_config":
                         for entry_label, entry_value in behaviour_config_inner_rows(complex_source):
-                            detail_panel.add_row(
+                            field_path = f"entity.behaviour_config.{entry_label}"
+                            entry_row = detail_panel.add_row(
                                 PanelRow(
                                     PanelField(
                                         entry_label,
@@ -322,6 +328,8 @@ class PrefabEditorOverlay(UIElement):
                                     padding_x=PREFAB_EDITOR_ROW_PADDING_X,
                                 )
                             )
+                            if field_path in behaviour_config_scalar_paths:
+                                self._widget_rows[field_path] = entry_row
                     if edit_mode and complex_field_path in PREFAB_LIST_COMPLEX_FIELDS:
                         add_complex_action(f"{complex_field_path}#add", f"Add {_add_label_for_list_field(complex_field_path)}")
                     if edit_mode and complex_field_path == "metadata":

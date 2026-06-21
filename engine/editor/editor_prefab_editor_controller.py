@@ -8,6 +8,7 @@ from engine.editor.editor_database_form_controller import EditorDatabaseFormCont
 from engine.editor.prefab_editor_model import PREFAB_LIST_COMPLEX_FIELDS
 
 _BEHAVIOUR_FIELD_PREFIX = "entity.behaviours."
+_BEHAVIOUR_CONFIG_FIELD_PREFIX = "entity.behaviour_config."
 _METADATA_FIELD_PREFIX = "metadata."
 _METADATA_KEY_FIELD_PREFIX = "metadata_key."
 PREFAB_DICT_COMPLEX_FIELDS = ("metadata", "entity.behaviour_config")
@@ -127,6 +128,9 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
             if field.startswith(_BEHAVIOUR_FIELD_PREFIX):
                 self._warn_for_unknown_behaviour(field, next_value)
             return
+        if field.startswith(_BEHAVIOUR_CONFIG_FIELD_PREFIX):
+            self._set_behaviour_config_field_value(record, field, next_value)
+            return
         _set_path(record, field, next_value)
 
     def _rebuild_text_inputs(self, record: dict[str, Any] | None) -> None:
@@ -147,6 +151,9 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
                 for key in sorted(metadata):
                     specs.append((f"{_METADATA_KEY_FIELD_PREFIX}{key}", "Metadata key"))
                     specs.append((f"metadata.{key}", f"Metadata {key}"))
+            from engine.editor.prefab_editor_model import behaviour_config_scalar_value_paths  # noqa: PLC0415
+
+            specs.extend(behaviour_config_scalar_value_paths(record))
         self._text_inputs = {}
         for field, placeholder in specs:
             value = self._get_field_value(record or {}, field)
@@ -312,6 +319,19 @@ class EditorPrefabEditorController(EditorDatabaseFormController):
         metadata.update(renamed)
         self._pending_metadata_key_focus = f"{_METADATA_KEY_FIELD_PREFIX}{new_key}"
 
+    def _set_behaviour_config_field_value(self, record: dict[str, Any], field: str, value: str) -> None:
+        parent_path, separator, config_key = field.rpartition(".")
+        if not separator:
+            return
+        parent = _get_path(record, parent_path)
+        if not isinstance(parent, dict) or config_key not in parent:
+            return
+        original = parent[config_key]
+        try:
+            parent[config_key] = _coerce_behaviour_config_value(original, value)
+        except ValueError:
+            self._set_save_error(f"Invalid value for {field}: {value}")
+
     def _warn_for_unknown_behaviour(self, field: str, value: str) -> None:
         known = _known_behaviour_names()
         if not known or value in known:
@@ -442,6 +462,23 @@ def _next_metadata_key(metadata: dict[str, Any]) -> str:
         candidate = f"new_key_{suffix}"
         suffix += 1
     return candidate
+
+
+def _coerce_behaviour_config_value(original: Any, text: str) -> Any:
+    if isinstance(original, bool):
+        lowered = str(text).strip().lower()
+        if lowered in {"true", "1"}:
+            return True
+        if lowered in {"false", "0"}:
+            return False
+        raise ValueError(text)
+    if isinstance(original, int):
+        return int(text)
+    if isinstance(original, float):
+        return float(text)
+    if isinstance(original, str):
+        return text
+    raise ValueError(text)
 
 
 def _known_behaviour_names() -> frozenset[str]:

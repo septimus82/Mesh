@@ -5,6 +5,7 @@ import pytest
 from engine.editor.prefab_editor_model import (
     PrefabEditorModel,
     behaviour_config_inner_rows,
+    behaviour_config_scalar_value_paths,
     complex_detail_rows_for_prefab,
     complex_entry_rows,
     validate_prefab_entries,
@@ -168,6 +169,31 @@ def test_prefab_editor_behaviour_config_inner_rows_degrade_on_missing_or_wrong_s
     assert behaviour_config_inner_rows({}) == []
     assert behaviour_config_inner_rows({"entity": {"behaviour_config": "Health"}}) == []
     assert behaviour_config_inner_rows({"entity": {"behaviour_config": {"Health": "max=8"}}}) == []
+
+
+def test_prefab_editor_behaviour_config_scalar_value_paths_include_scalars_only() -> None:
+    prefab = {
+        "entity": {
+            "behaviour_config": {
+                "DialogueRunner": {"script": {"start": {}}, "start_node": "start"},
+                "Health": {"enabled": True, "hp": 4.5, "max": 8, "none": None},
+                "TriggerVolume": {"target_tags": ["player"]},
+            }
+        }
+    }
+
+    assert behaviour_config_scalar_value_paths(prefab) == [
+        ("entity.behaviour_config.DialogueRunner.start_node", "DialogueRunner.start_node"),
+        ("entity.behaviour_config.Health.enabled", "Health.enabled"),
+        ("entity.behaviour_config.Health.hp", "Health.hp"),
+        ("entity.behaviour_config.Health.max", "Health.max"),
+    ]
+
+
+def test_prefab_editor_behaviour_config_scalar_value_paths_degrade_on_wrong_shapes() -> None:
+    assert behaviour_config_scalar_value_paths({}) == []
+    assert behaviour_config_scalar_value_paths({"entity": {"behaviour_config": []}}) == []
+    assert behaviour_config_scalar_value_paths({"entity": {"behaviour_config": {"Health": None}}}) == []
 
 
 def test_prefab_editor_complex_entry_rows_degrade_on_empty_missing_or_wrong_shapes() -> None:
