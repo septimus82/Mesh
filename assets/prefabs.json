@@ -35,7 +35,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 10
+          "max_hp": 10
         }
       },
       "behaviours": [
@@ -58,7 +58,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 5
+          "max_hp": 5
         }
       },
       "behaviours": [
@@ -81,7 +81,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 8
+          "max_hp": 8
         }
       },
       "behaviours": [
@@ -104,7 +104,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 15
+          "max_hp": 15
         }
       },
       "behaviours": [
@@ -127,7 +127,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 12
+          "max_hp": 12
         }
       },
       "behaviours": [
@@ -150,7 +150,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 4
+          "max_hp": 4
         }
       },
       "behaviours": [
@@ -173,7 +173,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 6
+          "max_hp": 6
         }
       },
       "behaviours": [
@@ -196,7 +196,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 10
+          "max_hp": 10
         }
       },
       "behaviours": [
@@ -219,7 +219,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 8
+          "max_hp": 8
         }
       },
       "behaviours": [
@@ -242,7 +242,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 7
+          "max_hp": 7
         }
       },
       "behaviours": [
@@ -265,7 +265,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 14
+          "max_hp": 14
         }
       },
       "behaviours": [
@@ -288,7 +288,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 9
+          "max_hp": 9
         }
       },
       "behaviours": [
@@ -311,7 +311,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 11
+          "max_hp": 11
         }
       },
       "behaviours": [
@@ -334,7 +334,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 6
+          "max_hp": 6
         }
       },
       "behaviours": [
@@ -357,7 +357,7 @@
     "entity": {
       "behaviour_config": {
         "Health": {
-          "max": 7
+          "max_hp": 7
         }
       },
       "behaviours": [
