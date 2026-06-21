@@ -9,6 +9,9 @@ Tests cover:
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -39,6 +42,83 @@ def mock_entity():
     entity.width = 32
     entity.height = 32
     return entity
+
+
+def _damage_on_touch(
+    monkeypatch: pytest.MonkeyPatch,
+    mock_entity,
+    mock_window,
+    **config,
+):
+    from engine.behaviours.damage_on_touch import DamageOnTouch
+
+    target = MagicMock()
+    mock_window.find_sprite_by_name.return_value = target
+    mock_window.should_collide.return_value = True
+    monkeypatch.setitem(
+        DamageOnTouch.update.__globals__,
+        "optional_arcade",
+        SimpleNamespace(arcade=SimpleNamespace(check_for_collision=lambda _entity, _target: True)),
+    )
+    return DamageOnTouch(mock_entity, mock_window, **config), target
+
+
+@pytest.mark.fast
+def test_damage_on_touch_cooldown_ticks_periodically(monkeypatch, mock_entity, mock_window) -> None:
+    behaviour, target = _damage_on_touch(monkeypatch, mock_entity, mock_window, damage=6, cooldown=0.5)
+
+    behaviour.update(0.0)
+    behaviour.update(0.25)
+    behaviour.update(0.24)
+    behaviour.update(0.02)
+
+    assert mock_window.on_damage.call_count == 2
+    mock_window.on_damage.assert_any_call(mock_entity, target, 6.0)
+
+
+@pytest.mark.fast
+def test_damage_on_touch_cooldown_zero_preserves_every_frame_damage(
+    monkeypatch,
+    mock_entity,
+    mock_window,
+) -> None:
+    behaviour, _target = _damage_on_touch(monkeypatch, mock_entity, mock_window, damage=2, cooldown=0.0)
+
+    behaviour.update(0.0)
+    behaviour.update(0.0)
+    behaviour.update(0.0)
+
+    assert mock_window.on_damage.call_count == 3
+
+
+@pytest.mark.fast
+def test_damage_on_touch_once_ignores_cooldown_after_first_hit(monkeypatch, mock_entity, mock_window) -> None:
+    behaviour, _target = _damage_on_touch(monkeypatch, mock_entity, mock_window, damage=2, cooldown=0.5, once=True)
+
+    behaviour.update(0.0)
+    behaviour.update(0.5)
+    behaviour.update(0.5)
+
+    assert mock_window.on_damage.call_count == 1
+
+
+@pytest.mark.fast
+def test_act3_phasefield_damage_on_touch_hazards_use_damage_and_cooldown() -> None:
+    scene_path = Path("packs/core_regions/scenes/Act3_Chapter5_PhaseField.json")
+    scene = json.loads(scene_path.read_text(encoding="utf-8"))
+    expected = {
+        "act3_chapter5_phasefield_phaseahazardstrip_580_260_0_0",
+        "act3_chapter5_phasefield_phasebhazardstrip_580_340_0_0",
+    }
+
+    found = {
+        entity["id"]: entity.get("behaviour_config", {}).get("DamageOnTouch")
+        for entity in scene.get("entities", [])
+        if entity.get("id") in expected
+    }
+
+    assert set(found) == expected
+    assert all(config == {"damage": 6, "cooldown": 0.5} for config in found.values())
 
 
 # ============================================================================
