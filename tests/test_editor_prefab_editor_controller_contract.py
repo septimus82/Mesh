@@ -55,6 +55,18 @@ def _prefab(prefab_id: str = "torch_wisp") -> dict[str, object]:
     }
 
 
+def _prefab_with_behaviour_config() -> dict[str, object]:
+    prefab = _prefab()
+    entity = prefab["entity"]
+    assert isinstance(entity, dict)
+    entity["behaviour_config"] = {
+        "DialogueRunner": {"script": {"start": {}}, "start_node": "start"},
+        "Health": {"enabled": True, "hp": 4.5, "max": 8, "none": None},
+        "TriggerVolume": {"target_tags": ["player"]},
+    }
+    return prefab
+
+
 def test_prefab_editor_controller_enter_cancel_and_dirty(tmp_path: Path) -> None:
     controller = EditorPrefabEditorController(_editor(tmp_path))
 
@@ -864,6 +876,113 @@ def test_prefab_editor_controller_rebuild_text_inputs_adds_list_entry_specs(tmp_
         "entity.require_flags.1",
     } <= set(text_inputs)
     assert text_inputs["entity.behaviours.1"].text == "Health"
+
+
+def test_prefab_editor_controller_rebuild_text_inputs_adds_scalar_behaviour_config_specs_only(
+    tmp_path: Path,
+) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab_with_behaviour_config())
+
+    text_inputs = controller.text_inputs()
+
+    assert {
+        "entity.behaviour_config.DialogueRunner.start_node",
+        "entity.behaviour_config.Health.enabled",
+        "entity.behaviour_config.Health.hp",
+        "entity.behaviour_config.Health.max",
+    } <= set(text_inputs)
+    assert "entity.behaviour_config.DialogueRunner.script" not in text_inputs
+    assert "entity.behaviour_config.Health.none" not in text_inputs
+    assert "entity.behaviour_config.TriggerVolume.target_tags" not in text_inputs
+    assert text_inputs["entity.behaviour_config.Health.enabled"].text == "True"
+
+
+def test_prefab_editor_controller_behaviour_config_scalar_edits_preserve_types_and_save_valid(
+    tmp_path: Path,
+) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab_with_behaviour_config())
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("entity.behaviour_config.Health.max").text = "12"
+    controller.text_input("entity.behaviour_config.Health.hp").text = "6.25"
+    controller.text_input("entity.behaviour_config.DialogueRunner.start_node").text = ""
+    controller.sync_widgets_to_buffer()
+
+    config = controller.edit_buffer["entity"]["behaviour_config"]
+    assert config["Health"]["max"] == 12
+    assert type(config["Health"]["max"]) is int
+    assert config["Health"]["hp"] == 6.25
+    assert type(config["Health"]["hp"]) is float
+    assert config["DialogueRunner"]["start_node"] == ""
+    assert type(config["DialogueRunner"]["start_node"]) is str
+    assert config["DialogueRunner"]["script"] == before["entity"]["behaviour_config"]["DialogueRunner"]["script"]
+    assert config["Health"]["enabled"] == before["entity"]["behaviour_config"]["Health"]["enabled"]
+    assert config["Health"]["none"] is None
+    assert config["TriggerVolume"] == before["entity"]["behaviour_config"]["TriggerVolume"]
+    assert validate_prefab_entries([controller.edit_buffer], tmp_path / "assets" / "prefabs.json") == []
+
+
+def test_prefab_editor_controller_behaviour_config_bool_edits_accept_common_literals(
+    tmp_path: Path,
+) -> None:
+    controller = EditorPrefabEditorController(_editor(tmp_path))
+    controller.enter_edit_mode(_prefab_with_behaviour_config())
+
+    for text, expected in (("false", False), ("true", True), ("0", False), ("1", True)):
+        controller.text_input("entity.behaviour_config.Health.enabled").text = text
+        controller.sync_widgets_to_buffer()
+        assert controller.edit_buffer is not None
+        value = controller.edit_buffer["entity"]["behaviour_config"]["Health"]["enabled"]
+        assert value is expected
+        assert type(value) is bool
+
+
+def test_prefab_editor_controller_invalid_behaviour_config_bool_is_rejected_without_pollution(
+    tmp_path: Path,
+) -> None:
+    editor = _editor(tmp_path)
+    controller = EditorPrefabEditorController(editor)
+    controller.enter_edit_mode(_prefab_with_behaviour_config())
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("entity.behaviour_config.Health.enabled").text = "maybe"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer == before
+    assert controller.last_error_message() == "Invalid value for entity.behaviour_config.Health.enabled: maybe"
+    assert editor.feedback_calls[-1] == (
+        "error",
+        "Invalid value for entity.behaviour_config.Health.enabled: maybe",
+    )
+
+
+def test_prefab_editor_controller_invalid_behaviour_config_numeric_is_rejected_without_pollution(
+    tmp_path: Path,
+) -> None:
+    editor = _editor(tmp_path)
+    controller = EditorPrefabEditorController(editor)
+    controller.enter_edit_mode(_prefab_with_behaviour_config())
+    controller.sync_widgets_to_buffer()
+    assert controller.edit_buffer is not None
+    before = copy.deepcopy(controller.edit_buffer)
+
+    controller.text_input("entity.behaviour_config.Health.max").text = "many"
+    controller.text_input("entity.behaviour_config.Health.hp").text = "fast"
+    controller.sync_widgets_to_buffer()
+
+    assert controller.edit_buffer == before
+    assert controller.last_error_message() in {
+        "Invalid value for entity.behaviour_config.Health.max: many",
+        "Invalid value for entity.behaviour_config.Health.hp: fast",
+    }
+    assert ("error", "Invalid value for entity.behaviour_config.Health.max: many") in editor.feedback_calls
+    assert ("error", "Invalid value for entity.behaviour_config.Health.hp: fast") in editor.feedback_calls
 
 
 @pytest.mark.parametrize(

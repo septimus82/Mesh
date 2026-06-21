@@ -178,6 +178,22 @@ def behaviour_config_inner_rows(prefab: dict[str, Any]) -> list[tuple[str, str]]
     return rows
 
 
+def behaviour_config_scalar_value_paths(prefab: dict[str, Any]) -> list[tuple[str, str]]:
+    value = _get_path(prefab, "entity.behaviour_config")
+    if not isinstance(value, dict):
+        return []
+    paths: list[tuple[str, str]] = []
+    for behaviour_name in sorted(value):
+        config = value[behaviour_name]
+        if not isinstance(config, dict):
+            continue
+        for config_key in sorted(config):
+            if _is_behaviour_config_scalar(config[config_key]):
+                label = f"{behaviour_name}.{config_key}"
+                paths.append((f"entity.behaviour_config.{label}", label))
+    return paths
+
+
 def _format_behaviour_config_inner_value(value: Any) -> str:
     if isinstance(value, (dict, list)):
         try:
@@ -185,6 +201,10 @@ def _format_behaviour_config_inner_value(value: Any) -> str:
         except TypeError:
             return repr(value)
     return _format_value(value)
+
+
+def _is_behaviour_config_scalar(value: Any) -> bool:
+    return isinstance(value, (bool, int, float, str))
 
 
 def complex_detail_rows_for_prefab(prefab: dict[str, Any]) -> list[tuple[str, str, str]]:
