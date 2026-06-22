@@ -140,9 +140,8 @@
       ],
       "behaviour_config": {
         "DamageOnTouch": {
-          "amount": 6,
-          "cooldown": 0.5,
-          "target_tag": "player"
+          "damage": 6,
+          "cooldown": 0.5
         }
       },
       "id": "act3_chapter5_phasefield_phaseahazardstrip_580_260_0_0",
@@ -164,9 +163,8 @@
       ],
       "behaviour_config": {
         "DamageOnTouch": {
-          "amount": 6,
-          "cooldown": 0.5,
-          "target_tag": "player"
+          "damage": 6,
+          "cooldown": 0.5
         }
       },
       "id": "act3_chapter5_phasefield_phasebhazardstrip_580_340_0_0",

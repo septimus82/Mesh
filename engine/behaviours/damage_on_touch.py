@@ -32,6 +32,12 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
             "default": 1.0,
         },
         {
+            "name": "cooldown",
+            "description": "Seconds between damage ticks while in contact (0 = every frame)",
+            "type": "float",
+            "default": 0.0,
+        },
+        {
             "name": "once",
             "description": "If true, damage applies only on the first hit",
             "type": "bool",
@@ -51,6 +57,11 @@ class DamageOnTouch(Behaviour):
     PARAM_DEFS = {
         "target_name": ParamDef(str, default="player", description="Name of the sprite that should receive damage"),
         "damage": ParamDef(float, default=1.0, description="Damage value applied on contact"),
+        "cooldown": ParamDef(
+            float,
+            default=0.0,
+            description="Seconds between damage ticks while in contact (0 = every frame)",
+        ),
         "once": ParamDef(bool, default=False, description="If true, damage applies only on the first hit"),
         "destroy_on_hit": ParamDef(bool, default=False, description="Remove the damaging sprite after contact"),
     }
@@ -60,12 +71,17 @@ class DamageOnTouch(Behaviour):
 
         self.target_name = self.config.get("target_name", "player")
         self.damage = float(self.config.get("damage", 1.0))
+        self.cooldown = float(self.config.get("cooldown", 0.0))
         self.once = bool(self.config.get("once", False))
         self.destroy_on_hit = bool(self.config.get("destroy_on_hit", False))
         self._already_triggered: bool = False
+        self._cooldown_remaining = 0.0
 
     def update(self, dt: float) -> None:  # noqa: D401 ARG002
         """Emit damage events when touching the configured target entity."""
+        if self._cooldown_remaining > 0:
+            self._cooldown_remaining = max(0.0, self._cooldown_remaining - dt)
+
         if self._already_triggered and self.once:
             return
 
@@ -82,7 +98,11 @@ class DamageOnTouch(Behaviour):
         if not self.window.should_collide(self.entity, target):
             return
 
+        if self._cooldown_remaining > 0:
+            return
+
         self.window.on_damage(self.entity, target, self.damage)
+        self._cooldown_remaining = self.cooldown
 
         if self.once:
             self._already_triggered = True
