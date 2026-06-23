@@ -38,6 +38,13 @@ class EditorTheme:
     shell_bg_alt: Color
     menubar_bg: Color
     context_shadow: Color
+    inspector_bg: Color
+    inspector_border: Color
+    inspector_selected: Color
+    inspector_accent: Color
+    inspector_dim: Color
+    inspector_text_soft: Color
+    inspector_text: Color
     input_bg: Color
     input_bg_focused: Color
     input_border: Color
@@ -52,6 +59,17 @@ class EditorTheme:
     severity_info_bg: RgbColor
     severity_info_border: RgbColor
     severity_info_text: RgbColor
+    browser_border: RgbColor
+    browser_accent: RgbColor
+    browser_white: RgbColor
+    status_ok: RgbColor
+    browser_text_dim: RgbColor
+    browser_text: RgbColor
+    browser_muted: RgbColor
+    status_error: RgbColor
+    status_warn: RgbColor
+    overlay_white_soft: Color
+    overlay_white: Color
     severity_warning_bg: RgbColor
     severity_warning_border: RgbColor
     severity_warning_text: RgbColor
@@ -85,6 +103,13 @@ EDITOR_THEME = EditorTheme(
     shell_bg_alt=(50, 50, 55, 255),
     menubar_bg=(40, 40, 45, 255),
     context_shadow=(0, 0, 0, 120),
+    inspector_bg=(45, 45, 55, 255),
+    inspector_border=(60, 80, 100, 255),
+    inspector_selected=(70, 100, 140, 180),
+    inspector_accent=(100, 180, 255, 255),
+    inspector_dim=(140, 140, 150, 255),
+    inspector_text_soft=(160, 160, 170, 255),
+    inspector_text=(200, 200, 200, 255),
     input_bg=(22, 22, 28, 190),
     input_bg_focused=(30, 30, 36, 220),
     input_border=(90, 90, 100, 140),
@@ -99,6 +124,17 @@ EDITOR_THEME = EditorTheme(
     severity_info_bg=(32, 36, 44),
     severity_info_border=(150, 190, 255),
     severity_info_text=(255, 255, 255),
+    browser_border=(100, 100, 100),
+    browser_accent=(100, 200, 255),
+    browser_white=(255, 255, 255),
+    status_ok=(100, 255, 100),
+    browser_text_dim=(170, 170, 180),
+    browser_text=(180, 180, 180),
+    browser_muted=(100, 100, 100),
+    status_error=(255, 100, 100),
+    status_warn=(255, 200, 100),
+    overlay_white_soft=(255, 255, 255, 40),
+    overlay_white=(255, 255, 255, 50),
     severity_warning_bg=(64, 44, 20),
     severity_warning_border=(255, 191, 92),
     severity_warning_text=(255, 244, 224),
