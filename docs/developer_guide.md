@@ -4,37 +4,40 @@
 
 The project is organized as follows:
 
--   `main.py`: The entry point of the application.
+```text
+Mesh/
+|-- main.py
+|-- mesh_cli.py
+|-- mesh.bat
+|-- config.json
+|-- engine/
+|-- mesh_cli/
+|-- assets/
+|-- packs/
+|-- scenes/
+|-- worlds/
+|-- replays/
+|-- jobs/
+|-- plans/
+|-- presets/
+|-- locales/
+|-- examples/
+|-- tools/
+|-- tooling/
+|-- tests/
+`-- docs/
+```
+
+-   `main.py`: Runtime entry point.
+-   `mesh_cli.py` / `mesh_cli/`: Command-line entry point and command modules.
+-   `mesh.bat`: Windows convenience launcher.
 -   `config.json`: Global engine configuration.
--   `engine/`: Core engine code.
-    -   `behaviours/`: Game logic components (AI, Player, Interactables).
-    -   `game.py`: Main game loop and window management.
-    -   `scene_controller.py`: Manages entities and scene loading.
-        -   Entity access is mediated by `SceneEntityStoreController` (`scene_controller.entities`).
-        -   Preferred access: `scene_controller.iter_entities()` / `scene_controller.entities.iter_entities()`.
-        -   `scene_controller.entities` remains iterable for legacy callers.
-    -   `editor_runtime/input.py`: Editor input entrypoint.
-        -   `editor_runtime/editor_input_router.py`: Scoped route table + dispatch.
-        -   `editor_runtime/editor_input_legacy_handlers.py`: Legacy key handling (moved out of input.py).
-        -   `editor_runtime/editor_input_menu_handlers.py`: Menu/context menu mouse/key helpers.
-        -   `editor_runtime/editor_input_transform_handlers.py`: Rotate/scale drag helpers.
-        -   `editor_runtime/editor_input_drag_handlers.py`: Mouse drag/release handling.
-        -   `editor_runtime/editor_input_click_handlers.py`: Mouse click handling (moved out of input.py).
-        -   `editor_runtime/editor_input_text_handlers.py`: Text input routing (moved out of input.py).
-        -   `editor_runtime/editor_input_key_handlers.py`: Pre-router key handling (moved out of input.py).
-        -   `editor_runtime/editor_input_shortcut_handlers.py`: Shortcut resolution helpers (moved out of input.py).
-        -   `editor_runtime/editor_input_dispatch.py`: Keyboard dispatch orchestrator (moved out of input.py).
-        -   `editor_runtime/input.py`: Facade only (policy test enforces no inline logic).
-    -   `editor/editor_undo_controller.py`: Undo/redo command execution + history snapshot facade.
-        -   `editor/editor_undo_model.py`: Pure undo history model (cursor + slicing).
-    -   `editor/editor_dock_controller.py`: Dock tabs/collapse/resize state + snapshot.
-    -   `ui_overlays/undo_history_overlay.py`: Renders history list from the undo controller snapshot.
-    -   `ui.py`: UI elements and overlays.
--   `scenes/`: JSON files defining game levels and menus.
--   `assets/`: Game assets (images, sounds, music, data).
--   `engine/tooling/`: Core tooling logic (CLI, pipelines, generation).
--   `engine/tooling_runtime/`: Runtime-safe tooling components.
--   `docs/`: Documentation.
+-   `engine/`: Runtime, editor, behaviours, UI overlays, validation, and tooling support code.
+-   `assets/`, `packs/`, `scenes/`, `worlds/`: Game content roots.
+-   `replays/`, `jobs/`, `plans/`, `presets/`, `locales/`, `examples/`: Authoring and data fixtures.
+-   `tools/`, `tooling/`: Developer tooling wrappers and support scripts.
+-   `tests/`: Contract, unit, integration, and gate tests.
+-   `docs/`: Generated and hand-maintained documentation.
 
 ## Setup
 

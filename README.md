@@ -1,6 +1,6 @@
-# Mesh Engine (Prototype)
+# Mesh Engine
 
-Minimal Arcade-based runtime that opens a window, loads a JSON scene, and draws sprites. The current iteration focuses on scene-driven content and sets the stage for future behaviour/input/camera systems.
+Mesh is a 2D Arcade game engine with an embedded editor, data-driven content, and AI-first authoring tools. It is built around JSON scenes, content packs, prefabs, worlds, behaviours, and a verification pipeline that keeps runtime, editor, and tooling changes shippable.
 
 ## Layout
 
@@ -8,13 +8,24 @@ Minimal Arcade-based runtime that opens a window, loads a JSON scene, and draws 
 Mesh/
 |-- main.py
 |-- mesh_cli.py
+|-- mesh.bat
 |-- config.json
 |-- engine/
 |-- mesh_cli/
-|-- scenes/
-|-- packs/
 |-- assets/
-`-- tooling/
+|-- packs/
+|-- scenes/
+|-- worlds/
+|-- replays/
+|-- jobs/
+|-- plans/
+|-- presets/
+|-- locales/
+|-- examples/
+|-- tools/
+|-- tooling/
+|-- tests/
+`-- docs/
 ```
 ## Editor & Tooling
 
@@ -36,9 +47,13 @@ The engine uses a component-based architecture where `GameWindow` acts as a Faca
 - **InputController**: Handles keyboard and mouse input.
 - **ConsoleController**: Manages the developer console.
 - **SaveManager**: Handles saving and loading of game state.
+- **Content packs, prefabs, and worlds**: Data lives in root assets plus pack folders, with prefabs and worlds providing reusable scene building blocks.
+- **Behaviour registry**: Built-in behaviours register through `engine.behaviours` and are attached to entities by name through scene/prefab `behaviours` and `behaviour_config` data.
+- **Verify-all gate**: `python -m mesh_cli verify-all --artifacts artifacts` runs the canonical local/CI validation pipeline, including pytest, type/lint gates, runtime smoke, content audits, and packaging checks.
 - **EditorController**: Editor-mode facade that delegates to focused sub-controllers
   (panels/providers/session/dock/unsaved-changes confirm). Modal visibility is owned by
   `EditorPanelsController` for deterministic UI state.
+- **Editor database controllers**: Item, prefab, quest, and dialogue editors use split controller/model/overlay surfaces so mutation, rendering, and validation stay testable.
 - **EditorDockController**: Owns dock tabs, sizing/collapse, and focus sync for
   panel visibility; UI/layout/tooltips read widths via `editor_dock_query`.
 - **Dock width policy**: runtime/editor code should not read `left_dock_width` /
