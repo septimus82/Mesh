@@ -93,13 +93,13 @@ def test_overlay_resolves_locked_severity_palette() -> None:
     items = overlay.get_visible_draw_items(now=clock.value)
 
     assert [item.bg_color[:3] for item in items] == [
-        (32, 36, 44),
-        (64, 44, 20),
-        (72, 24, 24),
+        (22, 32, 42),
+        (46, 36, 20),
+        (50, 24, 28),
     ]
     assert [item.border_color[:3] for item in items] == [
-        (150, 190, 255),
-        (255, 191, 92),
+        (94, 196, 255),
+        (255, 196, 92),
         (255, 110, 110),
     ]
 
