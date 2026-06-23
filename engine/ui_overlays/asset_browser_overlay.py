@@ -10,6 +10,7 @@ import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline, draw_panel_bg
+from .theme import EDITOR_THEME
 from .widget_overlay_helpers import OverlayFocusModel, build_empty_row, build_status_row, compose_list_rows
 from .widgets import Rect, ScrollList, TextInput
 
@@ -266,7 +267,7 @@ class AssetBrowserOverlay(UIElement):
             f"Filter: {self._text_input.text or 'Search assets...'}",
             search_rect_l,
             search_rect_b + 6,
-            color=(255, 255, 255),
+            color=EDITOR_THEME.browser_white,
             font_size=11,
             cache=self._text_cache,
         )
@@ -275,7 +276,7 @@ class AssetBrowserOverlay(UIElement):
                 "|",
                 search_rect_l + 46 + (len(str(self._text_input.text)) * 6),
                 search_rect_b + 6,
-                color=(255, 255, 255),
+                color=EDITOR_THEME.browser_white,
                 font_size=11,
                 cache=self._text_cache,
             )
@@ -284,12 +285,19 @@ class AssetBrowserOverlay(UIElement):
             f"Kind: {kind_text}",
             search_rect_r,
             search_rect_b + 6,
-            color=(100, 200, 255),
+            color=EDITOR_THEME.browser_accent,
             font_size=11,
             anchor_x="right",
             cache=self._text_cache,
         )
-        _draw_tb_rectangle_outline(search_rect_l, search_rect_r, search_rect_t, search_rect_b, (255, 255, 255, 50), 1)
+        _draw_tb_rectangle_outline(
+            search_rect_l,
+            search_rect_r,
+            search_rect_t,
+            search_rect_b,
+            EDITOR_THEME.overlay_white,
+            1,
+        )
 
         list_top = search_rect_b - padding
         detail_h = 92.0
@@ -327,7 +335,7 @@ class AssetBrowserOverlay(UIElement):
                 composed_rows[0] if composed_rows else _asset_browser_empty_state_text(),
                 search_rect_l,
                 list_top - 18,
-                color=(170, 170, 180),
+                color=EDITOR_THEME.browser_text_dim,
                 font_size=12,
                 cache=self._text_cache,
             )
@@ -337,20 +345,49 @@ class AssetBrowserOverlay(UIElement):
             sel_row = rows[sel_idx]
             detail_x = search_rect_l
             detail_y = detail_top - 16
-            draw_text_cached("DETAILS", detail_x, detail_y, color=(255, 200, 100), font_size=11, bold=True, cache=self._text_cache)
+            draw_text_cached(
+                "DETAILS",
+                detail_x,
+                detail_y,
+                color=EDITOR_THEME.status_warn,
+                font_size=11,
+                bold=True,
+                cache=self._text_cache,
+            )
             detail_y -= 18
-            draw_text_cached(f"Name: {sel_row.display_name}", detail_x, detail_y, color=(255, 255, 255), font_size=10, cache=self._text_cache)
+            draw_text_cached(
+                f"Name: {sel_row.display_name}",
+                detail_x,
+                detail_y,
+                color=EDITOR_THEME.browser_white,
+                font_size=10,
+                cache=self._text_cache,
+            )
             detail_y -= 16
-            draw_text_cached(f"Kind: {sel_row.kind}", detail_x, detail_y, color=(255, 255, 255), font_size=10, cache=self._text_cache)
+            draw_text_cached(
+                f"Kind: {sel_row.kind}",
+                detail_x,
+                detail_y,
+                color=EDITOR_THEME.browser_white,
+                font_size=10,
+                cache=self._text_cache,
+            )
             detail_y -= 16
-            draw_text_cached(f"Path: {sel_row.rel_path}", detail_x, detail_y, color=(100, 255, 100), font_size=10, cache=self._text_cache)
+            draw_text_cached(
+                f"Path: {sel_row.rel_path}",
+                detail_x,
+                detail_y,
+                color=EDITOR_THEME.status_ok,
+                font_size=10,
+                cache=self._text_cache,
+            )
         else:
             if not rows and str(filter_text or ""):
                 draw_text_cached(
                     "No matches found.",
                     search_rect_l,
                     detail_top - 16,
-                    color=(255, 100, 100),
+                    color=EDITOR_THEME.status_error,
                     font_size=12,
                     cache=self._text_cache,
                 )
@@ -363,8 +400,22 @@ class AssetBrowserOverlay(UIElement):
         elif composed_rows:
             status_row = composed_rows[-1]
 
-        draw_text_cached(status_row, search_rect_l, bottom + 16, color=(170, 170, 180), font_size=10, cache=self._text_cache)
-        draw_text_cached(hints_row, search_rect_l, bottom + 4, color=(170, 170, 180), font_size=10, cache=self._text_cache)
+        draw_text_cached(
+            status_row,
+            search_rect_l,
+            bottom + 16,
+            color=EDITOR_THEME.browser_text_dim,
+            font_size=10,
+            cache=self._text_cache,
+        )
+        draw_text_cached(
+            hints_row,
+            search_rect_l,
+            bottom + 4,
+            color=EDITOR_THEME.browser_text_dim,
+            font_size=10,
+            cache=self._text_cache,
+        )
 
     def _draw_asset_browser_row_list(self, instructions: list[Any], rows: list[Any]) -> None:
         bounds = self._list_rect
@@ -382,8 +433,8 @@ class AssetBrowserOverlay(UIElement):
                 width=float(bounds.width),
                 height=float(bounds.height),
             ),
-            panel_bg=(0, 0, 0, 0),
-            panel_border=(0, 0, 0, 0),
+            panel_bg=EDITOR_THEME.transparent,
+            panel_border=EDITOR_THEME.transparent,
             item_spacing=0.0,
             inner_padding_x=0.0,
             inner_padding_y=0.0,
@@ -420,14 +471,14 @@ class AssetBrowserOverlay(UIElement):
                 PanelField(
                     str(getattr(row_data, "display_name", "")),
                     str(getattr(row_data, "kind", "")),
-                    label_color=(255, 255, 255) if is_selected else (180, 180, 180),
-                    value_color=(100, 100, 100),
+                    label_color=EDITOR_THEME.browser_white if is_selected else EDITOR_THEME.browser_text,
+                    value_color=EDITOR_THEME.browser_muted,
                     label_font_size=12,
                     value_font_size=10,
                 ),
                 height=24.0,
                 padding_x=5.0,
-                selected_bg=(255, 255, 255, 40),
+                selected_bg=EDITOR_THEME.overlay_white_soft,
             )
             row.set_selected(is_selected)
             rows_panel.add_row(row)

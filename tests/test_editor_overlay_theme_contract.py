@@ -6,6 +6,8 @@ from pathlib import Path
 import pytest
 
 from engine.ui_overlays import (
+    asset_browser_overlay,
+    component_inspector_overlay,
     context_menu_overlay,
     debug_panels_overlay,
     dialogue_editor_overlay,
@@ -77,6 +79,27 @@ def test_editor_theme_chrome_tokens_pin_current_values() -> None:
     assert EDITOR_THEME.shell_bg_alt == (50, 50, 55, 255)
     assert EDITOR_THEME.menubar_bg == (40, 40, 45, 255)
     assert EDITOR_THEME.context_shadow == (0, 0, 0, 120)
+
+
+def test_editor_theme_inspector_browser_tokens_pin_current_values() -> None:
+    assert EDITOR_THEME.inspector_bg == (45, 45, 55, 255)
+    assert EDITOR_THEME.inspector_border == (60, 80, 100, 255)
+    assert EDITOR_THEME.inspector_selected == (70, 100, 140, 180)
+    assert EDITOR_THEME.inspector_accent == (100, 180, 255, 255)
+    assert EDITOR_THEME.inspector_dim == (140, 140, 150, 255)
+    assert EDITOR_THEME.inspector_text_soft == (160, 160, 170, 255)
+    assert EDITOR_THEME.inspector_text == (200, 200, 200, 255)
+    assert EDITOR_THEME.browser_border == (100, 100, 100)
+    assert EDITOR_THEME.browser_accent == (100, 200, 255)
+    assert EDITOR_THEME.browser_white == (255, 255, 255)
+    assert EDITOR_THEME.status_ok == (100, 255, 100)
+    assert EDITOR_THEME.browser_text_dim == (170, 170, 180)
+    assert EDITOR_THEME.browser_text == (180, 180, 180)
+    assert EDITOR_THEME.browser_muted == (100, 100, 100)
+    assert EDITOR_THEME.status_error == (255, 100, 100)
+    assert EDITOR_THEME.status_warn == (255, 200, 100)
+    assert EDITOR_THEME.overlay_white_soft == (255, 255, 255, 40)
+    assert EDITOR_THEME.overlay_white == (255, 255, 255, 50)
 
 
 def test_editor_theme_database_form_values_match_current_form_colors() -> None:
@@ -169,6 +192,19 @@ def test_panel_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module: 
     ],
 )
 def test_chrome_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module: object) -> None:
+    _assert_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module)
+
+
+@pytest.mark.parametrize(
+    "overlay_module",
+    [
+        component_inspector_overlay,
+        asset_browser_overlay,
+    ],
+)
+def test_inspector_browser_overlay_uses_theme_tokens_not_local_color_tuples(
+    overlay_module: object,
+) -> None:
     _assert_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module)
 
 
