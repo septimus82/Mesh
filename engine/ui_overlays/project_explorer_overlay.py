@@ -7,18 +7,19 @@ from typing import TYPE_CHECKING, Any, Optional
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline
 from .providers import project_explorer_provider
+from .theme import EDITOR_THEME
 from .widgets import Rect, ScrollList
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
 
-PROJECT_TEXT_COLOR = (220, 220, 230, 255)
-PROJECT_DIM_COLOR = (150, 150, 160, 255)
-PROJECT_SELECTED_BG = (90, 140, 200, 140)
-PROJECT_RENAME_BG = (40, 40, 50, 255)
-PROJECT_RENAME_BORDER = (120, 160, 220, 255)
-PROJECT_RENAME_CURSOR = (220, 220, 230, 255)
+PROJECT_TEXT_COLOR = EDITOR_THEME.text_primary
+PROJECT_DIM_COLOR = EDITOR_THEME.text_dim
+PROJECT_SELECTED_BG = EDITOR_THEME.selected_row_bg
+PROJECT_RENAME_BG = EDITOR_THEME.tree_bg
+PROJECT_RENAME_BORDER = EDITOR_THEME.tree_accent
+PROJECT_RENAME_CURSOR = EDITOR_THEME.text_primary
 
 
 class ProjectExplorerOverlay(UIElement):
@@ -30,7 +31,7 @@ class ProjectExplorerOverlay(UIElement):
 
     def _get_inline_rename_info(self, controller: object) -> tuple[bool, Optional[str], Optional[str], int, int, int]:
         """Get inline rename state from controller.
-        
+
         Returns:
             Tuple of (is_active, display_text, original_path, cursor_pos, sel_start, sel_end).
             cursor_pos is the caret position within the stem text.
@@ -256,8 +257,8 @@ class ProjectExplorerOverlay(UIElement):
                     width=float(panel_list_rect.right - panel_list_rect.left),
                     height=float(row_top - row_bottom),
                 ),
-                panel_bg=(0, 0, 0, 0),
-                panel_border=(0, 0, 0, 0),
+                panel_bg=EDITOR_THEME.transparent,
+                panel_border=EDITOR_THEME.transparent,
                 item_spacing=0.0,
                 inner_padding_x=0.0,
                 inner_padding_y=0.0,
@@ -286,7 +287,7 @@ class ProjectExplorerOverlay(UIElement):
         sel_end: int = 0,
     ) -> None:
         """Draw the inline rename text editor.
-        
+
         Args:
             left: Left edge of the row.
             right: Right edge of the row.
@@ -320,7 +321,7 @@ class ProjectExplorerOverlay(UIElement):
                     sel_right,
                     bottom,
                     top,
-                    (80, 120, 180, 128),  # Selection highlight color
+                    EDITOR_THEME.tree_selected_bg,
                 )
 
         # Draw cursor (blinking)

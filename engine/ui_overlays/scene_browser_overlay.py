@@ -6,6 +6,7 @@ import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline, draw_panel_bg
+from .theme import EDITOR_THEME
 from .widget_overlay_helpers import (
     OverlayFocusModel,
     build_empty_row,
@@ -20,10 +21,10 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 LINE_HEIGHT = 18.0
-TEXT_COLOR = (220, 220, 230, 255)
-DIM_COLOR = (150, 150, 160, 255)
-SELECT_BG = (90, 140, 200, 140)
-HEADER_COLOR = (200, 210, 230, 255)
+TEXT_COLOR = EDITOR_THEME.text_primary
+DIM_COLOR = EDITOR_THEME.text_dim
+SELECT_BG = EDITOR_THEME.selected_row_bg
+HEADER_COLOR = EDITOR_THEME.text_header
 ROW_HEIGHT = int(LINE_HEIGHT)
 
 
@@ -321,7 +322,7 @@ class SceneBrowserOverlay(UIElement):
             input_rect.right + 2.0,
             input_rect.top + 2.0,
             input_rect.bottom - 2.0,
-            (90, 120, 170, 180) if self._text_input.focused else (85, 85, 95, 120),
+            EDITOR_THEME.field_border_focus if self._text_input.focused else EDITOR_THEME.field_border_idle,
             1.0,
         )
         for instruction in input_layout.instructions:
