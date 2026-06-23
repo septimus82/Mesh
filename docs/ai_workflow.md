@@ -2,12 +2,30 @@
 
 - **What `ai_ops` does:** exposes small, stable operations (create scenes, add/modify entities, behaviours, dialogue, quests, paint tiles, run validation) so AIs don't edit raw Python/JSON directly.
 - **Job JSON shape:** top-level object with `operations: []`. Each entry has a `type` plus the fields it needs (e.g., `scene_path`, `prefab_name`, `entity_id`, `behaviour_name`, `params`, `ops` for tiles).
-- **Common operation types:**
-  - `add_entity_from_prefab` - place a prefab at `x`,`y`.
-  - `set_behaviour_params` - patch `behaviour_config` for an entity.
-  - `edit_dialogue` - set `behaviour_config.Dialogue.dialogue`.
-  - `paint_tiles` - list of `{layer, col, row, gid}`.
-  - `run_validation` - validate a scene.
+- **Operation types:**
+  - `create_scene` - create a new scene from a named template.
+  - `add_entity_from_prefab` - place a prefab instance in a scene at `x`, `y`.
+  - `delete_entity` - remove an entity from a scene by `entity_id`.
+  - `set_behaviour_params` - patch `behaviour_config` for one behaviour on an entity.
+  - `edit_dialogue` - patch an entity dialogue payload.
+  - `edit_quest` - patch a quest reference on a scene/entity.
+  - `add_quest_definition` - add or replace a quest definition in a quests file.
+  - `update_quest_definition` - update a quest definition in a quests file.
+  - `delete_quest_definition` - remove a quest definition by `quest_id`.
+  - `paint_tiles` - apply tile edits from `{layer, col, row, gid}` operations.
+  - `add_light` - append a light entry to a scene.
+  - `update_light` - patch a light entry by index.
+  - `delete_light` - delete a light entry by index.
+  - `run_validation` - validate a scene and return errors/warnings.
+  - `add_world_scene` - add a scene entry to a world graph.
+  - `link_world_scenes` - link two world scenes, optionally bidirectional.
+  - `set_world_start` - set the world start scene and optional spawn.
+  - `add_cutscene` - add or replace a cutscene definition.
+  - `update_cutscene` - update a cutscene definition.
+  - `delete_cutscene` - remove a cutscene definition by id.
+  - `insert_cutscene_step` - insert a step into a cutscene.
+  - `update_cutscene_step` - patch a cutscene step by index.
+  - `delete_cutscene_step` - delete a cutscene step by index.
 
 ## Run from CLI (Plan workflow)
 
