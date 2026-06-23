@@ -38,6 +38,11 @@ class EditorTheme:
     shell_bg_alt: Color
     menubar_bg: Color
     context_shadow: Color
+    scrim_dim: Color
+    scrim_dim_soft: Color
+    scrim_dim_medium: Color
+    black: RgbColor
+    undo_selected: Color
     inspector_bg: Color
     inspector_border: Color
     inspector_selected: Color
@@ -103,6 +108,11 @@ EDITOR_THEME = EditorTheme(
     shell_bg_alt=(50, 50, 55, 255),
     menubar_bg=(40, 40, 45, 255),
     context_shadow=(0, 0, 0, 120),
+    scrim_dim=(0, 0, 0, 200),
+    scrim_dim_soft=(0, 0, 0, 170),
+    scrim_dim_medium=(0, 0, 0, 180),
+    black=(0, 0, 0),
+    undo_selected=(70, 110, 150, 80),
     inspector_bg=(45, 45, 55, 255),
     inspector_border=(60, 80, 100, 255),
     inspector_selected=(70, 100, 140, 180),

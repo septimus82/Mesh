@@ -8,16 +8,17 @@ import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline
+from .theme import EDITOR_THEME
 from .widgets import Rect, ScrollList
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
 
-HISTORY_TEXT_COLOR = (220, 220, 230, 255)
-HISTORY_DIM_COLOR = (150, 150, 160, 255)
-HISTORY_CURRENT_BG = (70, 110, 150, 80)
-HISTORY_CURSOR_BG = (90, 140, 200, 140)
+HISTORY_TEXT_COLOR = EDITOR_THEME.text_primary
+HISTORY_DIM_COLOR = EDITOR_THEME.text_dim
+HISTORY_CURRENT_BG = EDITOR_THEME.undo_selected
+HISTORY_CURSOR_BG = EDITOR_THEME.selected_row_bg
 _DEFAULT_HISTORY_ROW_HEIGHT = 18
 
 
@@ -90,14 +91,14 @@ class UndoHistoryOverlay(UIElement):
             dock.right,
             dock.bottom,
             dock.top,
-            (18, 18, 22, 220),
+            EDITOR_THEME.panel_strong_bg,
         )
         _draw_tb_rectangle_outline(
             dock.left,
             dock.right,
             dock.top,
             dock.bottom,
-            (100, 100, 110, 255),
+            EDITOR_THEME.panel_strong_border,
             1,
         )
 
@@ -210,14 +211,14 @@ class UndoHistoryOverlay(UIElement):
             track_right = dock.right - HISTORY_PADDING - 1
             track_top = content_top
             track_bottom = content_bottom
-            _draw_rectangle_filled(track_left, track_right, track_bottom, track_top, (90, 90, 100, 140))
+            _draw_rectangle_filled(track_left, track_right, track_bottom, track_top, EDITOR_THEME.input_border)
             track_h = max(1.0, track_top - track_bottom)
             ratio = max(0.0, min(1.0, start_n / max(1, (total_n - visible_n))))
             thumb_h = max(10.0, track_h * (visible_n / total_n))
             usable_h = max(1.0, track_h - thumb_h)
             thumb_top = track_top - (ratio * usable_h)
             thumb_bottom = thumb_top - thumb_h
-            _draw_rectangle_filled(track_left, track_right, thumb_bottom, thumb_top, (150, 150, 160, 200))
+            _draw_rectangle_filled(track_left, track_right, thumb_bottom, thumb_top, EDITOR_THEME.text_dim_soft)
 
         # Optional footer hint
         if entries and visible > 0:

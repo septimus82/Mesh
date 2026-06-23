@@ -13,6 +13,7 @@ from .common import (
     _draw_rectangle_filled,
     _safe_truncate,
 )
+from .theme import EDITOR_THEME
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -104,8 +105,8 @@ class InspectorOverlay(UIElement):
     def __init__(self, window: "GameWindow") -> None:
         super().__init__(window)
         self.visible: bool = False
-        self.background_color = getattr(optional_arcade.arcade.color, "BLACK", (0, 0, 0))
-        self.text_color = getattr(optional_arcade.arcade.color, "WHITE", (255, 255, 255))
+        self.background_color = getattr(optional_arcade.arcade.color, "BLACK", EDITOR_THEME.black)
+        self.text_color = getattr(optional_arcade.arcade.color, "WHITE", EDITOR_THEME.browser_white)
         self._lines: list[str] = []
         self._text = optional_arcade.arcade.Text(
             text="",
@@ -156,7 +157,7 @@ class InspectorOverlay(UIElement):
 
         center_x = self.window.width - width / 2 - 10
         center_y = self.window.height - height / 2 - 10
-        _draw_rectangle_filled(center_x, center_y, width, height, (0, 0, 0, 180))
+        _draw_rectangle_filled(center_x, center_y, width, height, EDITOR_THEME.scrim_dim_medium)
 
         self._text.x = self.window.width - 20
         self._text.y = self.window.height - 20

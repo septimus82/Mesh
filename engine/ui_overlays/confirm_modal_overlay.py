@@ -4,6 +4,7 @@ import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import _log_swallow
 from engine.text_draw import TextCache
 from engine.ui_overlays.common import _draw_tb_rectangle_filled, draw_outline_centered, draw_panel_bg
+from engine.ui_overlays.theme import EDITOR_THEME
 from engine.ui_text_cache import UiTextCache, draw_text
 
 
@@ -28,7 +29,7 @@ class ConfirmModalOverlay:
 
         # Background
         draw_panel_bg(cx - panel_w//2, cy - panel_h//2, panel_w, panel_h)
-        draw_outline_centered(cx, cy, panel_w, panel_h, (100, 100, 100))
+        draw_outline_centered(cx, cy, panel_w, panel_h, EDITOR_THEME.browser_border)
 
         # Title
         draw_text(
@@ -77,14 +78,26 @@ class ConfirmModalOverlay:
                 track_right = track_left + 3
                 track_top = list_top
                 track_bottom = list_bottom
-                _draw_tb_rectangle_filled(track_left, track_right, track_top, track_bottom, (90, 90, 100, 140))
+                _draw_tb_rectangle_filled(
+                    track_left,
+                    track_right,
+                    track_top,
+                    track_bottom,
+                    EDITOR_THEME.input_border,
+                )
                 track_h = max(1.0, track_top - track_bottom)
                 ratio = max(0.0, min(1.0, start_index / max(1, (total_lines - visible_count))))
                 thumb_h = max(10.0, track_h * (visible_count / total_lines))
                 usable_h = max(1.0, track_h - thumb_h)
                 thumb_top = track_top - (ratio * usable_h)
                 thumb_bottom = thumb_top - thumb_h
-                _draw_tb_rectangle_filled(track_left, track_right, thumb_top, thumb_bottom, (150, 150, 160, 200))
+                _draw_tb_rectangle_filled(
+                    track_left,
+                    track_right,
+                    thumb_top,
+                    thumb_bottom,
+                    EDITOR_THEME.text_dim_soft,
+                )
         except Exception:
             _log_swallow("CONF-001", "engine/ui_overlays/confirm_modal_overlay.py pass-only blanket swallow")
             pass

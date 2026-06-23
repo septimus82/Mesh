@@ -7,6 +7,7 @@ import engine.optional_arcade as optional_arcade
 from ..editor_status import build_editor_status
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, draw_panel_bg
+from .theme import EDITOR_THEME
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -32,7 +33,7 @@ class EditorStatusBarOverlay(UIElement):
         status = build_editor_status(controller, int(width), int(height))
         bar_height = 26.0
 
-        draw_panel_bg(0.0, width, 0.0, bar_height, color=(0, 0, 0, 200))
+        draw_panel_bg(0.0, width, 0.0, bar_height, color=EDITOR_THEME.scrim_dim)
 
         left_text = f"{status['scene_label']}  {status['dirty_label']}"
         # Use operation banner if active, otherwise selection label
