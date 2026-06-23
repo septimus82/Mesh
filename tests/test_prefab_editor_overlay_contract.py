@@ -133,6 +133,7 @@ def _capture_panel_text(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     monkeypatch.setattr(panel_primitives, "draw_panel_bg", lambda *args, **kwargs: None)
     monkeypatch.setattr(panel_primitives, "_draw_tb_rectangle_outline", lambda *args, **kwargs: None)
     monkeypatch.setattr(panel_primitives, "draw_text_cached", lambda text, *args, **kwargs: captured.append(str(text)))
+    monkeypatch.setattr(panel_primitives, "get_text_scale", lambda: 0.0)
     return captured
 
 

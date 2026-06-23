@@ -10,9 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Sequence
 
-from engine.text_draw import TextCache, draw_text_cached
+from engine.text_draw import TextCache, draw_text_cached, get_text_scale
 from engine.ui.widgets import DrawInstruction, LayoutResult, Rect
-from engine.ui_overlays.common import _draw_tb_rectangle_outline, draw_panel_bg
+from engine.ui_overlays.common import _draw_tb_rectangle_outline, _safe_truncate, draw_panel_bg
 
 Color = tuple[int, int, int, int]
 
@@ -54,11 +54,54 @@ class PanelField:
     value_color: Color = DEFAULT_DIM_TEXT_COLOR
 
     def layout(self, bounds: Rect, *, padding_x: float = DEFAULT_PADDING) -> LayoutResult:
+        scale = get_text_scale()
+        label_char_w = max(1.0, self.label_font_size * 0.6 * scale)
+        available_px = bounds.width - 2.0 * padding_x
+
+        if self.value is None:
+            # Label-only row: full available width
+            label_chars = max(4, int(available_px / label_char_w))
+            label_text = _safe_truncate(str(self.label), label_chars)
+            instructions = [
+                DrawInstruction(
+                    kind="panel_field_label",
+                    payload={
+                        "text": label_text,
+                        "x": float(bounds.left + padding_x),
+                        "y": float(bounds.center_y),
+                        "font_size": int(self.label_font_size),
+                        "color": self.label_color,
+                        "anchor_x": "left",
+                        "anchor_y": "center",
+                    },
+                )
+            ]
+            return LayoutResult(rect=bounds, instructions=instructions)
+
+        # Label + value row: fit-first, then cap
+        value_char_w = max(1.0, self.value_font_size * 0.6 * scale)
+        gap = DEFAULT_PADDING
+        label_natural_px = len(str(self.label)) * label_char_w
+        value_natural_px = len(str(self.value)) * value_char_w
+
+        if label_natural_px + gap + value_natural_px <= available_px:
+            # Both fit without truncation
+            label_text = str(self.label)
+            value_text = str(self.value)
+        else:
+            # Overflow: cap value to ≤40%, label gets the remainder
+            value_cap_px = (available_px - gap) * 0.40
+            value_chars = max(4, int(min(value_natural_px, value_cap_px) / value_char_w))
+            value_text = _safe_truncate(str(self.value), value_chars)
+            value_actual_px = len(value_text) * value_char_w
+            label_chars = max(4, int((available_px - value_actual_px - gap) / label_char_w))
+            label_text = _safe_truncate(str(self.label), label_chars)
+
         instructions = [
             DrawInstruction(
                 kind="panel_field_label",
                 payload={
-                    "text": str(self.label),
+                    "text": label_text,
                     "x": float(bounds.left + padding_x),
                     "y": float(bounds.center_y),
                     "font_size": int(self.label_font_size),
@@ -66,23 +109,20 @@ class PanelField:
                     "anchor_x": "left",
                     "anchor_y": "center",
                 },
-            )
+            ),
+            DrawInstruction(
+                kind="panel_field_value",
+                payload={
+                    "text": value_text,
+                    "x": float(bounds.right - padding_x),
+                    "y": float(bounds.center_y),
+                    "font_size": int(self.value_font_size),
+                    "color": self.value_color,
+                    "anchor_x": "right",
+                    "anchor_y": "center",
+                },
+            ),
         ]
-        if self.value is not None:
-            instructions.append(
-                DrawInstruction(
-                    kind="panel_field_value",
-                    payload={
-                        "text": str(self.value),
-                        "x": float(bounds.right - padding_x),
-                        "y": float(bounds.center_y),
-                        "font_size": int(self.value_font_size),
-                        "color": self.value_color,
-                        "anchor_x": "right",
-                        "anchor_y": "center",
-                    },
-                )
-            )
         return LayoutResult(rect=bounds, instructions=instructions)
 
     def click(self) -> bool:

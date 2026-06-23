@@ -149,3 +149,100 @@ def test_panel_header_title_and_subtitle_layout_is_deterministic() -> None:
     ]
     assert layout.instructions[0].payload["text"] == "Transform"
     assert layout.instructions[1].payload["text"] == "World space"
+
+
+# ---------------------------------------------------------------------------
+# Truncation tests (Tier 11.0-B)
+# ---------------------------------------------------------------------------
+
+def test_panel_field_long_label_and_value_narrow_bounds_both_truncated_no_overlap() -> None:
+    """Long label + long value in a narrow panel: both get '...', label x < value x."""
+    field = PanelField("A very long quest name here", "quest_with_a_very_long_id_string")
+
+    # 80px wide — both texts overflow at default font sizes
+    layout = field.layout(Rect(0.0, 0.0, 80.0, 24.0))
+
+    assert len(layout.instructions) == 2
+    label_instr = layout.instructions[0]
+    value_instr = layout.instructions[1]
+    assert label_instr.kind == "panel_field_label"
+    assert value_instr.kind == "panel_field_value"
+    # Both were truncated
+    assert label_instr.payload["text"].endswith("...")
+    assert value_instr.payload["text"].endswith("...")
+    # No positional overlap: label is left-anchored, value is right-anchored —
+    # label end x must be < value start x
+    label_end_x = float(label_instr.payload["x"]) + len(label_instr.payload["text"]) * (11 * 0.6)
+    value_start_x = float(value_instr.payload["x"]) - len(value_instr.payload["text"]) * (10 * 0.6)
+    assert label_end_x < value_start_x
+
+
+def test_panel_field_short_label_and_value_wide_bounds_not_truncated() -> None:
+    """Short texts in a wide panel: strings are drawn unchanged (fit-first)."""
+    field = PanelField("Name", "id")
+
+    layout = field.layout(Rect(0.0, 0.0, 400.0, 24.0))
+
+    label_text = layout.instructions[0].payload["text"]
+    value_text = layout.instructions[1].payload["text"]
+    assert label_text == "Name"
+    assert value_text == "id"
+
+
+def test_panel_field_short_value_medium_label_fits_label_not_truncated() -> None:
+    """Fit-first: when label+gap+value fits, label is drawn full even if a fixed 60%
+    split would have cut it."""
+    # 30-char label × 6.6px ≈ 198px; 4-char value × 6px ≈ 24px; gap 8px → 230px total
+    # A 300px-wide panel comfortably fits both — label must NOT be truncated.
+    label = "A medium length quest name ok"   # 29 chars
+    value = "id01"                             # 4 chars
+    field = PanelField(label, value)
+
+    layout = field.layout(Rect(0.0, 0.0, 300.0, 24.0))
+
+    assert layout.instructions[0].payload["text"] == label
+    assert layout.instructions[1].payload["text"] == value
+
+
+def test_panel_field_value_none_narrow_bounds_label_only_no_raise() -> None:
+    """value=None row in a narrow panel: only label instruction emitted, no error."""
+    field = PanelField("Some label text that is quite long", value=None)
+
+    layout = field.layout(Rect(0.0, 0.0, 60.0, 24.0))
+
+    kinds = [i.kind for i in layout.instructions]
+    assert kinds == ["panel_field_label"]
+    # Label may be truncated but must not raise and must be a non-empty string
+    assert len(layout.instructions[0].payload["text"]) >= 1
+
+
+def test_panel_field_overflow_label_gets_majority_of_budget() -> None:
+    """On overflow, label_chars >= value_chars (label ≥60% of budget)."""
+    field = PanelField("X" * 40, "Y" * 40)
+
+    layout = field.layout(Rect(0.0, 0.0, 120.0, 24.0))
+
+    label_text = layout.instructions[0].payload["text"]
+    value_text = layout.instructions[1].payload["text"]
+    # Both truncated; label gets the larger share
+    assert len(label_text) >= len(value_text)
+
+
+def test_panel_field_truncation_tighter_at_high_text_scale(monkeypatch) -> None:
+    """At text_scale=2.0 the char budget is halved → truncation triggers sooner."""
+    import engine.text_draw as _td
+
+    monkeypatch.setattr(_td, "_text_scale", 2.0)
+
+    field = PanelField("Medium length label", "medium_value_id")
+
+    # At scale=1 this fits in 240px; at scale=2 it should overflow and truncate
+    layout_scale2 = field.layout(Rect(0.0, 0.0, 240.0, 24.0))
+
+    monkeypatch.setattr(_td, "_text_scale", 1.0)
+    layout_scale1 = field.layout(Rect(0.0, 0.0, 240.0, 24.0))
+
+    label_at_scale2 = layout_scale2.instructions[0].payload["text"]
+    label_at_scale1 = layout_scale1.instructions[0].payload["text"]
+    # At higher scale the rendered label is shorter (tighter budget)
+    assert len(label_at_scale2) <= len(label_at_scale1)
