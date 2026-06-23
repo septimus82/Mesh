@@ -1,6 +1,6 @@
 # Dev Console
 
-Command reference based on GameWindow help sections and runtime defaults.
+Command reference generated from GameWindow help sections.
 
 ## meta
 - **help / ?** -- Show this help
@@ -74,6 +74,10 @@ Command reference based on GameWindow help sections and runtime defaults.
 - **assets** -- Show texture cache info
 - **assets clear** -- Clear texture cache
 
+## prefabs
+- **prefab_source [prefab_id] [--json]** -- Show prefab source (hovered/inspected if omitted)
+- **prefab_source_chain <prefab_id> [--json]** -- Show override chain for prefab id
+
 ## audio
 - **sound <path>** -- Play a one-shot sound
 - **music <path>** -- Play music (looped)
@@ -85,14 +89,14 @@ Command reference based on GameWindow help sections and runtime defaults.
 - **bind <action> <key>** -- Add a key binding
 - **unbind <action> [key]** -- Remove one or all keys for an action
 - **saveconfig** -- Save config to disk
-- **set volume <0..1>** -- Set global volume scale
-- **set master <0..1>** -- Set master volume
-- **set music <0..1>** -- Set music volume
-- **set sfx <0..1>** -- Set SFX volume
-- **set fullscreen <on|off>** -- Toggle fullscreen
-- **set vsync <on|off>** -- Toggle vsync
-- **set show_fps <on|off>** -- Toggle FPS overlay
-- **set debug_on_start <on|off>** -- Toggle debug on start
+- **set volume <0..1>**
+- **set master <0..1>**
+- **set music <0..1>**
+- **set sfx <0..1>**
+- **set fullscreen <on|off>**
+- **set vsync <on|off>**
+- **set show_fps <on|off>**
+- **set debug_on_start <on|off>**
 
 ## inventory
 - **inventory [list]** -- Show current inventory contents
@@ -123,21 +127,20 @@ Command reference based on GameWindow help sections and runtime defaults.
 - **F1 / ` / Insert** -- Toggle console
 - **Ctrl+F1** -- Toggle command palette (debug)
 - **F2** -- Toggle capture mode (debug)
-- **F3** -- Toggle debug mode and overlay
-- **F4** -- Toggle editor mode
 - **H** -- Toggle help overlay
-- **V** -- Toggle variant picker
-- **Q** -- Toggle quest log
-- **TAB** -- Toggle inventory overlay
-- **C** -- Toggle character panel
-- **I** -- Toggle inspector panel (editor)
+- **F3** -- Toggle debug overlay
+- **F4** -- Toggle editor mode
 - **F5** -- Quick save (debug)
 - **F6** -- Quick load (debug)
 - **F8** -- Toggle encounter debug overlay
-- **F9** -- Toggle paused state (debug: copy snippet when inspector is active)
+- **F9** -- Toggle paused state
 - **F10** -- Toggle scene inspector overlay
 - **F11** -- Toggle tile paint mode (debug)
 - **F12** -- Toggle selection lock from hover (debug)
 - **Esc** -- Toggle settings overlay
+- **Q** -- Toggle quest log
+- **I** -- Toggle inventory overlay
+- **C** -- Toggle character panel
+- **V** -- Toggle variant picker
 - **PgUp/PgDn/Home/End** -- Scroll console
 - **Up/Down** -- Navigate console history
