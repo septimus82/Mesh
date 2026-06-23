@@ -6,15 +6,16 @@ from typing import TYPE_CHECKING, Any
 
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline
+from .theme import EDITOR_THEME
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
 
-DEBUG_TEXT_COLOR = (220, 220, 230, 255)
-DEBUG_DIM_COLOR = (150, 150, 160, 255)
-DEBUG_HEADER_COLOR = (180, 200, 220, 255)
-DEBUG_FILTER_ACTIVE_COLOR = (255, 220, 140, 255)
+DEBUG_TEXT_COLOR = EDITOR_THEME.text_primary
+DEBUG_DIM_COLOR = EDITOR_THEME.text_dim
+DEBUG_HEADER_COLOR = EDITOR_THEME.header_muted
+DEBUG_FILTER_ACTIVE_COLOR = EDITOR_THEME.accent_warm
 
 
 class DebugPanelsOverlay(UIElement):
@@ -55,14 +56,14 @@ class DebugPanelsOverlay(UIElement):
             dock.right,
             dock.bottom,
             dock.top,
-            (18, 18, 22, 220),
+            EDITOR_THEME.panel_strong_bg,
         )
         _draw_tb_rectangle_outline(
             dock.left,
             dock.right,
             dock.top,
             dock.bottom,
-            (100, 100, 110, 255),
+            EDITOR_THEME.panel_strong_border,
             1,
         )
 

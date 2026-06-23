@@ -6,16 +6,17 @@ from typing import TYPE_CHECKING, Any
 
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_rectangle_filled, _draw_tb_rectangle_outline
+from .theme import EDITOR_THEME
 from .widgets import Rect, ScrollList
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
 
-PROBLEMS_TEXT_COLOR = (220, 220, 230, 255)
-PROBLEMS_DIM_COLOR = (150, 150, 160, 255)
-PROBLEMS_SELECTED_BG = (90, 140, 200, 140)
-PROBLEMS_HEADER_COLOR = (180, 200, 220, 255)
+PROBLEMS_TEXT_COLOR = EDITOR_THEME.text_primary
+PROBLEMS_DIM_COLOR = EDITOR_THEME.text_dim
+PROBLEMS_SELECTED_BG = EDITOR_THEME.selected_row_bg
+PROBLEMS_HEADER_COLOR = EDITOR_THEME.header_muted
 
 
 class ProblemsPanelOverlay(UIElement):
@@ -81,14 +82,14 @@ class ProblemsPanelOverlay(UIElement):
             dock.right,
             dock.bottom,
             dock.top,
-            (18, 18, 22, 220),
+            EDITOR_THEME.panel_strong_bg,
         )
         _draw_tb_rectangle_outline(
             dock.left,
             dock.right,
             dock.top,
             dock.bottom,
-            (100, 100, 110, 255),
+            EDITOR_THEME.panel_strong_border,
             1,
         )
 
@@ -179,8 +180,8 @@ class ProblemsPanelOverlay(UIElement):
                     width=float(panel.list_rect.right - panel.list_rect.left),
                     height=float(panel.list_rect.top - panel.list_rect.bottom),
                 ),
-                panel_bg=(0, 0, 0, 0),
-                panel_border=(0, 0, 0, 0),
+                panel_bg=EDITOR_THEME.transparent,
+                panel_border=EDITOR_THEME.transparent,
                 item_spacing=0.0,
                 inner_padding_x=0.0,
                 inner_padding_y=0.0,
@@ -237,7 +238,7 @@ class ProblemsPanelOverlay(UIElement):
                     track_top = panel.list_rect.top
                     track_bottom = panel.list_rect.bottom
                     _draw_rectangle_filled(
-                        track_left, track_right, track_bottom, track_top, (90, 90, 100, 140)
+                        track_left, track_right, track_bottom, track_top, EDITOR_THEME.input_border
                     )
                     track_h = max(1.0, track_top - track_bottom)
                     ratio = max(0.0, min(1.0, start_n / max(1, (total_n - visible_n))))
@@ -246,7 +247,7 @@ class ProblemsPanelOverlay(UIElement):
                     thumb_top = track_top - (ratio * usable_h)
                     thumb_bottom = thumb_top - thumb_h
                     _draw_rectangle_filled(
-                        track_left, track_right, thumb_bottom, thumb_top, (150, 150, 160, 200)
+                        track_left, track_right, thumb_bottom, thumb_top, EDITOR_THEME.text_dim_soft
                     )
 
         # Detail area / Preview

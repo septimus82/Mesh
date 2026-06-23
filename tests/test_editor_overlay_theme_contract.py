@@ -5,7 +5,17 @@ from pathlib import Path
 
 import pytest
 
-from engine.ui_overlays import dialogue_editor_overlay, item_editor_overlay, prefab_editor_overlay, quest_editor_overlay
+from engine.ui_overlays import (
+    debug_panels_overlay,
+    dialogue_editor_overlay,
+    find_everything_overlay,
+    item_editor_overlay,
+    prefab_editor_overlay,
+    problems_panel_overlay,
+    project_explorer_overlay,
+    quest_editor_overlay,
+    scene_browser_overlay,
+)
 from engine.ui_overlays.editor_database_form_helpers import FormColors
 from engine.ui_overlays.theme import EDITOR_THEME
 
@@ -38,6 +48,19 @@ def test_editor_theme_tokens_pin_current_values() -> None:
     assert EDITOR_THEME.severity_error_bg == (72, 24, 24)
     assert EDITOR_THEME.severity_error_border == (255, 110, 110)
     assert EDITOR_THEME.severity_error_text == (255, 255, 255)
+
+
+def test_editor_theme_panel_tokens_pin_current_values() -> None:
+    assert EDITOR_THEME.field_border_idle == (85, 85, 95, 120)
+    assert EDITOR_THEME.field_border_focus == (90, 120, 170, 180)
+    assert EDITOR_THEME.panel_strong_bg == (18, 18, 22, 220)
+    assert EDITOR_THEME.panel_strong_border == (100, 100, 110, 255)
+    assert EDITOR_THEME.header_muted == (180, 200, 220, 255)
+    assert EDITOR_THEME.text_dim_soft == (150, 150, 160, 200)
+    assert EDITOR_THEME.accent_warm == (255, 220, 140, 255)
+    assert EDITOR_THEME.tree_bg == (40, 40, 50, 255)
+    assert EDITOR_THEME.tree_selected_bg == (80, 120, 180, 128)
+    assert EDITOR_THEME.tree_accent == (120, 160, 220, 255)
 
 
 def test_editor_theme_database_form_values_match_current_form_colors() -> None:
@@ -104,6 +127,20 @@ def test_prefab_editor_overlay_uses_theme_tokens_not_local_color_tuples() -> Non
 def test_database_editor_overlays_use_theme_tokens_not_local_color_tuples() -> None:
     for overlay_module in (item_editor_overlay, quest_editor_overlay, dialogue_editor_overlay):
         _assert_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module)
+
+
+@pytest.mark.parametrize(
+    "overlay_module",
+    [
+        find_everything_overlay,
+        scene_browser_overlay,
+        problems_panel_overlay,
+        debug_panels_overlay,
+        project_explorer_overlay,
+    ],
+)
+def test_panel_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module: object) -> None:
+    _assert_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module)
 
 
 def _assert_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module: object) -> None:
