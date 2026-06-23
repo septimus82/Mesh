@@ -16,26 +16,27 @@ from engine.ui_overlays.editor_database_form_helpers import (
     sync_text_inputs,
     try_click_text_widget,
 )
+from engine.ui_overlays.theme import EDITOR_THEME
 from engine.ui_overlays.widgets import Rect, TextInput, Toggle
 
 if TYPE_CHECKING:  # pragma: no cover
     from engine.game import GameWindow
 
 
-ITEM_EDITOR_TEXT_COLOR = (220, 220, 230, 255)
-ITEM_EDITOR_DIM_COLOR = (150, 150, 160, 255)
-ITEM_EDITOR_SELECTED_BG = (90, 140, 200, 140)
-ITEM_EDITOR_ERROR_COLOR = (255, 120, 120, 255)
-ITEM_EDITOR_BUTTON_COLOR = (100, 200, 255, 255)
+ITEM_EDITOR_TEXT_COLOR = EDITOR_THEME.text_primary
+ITEM_EDITOR_DIM_COLOR = EDITOR_THEME.text_dim
+ITEM_EDITOR_SELECTED_BG = EDITOR_THEME.selected_row_bg
+ITEM_EDITOR_ERROR_COLOR = EDITOR_THEME.error_text
+ITEM_EDITOR_BUTTON_COLOR = EDITOR_THEME.action_text
 ITEM_EDITOR_ROW_HEIGHT = 18.0
 ITEM_EDITOR_ROW_PADDING_X = 6.0
 ITEM_EDITOR_PANEL_GAP = 8.0
 ITEM_EDITOR_EDITABLE_SCALAR_FIELDS = {"id", "name", "description", "icon", "stackable", "max_stack"}
 ITEM_EDITOR_READ_ONLY_COMPLEX_FIELDS = {"tags", "effects"}
 _ITEM_FORM_COLORS = FormColors(
-    text=ITEM_EDITOR_TEXT_COLOR,
-    dim=ITEM_EDITOR_DIM_COLOR,
-    button=ITEM_EDITOR_BUTTON_COLOR,
+    text=EDITOR_THEME.text_primary,
+    dim=EDITOR_THEME.text_dim,
+    button=EDITOR_THEME.action_text,
 )
 
 
@@ -131,8 +132,8 @@ class ItemEditorOverlay(UIElement):
         dirty_marker = " *" if item_editor is not None and item_editor.is_dirty() else ""
         list_panel = EditorPanelBase(
             list_rect,
-            panel_bg=(0, 0, 0, 0),
-            panel_border=(0, 0, 0, 0),
+            panel_bg=EDITOR_THEME.transparent,
+            panel_border=EDITOR_THEME.transparent,
             item_spacing=0.0,
             inner_padding_x=0.0,
             inner_padding_y=0.0,
@@ -173,8 +174,8 @@ class ItemEditorOverlay(UIElement):
 
         detail_panel = EditorPanelBase(
             detail_rect,
-            panel_bg=(0, 0, 0, 0),
-            panel_border=(0, 0, 0, 0),
+            panel_bg=EDITOR_THEME.transparent,
+            panel_border=EDITOR_THEME.transparent,
             item_spacing=2.0,
             inner_padding_x=0.0,
             inner_padding_y=0.0,
