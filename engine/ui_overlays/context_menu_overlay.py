@@ -12,18 +12,18 @@ import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, draw_panel_bg
+from .theme import EDITOR_THEME
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
 
-# Color palette for the context menu
-CONTEXT_BG_COLOR = (35, 35, 40, 250)
-CONTEXT_BORDER_COLOR = (60, 60, 70, 255)
-CONTEXT_HOVER_COLOR = (70, 130, 180, 255)
-CONTEXT_TEXT_COLOR = (220, 220, 220, 255)
-CONTEXT_TEXT_DISABLED_COLOR = (100, 100, 100, 255)
-CONTEXT_SHORTCUT_COLOR = (140, 140, 140, 255)
+CONTEXT_BG_COLOR = EDITOR_THEME.panel_bg
+CONTEXT_BORDER_COLOR = EDITOR_THEME.chrome_border
+CONTEXT_HOVER_COLOR = EDITOR_THEME.chrome_accent
+CONTEXT_TEXT_COLOR = EDITOR_THEME.chrome_text
+CONTEXT_TEXT_DISABLED_COLOR = EDITOR_THEME.chrome_separator
+CONTEXT_SHORTCUT_COLOR = EDITOR_THEME.chrome_dim
 
 
 class ContextMenuOverlay(UIElement):

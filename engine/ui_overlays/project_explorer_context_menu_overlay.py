@@ -13,6 +13,7 @@ from ..text_draw import TextCache
 from ..ui_text_cache import UiTextCache, draw_text
 from .common import UIElement, _draw_tb_rectangle_filled, _draw_tb_rectangle_outline
 from .providers import project_explorer_context_menu_provider
+from .theme import EDITOR_THEME
 
 if TYPE_CHECKING:
     from ..game import GameWindow
@@ -27,15 +28,10 @@ class ProjectExplorerContextMenuOverlay(UIElement):
     def draw(self) -> None:
         from ..editor.project_explorer_context_menu_layout_model import clamp_menu_rect
         from ..editor.project_explorer_context_menu_model import (
-            CONTEXT_MENU_BG_COLOR,
-            CONTEXT_MENU_BORDER_COLOR,
-            CONTEXT_MENU_DISABLED_TEXT_COLOR,
             CONTEXT_MENU_FONT_SIZE,
-            CONTEXT_MENU_HOVER_COLOR,
             CONTEXT_MENU_ITEM_HEIGHT,
             CONTEXT_MENU_PADDING_X,
             CONTEXT_MENU_PADDING_Y,
-            CONTEXT_MENU_TEXT_COLOR,
             CONTEXT_MENU_WIDTH,
         )
 
@@ -93,9 +89,9 @@ class ProjectExplorerContextMenuOverlay(UIElement):
         t = my + h
 
         # Subtle shadow + panel
-        _draw_tb_rectangle_filled(left + 1, right + 1, t - 1, b - 1, (0, 0, 0, 120))
-        _draw_tb_rectangle_filled(left, right, t, b, CONTEXT_MENU_BG_COLOR)
-        _draw_tb_rectangle_outline(left, right, t, b, CONTEXT_MENU_BORDER_COLOR, 1)
+        _draw_tb_rectangle_filled(left + 1, right + 1, t - 1, b - 1, EDITOR_THEME.context_shadow)
+        _draw_tb_rectangle_filled(left, right, t, b, EDITOR_THEME.panel_bg)
+        _draw_tb_rectangle_outline(left, right, t, b, EDITOR_THEME.chrome_border, 1)
 
         # 2. Items
         # Render top to bottom
@@ -117,22 +113,27 @@ class ProjectExplorerContextMenuOverlay(UIElement):
             # Hover
             if item.kind != "separator" and (i == hover_idx or (hover_idx is None and i == selected_idx)):
                 _draw_tb_rectangle_filled(
-                    left + 1, right - 1, item_top, item_bottom, CONTEXT_MENU_HOVER_COLOR
+                    left + 1, right - 1, item_top, item_bottom, EDITOR_THEME.chrome_accent
                 )
 
             # Text
             if item.kind == "separator":
                 mid_y = (item_top + item_bottom) / 2
                 optional_arcade.arcade.draw_line(
-                    left + left_pad, mid_y, right - right_pad, mid_y, CONTEXT_MENU_BORDER_COLOR, 1
+                    left + left_pad, mid_y, right - right_pad, mid_y, EDITOR_THEME.chrome_border, 1
                 )
                 continue
 
             if item.enabled:
-                text_color = CONTEXT_MENU_TEXT_COLOR
+                text_color = EDITOR_THEME.chrome_text
                 shortcut_alpha = 200
             else:
-                text_color = (CONTEXT_MENU_DISABLED_TEXT_COLOR[0], CONTEXT_MENU_DISABLED_TEXT_COLOR[1], CONTEXT_MENU_DISABLED_TEXT_COLOR[2], 130)
+                text_color = (
+                    EDITOR_THEME.chrome_separator[0],
+                    EDITOR_THEME.chrome_separator[1],
+                    EDITOR_THEME.chrome_separator[2],
+                    130,
+                )
                 shortcut_alpha = 130
 
             # Label
@@ -201,7 +202,7 @@ class ProjectExplorerContextMenuOverlay(UIElement):
                 track_top = t - CONTEXT_MENU_PADDING_Y
                 track_bottom = b + CONTEXT_MENU_PADDING_Y
                 _draw_tb_rectangle_filled(
-                    track_left, track_right, track_top, track_bottom, (90, 90, 100, 140)
+                    track_left, track_right, track_top, track_bottom, EDITOR_THEME.input_border
                 )
                 track_h = max(1.0, track_top - track_bottom)
                 ratio = max(0.0, min(1.0, start_n / max(1, (total_n - visible_n))))
@@ -210,5 +211,5 @@ class ProjectExplorerContextMenuOverlay(UIElement):
                 thumb_top = track_top - (ratio * usable_h)
                 thumb_bottom = thumb_top - thumb_h
                 _draw_tb_rectangle_filled(
-                    track_left, track_right, thumb_top, thumb_bottom, (150, 150, 160, 200)
+                    track_left, track_right, thumb_top, thumb_bottom, EDITOR_THEME.text_dim_soft
                 )

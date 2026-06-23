@@ -29,6 +29,15 @@ class EditorTheme:
     panel_strong_border: Color
     chrome_bg: Color
     chrome_border: Color
+    chrome_accent: Color
+    chrome_accent_bright: Color
+    chrome_text: Color
+    chrome_dim: Color
+    chrome_separator: Color
+    shell_bg: Color
+    shell_bg_alt: Color
+    menubar_bg: Color
+    context_shadow: Color
     input_bg: Color
     input_bg_focused: Color
     input_border: Color
@@ -67,6 +76,15 @@ EDITOR_THEME = EditorTheme(
     panel_strong_border=(100, 100, 110, 255),
     chrome_bg=(30, 30, 35, 255),
     chrome_border=(60, 60, 70, 255),
+    chrome_accent=(70, 130, 180, 255),
+    chrome_accent_bright=(80, 140, 200, 255),
+    chrome_text=(220, 220, 220, 255),
+    chrome_dim=(140, 140, 140, 255),
+    chrome_separator=(100, 100, 100, 255),
+    shell_bg=(45, 45, 50, 255),
+    shell_bg_alt=(50, 50, 55, 255),
+    menubar_bg=(40, 40, 45, 255),
+    context_shadow=(0, 0, 0, 120),
     input_bg=(22, 22, 28, 190),
     input_bg_focused=(30, 30, 36, 220),
     input_border=(90, 90, 100, 140),

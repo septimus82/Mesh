@@ -15,22 +15,22 @@ from typing import TYPE_CHECKING, Any
 
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, draw_panel_bg
+from .theme import EDITOR_THEME
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
 
-# Color palette for the editor shell
-SHELL_BG_COLOR = (30, 30, 35, 255)
-SHELL_HEADER_COLOR = (45, 45, 50, 255)
-SHELL_BORDER_COLOR = (60, 60, 70, 255)
-SHELL_ACCENT_COLOR = (80, 140, 200, 255)
-SHELL_TEXT_COLOR = (220, 220, 220, 255)
-SHELL_TEXT_DIM_COLOR = (140, 140, 140, 255)
-SHELL_TAB_ACTIVE_COLOR = (70, 130, 180, 255)
-SHELL_TAB_INACTIVE_COLOR = (50, 50, 55, 255)
-SHELL_BUTTON_BG_COLOR = (50, 50, 55, 255)
-SHELL_BUTTON_ACTIVE_COLOR = (80, 140, 200, 255)
+SHELL_BG_COLOR = EDITOR_THEME.chrome_bg
+SHELL_HEADER_COLOR = EDITOR_THEME.shell_bg
+SHELL_BORDER_COLOR = EDITOR_THEME.chrome_border
+SHELL_ACCENT_COLOR = EDITOR_THEME.chrome_accent_bright
+SHELL_TEXT_COLOR = EDITOR_THEME.chrome_text
+SHELL_TEXT_DIM_COLOR = EDITOR_THEME.chrome_dim
+SHELL_TAB_ACTIVE_COLOR = EDITOR_THEME.chrome_accent
+SHELL_TAB_INACTIVE_COLOR = EDITOR_THEME.shell_bg_alt
+SHELL_BUTTON_BG_COLOR = EDITOR_THEME.shell_bg_alt
+SHELL_BUTTON_ACTIVE_COLOR = EDITOR_THEME.chrome_accent_bright
 _GLYPH_WIDTH_RATIO = 0.58
 
 

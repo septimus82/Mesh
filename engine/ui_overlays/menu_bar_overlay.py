@@ -12,21 +12,21 @@ import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, draw_panel_bg
+from .theme import EDITOR_THEME
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
 
 
-# Color palette for the menu bar
-MENU_BG_COLOR = (40, 40, 45, 255)
-MENU_HOVER_COLOR = (60, 60, 70, 255)
-MENU_ACTIVE_COLOR = (70, 130, 180, 255)
-MENU_TEXT_COLOR = (220, 220, 220, 255)
-MENU_TEXT_DISABLED_COLOR = (100, 100, 100, 255)
-MENU_DROPDOWN_BG_COLOR = (35, 35, 40, 250)
-MENU_DROPDOWN_BORDER_COLOR = (60, 60, 70, 255)
-MENU_SEPARATOR_COLOR = (60, 60, 70, 255)
-MENU_SHORTCUT_COLOR = (140, 140, 140, 255)
+MENU_BG_COLOR = EDITOR_THEME.menubar_bg
+MENU_HOVER_COLOR = EDITOR_THEME.chrome_border
+MENU_ACTIVE_COLOR = EDITOR_THEME.chrome_accent
+MENU_TEXT_COLOR = EDITOR_THEME.chrome_text
+MENU_TEXT_DISABLED_COLOR = EDITOR_THEME.chrome_separator
+MENU_DROPDOWN_BG_COLOR = EDITOR_THEME.panel_bg
+MENU_DROPDOWN_BORDER_COLOR = EDITOR_THEME.chrome_border
+MENU_SEPARATOR_COLOR = EDITOR_THEME.chrome_border
+MENU_SHORTCUT_COLOR = EDITOR_THEME.chrome_dim
 
 
 class MenuBarOverlay(UIElement):

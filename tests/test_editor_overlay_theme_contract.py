@@ -6,12 +6,16 @@ from pathlib import Path
 import pytest
 
 from engine.ui_overlays import (
+    context_menu_overlay,
     debug_panels_overlay,
     dialogue_editor_overlay,
+    editor_shell_overlay,
     find_everything_overlay,
     item_editor_overlay,
+    menu_bar_overlay,
     prefab_editor_overlay,
     problems_panel_overlay,
+    project_explorer_context_menu_overlay,
     project_explorer_overlay,
     quest_editor_overlay,
     scene_browser_overlay,
@@ -61,6 +65,18 @@ def test_editor_theme_panel_tokens_pin_current_values() -> None:
     assert EDITOR_THEME.tree_bg == (40, 40, 50, 255)
     assert EDITOR_THEME.tree_selected_bg == (80, 120, 180, 128)
     assert EDITOR_THEME.tree_accent == (120, 160, 220, 255)
+
+
+def test_editor_theme_chrome_tokens_pin_current_values() -> None:
+    assert EDITOR_THEME.chrome_accent == (70, 130, 180, 255)
+    assert EDITOR_THEME.chrome_accent_bright == (80, 140, 200, 255)
+    assert EDITOR_THEME.chrome_text == (220, 220, 220, 255)
+    assert EDITOR_THEME.chrome_dim == (140, 140, 140, 255)
+    assert EDITOR_THEME.chrome_separator == (100, 100, 100, 255)
+    assert EDITOR_THEME.shell_bg == (45, 45, 50, 255)
+    assert EDITOR_THEME.shell_bg_alt == (50, 50, 55, 255)
+    assert EDITOR_THEME.menubar_bg == (40, 40, 45, 255)
+    assert EDITOR_THEME.context_shadow == (0, 0, 0, 120)
 
 
 def test_editor_theme_database_form_values_match_current_form_colors() -> None:
@@ -140,6 +156,19 @@ def test_database_editor_overlays_use_theme_tokens_not_local_color_tuples() -> N
     ],
 )
 def test_panel_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module: object) -> None:
+    _assert_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module)
+
+
+@pytest.mark.parametrize(
+    "overlay_module",
+    [
+        editor_shell_overlay,
+        menu_bar_overlay,
+        context_menu_overlay,
+        project_explorer_context_menu_overlay,
+    ],
+)
+def test_chrome_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module: object) -> None:
     _assert_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module)
 
 
