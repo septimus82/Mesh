@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from engine.ui_overlays import prefab_editor_overlay
+from engine.ui_overlays import dialogue_editor_overlay, item_editor_overlay, prefab_editor_overlay, quest_editor_overlay
 from engine.ui_overlays.editor_database_form_helpers import FormColors
 from engine.ui_overlays.theme import EDITOR_THEME
 
@@ -63,8 +63,51 @@ def test_prefab_editor_form_colors_resolve_to_theme_tokens() -> None:
     )
 
 
+def test_item_editor_form_colors_resolve_to_theme_tokens() -> None:
+    assert item_editor_overlay.ITEM_EDITOR_TEXT_COLOR == EDITOR_THEME.text_primary
+    assert item_editor_overlay.ITEM_EDITOR_DIM_COLOR == EDITOR_THEME.text_dim
+    assert item_editor_overlay.ITEM_EDITOR_BUTTON_COLOR == EDITOR_THEME.action_text
+    assert item_editor_overlay._ITEM_FORM_COLORS == FormColors(
+        text=EDITOR_THEME.text_primary,
+        dim=EDITOR_THEME.text_dim,
+        button=EDITOR_THEME.action_text,
+    )
+
+
+def test_quest_editor_form_colors_resolve_to_theme_tokens() -> None:
+    assert quest_editor_overlay.QUEST_EDITOR_TEXT_COLOR == EDITOR_THEME.text_primary
+    assert quest_editor_overlay.QUEST_EDITOR_DIM_COLOR == EDITOR_THEME.text_dim
+    assert quest_editor_overlay.QUEST_EDITOR_BUTTON_COLOR == EDITOR_THEME.action_text
+    assert quest_editor_overlay._QUEST_FORM_COLORS == FormColors(
+        text=EDITOR_THEME.text_primary,
+        dim=EDITOR_THEME.text_dim,
+        button=EDITOR_THEME.action_text,
+    )
+
+
+def test_dialogue_editor_form_colors_resolve_to_theme_tokens() -> None:
+    assert dialogue_editor_overlay.DIALOGUE_EDITOR_TEXT_COLOR == EDITOR_THEME.text_primary
+    assert dialogue_editor_overlay.DIALOGUE_EDITOR_DIM_COLOR == EDITOR_THEME.text_dim
+    assert dialogue_editor_overlay.DIALOGUE_EDITOR_BUTTON_COLOR == EDITOR_THEME.action_text
+    assert dialogue_editor_overlay.DIALOGUE_EDITOR_WARN_COLOR == EDITOR_THEME.warning_text
+    assert dialogue_editor_overlay._DIALOGUE_FORM_COLORS == FormColors(
+        text=EDITOR_THEME.text_primary,
+        dim=EDITOR_THEME.text_dim,
+        button=EDITOR_THEME.action_text,
+    )
+
+
 def test_prefab_editor_overlay_uses_theme_tokens_not_local_color_tuples() -> None:
-    source_path = Path(prefab_editor_overlay.__file__)
+    _assert_overlay_uses_theme_tokens_not_local_color_tuples(prefab_editor_overlay)
+
+
+def test_database_editor_overlays_use_theme_tokens_not_local_color_tuples() -> None:
+    for overlay_module in (item_editor_overlay, quest_editor_overlay, dialogue_editor_overlay):
+        _assert_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module)
+
+
+def _assert_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module: object) -> None:
+    source_path = Path(overlay_module.__file__)
     tree = ast.parse(source_path.read_text(encoding="utf-8"))
 
     raw_color_tuples: list[tuple[int, ...]] = []
