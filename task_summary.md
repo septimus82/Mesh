@@ -1,5 +1,7 @@
 # Safe Refactor Ops v2.4 (Failure Matrix & Rollback)
 
+> **Note:** This document is a historical record and reflects the project state at the time it was written.
+
 I have implemented and hardened the "Safe Refactor Ops" system to ensure atomicity and reliability during file moves and renames. This includes comprehensive failure-mode testing (matrix) and a robust rollback mechanism.
 
 ## Key Accomplishments
