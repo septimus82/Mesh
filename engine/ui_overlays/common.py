@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .theme import EDITOR_THEME
+
 if TYPE_CHECKING:
     from arcade import Sprite
 
@@ -161,7 +163,7 @@ def _sprite_under_cursor(window: "GameWindow") -> "Sprite | None":
     return candidates[-1]
 
 
-def draw_panel_bg(left: float, right: float, bottom: float, top: float, color: Any = (0, 0, 0, 200)) -> None:
+def draw_panel_bg(left: float, right: float, bottom: float, top: float, color: Any = EDITOR_THEME.scrim_dim) -> None:
     """Draw a filled rectangle using lrbt ordering with safety."""
     lo_y, hi_y = (bottom, top) if bottom <= top else (top, bottom)
     arcade = _get_arcade()

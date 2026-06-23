@@ -9,6 +9,7 @@ from .common import (
     _draw_rectangle_filled,
     _draw_tb_rectangle_outline,
 )
+from .theme import EDITOR_THEME
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
@@ -110,7 +111,7 @@ class TilePaintOverlay(UIElement):
             center_y=(top + bottom) / 2.0,
             width=width,
             height=height,
-            color=(0, 0, 0, 170),
+            color=EDITOR_THEME.scrim_dim_soft,
         )
         _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
@@ -218,7 +219,7 @@ class EntityPaintOverlay(UIElement):
             center_y=(top + bottom) / 2.0,
             width=width,
             height=height,
-            color=(0, 0, 0, 170),
+            color=EDITOR_THEME.scrim_dim_soft,
         )
         _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 
@@ -465,7 +466,7 @@ class CaptureOverlay(UIElement):
             center_y=(top + bottom) / 2.0,
             width=width,
             height=height,
-            color=(0, 0, 0, 170),
+            color=EDITOR_THEME.scrim_dim_soft,
         )
         _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
 

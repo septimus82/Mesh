@@ -4,6 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from engine.ui_overlays.theme import EDITOR_THEME
 from engine.ui_overlays.widgets import Rect, TextInput
 
 
@@ -107,8 +108,8 @@ def draw_text_input(
         payload = instruction.payload
         instr_rect = payload.get("rect")
         if instruction.kind == "text_input_bg" and _is_rect_like(instr_rect):
-            bg = (30, 30, 36, 220) if payload.get("focused") else (22, 22, 28, 190)
-            border = (100, 200, 255, 180) if payload.get("focused") else (90, 90, 100, 140)
+            bg = EDITOR_THEME.input_bg_focused if payload.get("focused") else EDITOR_THEME.input_bg
+            border = EDITOR_THEME.input_border_focused if payload.get("focused") else EDITOR_THEME.input_border
             panel_primitives.draw_panel_bg(instr_rect.left, instr_rect.right, instr_rect.bottom, instr_rect.top, color=bg)
             panel_primitives._draw_tb_rectangle_outline(
                 instr_rect.left, instr_rect.right, instr_rect.top, instr_rect.bottom, border, 1

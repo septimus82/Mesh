@@ -7,12 +7,20 @@ import pytest
 
 from engine.ui_overlays import (
     asset_browser_overlay,
+    command_palette,
+    common,
     component_inspector_overlay,
+    confirm_modal_overlay,
     context_menu_overlay,
     debug_panels_overlay,
     dialogue_editor_overlay,
+    editor_database_form_helpers,
+    editor_feedback_overlay,
     editor_shell_overlay,
+    editor_status_bar_overlay,
+    editors,
     find_everything_overlay,
+    inspector,
     item_editor_overlay,
     menu_bar_overlay,
     prefab_editor_overlay,
@@ -21,6 +29,7 @@ from engine.ui_overlays import (
     project_explorer_overlay,
     quest_editor_overlay,
     scene_browser_overlay,
+    undo_history_overlay,
 )
 from engine.ui_overlays.editor_database_form_helpers import FormColors
 from engine.ui_overlays.theme import EDITOR_THEME
@@ -100,6 +109,14 @@ def test_editor_theme_inspector_browser_tokens_pin_current_values() -> None:
     assert EDITOR_THEME.status_warn == (255, 200, 100)
     assert EDITOR_THEME.overlay_white_soft == (255, 255, 255, 40)
     assert EDITOR_THEME.overlay_white == (255, 255, 255, 50)
+
+
+def test_editor_theme_small_editor_tokens_pin_current_values() -> None:
+    assert EDITOR_THEME.scrim_dim == (0, 0, 0, 200)
+    assert EDITOR_THEME.scrim_dim_soft == (0, 0, 0, 170)
+    assert EDITOR_THEME.scrim_dim_medium == (0, 0, 0, 180)
+    assert EDITOR_THEME.black == (0, 0, 0)
+    assert EDITOR_THEME.undo_selected == (70, 110, 150, 80)
 
 
 def test_editor_theme_database_form_values_match_current_form_colors() -> None:
@@ -203,6 +220,26 @@ def test_chrome_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module:
     ],
 )
 def test_inspector_browser_overlay_uses_theme_tokens_not_local_color_tuples(
+    overlay_module: object,
+) -> None:
+    _assert_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module)
+
+
+@pytest.mark.parametrize(
+    "overlay_module",
+    [
+        command_palette,
+        undo_history_overlay,
+        confirm_modal_overlay,
+        editor_status_bar_overlay,
+        editors,
+        common,
+        inspector,
+        editor_feedback_overlay,
+        editor_database_form_helpers,
+    ],
+)
+def test_small_editor_overlay_uses_theme_tokens_not_local_color_tuples(
     overlay_module: object,
 ) -> None:
     _assert_overlay_uses_theme_tokens_not_local_color_tuples(overlay_module)

@@ -6,21 +6,22 @@ from typing import TYPE_CHECKING
 
 from ..text_draw import TextCache, draw_text_cached
 from .common import UIElement, _draw_tb_rectangle_outline, draw_panel_bg
+from .theme import EDITOR_THEME
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..editor.editor_feedback_model import FeedbackEntry, FeedbackSeverity
     from ..game import GameWindow
 
 
-INFO_BG = (32, 36, 44)
-INFO_BORDER = (150, 190, 255)
-INFO_TEXT = (255, 255, 255)
-WARNING_BG = (64, 44, 20)
-WARNING_BORDER = (255, 191, 92)
-WARNING_TEXT = (255, 244, 224)
-ERROR_BG = (72, 24, 24)
-ERROR_BORDER = (255, 110, 110)
-ERROR_TEXT = (255, 255, 255)
+INFO_BG = EDITOR_THEME.severity_info_bg
+INFO_BORDER = EDITOR_THEME.severity_info_border
+INFO_TEXT = EDITOR_THEME.severity_info_text
+WARNING_BG = EDITOR_THEME.severity_warning_bg
+WARNING_BORDER = EDITOR_THEME.severity_warning_border
+WARNING_TEXT = EDITOR_THEME.severity_warning_text
+ERROR_BG = EDITOR_THEME.severity_error_bg
+ERROR_BORDER = EDITOR_THEME.severity_error_border
+ERROR_TEXT = EDITOR_THEME.severity_error_text
 
 OVERLAY_INSET_PX = 16.0
 STACK_GAP_PX = 8.0
@@ -67,7 +68,11 @@ def resolve_feedback_alpha(entry: FeedbackEntry, now: float) -> float:
     return max(0.0, remaining / FADE_OUT_WINDOW_S)
 
 
-def resolve_feedback_colors(severity: FeedbackSeverity, *, alpha: float) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]:
+def resolve_feedback_colors(
+    severity: FeedbackSeverity,
+    *,
+    alpha: float,
+) -> tuple[tuple[int, int, int, int], tuple[int, int, int, int], tuple[int, int, int, int]]:
     from ..editor.editor_feedback_model import FeedbackSeverity
 
     fade = max(0.0, min(1.0, float(alpha)))
