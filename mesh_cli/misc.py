@@ -170,6 +170,7 @@ def register(subparsers: argparse._SubParsersAction) -> None:
 
     # Docs
     docs_parser = subparsers.add_parser("docs", help="Generate documentation")
+    docs_parser.add_argument("--out-dir", default="docs", help="Directory where markdown files should be written")
     docs_parser.add_argument("--verify", action="store_true", help="Verify docs are up to date")
 
     # Dump State
@@ -404,7 +405,7 @@ def _handle_wizard(args: argparse.Namespace) -> int:
 def _handle_docs(args: argparse.Namespace) -> int:
     """Run the documentation generator."""
     # Reconstruct argv for the tool's main function
-    tool_argv = []
+    tool_argv = ["--out-dir", str(getattr(args, "out_dir", "docs") or "docs")]
     if args.verify:
         tool_argv.append("--verify")
 

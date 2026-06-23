@@ -8,15 +8,20 @@ Engine fallback defaults are bound via `InputManager.bind_default_actions(arcade
 
 | Action | Default Key Name |
 | --- | --- |
-| `move_up` | `W` |
-| `move_down` | `S` |
-| `move_left` | `A` |
-| `move_right` | `D` |
-| `interact` | `E` |
 | `attack` | `SPACE` |
-| `show_quests` | `Q` |
-| `show_inventory` | `TAB` |
+| `interact` | `E` |
+| `move_down` | `S, DOWN` |
+| `move_left` | `A, LEFT` |
+| `move_right` | `D, MOTION_RIGHT` |
+| `move_up` | `W, MOTION_UP` |
+| `pause_menu` | `ESCAPE` |
+| `quick_load` | `F9` |
+| `quick_save` | `F5` |
+| `quickload_last_save` | `F10` |
+| `save_game` | `F8` |
 | `show_character` | `C` |
+| `show_inventory` | `TAB` |
+| `show_quests` | `J, Q` |
 | `toggle_editor` | `F4` |
 | `toggle_help` | `H` |
 | `toggle_inspector` | `I` |
@@ -29,7 +34,7 @@ Note: debug/authoring hotkeys (for example `F3` debug, `F4` editor, `F5/F6` quic
 
 ### Keyboard Input
 
-Keyboard events flow through `capture_runtime.py` → `capture_key_router.py` which resolves keys to action IDs based on the current focus scope, then dispatches to handler modules.
+Keyboard events flow through `capture_runtime.py` -> `capture_key_router.py` which resolves keys to action IDs based on the current focus scope, then dispatches to handler modules.
 
 ### Mouse Input
 
