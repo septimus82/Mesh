@@ -52,6 +52,10 @@ def build_server() -> Any:
     server.tool()(tools.create_scene)
     server.tool()(tools.add_entity_from_prefab)
 
+    # Batch action: the full op surface in one call, with validation feedback.
+    server.tool()(tools.list_op_types)
+    server.tool()(tools.apply_ops)
+
     # Safety.
     server.tool()(tools.validate_scene)
 

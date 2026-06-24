@@ -59,6 +59,18 @@ Action (the AI's hands), wrapping `engine.ai_ops.AIOps`:
 | --- | --- |
 | `create_scene` | Create a scene from a template. |
 | `add_entity_from_prefab` | Place a prefab instance into a scene. |
+| `list_op_types` | List every batch operation with its required/optional fields. |
+| `apply_ops` | Run a batch of operations (the full 23-op surface) in one call, then validate. |
+
+`apply_ops` is the cost-and-capability lever: instead of one chatty tool call
+per change, the model sends the whole batch (e.g. create a scene + place several
+entities + set behaviours) in a single request. It returns a per-operation
+result list (each echoing its `type` and `ok`/`message`) plus a `validation`
+verdict, so the model gets immediate, structured feedback on whether the batch
+left the content valid — and can self-correct in one more shot. Per-op failures
+are isolated: one bad operation does not abort the rest. Call `list_op_types`
+(or read the `mesh://overview` resource) to see the available operations and
+their field shapes.
 
 Safety:
 
@@ -68,8 +80,9 @@ Safety:
 
 ## Resource
 
-`mesh://overview` — a compact briefing (scenes, prefabs, behaviours) so a
-freshly-connected model is immediately fluent in what the engine contains.
+`mesh://overview` — a compact briefing (scenes, prefabs, behaviours, and the
+operation surface) so a freshly-connected model is immediately fluent in both
+what the engine contains and what it can do.
 
 ## Architecture
 

@@ -86,13 +86,92 @@ def test_add_entity_unknown_prefab_is_structured_not_raised(tmp_path) -> None:
     assert "not found" in result["message"].lower()
 
 
+# ------------------------------------------------------------- batch action
+def test_op_catalog_matches_apply_job_dispatch() -> None:
+    """Drift guard: the catalog's op types must equal what apply_job dispatches."""
+    import ast
+    import inspect
+    import textwrap
+
+    from engine.ai_ops import AIOps
+
+    src = textwrap.dedent(inspect.getsource(AIOps.apply_job))
+    dispatched: set[str] = set()
+    for node in ast.walk(ast.parse(src)):
+        if (
+            isinstance(node, ast.Compare)
+            and isinstance(node.left, ast.Name)
+            and node.left.id == "op_type"
+        ):
+            for comparator in node.comparators:
+                if isinstance(comparator, ast.Constant) and isinstance(comparator.value, str):
+                    dispatched.add(comparator.value)
+    assert dispatched, "expected to find op_type dispatch literals"
+    assert set(tools.OP_CATALOG) == dispatched
+
+
+def test_list_op_types_exposes_full_surface() -> None:
+    rows = tools.list_op_types()
+    types = [row["type"] for row in rows]
+    assert types == sorted(types)
+    assert set(types) == set(tools.OP_CATALOG)
+    assert all({"type", "required", "optional", "summary"} <= set(row) for row in rows)
+
+
+def test_apply_ops_batch_round_trip_with_validation(tmp_path) -> None:
+    """A whole little scene built in ONE call, then validated."""
+    import os
+
+    prefabs_abs = os.path.abspath(os.path.join("assets", "prefabs.json"))
+    prefab_name = tools.list_prefabs(".")[0]["display_name"]
+    root = str(tmp_path)
+
+    result = tools.apply_ops(
+        [
+            {"type": "create_scene", "name": "scenes/batch"},
+            {"type": "add_entity_from_prefab", "scene_path": "scenes/batch.json",
+             "prefab_name": prefab_name, "x": 10, "y": 10, "prefab_path": prefabs_abs},
+            {"type": "add_entity_from_prefab", "scene_path": "scenes/batch.json",
+             "prefab_name": prefab_name, "x": 40, "y": 40, "prefab_path": prefabs_abs},
+        ],
+        root=root,
+        validate_scene_path="scenes/batch.json",
+    )
+
+    assert result["ok"] is True
+    assert [r["type"] for r in result["results"]] == [
+        "create_scene", "add_entity_from_prefab", "add_entity_from_prefab",
+    ]
+    assert all(r["ok"] for r in result["results"])
+    assert "validation" in result and "ok" in result["validation"]
+    assert tools.read_scene("scenes/batch.json", root=root)["entity_count"] == 2
+
+
+def test_apply_ops_isolates_per_op_failures(tmp_path) -> None:
+    root = str(tmp_path)
+    result = tools.apply_ops(
+        [
+            {"type": "create_scene", "name": "scenes/mix"},
+            {"type": "add_entity_from_prefab", "scene_path": "scenes/mix.json",
+             "prefab_name": "__no_such_prefab__", "x": 0, "y": 0},
+        ],
+        root=root,
+        validate=False,
+    )
+    assert result["ok"] is False  # overall fails because one op failed
+    assert result["results"][0]["ok"] is True  # but the good op still ran
+    assert result["results"][1]["ok"] is False
+    assert "validation" not in result
+
+
 # ------------------------------------------------------------- context resource
 def test_engine_overview_json_is_valid_and_complete() -> None:
     import json
 
     payload = json.loads(tools.engine_overview_json("."))
-    assert set(payload) == {"scenes", "prefabs", "behaviours"}
+    assert set(payload) == {"scenes", "prefabs", "behaviours", "operations"}
     assert payload["behaviours"], "overview must brief the model on behaviours"
+    assert payload["operations"], "overview must brief the model on the op surface"
 
 
 # ------------------------------------------------------------- server guard

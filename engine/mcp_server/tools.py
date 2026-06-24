@@ -28,6 +28,37 @@ def _root_path(root: str) -> Path:
     return Path(root)
 
 
+# Catalog of every operation `apply_ops` can run, mirroring the dispatch in
+# engine.ai_ops.AIOps.apply_job. "required" fields are accessed via op["..."]
+# (a KeyError if missing); "optional" via op.get(...). A drift-guard test
+# asserts these type names match what apply_job actually dispatches.
+OP_CATALOG: dict[str, dict[str, Any]] = {
+    "create_scene": {"required": ["name"], "optional": ["template"], "summary": "Create a scene from a template."},
+    "add_entity_from_prefab": {"required": ["scene_path", "prefab_name"], "optional": ["x", "y", "prefab_path"], "summary": "Place a prefab in a scene."},
+    "delete_entity": {"required": ["scene_path", "entity_id"], "optional": [], "summary": "Remove an entity from a scene."},
+    "set_behaviour_params": {"required": ["scene_path", "entity_id", "behaviour_name"], "optional": ["params"], "summary": "Set a behaviour's params."},
+    "edit_dialogue": {"required": ["scene_path", "entity_id"], "optional": ["patch"], "summary": "Patch an entity's dialogue."},
+    "edit_quest": {"required": ["quest_id"], "optional": ["patch", "quests_path"], "summary": "Patch a quest definition."},
+    "add_quest_definition": {"required": ["quest_id"], "optional": ["quest", "quests_path"], "summary": "Add a quest definition."},
+    "update_quest_definition": {"required": ["quest_id"], "optional": ["quest", "quests_path"], "summary": "Update a quest definition."},
+    "delete_quest_definition": {"required": ["quest_id"], "optional": ["quests_path"], "summary": "Delete a quest definition."},
+    "paint_tiles": {"required": ["scene_path"], "optional": ["ops"], "summary": "Apply tile paint operations to a scene."},
+    "add_light": {"required": ["scene_path"], "optional": ["light"], "summary": "Add a light to a scene."},
+    "update_light": {"required": ["scene_path"], "optional": ["index", "patch"], "summary": "Patch a light by index."},
+    "delete_light": {"required": ["scene_path"], "optional": ["index"], "summary": "Delete a light by index."},
+    "run_validation": {"required": [], "optional": ["scene_path"], "summary": "Validate a scene (or the whole world)."},
+    "add_world_scene": {"required": ["scene_key", "path"], "optional": ["world_path", "label", "tags"], "summary": "Register a scene in the world."},
+    "link_world_scenes": {"required": ["from_key", "to_key"], "optional": ["world_path", "via", "bidirectional"], "summary": "Link two world scenes."},
+    "set_world_start": {"required": [], "optional": ["world_path", "start_scene", "start_spawn"], "summary": "Set the world start scene/spawn."},
+    "add_cutscene": {"required": ["id"], "optional": ["steps", "cutscenes_path"], "summary": "Add a cutscene."},
+    "update_cutscene": {"required": ["id"], "optional": ["steps", "cutscenes_path"], "summary": "Update a cutscene."},
+    "delete_cutscene": {"required": ["id"], "optional": ["cutscenes_path"], "summary": "Delete a cutscene."},
+    "insert_cutscene_step": {"required": ["id"], "optional": ["step", "index", "cutscenes_path"], "summary": "Insert a step into a cutscene."},
+    "update_cutscene_step": {"required": ["id"], "optional": ["index", "patch", "cutscenes_path"], "summary": "Patch a cutscene step by index."},
+    "delete_cutscene_step": {"required": ["id"], "optional": ["index", "cutscenes_path"], "summary": "Delete a cutscene step by index."},
+}
+
+
 # ---------------------------------------------------------------- read tools
 def list_scenes(root: str = ".") -> list[str]:
     """List scene file paths (relative to ``root``) under ``scenes/``."""
@@ -142,6 +173,61 @@ def add_entity_from_prefab(
     return _result_to_dict(result)
 
 
+# -------------------------------------------------------------- batch action
+def list_op_types() -> list[dict[str, Any]]:
+    """List every operation `apply_ops` accepts, with required/optional fields.
+
+    Lets a connected model see the full action surface and field shapes up
+    front, so it builds well-formed operations instead of guessing.
+    """
+    return [
+        {"type": op_type, **spec}
+        for op_type, spec in sorted(OP_CATALOG.items())
+    ]
+
+
+def apply_ops(
+    operations: list[dict[str, Any]],
+    root: str = ".",
+    validate: bool = True,
+    validate_scene_path: str | None = None,
+) -> dict[str, Any]:
+    """Run a batch of operations in one call, then validate.
+
+    ``operations`` is a list of ``{"type": <op>, ...fields}`` dicts (see
+    :func:`list_op_types`). Wraps :meth:`engine.ai_ops.AIOps.apply_job`, echoing
+    each operation's ``type`` into its result, and — when ``validate`` is true —
+    appends a validation pass so the model gets immediate, structured feedback
+    on whether the batch left the content valid.
+
+    Returns ``{ok, results: [{type, ok, message, data}], validation?}``. Per-op
+    failures are isolated (one bad op does not abort the rest); ``ok`` is the
+    AND of every operation's success.
+    """
+    from engine.ai_ops import AIOps
+
+    ops_runner = AIOps(base_dir=root)
+    outcome = ops_runner.apply_job({"operations": list(operations)})
+
+    annotated: list[dict[str, Any]] = []
+    raw_results = outcome.get("results", []) if isinstance(outcome, dict) else []
+    for op, result in zip(operations, raw_results):
+        entry = dict(result) if isinstance(result, dict) else {"ok": False, "message": str(result)}
+        if isinstance(op, dict):
+            entry["type"] = op.get("type")
+        annotated.append(entry)
+
+    payload: dict[str, Any] = {
+        "ok": bool(outcome.get("ok", False)) if isinstance(outcome, dict) else False,
+        "results": annotated,
+    }
+    if validate:
+        payload["validation"] = _result_to_dict(
+            ops_runner.run_validation(validate_scene_path)
+        )
+    return payload
+
+
 # ---------------------------------------------------------------- safety
 def validate_scene(scene_path: str | None = None, root: str = ".") -> dict[str, Any]:
     """Validate a scene (or the whole world if ``scene_path`` is None)."""
@@ -161,6 +247,7 @@ def engine_overview(root: str = ".") -> dict[str, Any]:
         "scenes": list_scenes(root),
         "prefabs": list_prefabs(root),
         "behaviours": list_behaviours(),
+        "operations": list_op_types(),
     }
 
 
