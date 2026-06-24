@@ -50,8 +50,15 @@ Read (the AI's eyes):
 | --- | --- |
 | `list_scenes` | List scene files under `scenes/`. |
 | `read_scene` | Parse a scene + entity-count summary. |
+| `list_entities` | List a scene's entities as compact summaries (name, tag, pos, behaviours). |
+| `inspect_entity` | Return one entity in full detail (summary + behaviour_config + raw entity). |
 | `list_prefabs` | List prefabs (`id` + `display_name`) from `assets/prefabs.json`. |
 | `list_behaviours` | List every registered behaviour. |
+
+`list_entities` and `inspect_entity` key on the entity's `name` — the same
+identifier the action ops (`delete_entity`, `set_behaviour_params`) use — so the
+AI can build, list what's there, inspect one in detail, then refine it
+precisely. That closes the **build → inspect → refine** loop.
 
 Action (the AI's hands), wrapping `engine.ai_ops.AIOps`:
 

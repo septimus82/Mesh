@@ -97,6 +97,65 @@ def read_scene(scene_path: str, root: str = ".") -> dict[str, Any]:
     }
 
 
+def _entity_summary(entity: dict[str, Any]) -> dict[str, Any]:
+    """Compact, identity-first view of one entity."""
+    behaviours = entity.get("behaviours")
+    return {
+        "name": str(entity.get("name")) if entity.get("name") is not None else None,
+        "id": entity.get("id"),
+        "tag": entity.get("tag"),
+        "sprite": entity.get("sprite"),
+        "x": entity.get("x"),
+        "y": entity.get("y"),
+        "behaviours": list(behaviours) if isinstance(behaviours, list) else [],
+    }
+
+
+def list_entities(scene_path: str, root: str = ".") -> dict[str, Any]:
+    """List a scene's entities as compact summaries (name, tag, pos, behaviours).
+
+    ``name`` is the identifier the action ops use — ``inspect_entity``,
+    ``delete_entity``, and ``set_behaviour_params`` all key on it.
+    """
+    loaded = read_scene(scene_path, root)
+    if not loaded.get("ok"):
+        return {"ok": False, "message": loaded.get("message", "Scene not found")}
+    scene = loaded.get("scene")
+    entities = scene.get("entities") if isinstance(scene, dict) else None
+    summaries = [
+        _entity_summary(entity)
+        for entity in (entities or [])
+        if isinstance(entity, dict)
+    ]
+    return {"ok": True, "scene_path": scene_path, "count": len(summaries), "entities": summaries}
+
+
+def inspect_entity(scene_path: str, entity_id: str, root: str = ".") -> dict[str, Any]:
+    """Return one entity in full detail so the AI can see what it built.
+
+    ``entity_id`` matches the entity's ``name`` field (the same identity the
+    action ops use). Returns a compact summary plus ``behaviour_config`` and the
+    full raw ``entity`` dict — closing the build -> inspect -> refine loop.
+    """
+    loaded = read_scene(scene_path, root)
+    if not loaded.get("ok"):
+        return {"ok": False, "message": loaded.get("message", "Scene not found")}
+    scene = loaded.get("scene")
+    entities = scene.get("entities") if isinstance(scene, dict) else None
+    for entity in (entities or []):
+        if isinstance(entity, dict) and str(entity.get("name")) == entity_id:
+            summary = _entity_summary(entity)
+            behaviour_config = entity.get("behaviour_config")
+            return {
+                "ok": True,
+                "scene_path": scene_path,
+                **summary,
+                "behaviour_config": behaviour_config if isinstance(behaviour_config, dict) else {},
+                "entity": entity,
+            }
+    return {"ok": False, "message": f"Entity '{entity_id}' not found in {scene_path}"}
+
+
 def list_prefabs(root: str = ".") -> list[dict[str, str]]:
     """List available prefabs as ``{id, display_name}`` from assets/prefabs.json."""
     base = _root_path(root)
