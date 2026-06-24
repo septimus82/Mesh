@@ -45,6 +45,8 @@ def build_server() -> Any:
     # Read tools (the AI's eyes).
     server.tool()(tools.list_scenes)
     server.tool()(tools.read_scene)
+    server.tool()(tools.list_entities)
+    server.tool()(tools.inspect_entity)
     server.tool()(tools.list_prefabs)
     server.tool()(tools.list_behaviours)
 

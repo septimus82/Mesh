@@ -35,6 +35,45 @@ def test_read_scene_missing_is_structured_not_raised() -> None:
     assert "not found" in result["message"].lower()
 
 
+def _scene_with_entities() -> str:
+    for scene_path in tools.list_scenes("."):
+        if tools.list_entities(scene_path, ".")["count"] > 0:
+            return scene_path
+    raise AssertionError("expected at least one scene with entities")
+
+
+def test_list_entities_returns_named_summaries() -> None:
+    scene_path = _scene_with_entities()
+    listed = tools.list_entities(scene_path, ".")
+    assert listed["ok"] is True
+    assert listed["count"] == len(listed["entities"])
+    first = listed["entities"][0]
+    assert set(first) == {"name", "id", "tag", "sprite", "x", "y", "behaviours"}
+    assert isinstance(first["behaviours"], list)
+
+
+def test_inspect_entity_returns_full_detail() -> None:
+    scene_path = _scene_with_entities()
+    name = tools.list_entities(scene_path, ".")["entities"][0]["name"]
+    result = tools.inspect_entity(scene_path, name, ".")
+    assert result["ok"] is True
+    assert result["name"] == name
+    assert isinstance(result["behaviour_config"], dict)
+    assert isinstance(result["entity"], dict)  # full raw entity for refinement
+
+
+def test_inspect_entity_missing_is_structured_not_raised() -> None:
+    scene_path = _scene_with_entities()
+    result = tools.inspect_entity(scene_path, "__no_such_entity__", ".")
+    assert result["ok"] is False
+    assert "not found" in result["message"].lower()
+
+
+def test_inspect_entity_on_missing_scene_is_structured() -> None:
+    result = tools.inspect_entity("scenes/__nope__.json", "whatever", ".")
+    assert result["ok"] is False
+
+
 def test_list_prefabs_returns_id_and_display_name() -> None:
     prefabs = tools.list_prefabs(".")
     assert prefabs, "expected prefabs from assets/prefabs.json"
@@ -116,6 +155,32 @@ def test_list_op_types_exposes_full_surface() -> None:
     assert types == sorted(types)
     assert set(types) == set(tools.OP_CATALOG)
     assert all({"type", "required", "optional", "summary"} <= set(row) for row in rows)
+
+
+def test_build_then_inspect_loop(tmp_path) -> None:
+    """The refine loop: build -> list what's there -> inspect it in detail."""
+    prefabs_abs = os.path.abspath(os.path.join("assets", "prefabs.json"))
+    prefab_name = tools.list_prefabs(".")[0]["display_name"]
+    root = str(tmp_path)
+
+    tools.apply_ops(
+        [
+            {"type": "create_scene", "name": "scenes/loop"},
+            {"type": "add_entity_from_prefab", "scene_path": "scenes/loop.json",
+             "prefab_name": prefab_name, "x": 25, "y": 75, "prefab_path": prefabs_abs},
+        ],
+        root=root,
+        validate=False,
+    )
+
+    listed = tools.list_entities("scenes/loop.json", root=root)
+    assert listed["count"] == 1
+    built_name = listed["entities"][0]["name"]
+
+    detail = tools.inspect_entity("scenes/loop.json", built_name, root=root)
+    assert detail["ok"] is True
+    assert detail["x"] == 25 and detail["y"] == 75
+    assert isinstance(detail["entity"], dict)
 
 
 def test_apply_ops_batch_round_trip_with_validation(tmp_path) -> None:
