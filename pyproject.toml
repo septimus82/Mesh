@@ -23,6 +23,12 @@ dev = [
     "pygbag==0.9.3",
     "pytest>=8.0",
 ]
+# Optional: enables the Mesh MCP server (engine.mcp_server) so MCP-capable
+# AI clients can drive the engine. The engine never hard-requires this; the
+# server module imports it behind a guard. Install with: pip install -e .[mcp]
+mcp = [
+    "mcp>=1.0",
+]
 
 [project.scripts]
 mesh = "mesh_cli:main"
