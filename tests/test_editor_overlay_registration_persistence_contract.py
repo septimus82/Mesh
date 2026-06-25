@@ -30,6 +30,7 @@ _EDITOR_OVERLAY_ATTRS = (
     "item_editor_overlay",
     "prefab_editor_overlay",
     "quest_editor_overlay",
+    "dialogue_editor_overlay",
     "undo_history_overlay",
     "problems_panel_overlay",
     "debug_panels_overlay",
@@ -69,7 +70,7 @@ def test_editor_overlays_persist_across_scene_ui_rebuild(monkeypatch) -> None:
     controller = SceneController(as_any(window))
     window.scene_controller = controller
 
-    controller._rebuild_ui_for_scene()
+    as_any(controller)._rebuild_ui_for_scene()
 
     for overlay in editor_overlays.values():
         assert overlay in window.ui_controller.ui_elements

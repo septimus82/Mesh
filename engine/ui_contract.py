@@ -36,6 +36,7 @@ PERSISTENT_UI_ATTRS: tuple[str, ...] = (
     "item_editor_overlay",
     "prefab_editor_overlay",
     "quest_editor_overlay",
+    "dialogue_editor_overlay",
     "undo_history_overlay",
     "problems_panel_overlay",
     "debug_panels_overlay",
