@@ -9,6 +9,8 @@ from typing import Any, Dict, List, Set
 
 from .content_index import ContentIndex
 from .paths import resolve_path
+from .repo_root import find_repo_root
+from .tooling.content_inventory import discover_scene_paths
 
 
 @dataclass
@@ -68,8 +70,7 @@ def build_audit_report(scene_paths: List[Path] | None = None) -> AIAuditReport:
     """
     report = AIAuditReport()
 
-    # 1. Load Content Index to find all scenes
-    # We need to initialize ContentIndex with roots.
+    # 1. Load Content Index for reference checks.
     roots = [Path(".")]
     index = ContentIndex(roots)
     index.build()
@@ -91,9 +92,8 @@ def build_audit_report(scene_paths: List[Path] | None = None) -> AIAuditReport:
     is_full_audit = scene_paths is None
     resolved_scene_paths: List[Path] = []
     if is_full_audit:
-        for key, entry in index.entries.items():
-            if key.endswith(".json") and ("scenes/" in key or "scenes\\" in key):
-                resolved_scene_paths.append(entry.resolved_path)
+        repo_root = find_repo_root() or Path.cwd().resolve()
+        resolved_scene_paths = discover_scene_paths(repo_root)
     else:
         assert scene_paths is not None
         resolved_scene_paths = list(scene_paths)
