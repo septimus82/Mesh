@@ -129,14 +129,16 @@ def track_scene_subscription(self: "GameWindow", unsubscribe: Callable[[], None]
 
 # --- Event bus ---
 def emit_event(self: "GameWindow", event: MeshEvent) -> None:
-    self._mesh_event_queue.append(event)
     event_bus = getattr(self, "event_bus", None)
-    if event_bus is not None:
-        try:
-            event_bus.emit_event(event)
-        except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation - event bus should not break runtime
-            _log_swallow("GAME-006", "engine/game.py blanket swallow", once=True)
-            logger.error("[Mesh][EventBus] ERROR forwarding event '%s': %s", event.type, exc)
+    if event_bus is None:
+        self._mesh_event_queue.append(event)
+        return
+    try:
+        event_bus.emit_event(event)
+    except Exception as exc:  # noqa: BLE001  # REASON: runtime fallback isolation - event bus should not break runtime
+        _log_swallow("GAME-006", "engine/game.py blanket swallow", once=True)
+        logger.error("[Mesh][EventBus] ERROR forwarding event '%s': %s", event.type, exc)
+        self._mesh_event_queue.append(event)
 
 
 def emit_signal(self: "GameWindow", event_type: str, **payload: Any) -> None:
