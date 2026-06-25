@@ -285,9 +285,42 @@ def test_engine_overview_json_is_valid_and_complete() -> None:
     import json
 
     payload = json.loads(tools.engine_overview_json("."))
-    assert set(payload) == {"scenes", "prefabs", "behaviours", "operations"}
+    assert set(payload) == {
+        "scenes",
+        "prefabs",
+        "behaviours",
+        "operations",
+        "playable_scene_recipe",
+        "scene_templates",
+    }
     assert payload["behaviours"], "overview must brief the model on behaviours"
     assert payload["operations"], "overview must brief the model on the op surface"
+
+    recipe = payload["playable_scene_recipe"]
+    assert isinstance(recipe, list) and recipe, "recipe must be a non-empty list"
+
+    templates = payload["scene_templates"]
+    assert isinstance(templates, list) and templates, "scene_templates must be a non-empty list"
+    # Enumerated from the live scaffold registry, not hardcoded.
+    from engine.tooling.scaffold import TEMPLATES
+
+    assert set(templates) == set(TEMPLATES.keys())
+    assert "empty" in templates
+
+
+def test_playable_recipe_references_only_existing_prefabs() -> None:
+    """Guard: the recipe can't reference a prefab that was removed."""
+    prefab_ids = {row["id"] for row in tools.list_prefabs(".")}
+    referenced = {
+        step["prefab"]
+        for step in tools.playable_scene_recipe()
+        if step.get("prefab") is not None
+    }
+    assert referenced, "recipe should reference at least one prefab"
+    assert "player" in referenced
+    assert referenced & {"chaser_enemy"}, "recipe should reference an enemy prefab"
+    missing = referenced - prefab_ids
+    assert not missing, f"recipe references non-existent prefabs: {missing}"
 
 
 # ------------------------------------------------------------- server guard
