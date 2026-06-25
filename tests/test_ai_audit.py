@@ -200,7 +200,7 @@ def test_run_ai_audit_integration(tmp_path):
     }), encoding="utf-8")
 
     with patch("engine.ai_audit.resolve_path") as mock_resolve, \
-         patch("engine.ai_audit.ContentIndex") as MockIndex:
+         patch("engine.ai_audit.discover_scene_paths", return_value=[scene_file]):
 
         # Mock resolve_path to return our temp files
         def side_effect(path):
@@ -209,13 +209,6 @@ def test_run_ai_audit_integration(tmp_path):
             return Path(path) # Default
 
         mock_resolve.side_effect = side_effect
-
-        # Mock ContentIndex
-        mock_idx = MockIndex.return_value
-        # Mock entries to return our scene file
-        mock_entry = MagicMock()
-        mock_entry.resolved_path = scene_file
-        mock_idx.entries = {"scenes/scene1.json": mock_entry}
 
         # Run audit
         report_dict = run_ai_audit(json_output=True)
