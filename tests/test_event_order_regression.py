@@ -7,7 +7,7 @@ from engine.game import GameWindow
 from tests._typing import as_any
 
 
-def test_emit_signal_enqueues_event_before_bus_wildcard_enqueue() -> None:
+def test_emit_signal_uses_bus_wildcard_as_single_enqueue_path() -> None:
     dummy = types.SimpleNamespace()
     dummy._mesh_event_queue = []
     dummy.last_events = []
@@ -31,6 +31,4 @@ def test_emit_signal_enqueues_event_before_bus_wildcard_enqueue() -> None:
     GameWindow.emit_signal(as_any(dummy), "b", value=2)
 
     q = dummy._mesh_event_queue
-    assert [e.type for e in q] == ["a", "a", "b", "b"]
-    assert q[0] is q[1]
-    assert q[2] is q[3]
+    assert [e.type for e in q] == ["a", "b"]
