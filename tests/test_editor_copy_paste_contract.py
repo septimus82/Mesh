@@ -7,6 +7,7 @@ without any arcade/pygame dependencies (pure unit tests).
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import MagicMock
 
 from engine.editor.editor_clipboard_ops import (
@@ -77,7 +78,7 @@ class TestCloneEntityPayload:
 
     def test_deep_copies_entity(self) -> None:
         """Entity is deep copied, not referenced."""
-        original = {"id": "test", "x": 100, "nested": {"value": 1}}
+        original: dict[str, Any] = {"id": "test", "x": 100, "nested": {"value": 1}}
         cloned = clone_entity_payload(original, "test_copy_1", (200, 300))
 
         # Modify cloned nested value
@@ -295,8 +296,8 @@ class TestCopyPasteIntegration:
 class TestContextMenuCopyPaste:
     """Tests for context menu copy/paste items."""
 
-    def test_copy_enabled_with_selection(self) -> None:
-        """Copy is enabled when there's a selection."""
+    def test_copy_omitted_from_viewport_context_menu(self) -> None:
+        """Copy is no longer shown in the viewport context menu."""
         from engine.editor.context_menu_model import build_context_menu_items
 
         controller = MagicMock()
@@ -304,12 +305,12 @@ class TestContextMenuCopyPaste:
         controller._entity_clipboard = None
 
         items = build_context_menu_items(controller)
-        copy_item = next(i for i in items if i.id == "ctx_copy")
+        ids = {i.id for i in items}
 
-        assert copy_item.enabled is True
+        assert "ctx_copy" not in ids
 
-    def test_copy_disabled_without_selection(self) -> None:
-        """Copy is disabled when there's no selection."""
+    def test_copy_stays_omitted_without_selection(self) -> None:
+        """Copy stays off the viewport context menu without selection."""
         from engine.editor.context_menu_model import build_context_menu_items
 
         controller = MagicMock()
@@ -317,12 +318,12 @@ class TestContextMenuCopyPaste:
         controller._entity_clipboard = None
 
         items = build_context_menu_items(controller)
-        copy_item = next(i for i in items if i.id == "ctx_copy")
+        ids = {i.id for i in items}
 
-        assert copy_item.enabled is False
+        assert "ctx_copy" not in ids
 
-    def test_paste_enabled_with_clipboard(self) -> None:
-        """Paste is enabled when clipboard has content."""
+    def test_paste_omitted_from_viewport_context_menu(self) -> None:
+        """Paste is no longer shown in the viewport context menu."""
         from engine.editor.context_menu_model import build_context_menu_items
 
         controller = MagicMock()
@@ -330,12 +331,12 @@ class TestContextMenuCopyPaste:
         controller._entity_clipboard = {"id": "test"}
 
         items = build_context_menu_items(controller)
-        paste_item = next(i for i in items if i.id == "ctx_paste")
+        ids = {i.id for i in items}
 
-        assert paste_item.enabled is True
+        assert "ctx_paste" not in ids
 
-    def test_paste_disabled_without_clipboard(self) -> None:
-        """Paste is disabled when clipboard is empty."""
+    def test_paste_stays_omitted_without_clipboard(self) -> None:
+        """Paste stays off the viewport context menu without clipboard content."""
         from engine.editor.context_menu_model import build_context_menu_items
 
         controller = MagicMock()
@@ -343,9 +344,9 @@ class TestContextMenuCopyPaste:
         controller._entity_clipboard = None
 
         items = build_context_menu_items(controller)
-        paste_item = next(i for i in items if i.id == "ctx_paste")
+        ids = {i.id for i in items}
 
-        assert paste_item.enabled is False
+        assert "ctx_paste" not in ids
 
 
 # ------------------------------------------------------------------------------
