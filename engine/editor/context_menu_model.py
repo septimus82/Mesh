@@ -40,6 +40,7 @@ class ContextMenuItem:
     label: str
     enabled: bool = True
     shortcut: str = ""
+    separator: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,24 +60,15 @@ def build_context_menu_items(controller: Any) -> List[ContextMenuItem]:
     Returns:
         List of ContextMenuItem with items enabled/disabled appropriately.
     """
-    # Check if there's a selection
     has_selection = getattr(controller, "selected_entity", None) is not None
-    # Check if clipboard has content
-    has_clipboard = getattr(controller, "_entity_clipboard", None) is not None
 
     items: List[ContextMenuItem] = [
         ContextMenuItem(
-            id="ctx_copy",
-            label="Copy",
+            id="ctx_edit",
+            label="Edit",
             enabled=has_selection,
-            shortcut="Ctrl+C",
         ),
-        ContextMenuItem(
-            id="ctx_paste",
-            label="Paste",
-            enabled=has_clipboard,
-            shortcut="Ctrl+V",
-        ),
+        ContextMenuItem(id="ctx_separator_edit", label="", enabled=False, separator=True),
         ContextMenuItem(
             id="ctx_duplicate",
             label="Duplicate",
@@ -89,17 +81,12 @@ def build_context_menu_items(controller: Any) -> List[ContextMenuItem]:
             enabled=has_selection,
             shortcut="Del",
         ),
+        ContextMenuItem(id="ctx_separator_mutate", label="", enabled=False, separator=True),
         ContextMenuItem(
             id="ctx_focus",
             label="Focus",
             enabled=has_selection,
             shortcut="F",
-        ),
-        ContextMenuItem(
-            id="ctx_rename",
-            label="Rename",
-            enabled=has_selection,
-            shortcut="F2",
         ),
     ]
 
@@ -195,6 +182,8 @@ def hit_test_context_menu(x: float, y: float, layout: ContextMenuLayout) -> str 
         Item ID if hit, None otherwise.
     """
     for item, rect in layout.items_with_rects:
+        if item.separator:
+            continue
         if rect.contains_point(x, y):
             return item.id
     return None
