@@ -47,6 +47,9 @@ def build_server() -> Any:
     server.tool()(tools.read_scene)
     server.tool()(tools.list_entities)
     server.tool()(tools.inspect_entity)
+    server.tool()(tools.list_lights)
+    server.tool()(tools.list_quests)
+    server.tool()(tools.inspect_quest)
     server.tool()(tools.list_prefabs)
     server.tool()(tools.list_behaviours)
 

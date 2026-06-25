@@ -74,6 +74,57 @@ def test_inspect_entity_on_missing_scene_is_structured() -> None:
     assert result["ok"] is False
 
 
+# --------------------------------------------------------------- quests/lights
+def test_list_quests_returns_summaries_keyed_on_id() -> None:
+    listed = tools.list_quests(".")
+    assert listed["ok"] is True
+    assert listed["count"] == len(listed["quests"])
+    assert listed["quests"], "expected quests in assets/data/quests.json"
+    first = listed["quests"][0]
+    assert set(first) == {"id", "title", "stage_count"}
+    ids = [row["id"] for row in listed["quests"]]
+    assert ids == sorted(ids)
+    assert "quests" not in ids, "must parse the {'quests': [...]} shape, not the wrapper key"
+
+
+def test_inspect_quest_returns_full_detail() -> None:
+    quest_id = tools.list_quests(".")["quests"][0]["id"]
+    result = tools.inspect_quest(quest_id, ".")
+    assert result["ok"] is True
+    assert result["id"] == quest_id
+    assert isinstance(result["stages"], list)
+    assert isinstance(result["quest"], dict)  # full raw quest for refinement
+
+
+def test_inspect_quest_missing_is_structured_not_raised() -> None:
+    result = tools.inspect_quest("__no_such_quest__", ".")
+    assert result["ok"] is False
+    assert "not found" in result["message"].lower()
+
+
+def _scene_with_lights() -> str:
+    for scene_path in tools.list_scenes("."):
+        if tools.list_lights(scene_path, ".")["count"] > 0:
+            return scene_path
+    raise AssertionError("expected at least one scene with lights")
+
+
+def test_list_lights_exposes_index_for_refinement() -> None:
+    scene_path = _scene_with_lights()
+    listed = tools.list_lights(scene_path, ".")
+    assert listed["ok"] is True
+    assert listed["count"] == len(listed["lights"])
+    first = listed["lights"][0]
+    assert set(first) == {"index", "id", "type", "x", "y", "radius", "color", "enabled"}
+    # index must match list position so update_light/delete_light can target it
+    assert [row["index"] for row in listed["lights"]] == list(range(listed["count"]))
+
+
+def test_list_lights_on_missing_scene_is_structured() -> None:
+    result = tools.list_lights("scenes/__nope__.json", ".")
+    assert result["ok"] is False
+
+
 def test_list_prefabs_returns_id_and_display_name() -> None:
     prefabs = tools.list_prefabs(".")
     assert prefabs, "expected prefabs from assets/prefabs.json"
