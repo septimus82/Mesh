@@ -52,13 +52,20 @@ Read (the AI's eyes):
 | `read_scene` | Parse a scene + entity-count summary. |
 | `list_entities` | List a scene's entities as compact summaries (name, tag, pos, behaviours). |
 | `inspect_entity` | Return one entity in full detail (summary + behaviour_config + raw entity). |
+| `list_lights` | List a scene's lights with their `index` and key fields. |
+| `list_quests` | List quest definitions (`id`, title, stage count) from `assets/data/quests.json`. |
+| `inspect_quest` | Return one quest in full detail (stages + raw quest). |
 | `list_prefabs` | List prefabs (`id` + `display_name`) from `assets/prefabs.json`. |
 | `list_behaviours` | List every registered behaviour. |
 
-`list_entities` and `inspect_entity` key on the entity's `name` — the same
-identifier the action ops (`delete_entity`, `set_behaviour_params`) use — so the
-AI can build, list what's there, inspect one in detail, then refine it
-precisely. That closes the **build → inspect → refine** loop.
+The inspect tools key on whatever identifier the matching action op uses, so the
+AI can build, list what's there, inspect one in detail, then refine it precisely:
+`list_entities`/`inspect_entity` on the entity `name` (matching `delete_entity`,
+`set_behaviour_params`); `list_quests`/`inspect_quest` on the quest `id` (matching
+`edit_quest`, `update_quest_definition`, `delete_quest_definition`); and
+`list_lights` on the light `index` (matching `update_light`, `delete_light`).
+That closes the **build → inspect → refine** loop for entities, quests, and
+lighting.
 
 Action (the AI's hands), wrapping `engine.ai_ops.AIOps`:
 

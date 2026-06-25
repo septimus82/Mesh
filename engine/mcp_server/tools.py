@@ -193,6 +193,109 @@ def list_behaviours() -> list[str]:
     return sorted(BEHAVIOUR_REGISTRY)
 
 
+def _load_quests(root: str) -> list[dict[str, Any]]:
+    """Load quest definitions from assets/data/quests.json across known shapes."""
+    path = _root_path(root) / "assets" / "data" / "quests.json"
+    if not path.is_file():
+        return []
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    if isinstance(raw, dict):
+        quests = raw.get("quests")
+        if isinstance(quests, list):
+            return [q for q in quests if isinstance(q, dict)]
+        # Legacy {quest_id: {...}} mapping.
+        result: list[dict[str, Any]] = []
+        for key, value in raw.items():
+            if isinstance(value, dict):
+                entry = dict(value)
+                entry.setdefault("id", key)
+                result.append(entry)
+        return result
+    if isinstance(raw, list):
+        return [q for q in raw if isinstance(q, dict)]
+    return []
+
+
+def list_quests(root: str = ".") -> dict[str, Any]:
+    """List quest definitions as compact summaries (id, title, stage count).
+
+    ``id`` is the identifier the quest action ops (``edit_quest``,
+    ``update_quest_definition``, ``delete_quest_definition``) key on.
+    """
+    summaries: list[dict[str, Any]] = []
+    for quest in _load_quests(root):
+        quest_id = quest.get("id")
+        if not isinstance(quest_id, str) or not quest_id.strip():
+            continue
+        stages = quest.get("stages")
+        summaries.append(
+            {
+                "id": quest_id,
+                "title": quest.get("title"),
+                "stage_count": len(stages) if isinstance(stages, list) else 0,
+            }
+        )
+    summaries.sort(key=lambda row: row["id"])
+    return {"ok": True, "count": len(summaries), "quests": summaries}
+
+
+def inspect_quest(quest_id: str, root: str = ".") -> dict[str, Any]:
+    """Return one quest in full detail so the AI can refine it.
+
+    Includes a compact stage list (id + title) plus the full raw ``quest`` dict.
+    """
+    for quest in _load_quests(root):
+        if str(quest.get("id")) == quest_id:
+            stages = quest.get("stages")
+            stage_rows = [
+                {"id": stage.get("id"), "title": stage.get("title")}
+                for stage in (stages or [])
+                if isinstance(stage, dict)
+            ]
+            return {
+                "ok": True,
+                "id": quest_id,
+                "title": quest.get("title"),
+                "description": quest.get("description"),
+                "stages": stage_rows,
+                "quest": quest,
+            }
+    return {"ok": False, "message": f"Quest '{quest_id}' not found"}
+
+
+def list_lights(scene_path: str, root: str = ".") -> dict[str, Any]:
+    """List a scene's lights with their index and key fields.
+
+    ``index`` is the identifier the light action ops (``update_light``,
+    ``delete_light``) key on, so the AI can list then refine a specific light.
+    """
+    loaded = read_scene(scene_path, root)
+    if not loaded.get("ok"):
+        return {"ok": False, "message": loaded.get("message", "Scene not found")}
+    scene = loaded.get("scene")
+    lights = scene.get("lights") if isinstance(scene, dict) else None
+    rows: list[dict[str, Any]] = []
+    for index, light in enumerate(lights or []):
+        if not isinstance(light, dict):
+            continue
+        rows.append(
+            {
+                "index": index,
+                "id": light.get("id"),
+                "type": light.get("type"),
+                "x": light.get("x"),
+                "y": light.get("y"),
+                "radius": light.get("radius"),
+                "color": light.get("color"),
+                "enabled": light.get("enabled"),
+            }
+        )
+    return {"ok": True, "scene_path": scene_path, "count": len(rows), "lights": rows}
+
+
 # -------------------------------------------------------------- action tools
 def _result_to_dict(result: Any) -> dict[str, Any]:
     return {
