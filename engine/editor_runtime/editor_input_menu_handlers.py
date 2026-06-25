@@ -188,13 +188,54 @@ def handle_context_menu_click(controller: EditorController, x: float, y: float) 
         _close_context_menu(controller)
         return True
 
-    # No menu open - check if we should open one
-    # Only open if there's a selection
-    if getattr(controller, "selected_entity", None) is not None:
+    # No menu open - select the entity under the cursor before opening.
+    if _select_entity_under_context_cursor(controller, x, y):
         _open_context_menu(controller, x, y)
         return True
 
     return None
+
+
+def _select_entity_under_context_cursor(controller: EditorController, x: float, y: float) -> bool:
+    screen_to_world = getattr(getattr(controller, "window", None), "screen_to_world", None)
+    if not callable(screen_to_world):
+        return False
+
+    world_x, world_y = screen_to_world(x, y)
+
+    from .editor_input_click_handlers import _pick_entity_sprite_at_world  # noqa: PLC0415
+
+    clicked_sprite = _pick_entity_sprite_at_world(controller, world_x, world_y)
+    if clicked_sprite is None:
+        return False
+
+    _apply_context_menu_selection(controller, clicked_sprite)
+    controller.entity_dragging = False
+    controller.entity_drag_start_pos = None
+    controller._multiselect_drag_starts = {}
+    controller._rotate_drag_active = False
+    controller._scale_drag_active = False
+    controller._transform_drag_pivot = None
+    controller._transform_drag_mouse_start = None
+    controller._transform_drag_start_rots = {}
+    controller._transform_drag_start_scales = {}
+    return True
+
+
+def _apply_context_menu_selection(controller: EditorController, clicked_sprite: object) -> None:
+    from ..editor.editor_transform_ops import resolve_entity_id_for_sprite  # noqa: PLC0415
+    from .state import apply_selection  # noqa: PLC0415
+
+    try:
+        apply_selection(controller, clicked_sprite, shift=False)
+        return
+    except AttributeError:
+        logger.debug("[Editor] Context menu selection used minimal-controller fallback", exc_info=True)
+
+    clicked_id = resolve_entity_id_for_sprite(clicked_sprite)
+    controller.selected_entity = clicked_sprite
+    setattr(controller, "_primary_entity_id", clicked_id)
+    setattr(controller, "_selected_entity_ids", [clicked_id] if clicked_id else [])
 
 
 def _open_context_menu(controller: EditorController, x: float, y: float) -> None:
@@ -263,7 +304,9 @@ def handle_context_menu_key(controller: EditorController, key: int, _modifiers: 
 
 def _execute_context_menu_item(controller: EditorController, item_id: str) -> None:
     """Execute a context menu item action."""
-    if item_id == "ctx_copy":
+    if item_id == "ctx_edit":
+        _open_selected_entity_inspector(controller)
+    elif item_id == "ctx_copy":
         copier = getattr(controller, "copy_selected_entity_to_clipboard", None)
         if callable(copier):
             copier()
@@ -283,6 +326,16 @@ def _execute_context_menu_item(controller: EditorController, item_id: str) -> No
         _focus_camera_on_entity(controller)
     elif item_id == "ctx_rename":
         _begin_context_rename(controller)
+
+
+def _open_selected_entity_inspector(controller: EditorController) -> None:
+    """Open the right dock Inspector tab for the selected entity."""
+    if getattr(controller, "selected_entity", None) is None:
+        return
+    dock = getattr(controller, "dock", None)
+    setter = getattr(dock, "set_active_tab", None) if dock is not None else None
+    if callable(setter):
+        setter("right", "Inspector", force=True)
 
 
 def _focus_camera_on_entity(controller: EditorController) -> None:

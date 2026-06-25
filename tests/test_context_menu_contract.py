@@ -6,6 +6,8 @@ correctly without any arcade/pygame dependencies (pure unit tests).
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -73,23 +75,43 @@ class TestBuildContextMenuItems:
         controller._entity_clipboard = None  # No clipboard content
         return controller
 
-    def test_returns_six_items(self, mock_controller_with_selection: MagicMock) -> None:
-        """Returns Copy, Paste, Duplicate, Delete, Focus, Rename items."""
+    def test_returns_entity_action_items(self, mock_controller_with_selection: MagicMock) -> None:
+        """Returns the lean entity action set."""
         items = build_context_menu_items(mock_controller_with_selection)
         ids = [i.id for i in items]
-        assert ids == ["ctx_copy", "ctx_paste", "ctx_duplicate", "ctx_delete", "ctx_focus", "ctx_rename"]
+        assert ids == [
+            "ctx_edit",
+            "ctx_separator_edit",
+            "ctx_duplicate",
+            "ctx_delete",
+            "ctx_separator_mutate",
+            "ctx_focus",
+        ]
 
     def test_items_enabled_with_selection(self, mock_controller_with_selection: MagicMock) -> None:
-        """All items are enabled when there's a selection."""
+        """Action items are enabled when there's a selection."""
         items = build_context_menu_items(mock_controller_with_selection)
         for item in items:
-            assert item.enabled is True
+            if not item.separator:
+                assert item.enabled is True
+
+    def test_viewport_copy_paste_rename_are_omitted(self, mock_controller_with_selection: MagicMock) -> None:
+        """Copy, Paste, and Rename stay off the viewport context menu."""
+        items = build_context_menu_items(mock_controller_with_selection)
+        ids = {i.id for i in items}
+        assert "ctx_copy" not in ids
+        assert "ctx_paste" not in ids
+        assert "ctx_rename" not in ids
 
     def test_selection_items_disabled_without_selection(self, mock_controller_no_selection: MagicMock) -> None:
         """Selection-dependent items are disabled when there's no selection."""
         items = build_context_menu_items(mock_controller_no_selection)
         # Selection-dependent items should be disabled
-        selection_items = [i for i in items if i.id in ["ctx_copy", "ctx_duplicate", "ctx_delete", "ctx_focus", "ctx_rename"]]
+        selection_items = [
+            i
+            for i in items
+            if i.id in ["ctx_edit", "ctx_duplicate", "ctx_delete", "ctx_focus"]
+        ]
         for item in selection_items:
             assert item.enabled is False
 
@@ -97,12 +119,10 @@ class TestBuildContextMenuItems:
         """Items have correct shortcuts."""
         items = build_context_menu_items(mock_controller_with_selection)
         shortcuts = {i.id: i.shortcut for i in items}
-        assert shortcuts["ctx_copy"] == "Ctrl+C"
-        assert shortcuts["ctx_paste"] == "Ctrl+V"
+        assert shortcuts["ctx_edit"] == ""
         assert shortcuts["ctx_duplicate"] == "Ctrl+D"
         assert shortcuts["ctx_delete"] == "Del"
         assert shortcuts["ctx_focus"] == "F"
-        assert shortcuts["ctx_rename"] == "F2"
 
 
 # ------------------------------------------------------------------------------
@@ -267,14 +287,14 @@ class TestContextMenuIntegration:
         layout = compute_context_menu_layout(200, 400, items, 800, 600)
         assert layout.rect.w == CONTEXT_MENU_WIDTH
 
-        # Hit test - should find copy (first item)
+        # Hit test - should find edit (first item)
         first_item, first_rect = layout.items_with_rects[0]
         hit_id = hit_test_context_menu(
             first_rect.x + first_rect.w / 2,
             first_rect.y + first_rect.h / 2,
             layout,
         )
-        assert hit_id == "ctx_copy"
+        assert hit_id == "ctx_edit"
 
     def test_disabled_items_still_have_layout(self) -> None:
         """Disabled items still appear in layout."""
@@ -298,6 +318,19 @@ class TestContextMenuIntegration:
 
 class TestContextMenuActions:
     """Tests for context menu action execution."""
+
+    def test_edit_switches_right_dock_to_inspector(self) -> None:
+        """Edit action opens the right dock Inspector tab."""
+        from engine.editor_runtime.input import _execute_context_menu_item
+
+        dock = MagicMock()
+        controller = MagicMock()
+        controller.selected_entity = MagicMock()
+        controller.dock = dock
+
+        _execute_context_menu_item(controller, "ctx_edit")
+
+        dock.set_active_tab.assert_called_once_with("right", "Inspector", force=True)
 
     def test_duplicate_calls_duplicate_selected(self) -> None:
         """Duplicate action calls controller.duplicate_selected."""
@@ -358,3 +391,91 @@ class TestContextMenuActions:
         controller.toggle_hierarchy.assert_called_once()
         # Should begin rename
         controller._begin_hierarchy_rename.assert_called_once()
+
+    def test_right_click_selects_entity_under_cursor_then_opens(self) -> None:
+        """Right-clicking an entity selects it before opening the context menu."""
+        from engine.editor_runtime.editor_input_menu_handlers import handle_context_menu_click
+
+        class Sprite:
+            mesh_name = "entity-a"
+            mesh_tag = "entity"
+            mesh_behaviours: list[Any] = []
+            mesh_behaviours_runtime: list[Any] = []
+            mesh_entity_data = {
+                "id": "entity-a",
+                "x": 100.0,
+                "y": 200.0,
+                "width": 32.0,
+                "height": 32.0,
+            }
+            center_x = 100.0
+            center_y = 200.0
+            width = 32.0
+            height = 32.0
+
+            def collides_with_point(self, point: tuple[float, float]) -> bool:
+                return point == (100.0, 200.0)
+
+        sprite = Sprite()
+        open_state = {"open": False}
+        panels = SimpleNamespace(
+            is_context_menu_open=lambda: open_state["open"],
+            open_context_menu=lambda: open_state.__setitem__("open", True),
+        )
+        scene = SimpleNamespace(
+            get_sprites_in_layer=lambda layer: [sprite] if layer == "entities" else None,
+            entity_sprites=[sprite],
+            all_sprites=[sprite],
+        )
+        controller = SimpleNamespace(
+            active=True,
+            selected_entity=None,
+            _selected_entity_ids=[],
+            _primary_entity_id=None,
+            _multiselect_drag_starts={},
+            _rotate_drag_active=False,
+            _scale_drag_active=False,
+            _transform_drag_pivot=None,
+            _transform_drag_mouse_start=None,
+            _transform_drag_start_rots={},
+            _transform_drag_start_scales={},
+            tool_mode="MOVE",
+            transform_mode="MOVE",
+            entity_dragging=False,
+            entity_drag_start_pos=None,
+            shape=SimpleNamespace(
+                reset_zone_selection_state=lambda: None,
+                sync_zone_selection_state=lambda _entity: None,
+            ),
+            _cancel_hierarchy_rename=lambda: None,
+            _refresh_dialogue_cache=lambda: None,
+            _refresh_animation_cache=lambda: None,
+            _refresh_tile_palette=lambda: None,
+            _get_display_name_for_sprite=lambda _entity: "entity-a",
+            _refresh_inspector_items=lambda: None,
+            hierarchy_active=False,
+            dialogue_panel_active=False,
+            dialogue_editing=False,
+            animation_active=False,
+            animation_editing=False,
+            tile_panel_active=False,
+            inspector_selection_index=0,
+            inspector=SimpleNamespace(set_inspector_active=lambda _value: None),
+            panels=panels,
+            window=SimpleNamespace(
+                width=800,
+                height=600,
+                screen_to_world=lambda x, y: (float(x), float(y)),
+                scene_controller=scene,
+            ),
+        )
+
+        handled = handle_context_menu_click(cast(Any, controller), 100.0, 200.0)
+
+        assert handled is True
+        assert open_state["open"] is True
+        assert controller.selected_entity is sprite
+        assert controller._selected_entity_ids == ["entity-a"]
+        assert controller._primary_entity_id == "entity-a"
+        assert controller.entity_dragging is False
+        assert controller.entity_drag_start_pos is None

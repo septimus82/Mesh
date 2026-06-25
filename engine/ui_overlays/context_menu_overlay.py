@@ -85,6 +85,18 @@ class ContextMenuOverlay(UIElement):
 
         # Draw items
         for item, item_rect in layout.items_with_rects:
+            if item.separator:
+                line_y = item_rect.y + item_rect.h / 2
+                optional_arcade.arcade.draw_line(
+                    item_rect.x + 8,
+                    line_y,
+                    item_rect.x + item_rect.w - 8,
+                    line_y,
+                    CONTEXT_BORDER_COLOR,
+                    1,
+                )
+                continue
+
             # Highlight hovered item
             if item.enabled and item.id == hover_id:
                 draw_panel_bg(
