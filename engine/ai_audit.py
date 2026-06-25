@@ -38,6 +38,28 @@ class AIAuditReport:
     global_warnings: List[str] = field(default_factory=list)
 
 
+def _extract_quest_ids(raw_quests: Any) -> Set[str]:
+    if isinstance(raw_quests, dict):
+        quests = raw_quests.get("quests")
+        if isinstance(quests, list):
+            return _extract_quest_ids_from_list(quests)
+        return {str(key) for key in raw_quests.keys() if str(key).strip()}
+    if isinstance(raw_quests, list):
+        return _extract_quest_ids_from_list(raw_quests)
+    return set()
+
+
+def _extract_quest_ids_from_list(raw_quests: List[Any]) -> Set[str]:
+    quest_ids: Set[str] = set()
+    for entry in raw_quests:
+        if not isinstance(entry, dict):
+            continue
+        quest_id = entry.get("id")
+        if isinstance(quest_id, str) and quest_id.strip():
+            quest_ids.add(quest_id)
+    return quest_ids
+
+
 def build_audit_report(scene_paths: List[Path] | None = None) -> AIAuditReport:
     """
     Builds an AI audit report.
@@ -58,8 +80,7 @@ def build_audit_report(scene_paths: List[Path] | None = None) -> AIAuditReport:
     if quests_path.exists():
         try:
             raw_quests = json.loads(quests_path.read_text(encoding="utf-8"))
-            if isinstance(raw_quests, dict):
-                quest_ids = set(raw_quests.keys())
+            quest_ids = _extract_quest_ids(raw_quests)
         except Exception as e:
             report.global_warnings.append(f"Failed to load quests.json: {e}")
 
@@ -151,7 +172,6 @@ def _audit_scene(scene_path: Path, index: ContentIndex, valid_quest_ids: Set[str
         # Check for NPC-ness (name, dialogue, tags)
         is_npc = False
         has_dialogue = False
-        has_tags = False
 
         name = entity.get("name")
         dialogue = entity.get("dialogue")
