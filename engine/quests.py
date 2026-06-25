@@ -45,11 +45,6 @@ class QuestManager:
         self._definitions: dict[str, dict[str, Any]] = {}
         self._stage_lookup: dict[str, dict[str, Any]] = {}
         self.load_definitions()
-        # Single shared quest store: callers reaching the controller's `quests`
-        # (UI/save/update paths) resolve to this canonical full manager.
-        gsc = getattr(window, "game_state_controller", None)
-        if gsc is not None:
-            gsc.quests = self
 
     # ------------------------------------------------------------------
     # Public API

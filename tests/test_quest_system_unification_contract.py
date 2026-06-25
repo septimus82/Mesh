@@ -31,6 +31,7 @@ class _Window:
         self.game_state_controller = GameStateController(cast(Any, self))
         self.game_state = self.game_state_controller.state
         self.quest_manager = FullQuestManager(self)
+        self.game_state_controller.quests = self.quest_manager
 
     def emit_signal(self, event_name: str, **payload: Any) -> None:
         event = MeshEvent(event_name, payload)
