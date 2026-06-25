@@ -18,20 +18,36 @@ The `mcp` SDK is an *optional* dependency — the engine never requires it:
 pip install -e .[mcp]
 ```
 
-## Run
+## Quickstart
 
 ```bash
-python -m engine.mcp_server.server
+pip install -e .[mcp]
+mesh mcp install
 ```
 
-The server speaks MCP over **stdio**, so an MCP client launches that command
-directly. Example client config (Claude Desktop `mcpServers` entry):
+Fully restart Claude Desktop after the install command so it reloads the MCP
+configuration.
+
+`mesh mcp install` writes the Claude Desktop config for the current project. It
+backs up any existing config to `claude_desktop_config.json.bak`, preserves other
+servers, and overwrites only the `mcpServers.mesh` entry.
+
+## Other MCP Clients
+
+The server speaks MCP over **stdio**, so any MCP client can launch it directly.
+For clients other than Claude Desktop, print the config snippet for this project:
+
+```bash
+mesh mcp config
+```
+
+That prints JSON in this shape:
 
 ```json
 {
   "mcpServers": {
     "mesh": {
-      "command": "python",
+      "command": "C:/path/to/python",
       "args": ["-m", "engine.mcp_server.server"],
       "cwd": "C:/path/to/Mesh"
     }
@@ -39,8 +55,9 @@ directly. Example client config (Claude Desktop `mcpServers` entry):
 }
 ```
 
-Run it from the project root (or set `cwd`) so the read/action tools resolve
-`scenes/`, `assets/prefabs.json`, etc. relative to the right place.
+Run `mesh mcp config` from the project root so the generated `cwd` lets the
+read/action tools resolve `scenes/`, `assets/prefabs.json`, etc. relative to the
+right place.
 
 ## Tools
 

@@ -29,6 +29,10 @@ def handle(args: argparse.Namespace) -> int:
         return _handle_wizard(args)
     if args.command == "docs":
         return _handle_docs(args)
+    if args.command == "mcp":
+        from . import mcp_setup
+
+        return mcp_setup.handle(args)
     if args.command == "dump-state":
         return _handle_dump_state(args)
     if args.command == "build-web":
@@ -172,6 +176,24 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     docs_parser = subparsers.add_parser("docs", help="Generate documentation")
     docs_parser.add_argument("--out-dir", default="docs", help="Directory where markdown files should be written")
     docs_parser.add_argument("--verify", action="store_true", help="Verify docs are up to date")
+
+    # MCP onboarding
+    mcp_parser = subparsers.add_parser("mcp", help="Configure an MCP client for this Mesh project")
+    mcp_subparsers = mcp_parser.add_subparsers(dest="mcp_command", help="MCP subcommand")
+    mcp_config_parser = mcp_subparsers.add_parser("config", help="Print an MCP client config snippet")
+    mcp_config_parser.set_defaults(func=_handle_mcp)
+    mcp_install_parser = mcp_subparsers.add_parser("install", help="Install Mesh into an MCP client config")
+    mcp_install_parser.add_argument(
+        "--client",
+        choices=("claude-desktop",),
+        default="claude-desktop",
+        help="MCP client to configure",
+    )
+    mcp_install_parser.add_argument(
+        "--config-path",
+        help=argparse.SUPPRESS,
+    )
+    mcp_install_parser.set_defaults(func=_handle_mcp)
 
     # Dump State
     dump_state_parser = subparsers.add_parser("dump-state", help="Print a deterministic debug state snapshot")
@@ -411,6 +433,13 @@ def _handle_docs(args: argparse.Namespace) -> int:
 
     from engine.tooling import generate_docs as docs_generator
     return docs_generator.main(tool_argv)
+
+
+def _handle_mcp(args: argparse.Namespace) -> int:
+    from . import mcp_setup
+
+    return mcp_setup.handle(args)
+
 
 def _handle_dump_state(args: argparse.Namespace) -> int:
     """Dump deterministic state snapshot."""

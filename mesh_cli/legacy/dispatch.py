@@ -63,6 +63,10 @@ def dispatch(
         return int(impl._handle_index(args))
     if args.command == "docs":
         return int(impl._handle_docs(args))
+    if args.command == "mcp":
+        from .. import mcp_setup
+
+        return int(mcp_setup.handle(args))
     if args.command == "wizard":
         return int(impl._handle_wizard(args))
     if args.command == "new-scene":
