@@ -11,6 +11,7 @@ from typing import Any, Dict, Iterable, List, Optional, Set
 
 from engine.swallowed_exceptions import _log_swallow
 
+from .behaviours import load_builtin_behaviours
 from .behaviours.registry import get_behaviour_info, get_behaviour_param_defs
 from .diagnostics import error as diag_error
 from .diagnostics import warn as diag_warn
@@ -191,6 +192,7 @@ class SceneLoader:
     def validate_scene_file(self, scene_path: str, strict: bool = False) -> ValidationReport:
         """Validate a scene JSON file without loading it into the engine."""
 
+        load_builtin_behaviours()
         report = ValidationReport()
         full_path = resolve_path(scene_path)
         if not full_path.exists():
@@ -390,31 +392,31 @@ class SceneLoader:
         self._require_string(entity, "trigger_target", report, label, required=False)
         self._require_string(entity, "on_trigger", report, label, required=False)
 
-        for field in ("require_flags", "forbid_flags"):
-            value = entity.get(field)
+        for flag_field in ("require_flags", "forbid_flags"):
+            value = entity.get(flag_field)
             if value is None:
                 continue
             if not isinstance(value, list):
-                report.add_error(f"{label}: field '{field}' must be an array of strings when present")
+                report.add_error(f"{label}: field '{flag_field}' must be an array of strings when present")
                 continue
             for entry in value:
                 if not isinstance(entry, str) or not entry.strip():
-                    report.add_error(f"{label}: field '{field}' must contain non-empty strings")
+                    report.add_error(f"{label}: field '{flag_field}' must contain non-empty strings")
                     break
 
-        for field in ("collision_poly", "occluder_poly"):
-            value = entity.get(field)
+        for poly_field in ("collision_poly", "occluder_poly"):
+            value = entity.get(poly_field)
             if value is None:
                 continue
             if not isinstance(value, list):
-                report.add_error(f"{label}: field '{field}' must be an array of points")
+                report.add_error(f"{label}: field '{poly_field}' must be an array of points")
                 continue
             for point in value:
                 if not isinstance(point, (list, tuple)) or len(point) != 2:
-                    report.add_error(f"{label}: field '{field}' must contain [x,y] point pairs")
+                    report.add_error(f"{label}: field '{poly_field}' must contain [x,y] point pairs")
                     break
                 if not isinstance(point[0], (int, float)) or not isinstance(point[1], (int, float)):
-                    report.add_error(f"{label}: field '{field}' must contain numeric [x,y] point pairs")
+                    report.add_error(f"{label}: field '{poly_field}' must contain numeric [x,y] point pairs")
                     break
 
         sprite_sheet = entity.get("sprite_sheet")
