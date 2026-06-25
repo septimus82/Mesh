@@ -2,16 +2,12 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-import pytest
-
 from engine.behaviours.quest_giver import QuestGiver
 from engine.events import MeshEvent, MeshEventBus
 from engine.game_state_controller import GameStateController
 from engine.quest_ui import get_active_quests
 from engine.quests import QuestManager as FullQuestManager
 from engine.save_runtime import payloads as save_payloads
-
-pytestmark = pytest.mark.xfail(reason="quest systems not yet unified -- task #128", strict=True)
 
 
 class _Entity:
@@ -39,7 +35,12 @@ class _Window:
     def emit_signal(self, event_name: str, **payload: Any) -> None:
         event = MeshEvent(event_name, payload)
         self.event_bus.emit_event(event)
-        self.quest_manager.handle_event(event)
+        # Quest definitions may auto-start a stage during QuestManager
+        # construction, which emits before ``quest_manager`` is bound; guard
+        # the reentrant call. Post-unification this is the same shared store.
+        quest_manager = getattr(self, "quest_manager", None)
+        if quest_manager is not None:
+            quest_manager.handle_event(event)
         self.game_state_controller.handle_event(event)
 
     def set_flag(self, name: str, value: bool = True) -> None:
