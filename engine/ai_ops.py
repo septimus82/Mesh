@@ -49,12 +49,19 @@ class AIOps:
     def __init__(self, base_dir: str | Path = ".") -> None:
         self.base_dir = Path(base_dir)
 
+    def _contain(self, path: Path, original: str | None) -> Path:
+        resolved_base = self.base_dir.resolve()
+        resolved_path = path.resolve()
+        if not resolved_path.is_relative_to(resolved_base):
+            raise ValueError(f"path escapes workspace: {original or path}")
+        return resolved_path
+
     # ------------------------------------------------------------------ world helpers
     def _world_path(self, world_path: str | None) -> Path:
         path = Path(world_path or "worlds/main_world.json")
         if not path.is_absolute():
             path = self.base_dir / path
-        return path
+        return self._contain(path, world_path)
 
     def _load_world_json(self, world_path: str | None) -> tuple[Path, dict[str, Any]]:
         path = self._world_path(world_path)
@@ -73,7 +80,7 @@ class AIOps:
         path = Path(scene_path)
         if not path.is_absolute():
             path = self.base_dir / path
-        return path
+        return self._contain(path, scene_path)
 
     def _load_scene(self, scene_path: str) -> tuple[Path, dict[str, Any]]:
         path = self._scene_path(scene_path)
@@ -95,7 +102,7 @@ class AIOps:
         path = Path(cutscenes_path or "cutscenes.json")
         if not path.is_absolute():
             path = self.base_dir / path
-        return path
+        return self._contain(path, cutscenes_path)
 
     def _load_cutscene_store(self, cutscenes_path: str | None) -> tuple[Path, dict[str, Any]]:
         path = self._cutscene_path(cutscenes_path)
