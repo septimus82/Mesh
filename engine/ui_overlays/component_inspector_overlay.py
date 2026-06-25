@@ -127,6 +127,12 @@ class ComponentInspectorOverlay(UIElement):
 
     def _get_selected_entity_json(self, controller: Any) -> Optional[Dict[str, Any]]:
         """Get the JSON data for the currently selected entity."""
+        getter = getattr(controller, "_get_selected_entity_json_for_inspector", None)
+        if callable(getter):
+            entity_json = getter()
+            if isinstance(entity_json, dict):
+                return entity_json
+
         # Try to get primary selected entity
         primary_id = getattr(controller, "_primary_selected_id", None)
         if not primary_id:
