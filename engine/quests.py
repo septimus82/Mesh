@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, cast
 
@@ -10,6 +12,18 @@ from .events import MeshEvent
 from .paths import resolve_path
 from .quest_runtime import normalize as quest_normalize
 from .quest_runtime import progress as quest_progress
+
+
+@dataclass(frozen=True)
+class _QuestStateView:
+    """Lightweight, save-compatible view of a quest's top-level status.
+
+    Exposes only ``id`` and ``state`` so ``serialize_quests`` produces the
+    quest-level projection (Option A) without leaking stage internals.
+    """
+
+    id: str
+    state: str
 
 
 def _lookup_stage(quest: dict[str, Any], stage_id: object) -> dict[str, Any] | None:
@@ -31,6 +45,11 @@ class QuestManager:
         self._definitions: dict[str, dict[str, Any]] = {}
         self._stage_lookup: dict[str, dict[str, Any]] = {}
         self.load_definitions()
+        # Single shared quest store: callers reaching the controller's `quests`
+        # (UI/save/update paths) resolve to this canonical full manager.
+        gsc = getattr(window, "game_state_controller", None)
+        if gsc is not None:
+            gsc.quests = self
 
     # ------------------------------------------------------------------
     # Public API
@@ -89,9 +108,73 @@ class QuestManager:
             self._coerce_state_schema(state)
             self._sync_pending_stage(quest, state)
 
-    def handle_event(self, event: MeshEvent) -> None:
-        """Inspect Mesh events and update quests when triggers match."""
+    def handle_event(self, event: MeshEvent, controller: Any = None) -> None:
+        """Inspect Mesh events and update quests when triggers match.
+
+        Accepts both the 1-arg call form (``handle_event(event)``) and the
+        controller-aware 2-arg form (``handle_event(event, controller)``) used
+        by ``GameStateController``. The ``controller`` argument is unused here
+        because state already lives in ``game_state.values["quests"]``; the
+        delegation is idempotent so double-dispatch is safe.
+        """
         quest_progress.handle_event(self, event)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the stage-complete runtime state (canonical truth).
+
+        Mirrors ``game_state.values["quests"]`` so save/reload preserves
+        ``current_stage``/``awaiting_stage``/``completed_stages``.
+        """
+        return {"schema_version": 1, "quests": deepcopy(self._state_root())}
+
+    def load_from_dict(self, data: Any) -> None:
+        """Restore stage-complete runtime state from a persisted payload.
+
+        Defensively accepts either ``{"quests": {...}}`` or a bare mapping, and
+        maps the legacy lightweight shape (``state`` -> ``status``, missing
+        stage fields defaulted) so it never crashes on an old save. Full legacy
+        migration is out of scope for this slice.
+        """
+        if not isinstance(data, dict):
+            return
+        raw_quests = data.get("quests") if "quests" in data else data
+        if not isinstance(raw_quests, dict):
+            return
+        root = self._state_root()
+        for quest_id, entry in raw_quests.items():
+            key = str(quest_id or "").strip()
+            if not key or not isinstance(entry, dict):
+                continue
+            status = entry.get("status", entry.get("state", "inactive"))
+            completed = entry.get("completed_stages", [])
+            if not isinstance(completed, list):
+                completed = []
+            current = entry.get("current_stage")
+            awaiting = entry.get("awaiting_stage")
+            root[key] = {
+                "status": status if isinstance(status, str) else "inactive",
+                "current_stage": current if isinstance(current, str) else None,
+                "awaiting_stage": awaiting if isinstance(awaiting, str) else None,
+                "completed_stages": [str(s) for s in completed if isinstance(s, str)],
+            }
+        self.reload_from_state()
+
+    def update_quest_states(self, controller: Any = None) -> None:
+        """Auto-complete quests whose stage requirements now match.
+
+        Delegates to ``check_requirements`` (stage flag/counter auto-complete);
+        the ``controller`` argument is accepted for call-site compatibility.
+        """
+        self.check_requirements()
+
+    def get_all_quests(self) -> list[_QuestStateView]:
+        """Return quest-level views (``id``/``state``) for save serialization."""
+        views: list[_QuestStateView] = []
+        for quest_id in self._definitions:
+            state = self._ensure_state(quest_id)
+            status = state.get("status", "inactive")
+            views.append(_QuestStateView(id=quest_id, state=str(status)))
+        return views
 
     def request_progress(self, quest_id: str, action: str, stage_id: str | None = None) -> bool:
         """Allow behaviours to manipulate quest progression directly."""
@@ -225,10 +308,10 @@ class QuestManager:
 
     def get_inspector_state(self) -> dict[str, Any]:
         """Return read-only quest status summary for editor inspector.
-        
+
         This provides a comprehensive overview of all quests and their
         current state, suitable for debugging and editor tooling.
-        
+
         Returns:
             Dictionary with quest summaries, counts, and metadata.
         """
