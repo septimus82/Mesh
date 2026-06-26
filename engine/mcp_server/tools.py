@@ -296,6 +296,171 @@ def list_lights(scene_path: str, root: str = ".") -> dict[str, Any]:
     return {"ok": True, "scene_path": scene_path, "count": len(rows), "lights": rows}
 
 
+def read_dialogue(scene_path: str, entity_id: str, root: str = ".") -> dict[str, Any]:
+    """Return an entity's dialogue block (the read counterpart to ``edit_dialogue``).
+
+    ``entity_id`` matches the entity's ``name`` (the same identity
+    ``inspect_entity`` and ``edit_dialogue`` use). The dialogue dict is returned
+    verbatim (no fixed schema assumed). Looks at the entity-level ``dialogue``
+    key first, then ``behaviour_config["Dialogue"]["dialogue"]`` (where
+    ``edit_dialogue`` writes). Never raises.
+    """
+    loaded = read_scene(scene_path, root)
+    if not loaded.get("ok"):
+        return {"ok": False, "message": loaded.get("message", f"Scene not found: {scene_path}")}
+    scene = loaded.get("scene")
+    entities = scene.get("entities") if isinstance(scene, dict) else None
+    for entity in (entities or []):
+        if not isinstance(entity, dict) or str(entity.get("name")) != entity_id:
+            continue
+        dialogue = entity.get("dialogue")
+        if not isinstance(dialogue, dict):
+            config = entity.get("behaviour_config")
+            if isinstance(config, dict):
+                inner = config.get("Dialogue")
+                if isinstance(inner, dict) and isinstance(inner.get("dialogue"), dict):
+                    dialogue = inner["dialogue"]
+        has_dialogue = isinstance(dialogue, dict) and bool(dialogue)
+        return {
+            "ok": True,
+            "scene_path": scene_path,
+            "entity_id": entity_id,
+            "has_dialogue": has_dialogue,
+            "dialogue": dialogue if isinstance(dialogue, dict) else None,
+        }
+    return {"ok": False, "message": f"Entity '{entity_id}' not found in {scene_path}"}
+
+
+def read_world(world_path: str | None = None, root: str = ".") -> dict[str, Any]:
+    """Return the world graph (the read counterpart to the world write ops).
+
+    Mirrors ``add_world_scene`` / ``link_world_scenes`` / ``set_world_start``:
+    keyed on ``world_path`` (default ``worlds/main_world.json``, matching
+    ``AIOps``), resolved relative to ``root``. Never raises.
+    """
+    base = _root_path(root)
+    rel = world_path or "worlds/main_world.json"
+    path = Path(rel)
+    if not path.is_absolute():
+        path = base / path
+    if not path.is_file():
+        return {"ok": False, "message": f"World not found: {rel}"}
+    try:
+        world = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return {"ok": False, "message": f"Failed to read world: {exc}"}
+    if not isinstance(world, dict):
+        return {"ok": False, "message": f"World file is not an object: {rel}"}
+
+    scenes_raw = world.get("scenes")
+    scenes: list[dict[str, Any]] = []
+    if isinstance(scenes_raw, dict):
+        for key in sorted(scenes_raw):
+            entry = scenes_raw[key]
+            if not isinstance(entry, dict):
+                continue
+            scenes.append(
+                {
+                    "key": key,
+                    "path": entry.get("path"),
+                    "label": entry.get("label"),
+                    "tags": entry.get("tags") if isinstance(entry.get("tags"), list) else [],
+                }
+            )
+
+    links_raw = world.get("links")
+    links: list[dict[str, Any]] = []
+    if isinstance(links_raw, list):
+        for link in links_raw:
+            if isinstance(link, dict):
+                links.append({"from": link.get("from"), "to": link.get("to"), "via": link.get("via")})
+
+    return {
+        "ok": True,
+        "world_path": rel,
+        "start_scene": world.get("start_scene"),
+        "start_spawn": world.get("start_spawn"),
+        "scenes": scenes,
+        "links": links,
+    }
+
+
+_TILEMAP_DIMENSION_KEYS = (
+    "width",
+    "height",
+    "tile_size",
+    "tile_width",
+    "tile_height",
+    "cols",
+    "rows",
+    "columns",
+)
+
+
+def read_tilemap(scene_path: str, root: str = ".") -> dict[str, Any]:
+    """Return a scene's tilemap structure (the read counterpart to ``paint_tiles``).
+
+    Keyed on ``scene_path`` (same identity ``paint_tiles`` uses). Reads
+    ``scene["tilemap"]`` (falling back to ``settings["tilemap"]``) and returns the
+    layers (name/z), per-layer tile arrays (from ``overrides.layers``), the
+    collision layer id, and any dimension fields present. No tilemap is not an
+    error (``has_tilemap`` False). Never raises.
+    """
+    loaded = read_scene(scene_path, root)
+    if not loaded.get("ok"):
+        return {"ok": False, "message": loaded.get("message", f"Scene not found: {scene_path}")}
+    scene = loaded.get("scene")
+    scene_dict: dict[str, Any] = scene if isinstance(scene, dict) else {}
+
+    tilemap = scene_dict.get("tilemap")
+    if not isinstance(tilemap, dict):
+        settings = scene_dict.get("settings")
+        candidate = settings.get("tilemap") if isinstance(settings, dict) else None
+        if isinstance(candidate, dict):
+            tilemap = candidate
+        elif candidate:
+            # A bare tilemap path reference (no inline layer data).
+            return {
+                "ok": True,
+                "scene_path": scene_path,
+                "has_tilemap": True,
+                "collision_layer_id": None,
+                "layers": [],
+                "tiles": {},
+                "path": candidate,
+                "dimensions": {},
+            }
+        else:
+            return {"ok": True, "scene_path": scene_path, "has_tilemap": False}
+
+    layers_raw = tilemap.get("layers")
+    layers: list[dict[str, Any]] = []
+    if isinstance(layers_raw, list):
+        for layer in layers_raw:
+            if isinstance(layer, dict):
+                layers.append({"name": layer.get("name"), "z": layer.get("z")})
+
+    tiles: dict[str, Any] = {}
+    overrides = tilemap.get("overrides")
+    if isinstance(overrides, dict):
+        override_layers = overrides.get("layers")
+        if isinstance(override_layers, dict):
+            tiles = {str(name): values for name, values in override_layers.items()}
+
+    dimensions = {key: tilemap[key] for key in _TILEMAP_DIMENSION_KEYS if key in tilemap}
+
+    return {
+        "ok": True,
+        "scene_path": scene_path,
+        "has_tilemap": True,
+        "collision_layer_id": tilemap.get("collision_layer_id"),
+        "layers": layers,
+        "tiles": tiles,
+        "path": tilemap.get("path"),
+        "dimensions": dimensions,
+    }
+
+
 # -------------------------------------------------------------- action tools
 def _result_to_dict(result: Any) -> dict[str, Any]:
     return {

@@ -72,6 +72,9 @@ Read (the AI's eyes):
 | `list_lights` | List a scene's lights with their `index` and key fields. |
 | `list_quests` | List quest definitions (`id`, title, stage count) from `assets/data/quests.json`. |
 | `inspect_quest` | Return one quest in full detail (stages + raw quest). |
+| `read_dialogue` | Return an entity's dialogue block (keyed on entity `name`). |
+| `read_world` | Return the world graph: `start_scene`/`start_spawn`, scenes, links. |
+| `read_tilemap` | Return a scene's tilemap: layers (name/z), per-layer tile arrays, collision layer. |
 | `list_prefabs` | List prefabs (`id` + `display_name`) from `assets/prefabs.json`. |
 | `list_behaviours` | List every registered behaviour. |
 
@@ -81,8 +84,12 @@ AI can build, list what's there, inspect one in detail, then refine it precisely
 `set_behaviour_params`); `list_quests`/`inspect_quest` on the quest `id` (matching
 `edit_quest`, `update_quest_definition`, `delete_quest_definition`); and
 `list_lights` on the light `index` (matching `update_light`, `delete_light`).
-That closes the **build → inspect → refine** loop for entities, quests, and
-lighting.
+`read_dialogue` keys on the entity `name` (matching `edit_dialogue`), `read_world`
+on the `world_path` (matching `add_world_scene`/`link_world_scenes`/
+`set_world_start`), and `read_tilemap` on the `scene_path` (matching
+`paint_tiles`). The **build → inspect → refine** loop is now closed
+symmetrically for entities, quests, lights, dialogue, world, and tilemaps — every
+write surface has a structured read counterpart.
 
 Action (the AI's hands), wrapping `engine.ai_ops.AIOps`:
 
