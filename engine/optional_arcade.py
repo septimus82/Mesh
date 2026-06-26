@@ -33,4 +33,55 @@ def has_arcade_gl() -> bool:
     return arcade_gl is not None
 
 
-__all__ = ["arcade", "arcade_gl", "has_arcade", "has_arcade_gl", "HAS_ARCADE"]
+def draw_texture_rect_compat(
+    center_x: float,
+    center_y: float,
+    width: float,
+    height: float,
+    texture: Any,
+    *,
+    angle: float = 0.0,
+    alpha: int = 255,
+) -> None:
+    """Draw ``texture`` centered at ``(center_x, center_y)`` with the given size.
+
+    Arcade 3 removed ``arcade.draw_texture_rectangle`` in favour of
+    ``draw_texture_rect(texture, rect)`` (rect via ``arcade.XYWH``). This shim
+    prefers the Arcade-3 API and falls back to the legacy call (still defined by
+    the headless arcade stub) so headless render paths keep working. Centralising
+    the getattr dance keeps every call site off the removed bare attribute.
+    """
+    backend = arcade
+    if backend is None:
+        return
+    draw_rect = getattr(backend, "draw_texture_rect", None)
+    xywh = getattr(backend, "XYWH", None)
+    if callable(draw_rect) and callable(xywh):
+        draw_rect(
+            texture,
+            xywh(float(center_x), float(center_y), float(width), float(height)),
+            angle=float(angle),
+            alpha=int(alpha),
+        )
+        return
+    legacy = getattr(backend, "draw_texture_rectangle", None)
+    if callable(legacy):
+        legacy(
+            float(center_x),
+            float(center_y),
+            float(width),
+            float(height),
+            texture,
+            angle=float(angle),
+            alpha=int(alpha),
+        )
+
+
+__all__ = [
+    "arcade",
+    "arcade_gl",
+    "has_arcade",
+    "has_arcade_gl",
+    "HAS_ARCADE",
+    "draw_texture_rect_compat",
+]

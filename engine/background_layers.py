@@ -215,7 +215,7 @@ def _draw_texture_rectangle(
     height: float,
     texture: TextureLike,
 ) -> None:
-    optional_arcade.arcade.draw_texture_rectangle(
+    optional_arcade.draw_texture_rect_compat(
         float(center_x),
         float(center_y),
         float(width),
