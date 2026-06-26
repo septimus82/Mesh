@@ -398,6 +398,126 @@ def validate_scene(scene_path: str | None = None, root: str = ".") -> dict[str, 
     return _result_to_dict(AIOps(base_dir=root).run_validation(scene_path))
 
 
+# ----------------------------------------------------------- playability
+_ENEMY_BEHAVIOURS = ("EnemyAI", "ChaseTarget")
+# Effective default target_tag per enemy behaviour when none is configured.
+# (EnemyAI defaults to "player"; ChaseTarget defaults to "" i.e. targets nothing.)
+_ENEMY_DEFAULT_TARGET_TAG = {"EnemyAI": "player", "ChaseTarget": ""}
+
+
+def _behaviour_names(entity: dict[str, Any]) -> list[str]:
+    behaviours = entity.get("behaviours")
+    return [str(b) for b in behaviours] if isinstance(behaviours, list) else []
+
+
+def _behaviour_config(entity: dict[str, Any], name: str) -> dict[str, Any]:
+    config = entity.get("behaviour_config")
+    if isinstance(config, dict):
+        inner = config.get(name)
+        if isinstance(inner, dict):
+            return inner
+    return {}
+
+
+def _scene_has_tilemap(scene: dict[str, Any]) -> bool:
+    if scene.get("tilemap"):
+        return True
+    settings = scene.get("settings")
+    return bool(isinstance(settings, dict) and settings.get("tilemap"))
+
+
+def playability_check(scene_path: str, root: str = ".") -> dict[str, Any]:
+    """Advisory: does this scene *feel* playable (tagged player + camera + enemy)?
+
+    Resolves prefab references (via :class:`engine.prefabs.PrefabManager`) so the
+    check sees MERGED entities -- it works for AI-placed inline entities *and*
+    ``prefab_id``-referenced ones. Findings are WARNINGS, never hard failures:
+    ``ok`` is ``True`` only when there are no warnings, but ``ok=False`` just
+    means "not fully playable yet", not an error. A missing scene returns a
+    structured ``{"ok": False, "message": ...}`` rather than raising.
+    """
+    loaded = read_scene(scene_path, root)
+    if not loaded.get("ok"):
+        return {"ok": False, "message": loaded.get("message", f"Scene not found: {scene_path}")}
+
+    scene_obj = loaded.get("scene")
+    scene: dict[str, Any] = scene_obj if isinstance(scene_obj, dict) else {}
+    raw_entities = scene.get("entities")
+    entities = [e for e in (raw_entities or []) if isinstance(e, dict)]
+
+    from engine.prefabs import get_prefab_manager
+
+    manager = get_prefab_manager()
+    resolved: list[dict[str, Any]] = []
+    for entity in entities:
+        try:
+            merged = manager.resolve(entity)
+        except Exception:  # noqa: BLE001  # REASON: advisory tool must never raise on content
+            merged = entity
+        resolved.append(merged if isinstance(merged, dict) else entity)
+
+    # --- player ---
+    players = [e for e in resolved if str(e.get("tag") or "") == "player"]
+    has_player = bool(players)
+    player_has_camera = any("CameraFollow" in _behaviour_names(e) for e in players)
+    player_tags = {str(e.get("tag")) for e in players if e.get("tag")} or {"player"}
+
+    # --- enemies able to target the player ---
+    enemies_targeting = 0
+    enemyai_targeting = 0
+    chasetarget_targeting = 0
+    for entity in resolved:
+        names = _behaviour_names(entity)
+        for enemy_behaviour in _ENEMY_BEHAVIOURS:
+            if enemy_behaviour not in names:
+                continue
+            config = _behaviour_config(entity, enemy_behaviour)
+            target_tag = str(
+                config.get("target_tag", _ENEMY_DEFAULT_TARGET_TAG[enemy_behaviour]) or ""
+            )
+            if target_tag and target_tag in player_tags:
+                enemies_targeting += 1
+                if enemy_behaviour == "EnemyAI":
+                    enemyai_targeting += 1
+                else:
+                    chasetarget_targeting += 1
+
+    warnings: list[str] = []
+    if not has_player:
+        warnings.append(
+            'No entity is tagged "player"; the camera has nothing to follow and '
+            "enemies have nothing to target."
+        )
+    elif not player_has_camera:
+        warnings.append(
+            "A player is present but has no CameraFollow behaviour; the camera won't "
+            "follow the player."
+        )
+
+    if enemies_targeting == 0:
+        warnings.append(
+            "No enemy can target the player (add an entity with EnemyAI or ChaseTarget "
+            "whose target_tag matches the player's tag)."
+        )
+    elif chasetarget_targeting > 0 and enemyai_targeting == 0 and not _scene_has_tilemap(scene):
+        warnings.append(
+            "The only player-targeting enemy uses ChaseTarget but the scene has no "
+            "tilemap; ChaseTarget needs a nav grid (tilemap) to path, so the chase will "
+            "be inert. Use EnemyAI for collision-based chasing without a tilemap."
+        )
+
+    return {
+        "ok": not warnings,
+        "scene_path": scene_path,
+        "warnings": warnings,
+        "summary": {
+            "has_player": has_player,
+            "player_has_camera": player_has_camera,
+            "enemies_targeting_player": enemies_targeting,
+        },
+    }
+
+
 # ---------------------------------------------------------------- context
 def list_scene_templates() -> list[str]:
     """List the template names ``create_scene`` accepts.

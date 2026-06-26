@@ -108,6 +108,19 @@ Safety:
 | Tool | Purpose |
 | --- | --- |
 | `validate_scene` | Validate a scene (or the whole world) and return a structured verdict. |
+| `playability_check` | Advisory self-verify: does the scene *feel* playable? |
+
+`playability_check(scene_path)` is the advisory self-verify tool the AI can call
+after building, to confirm a scene is actually playable rather than just valid.
+It resolves prefab references (so both AI-placed inline entities and
+`prefab_id`-referenced ones are seen) and returns WARNINGS, never hard failures —
+a valid-but-incomplete scene still saves. It checks for: a tagged `"player"`
+with `CameraFollow` (camera follows), and at least one enemy (`EnemyAI` or
+`ChaseTarget`) whose `target_tag` matches the player's tag (something can chase
+the player); it also advises when the only chaser uses `ChaseTarget` in a
+tilemap-less scene (no nav grid, so the chase is inert — prefer `EnemyAI`).
+Returns `{ok, scene_path, warnings, summary{has_player, player_has_camera,
+enemies_targeting_player}}` where `ok` is simply "no warnings" (not an error).
 
 ## Resource
 
