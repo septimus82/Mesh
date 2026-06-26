@@ -325,7 +325,7 @@ class EditorPaletteController:
                     border=1,
                 )
             else:
-                optional_arcade.arcade.draw_texture_rectangle(
+                optional_arcade.draw_texture_rect_compat(
                     thumb_x,
                     thumb_y,
                     PALETTE_THUMB_DRAW_SIZE,

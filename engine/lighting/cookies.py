@@ -132,9 +132,7 @@ def apply_light_cookies(manager: Any, *, target_fbo: Any, offset: tuple[float, f
         return 0
     if engine.optional_arcade.arcade is None:
         return 0
-    draw_tex = getattr(engine.optional_arcade.arcade, "draw_texture_rectangle", None)
-    if not callable(draw_tex):
-        return 0
+    draw_tex = engine.optional_arcade.draw_texture_rect_compat
     ctx = getattr(manager.window, "ctx", None)
     gl = engine.optional_arcade.arcade_gl
     multiply_available = False

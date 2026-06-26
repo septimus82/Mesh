@@ -366,7 +366,7 @@ def compute_background_tile_ranges(
 ) -> tuple[tuple[int, int], tuple[int, int]]:
     """Return ((x_start, x_end), (y_start, y_end)) for use with range() (end-exclusive).
 
-    Tiles are centered at base + i*tex (draw_texture_rectangle centers on the point).
+    Tiles are centered at base + i*tex (XYWH/draw_texture_rect centers on the point).
     Cover the full viewport with a small pad so no edge gaps; clamp to visible band.
     Non-repeating axis returns (0, 1).
     """
@@ -393,10 +393,6 @@ def execute_background_plan(
     if optional_arcade.arcade is None:
         return
 
-    draw_texture_rectangle = getattr(optional_arcade.arcade, "draw_texture_rectangle", None)
-    if not draw_texture_rectangle:
-        return
-
     for bg_op in plan.background_ops:
         texture = texture_lookup(bg_op.plane.asset_path)
         if texture is None:
@@ -406,10 +402,10 @@ def execute_background_plan(
         tex_h = max(1.0, float(texture.height))
 
         if not bg_op.plane.repeat_x and not bg_op.plane.repeat_y:
-             draw_texture_rectangle(
+            optional_arcade.draw_texture_rect_compat(
                 bg_op.base_x, bg_op.base_y, tex_w, tex_h, texture, alpha=bg_op.alpha
             )
-             continue
+            continue
 
         # Tiled drawing
         if viewport_size is not None:
@@ -438,7 +434,7 @@ def execute_background_plan(
             for iy in range(y_range[0], y_range[1]):
                 draw_x = bg_op.base_x + (ix * tex_w)
                 draw_y = bg_op.base_y + (iy * tex_h)
-                draw_texture_rectangle(
+                optional_arcade.draw_texture_rect_compat(
                     draw_x, draw_y, tex_w, tex_h, texture, alpha=bg_op.alpha
                 )
 

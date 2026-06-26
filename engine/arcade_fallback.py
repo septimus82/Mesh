@@ -518,6 +518,20 @@ def draw_texture_rectangle(
     pass
 
 
+def XYWH(
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+    anchor: Any = None,
+) -> Tuple[float, float, float, float]:
+    return (x, y, width, height)
+
+
+def draw_texture_rect(texture: Texture, rect: Any, **kwargs: Any) -> None:
+    pass
+
+
 def draw_polygon_filled(points: Sequence[Tuple[float, float]], color_value: Tuple[int, int, int], **kwargs: Any) -> None:
     pass
 
