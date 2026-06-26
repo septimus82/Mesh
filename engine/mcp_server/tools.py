@@ -399,17 +399,72 @@ def validate_scene(scene_path: str | None = None, root: str = ".") -> dict[str, 
 
 
 # ---------------------------------------------------------------- context
+def list_scene_templates() -> list[str]:
+    """List the template names ``create_scene`` accepts.
+
+    Read live from the scaffold registry (:data:`engine.tooling.scaffold.TEMPLATES`)
+    so the surfaced list can never drift from what the tool actually supports.
+    """
+    from engine.tooling.scaffold import TEMPLATES
+
+    return sorted(TEMPLATES.keys())
+
+
+def playable_scene_recipe() -> list[dict[str, Any]]:
+    """An ordered, engine-accurate recipe for assembling a *playable* scene.
+
+    Every prefab id referenced here (``prefab`` field) is a real prefab in
+    ``assets/prefabs.json`` (guarded by the tool contract tests), so a connected
+    model can follow these steps with the existing tools/prefabs only.
+    """
+    return [
+        {
+            "step": 1,
+            "tool": "create_scene",
+            "prefab": None,
+            "detail": "Create a scene. Pass a template from `scene_templates` (e.g. \"empty\").",
+        },
+        {
+            "step": 2,
+            "tool": "add_entity_from_prefab",
+            "prefab": "player",
+            "detail": (
+                "Add the \"player\" prefab. It already includes PlayerController + CameraFollow "
+                "and tag \"player\", so the camera follows it and enemies can target it."
+            ),
+        },
+        {
+            "step": 3,
+            "tool": "add_entity_from_prefab",
+            "prefab": "chaser_enemy",
+            "detail": (
+                "Add at least one enemy, e.g. the \"chaser_enemy\" prefab (EnemyAI chases the "
+                "nearest entity tagged \"player\"; collision-based, so it works without a tilemap)."
+            ),
+        },
+        {
+            "step": 4,
+            "tool": "validate_scene",
+            "prefab": None,
+            "detail": "Validate the scene to confirm the batch left it valid.",
+        },
+    ]
+
+
 def engine_overview(root: str = ".") -> dict[str, Any]:
     """A compact expert briefing: scenes, prefabs, and behaviours available.
 
     Served as an MCP resource so a freshly-connected model is immediately
-    fluent in what this engine contains and what it can build.
+    fluent in what this engine contains, what it can build, and *how* to build a
+    playable scene (the recipe + the create_scene template names).
     """
     return {
         "scenes": list_scenes(root),
         "prefabs": list_prefabs(root),
         "behaviours": list_behaviours(),
         "operations": list_op_types(),
+        "scene_templates": list_scene_templates(),
+        "playable_scene_recipe": playable_scene_recipe(),
     }
 
 

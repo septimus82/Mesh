@@ -115,6 +115,17 @@ Safety:
 operation surface) so a freshly-connected model is immediately fluent in both
 what the engine contains and what it can do.
 
+It also includes two keys that brief the model on *how* to assemble a playable
+scene, not just what exists:
+
+- `scene_templates` — the list of template names `create_scene` accepts,
+  enumerated live from the scaffold registry (`engine/tooling/scaffold.py`) so it
+  can't drift from what the tool supports.
+- `playable_scene_recipe` — a short, ordered recipe (create a scene, add the
+  `player` prefab which already carries `CameraFollow` + tag `"player"`, add at
+  least one enemy such as `chaser_enemy`, then validate) using only existing
+  tools and prefabs, so the model knows the playable pattern at connect time.
+
 ## Architecture
 
 The tool **logic** lives in [`engine/mcp_server/tools.py`](../engine/mcp_server/tools.py)
