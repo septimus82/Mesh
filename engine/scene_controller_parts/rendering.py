@@ -21,9 +21,9 @@ def draw(self) -> None:
     camera_rect = self._get_camera_rect(camera_pos=base_camera_pos) if use_culling else None
 
     if self._background_layers:
+        camera_x, camera_y = base_camera_pos
+        zoom = float(self.window.camera_controller.zoom_state.current)
         try:
-            camera_x, camera_y = base_camera_pos
-            zoom = float(self.window.camera_controller.zoom_state.current)
             self.window.camera_controller.gui_camera.use()
             scene_controller_module.draw_background_layers(
                 self._background_layers,
@@ -32,6 +32,7 @@ def draw(self) -> None:
                 viewport_w=float(self.window.width),
                 viewport_h=float(self.window.height),
                 zoom=zoom,
+                coordinate_space="projected",
             )
         finally:
             self.window.camera.use()

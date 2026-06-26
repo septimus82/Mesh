@@ -1,0 +1,17 @@
+{
+  "entities": [],
+  "background_layers": [
+    {
+      "id": "sky",
+      "path": "tests/fixtures/background_layer_red.png",
+      "z": -100,
+      "parallax": 0.0,
+      "repeat_x": false,
+      "repeat_y": false
+    }
+  ],
+  "settings": {
+    "background_color": "dark_blue_gray",
+    "lighting_enabled": false
+  }
+}
