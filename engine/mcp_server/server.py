@@ -63,6 +63,7 @@ def build_server() -> Any:
 
     # Safety.
     server.tool()(tools.validate_scene)
+    server.tool()(tools.playability_check)
 
     # Context resource: instant expertise on connect.
     @server.resource("mesh://overview")
