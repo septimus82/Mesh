@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, Literal, Protocol
 
 import engine.optional_arcade as optional_arcade
 
@@ -70,9 +70,65 @@ def compute_background_offset_px(
     Parallax model: the layer shifts by `-camera * parallax` (scaled by zoom).
     - `parallax=1.0` tracks the world camera normally.
     - `parallax=0.0` locks to the screen (no movement).
+
+    Used by the legacy screen-space draw path (``coordinate_space="screen"``).
     """
     factor = float(parallax) * float(zoom)
     return (-float(camera_x) * factor, -float(camera_y) * factor)
+
+
+def compute_background_world_center(
+    *,
+    camera_x: float,
+    camera_y: float,
+    parallax: float,
+    anchor_x: float = 0.0,
+    anchor_y: float = 0.0,
+) -> tuple[float, float]:
+    """Return the world-space center for a background layer texture.
+
+    ``parallax=1.0`` anchors the layer to ``anchor`` (default world origin).
+    ``parallax=0.0`` locks the layer to the camera center (screen-fixed backdrop).
+    Intermediate values interpolate between anchor and camera for parallax depth.
+    """
+    t = float(parallax)
+    cx = float(camera_x)
+    cy = float(camera_y)
+    return (
+        float(anchor_x) * t + cx * (1.0 - t),
+        float(anchor_y) * t + cy * (1.0 - t),
+    )
+
+
+def compute_background_screen_center(
+    *,
+    camera_x: float,
+    camera_y: float,
+    parallax: float,
+    viewport_w: float,
+    viewport_h: float,
+    zoom: float = 1.0,
+    anchor_x: float = 0.0,
+    anchor_y: float = 0.0,
+) -> tuple[float, float]:
+    """Project a parallax layer's world center to GUI/screen pixel coordinates.
+
+    Use with ``gui_camera`` (including inside Arcade LightLayer capture) so the
+    draw lands in the active diffuse framebuffer. ``parallax=0`` stays centred
+    on screen when the camera pans; ``parallax=1`` anchors to ``anchor`` in world
+    space and scrolls correctly as the camera moves.
+    """
+    wx, wy = compute_background_world_center(
+        camera_x=camera_x,
+        camera_y=camera_y,
+        parallax=parallax,
+        anchor_x=anchor_x,
+        anchor_y=anchor_y,
+    )
+    safe_zoom = float(zoom) if float(zoom) > 0.0 else 1.0
+    sx = (wx - float(camera_x)) * safe_zoom + float(viewport_w) / 2.0
+    sy = (wy - float(camera_y)) * safe_zoom + float(viewport_h) / 2.0
+    return (sx, sy)
 
 
 def parse_background_layers(scene_payload: dict[str, Any]) -> list[BackgroundLayer]:
@@ -147,6 +203,7 @@ def draw_background_layers(
     viewport_w: float,
     viewport_h: float,
     zoom: float = 1.0,
+    coordinate_space: Literal["screen", "world", "projected"] = "projected",
     texture_cache: BackgroundTextureCache | None = None,
     draw_texture: Callable[[float, float, float, float, TextureLike], None] | None = None,
     get_texture: Callable[[str], TextureLike | None] | None = None,
@@ -161,6 +218,22 @@ def draw_background_layers(
     else:
         fetch = get_texture
 
+    if coordinate_space == "world":
+        safe_zoom = float(zoom) if float(zoom) > 0.0 else 1.0
+        span_w = float(viewport_w) / safe_zoom
+        span_h = float(viewport_h) / safe_zoom
+        view_left = float(camera_x) - span_w / 2.0
+        view_right = float(camera_x) + span_w / 2.0
+        view_bottom = float(camera_y) - span_h / 2.0
+        view_top = float(camera_y) + span_h / 2.0
+    else:
+        span_w = float(viewport_w)
+        span_h = float(viewport_h)
+        view_left = 0.0
+        view_right = span_w
+        view_bottom = 0.0
+        view_top = span_h
+
     center_x = float(viewport_w) / 2.0
     center_y = float(viewport_h) / 2.0
 
@@ -169,14 +242,30 @@ def draw_background_layers(
         if texture is None:
             continue
 
-        offset_x, offset_y = compute_background_offset_px(
-            camera_x=float(camera_x),
-            camera_y=float(camera_y),
-            parallax=float(layer.parallax),
-            zoom=float(zoom),
-        )
-        base_x = center_x + offset_x
-        base_y = center_y + offset_y
+        if coordinate_space == "world":
+            base_x, base_y = compute_background_world_center(
+                camera_x=float(camera_x),
+                camera_y=float(camera_y),
+                parallax=float(layer.parallax),
+            )
+        elif coordinate_space == "projected":
+            base_x, base_y = compute_background_screen_center(
+                camera_x=float(camera_x),
+                camera_y=float(camera_y),
+                parallax=float(layer.parallax),
+                viewport_w=float(viewport_w),
+                viewport_h=float(viewport_h),
+                zoom=float(zoom),
+            )
+        else:
+            offset_x, offset_y = compute_background_offset_px(
+                camera_x=float(camera_x),
+                camera_y=float(camera_y),
+                parallax=float(layer.parallax),
+                zoom=float(zoom),
+            )
+            base_x = center_x + offset_x
+            base_y = center_y + offset_y
 
         tile_w = max(1.0, float(texture.width))
         tile_h = max(1.0, float(texture.height))
@@ -185,18 +274,18 @@ def draw_background_layers(
             draw(base_x, base_y, float(texture.width), float(texture.height), texture)
             continue
 
-        # Determine tiling ranges (inclusive).
+        # Determine tiling ranges (inclusive) over the visible span.
         x_range = (0, 0)
         y_range = (0, 0)
         if layer.repeat_x:
-            left_needed = -tile_w / 2.0
-            right_needed = float(viewport_w) + tile_w / 2.0
+            left_needed = view_left - tile_w / 2.0
+            right_needed = view_right + tile_w / 2.0
             n_min = int((left_needed - base_x) // tile_w) - 1
             n_max = int((right_needed - base_x) // tile_w) + 1
             x_range = (n_min, n_max)
         if layer.repeat_y:
-            bottom_needed = -tile_h / 2.0
-            top_needed = float(viewport_h) + tile_h / 2.0
+            bottom_needed = view_bottom - tile_h / 2.0
+            top_needed = view_top + tile_h / 2.0
             m_min = int((bottom_needed - base_y) // tile_h) - 1
             m_max = int((top_needed - base_y) // tile_h) + 1
             y_range = (m_min, m_max)

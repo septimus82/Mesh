@@ -24,7 +24,11 @@ from pathlib import Path
 import pytest
 
 from engine import background_layers, optional_arcade
-from engine.background_layers import BackgroundLayer, draw_background_layers
+from engine.background_layers import (
+    BackgroundLayer,
+    compute_background_screen_center,
+    draw_background_layers,
+)
 
 pytestmark = [pytest.mark.fast]
 
@@ -37,9 +41,46 @@ class _FakeTexture:
 
 
 # ---------------------------------------------------------------------------
-# 1. Draw-capture: draw_background_layers emits the expected centred draws.
+# 1. Draw-capture: world-space positions (live render path).
 # ---------------------------------------------------------------------------
-def test_draw_background_layers_emits_centered_draws() -> None:
+def test_draw_background_layers_projected_space_parallax_centers() -> None:
+    layers = [
+        BackgroundLayer(id="far", path="far.png", z=0, parallax=0.5),
+        BackgroundLayer(id="near", path="near.png", z=10, parallax=1.0),
+    ]
+    textures = {
+        "far.png": _FakeTexture("far", 128, 64),
+        "near.png": _FakeTexture("near", 64, 32),
+    }
+    recorded: list[tuple[float, float, float, float, str]] = []
+
+    def recorder(cx: float, cy: float, w: float, h: float, tex) -> None:  # type: ignore[no-untyped-def]
+        recorded.append((cx, cy, w, h, tex.name))
+
+    draw_background_layers(
+        layers,
+        camera_x=100.0,
+        camera_y=50.0,
+        viewport_w=800.0,
+        viewport_h=600.0,
+        zoom=1.0,
+        coordinate_space="projected",
+        draw_texture=recorder,
+        get_texture=lambda path: textures.get(path),
+    )
+
+    by_name = {name: (cx, cy, w, h) for cx, cy, w, h, name in recorded}
+    assert by_name["far"][:2] == compute_background_screen_center(
+        camera_x=100.0, camera_y=50.0, parallax=0.5, viewport_w=800.0, viewport_h=600.0
+    )
+    assert by_name["near"][:2] == compute_background_screen_center(
+        camera_x=100.0, camera_y=50.0, parallax=1.0, viewport_w=800.0, viewport_h=600.0
+    )
+    assert by_name["far"][2:] == (128.0, 64.0)
+    assert by_name["near"][2:] == (64.0, 32.0)
+
+
+def test_draw_background_layers_screen_space_legacy_path() -> None:
     layers = [
         BackgroundLayer(id="far", path="far.png", z=0, parallax=0.5),
         BackgroundLayer(id="near", path="near.png", z=10, parallax=1.0),
@@ -60,18 +101,18 @@ def test_draw_background_layers_emits_centered_draws() -> None:
         viewport_w=800.0,
         viewport_h=600.0,
         zoom=1.0,
+        coordinate_space="screen",
         draw_texture=recorder,
         get_texture=lambda path: textures.get(path),
     )
 
-    # Camera at origin -> every layer centres on the viewport centre (400, 300).
     assert recorded == [
         (400.0, 300.0, 128.0, 64.0, "far"),
         (400.0, 300.0, 64.0, 32.0, "near"),
     ]
 
 
-def test_draw_background_layers_parallax_offsets_each_layer() -> None:
+def test_draw_background_layers_screen_space_parallax_offsets() -> None:
     layers = [
         BackgroundLayer(id="far", path="far.png", z=0, parallax=0.5),
         BackgroundLayer(id="near", path="near.png", z=10, parallax=1.0),
@@ -92,11 +133,11 @@ def test_draw_background_layers_parallax_offsets_each_layer() -> None:
         viewport_w=800.0,
         viewport_h=600.0,
         zoom=1.0,
+        coordinate_space="screen",
         draw_texture=recorder,
         get_texture=lambda path: textures.get(path),
     )
 
-    # base_x = center_x + (-camera_x * parallax * zoom)
     by_name = {name: (cx, cy) for cx, cy, name in recorded}
     assert by_name["far"] == (400.0 - 100.0 * 0.5, 300.0)
     assert by_name["near"] == (400.0 - 100.0 * 1.0, 300.0)
@@ -118,12 +159,34 @@ def test_draw_background_layers_repeat_x_tiles_across_viewport() -> None:
         viewport_w=800.0,
         viewport_h=600.0,
         zoom=1.0,
+        coordinate_space="projected",
         draw_texture=recorder,
         get_texture=lambda path: textures.get(path),
     )
 
-    # An 800px-wide viewport tiled with a 100px texture needs many draws (>1).
     assert count > 1
+
+
+def test_draw_background_layers_projected_parallax_zero_stays_screen_center() -> None:
+    layers = [BackgroundLayer(id="sky", path="sky.png", z=0, parallax=0.0)]
+    textures = {"sky.png": _FakeTexture("sky", 64, 64)}
+    recorded: list[tuple[float, float]] = []
+
+    def recorder(cx: float, cy: float, w: float, h: float, tex) -> None:  # type: ignore[no-untyped-def]
+        recorded.append((cx, cy))
+
+    draw_background_layers(
+        layers,
+        camera_x=500.0,
+        camera_y=300.0,
+        viewport_w=640.0,
+        viewport_h=480.0,
+        coordinate_space="projected",
+        draw_texture=recorder,
+        get_texture=lambda path: textures.get(path),
+    )
+
+    assert recorded == [(320.0, 240.0)]
 
 
 def test_draw_background_layers_skips_missing_textures() -> None:
@@ -254,25 +317,108 @@ def _write_solid_png(path: Path, width: int, height: int, rgba=(255, 0, 0, 255))
     reason="real-arcade GL smoke is opt-in (set MESH_GL_SMOKE=1 with a display/GL context)",
 )
 def test_real_arcade_background_layer_renders_non_clear_pixels(tmp_path: Path) -> None:
+    from engine.camera_controller import CameraController
+
     arcade = optional_arcade.arcade
     png = tmp_path / "bg.png"
-    _write_solid_png(png, 8, 8, (255, 0, 0, 255))
+    _write_solid_png(png, 64, 64, (255, 0, 0, 255))
 
-    window = arcade.Window(64, 64, "bg-smoke", visible=False)
+    window = arcade.Window(128, 128, "bg-smoke", visible=False)
     try:
+        cc = CameraController(window)
+        cc.resize(128, 128)
+        cc.camera.position = (200.0, 200.0)
         window.clear()
+        cc.camera.use()
         layers = [BackgroundLayer(id="bg", path=str(png), z=0, parallax=0.0)]
         cache = background_layers.BackgroundTextureCache()
+        cc.gui_camera.use()
         draw_background_layers(
             layers,
-            camera_x=0.0,
-            camera_y=0.0,
-            viewport_w=64.0,
-            viewport_h=64.0,
+            camera_x=200.0,
+            camera_y=200.0,
+            viewport_w=128.0,
+            viewport_h=128.0,
             texture_cache=cache,
+            coordinate_space="projected",
         )
-        image = arcade.get_image(0, 0, 64, 64)
-        pixels = list(image.convert("RGB").getdata())
-        assert any(px != pixels[0] for px in pixels) or pixels[0] == (255, 0, 0)
+        cc.camera.use()
+        image = arcade.get_image(0, 0, 128, 128)
+        center = image.convert("RGB").getpixel((64, 64))
+        clearish = image.convert("RGB").getpixel((0, 0))
+        assert center[0] > clearish[0] + 40
+    finally:
+        window.close()
+
+
+@pytest.mark.skipif(
+    os.environ.get("MESH_GL_SMOKE") != "1" or not optional_arcade.has_arcade(),
+    reason="real-arcade GL smoke is opt-in (set MESH_GL_SMOKE=1 with a display/GL context)",
+)
+def test_scene_controller_draw_composites_background_layer(tmp_path: Path) -> None:
+    """Full draw-path smoke: bg layer must survive LightLayer compositing."""
+    from types import SimpleNamespace
+
+    from arcade.future.light import LightLayer
+
+    from engine.camera_controller import CameraController
+    from engine.scene_controller import SceneController
+
+    arcade = optional_arcade.arcade
+    fixture_png = Path("tests/fixtures/background_layer_red.png")
+    _write_solid_png(fixture_png, 64, 64, (255, 0, 0, 255))
+
+    window = arcade.Window(128, 128, "bg-full-path", visible=False)
+    try:
+        cc = CameraController(window)
+        cc.resize(128, 128)
+        cc.camera.position = (400.0, 300.0)
+
+        controller = object.__new__(SceneController)
+        controller._background_layers = [
+            BackgroundLayer(id="sky", path=str(fixture_png.resolve()), z=-100, parallax=0.0),
+        ]
+        controller._background_planes = []
+        controller._background_plane_texture_cache = {}
+        controller._render_culled_count = 0
+        controller._render_sort_mode = "y_sort"
+        controller._shadows_enabled = False
+        controller._shadows_contact_enabled = False
+        controller._shadows_ao_enabled = False
+        controller._depth_tint_settings = object()
+        controller._outline_settings = object()
+        controller._tilemap_background_layers = []
+        controller._tilemap_foreground_layers = []
+        controller._tilemap_draw_layers = []
+        controller._tilemap_batcher = None
+        controller.tilemap_instance = None
+        controller.layers = {
+            "background": [],
+            "entities": [],
+            "foreground": [],
+        }
+        controller.window = SimpleNamespace(
+            width=128,
+            height=128,
+            render_queue=None,
+            render_batching_enabled=False,
+            render_culling_enabled=False,
+            tilemap_batching_enabled=False,
+            get_camera_center=lambda: (400.0, 300.0),
+            camera=cc.camera,
+            camera_controller=cc,
+            perf_stats=SimpleNamespace(set_counter=lambda *_a, **_k: None),
+            assets=None,
+        )
+
+        light_layer = LightLayer(128, 128)
+        window.clear()
+        cc.camera.use()
+        with light_layer:
+            controller.draw()
+        light_layer.draw(ambient_color=(64, 64, 64))
+
+        center = arcade.get_image(64, 64, 1, 1).convert("RGB").getpixel((0, 0))
+        assert center[0] > 40, f"expected red background at screen center, got {center}"
     finally:
         window.close()
