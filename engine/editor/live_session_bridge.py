@@ -13,9 +13,12 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlsplit
 
+from engine.logging_tools import get_logger
+
 SESSION_SCHEMA_VERSION = 1
 SESSION_RELATIVE_PATH = Path(".mesh") / "live_session.json"
 LOOPBACK_HOST = "127.0.0.1"
+logger = get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -136,7 +139,13 @@ class EditorLiveSessionBridge:
         self._thread = threading.Thread(target=server.serve_forever, name="mesh-live-session-bridge", daemon=True)
         self._thread.start()
         if write_discovery:
-            write_live_session_file(self.workspace_root, info)
+            discovery_path = write_live_session_file(self.workspace_root, info)
+            logger.info(
+                "[Editor][LiveBridge] Live session ACTIVE - workspace_root=%s, discovery=%s, port=%s",
+                self.workspace_root,
+                discovery_path,
+                port,
+            )
         return info
 
     def stop(self) -> None:

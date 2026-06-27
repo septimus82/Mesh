@@ -10,17 +10,80 @@ from engine.editor.live_session_bridge import (
     SESSION_SCHEMA_VERSION,
     read_live_session_file,
 )
+from engine.repo_root import find_repo_root
 
 
-def _failure(reason: str, message: str | None = None) -> dict[str, Any]:
+def _failure(reason: str, message: str | None = None, **extra: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {"ok": False, "mode": "live_editor", "reason": reason}
     if message:
         payload["message"] = message
+    payload.update(extra)
     return payload
 
 
 def _workspace_root(root: str | Path) -> str:
     return str(Path(root).resolve())
+
+
+def _resolve_discovery_root(root: str | Path) -> Path:
+    raw = Path(root).resolve()
+    discovered = find_repo_root(raw)
+    return (discovered or raw).resolve()
+
+
+def _session_root_from_payload(payload: dict[str, Any], fallback_root: Path) -> Path:
+    raw_root = str(payload.get("workspace_root") or "").strip()
+    if raw_root:
+        return Path(raw_root).resolve()
+    return fallback_root.resolve()
+
+
+def _probe_candidate_roots(raw_root: Path, server_root: Path) -> list[Path]:
+    candidates: dict[str, Path] = {}
+
+    def add(path: Path) -> None:
+        resolved = path.resolve()
+        candidates[str(resolved).lower()] = resolved
+
+    add(raw_root)
+    add(server_root)
+    add(raw_root.parent)
+    try:
+        siblings = sorted(raw_root.parent.iterdir() if raw_root.parent.is_dir() else (), key=lambda p: p.name)[:50]
+    except OSError:
+        siblings = []
+    for child in siblings:
+        try:
+            if child.is_dir():
+                add(child)
+        except OSError:
+            continue
+    return list(candidates.values())
+
+
+def _session_root_mismatch_failure(found_root: Path, server_root: Path) -> dict[str, Any]:
+    found_text = str(found_root.resolve())
+    server_text = str(server_root.resolve())
+    return _failure(
+        "session_root_mismatch",
+        (
+            f"Found a live editor session rooted at {found_text} but this MCP server is rooted at {server_text}. "
+            "Launch the editor and the MCP server from the SAME project root (cd into it before launching)."
+        ),
+        found_root=found_text,
+        server_root=server_text,
+    )
+
+
+def _probe_for_other_session(raw_root: Path, server_root: Path) -> dict[str, Any] | None:
+    for candidate in _probe_candidate_roots(raw_root, server_root):
+        payload = read_live_session_file(candidate)
+        if not isinstance(payload, dict):
+            continue
+        found_root = _session_root_from_payload(payload, candidate)
+        if _workspace_root(found_root) != _workspace_root(server_root):
+            return _session_root_mismatch_failure(found_root, server_root)
+    return None
 
 
 def _request_json(
@@ -52,10 +115,12 @@ def _request_json(
 
 
 def _load_verified_session(root: str | Path, *, timeout: float = 2.0) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
-    workspace_root = _workspace_root(root)
-    info = read_live_session_file(workspace_root)
+    raw_root = Path(root).resolve()
+    server_root = _resolve_discovery_root(raw_root)
+    workspace_root = _workspace_root(server_root)
+    info = read_live_session_file(server_root)
     if not isinstance(info, dict):
-        return None, _failure("no_live_session")
+        return None, _probe_for_other_session(raw_root, server_root) or _failure("no_live_session")
     if info.get("schema_version") != SESSION_SCHEMA_VERSION:
         return None, _failure("invalid_live_session", "Unsupported live session schema")
     if _workspace_root(str(info.get("workspace_root") or "")) != workspace_root:
@@ -75,6 +140,10 @@ def _load_verified_session(root: str | Path, *, timeout: float = 2.0) -> tuple[d
     if _workspace_root(str(health.get("workspace_root") or "")) != workspace_root:
         return None, _failure("workspace_mismatch")
     return info, None
+
+
+def resolved_discovery_root(root: str | Path = ".") -> str:
+    return str(_resolve_discovery_root(root))
 
 
 def live_stage_proposal(ops: list[dict[str, Any]], *, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:

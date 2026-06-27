@@ -101,6 +101,12 @@ def _reject_with_drain(controller: Any, bridge: EditorLiveSessionBridge, root: P
     )
 
 
+def _make_marker_root(path: Path) -> Path:
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "pyproject.toml").write_text("[project]\nname = \"mesh-test\"\n", encoding="utf-8")
+    return path
+
+
 def test_live_add_entity_from_prefab_forwards_to_running_editor_without_file_write(tmp_path: Path) -> None:
     controller = _make_controller()
     scene_controller = controller.window.scene_controller
@@ -363,3 +369,57 @@ def test_live_read_scene_over_transport_reflects_unsaved_live_edit(tmp_path: Pat
         assert not (tmp_path / "scenes" / "live.json").exists()
     finally:
         bridge.stop()
+
+
+def test_live_tools_resolve_project_marker_root_from_subdir(tmp_path: Path) -> None:
+    root = _make_marker_root(tmp_path / "project")
+    subdir = root / "tools" / "nested"
+    subdir.mkdir(parents=True)
+    controller = _make_controller()
+    bridge = EditorLiveSessionBridge(controller, root)
+    bridge.start(write_discovery=True)
+    try:
+        payload = _call_tool_with_drain(
+            controller,
+            bridge,
+            lambda: tools.live_read_scene(compact=False, root=str(subdir)),
+        )
+
+        assert payload["ok"] is True
+        assert payload["mode"] == "live_editor"
+        assert payload["current_scene_path"] == "scenes/live.json"
+    finally:
+        bridge.stop()
+
+
+def test_live_tools_report_session_root_mismatch_without_cross_root_connect(tmp_path: Path) -> None:
+    editor_root = _make_marker_root(tmp_path / "editor_checkout")
+    server_root = _make_marker_root(tmp_path / "server_checkout")
+    controller = _make_controller()
+    bridge = EditorLiveSessionBridge(controller, editor_root)
+    bridge.start(write_discovery=True)
+    try:
+        result = tools.live_read_scene(root=str(server_root))
+
+        assert result["ok"] is False
+        assert result["reason"] == "session_root_mismatch"
+        assert result["found_root"] == str(editor_root.resolve())
+        assert result["server_root"] == str(server_root.resolve())
+        assert "SAME project root" in result["message"]
+        assert bridge.pending_count() == 0
+
+        success = _call_tool_with_drain(
+            controller,
+            bridge,
+            lambda: tools.live_read_scene(compact=False, root=str(editor_root)),
+        )
+        assert success["ok"] is True
+    finally:
+        bridge.stop()
+
+    empty_root = _make_marker_root(tmp_path / "empty_checkout")
+    assert tools.live_read_scene(root=str(empty_root)) == {
+        "ok": False,
+        "mode": "live_editor",
+        "reason": "no_live_session",
+    }

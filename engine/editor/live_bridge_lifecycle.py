@@ -27,7 +27,6 @@ def maybe_start_live_bridge(editor: Any) -> None:
         workspace_root = _workspace_root_for_editor(editor)
         bridge = EditorLiveSessionBridge(editor, workspace_root)
         bridge.start()
-        logger.info("[Editor][LiveBridge] Started live session bridge root=%s", workspace_root)
     except Exception as exc:  # noqa: BLE001
         logger.warning("[Editor][LiveBridge] Live session bridge unavailable: %s", exc, exc_info=True)
         if getattr(editor, "live_bridge", None) is not None:
