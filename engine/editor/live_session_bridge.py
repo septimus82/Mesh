@@ -154,6 +154,22 @@ class EditorLiveSessionBridge:
         if getattr(self.editor, "live_bridge", None) is self:
             setattr(self.editor, "live_bridge", None)
 
+    def refresh_discovery(self) -> None:
+        if self._info is None:
+            return
+        self._info = LiveSessionInfo(
+            schema_version=self._info.schema_version,
+            workspace_root=self._info.workspace_root,
+            host=self._info.host,
+            port=self._info.port,
+            pid=self._info.pid,
+            session_id=self._info.session_id,
+            token=self._info.token,
+            current_scene_path=self._current_scene_path(),
+            started_at=self._info.started_at,
+        )
+        write_live_session_file(self.workspace_root, self._info)
+
     def drain_pending(self, *, limit: int = 50) -> int:
         drained = 0
         for _ in range(max(0, int(limit))):

@@ -273,6 +273,9 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     record_recent = getattr(editor, "record_recent_scene", None) if editor is not None else None
     if callable(record_recent):
         record_recent(controller.current_scene_path)
+    refresh_live_bridge = getattr(editor, "refresh_live_bridge_scene", None) if editor is not None else None
+    if callable(refresh_live_bridge):
+        refresh_live_bridge()
     # Auto-apply HD2D defaults if configured and scene lacks HD2D keys
     auto_apply_hd2d = getattr(editor, "maybe_auto_apply_hd2d_defaults", None) if editor is not None else None
     if callable(auto_apply_hd2d):
