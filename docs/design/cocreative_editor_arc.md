@@ -351,3 +351,252 @@ Test:
 Build the co-creative bridge as an editor-owned live op endpoint with staged accept/reject. Use `SceneController.build_scene_snapshot()` for AI read-back. Keep existing `AIOps` as the file/headless path, and extract pure helpers only after the first live slices prove the shape.
 
 The north-star invariant should be: once an editor session is active, AI accepted scene ops mutate the same live `SceneController` state and the same editor undo history as human edits; disk changes happen only through the editor save path.
+
+## Live Session Transport
+
+### Problem
+
+Slices 1-4 built the live co-creative machine inside the editor process:
+
+- `apply_live_op()` for `add_entity_from_prefab`, `set_behaviour_params`, and `delete_entity`
+- `read_live_scene()` plus `content_revision`
+- `stage_proposal()`, `accept_proposal()`, `reject_proposal()`
+- stale-revision blocking
+- one composite `ApplyAIOpBatch` undo entry for accepted batches
+
+The current MCP server is not inside that process. `engine/mcp_server/server.py` builds a `FastMCP` server and `main()` calls `build_server().run()` with the default transport. The current install path points MCP clients at:
+
+```json
+{
+  "command": "<python>",
+  "args": ["-m", "engine.mcp_server.server"],
+  "cwd": "<workspace>"
+}
+```
+
+That is a stdio subprocess, so it cannot directly call the running editor's `EditorModeController`.
+
+### Verified Transport Facts
+
+Checked locally in this workspace on this branch:
+
+- `pyproject.toml` declares the optional MCP extra as `mcp>=1.0`.
+- The installed package is `mcp==1.28.0`, verified with `.venv\Scripts\python.exe -c "import importlib.metadata as im; print(im.version('mcp'))"`.
+- There is no separate installed `fastmcp` distribution; `FastMCP` comes from the `mcp` package at `.venv\Lib\site-packages\mcp\server\fastmcp\server.py`.
+- `FastMCP.run` has signature `run(self, transport: Literal["stdio", "sse", "streamable-http"] = "stdio", mount_path: str | None = None) -> None`.
+- `FastMCP.run()` is synchronous and dispatches through `anyio.run(...)`.
+- `FastMCP.__init__` accepts `host`, `port`, `sse_path`, `message_path`, and `streamable_http_path`; the defaults are `host="127.0.0.1"`, `port=8000`, `sse_path="/sse"`, and `streamable_http_path="/mcp"`.
+- For loopback hosts, `FastMCP.__init__` auto-creates transport security settings with DNS rebinding protection and allowed hosts/origins limited to localhost forms.
+- `run_sse_async()` and `run_streamable_http_async()` both create a Starlette app and serve it through `uvicorn.Server(...).serve()`.
+- `uvicorn==0.49.0` is installed in the local environment.
+- `mesh_cli/mcp_setup.py` and `tests/test_mcp_onboarding_cli_contract.py` verify that `mesh mcp config` and `mesh mcp install` currently write a stdio command entry, not a URL.
+- `docs/mcp_server.md` documents that the server speaks MCP over stdio and that other clients should launch the command printed by `mesh mcp config`.
+
+Conclusion: the pinned/local MCP SDK can host SSE or streamable HTTP, but switching the Mesh server itself to direct HTTP would change the client onboarding/config model and would require owning an async HTTP server lifecycle in or beside the editor.
+
+### Decision: forwarding over a loopback editor bridge
+
+Choose model A: keep the existing stdio MCP server and add live tools that forward to a loopback-only bridge hosted by the running editor.
+
+```text
+MCP client
+  -> existing stdio Mesh MCP subprocess
+  -> live_* MCP tool in engine.mcp_server.tools
+  -> workspace-local session discovery
+  -> 127.0.0.1 editor bridge
+  -> live EditorModeController methods
+```
+
+The bridge should not be a second editor mutation engine. It is only a process-boundary adapter over the editor-owned methods from slices 1-4.
+
+Initial live MCP tools:
+
+- `live_read_scene(compact=False)`
+- `live_stage_proposal(ops)`
+- `live_accept_proposal(proposal_id)`
+- `live_reject_proposal(proposal_id)`
+
+For the smallest slice, `live_apply_op(op)` or `live_stage_proposal` plus `live_accept_proposal` can be temporarily exposed behind the same forwarding client, but the lasting shape should remain proposal-based.
+
+### Rationale
+
+Client-config disruption is minimal. The existing `mesh mcp install` remains valid because the AI client still launches `python -m engine.mcp_server.server` over stdio. Existing file-backed tools remain available with no re-onboarding, and current documentation remains true for the base server.
+
+The editor event loop risk is smaller. Model A needs the editor to host a tiny local bridge, not a full MCP server with protocol/session semantics. That bridge can run on a background thread using a small HTTP server or an asyncio loop isolated from Arcade's main thread, then marshal work onto the editor thread. The editor does not have to make `FastMCP.run(transport="streamable-http")` coexist with the Arcade loop.
+
+It preserves the current headless/file workflow. If no live session is discoverable, `apply_ops()` remains exactly the file-backed AIOps path. Live tools can return `ok=False, reason="no_live_session"` instead of silently falling back to file mutation; the existing `apply_ops()` tool is the explicit fallback.
+
+It is testable without a GUI. Tests can instantiate an editor/controller stub, start the bridge on `127.0.0.1` with port `0`, write a temporary `.mesh/live_session.json`, and call the forwarding client/tool functions. No Arcade window or MCP client subprocess is required.
+
+It lets direct HTTP MCP remain a later option. Because `mcp==1.28.0` supports `sse` and `streamable-http`, a future direct mode is possible once there is a clear client onboarding story and editor-loop hosting strategy.
+
+### Rejected Alternative: direct editor-hosted MCP over HTTP/SSE
+
+Model B is rejected for slice 5.
+
+It forces client-config churn. Today `mesh mcp install` writes a stdio command entry and `docs/mcp_server.md` tells clients to launch the command. Direct editor-hosted MCP would require the AI client to point to a dynamic URL and only work while the editor is running. That is a new onboarding model, not an incremental live-session route.
+
+It complicates lifecycle ownership. `FastMCP.run(transport="sse" | "streamable-http")` is synchronous and internally uses `anyio.run`. The async HTTP transports serve through Uvicorn. Running that directly inside the editor process means deciding how Uvicorn's loop, shutdown, exceptions, and port binding interact with Arcade's GUI loop. This is solvable, but it is not the smallest next slice.
+
+It makes no-session behavior awkward. A direct editor-hosted MCP endpoint does not exist when the editor is closed, so the same configured MCP server cannot naturally serve file-backed tools unless there is also a separate stdio/file server. That splits the user's MCP surface or requires dynamic reconfiguration.
+
+It increases protocol surface in the GUI process. Hosting the full MCP protocol in the editor means the GUI process owns MCP sessions, resources, tool schemas, and HTTP transport concerns. The forwarding model keeps that in the existing MCP subprocess and keeps the editor bridge narrow.
+
+### Third Option Considered: local IPC other than HTTP
+
+Named pipes or Unix-domain sockets would reduce browser-style HTTP exposure and could avoid port discovery. They are rejected for now because cross-platform behavior, client library support, and pytest ergonomics are worse than loopback HTTP on `127.0.0.1`. The live bridge protocol should stay tiny and JSON-shaped, so replacing loopback HTTP later remains possible if needed.
+
+### Security Design
+
+Hard requirements:
+
+- Bind the editor bridge to `127.0.0.1` only.
+- Never bind to `0.0.0.0`.
+- Write discovery only under the current workspace, e.g. `.mesh/live_session.json`.
+- The discovery file must include `workspace_root`, `current_scene_path`, `host`, `port`, `pid`, a random session id, and a random bearer token.
+- Live forwarding must reject sessions whose `workspace_root` does not match the MCP server's current `root`/`cwd`.
+- Live forwarding must reject sessions whose process is gone or whose bridge does not answer a health check.
+- The bridge must require the bearer token for every request.
+- Live scene ops must still validate that `scene_path` is omitted or equals the current live scene. They must not route arbitrary workspace file paths into the editor.
+
+New attack surface:
+
+- A local process in the same user account could read `.mesh/live_session.json` and call the bridge while the editor is open.
+- A malicious workspace could try to leave a stale discovery file that points at another process.
+
+Containment:
+
+- Loopback-only binding prevents LAN exposure.
+- Workspace-root matching prevents a stdio server in one checkout from reaching a session in another checkout.
+- PID liveness plus health check prevents stale file reuse.
+- Bearer token makes blind localhost calls insufficient.
+- The live bridge exposes only the live co-creative methods, not arbitrary file IO or Python execution.
+- Existing AIOps path-containment hardening remains relevant for file-backed `apply_ops`; live ops remain confined to current live scene and editor-owned op validators.
+
+### Discovery and Lifecycle
+
+Editor startup:
+
+1. When the editor live bridge starts, bind `127.0.0.1` on port `0`.
+2. Generate a high-entropy session id and bearer token.
+3. Write `.mesh/live_session.json` atomically with:
+   - `schema_version`
+   - `workspace_root`
+   - `host`
+   - `port`
+   - `pid`
+   - `session_id`
+   - `token`
+   - `current_scene_path`
+   - `started_at`
+4. Keep bridge state tied to the active editor controller.
+
+Tool call:
+
+1. The stdio MCP tool reads `.mesh/live_session.json` from its `root`.
+2. It verifies `workspace_root`, loopback host, PID liveness, and JSON shape.
+3. It calls `GET /health` with the token and checks the returned `session_id`, `workspace_root`, and current scene.
+4. It forwards `live_read_scene`, `live_stage_proposal`, `live_accept_proposal`, or `live_reject_proposal`.
+
+No session:
+
+- `live_*` tools return a structured failure: `{"ok": false, "mode": "live_editor", "reason": "no_live_session"}`.
+- Existing file-backed `apply_ops()` remains unchanged and remains the fallback when the caller intentionally wants file workspace mutation.
+
+Editor exit:
+
+- Stop the bridge.
+- Delete `.mesh/live_session.json` if it still matches this session id.
+- If deletion fails, leave it; the next forwarding call must reject it via PID/health/token checks.
+
+Scene switch:
+
+- Update `current_scene_path` in the bridge health response and, optionally, rewrite the discovery file.
+- Existing live op validators still reject `scene_path` targeting a non-current scene.
+
+### Testability Plan
+
+All slice-5 transport tests should be in-process and headless:
+
+- Build an editor stub using the same fake-window pattern as `tests/test_cocreative_live_ops.py`.
+- Start the editor bridge against the stub on `127.0.0.1:0`.
+- Write a temporary `.mesh/live_session.json` under `tmp_path`.
+- Exercise the forwarding client functions directly, not a real MCP client.
+- Assert that a forwarded op reaches the stub's `stage_proposal`/`accept_proposal`/`apply_live_op` path and mutates only the live stub state.
+- Assert no-session, wrong-workspace, stale-PID/failed-health, and bad-token failures.
+
+The MCP registration layer can be contract-tested separately by importing `engine.mcp_server.server.build_server()` when `mcp` is installed, as existing MCP tests already do.
+
+### Minimal Implementation Slice Plan
+
+#### Slice 5a: one live op across the process boundary
+
+Smallest shippable proof: one MCP tool call reaches a running editor bridge and creates one live entity in the editor stub.
+
+Scope:
+
+- Add an editor live bridge object that can be started/stopped against an `EditorModeController` or stub.
+- Bind only to `127.0.0.1` on an ephemeral port.
+- Implement `POST /live/apply_op` or `POST /live/stage_accept_one` for one op type: `add_entity_from_prefab`.
+- The endpoint calls the existing editor live method/proposal path; it must not create entities itself.
+- Add `.mesh/live_session.json` writer/reader helpers.
+- Add a dependency-free forwarding client used by MCP tool logic.
+- Add one MCP tool, e.g. `live_apply_op(op, root=".")`, that forwards when a valid session exists and returns `no_live_session` when absent.
+- Existing `apply_ops()` remains unchanged and file-backed.
+
+Tests:
+
+- Start bridge against the fake editor controller, write discovery, call forwarding tool, assert live sprite count and snapshot changed before save.
+- Assert the scene file on disk is not required and not written.
+- Assert no discovery file returns `ok=False` without touching `apply_ops()`.
+- Assert host other than `127.0.0.1` in discovery is rejected.
+
+#### Slice 5b: proposal transport
+
+Scope:
+
+- Replace or supplement the 5a proof tool with the durable live tools:
+  - `live_read_scene`
+  - `live_stage_proposal`
+  - `live_accept_proposal`
+  - `live_reject_proposal`
+- Store proposals in the editor bridge by proposal id, not in the MCP subprocess.
+- Preserve base revision and stale-block semantics from slice 3.
+
+Tests:
+
+- Stage proposal over forwarding transport; assert no mutation.
+- Accept by proposal id; assert one `ApplyAIOpBatch` undo entry.
+- Reject by proposal id; assert no mutation.
+- Human edit between stage and accept causes stale rejection over transport.
+
+#### Slice 5c: routing metadata and AI guidance
+
+Scope:
+
+- Add `mode` metadata to relevant tool results: `live_editor` vs `file_workspace`.
+- Add connect/overview guidance that explains when to use live tools and when to use file-backed `apply_ops`.
+- Update `docs/mcp_server.md` with the live-session behavior while preserving stdio install docs.
+
+Tests:
+
+- Tool result contracts include mode.
+- No-session live tools are explicit failures, not accidental file mutations.
+- File-backed `apply_ops()` result shape remains unchanged.
+
+#### Slice 5d: full live tool coverage for slice-4 ops
+
+Scope:
+
+- Ensure transport covers `add_entity_from_prefab`, `set_behaviour_params`, and `delete_entity` through the proposal endpoints.
+- Add read-back path through `live_read_scene`.
+- Keep lights, tiles, quests, worlds, and cutscenes out of live transport until their live editor endpoints exist.
+
+Tests:
+
+- Forwarded yardstick batch `[add guard, set Patrol params]` applies and undoes as one action.
+- Forwarded delete applies and undoes as one action.
+
+### Final Transport Recommendation
+
+Keep the stdio MCP server as the stable client-facing server. Add a narrow, authenticated, loopback-only editor bridge discovered through `.mesh/live_session.json`, and have new `live_*` MCP tools forward to it. This is the least disruptive path to real co-creation because it preserves existing MCP onboarding and file-backed AI workflows while crossing the necessary process boundary into the running editor session.
