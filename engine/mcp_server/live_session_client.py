@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
-from urllib import error, request
+from urllib import error, parse, request
 
 from engine.editor.live_session_bridge import (
     LOOPBACK_HOST,
@@ -95,6 +95,31 @@ def live_accept_proposal(proposal_id: str, *, root: str = ".", timeout: float = 
         return failure or _failure("no_live_session")
     try:
         result = _request_json(info, "POST", "/live/accept_proposal", {"proposal_id": proposal_id}, timeout=timeout)
+    except (OSError, TimeoutError, ValueError, error.URLError) as exc:
+        return _failure("forward_failed", str(exc))
+    result.setdefault("mode", "live_editor")
+    return result
+
+
+def live_reject_proposal(proposal_id: str, *, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:
+    info, failure = _load_verified_session(root, timeout=timeout)
+    if failure is not None or info is None:
+        return failure or _failure("no_live_session")
+    try:
+        result = _request_json(info, "POST", "/live/reject_proposal", {"proposal_id": proposal_id}, timeout=timeout)
+    except (OSError, TimeoutError, ValueError, error.URLError) as exc:
+        return _failure("forward_failed", str(exc))
+    result.setdefault("mode", "live_editor")
+    return result
+
+
+def live_read_scene(*, compact: bool = False, root: str = ".", timeout: float = 2.0) -> dict[str, Any]:
+    info, failure = _load_verified_session(root, timeout=timeout)
+    if failure is not None or info is None:
+        return failure or _failure("no_live_session")
+    query = parse.urlencode({"compact": "true" if compact else "false"})
+    try:
+        result = _request_json(info, "GET", f"/live/read_scene?{query}", timeout=timeout)
     except (OSError, TimeoutError, ValueError, error.URLError) as exc:
         return _failure("forward_failed", str(exc))
     result.setdefault("mode", "live_editor")
