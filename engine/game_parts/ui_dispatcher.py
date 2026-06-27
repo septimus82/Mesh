@@ -49,6 +49,7 @@ from engine.ui_overlays.light_occluder_editor import LightOccluderEditorOverlay
 from engine.ui_overlays.prefab_editor_overlay import PrefabEditorOverlay
 from engine.ui_overlays.problems_panel_overlay import ProblemsPanelOverlay
 from engine.ui_overlays.project_explorer_overlay import ProjectExplorerOverlay
+from engine.ui_overlays.proposal_inbox_overlay import ProposalInboxOverlay
 from engine.ui_overlays.scene_browser_overlay import SceneBrowserOverlay
 from engine.ui_overlays.scene_switcher_overlay import SceneSwitcherOverlay
 from engine.ui_overlays.transition_fade import TransitionFadeOverlay
@@ -192,6 +193,8 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
         editor_controller.dialogue_editor = EditorDialogueEditorController(editor_controller)
     window.dialogue_editor_overlay = DialogueEditorOverlay(window)
     window.register_ui_element(window.dialogue_editor_overlay)
+    window.proposal_inbox_overlay = ProposalInboxOverlay(window)
+    window.register_ui_element(window.proposal_inbox_overlay)
     window.undo_history_overlay = UndoHistoryOverlay(window)
     window.register_ui_element(window.undo_history_overlay)
     window.problems_panel_overlay = ProblemsPanelOverlay(window)

@@ -61,6 +61,7 @@ from .editor_ui_flow_controller import EditorUIFlowController
 from .editor_undo_controller import EditorUndoController
 from .editor_unsaved_changes_controller import EditorUnsavedChangesController
 from .editor_workspace_controller import EditorWorkspaceController
+from .proposal_inbox import ProposalInbox
 from .state import (
     ENTITY_PANEL_FOCUS_OUTLINER,
     TOOL_MODE_MOVE,
@@ -96,6 +97,7 @@ def bootstrap_dependencies(controller: Any) -> None:
     controller.unsaved_confirm = EditorUnsavedChangesController(controller)
     controller.dialogue = EditorDialogueController(controller)
     controller.debug_panels = EditorDebugPanelsController(controller)
+    controller.proposal_inbox = ProposalInbox(controller)
     controller.debug_overlay = EditorDebugOverlayController(controller)
     controller.overlay = EditorOverlayController(controller)
     controller.tool = EditorToolController(controller)
