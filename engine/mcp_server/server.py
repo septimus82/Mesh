@@ -59,6 +59,7 @@ def build_server() -> Any:
     # Action tools (the AI's hands).
     server.tool()(tools.create_scene)
     server.tool()(tools.add_entity_from_prefab)
+    server.tool()(tools.live_add_entity_from_prefab)
 
     # Batch action: the full op surface in one call, with validation feedback.
     server.tool()(tools.list_op_types)

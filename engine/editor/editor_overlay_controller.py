@@ -25,6 +25,10 @@ class EditorOverlayController:
 
     def draw_overlay(self) -> None:
         editor = self._editor
+        drain_live_bridge = getattr(editor, "drain_live_bridge", None)
+        if callable(drain_live_bridge):
+            drain_live_bridge()
+
         build = getattr(editor, "build", None)
         if build is not None and callable(getattr(build, "tick", None)):
             build.tick()
