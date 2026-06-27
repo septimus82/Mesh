@@ -36,7 +36,9 @@ def _clear_tilemap_layers(self) -> None:
     self._tilemap_background_layers = []
     self._tilemap_foreground_layers = []
     self._tilemap_draw_layers = []
-    self._background_layers = []
+    # NOTE: do NOT clear self._background_layers here — those are scene-level
+    # parallax layers (re-parsed each load_scene), not tilemap state. Clearing
+    # them here wiped the layers parsed earlier in load_scene -> blank backdrop.
     self.tilemap_instance = None
     self.navigation.invalidate()
     try:
