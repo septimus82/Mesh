@@ -53,6 +53,10 @@ class EditorCommandDispatchController:
                 self.editor._delete_entity_internal(entity)
             self._remove_scene_entity(cmd)
 
+        elif ctype == "ApplyAIOpBatch":
+            for child in reversed(_command_children(cmd)):
+                self.revert_command(child)
+
         elif ctype == "DeleteEntity":
             self._append_scene_entity(cmd.get("data"))
             self.editor._create_entity_internal(cmd["data"])
@@ -274,6 +278,10 @@ class EditorCommandDispatchController:
         elif ctype == "AddEntity":
             self._append_scene_entity(cmd.get("data"))
             self.editor._create_entity_internal(cmd["data"])
+
+        elif ctype == "ApplyAIOpBatch":
+            for child in _command_children(cmd):
+                self.apply_command(child)
 
         elif ctype == "DeleteEntity":
             entity = self.editor._find_entity_by_name(entity_name)
@@ -546,3 +554,10 @@ class EditorCommandDispatchController:
         if not identity:
             return
         entities[:] = [entity for entity in entities if self._entity_identity(entity) != identity]
+
+
+def _command_children(cmd: Dict[str, Any]) -> list[Dict[str, Any]]:
+    children = cmd.get("children")
+    if not isinstance(children, list):
+        return []
+    return [child for child in children if isinstance(child, dict)]

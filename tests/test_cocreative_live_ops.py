@@ -150,6 +150,19 @@ def _entity_names(snapshot: dict[str, Any]) -> list[str]:
     return [str(entity.get("name")) for entity in snapshot.get("entities", []) if isinstance(entity, dict)]
 
 
+def _proposal_ops(*names: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "add_entity_from_prefab",
+            "prefab_id": "crate",
+            "x": 64 + (index * 16),
+            "y": 80,
+            "name": name,
+        }
+        for index, name in enumerate(names)
+    ]
+
+
 def _add_entity(controller: EditorModeController, name: str = "ai_crate") -> _FakeSprite:
     result = controller.apply_live_op(
         {"type": "add_entity_from_prefab", "prefab_id": "crate", "x": 64, "y": 80, "name": name}
@@ -314,4 +327,132 @@ def test_read_live_scene_and_rejected_live_op_do_not_change_revision() -> None:
     )
 
     assert result["ok"] is False
+    assert controller.content_revision == revision
+
+
+def test_stage_proposal_valid_batch_dry_runs_without_mutation() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    revision = controller.content_revision
+
+    proposal = controller.stage_proposal(_proposal_ops("staged_crate"))
+
+    assert proposal.base_revision == revision
+    assert proposal.dry_run["ok"] is True
+    assert proposal.dry_run["affected_ids"] == ["staged_crate"]
+    assert "staged_crate" in proposal.preview_summary
+    assert len(scene_controller.all_sprites) == 0
+    assert scene_controller._loaded_scene_data["entities"] == []
+    assert controller.content_revision == revision
+    assert controller.undo.undo_stack == []
+
+
+def test_accept_proposal_at_matching_revision_pushes_one_undo_entry() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    revision = controller.content_revision
+    proposal = controller.stage_proposal(_proposal_ops("accepted_crate"))
+
+    result = controller.accept_proposal(proposal)
+
+    assert result["ok"] is True
+    assert len(scene_controller.all_sprites) == 1
+    assert [entity.get("name") for entity in scene_controller._loaded_scene_data["entities"]] == ["accepted_crate"]
+    assert "accepted_crate" in _entity_names(scene_controller.build_scene_snapshot(compact=False))
+    assert controller.content_revision == revision + 1
+    assert len(controller.undo.undo_stack) == 1
+    assert controller.undo.undo_stack[0]["type"] == "ApplyAIOpBatch"
+
+    assert controller.undo.undo() is True
+    assert len(scene_controller.all_sprites) == 0
+    assert scene_controller._loaded_scene_data["entities"] == []
+    assert "accepted_crate" not in _entity_names(scene_controller.build_scene_snapshot(compact=False))
+
+    assert controller.undo.redo() is True
+    assert len(scene_controller.all_sprites) == 1
+    assert [entity.get("name") for entity in scene_controller._loaded_scene_data["entities"]] == ["accepted_crate"]
+    assert "accepted_crate" in _entity_names(scene_controller.build_scene_snapshot(compact=False))
+
+
+def test_accept_multi_op_proposal_is_one_undoable_batch() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    proposal = controller.stage_proposal(_proposal_ops("batch_crate_a", "batch_crate_b"))
+
+    result = controller.accept_proposal(proposal)
+
+    assert result["ok"] is True
+    assert len(scene_controller.all_sprites) == 2
+    assert _entity_names(scene_controller.build_scene_snapshot(compact=False)) == ["batch_crate_a", "batch_crate_b"]
+    assert len(controller.undo.undo_stack) == 1
+    assert controller.undo.undo_stack[0]["type"] == "ApplyAIOpBatch"
+    assert len(controller.undo.undo_stack[0]["children"]) == 2
+
+    assert controller.undo.undo() is True
+    assert len(scene_controller.all_sprites) == 0
+    assert scene_controller._loaded_scene_data["entities"] == []
+    assert _entity_names(scene_controller.build_scene_snapshot(compact=False)) == []
+
+    assert controller.undo.redo() is True
+    assert len(scene_controller.all_sprites) == 2
+    assert _entity_names(scene_controller.build_scene_snapshot(compact=False)) == ["batch_crate_a", "batch_crate_b"]
+
+
+def test_accept_stale_proposal_is_blocked_without_mutation() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    proposal = controller.stage_proposal(_proposal_ops("stale_crate"))
+
+    _add_entity(controller, "human_crate")
+    revision_after_human_edit = controller.content_revision
+    sprite_count = len(scene_controller.all_sprites)
+    entity_payload = deepcopy(scene_controller._loaded_scene_data["entities"])
+
+    result = controller.accept_proposal(proposal)
+
+    assert result["ok"] is False
+    assert result["data"]["stale"] is True
+    assert len(scene_controller.all_sprites) == sprite_count
+    assert scene_controller._loaded_scene_data["entities"] == entity_payload
+    assert "stale_crate" not in _entity_names(scene_controller.build_scene_snapshot(compact=False))
+    assert controller.content_revision == revision_after_human_edit
+    assert len(controller.undo.undo_stack) == 1
+
+
+def test_reject_proposal_drops_it_without_mutation() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    revision = controller.content_revision
+    proposal = controller.stage_proposal(_proposal_ops("rejected_crate"))
+
+    result = controller.reject_proposal(proposal)
+
+    assert result["ok"] is True
+    assert len(scene_controller.all_sprites) == 0
+    assert scene_controller._loaded_scene_data["entities"] == []
+    assert controller.undo.undo_stack == []
+    assert controller.content_revision == revision
+
+
+def test_invalid_proposal_batch_refuses_accept_without_partial_apply() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    revision = controller.content_revision
+    proposal = controller.stage_proposal(
+        [
+            *_proposal_ops("valid_but_not_applied"),
+            {"type": "add_entity_from_prefab", "prefab_id": "missing", "x": 64, "y": 80},
+        ]
+    )
+
+    assert proposal.dry_run["ok"] is False
+    assert proposal.dry_run["warnings"]
+
+    result = controller.accept_proposal(proposal)
+
+    assert result["ok"] is False
+    assert len(scene_controller.all_sprites) == 0
+    assert scene_controller._loaded_scene_data["entities"] == []
+    assert "valid_but_not_applied" not in _entity_names(scene_controller.build_scene_snapshot(compact=False))
+    assert controller.undo.undo_stack == []
     assert controller.content_revision == revision

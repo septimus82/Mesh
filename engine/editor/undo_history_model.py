@@ -54,6 +54,7 @@ _LABEL_MAP = {
     "FixSceneIssue": "FIX",
     "FixSceneIssues": "FIX",
     "EditBackgroundPlanes": "BG",
+    "ApplyAIOpBatch": "AI",
 }
 
 
