@@ -238,6 +238,7 @@ class SceneLoader:
             "entities",
             "tilemap",
             "background_layers",
+            "foreground_layers",
             "lights",
             "occluders",
         }

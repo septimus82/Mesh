@@ -308,6 +308,8 @@ class SceneController:
 
         # Background/parallax layers
         self._background_layers: list[BackgroundLayer] = []
+        # Foreground parallax layers (drawn in front of entities, e.g. RPG-Maker ParallaxUpper)
+        self._foreground_layers: list[BackgroundLayer] = []
         self._background_planes: list[BackgroundPlane] = []
         self._background_plane_texture_cache: dict[str, Any] = {}
 

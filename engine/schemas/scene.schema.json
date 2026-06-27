@@ -10,6 +10,12 @@
         "$ref": "#/$defs/backgroundLayer"
       }
     },
+    "foreground_layers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/backgroundLayer"
+      }
+    },
     "collision_rules": {
       "type": "object",
       "patternProperties": {

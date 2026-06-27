@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from engine import optional_arcade
-from engine.background_layers import parse_background_layers
+from engine.background_layers import parse_background_layers, parse_foreground_layers
 from engine.depth_tint_model import parse_depth_tint_settings
 from engine.editor.sprite_outline_model import parse_outline_settings
 from engine.parallax_model import parse_background_planes
@@ -105,6 +105,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     # Keep a stable authored copy for debug authoring tools (avoid persisting runtime-only mutations).
     controller._loaded_scene_source_data = copy.deepcopy(scene) if isinstance(scene, dict) else {}
     controller._background_layers = parse_background_layers(scene)
+    controller._foreground_layers = parse_foreground_layers(scene)
     controller._background_planes = parse_background_planes(scene)
     controller._background_plane_texture_cache.clear()  # Clear texture cache on scene load
 

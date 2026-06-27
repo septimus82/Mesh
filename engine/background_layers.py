@@ -195,6 +195,18 @@ def parse_background_layers(scene_payload: dict[str, Any]) -> list[BackgroundLay
     return sort_background_layers(layers)
 
 
+def parse_foreground_layers(scene_payload: dict[str, Any]) -> list[BackgroundLayer]:
+    """Parse scene.foreground_layers (same shape/validation as background_layers).
+
+    Foreground layers render AFTER entities (in front of the player) — e.g. the
+    RPG-Maker 'ParallaxUpper' canopy the player can walk behind.
+    """
+    raw = scene_payload.get("foreground_layers")
+    if raw is None:
+        return []
+    return parse_background_layers({"background_layers": raw})
+
+
 def draw_background_layers(
     layers: list[BackgroundLayer],
     *,
