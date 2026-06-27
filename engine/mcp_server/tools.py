@@ -500,6 +500,30 @@ def add_entity_from_prefab(
     return _result_to_dict(result)
 
 
+def live_add_entity_from_prefab(
+    prefab_id: str,
+    x: float,
+    y: float,
+    name: str | None = None,
+    scene_path: str | None = None,
+    root: str = ".",
+) -> dict[str, Any]:
+    """Stage and accept one add-entity op in a running live editor session."""
+    from engine.mcp_server.live_session_client import live_stage_and_accept_add_entity
+
+    op: dict[str, Any] = {
+        "type": "add_entity_from_prefab",
+        "prefab_id": prefab_id,
+        "x": float(x),
+        "y": float(y),
+    }
+    if name:
+        op["name"] = name
+    if scene_path:
+        op["scene_path"] = scene_path
+    return live_stage_and_accept_add_entity(op, root=root)
+
+
 # -------------------------------------------------------------- batch action
 def list_op_types() -> list[dict[str, Any]]:
     """List every operation `apply_ops` accepts, with required/optional fields.

@@ -921,6 +921,14 @@ class EditorModeController:
             "selected_entity_ids": selected_entity_ids(self),
         }
 
+    def drain_live_bridge(self, *, limit: int = 50) -> int:
+        """Run pending live-bridge work on the editor thread."""
+        bridge = getattr(self, "live_bridge", None)
+        drain = getattr(bridge, "drain_pending", None)
+        if not callable(drain):
+            return 0
+        return int(drain(limit=limit))
+
     def _mark_dirty(self) -> None:
         self.content_revision = int(getattr(self, "content_revision", 0)) + 1
         self.scene_dirty = True
