@@ -4,7 +4,7 @@ import copy
 from dataclasses import dataclass
 from typing import Any
 
-from engine.ai_ops import build_prefab_entity_definition, find_prefab_palette_entry
+from engine.ai_ops import _deep_merge, build_prefab_entity_definition, find_prefab_palette_entry
 
 
 @dataclass(frozen=True)
@@ -26,9 +26,13 @@ class EditorLiveOpsController:
         if not isinstance(op, dict):
             return _result(False, "Operation must be an object")
         op_type = str(op.get("type") or "")
-        if op_type != "add_entity_from_prefab":
-            return _result(False, f"Unsupported live operation type '{op_type}'")
-        return self._add_entity_from_prefab(op, push_undo=push_undo)
+        if op_type == "add_entity_from_prefab":
+            return self._add_entity_from_prefab(op, push_undo=push_undo)
+        if op_type == "set_behaviour_params":
+            return self._set_behaviour_params(op, push_undo=push_undo)
+        if op_type == "delete_entity":
+            return self._delete_entity(op, push_undo=push_undo)
+        return _result(False, f"Unsupported live operation type '{op_type}'")
 
     def stage_proposal(self, ops: list[dict[str, Any]]) -> LiveOpProposal:
         """Validate a proposed live-op batch without mutating the scene."""
@@ -182,25 +186,59 @@ class EditorLiveOpsController:
                 warnings.append(f"Op {index}: operation must be an object")
                 continue
             op_type = str(op.get("type") or "")
-            if op_type != "add_entity_from_prefab":
+            if op_type == "add_entity_from_prefab":
+                entity_def, warning = self._dry_run_add_entity_from_prefab(op, staged_scene)
+                if warning:
+                    warnings.append(f"Op {index}: {warning}")
+                    continue
+                if entity_def is None:
+                    warnings.append(f"Op {index}: failed to validate add_entity_from_prefab")
+                    continue
+
+                entities.append(entity_def)
+                entity_name = str(entity_def.get("name") or "")
+                affected_ids.append(str(entity_def.get("id") or entity_def.get("entity_id") or entity_name))
+                preview_lines.append(
+                    f"Add prefab '{op.get('prefab_id') or op.get('prefab_name')}' as '{entity_name}' "
+                    f"at ({float(entity_def.get('x', 0.0)):g}, {float(entity_def.get('y', 0.0)):g})"
+                )
+                continue
+
+            if op_type == "set_behaviour_params":
+                entity, behaviour_name, params, warning = self._dry_run_set_behaviour_params(op, staged_scene)
+                if warning:
+                    warnings.append(f"Op {index}: {warning}")
+                    continue
+                if entity is None or behaviour_name is None or params is None:
+                    warnings.append(f"Op {index}: failed to validate set_behaviour_params")
+                    continue
+
+                current = _entity_behaviour_config(entity, behaviour_name)
+                entity.setdefault("behaviour_config", {})[behaviour_name] = _deep_merge(current, params)
+                entity_id = _entity_identity(entity)
+                affected_ids.append(entity_id)
+                preview_lines.append(f"Set {behaviour_name} params on '{entity_id}'")
+                continue
+
+            if op_type == "delete_entity":
+                entity, warning = self._dry_run_delete_entity(op, staged_scene)
+                if warning:
+                    warnings.append(f"Op {index}: {warning}")
+                    continue
+                if entity is None:
+                    warnings.append(f"Op {index}: failed to validate delete_entity")
+                    continue
+
+                entity_id = _entity_identity(entity)
+                entities.remove(entity)
+                affected_ids.append(entity_id)
+                preview_lines.append(f"Delete entity '{entity_id}'")
+                continue
+
+            if op_type:
                 warnings.append(f"Op {index}: unsupported live operation type '{op_type}'")
                 continue
-
-            entity_def, warning = self._dry_run_add_entity_from_prefab(op, staged_scene)
-            if warning:
-                warnings.append(f"Op {index}: {warning}")
-                continue
-            if entity_def is None:
-                warnings.append(f"Op {index}: failed to validate add_entity_from_prefab")
-                continue
-
-            entities.append(entity_def)
-            entity_name = str(entity_def.get("name") or "")
-            affected_ids.append(str(entity_def.get("id") or entity_def.get("entity_id") or entity_name))
-            preview_lines.append(
-                f"Add prefab '{op.get('prefab_id') or op.get('prefab_name')}' as '{entity_name}' "
-                f"at ({float(entity_def.get('x', 0.0)):g}, {float(entity_def.get('y', 0.0)):g})"
-            )
+            warnings.append(f"Op {index}: unsupported live operation type '{op_type}'")
 
         dry_run = {"ok": not warnings and bool(ops), "warnings": warnings, "affected_ids": affected_ids}
         return dry_run, "\n".join(preview_lines) if preview_lines else "No valid changes"
@@ -243,6 +281,139 @@ class EditorLiveOpsController:
             None,
         )
 
+    def _set_behaviour_params(self, op: dict[str, Any], *, push_undo: bool = True) -> dict[str, Any]:
+        scene_mismatch = self._scene_mismatch_message(op)
+        if scene_mismatch:
+            return _result(False, scene_mismatch)
+
+        entity_ref = _op_entity_ref(op)
+        if not entity_ref:
+            return _result(False, "set_behaviour_params requires entity_id")
+        behaviour_name = str(op.get("behaviour_name") or op.get("behaviour") or "").strip()
+        if not behaviour_name:
+            return _result(False, "set_behaviour_params requires behaviour_name")
+        params = op.get("params")
+        if not isinstance(params, dict):
+            return _result(False, "set_behaviour_params requires params object")
+
+        entity = self._find_live_entity(entity_ref)
+        if entity is None:
+            return _result(False, f"Entity '{entity_ref}' not found")
+        entity_data = self._editor.window.scene_controller._ensure_entity_data_dict(entity)
+        if not _entity_has_behaviour(entity_data, behaviour_name):
+            return _result(False, f"Behaviour '{behaviour_name}' not found on '{entity_ref}'")
+
+        entity_name = _sprite_entity_name(entity)
+        current = _entity_behaviour_config(entity_data, behaviour_name)
+        child_commands: list[dict[str, Any]] = []
+        for key, value in params.items():
+            key_text = str(key)
+            before = copy.deepcopy(current.get(key_text))
+            after = _deep_merge(before, value) if isinstance(before, dict) and isinstance(value, dict) else copy.deepcopy(value)
+            command = {
+                "type": "ChangeProperty",
+                "entity_name": entity_name,
+                "behaviour": behaviour_name,
+                "param": key_text,
+                "before": before,
+                "after": after,
+            }
+            self._editor.command_dispatch.apply_command(command)
+            child_commands.append(command)
+            current[key_text] = copy.deepcopy(after)
+
+        command = _single_or_batch_command(child_commands, f"Set {behaviour_name} Params")
+        if push_undo and command is not None:
+            self._editor._push_command(command)
+        self._refresh_editor_surfaces()
+        data: dict[str, Any] = {"entity_name": entity_name, "entity_id": entity_ref, "behaviour": behaviour_name}
+        if not push_undo and command is not None:
+            data["command"] = command
+        return _result(True, f"Updated {behaviour_name} on '{entity_name}'", data)
+
+    def _delete_entity(self, op: dict[str, Any], *, push_undo: bool = True) -> dict[str, Any]:
+        scene_mismatch = self._scene_mismatch_message(op)
+        if scene_mismatch:
+            return _result(False, scene_mismatch)
+
+        entity_ref = _op_entity_ref(op)
+        if not entity_ref:
+            return _result(False, "delete_entity requires entity_id")
+        entity = self._find_live_entity(entity_ref)
+        if entity is None:
+            return _result(False, f"Entity '{entity_ref}' not found")
+
+        entity_name = _sprite_entity_name(entity)
+        entity_data = self._editor.window.scene_controller._ensure_entity_data_dict(entity)
+        command = {
+            "type": "DeleteEntity",
+            "entity_name": entity_name,
+            "data": copy.deepcopy(entity_data),
+        }
+        self._editor.command_dispatch.apply_command(command)
+        if push_undo:
+            self._editor._push_command(command)
+        self._refresh_editor_surfaces()
+        data = {"entity_name": entity_name, "entity_id": entity_ref}
+        if not push_undo:
+            data["command"] = command
+        return _result(True, f"Deleted entity '{entity_name}'", data)
+
+    def _dry_run_set_behaviour_params(
+        self, op: dict[str, Any], staged_scene: dict[str, Any]
+    ) -> tuple[dict[str, Any] | None, str | None, dict[str, Any] | None, str | None]:
+        scene_mismatch = self._scene_mismatch_message(op)
+        if scene_mismatch:
+            return None, None, None, scene_mismatch
+        entity_ref = _op_entity_ref(op)
+        if not entity_ref:
+            return None, None, None, "set_behaviour_params requires entity_id"
+        entity = _find_scene_entity(staged_scene, entity_ref)
+        if entity is None:
+            return None, None, None, f"Entity '{entity_ref}' not found"
+        behaviour_name = str(op.get("behaviour_name") or op.get("behaviour") or "").strip()
+        if not behaviour_name:
+            return None, None, None, "set_behaviour_params requires behaviour_name"
+        if not _entity_has_behaviour(entity, behaviour_name):
+            return None, None, None, f"Behaviour '{behaviour_name}' not found on '{entity_ref}'"
+        params = op.get("params")
+        if not isinstance(params, dict):
+            return None, None, None, "set_behaviour_params requires params object"
+        return entity, behaviour_name, copy.deepcopy(params), None
+
+    def _dry_run_delete_entity(
+        self, op: dict[str, Any], staged_scene: dict[str, Any]
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        scene_mismatch = self._scene_mismatch_message(op)
+        if scene_mismatch:
+            return None, scene_mismatch
+        entity_ref = _op_entity_ref(op)
+        if not entity_ref:
+            return None, "delete_entity requires entity_id"
+        entity = _find_scene_entity(staged_scene, entity_ref)
+        if entity is None:
+            return None, f"Entity '{entity_ref}' not found"
+        return entity, None
+
+    def _scene_mismatch_message(self, op: dict[str, Any]) -> str:
+        scene_controller = getattr(self._editor.window, "scene_controller", None)
+        current_scene = str(getattr(scene_controller, "current_scene_path", "") or "")
+        requested_scene = op.get("scene_path")
+        if isinstance(requested_scene, str) and requested_scene and requested_scene != current_scene:
+            return f"Live op targets '{requested_scene}', but current scene is '{current_scene}'"
+        return ""
+
+    def _find_live_entity(self, entity_ref: str) -> Any:
+        finder_by_id = getattr(self._editor, "_find_entity_by_id", None)
+        if callable(finder_by_id):
+            entity = finder_by_id(entity_ref)
+            if entity is not None:
+                return entity
+        finder_by_name = getattr(self._editor, "_find_entity_by_name", None)
+        if callable(finder_by_name):
+            return finder_by_name(entity_ref)
+        return None
+
     def _revert_applied_children(self, child_commands: list[dict[str, Any]]) -> None:
         dispatcher = getattr(self._editor, "command_dispatch", None)
         revert = getattr(dispatcher, "revert_command", None)
@@ -264,3 +435,80 @@ class EditorLiveOpsController:
 
 def _result(ok: bool, message: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
     return {"ok": ok, "message": message, "data": data}
+
+
+def _op_entity_ref(op: dict[str, Any]) -> str:
+    for key in ("entity_id", "entity_name", "entity", "name", "id"):
+        value = op.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def _sprite_entity_name(sprite: Any) -> str:
+    value = getattr(sprite, "mesh_name", "")
+    if isinstance(value, str) and value:
+        return value
+    data = getattr(sprite, "mesh_entity_data", None)
+    if isinstance(data, dict):
+        identity = _entity_identity(data)
+        if identity:
+            return identity
+    return ""
+
+
+def _find_scene_entity(scene: dict[str, Any], entity_ref: str) -> dict[str, Any] | None:
+    entities = scene.get("entities")
+    if not isinstance(entities, list):
+        return None
+    for entity in entities:
+        if isinstance(entity, dict) and _entity_matches(entity, entity_ref):
+            return entity
+    return None
+
+
+def _entity_matches(entity: dict[str, Any], entity_ref: str) -> bool:
+    return any(entity.get(key) == entity_ref for key in ("id", "entity_id", "name", "mesh_name"))
+
+
+def _entity_identity(entity: dict[str, Any]) -> str:
+    for key in ("id", "entity_id", "name", "mesh_name"):
+        value = entity.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
+def _entity_behaviour_config(entity: dict[str, Any], behaviour_name: str) -> dict[str, Any]:
+    root = entity.setdefault("behaviour_config", {})
+    if not isinstance(root, dict):
+        entity["behaviour_config"] = {}
+        root = entity["behaviour_config"]
+    current = root.get(behaviour_name, {})
+    if not isinstance(current, dict):
+        current = {}
+    return copy.deepcopy(current)
+
+
+def _entity_has_behaviour(entity: dict[str, Any], behaviour_name: str) -> bool:
+    behaviours = entity.get("behaviours")
+    if isinstance(behaviours, list):
+        for entry in behaviours:
+            if entry == behaviour_name:
+                return True
+            if isinstance(entry, dict) and entry.get("type") == behaviour_name:
+                return True
+    config = entity.get("behaviour_config")
+    return isinstance(config, dict) and behaviour_name in config
+
+
+def _single_or_batch_command(commands: list[dict[str, Any]], label: str) -> dict[str, Any] | None:
+    if not commands:
+        return None
+    if len(commands) == 1:
+        return copy.deepcopy(commands[0])
+    return {
+        "type": "ApplyAIOpBatch",
+        "label": label,
+        "children": [copy.deepcopy(command) for command in commands],
+    }
