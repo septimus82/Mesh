@@ -224,6 +224,10 @@ class EditorLiveSessionBridge:
         """Reject a staged proposal from the editor main thread."""
         return self._reject_proposal({"proposal_id": proposal_id})
 
+    def stage_pending_proposal(self, ops: list[dict[str, Any]]) -> dict[str, Any]:
+        """Stage a proposal in the same store read by ProposalInbox."""
+        return self._stage_proposal({"ops": ops})
+
     def _build_handler_class(self) -> type[BaseHTTPRequestHandler]:
         bridge = self
 

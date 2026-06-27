@@ -6,6 +6,7 @@ import engine.optional_arcade as optional_arcade
 
 from ..behaviours.utils import ZONE_TARGET_TRIGGER
 from ..editor_light_occluder_ops import COOKIE_PRESETS, LIGHT_COLOR_PRESETS
+from .chat_session_controller import ChatSessionController
 from .editor_align_controller import EditorAlignController
 from .editor_animation_controller import EditorAnimationController
 from .editor_asset_browser_controller import EditorAssetBrowserController
@@ -61,6 +62,7 @@ from .editor_ui_flow_controller import EditorUIFlowController
 from .editor_undo_controller import EditorUndoController
 from .editor_unsaved_changes_controller import EditorUnsavedChangesController
 from .editor_workspace_controller import EditorWorkspaceController
+from .main_thread_dispatcher import EditorMainThreadDispatcher
 from .proposal_inbox import ProposalInbox
 from .state import (
     ENTITY_PANEL_FOCUS_OUTLINER,
@@ -83,6 +85,7 @@ def bootstrap_dependencies(controller: Any) -> None:
     controller.search = EditorSearchController(controller, controller._ui_flow_ctl)
     controller._file_ops_ctl = EditorFileOpsController(controller)
     controller.session = EditorSessionController()
+    controller.main_thread_dispatcher = EditorMainThreadDispatcher()
 
     from engine.editor.editor_focus_controller import EditorFocusController  # noqa: PLC0415
 
@@ -98,6 +101,7 @@ def bootstrap_dependencies(controller: Any) -> None:
     controller.dialogue = EditorDialogueController(controller)
     controller.debug_panels = EditorDebugPanelsController(controller)
     controller.proposal_inbox = ProposalInbox(controller)
+    controller.chat = ChatSessionController(controller)
     controller.debug_overlay = EditorDebugOverlayController(controller)
     controller.overlay = EditorOverlayController(controller)
     controller.tool = EditorToolController(controller)

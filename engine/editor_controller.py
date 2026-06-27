@@ -930,6 +930,22 @@ class EditorModeController:
             return 0
         return int(drain(limit=limit))
 
+    def drain_main_thread_dispatcher(self, *, limit: int = 50) -> int:
+        """Run queued editor-main-thread work from background services."""
+        dispatcher = getattr(self, "main_thread_dispatcher", None)
+        drain = getattr(dispatcher, "drain", None)
+        if not callable(drain):
+            return 0
+        return int(drain(limit=limit))
+
+    def submit_chat_prompt(self, text: str) -> dict[str, Any]:
+        """Submit a prompt to the native co-creative chat loop."""
+        chat = getattr(self, "chat", None)
+        submit = getattr(chat, "submit", None) if chat is not None else None
+        if not callable(submit):
+            return {"ok": False, "reason": "chat_unavailable", "message": "Claude chat is unavailable"}
+        return dict(submit(text))
+
     def refresh_live_bridge_scene(self) -> None:
         """Refresh live-session discovery after the current scene changes."""
         from engine.editor.live_bridge_lifecycle import refresh_live_bridge_scene  # noqa: PLC0415
