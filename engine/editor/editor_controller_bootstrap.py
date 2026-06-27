@@ -210,6 +210,7 @@ def bootstrap_runtime_state(controller: Any) -> None:
     controller._transform_snap_active = False
 
     controller.dirty_state = EditorDirtyState()
+    controller.content_revision = 0
     controller.play_session = EditorPlaySession()
     controller.build_session = EditorBuildSession()
     controller.tour_session = EditorTourSession()

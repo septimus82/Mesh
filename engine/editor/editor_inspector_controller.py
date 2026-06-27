@@ -466,7 +466,6 @@ class EditorInspectorController:
                     break
 
         self.apply_inspector_to_sprite(field_key, new_value)
-        self._editor._mark_dirty()
 
     def get_entity_id_for_inspector(self) -> str | None:
         from engine.editor.editor_selection_model import selected_entity_id  # noqa: PLC0415

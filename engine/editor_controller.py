@@ -895,7 +895,22 @@ class EditorModeController:
         """Apply one AI-style operation to the live editor scene."""
         return self.live_ops.apply_live_op(op)
 
+    def read_live_scene(self, compact: bool = False) -> dict[str, Any]:
+        """Return the current live editor scene snapshot for AI read-back."""
+        from engine.editor.editor_selection_model import selected_entity_ids  # noqa: PLC0415
+
+        scene_controller = getattr(self.window, "scene_controller", None)
+        snapshot = scene_controller.build_scene_snapshot(compact=compact) if scene_controller is not None else {}
+        return {
+            "scene": snapshot,
+            "current_scene_path": str(getattr(scene_controller, "current_scene_path", "") or ""),
+            "dirty": bool(self.scene_dirty),
+            "revision": int(getattr(self, "content_revision", 0)),
+            "selected_entity_ids": selected_entity_ids(self),
+        }
+
     def _mark_dirty(self) -> None:
+        self.content_revision = int(getattr(self, "content_revision", 0)) + 1
         self.scene_dirty = True
         self.dirty_state.is_dirty = True
 
