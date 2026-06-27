@@ -101,6 +101,25 @@ def draw(self) -> None:
         for layer in self._tilemap_foreground_layers:
             layer.draw()
 
+    # Foreground parallax image layers: drawn AFTER entities so they sit in front
+    # of the player (RPG-Maker ParallaxUpper canopies the player walks behind).
+    if self._foreground_layers:
+        camera_x, camera_y = base_camera_pos
+        zoom = float(self.window.camera_controller.zoom_state.current)
+        try:
+            self.window.camera_controller.gui_camera.use()
+            scene_controller_module.draw_background_layers(
+                self._foreground_layers,
+                camera_x=float(camera_x),
+                camera_y=float(camera_y),
+                viewport_w=float(self.window.width),
+                viewport_h=float(self.window.height),
+                zoom=zoom,
+                coordinate_space="projected",
+            )
+        finally:
+            self.window.camera.use()
+
     self._set_tilemap_perf_counters(tile_stats)
     self._set_render_cull_counter()
 
