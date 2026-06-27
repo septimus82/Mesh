@@ -36,6 +36,49 @@ def _deep_merge(dest: dict[str, Any], src: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
+def find_prefab_palette_entry(
+    palette: list[dict[str, Any]],
+    prefab_name: str,
+    *,
+    include_id: bool = False,
+) -> dict[str, Any] | None:
+    """Find a prefab palette entry using the same keys as AIOps by default."""
+    for entry in palette:
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("display_name") == prefab_name or entry.get("name") == prefab_name:
+            return entry
+        if include_id and entry.get("id") == prefab_name:
+            return entry
+    return None
+
+
+def build_prefab_entity_definition(
+    match: dict[str, Any],
+    prefab_name: str,
+    x: float,
+    y: float,
+    scene: dict[str, Any],
+    *,
+    name: str | None = None,
+) -> dict[str, Any]:
+    """Build a uniquely named entity definition from a prefab palette entry."""
+    entity_def = deepcopy(match.get("entity") or {})
+    entity_def["x"] = float(x)
+    entity_def["y"] = float(y)
+    if name:
+        entity_def["name"] = str(name)
+    if "name" not in entity_def or not entity_def.get("name"):
+        entity_def["name"] = f"{prefab_name}_{len(scene.get('entities', [])) + 1}"
+    existing_names = {e.get("name") for e in scene.get("entities", []) if isinstance(e, dict)}
+    base_name = str(entity_def["name"])
+    counter = 1
+    while entity_def["name"] in existing_names:
+        entity_def["name"] = f"{base_name}_{counter}"
+        counter += 1
+    return entity_def
+
+
 @dataclass
 class AIOpsResult:
     ok: bool
@@ -144,39 +187,17 @@ class AIOps:
     ) -> AIOpsResult:
         scene_file, scene = self._load_scene(scene_path)
         palette = load_prefab_palette(prefab_path or None or "", strict=False)
-        match = None
-        for entry in palette:
-            if not isinstance(entry, dict):
-                continue
-            if entry.get("display_name") == prefab_name or entry.get("name") == prefab_name:
-                match = entry
-                break
+        match = find_prefab_palette_entry(palette, prefab_name)
         if match is None and prefab_path:
             try:
                 raw = _load_json(Path(prefab_path))
                 if isinstance(raw, list):
-                    for entry in raw:
-                        if isinstance(entry, dict) and (
-                            entry.get("display_name") == prefab_name or entry.get("name") == prefab_name
-                        ):
-                            match = entry
-                            break
+                    match = find_prefab_palette_entry(raw, prefab_name)
             except Exception:
                 match = None
         if match is None:
             return AIOpsResult(False, f"Prefab '{prefab_name}' not found")
-        entity_def = deepcopy(match.get("entity") or {})
-        entity_def["x"] = float(x)
-        entity_def["y"] = float(y)
-        if "name" not in entity_def or not entity_def.get("name"):
-            entity_def["name"] = f"{prefab_name}_{len(scene.get('entities', [])) + 1}"
-        # Ensure unique name
-        existing_names = {e.get("name") for e in scene.get("entities", []) if isinstance(e, dict)}
-        base_name = entity_def["name"]
-        counter = 1
-        while entity_def["name"] in existing_names:
-            entity_def["name"] = f"{base_name}_{counter}"
-            counter += 1
+        entity_def = build_prefab_entity_definition(match, prefab_name, x, y, scene)
         scene.setdefault("entities", []).append(entity_def)
         self._save_scene(scene_file, scene)
         return AIOpsResult(True, f"Added prefab '{prefab_name}' to {scene_path}", {"entity_name": entity_def["name"]})

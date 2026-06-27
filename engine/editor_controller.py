@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from .editor.editor_inspector_controller import EditorInspectorController
     from .editor.editor_keymap_controller import EditorKeymapController
     from .editor.editor_lights_controller import EditorLightsController
+    from .editor.editor_live_ops_controller import EditorLiveOpsController
     from .editor.editor_marquee_controller import EditorMarqueeController
     from .editor.editor_overlay_controller import EditorOverlayController
     from .editor.editor_palette_controller import EditorPaletteController
@@ -248,6 +249,7 @@ class EditorModeController:
     entity_panels_controller: EditorEntityPanelsController
     undo: EditorUndoController
     lights: EditorLightsController
+    live_ops: EditorLiveOpsController
     play: EditorPlayController
     palette: EditorPaletteController
     hd2d: EditorHd2dController
@@ -888,6 +890,10 @@ class EditorModeController:
             self.undo_stack.append(cmd)
             self.redo_stack.clear()
             self._mark_dirty()
+
+    def apply_live_op(self, op: dict[str, Any]) -> dict[str, Any]:
+        """Apply one AI-style operation to the live editor scene."""
+        return self.live_ops.apply_live_op(op)
 
     def _mark_dirty(self) -> None:
         self.scene_dirty = True
