@@ -135,7 +135,18 @@ def _make_controller() -> EditorModeController:
             "id": "crate",
             "display_name": "Crate",
             "entity": {"name": "crate", "sprite": "assets/crate.png", "layer": "entities"},
-        }
+        },
+        {
+            "id": "guard",
+            "display_name": "Guard",
+            "entity": {
+                "name": "guard",
+                "sprite": "assets/guard.png",
+                "layer": "entities",
+                "behaviours": ["Patrol"],
+                "behaviour_config": {"Patrol": {"speed": 1.0}},
+            },
+        },
     ]
     controller.active = True
     controller._selected_entity_ids = []
@@ -161,6 +172,14 @@ def _proposal_ops(*names: str) -> list[dict[str, Any]]:
         }
         for index, name in enumerate(names)
     ]
+
+
+def _guard_add_op(name: str = "yard_guard") -> dict[str, Any]:
+    return {"type": "add_entity_from_prefab", "prefab_id": "guard", "x": 96, "y": 112, "name": name}
+
+
+def _entity_by_name(snapshot: dict[str, Any], name: str) -> dict[str, Any]:
+    return next(entity for entity in snapshot.get("entities", []) if isinstance(entity, dict) and entity.get("name") == name)
 
 
 def _add_entity(controller: EditorModeController, name: str = "ai_crate") -> _FakeSprite:
@@ -430,6 +449,141 @@ def test_reject_proposal_drops_it_without_mutation() -> None:
     assert result["ok"] is True
     assert len(scene_controller.all_sprites) == 0
     assert scene_controller._loaded_scene_data["entities"] == []
+    assert controller.undo.undo_stack == []
+    assert controller.content_revision == revision
+
+
+def test_yardstick_batch_add_guard_then_set_patrol_params_is_one_undoable_proposal() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    revision = controller.content_revision
+    ops = [
+        _guard_add_op("yard_guard"),
+        {
+            "type": "set_behaviour_params",
+            "entity_id": "yard_guard",
+            "behaviour_name": "Patrol",
+            "params": {"speed": 2.5, "points": [[0, 0], [32, 0]]},
+        },
+    ]
+
+    proposal = controller.stage_proposal(ops)
+
+    assert proposal.dry_run["ok"] is True
+    assert "yard_guard" in proposal.preview_summary
+    assert len(scene_controller.all_sprites) == 0
+    assert scene_controller._loaded_scene_data["entities"] == []
+    assert controller.content_revision == revision
+
+    result = controller.accept_proposal(proposal)
+
+    assert result["ok"] is True
+    assert len(scene_controller.all_sprites) == 1
+    assert len(scene_controller._loaded_scene_data["entities"]) == 1
+    payload = _entity_by_name(scene_controller.build_scene_snapshot(compact=False), "yard_guard")
+    assert payload["behaviour_config"]["Patrol"]["speed"] == 2.5
+    assert payload["behaviour_config"]["Patrol"]["points"] == [[0, 0], [32, 0]]
+    assert len(controller.undo.undo_stack) == 1
+    assert controller.undo.undo_stack[0]["type"] == "ApplyAIOpBatch"
+    assert len(controller.undo.undo_stack[0]["children"]) == 2
+
+    assert controller.undo.undo() is True
+    assert len(scene_controller.all_sprites) == 0
+    assert scene_controller._loaded_scene_data["entities"] == []
+    assert "yard_guard" not in _entity_names(scene_controller.build_scene_snapshot(compact=False))
+
+    assert controller.undo.redo() is True
+    assert len(scene_controller.all_sprites) == 1
+    payload = _entity_by_name(scene_controller.build_scene_snapshot(compact=False), "yard_guard")
+    assert payload["behaviour_config"]["Patrol"]["speed"] == 2.5
+    assert payload["behaviour_config"]["Patrol"]["points"] == [[0, 0], [32, 0]]
+
+
+def test_live_set_behaviour_params_updates_snapshot_and_undo_redo() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    add_result = controller.apply_live_op(_guard_add_op("patrol_guard"))
+    assert add_result["ok"] is True
+    revision_after_add = controller.content_revision
+
+    result = controller.apply_live_op(
+        {
+            "type": "set_behaviour_params",
+            "entity_id": "patrol_guard",
+            "behaviour_name": "Patrol",
+            "params": {"speed": 3.0},
+        }
+    )
+
+    assert result["ok"] is True
+    assert controller.content_revision == revision_after_add + 1
+    payload = _entity_by_name(scene_controller.build_scene_snapshot(compact=False), "patrol_guard")
+    assert payload["behaviour_config"]["Patrol"]["speed"] == 3.0
+    assert len(controller.undo.undo_stack) == 2
+    assert controller.undo.undo_stack[-1]["type"] == "ChangeProperty"
+
+    assert controller.undo.undo() is True
+    payload = _entity_by_name(scene_controller.build_scene_snapshot(compact=False), "patrol_guard")
+    assert payload["behaviour_config"]["Patrol"]["speed"] == 1.0
+
+    assert controller.undo.redo() is True
+    payload = _entity_by_name(scene_controller.build_scene_snapshot(compact=False), "patrol_guard")
+    assert payload["behaviour_config"]["Patrol"]["speed"] == 3.0
+
+
+def test_live_delete_entity_updates_snapshot_and_undo_redo() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    add_result = controller.apply_live_op(_guard_add_op("delete_guard"))
+    assert add_result["ok"] is True
+    revision_after_add = controller.content_revision
+
+    result = controller.apply_live_op({"type": "delete_entity", "entity_id": "delete_guard"})
+
+    assert result["ok"] is True
+    assert controller.content_revision == revision_after_add + 1
+    assert len(scene_controller.all_sprites) == 0
+    assert scene_controller._loaded_scene_data["entities"] == []
+    assert "delete_guard" not in _entity_names(scene_controller.build_scene_snapshot(compact=False))
+    assert len(controller.undo.undo_stack) == 2
+    assert controller.undo.undo_stack[-1]["type"] == "DeleteEntity"
+
+    assert controller.undo.undo() is True
+    assert len(scene_controller.all_sprites) == 1
+    assert [entity.get("name") for entity in scene_controller._loaded_scene_data["entities"]] == ["delete_guard"]
+    assert "delete_guard" in _entity_names(scene_controller.build_scene_snapshot(compact=False))
+
+    assert controller.undo.redo() is True
+    assert len(scene_controller.all_sprites) == 0
+    assert scene_controller._loaded_scene_data["entities"] == []
+
+
+def test_invalid_set_or_delete_proposal_refuses_accept_without_partial_apply() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    revision = controller.content_revision
+    proposal = controller.stage_proposal(
+        [
+            _guard_add_op("valid_but_not_applied"),
+            {
+                "type": "set_behaviour_params",
+                "entity_id": "missing_guard",
+                "behaviour_name": "Patrol",
+                "params": {"speed": 4.0},
+            },
+            {"type": "delete_entity", "entity_id": "also_missing"},
+        ]
+    )
+
+    assert proposal.dry_run["ok"] is False
+    assert len(proposal.dry_run["warnings"]) == 2
+
+    result = controller.accept_proposal(proposal)
+
+    assert result["ok"] is False
+    assert len(scene_controller.all_sprites) == 0
+    assert scene_controller._loaded_scene_data["entities"] == []
+    assert "valid_but_not_applied" not in _entity_names(scene_controller.build_scene_snapshot(compact=False))
     assert controller.undo.undo_stack == []
     assert controller.content_revision == revision
 
