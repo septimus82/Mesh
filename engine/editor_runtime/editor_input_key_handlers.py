@@ -37,6 +37,9 @@ def handle_pre_routed_keys(controller: EditorController, key: int, modifiers: in
             return bool(handler(key, modifiers))
         return True
 
+    if _handle_ai_chat_key(controller, key, modifiers):
+        return True
+
     if key == optional_arcade.arcade.key.F and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
         search = getattr(controller, "search", None)
         if search is not None and search.focus_search_for_active_panel():
@@ -148,6 +151,8 @@ def _prefab_editor_should_route(controller: EditorController, prefab_editor: obj
 
 
 def _has_text_input_focus_or_edit_mode(controller: EditorController) -> bool:
+    if _ai_chat_input_focused(controller):
+        return True
     if bool(getattr(controller, "_inspector_text_edit_active", False)):
         return True
     if bool(getattr(controller, "entity_panels_text_edit_active", False)):
@@ -160,6 +165,25 @@ def _has_text_input_focus_or_edit_mode(controller: EditorController) -> bool:
     if search is not None and getattr(search, "is_search_focused", lambda: False)():
         return True
     return False
+
+
+def _handle_ai_chat_key(controller: EditorController, key: int, modifiers: int) -> bool:
+    dock_ctl = getattr(controller, "dock", None)
+    snapshot = dock_ctl.get_snapshot() if dock_ctl is not None and hasattr(dock_ctl, "get_snapshot") else dock_ctl
+    if (getattr(snapshot, "right_tab", "Inspector") or "Inspector") != "AI Chat":
+        return False
+    overlay = getattr(getattr(controller, "window", None), "ai_chat_overlay", None)
+    handler = getattr(overlay, "handle_key", None) if overlay is not None else None
+    return bool(callable(handler) and handler(key, modifiers))
+
+
+def _ai_chat_input_focused(controller: EditorController) -> bool:
+    dock_ctl = getattr(controller, "dock", None)
+    snapshot = dock_ctl.get_snapshot() if dock_ctl is not None and hasattr(dock_ctl, "get_snapshot") else dock_ctl
+    if (getattr(snapshot, "right_tab", "Inspector") or "Inspector") != "AI Chat":
+        return False
+    chat = getattr(controller, "chat", None)
+    return bool(getattr(chat, "input_focused", False))
 
 
 def _cycle_right_dock_tab(controller: EditorController, delta: int) -> bool:

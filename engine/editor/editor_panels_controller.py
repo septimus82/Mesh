@@ -194,6 +194,7 @@ class EditorPanelsController:
         self.ui_layers.register_layer("inspector", "panel", z=10)
         self.ui_layers.register_layer("outliner", "panel", z=10)
         self.ui_layers.register_layer("history", "panel", z=10)
+        self.ui_layers.register_layer("ai_chat", "panel", z=10)
         self.ui_layers.register_layer("ai_proposals", "panel", z=10)
         self.ui_layers.register_layer("prefab_variant", "panel", z=10)
         self.ui_layers.register_layer("debug", "panel", z=10)
@@ -204,6 +205,7 @@ class EditorPanelsController:
             "inspector",
             "outliner",
             "history",
+            "ai_chat",
             "ai_proposals",
             "prefab_variant",
             "debug",

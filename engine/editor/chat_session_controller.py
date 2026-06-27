@@ -133,8 +133,11 @@ class ChatSessionController:
         self.max_tool_rounds = int(max_tool_rounds)
         self.messages: list[dict[str, Any]] = []
         self.visible_messages: list[dict[str, Any]] = []
+        self.current_input = ""
+        self.input_focused = False
         self.last_error: str | None = None
         self.is_running = False
+        self.cancel_requested = False
         self._worker: threading.Thread | None = None
         self._tool_executor = ToolExecutor(editor, self.dispatcher)
 
@@ -155,11 +158,37 @@ class ChatSessionController:
 
         self.messages.append({"role": "user", "content": prompt})
         self.visible_messages.append({"role": "user", "text": prompt})
+        self.current_input = ""
         self.last_error = None
+        self.cancel_requested = False
         self.is_running = True
         self._worker = threading.Thread(target=self._run_worker, name="mesh-claude-chat", daemon=True)
         self._worker.start()
         return {"ok": True, "message": "Claude chat started"}
+
+    def submit_current_input(self) -> dict[str, Any]:
+        return self.submit(self.current_input)
+
+    def cancel(self) -> dict[str, Any]:
+        self.cancel_requested = True
+        if self.is_running:
+            self.visible_messages.append({"role": "system", "text": "Claude chat cancellation requested.", "status": "cancelled"})
+            return {"ok": True, "message": "Claude chat cancellation requested"}
+        return {"ok": False, "reason": "not_running", "message": "Claude chat is not running"}
+
+    def append_input_text(self, text: str) -> bool:
+        if not self.input_focused:
+            return False
+        if text and text.isprintable():
+            self.current_input += text
+            return True
+        return False
+
+    def backspace_input(self) -> bool:
+        if not self.input_focused:
+            return False
+        self.current_input = self.current_input[:-1]
+        return True
 
     def drain(self, *, limit: int = 50) -> int:
         drain = getattr(self.dispatcher, "drain", None)
@@ -183,6 +212,8 @@ class ChatSessionController:
 
     def _run_tool_loop(self, client: Any) -> None:
         for _round in range(self.max_tool_rounds):
+            if self.cancel_requested:
+                return
             final_message = self._stream_final_message(client)
             assistant_blocks = ClaudeMessageAdapter.content_blocks(final_message)
             self.messages.append({"role": "assistant", "content": ClaudeMessageAdapter.to_anthropic_content(assistant_blocks)})
