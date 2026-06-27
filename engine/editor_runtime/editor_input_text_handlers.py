@@ -17,6 +17,9 @@ def handle_text_input(controller: EditorController, text: str) -> None:
     if panels_is_open(controller, "unsaved_confirm"):
         return
 
+    if _handle_ai_chat_text(controller, text):
+        return
+
     # Project Explorer inline rename text input
     project_ctrl = getattr(controller, "project_explorer", None)
     if project_ctrl is not None and getattr(project_ctrl, "inline_rename_active", False):
@@ -107,6 +110,16 @@ def handle_text_input(controller: EditorController, text: str) -> None:
         if text.isprintable():
             controller.hierarchy_filter += text
             controller._refresh_hierarchy_list()
+
+
+def _handle_ai_chat_text(controller: EditorController, text: str) -> bool:
+    dock_ctl = getattr(controller, "dock", None)
+    snapshot = dock_ctl.get_snapshot() if dock_ctl is not None and hasattr(dock_ctl, "get_snapshot") else dock_ctl
+    if (getattr(snapshot, "right_tab", "Inspector") or "Inspector") != "AI Chat":
+        return False
+    overlay = getattr(getattr(controller, "window", None), "ai_chat_overlay", None)
+    handler = getattr(overlay, "on_text", None) if overlay is not None else None
+    return bool(callable(handler) and handler(text))
 
 
 def _item_editor_should_route(controller: EditorController, item_editor: object) -> bool:

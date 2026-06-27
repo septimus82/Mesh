@@ -47,6 +47,7 @@ def test_register_ui_layers_is_deterministic() -> None:
     assert layers_a == layers_b
 
     expected = [
+        ("ai_chat", "panel", 10, False),
         ("ai_proposals", "panel", 10, False),
         ("debug", "panel", 10, False),
         ("history", "panel", 10, False),

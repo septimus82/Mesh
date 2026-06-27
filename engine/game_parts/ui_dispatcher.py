@@ -34,6 +34,7 @@ from engine.ui import (
     UIElement,
 )
 from engine.ui_overlays import providers as ui_providers
+from engine.ui_overlays.ai_chat_overlay import AIChatOverlay
 from engine.ui_overlays.asset_browser_overlay import AssetBrowserOverlay
 from engine.ui_overlays.component_inspector_overlay import ComponentInspectorOverlay
 from engine.ui_overlays.debug_panels_overlay import DebugPanelsOverlay
@@ -193,6 +194,8 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
         editor_controller.dialogue_editor = EditorDialogueEditorController(editor_controller)
     window.dialogue_editor_overlay = DialogueEditorOverlay(window)
     window.register_ui_element(window.dialogue_editor_overlay)
+    window.ai_chat_overlay = AIChatOverlay(window)
+    window.register_ui_element(window.ai_chat_overlay)
     window.proposal_inbox_overlay = ProposalInboxOverlay(window)
     window.register_ui_element(window.proposal_inbox_overlay)
     window.undo_history_overlay = UndoHistoryOverlay(window)
