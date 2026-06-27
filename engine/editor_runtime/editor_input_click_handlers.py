@@ -121,6 +121,9 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
             if handled:
                 return True
 
+        if _handle_proposal_inbox_click(controller, x, y, button, modifiers):
+            return True
+
         debug_result = getattr(controller, "_debug_handle_mouse_click", None)
         if callable(debug_result):
             handled = debug_result(x, y, button)
@@ -325,6 +328,26 @@ def _is_inside_left_dock(controller: EditorController, x: float, y: float) -> bo
 
 def _is_inside_right_dock(controller: EditorController, x: float, y: float) -> bool:
     return _is_inside_dock(controller, x, y, "right")
+
+
+def _handle_proposal_inbox_click(
+    controller: EditorController,
+    x: float,
+    y: float,
+    button: int,
+    modifiers: int,
+) -> bool:
+    dock_ctl = getattr(controller, "dock", None)
+    snapshot = dock_ctl.get_snapshot() if dock_ctl is not None and hasattr(dock_ctl, "get_snapshot") else dock_ctl
+    if (getattr(snapshot, "right_tab", "Inspector") or "Inspector") != "AI Proposals":
+        return False
+    if not _is_inside_right_dock(controller, x, y):
+        return False
+    overlay = getattr(getattr(controller, "window", None), "proposal_inbox_overlay", None)
+    handler = getattr(overlay, "on_mouse_press", None) if overlay is not None else None
+    if not callable(handler):
+        return False
+    return bool(handler(x, y, button, modifiers))
 
 
 def _is_inside_dock(controller: EditorController, x: float, y: float, side: str) -> bool:
