@@ -198,6 +198,32 @@ class EditorLiveSessionBridge:
     def pending_count(self) -> int:
         return self._work.qsize()
 
+    def list_pending_proposals(self) -> list[dict[str, Any]]:
+        """Return GUI-safe summaries for proposals staged in this editor process."""
+        rows: list[dict[str, Any]] = []
+        for proposal_id, proposal in self._proposals.items():
+            dry_run = getattr(proposal, "dry_run", {})
+            if not isinstance(dry_run, dict):
+                dry_run = {}
+            affected_ids = dry_run.get("affected_ids")
+            rows.append(
+                {
+                    "proposal_id": str(proposal_id),
+                    "preview_summary": str(getattr(proposal, "preview_summary", "")),
+                    "affected_ids": list(affected_ids) if isinstance(affected_ids, list) else [],
+                    "dry_run": dict(dry_run),
+                }
+            )
+        return rows
+
+    def accept_pending_proposal(self, proposal_id: str) -> dict[str, Any]:
+        """Accept a staged proposal from the editor main thread."""
+        return self._accept_proposal({"proposal_id": proposal_id})
+
+    def reject_pending_proposal(self, proposal_id: str) -> dict[str, Any]:
+        """Reject a staged proposal from the editor main thread."""
+        return self._reject_proposal({"proposal_id": proposal_id})
+
     def _build_handler_class(self) -> type[BaseHTTPRequestHandler]:
         bridge = self
 
