@@ -51,8 +51,10 @@ class EditorCommandDispatchController:
             entity = self.editor._find_entity_by_name(entity_name)
             if entity:
                 self.editor._delete_entity_internal(entity)
+            self._remove_scene_entity(cmd)
 
         elif ctype == "DeleteEntity":
+            self._append_scene_entity(cmd.get("data"))
             self.editor._create_entity_internal(cmd["data"])
 
         elif ctype == "ModifyPatrolPath":
@@ -270,12 +272,14 @@ class EditorCommandDispatchController:
             self.editor._update_param_internal(cmd["behaviour"], cmd["param"], cmd["after"], entity_name)
 
         elif ctype == "AddEntity":
+            self._append_scene_entity(cmd.get("data"))
             self.editor._create_entity_internal(cmd["data"])
 
         elif ctype == "DeleteEntity":
             entity = self.editor._find_entity_by_name(entity_name)
             if entity:
                 self.editor._delete_entity_internal(entity)
+            self._remove_scene_entity(cmd)
 
         elif ctype == "ModifyPatrolPath":
              self.editor._update_param_internal("patrol", "points", cmd["after"], entity_name)
@@ -498,3 +502,47 @@ class EditorCommandDispatchController:
                 sc = getattr(self.editor.window, "scene_controller", None)
                 if sc:
                     sc._apply_entity_mutation(sprite, x=sprite.center_x, y=sprite.center_y)
+
+    def _scene_entities(self) -> list[dict[str, Any]] | None:
+        sc = getattr(self.editor.window, "scene_controller", None)
+        scene = getattr(sc, "_loaded_scene_data", None) if sc is not None else None
+        if not isinstance(scene, dict):
+            return None
+        entities = scene.setdefault("entities", [])
+        if not isinstance(entities, list):
+            return None
+        return entities
+
+    def _entity_identity(self, payload: Any) -> str:
+        if not isinstance(payload, dict):
+            return ""
+        for key in ("id", "entity_id", "name", "mesh_name"):
+            value = payload.get(key)
+            if isinstance(value, str) and value:
+                return value
+        return ""
+
+    def _append_scene_entity(self, payload: Any) -> None:
+        if not isinstance(payload, dict):
+            return
+        entities = self._scene_entities()
+        if entities is None:
+            return
+        identity = self._entity_identity(payload)
+        if identity:
+            for entity in entities:
+                if self._entity_identity(entity) == identity:
+                    return
+        entities.append(copy.deepcopy(payload))
+
+    def _remove_scene_entity(self, cmd: Dict[str, Any]) -> None:
+        entities = self._scene_entities()
+        if entities is None:
+            return
+        identity = self._entity_identity(cmd.get("data"))
+        if not identity:
+            entity_name = cmd.get("entity_name")
+            identity = entity_name if isinstance(entity_name, str) else ""
+        if not identity:
+            return
+        entities[:] = [entity for entity in entities if self._entity_identity(entity) != identity]
