@@ -25,6 +25,10 @@ class EditorOverlayController:
 
     def draw_overlay(self) -> None:
         editor = self._editor
+        drain_main_thread = getattr(editor, "drain_main_thread_dispatcher", None)
+        if callable(drain_main_thread):
+            drain_main_thread()
+
         drain_live_bridge = getattr(editor, "drain_live_bridge", None)
         if callable(drain_live_bridge):
             drain_live_bridge()

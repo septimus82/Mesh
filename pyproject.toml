@@ -29,6 +29,13 @@ dev = [
 mcp = [
     "mcp>=1.0",
 ]
+# Optional: enables the native in-editor Claude chatbox. The engine imports it
+# behind a guard and keeps editor startup safe without this extra. Install with:
+# pip install -e .[chat]
+chat = [
+    # 0.112.0 is the current published SDK; model id and adaptive thinking are API-validated request fields.
+    "anthropic>=0.112.0,<1",
+]
 
 [project.scripts]
 mesh = "mesh_cli:main"
