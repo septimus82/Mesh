@@ -279,7 +279,7 @@ class EditorAssetBrowserController:
             scene_data = getattr(scene_controller, "_loaded_scene_data", None)
             if isinstance(scene_data, dict):
                 spawn_entity_from_asset(scene_data, self._editor.asset_place_path, (x, y))
-                self._editor.scene_dirty = True
+                self._editor._mark_dirty()
                 if hasattr(scene_controller, "reload_scene"):
                     scene_controller.reload_scene()
 

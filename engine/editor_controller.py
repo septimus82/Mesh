@@ -895,6 +895,18 @@ class EditorModeController:
         """Apply one AI-style operation to the live editor scene."""
         return self.live_ops.apply_live_op(op)
 
+    def stage_proposal(self, ops: list[dict[str, Any]]) -> Any:
+        """Validate and stage an AI live-op batch without mutating the scene."""
+        return self.live_ops.stage_proposal(ops)
+
+    def accept_proposal(self, proposal: Any) -> dict[str, Any]:
+        """Accept a staged AI live-op batch if its base revision is current."""
+        return self.live_ops.accept_proposal(proposal)
+
+    def reject_proposal(self, proposal: Any) -> dict[str, Any]:
+        """Reject a staged AI live-op batch without mutating the scene."""
+        return self.live_ops.reject_proposal(proposal)
+
     def read_live_scene(self, compact: bool = False) -> dict[str, Any]:
         """Return the current live editor scene snapshot for AI read-back."""
         from engine.editor.editor_selection_model import selected_entity_ids  # noqa: PLC0415

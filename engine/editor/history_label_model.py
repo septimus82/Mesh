@@ -21,6 +21,7 @@ _COMMAND_ACTION_IDS: dict[str, str] = {
     "DeleteLight": "editor.light.delete",
     "MoveLight": "editor.light.move",
     "EditOccluder": "editor.occluder.edit",
+    "ApplyAIOpBatch": "editor.ai.apply_batch",
 }
 
 _COMMAND_LABELS: dict[str, str] = {
@@ -40,6 +41,7 @@ _COMMAND_LABELS: dict[str, str] = {
     "MoveLight": "Move Light",
     "EditLight": "Edit Light",
     "EditOccluder": "Edit Occluder",
+    "ApplyAIOpBatch": "Apply AI Proposal",
 }
 
 
