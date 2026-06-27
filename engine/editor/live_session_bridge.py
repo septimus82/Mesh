@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import parse_qs, urlsplit
 
 SESSION_SCHEMA_VERSION = 1
 SESSION_RELATIVE_PATH = Path(".mesh") / "live_session.json"
@@ -180,20 +181,26 @@ class EditorLiveSessionBridge:
                 return
 
             def do_GET(self) -> None:  # noqa: N802
-                if self.path.split("?", 1)[0] != "/health":
-                    self._send_json({"ok": False, "reason": "not_found"}, status=404)
-                    return
+                parsed = urlsplit(self.path)
+                path = parsed.path
                 if not self._authorized():
                     self._send_json({"ok": False, "reason": "unauthorized"}, status=401)
                     return
-                self._send_json(
-                    {
-                        "ok": True,
-                        "session_id": bridge.session_id,
-                        "workspace_root": str(bridge.workspace_root),
-                        "current_scene_path": bridge._current_scene_path(),
-                    }
-                )
+                if path == "/health":
+                    self._send_json(
+                        {
+                            "ok": True,
+                            "session_id": bridge.session_id,
+                            "workspace_root": str(bridge.workspace_root),
+                            "current_scene_path": bridge._current_scene_path(),
+                        }
+                    )
+                    return
+                if path == "/live/read_scene":
+                    compact = _truthy(parse_qs(parsed.query).get("compact", ["false"])[0])
+                    self._send_json(bridge._enqueue(lambda: bridge._read_scene(compact=compact)))
+                    return
+                self._send_json({"ok": False, "reason": "not_found"}, status=404)
 
             def do_POST(self) -> None:  # noqa: N802
                 if not self._authorized():
@@ -206,6 +213,9 @@ class EditorLiveSessionBridge:
                     return
                 if path == "/live/accept_proposal":
                     self._send_json(bridge._enqueue(lambda: bridge._accept_proposal(payload)))
+                    return
+                if path == "/live/reject_proposal":
+                    self._send_json(bridge._enqueue(lambda: bridge._reject_proposal(payload)))
                     return
                 self._send_json({"ok": False, "reason": "not_found"}, status=404)
 
@@ -256,6 +266,8 @@ class EditorLiveSessionBridge:
                 "preview_summary": str(getattr(proposal, "preview_summary", "")),
                 "dry_run": getattr(proposal, "dry_run", {}),
             },
+            "preview": str(getattr(proposal, "preview_summary", "")),
+            "dry_run": getattr(proposal, "dry_run", {}),
         }
 
     def _accept_proposal(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -271,6 +283,27 @@ class EditorLiveSessionBridge:
         result.setdefault("proposal_id", proposal_id)
         return result
 
+    def _reject_proposal(self, payload: dict[str, Any]) -> dict[str, Any]:
+        proposal_id = str(payload.get("proposal_id") or "")
+        proposal = self._proposals.get(proposal_id)
+        if proposal is None:
+            return {"ok": False, "mode": "live_editor", "reason": "proposal_not_found"}
+        result = dict(self.editor.reject_proposal(proposal))
+        self._proposals.pop(proposal_id, None)
+        result.setdefault("mode", "live_editor")
+        result.setdefault("proposal_id", proposal_id)
+        return result
+
+    def _read_scene(self, *, compact: bool = False) -> dict[str, Any]:
+        result = dict(self.editor.read_live_scene(compact=compact))
+        result.setdefault("ok", True)
+        result.setdefault("mode", "live_editor")
+        return result
+
     def _current_scene_path(self) -> str:
         scene_controller = getattr(getattr(self.editor, "window", None), "scene_controller", None)
         return str(getattr(scene_controller, "current_scene_path", "") or "")
+
+
+def _truthy(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "on"}

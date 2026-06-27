@@ -524,6 +524,34 @@ def live_add_entity_from_prefab(
     return live_stage_and_accept_add_entity(op, root=root)
 
 
+def live_read_scene(compact: bool = False, root: str = ".") -> dict[str, Any]:
+    """Read the unsaved live editor scene through the active live session."""
+    from engine.mcp_server.live_session_client import live_read_scene as _live_read_scene
+
+    return _live_read_scene(compact=compact, root=root)
+
+
+def live_stage_proposal(ops: list[dict[str, Any]], root: str = ".") -> dict[str, Any]:
+    """Stage an AI live-op proposal in the running editor without mutating it."""
+    from engine.mcp_server.live_session_client import live_stage_proposal as _live_stage_proposal
+
+    return _live_stage_proposal(ops, root=root)
+
+
+def live_accept_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
+    """Accept a staged live proposal by id if it is still revision-current."""
+    from engine.mcp_server.live_session_client import live_accept_proposal as _live_accept_proposal
+
+    return _live_accept_proposal(proposal_id, root=root)
+
+
+def live_reject_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
+    """Reject and drop a staged live proposal by id."""
+    from engine.mcp_server.live_session_client import live_reject_proposal as _live_reject_proposal
+
+    return _live_reject_proposal(proposal_id, root=root)
+
+
 # -------------------------------------------------------------- batch action
 def list_op_types() -> list[dict[str, Any]]:
     """List every operation `apply_ops` accepts, with required/optional fields.
