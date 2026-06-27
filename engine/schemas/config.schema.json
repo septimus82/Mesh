@@ -21,6 +21,10 @@
     "content_roots": {
       "$ref": "#/$defs/nonEmptyStringArray"
     },
+    "cocreative_live_bridge_enabled": {
+      "type": "boolean",
+      "default": true
+    },
     "day_length_seconds": {
       "type": "number",
       "deprecated": true

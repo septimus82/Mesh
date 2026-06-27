@@ -318,6 +318,7 @@ class EditorModeController:
         self.window = window
         self.active: bool = False
         self.selected_entity: Optional[optional_arcade.arcade.Sprite] = None
+        self.live_bridge: Any | None = None
         self.entity_dragging: bool = False
         self.entity_drag_start_pos: Optional[tuple[float, float]] = None
         self.grid_size: float = 16.0
@@ -928,6 +929,18 @@ class EditorModeController:
         if not callable(drain):
             return 0
         return int(drain(limit=limit))
+
+    def refresh_live_bridge_scene(self) -> None:
+        """Refresh live-session discovery after the current scene changes."""
+        from engine.editor.live_bridge_lifecycle import refresh_live_bridge_scene  # noqa: PLC0415
+
+        refresh_live_bridge_scene(self)
+
+    def stop_live_bridge(self) -> None:
+        """Stop the live-session bridge if it is running."""
+        from engine.editor.live_bridge_lifecycle import stop_live_bridge  # noqa: PLC0415
+
+        stop_live_bridge(self)
 
     def _mark_dirty(self) -> None:
         self.content_revision = int(getattr(self, "content_revision", 0)) + 1

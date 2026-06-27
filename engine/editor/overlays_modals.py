@@ -91,9 +91,15 @@ def _enable_editor_mode(self: Any) -> None:
     tour = getattr(self, "tour", None)
     if tour is not None and callable(getattr(tour, "maybe_start", None)):
         tour.maybe_start()
+    from engine.editor.live_bridge_lifecycle import maybe_start_live_bridge  # noqa: PLC0415
+
+    maybe_start_live_bridge(self)
 
 
 def _disable_editor_mode(self: Any) -> None:
+    from engine.editor.live_bridge_lifecycle import stop_live_bridge  # noqa: PLC0415
+
+    stop_live_bridge(self)
     self._flush_workspace_autosave()
     self.active = False
     _EDITOR_LOGGER.info("[Editor] Mode DISABLED")

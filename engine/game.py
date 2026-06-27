@@ -694,12 +694,20 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         stop_hot_reload_watcher(self)
 
     def on_close(self) -> None:
+        editor = getattr(self, "editor_controller", None)
+        stop_live_bridge = getattr(editor, "stop_live_bridge", None) if editor is not None else None
+        if callable(stop_live_bridge):
+            stop_live_bridge()
         self._stop_asset_hot_reload_watcher()
         base_on_close = getattr(engine.optional_arcade.arcade.Window, "on_close", None)
         if callable(base_on_close):
             base_on_close(self)
 
     def close(self) -> None:
+        editor = getattr(self, "editor_controller", None)
+        stop_live_bridge = getattr(editor, "stop_live_bridge", None) if editor is not None else None
+        if callable(stop_live_bridge):
+            stop_live_bridge()
         self._stop_asset_hot_reload_watcher()
         base_close = getattr(engine.optional_arcade.arcade.Window, "close", None)
         if callable(base_close):
