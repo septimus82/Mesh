@@ -13,11 +13,28 @@ logger = get_logger(__name__)
 MODEL_ID = "claude-opus-4-8"
 OPENAI_COMPATIBLE_MODEL_ID = "qwen3:14b"
 OPENAI_COMPATIBLE_BASE_URL = "http://localhost:11434/v1"
-SYSTEM_PROMPT = (
-    "You are Mesh's in-editor co-creative scene assistant. Inspect the live scene before proposing "
-    "changes. You may stage proposals for the human to review in the AI Proposals dock. Never accept "
-    "or apply proposals yourself."
-)
+
+
+def build_system_prompt() -> str:
+    return (
+        "You are a scene-EDITING assistant for the Mesh editor. When the user asks to add, place, move, "
+        "change, or remove anything, you MUST call stage_proposal with the correct Mesh ops. Do NOT "
+        "summarize the scene, explain quests, or answer like a player-facing game guide. If you need facts "
+        "first, call read_live_scene, list_prefabs, or list_entities, THEN stage_proposal. Proposals are "
+        "reviewed by a human before they apply, so propose concrete edits rather than asking permission.\n\n"
+        "Use only real prefab ids from list_prefabs. Use real entity names/positions from list_entities or "
+        "read_live_scene. Supported live ops are:\n"
+        '- add_entity_from_prefab: {"type":"add_entity_from_prefab","prefab_id":"<id from list_prefabs>",'
+        '"x":<number>,"y":<number>,"name":"optional_unique_name"}\n'
+        '- set_behaviour_params: {"type":"set_behaviour_params","entity_id":"<entity name/id>",'
+        '"behaviour_name":"<behaviour>","params":{...}}\n'
+        '- delete_entity: {"type":"delete_entity","entity_id":"<entity name/id>"}\n'
+        "Example proposal: call stage_proposal with "
+        '{"ops":[{"type":"add_entity_from_prefab","prefab_id":"crate","x":700,"y":360}]}'
+    )
+
+
+SYSTEM_PROMPT = build_system_prompt()
 
 
 CHAT_TOOLS: list[dict[str, Any]] = [
@@ -31,8 +48,32 @@ CHAT_TOOLS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "list_prefabs",
+        "description": "List valid prefab ids and display names from the Mesh editor prefab palette. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "list_entities",
+        "description": "List existing live scene entities with names/ids and positions. Read-only.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"selected_only": {"type": "boolean"}},
+            "additionalProperties": False,
+        },
+    },
+    {
         "name": "stage_proposal",
-        "description": "Stage a proposal for human review in the AI Proposals dock. Does not apply changes.",
+        "description": (
+            "Stage concrete Mesh scene edits for human review in the AI Proposals dock. Does not apply changes. "
+            'Ops schema examples: add {"type":"add_entity_from_prefab","prefab_id":"<id from list_prefabs>",'
+            '"x":<number>,"y":<number>,"name":"optional"}; set params {"type":"set_behaviour_params",'
+            '"entity_id":"<entity name/id>","behaviour_name":"Patrol","params":{...}}; delete '
+            '{"type":"delete_entity","entity_id":"<entity name/id>"}.'
+        ),
         "input_schema": {
             "type": "object",
             "properties": {"ops": {"type": "array", "items": {"type": "object"}}},
@@ -196,6 +237,11 @@ class ToolExecutor:
         if name == "read_live_scene":
             compact = bool(payload.get("compact", False)) if isinstance(payload, dict) else False
             return self._dispatcher.call_sync(lambda: dict(self._editor.read_live_scene(compact=compact)))
+        if name == "list_prefabs":
+            return self._dispatcher.call_sync(lambda: _list_prefabs(self._editor))
+        if name == "list_entities":
+            selected_only = bool(payload.get("selected_only", False)) if isinstance(payload, dict) else False
+            return self._dispatcher.call_sync(lambda: _list_entities(self._editor, selected_only=selected_only))
         if name == "stage_proposal":
             ops = payload.get("ops") if isinstance(payload, dict) else None
             if not isinstance(ops, list):
@@ -405,6 +451,68 @@ def _stage_into_inbox(editor: Any, ops: list[dict[str, Any]]) -> dict[str, Any]:
         setattr(editor, "live_bridge", bridge)
         stage = bridge.stage_pending_proposal
     return dict(stage(ops))
+
+
+def _list_prefabs(editor: Any) -> dict[str, Any]:
+    prefabs: list[dict[str, Any]] = []
+    for prefab in list(getattr(editor, "prefab_palette", []) or []):
+        if not isinstance(prefab, dict):
+            continue
+        prefab_id = str(prefab.get("id") or prefab.get("prefab_id") or prefab.get("name") or "").strip()
+        if not prefab_id:
+            continue
+        prefabs.append(
+            {
+                "id": prefab_id,
+                "display_name": str(prefab.get("display_name") or prefab.get("name") or prefab_id),
+            }
+        )
+    return {"ok": True, "prefabs": prefabs}
+
+
+def _list_entities(editor: Any, *, selected_only: bool = False) -> dict[str, Any]:
+    from engine.editor.editor_selection_model import selected_entity_ids  # noqa: PLC0415
+
+    scene_controller = getattr(getattr(editor, "window", None), "scene_controller", None)
+    snapshot = scene_controller.build_scene_snapshot(compact=False) if scene_controller is not None else {}
+    selected_ids = set(selected_entity_ids(editor))
+    entities: list[dict[str, Any]] = []
+    for entity in list(snapshot.get("entities", []) if isinstance(snapshot, dict) else []):
+        if not isinstance(entity, dict):
+            continue
+        entity_id = _entity_identifier(entity)
+        if selected_only and entity_id not in selected_ids:
+            continue
+        entities.append(
+            {
+                "id": entity_id,
+                "name": str(entity.get("name") or entity_id),
+                "x": _coerce_number(entity.get("x")),
+                "y": _coerce_number(entity.get("y")),
+            }
+        )
+    return {"ok": True, "selected_only": bool(selected_only), "entities": entities}
+
+
+def _entity_identifier(entity: dict[str, Any]) -> str:
+    for key in ("id", "entity_id", "mesh_name", "name"):
+        value = entity.get(key)
+        if value:
+            return str(value)
+    return ""
+
+
+def _coerce_number(value: Any) -> float | int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return value
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def anthropic_tools_to_openai_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
