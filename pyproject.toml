@@ -36,6 +36,13 @@ chat = [
     # 0.112.0 is the current published SDK; model id and adaptive thinking are API-validated request fields.
     "anthropic>=0.112.0,<1",
 ]
+# Optional: enables local/OpenAI-compatible native chat providers such as
+# Ollama's http://localhost:11434/v1 endpoint. Install with:
+# pip install -e .[chat-local]
+chat-local = [
+    # 2.44.0 is the current published SDK and includes Chat Completions streaming/tool calls.
+    "openai>=2.44.0,<3",
+]
 
 [project.scripts]
 mesh = "mesh_cli:main"
