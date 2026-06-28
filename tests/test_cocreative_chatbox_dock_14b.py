@@ -8,7 +8,9 @@ import pytest
 import engine.optional_arcade as optional_arcade
 from engine.editor.dock_tab_registry import DOCK_TAB_TOOLTIPS, RIGHT_DOCK_TABS
 from engine.editor.editor_dock_controller import EditorDockController
-from engine.ui_overlays.ai_chat_overlay import AIChatOverlay
+from engine.editor.editor_focus_model import is_text_input_active_for_controller
+from engine.editor_runtime.editor_input_shortcut_handlers import is_text_input_active
+from engine.ui_overlays.ai_chat_overlay import AIChatOverlay, build_transcript_lines, wrap_transcript_text
 from tests.test_cocreative_chatbox_14a import _FakeClient, _FakeFactory, _run_chat_to_completion, _text, _tool_use
 from tests.test_cocreative_live_ops import _entity_names, _make_controller
 
@@ -92,6 +94,61 @@ def test_ai_chat_text_input_routes_through_editor_text_and_key_handlers(monkeypa
     assert submit_calls == ["a"]
 
 
+def test_ai_chat_input_focus_marks_text_input_active(monkeypatch: pytest.MonkeyPatch) -> None:
+    controller = _make_controller()
+    overlay = _install_and_draw_chat_overlay(controller, monkeypatch)
+    input_x, input_y = _input_center(overlay)
+
+    assert is_text_input_active(controller) is False
+
+    assert controller.handle_mouse_click(input_x, input_y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+
+    assert is_text_input_active(controller) is True
+    assert is_text_input_active_for_controller("ai_chat", controller) is True
+
+    assert controller.handle_input(optional_arcade.arcade.key.ESCAPE, 0) is True
+    assert is_text_input_active(controller) is False
+
+    controller.chat.input_focused = True
+    controller.dock.set_right_tab("Inspector", force=True)
+    assert is_text_input_active(controller) is False
+
+
+def test_ai_chat_focus_suppresses_global_command_palette_hotkey(monkeypatch: pytest.MonkeyPatch) -> None:
+    controller = _make_controller()
+    overlay = _install_and_draw_chat_overlay(controller, monkeypatch)
+    calls: list[str] = []
+    controller.run_editor_action = lambda action_id: calls.append(str(action_id)) or True  # type: ignore[method-assign]
+    input_x, input_y = _input_center(overlay)
+    assert controller.handle_mouse_click(input_x, input_y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+
+    handled = controller.handle_input(optional_arcade.arcade.key.P, optional_arcade.arcade.key.MOD_CTRL)
+
+    assert handled is True
+    assert calls == []
+    assert controller.chat.input_focused is True
+
+    controller.chat.input_focused = False
+    handled = controller.handle_input(optional_arcade.arcade.key.P, optional_arcade.arcade.key.MOD_CTRL)
+
+    assert handled is True
+    assert calls == ["editor.command_palette.toggle"]
+
+
+def test_ai_chat_click_outside_input_releases_focus(monkeypatch: pytest.MonkeyPatch) -> None:
+    controller = _make_controller()
+    overlay = _install_and_draw_chat_overlay(controller, monkeypatch)
+    input_x, input_y = _input_center(overlay)
+    assert controller.handle_mouse_click(input_x, input_y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+
+    rect = getattr(overlay, "_transcript_rect")
+    assert rect is not None
+    left, bottom, width, height = rect
+    assert controller.handle_mouse_click(left + width - 2, bottom + height - 2, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+
+    assert controller.chat.input_focused is False
+
+
 def test_ai_chat_overlay_click_not_reached_from_other_right_tab(monkeypatch: pytest.MonkeyPatch) -> None:
     controller = _make_controller()
     overlay = _install_and_draw_chat_overlay(controller, monkeypatch)
@@ -171,6 +228,33 @@ def test_ai_chat_dock_submit_stages_proposal_and_updates_transcript(monkeypatch:
     assert "crate" in visible_text
     assert "Staged a crate proposal." in visible_text
     assert "dock_chat_crate" not in _entity_names(controller.window.scene_controller.build_scene_snapshot(compact=False))
+
+
+def test_ai_chat_wrap_helper_and_layout_include_all_wrapped_lines() -> None:
+    long_text = "alpha beta gamma delta epsilon zeta"
+
+    wrapped = wrap_transcript_text(long_text, 12)
+    layout = build_transcript_lines([{"role": "assistant", "text": long_text}], 12)
+
+    assert len(wrapped) > 1
+    assert all(len(line) <= 12 for line in wrapped)
+    assert [line["text"] for line in layout] == wrap_transcript_text(f"assistant: {long_text}", 12)
+    assert len(layout) > 1
+
+
+def test_ai_chat_transcript_scroll_changes_visible_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    controller = _make_controller()
+    overlay = _install_and_draw_chat_overlay(controller, monkeypatch)
+    controller.chat.visible_messages = [{"role": "assistant", "text": f"message {idx} " * 5} for idx in range(20)]
+    overlay.draw()
+    rect = getattr(overlay, "_transcript_rect")
+    assert rect is not None
+    left, bottom, width, height = rect
+    assert len(getattr(overlay, "_transcript_lines")) > int(height // 18)
+
+    assert overlay.on_mouse_scroll(left + width / 2, bottom + height / 2, 0, 4) is True
+
+    assert getattr(overlay, "_scroll_offset_lines") > 0
 
 
 def _install_and_draw_chat_overlay(controller: Any, monkeypatch: pytest.MonkeyPatch) -> AIChatOverlay:

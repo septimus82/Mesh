@@ -28,6 +28,9 @@ class AIChatOverlay(UIElement):
         super().__init__(window)
         self._text_cache = TextCache(max_size=256)
         self._input_rect: tuple[float, float, float, float] | None = None
+        self._transcript_rect: tuple[float, float, float, float] | None = None
+        self._transcript_lines: list[dict[str, Any]] = []
+        self._scroll_offset_lines = 0
         self._button_rects: dict[str, tuple[float, float, float, float]] = {}
 
     def draw(self) -> None:
@@ -39,6 +42,8 @@ class AIChatOverlay(UIElement):
             return
         if not self._is_active_tab(controller):
             self._input_rect = None
+            self._transcript_rect = None
+            self._transcript_lines = []
             self._button_rects.clear()
             return
 
@@ -70,6 +75,12 @@ class AIChatOverlay(UIElement):
 
         transcript_bottom = input_bottom + INPUT_H + PADDING
         transcript_top = content_top - LINE_H - PADDING
+        self._transcript_rect = (
+            dock.left + PADDING,
+            transcript_bottom,
+            max(1.0, dock.right - dock.left - (PADDING * 2)),
+            max(1.0, transcript_top - transcript_bottom),
+        )
         self._draw_transcript(chat, dock.left + PADDING, transcript_bottom, dock.right - PADDING, transcript_top)
         self._draw_input(chat)
         self._draw_button(send_rect, "Send", EDITOR_THEME.action_text if not bool(getattr(chat, "is_running", False)) else EDITOR_THEME.text_dim)
@@ -101,7 +112,21 @@ class AIChatOverlay(UIElement):
                 if callable(cancel):
                     cancel()
                 return True
-        return False
+        chat.input_focused = False
+        return True
+
+    def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool:  # noqa: ARG002
+        controller = getattr(self.window, "editor_controller", None)
+        if controller is None or not self._is_active_tab(controller):
+            return False
+        rect = self._transcript_rect
+        if rect is None or not _contains(rect, float(x), float(y)):
+            return False
+        capacity = self._visible_line_capacity(rect)
+        max_offset = max(0, len(self._transcript_lines) - capacity)
+        previous = self._scroll_offset_lines
+        self._scroll_offset_lines = max(0, min(max_offset, self._scroll_offset_lines + int(scroll_y)))
+        return previous != self._scroll_offset_lines or max_offset > 0
 
     def on_text(self, text: str) -> bool:
         controller = getattr(self.window, "editor_controller", None)
@@ -127,21 +152,24 @@ class AIChatOverlay(UIElement):
 
     def _draw_transcript(self, chat: Any, left: float, bottom: float, right: float, top: float) -> None:
         messages = list(getattr(chat, "visible_messages", []) if chat is not None else [])
-        y = top - LINE_H
         approx_char_w = max(1.0, 10 * 0.6)
         max_chars = int(max(1.0, (right - left) / approx_char_w))
-        for message in reversed(messages[-12:]):
-            if y < bottom:
-                break
-            role = str(message.get("role", "system")) if isinstance(message, dict) else "system"
-            text = str(message.get("text", "") if isinstance(message, dict) else "")
+        self._transcript_lines = build_transcript_lines(messages, max_chars)
+        capacity = self._visible_line_capacity((left, bottom, right - left, max(1.0, top - bottom)))
+        max_offset = max(0, len(self._transcript_lines) - capacity)
+        self._scroll_offset_lines = max(0, min(max_offset, self._scroll_offset_lines))
+        start = max(0, len(self._transcript_lines) - capacity - self._scroll_offset_lines)
+        visible = self._transcript_lines[start : start + capacity]
+        y = top - LINE_H
+        for line in visible:
+            role = str(line.get("role", "system"))
             color = EDITOR_THEME.text_primary
             if role == "user":
                 color = EDITOR_THEME.action_text
-            if isinstance(message, dict) and message.get("status") == "error":
+            if line.get("status") == "error":
                 color = EDITOR_THEME.warning_text
             draw_text_cached(
-                _truncate(f"{role}: {text}", max_chars),
+                str(line.get("text", "")),
                 left,
                 y,
                 color=color,
@@ -149,6 +177,10 @@ class AIChatOverlay(UIElement):
                 cache=self._text_cache,
             )
             y -= LINE_H
+
+    def _visible_line_capacity(self, rect: tuple[float, float, float, float]) -> int:
+        _left, _bottom, _width, height = rect
+        return max(1, int(float(height) // LINE_H))
 
     def _draw_input(self, chat: Any) -> None:
         if self._input_rect is None:
@@ -191,6 +223,54 @@ class AIChatOverlay(UIElement):
 def _contains(rect: tuple[float, float, float, float], x: float, y: float) -> bool:
     left, bottom, width, height = rect
     return left <= x <= left + width and bottom <= y <= bottom + height
+
+
+def build_transcript_lines(messages: list[Any], max_chars: int) -> list[dict[str, Any]]:
+    width = max(1, int(max_chars))
+    lines: list[dict[str, Any]] = []
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        role = str(message.get("role", "system") or "system")
+        status = message.get("status")
+        text = str(message.get("text", "") or "")
+        for wrapped in wrap_transcript_text(f"{role}: {text}", width):
+            line = {"role": role, "text": wrapped}
+            if status is not None:
+                line["status"] = status
+            lines.append(line)
+    return lines
+
+
+def wrap_transcript_text(text: str, max_chars: int) -> list[str]:
+    width = max(1, int(max_chars))
+    result: list[str] = []
+    for paragraph in str(text or "").splitlines() or [""]:
+        words = paragraph.split()
+        if not words:
+            result.append("")
+            continue
+        current = ""
+        for word in words:
+            pieces = _split_long_word(word, width)
+            for piece in pieces:
+                candidate = piece if not current else f"{current} {piece}"
+                if len(candidate) <= width:
+                    current = candidate
+                    continue
+                if current:
+                    result.append(current)
+                current = piece
+        if current:
+            result.append(current)
+    return result or [""]
+
+
+def _split_long_word(word: str, width: int) -> list[str]:
+    value = str(word)
+    if len(value) <= width:
+        return [value]
+    return [value[index : index + width] for index in range(0, len(value), width)]
 
 
 def _truncate(value: str, limit: int) -> str:

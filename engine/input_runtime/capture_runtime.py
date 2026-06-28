@@ -47,7 +47,7 @@ def handle_key_press(controller: "InputController", key: int, modifiers: int) ->
     """Handle key press events with capture priority.
 
     Returns True if the event was consumed and should not propagate further.
-    
+
     This function routes keys through the capture_key_router system first.
     """
     window = controller.window
@@ -153,6 +153,11 @@ def handle_mouse_scroll(controller: "InputController", x: float, y: float, scrol
     if editor is not None and getattr(editor, "active", False) and getattr(editor, "_find_everything_open", False):
         search = getattr(editor, "search", None)
         handler = getattr(search, "handle_find_everything_mouse_scroll", None)
+        if callable(handler) and handler(float(x), float(y), float(scroll_x), float(scroll_y)):
+            return True
+    if editor is not None and getattr(editor, "active", False):
+        overlay = getattr(window, "ai_chat_overlay", None)
+        handler = getattr(overlay, "on_mouse_scroll", None) if overlay is not None else None
         if callable(handler) and handler(float(x), float(y), float(scroll_x), float(scroll_y)):
             return True
     if editor is not None and getattr(editor, "active", False):
