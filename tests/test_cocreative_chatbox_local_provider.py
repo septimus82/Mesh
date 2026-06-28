@@ -168,6 +168,111 @@ def test_openai_streamed_malformed_tool_arguments_become_tool_error_block() -> N
     assert "Malformed tool arguments JSON" in blocks[0]["parse_error"]
 
 
+def test_text_tool_call_fenced_json_stages_proposal_on_main_thread() -> None:
+    controller = _make_controller()
+    main_thread_id = threading.get_ident()
+    calls: list[tuple[str, int]] = []
+    original_stage = controller.stage_proposal
+
+    def stage_guard(ops: list[dict[str, Any]]) -> Any:
+        calls.append(("stage_proposal", threading.get_ident()))
+        assert threading.get_ident() == main_thread_id
+        return original_stage(ops)
+
+    controller.stage_proposal = stage_guard  # type: ignore[method-assign]
+    content = (
+        "```json\n"
+        '{"name":"stage_proposal","arguments":{"ops":[{"type":"add_entity_from_prefab",'
+        '"prefab_id":"crate","x":700,"y":360,"name":"text_tool_crate"}]}}\n'
+        "```"
+    )
+    _FakeOpenAIClient.completions = _FakeCompletions([[_chunk(content=content)], [_chunk(content="Staged.")]])
+    controller.chat.set_client_factory(OpenAICompatibleProvider(openai_cls=_FakeOpenAIClient, model="qwen3:14b"))
+
+    result = controller.submit_chat_prompt("stage from text")
+    _run_chat_to_completion(controller)
+
+    assert result["ok"] is True
+    assert calls == [("stage_proposal", main_thread_id)]
+    assert len(controller.proposal_inbox.list_pending()) == 1
+    assert len(controller.window.scene_controller.all_sprites) == 0
+    assert controller.undo.undo_stack == []
+
+
+def test_text_tool_call_bare_json_read_live_scene_executes() -> None:
+    controller = _make_controller()
+    main_thread_id = threading.get_ident()
+    calls: list[tuple[str, int]] = []
+    original_read = controller.read_live_scene
+
+    def read_guard(*, compact: bool = False) -> dict[str, Any]:
+        calls.append(("read_live_scene", threading.get_ident()))
+        assert threading.get_ident() == main_thread_id
+        return original_read(compact=compact)
+
+    controller.read_live_scene = read_guard  # type: ignore[method-assign]
+    _FakeOpenAIClient.completions = _FakeCompletions(
+        [
+            [_chunk(content='{"name":"read_live_scene","arguments":{"compact":false}}')],
+            [_chunk(content="I inspected the scene.")],
+        ]
+    )
+    controller.chat.set_client_factory(OpenAICompatibleProvider(openai_cls=_FakeOpenAIClient, model="qwen3:14b"))
+
+    result = controller.submit_chat_prompt("inspect")
+    _run_chat_to_completion(controller)
+
+    assert result["ok"] is True
+    assert calls == [("read_live_scene", main_thread_id)]
+    assert controller.proposal_inbox.list_pending() == []
+
+
+def test_text_tool_call_arguments_json_string_is_parsed() -> None:
+    blocks = normalize_openai_stream(
+        [
+            _chunk(
+                content=(
+                    '{"name":"stage_proposal","arguments":"{\\"ops\\":[{\\"type\\":\\"add_entity_from_prefab\\",'
+                    '\\"prefab_id\\":\\"crate\\",\\"x\\":700,\\"y\\":360}]}"}'
+                )
+            )
+        ]
+    )
+
+    assert blocks == [
+        {
+            "type": "tool_use",
+            "id": "text-tool-0",
+            "name": "stage_proposal",
+            "input": {"ops": [{"type": "add_entity_from_prefab", "prefab_id": "crate", "x": 700, "y": 360}]},
+        }
+    ]
+
+
+def test_text_tool_call_plain_prose_and_malformed_json_stay_text() -> None:
+    prose_blocks = normalize_openai_stream([_chunk(content="I can help stage a proposal.")])
+    malformed_blocks = normalize_openai_stream([_chunk(content="{bad")])
+
+    assert prose_blocks == [{"type": "text", "text": "I can help stage a proposal."}]
+    assert malformed_blocks == [{"type": "text", "text": "{bad"}]
+
+
+def test_structured_tool_call_wins_over_text_fallback() -> None:
+    blocks = normalize_openai_stream(
+        [
+            _chunk(
+                content='{"name":"read_live_scene","arguments":{"compact":false}}',
+                tool_calls=[_tool_delta(0, tool_id="call-1", name="stage_proposal", arguments='{"ops":[]}')],
+            )
+        ]
+    )
+
+    assert blocks == [
+        {"type": "text", "text": '{"name":"read_live_scene","arguments":{"compact":false}}'},
+        {"type": "tool_use", "id": "call-1", "name": "stage_proposal", "input": {"ops": []}},
+    ]
+
+
 def test_provider_selection_defaults_to_anthropic_and_honors_openai_compatible_env(monkeypatch: Any) -> None:
     monkeypatch.delenv("MESH_CHAT_PROVIDER", raising=False)
     assert isinstance(create_chat_provider_from_env(), AnthropicProvider)
