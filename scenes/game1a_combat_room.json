@@ -1,0 +1,156 @@
+{
+  "name": "GAME-1a Combat Room",
+  "version": 1,
+  "schema_version": 1,
+  "settings": {
+    "background_color": "dark_blue_gray"
+  },
+  "layers": [
+    {
+      "name": "background"
+    },
+    {
+      "name": "entities"
+    },
+    {
+      "name": "foreground"
+    }
+  ],
+  "entities": [
+    {
+      "id": "game1a_spawn_default",
+      "name": "default",
+      "spawn_id": "default",
+      "tag": "spawn_point",
+      "x": 96,
+      "y": 180
+    },
+    {
+      "id": "game1a_player",
+      "mesh_name": "Player",
+      "name": "Player",
+      "prefab_id": "player",
+      "tag": "player",
+      "x": 96,
+      "y": 180,
+      "behaviours": [
+        "PlayerController",
+        "Health",
+        "Combat",
+        "CameraFollow"
+      ],
+      "behaviour_config": {
+        "Health": {
+          "hp": 20,
+          "max_hp": 20
+        },
+        "Combat": {
+          "cooldown": 0.35,
+          "damage": 5,
+          "hitbox_size": 44,
+          "range": 38,
+          "target_tag": "enemy"
+        }
+      }
+    },
+    {
+      "id": "game1a_enemy_01",
+      "name": "Shadow Chaser A",
+      "prefab_id": "chaser_enemy",
+      "tag": "enemy",
+      "x": 310,
+      "y": 180,
+      "behaviours": [
+        "EnemyAI",
+        "Health",
+        "Combat"
+      ],
+      "behaviour_config": {
+        "EnemyAI": {
+          "attack_radius": 42,
+          "detect_radius": 420,
+          "speed": 70,
+          "target_tag": "player"
+        },
+        "Health": {
+          "hp": 10,
+          "max_hp": 10
+        },
+        "Combat": {
+          "cooldown": 0.9,
+          "damage": 4,
+          "hitbox_size": 38,
+          "range": 34,
+          "target_tag": "player"
+        }
+      }
+    },
+    {
+      "id": "game1a_enemy_02",
+      "name": "Shadow Chaser B",
+      "prefab_id": "chaser_enemy",
+      "tag": "enemy",
+      "x": 390,
+      "y": 230,
+      "behaviours": [
+        "EnemyAI",
+        "Health",
+        "Combat"
+      ],
+      "behaviour_config": {
+        "EnemyAI": {
+          "attack_radius": 42,
+          "detect_radius": 420,
+          "speed": 70,
+          "target_tag": "player"
+        },
+        "Health": {
+          "hp": 10,
+          "max_hp": 10
+        },
+        "Combat": {
+          "cooldown": 0.9,
+          "damage": 4,
+          "hitbox_size": 38,
+          "range": 34,
+          "target_tag": "player"
+        }
+      }
+    },
+    {
+      "id": "game1a_encounter_controller",
+      "name": "EncounterController",
+      "sprite": "assets/placeholder.png",
+      "alpha": 0,
+      "x": 0,
+      "y": 0,
+      "behaviours": [
+        "EncounterCleared",
+        "SetGameStateOnEvent",
+        "EmitEventOnEvent"
+      ],
+      "behaviour_config": {
+        "EncounterCleared": {
+          "clear_event": "encounter_cleared",
+          "enemy_tag": "enemy"
+        },
+        "SetGameStateOnEvent": {
+          "event_type": "encounter_cleared",
+          "once": true,
+          "set_flags": {
+            "game1a.victory": true
+          },
+          "toast": "Encounter cleared"
+        },
+        "EmitEventOnEvent": {
+          "listen_event": "encounter_cleared",
+          "emit_event": "victory",
+          "emit_payload": {
+            "source": "encounter_cleared",
+            "scene": "scenes/game1a_combat_room.json"
+          }
+        }
+      }
+    }
+  ]
+}

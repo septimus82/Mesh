@@ -34,6 +34,7 @@ _BUILTIN_MODULES: tuple[str, ...] = (
     "engine.behaviours.dialogue",
     "engine.behaviours.dialogue_runner",
     "engine.behaviours.drop_table",
+    "engine.behaviours.encounter_cleared",
     "engine.behaviours.emit_event_on_event",
     "engine.behaviours.enemy_ai",
     "engine.behaviours.event_logger",
