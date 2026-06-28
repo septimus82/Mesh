@@ -471,6 +471,10 @@ def normalize_openai_stream(stream: Any) -> list[dict[str, Any]]:
         if parse_error:
             block["parse_error"] = parse_error
         blocks.append(block)
+    if text and not any(block.get("type") == "tool_use" for block in blocks):
+        fallback_blocks = _extract_text_tool_calls(text)
+        if fallback_blocks:
+            return fallback_blocks
     return blocks
 
 
@@ -532,6 +536,83 @@ def _parse_openai_tool_arguments(raw_arguments: str) -> tuple[dict[str, Any], st
     if not isinstance(parsed, dict):
         return {}, "Malformed tool arguments JSON: expected an object"
     return parsed, None
+
+
+def _extract_text_tool_calls(text: str) -> list[dict[str, Any]]:
+    payload = _extract_json_payload_from_text(text)
+    if payload is None:
+        return []
+    calls = payload if isinstance(payload, list) else [payload]
+    blocks: list[dict[str, Any]] = []
+    for index, call in enumerate(calls):
+        if not isinstance(call, dict):
+            return []
+        block = _text_tool_call_to_block(call, index)
+        if block is None:
+            return []
+        blocks.append(block)
+    return blocks
+
+
+def _extract_json_payload_from_text(text: str) -> Any | None:
+    raw = str(text or "").strip()
+    if not raw:
+        return None
+    fenced = _extract_fenced_json_body(raw)
+    candidates = [fenced] if fenced is not None else []
+    candidates.append(raw)
+    for candidate in candidates:
+        if candidate is None:
+            continue
+        try:
+            return json.loads(candidate.strip())
+        except (TypeError, json.JSONDecodeError):
+            continue
+    return None
+
+
+def _extract_fenced_json_body(text: str) -> str | None:
+    stripped = text.strip()
+    if not stripped.startswith("```"):
+        return None
+    lines = stripped.splitlines()
+    if len(lines) < 3:
+        return None
+    opener = lines[0].strip().lower()
+    if opener not in {"```", "```json"}:
+        return None
+    closer_index = next((index for index in range(1, len(lines)) if lines[index].strip() == "```"), None)
+    if closer_index is None:
+        return None
+    return "\n".join(lines[1:closer_index]).strip()
+
+
+def _text_tool_call_to_block(call: dict[str, Any], index: int) -> dict[str, Any] | None:
+    name = call.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return None
+    raw_arguments = call.get("arguments", call.get("parameters"))
+    arguments = _coerce_text_tool_arguments(raw_arguments)
+    if arguments is None:
+        return None
+    tool_id = call.get("id") or call.get("tool_use_id") or call.get("tool_call_id") or f"text-tool-{index}"
+    return {
+        "type": "tool_use",
+        "id": str(tool_id),
+        "name": name.strip(),
+        "input": arguments,
+    }
+
+
+def _coerce_text_tool_arguments(raw_arguments: Any) -> dict[str, Any] | None:
+    if isinstance(raw_arguments, dict):
+        return dict(raw_arguments)
+    if isinstance(raw_arguments, str):
+        parsed, parse_error = _parse_openai_tool_arguments(raw_arguments)
+        if parse_error:
+            return None
+        return parsed
+    return None
 
 
 def _get(obj: Any, key: str, default: Any = None) -> Any:
