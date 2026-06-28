@@ -19,12 +19,14 @@ from typing import Any
 from engine.mcp_server import tools
 
 HAS_MCP = False
+FastMCP: Any = None
 try:  # pragma: no cover - exercised only when the optional SDK is installed
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.fastmcp import FastMCP as _FastMCP
 
+    FastMCP = _FastMCP
     HAS_MCP = True
 except ImportError:  # pragma: no cover - the import-guard path
-    FastMCP = None  # type: ignore[assignment, misc]
+    pass
 
 
 SERVER_NAME = "mesh"

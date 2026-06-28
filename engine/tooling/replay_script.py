@@ -91,15 +91,15 @@ def _default_window_factory(script: dict[str, Any]) -> ReplayWindow:
 
 
 def _emit_event(window: Any, event_type: str, payload: dict[str, Any]) -> None:
-    # Update game state controller (records last_zone_id, etc.).
+    event = MeshEvent(type=event_type, payload=dict(payload))
+
     gsc = getattr(window, "game_state_controller", None)
     if gsc is not None and hasattr(gsc, "handle_event"):
-        gsc.handle_event({"type": event_type, "payload": dict(payload)})
+        gsc.handle_event(event)
 
-    # Update runtime quest manager (applies rewards).
     qm = getattr(window, "quest_manager", None)
     if qm is not None and hasattr(qm, "handle_event"):
-        qm.handle_event(MeshEvent(type=event_type, payload=dict(payload)))
+        qm.handle_event(event)
 
 
 def _repr_expect_value(value: Any) -> str:

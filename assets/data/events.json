@@ -177,6 +177,21 @@
       }
     },
     {
+      "description": "Fired when the last tagged encounter enemy dies in a combat room.",
+      "name": "encounter_cleared",
+      "payload": {
+        "enemy_tag": "string",
+        "source": "string"
+      }
+    },
+    {
+      "description": "Fired when a combat room encounter is won.",
+      "name": "victory",
+      "payload": {
+        "source": "string"
+      }
+    },
+    {
       "description": "Fired when a player selects a dialogue choice.",
       "name": "dialogue_choice",
       "payload": {

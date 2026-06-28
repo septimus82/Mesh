@@ -56,8 +56,6 @@ def handle_editor_action_shortcut(controller: "EditorController", key: int, modi
     shortcut = normalize_shortcut_event(key, modifiers)
     if not shortcut:
         return False
-    if is_text_input_active(controller):
-        return False
     # Skip single alphanumeric characters without modifiers (let text input handle them)
     if "+" not in shortcut and len(shortcut) == 1 and shortcut.isalnum():
         return False

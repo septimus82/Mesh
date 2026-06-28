@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 import engine.paths
+from engine.paths import reset_path_caches, set_content_roots
 from engine.tooling.plan_executor import PlanExecutor
 from engine.tooling.plan_types import Plan
 
@@ -52,6 +53,8 @@ def _write_world_and_scenes(tmp_path: Path) -> None:
 def test_plan_executor_capture_touches_guard_fails_on_missing(tmp_path, monkeypatch):
     engine.paths._CONTENT_ROOTS = None
     engine.paths._CACHED_CONFIG = None
+    reset_path_caches()
+    set_content_roots([tmp_path])
     monkeypatch.chdir(tmp_path)
     _write_world_and_scenes(tmp_path)
 
@@ -83,6 +86,8 @@ def test_plan_executor_capture_touches_guard_fails_on_missing(tmp_path, monkeypa
 def test_plan_executor_capture_touches_guard_ok_when_covered(tmp_path, monkeypatch):
     engine.paths._CONTENT_ROOTS = None
     engine.paths._CACHED_CONFIG = None
+    reset_path_caches()
+    set_content_roots([tmp_path])
     monkeypatch.chdir(tmp_path)
     _write_world_and_scenes(tmp_path)
 

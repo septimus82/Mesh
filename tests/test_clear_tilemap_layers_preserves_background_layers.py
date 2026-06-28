@@ -4,10 +4,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-pytestmark = [pytest.mark.integration, pytest.mark.slow]
-
 from engine.background_layers import BackgroundLayer
 from engine.scene_controller import SceneController
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 
 class _Window:

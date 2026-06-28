@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from engine.encounter_sets import ThemeManager
 
@@ -25,18 +25,35 @@ class TestEncounterSetsLoading(unittest.TestCase):
         }
         """
 
-        with patch("pathlib.Path.read_text", side_effect=[themes_json, sets_json]):
-            with patch("pathlib.Path.exists", return_value=True):
-                tm = ThemeManager()
-                tm.load_data()
+        themes_path = MagicMock()
+        themes_path.exists.return_value = True
+        themes_path.read_text.return_value = themes_json
+        sets_path = MagicMock()
+        sets_path.exists.return_value = True
+        sets_path.read_text.return_value = sets_json
+        presets_path = MagicMock()
+        presets_path.exists.return_value = False
 
-                theme = tm.get_theme("moss")
-                self.assertIsNotNone(theme)
-                self.assertEqual(theme.encounter_set_id, "moss_encounters")
+        def _resolve_path(relative: str):
+            if relative == "assets/data/themes.json":
+                return themes_path
+            if relative == "packs/core_regions/data/encounter_sets.json":
+                return sets_path
+            if relative == "packs/core_regions/data/encounter_presets.json":
+                return presets_path
+            raise AssertionError(f"unexpected resolve_path arg: {relative}")
 
-                es = tm.get_encounter_set("moss_encounters")
-                self.assertIsNotNone(es)
-                self.assertEqual(es.enemy_tags, ["plant"])
+        with patch("engine.encounter_sets.resolve_path", side_effect=_resolve_path):
+            tm = ThemeManager()
+            tm.load_data()
+
+            theme = tm.get_theme("moss")
+            self.assertIsNotNone(theme)
+            self.assertEqual(theme.encounter_set_id, "moss_encounters")
+
+            es = tm.get_encounter_set("moss_encounters")
+            self.assertIsNotNone(es)
+            self.assertEqual(es.enemy_tags, ["plant"])
 
     def test_resolve_encounter_set(self):
         tm = ThemeManager()

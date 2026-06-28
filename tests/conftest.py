@@ -58,6 +58,17 @@ def _autoload_builtin_behaviours_marker(request):
         load_builtin_behaviours()
 
 
+@pytest.fixture(autouse=True)
+def _reset_engine_path_caches_after_test():
+    yield
+    try:
+        from engine.paths import reset_path_caches
+
+        reset_path_caches()
+    except Exception:
+        pass
+
+
 @pytest.fixture(scope="session")
 def unmarked_test_nodeids(pytestconfig):
     return list(getattr(pytestconfig, "_mesh_unmarked_nodeids", []))

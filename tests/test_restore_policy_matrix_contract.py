@@ -189,13 +189,17 @@ def test_slot_policy_restore_fail_is_hard_fail_with_sidecars(tmp_path: Path, cap
     assert (slot_path.parent / "slot1.json.diagnostics.txt").exists()
 
 
-def test_snapshot_policy_best_effort_restore_returns_true_and_writes_diagnostics_sidecar(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.chdir(tmp_path)
-    world_path = Path("worlds/bad_world.json")
+def test_snapshot_policy_best_effort_restore_returns_true_and_writes_diagnostics_sidecar(tmp_path: Path) -> None:
+    from engine.paths import reset_path_caches, set_content_roots
+
+    reset_path_caches()
+    set_content_roots([tmp_path])
+
+    world_path = tmp_path / "worlds" / "bad_world.json"
     world_path.parent.mkdir(parents=True, exist_ok=True)
     world_path.write_text("{", encoding="utf-8")
 
-    snapshot_path = Path("saves/quick.json")
+    snapshot_path = tmp_path / "saves" / "quick.json"
     _write_json(
         snapshot_path,
         {

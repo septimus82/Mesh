@@ -18,7 +18,7 @@ def maybe_start_live_bridge(editor: Any) -> None:
         if callable(refresh):
             try:
                 refresh()
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: discovery refresh must not break an active editor session
                 logger.warning("[Editor][LiveBridge] Failed to refresh live session discovery: %s", exc)
         return
     try:
@@ -27,7 +27,7 @@ def maybe_start_live_bridge(editor: Any) -> None:
         workspace_root = _workspace_root_for_editor(editor)
         bridge = EditorLiveSessionBridge(editor, workspace_root)
         bridge.start()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: live bridge startup is optional and must not block editor boot
         logger.warning("[Editor][LiveBridge] Live session bridge unavailable: %s", exc, exc_info=True)
         if getattr(editor, "live_bridge", None) is not None:
             setattr(editor, "live_bridge", None)
@@ -41,7 +41,7 @@ def stop_live_bridge(editor: Any) -> None:
         stop = getattr(bridge, "stop", None)
         if callable(stop):
             stop()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: bridge shutdown is best-effort during editor teardown
         logger.warning("[Editor][LiveBridge] Failed to stop live session bridge: %s", exc, exc_info=True)
     finally:
         if getattr(editor, "live_bridge", None) is bridge:
@@ -57,7 +57,7 @@ def refresh_live_bridge_scene(editor: Any) -> None:
         return
     try:
         refresh()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: discovery refresh must not break an active editor session
         logger.warning("[Editor][LiveBridge] Failed to refresh live session discovery: %s", exc, exc_info=True)
 
 

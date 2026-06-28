@@ -168,7 +168,7 @@ def test_clear_tilemap_layers_clears_observable_state_and_tolerates_missing_occl
     assert controller._tilemap_background_layers == []
     assert controller._tilemap_foreground_layers == []
     assert controller._tilemap_draw_layers == []
-    assert controller._background_layers == []
+    assert controller._background_layers == ["background-layer"]
     assert controller.tilemap_instance is None
     assert controller._tilemap_batcher is None
     assert controller._tilemap_batch_state is None

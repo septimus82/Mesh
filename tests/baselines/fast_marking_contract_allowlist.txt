@@ -1,4 +1,7 @@
 tests/test_action_list_runner_flag_gating_contract.py
+tests/test_ai_audit_quest_parsing_contract.py
+tests/test_ai_audit_scope_contract.py
+tests/test_ai_ops_path_containment_contract.py
 tests/test_alt_drag_duplicate_integration_contract.py
 tests/test_alt_drag_duplicate_ops_contract.py
 tests/test_animation_determinism_contract.py
@@ -8,7 +11,9 @@ tests/test_asset_move_model_contract.py
 tests/test_asset_place_mode_contract.py
 tests/test_asset_refactor_model_contract.py
 tests/test_asset_rename_model_contract.py
+tests/test_authoring_playable_prefabs_contract.py
 tests/test_auto_wire_target_scene_contract.py
+tests/test_background_layers_render_contract.py
 tests/test_background_plane_actions_contract.py
 tests/test_background_planes_edit_model_contract.py
 tests/test_behaviour_event_router_integration_contract.py
@@ -101,11 +106,13 @@ tests/test_editor_undo_policy_contract.py
 tests/test_editor_workspace_controller_integration_contract.py
 tests/test_editor_workspace_model_contract.py
 tests/test_editor_workspace_policy_contract.py
+tests/test_emit_event_single_enqueue_contract.py
 tests/test_episode_replay_digest_projection_contract.py
 tests/test_event_dispatch_contract.py
 tests/test_event_emit_contract.py
 tests/test_event_monitor_model_contract.py
 tests/test_find_everything_model_contract.py
+tests/test_foreground_layers_contract.py
 tests/test_gameplay_emit_migration_contract.py
 tests/test_ghost_originals_persistence_cache_contract.py
 tests/test_golden_slice_boss_victory_ux_contract.py
@@ -140,6 +147,10 @@ tests/test_lighting_contract.py
 tests/test_log_once_contract.py
 tests/test_logging_policy_contract.py
 tests/test_marquee_select_contract.py
+tests/test_mcp_onboarding_cli_contract.py
+tests/test_mcp_playability_check_contract.py
+tests/test_mcp_read_symmetry_contract.py
+tests/test_mcp_server_tools_contract.py
 tests/test_menu_bar_model_contract.py
 tests/test_menu_hover_policy_contract.py
 tests/test_menu_separators_web_contract.py
@@ -195,6 +206,7 @@ tests/test_pytest_full_log_readable_contract.py
 tests/test_pytest_runner_logs_written_contract.py
 tests/test_quest_debug_model_contract.py
 tests/test_quest_log_contract.py
+tests/test_quest_system_unification_contract.py
 tests/test_quest_toast_metadata_contract.py
 tests/test_release_bundle_self_verify_contract.py
 tests/test_release_contract_asset_audit_fail_fast.py
@@ -238,6 +250,7 @@ tests/test_scene_transition_policy_integration_contract.py
 tests/test_scene_transition_policy_model_contract.py
 tests/test_scene_update_controller_integration_contract.py
 tests/test_scene_update_model_contract.py
+tests/test_scene_validate_builtin_behaviours_contract.py
 tests/test_selection_outline_contract.py
 tests/test_selection_outline_overlay_contract.py
 tests/test_selection_outline_style_map_contract.py

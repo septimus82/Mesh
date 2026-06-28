@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import json
 import os
 import threading
@@ -94,11 +95,11 @@ class AnthropicProvider:
     def __init__(self, *, api_key_env: str = "ANTHROPIC_API_KEY") -> None:
         self.api_key_env = api_key_env
         try:
-            from anthropic import Anthropic  # type: ignore
+            anthropic_mod = importlib.import_module("anthropic")
         except ImportError:
             self._anthropic_cls: Any = None
         else:
-            self._anthropic_cls = Anthropic
+            self._anthropic_cls = anthropic_mod.Anthropic
 
     def unavailable_reason(self) -> str | None:
         if self._anthropic_cls is None:
@@ -156,11 +157,11 @@ class OpenAICompatibleProvider:
             self._openai_cls = openai_cls
         else:
             try:
-                from openai import OpenAI  # type: ignore
+                openai_mod = importlib.import_module("openai")
             except ImportError:
                 self._openai_cls = None
             else:
-                self._openai_cls = OpenAI
+                self._openai_cls = openai_mod.OpenAI
 
     def unavailable_reason(self) -> str | None:
         if self._openai_cls is None:
@@ -348,7 +349,7 @@ class ChatSessionController:
         try:
             client = self.client_factory.create_client()
             self._run_tool_loop(client)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001  # REASON: chat worker failures must surface in UI without crashing editor
             logger.debug("Claude chat worker failed: %s", exc)
             self.last_error = str(exc)
             self._post_visible({"role": "system", "text": self.last_error, "status": "error"})
@@ -445,7 +446,7 @@ def _stage_into_inbox(editor: Any, ops: list[dict[str, Any]]) -> dict[str, Any]:
 
         try:
             root = editor._get_repo_root()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001  # REASON: repo root lookup is best-effort when staging chat proposals
             root = "."
         bridge = EditorLiveSessionBridge(editor, root)
         setattr(editor, "live_bridge", bridge)

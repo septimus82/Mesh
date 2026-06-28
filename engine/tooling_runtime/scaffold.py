@@ -8,3 +8,9 @@ def create_scene(path: str, template_name: str = "empty", *, extra_args: dict[st
 
     return _create_scene(path, template_name=template_name, extra_args=extra_args)
 
+
+def list_scene_template_names() -> list[str]:
+    from engine.tooling.scaffold import TEMPLATES  # noqa: PLC0415
+
+    return sorted(TEMPLATES.keys())
+
