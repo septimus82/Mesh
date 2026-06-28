@@ -48,10 +48,11 @@ def handle_input_legacy(
             return bool(handler(key, modifiers))
         return True
 
-    if key == optional_arcade.arcade.key.J and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
-        if not is_text_input_active(controller):
-            return bool(run_action("editor.find_everything.toggle", controller, controller.window))
+    if is_text_input_active(controller):
         return True
+
+    if key == optional_arcade.arcade.key.J and (modifiers & optional_arcade.arcade.key.MOD_CTRL):
+        return bool(run_action("editor.find_everything.toggle", controller, controller.window))
 
     dock = getattr(controller, "dock", None)
     snapshot = dock.get_snapshot() if dock is not None and hasattr(dock, "get_snapshot") else dock

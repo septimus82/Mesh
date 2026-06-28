@@ -32,6 +32,7 @@ FOCUS_PALETTE: FocusTarget = "palette"
 FOCUS_ENTITY_PANELS: FocusTarget = "entity_panels"
 FOCUS_SCENE_SWITCHER: FocusTarget = "scene_switcher"
 FOCUS_DEBUG: FocusTarget = "debug"
+FOCUS_AI_CHAT: FocusTarget = "ai_chat"
 
 _SEARCH_FOCUS_MAP: dict[str, FocusTarget] = {
     "project": FOCUS_PROJECT_EXPLORER,
@@ -61,6 +62,7 @@ _STATE_KEYS: tuple[str, ...] = (
     "project_explorer",
     "panels",
     "ui_layers",
+    "chat",
 )
 
 
@@ -110,6 +112,8 @@ def derive_focus_target_for_controller(
         return FOCUS_SCENE_BROWSER
     if getattr(controller, "asset_browser_filter_active", False) is True:
         return FOCUS_ASSET_BROWSER
+    if _ai_chat_input_focused_for_controller(controller):
+        return FOCUS_AI_CHAT
 
     search = getattr(controller, "search", None)
     focus_value = ""
@@ -161,6 +165,14 @@ def derive_focus_target(editor_state_dict: Mapping[str, Any], session_snapshot: 
         return FOCUS_SCENE_BROWSER
     if editor_state_dict.get("asset_browser_filter_active", False) is True:
         return FOCUS_ASSET_BROWSER
+    chat = editor_state_dict.get("chat")
+    dock = editor_state_dict.get("dock")
+    right_tab = ""
+    if dock is not None:
+        snapshot = dock.get_snapshot()
+        right_tab = getattr(snapshot, "right_tab", "") or ""
+    if chat is not None and getattr(chat, "input_focused", False) is True and right_tab == "AI Chat":
+        return FOCUS_AI_CHAT
 
     search_obj = editor_state_dict.get("search")
     search_focus = ""
@@ -190,6 +202,8 @@ def derive_focus_target(editor_state_dict: Mapping[str, Any], session_snapshot: 
 
 def is_text_input_active(focus_target: FocusTarget, editor_state_dict: Mapping[str, Any]) -> bool:
     if focus_target in (FOCUS_INLINE_RENAME, FOCUS_COMMAND_PALETTE):
+        return True
+    if focus_target == FOCUS_AI_CHAT:
         return True
     if editor_state_dict.get("palette_filter_active", False) is True:
         return True
@@ -231,6 +245,8 @@ def is_text_input_active(focus_target: FocusTarget, editor_state_dict: Mapping[s
 def is_text_input_active_for_controller(focus_target: FocusTarget, controller: Any) -> bool:
     if focus_target in (FOCUS_INLINE_RENAME, FOCUS_COMMAND_PALETTE):
         return True
+    if focus_target == FOCUS_AI_CHAT:
+        return True
     if getattr(controller, "palette_filter_active", False) is True:
         return True
     if getattr(controller, "hierarchy_filter_active", False) is True:
@@ -261,6 +277,14 @@ def is_text_input_active_for_controller(focus_target: FocusTarget, controller: A
         return True
 
     return False
+
+
+def _ai_chat_input_focused_for_controller(controller: Any) -> bool:
+    chat = getattr(controller, "chat", None)
+    if chat is None or getattr(chat, "input_focused", False) is not True:
+        return False
+    dock_snapshot = get_dock_snapshot(controller)
+    return (getattr(dock_snapshot, "right_tab", "") or "") == "AI Chat"
 
 
 def compute_active_shortcut_scopes(

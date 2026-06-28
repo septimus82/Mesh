@@ -365,6 +365,9 @@ def _handle_ai_chat_click(
     if (getattr(snapshot, "right_tab", "Inspector") or "Inspector") != "AI Chat":
         return False
     if not _is_inside_right_dock(controller, x, y):
+        chat = getattr(controller, "chat", None)
+        if chat is not None and getattr(chat, "input_focused", False):
+            chat.input_focused = False
         return False
     overlay = getattr(getattr(controller, "window", None), "ai_chat_overlay", None)
     handler = getattr(overlay, "on_mouse_press", None) if overlay is not None else None
