@@ -1221,10 +1221,12 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             action_id="capture.command_palette.toggle",
             when=_when_debug,
         ),
-        # Debug monster battle dogfood launcher (Ctrl+B)
+        # Debug monster battle dogfood launcher (Shift+F11). Keep this off
+        # bare letters: config action bindings match letters without modifiers
+        # before this route can win in the real GameWindow path.
         RouteSpec(
             scope=SCOPE_GLOBAL,
-            combo=KeyCombo(key=key.B, mods=key.MOD_CTRL),
+            combo=KeyCombo(key=key.F11, mods=key.MOD_SHIFT),
             action_id="capture.debug.monster_battle.start",
             when=_when_debug_not_ui_blocked,
         ),

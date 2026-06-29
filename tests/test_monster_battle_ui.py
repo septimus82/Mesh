@@ -6,6 +6,8 @@ from unittest.mock import MagicMock
 import pytest
 
 import engine.optional_arcade as optional_arcade
+from engine.config import load_config
+from engine.game_runtime import input_dispatch
 from engine.input_controller import InputController
 from engine.monster.battle_controller import MoveAction
 from engine.monster.battle_mode import MONSTER_BATTLE_CAPTURE_ATTEMPT_EVENT, MonsterBattleMode
@@ -46,6 +48,7 @@ def _window() -> types.SimpleNamespace:
     window.width = 1280
     window.height = 720
     window.paused = False
+    window.game_over = False
     window.show_debug = False
     window.command_palette_enabled = False
     window.command_palette_prompt_active = False
@@ -154,15 +157,34 @@ def test_hp_and_log_snapshot_update_after_resolved_turn() -> None:
     assert "Sproutling used ember" in str(after["log_line"])
 
 
-def test_debug_ctrl_b_launches_fixture_battle_through_key_router() -> None:
+def test_debug_shift_f11_launches_fixture_battle_through_key_router() -> None:
     window = _window()
     window.show_debug = True
     window.start_debug_monster_battle = MagicMock(return_value=True)
 
     handled = window.input_controller.on_key_press(
-        optional_arcade.arcade.key.B,
-        optional_arcade.arcade.key.MOD_CTRL,
+        optional_arcade.arcade.key.F11,
+        optional_arcade.arcade.key.MOD_SHIFT,
     )
 
     assert handled is True
     window.start_debug_monster_battle.assert_called_once_with()
+
+
+def test_debug_shift_f11_launches_through_real_dispatch_without_dev_browser() -> None:
+    window = _window()
+    window.engine_config = load_config("config.json")
+    window.input_controller = InputController(as_any(window))
+    window.show_debug = True
+    window.start_debug_monster_battle = MagicMock(return_value=True)
+    dev_browser = types.SimpleNamespace(toggle=MagicMock())
+    window.dev_browser_overlay = dev_browser
+
+    input_dispatch.on_key_press(
+        as_any(window),
+        optional_arcade.arcade.key.F11,
+        optional_arcade.arcade.key.MOD_SHIFT,
+    )
+
+    window.start_debug_monster_battle.assert_called_once_with()
+    dev_browser.toggle.assert_not_called()
