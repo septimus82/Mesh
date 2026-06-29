@@ -60,7 +60,7 @@ build a party → eventually breed them.
 
 ## Status — Phase 0 (proving slice: encounter → 1v1 battle → capture → party)
 
-**DONE & merged (all pure + headless + tested):**
+**DONE & merged:**
 
 | Slice | What | Where |
 |---|---|---|
@@ -68,26 +68,19 @@ build a party → eventually breed them.
 | MON-0b | JSON loaders + validators (species/moves/type-chart) | `engine/monster/data_load.py`, `assets/data/monster_*.json` |
 | MON-0c | pure `MonsterBattleController` state machine (choose→resolve→faints→won/lost, speed order) | `engine/monster/battle_controller.py` |
 | MON-0d | runtime battle **mode** shell (pause overworld + blocking placeholder overlay + result→`GameState.values` + `monster_battle_ended` event) | `engine/monster/battle_mode.py` |
+| MON-0e | overworld encounter trigger (deterministic weighted roll → `start_monster_battle` + return context; `enabled`/flag/cooldown gates) | `engine/behaviours/monster_encounter_zone.py`, `engine/monster/encounter.py` |
+| MON-0f | **playable battle UI** — HP bars/text, log, Fight/Bag/Run, move list, real mouse+keyboard input seam. Dogfood verdict: *primitive but functional = Phase-0 UI question PASSED*. Debug launch: **F3 then F12**. | `engine/monster/battle_mode.py` |
+| MON-0f-polish | **turn pacing** — resolved turn is presented step-by-step (held menu; advance on Enter/Space or a ~0.7s dt timer; HP drops *with* its log line, not at submit); lethal turn shows the faint line then ends. | `engine/monster/battle_mode.py` |
+
+> **Launch-key lesson (MON-0f):** debug hotkeys belong as explicit branches in
+> `engine/game_runtime/input_dispatch.py` (like F6/F9), gated on `engine_config.debug_mode` — NOT in the
+> capture key-router (its debug gating reads a *different* flag `window.show_debug`, plus scope/modifier
+> predicates, and shadowed three attempts). A unit test on `input_controller.on_key_press` will not catch
+> this — test through `input_dispatch.on_key_press` with the real bindings, and **dogfood the live key**.
 
 **REMAINING Phase 0 — build each as its own slice (goal / scope / tests):**
 
-### MON-0e — Encounter trigger
-- **Goal:** walking into grass/a zone starts a battle.
-- **Scope:** an overworld behaviour/zone that, on player enter, rolls an encounter table and calls
-  `GameWindow.start_monster_battle()` with the wild species/level + a return context (scene path, zone id,
-  encounter id). Reuse the existing `trigger_zone` behaviour.
-- **Tests:** encounter starts only when eligible; disabled by a flag/cooldown → no encounter; the battle
-  receives the expected wild monster data.
-
-### MON-0f — Battle UI usable path  ⚠️ *first real UI — the menu pain starts here*
-- **Goal:** a player can actually fight via the overlay.
-- **Scope:** real (minimal) UI in `MonsterBattleOverlay` — HP bars/text, a log line, a Fight/Bag/Run menu,
-  a move list (PP + type), and a throw-ball action. Route key/mouse input through the existing UI/editor
-  input path (mirror how other overlays receive input — see the AI Proposals dock click-routing pattern).
-- **Tests (drive the real input entry, not the model):** Fight → move chosen; Bag → ball → capture
-  attempt; the overlay blocks overworld input.
-
-### MON-0g — Capture + party persistence
+### MON-0g — Capture + party persistence  *(next)*
 - **Goal:** catch a monster and keep it.
 - **Scope:** a ball item + a catch formula (HP% / status / `capture_rate`); consume the ball, generate a
   monster instance id, add to the party (or the box if the party is full); persist
