@@ -400,9 +400,10 @@ jobs:
       - name: Delete baseline diff PR comment when no diffs
         if: always() && github.event_name == 'pull_request' && runner.os != 'Windows' && steps.baseline_diff_insights.outputs.mode == 'none' && steps.find_baseline_diff_comment.outputs.comment-id != ''
         continue-on-error: true
-        uses: peter-evans/delete-comment@v3
-        with:
-          comment-id: ${{ steps.find_baseline_diff_comment.outputs.comment-id }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X DELETE "repos/${{ github.repository }}/issues/comments/${{ steps.find_baseline_diff_comment.outputs.comment-id }}"
 
       - name: Release notes to Step Summary (Linux)
         if: always() && runner.os != 'Windows'
