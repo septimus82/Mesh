@@ -219,3 +219,11 @@ class UIController:
                 if element.on_key_press(key, modifiers):
                     return True
         return False
+
+    def on_mouse_press(self, x: float, y: float, button: int, modifiers: int = 0) -> bool:
+        """Dispatch mouse press to UI elements. Returns True if handled."""
+        for element in reversed(self.ui_elements):
+            handler = getattr(element, "on_mouse_press", None)
+            if callable(handler) and handler(x, y, button, modifiers):
+                return True
+        return False

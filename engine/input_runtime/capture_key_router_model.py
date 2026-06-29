@@ -1221,6 +1221,13 @@ def build_route_table() -> tuple[RouteSpec, ...]:
             action_id="capture.command_palette.toggle",
             when=_when_debug,
         ),
+        # Debug monster battle dogfood launcher (Ctrl+B)
+        RouteSpec(
+            scope=SCOPE_GLOBAL,
+            combo=KeyCombo(key=key.B, mods=key.MOD_CTRL),
+            action_id="capture.debug.monster_battle.start",
+            when=_when_debug_not_ui_blocked,
+        ),
         # Debug undo/redo
         RouteSpec(
             scope=SCOPE_GLOBAL,

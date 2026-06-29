@@ -16,6 +16,7 @@ from .battle_controller import (
     controller_from_catalog,
 )
 from .battle_mode import (
+    MONSTER_BATTLE_CAPTURE_ATTEMPT_EVENT,
     MONSTER_BATTLE_ENDED_EVENT,
     MONSTER_BATTLE_RESULT_KEY,
     MONSTER_BATTLE_RETURN_CONTEXT_KEY,
@@ -54,6 +55,7 @@ __all__ = [
     "BattleResult",
     "BattleSideId",
     "InvalidBattleActionError",
+    "MONSTER_BATTLE_CAPTURE_ATTEMPT_EVENT",
     "MONSTER_BATTLE_ENDED_EVENT",
     "MONSTER_BATTLE_RESULT_KEY",
     "MONSTER_BATTLE_RETURN_CONTEXT_KEY",

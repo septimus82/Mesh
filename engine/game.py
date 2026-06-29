@@ -701,6 +701,35 @@ class GameWindow(engine.optional_arcade.arcade.Window):
 
         return self.monster_battle_mode.end_battle(result)
 
+    def start_debug_monster_battle(self) -> Any:
+        """Start a fixture monster battle for MON-0f dogfooding."""
+
+        from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
+        from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
+
+        mode = getattr(self, "monster_battle_mode", None)
+        if mode is not None and getattr(mode, "active", False):
+            return getattr(mode, "controller", None)
+
+        catalog, validation = load_monster_catalog()
+        if not validation.ok or catalog is None:
+            self.console_log(f"[MonsterBattle] Catalog load failed: {'; '.join(validation.errors)}")
+            return None
+        try:
+            player_species = catalog.species["sproutling"]
+            opponent_species = catalog.species["shelltide"]
+        except KeyError as exc:
+            self.console_log(f"[MonsterBattle] Missing debug species: {exc}")
+            return None
+        self.console_log("[MonsterBattle] Starting debug battle: Sproutling vs Shelltide")
+        return self.start_monster_battle(
+            player_monster=MonsterInstance(player_species, level=8, known_moves=player_species.learnset),
+            opponent_monster=MonsterInstance(opponent_species, level=6, known_moves=opponent_species.learnset),
+            moves=catalog.moves,
+            type_chart=catalog.type_chart,
+            return_context={"source": "debug_key", "scene_path": getattr(self.scene_controller, "current_scene_path", "")},
+        )
+
     def _stop_asset_hot_reload_watcher(self) -> None:
         from engine.asset_hot_reload_watcher import stop_hot_reload_watcher  # noqa: PLC0415
 

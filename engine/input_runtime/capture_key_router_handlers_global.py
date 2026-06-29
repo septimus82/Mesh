@@ -37,6 +37,8 @@ def dispatch_global_action(
         return _handle_debug_undo(window)
     if action_id == "capture.debug.redo":
         return _handle_debug_redo(window)
+    if action_id == "capture.debug.monster_battle.start":
+        return _handle_debug_monster_battle_start(window)
     if action_id == "capture.palette.toggle":
         return _handle_palette_toggle(window)
     if action_id == "capture.scene.reload":
@@ -175,6 +177,14 @@ def _handle_debug_redo(window: Any) -> bool:
     redoer = getattr(window, "redo", None)
     if callable(redoer):
         redoer()
+        return True
+    return False
+
+
+def _handle_debug_monster_battle_start(window: Any) -> bool:
+    starter = getattr(window, "start_debug_monster_battle", None)
+    if callable(starter):
+        starter()
         return True
     return False
 
