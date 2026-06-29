@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from engine.monster.battle_model import MonsterInstance, compute_damage, resolve_move
+from engine.monster.battle_controller import controller_from_catalog
 from engine.monster.data_load import load_monster_catalog, parse_moves, parse_species, parse_type_chart
 
 pytestmark = pytest.mark.fast
@@ -246,6 +247,74 @@ def test_move_status_inflict_parses_and_validates() -> None:
     )
     assert bad_result.ok is False
     assert any("status_inflict" in err for err in bad_result.errors)
+
+
+def test_repo_catalog_loads_status_moves_and_learnsets() -> None:
+    catalog, result = load_monster_catalog(Path("assets/data"))
+
+    assert result.ok is True
+    assert catalog is not None
+    assert "poison_sting" in catalog.moves
+    assert "sleep_powder" in catalog.moves
+
+    poison = catalog.moves["poison_sting"]
+    sleep = catalog.moves["sleep_powder"]
+    assert poison.status_inflict is not None
+    assert poison.status_inflict.condition == "poison"
+    assert poison.status_inflict.chance == 0.5
+    assert sleep.status_inflict is not None
+    assert sleep.status_inflict.condition == "sleep"
+    assert sleep.status_inflict.chance == 0.75
+
+    assert "poison_sting" in catalog.species["sproutling"].learnset
+    assert "sleep_powder" in catalog.species["sproutling"].learnset
+    assert "sleep_powder" in catalog.species["shelltide"].learnset
+
+
+class _Rng:
+    def __init__(self, *values: float) -> None:
+        self.values = list(values)
+
+    def random(self) -> float:
+        return self.values.pop(0) if self.values else 0.0
+
+
+def test_catalog_poison_sting_inflicts_poison_under_fixed_seed() -> None:
+    catalog, result = load_monster_catalog(Path("assets/data"))
+    assert result.ok is True
+    assert catalog is not None
+
+    controller = controller_from_catalog(
+        catalog,
+        player=MonsterInstance(catalog.species["sproutling"], level=10, known_moves=("poison_sting",)),
+        opponent=MonsterInstance(catalog.species["shelltide"], level=10, known_moves=("tackle",)),
+        rng=_Rng(0.0, 0.0, 0.0),
+        opponent_action_provider=lambda _controller: "tackle",
+    )
+
+    controller.submit_action("player", "poison_sting")
+
+    assert controller.opponent.status_condition == "poison"
+    assert any(entry.status_event == "poisoned" for entry in controller.turn_log if entry.kind == "status")
+
+
+def test_catalog_sleep_powder_inflicts_sleep_under_fixed_seed() -> None:
+    catalog, result = load_monster_catalog(Path("assets/data"))
+    assert result.ok is True
+    assert catalog is not None
+
+    controller = controller_from_catalog(
+        catalog,
+        player=MonsterInstance(catalog.species["sproutling"], level=10, known_moves=("sleep_powder",)),
+        opponent=MonsterInstance(catalog.species["shelltide"], level=10, known_moves=("tackle",)),
+        rng=_Rng(0.0, 0.0, 0.0),
+        opponent_action_provider=lambda _controller: "tackle",
+    )
+
+    controller.submit_action("player", "sleep_powder")
+
+    assert controller.opponent.status_condition == "sleep"
+    assert any(entry.status_event == "fell_asleep" for entry in controller.turn_log if entry.kind == "status")
 
 
 def test_parse_helpers_accept_inline_payloads() -> None:

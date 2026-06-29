@@ -9,7 +9,7 @@
         "defense": 10,
         "spd": 8
       },
-      "learnset": ["tackle", "ember"],
+      "learnset": ["tackle", "ember", "poison_sting", "sleep_powder"],
       "capture_rate": 190,
       "sprite": "assets/monsters/sproutling.png"
     },
@@ -22,7 +22,7 @@
         "defense": 12,
         "spd": 6
       },
-      "learnset": ["tackle", "splash"],
+      "learnset": ["tackle", "splash", "sleep_powder"],
       "capture_rate": 180,
       "sprite": "assets/monsters/shelltide.png"
     }
