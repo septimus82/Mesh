@@ -20,6 +20,28 @@
       "power": 40,
       "accuracy": 100,
       "pp": 25
+    },
+    {
+      "id": "poison_sting",
+      "type": "grass",
+      "power": 15,
+      "accuracy": 100,
+      "pp": 20,
+      "status_inflict": {
+        "condition": "poison",
+        "chance": 0.5
+      }
+    },
+    {
+      "id": "sleep_powder",
+      "type": "grass",
+      "power": 0,
+      "accuracy": 100,
+      "pp": 15,
+      "status_inflict": {
+        "condition": "sleep",
+        "chance": 0.75
+      }
     }
   ]
 }
