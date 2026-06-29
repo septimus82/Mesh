@@ -71,6 +71,7 @@ build a party → eventually breed them.
 | MON-0e | overworld encounter trigger (deterministic weighted roll → `start_monster_battle` + return context; `enabled`/flag/cooldown gates) | `engine/behaviours/monster_encounter_zone.py`, `engine/monster/encounter.py` |
 | MON-0f | **playable battle UI** — HP bars/text, log, Fight/Bag/Run, move list, real mouse+keyboard input seam. Dogfood verdict: *primitive but functional = Phase-0 UI question PASSED*. Debug launch: **F3 then F12**. | `engine/monster/battle_mode.py` |
 | MON-0f-polish | **turn pacing** — resolved turn is presented step-by-step (held menu; advance on Enter/Space or a ~0.7s dt timer; HP drops *with* its log line, not at submit); lethal turn shows the faint line then ends. | `engine/monster/battle_mode.py` |
+| MON-0g | **capture + party** — pure seeded catch formula (`capture_rate` + HP fraction); Bag→ball decrements/blocks-at-0/continues-on-fail; caught monster → party (or box when full); `monster_party`/`box`/`instances`/ball count survive a real `SaveManager` save→load round-trip. | `engine/monster/capture.py`, `engine/monster/collection.py` |
 
 > **Launch-key lesson (MON-0f):** debug hotkeys belong as explicit branches in
 > `engine/game_runtime/input_dispatch.py` (like F6/F9), gated on `engine_config.debug_mode` — NOT in the
@@ -80,15 +81,7 @@ build a party → eventually breed them.
 
 **REMAINING Phase 0 — build each as its own slice (goal / scope / tests):**
 
-### MON-0g — Capture + party persistence  *(next)*
-- **Goal:** catch a monster and keep it.
-- **Scope:** a ball item + a catch formula (HP% / status / `capture_rate`); consume the ball, generate a
-  monster instance id, add to the party (or the box if the party is full); persist
-  `monster_party`/`monster_box`/`monster_instances` through `GameState` save.
-- **Tests:** catch adds to party when space exists; routes to box when full; save payload contains the
-  monster data; load restores it.
-
-### MON-0h — XP + level
+### MON-0h — XP + level  *(next)*
 - **Goal:** winning makes your monster grow.
 - **Scope:** XP award on win, level-up stat recalculation, and a phase-0 learnset policy (offer or
   auto-learn a learnable move).
