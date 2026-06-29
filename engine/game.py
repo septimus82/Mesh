@@ -107,6 +107,7 @@ from .input_controller import InputController
 from .lighting import LightManager
 from .logging_tools import get_logger
 from .migrations import migrate_payload
+from .monster.battle_mode import MonsterBattleMode
 from .particles import ParticleManager
 from .paths import resolve_path
 from .perf import PerfStats
@@ -602,6 +603,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
 
         self.paused: bool = False
         self.game_over: bool = False
+        self.monster_battle_mode = MonsterBattleMode(self)
+        self.monster_battle_mode_active: bool = False
         self.world_width: int | None = None
         self.world_height: int | None = None
         self.show_debug: bool = bool(self.engine_config.debug_on_start)
@@ -687,6 +690,16 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         """Start Arcade's main loop."""
         logger.info("[Mesh][GameWindow] Starting Arcade loop...")
         engine.optional_arcade.arcade.run()
+
+    def start_monster_battle(self, **kwargs: Any) -> Any:
+        """Start the runtime monster battle mode."""
+
+        return self.monster_battle_mode.start_battle(**kwargs)
+
+    def end_monster_battle(self, result: Any | None = None) -> Any:
+        """End the runtime monster battle mode."""
+
+        return self.monster_battle_mode.end_battle(result)
 
     def _stop_asset_hot_reload_watcher(self) -> None:
         from engine.asset_hot_reload_watcher import stop_hot_reload_watcher  # noqa: PLC0415
