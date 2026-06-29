@@ -69,6 +69,7 @@ def serialize_monster_instance(monster: MonsterInstance) -> dict[str, Any]:
     return {
         "species_id": monster.species.id,
         "level": int(monster.level),
+        "xp": int(monster.experience),
         "current_hp": int(monster.current_hp or 0),
         "known_moves": list(monster.known_moves),
     }

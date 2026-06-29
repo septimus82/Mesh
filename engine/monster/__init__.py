@@ -62,6 +62,13 @@ from .data_load import (
     parse_type_chart,
     validate_referential_integrity,
 )
+from .progression import (
+    ExperienceResult,
+    apply_experience,
+    award_xp_for_victory,
+    level_for_experience,
+    xp_required_for_level,
+)
 
 __all__ = [
     "BattleStats",
@@ -73,6 +80,7 @@ __all__ = [
     "InvalidBattleActionError",
     "CaptureResult",
     "DEFAULT_POCKET_BALL_COUNT",
+    "ExperienceResult",
     "MONSTER_BATTLE_CAPTURE_ATTEMPT_EVENT",
     "MONSTER_BATTLE_ENDED_EVENT",
     "MONSTER_BATTLE_RESULT_KEY",
@@ -94,11 +102,14 @@ __all__ = [
     "TypeChart",
     "ValidationResult",
     "add_caught_monster",
+    "apply_experience",
+    "award_xp_for_victory",
     "compute_damage",
     "consume_pocket_ball",
     "controller_from_catalog",
     "ensure_monster_collection",
     "get_pocket_ball_count",
+    "level_for_experience",
     "load_monster_catalog",
     "load_moves",
     "load_species",
@@ -112,4 +123,5 @@ __all__ = [
     "start_monster_battle",
     "type_multiplier",
     "validate_referential_integrity",
+    "xp_required_for_level",
 ]

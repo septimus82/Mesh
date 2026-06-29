@@ -20,11 +20,17 @@ from .battle_model import MonsterInstance, Move, RandomLike, TypeChart, resolve_
 from .capture import CaptureResult, resolve_capture
 from .collection import (
     DEFAULT_POCKET_BALL_COUNT,
+    MAX_PARTY_SIZE,
+    MONSTER_BOX_KEY,
+    MONSTER_INSTANCES_KEY,
+    MONSTER_PARTY_KEY,
     add_caught_monster,
     consume_pocket_ball,
     ensure_monster_collection,
     get_pocket_ball_count,
+    serialize_monster_instance,
 )
+from .progression import apply_experience, award_xp_for_victory
 
 if TYPE_CHECKING:
     from engine.game import GameWindow
@@ -387,8 +393,12 @@ class MonsterBattleMode:
         result = self.controller.submit_action("player", str(move_id))
         if self.overlay is not None:
             steps = self._build_presentation_steps(before_len, before_player_hp, before_opponent_hp)
+            if result is not None and result.outcome == "won":
+                steps.extend(self._apply_victory_progression_steps(before_player_hp, before_opponent_hp))
             self.overlay.begin_turn_presentation(steps, result=result)
         elif result is not None:
+            if result.outcome == "won":
+                self._apply_victory_progression_steps(before_player_hp, before_opponent_hp)
             self.end_battle(result)
         return result
 
@@ -598,6 +608,53 @@ class MonsterBattleMode:
             if entry.target_fainted:
                 steps.append(BattlePresentationStep(f"{target} fainted!", player_hp, opponent_hp))
         return steps
+
+    def _apply_victory_progression_steps(self, before_player_hp: int, before_opponent_hp: int) -> list[BattlePresentationStep]:
+        if self.controller is None:
+            return []
+        xp = award_xp_for_victory(self.controller.opponent)
+        progression = apply_experience(self.controller.player, xp)
+        self.controller.player = progression.instance
+        instance_id = self._persist_player_monster(progression.instance)
+        self.return_context.update({"player_instance_id": instance_id, "xp_gained": progression.xp_gained})
+        hp = int(progression.instance.current_hp or before_player_hp)
+        opponent_hp = int(self.controller.opponent.current_hp if self.controller.opponent.current_hp is not None else before_opponent_hp)
+        steps = [
+            BattlePresentationStep(
+                f"{_display_name(progression.instance)} gained {progression.xp_gained} XP!",
+                hp,
+                opponent_hp,
+            ),
+        ]
+        for level in range(progression.previous_level + 1, progression.instance.level + 1):
+            steps.append(BattlePresentationStep(f"{_display_name(progression.instance)} grew to Lv {level}!", hp, opponent_hp))
+        for move_id in progression.moves_learned:
+            steps.append(BattlePresentationStep(f"{_display_name(progression.instance)} learned {move_id}!", hp, opponent_hp))
+        return steps
+
+    def _persist_player_monster(self, monster: MonsterInstance) -> str:
+        values = self._state_values()
+        instances = values[MONSTER_INSTANCES_KEY]
+        party = values[MONSTER_PARTY_KEY]
+        box = values[MONSTER_BOX_KEY]
+        raw_id = self.return_context.get("player_instance_id")
+        instance_id = str(raw_id) if isinstance(raw_id, str) and raw_id in instances else ""
+        if not instance_id:
+            for candidate in party:
+                candidate_id = str(candidate)
+                if candidate_id in instances:
+                    instance_id = candidate_id
+                    break
+        if not instance_id:
+            stored = add_caught_monster(values, monster)
+            instance_id = stored.instance_id
+        elif instance_id not in party and instance_id not in box:
+            if len(party) < MAX_PARTY_SIZE:
+                party.append(instance_id)
+            else:
+                box.append(instance_id)
+        instances[instance_id] = serialize_monster_instance(monster)
+        return instance_id
 
     def _resolve_failed_capture_response(self, *, item_id: str, capture: CaptureResult) -> None:
         if self.controller is None or self.overlay is None:

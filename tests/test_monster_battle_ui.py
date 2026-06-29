@@ -13,7 +13,8 @@ from engine.input_controller import InputController
 from engine.monster.battle_controller import MoveAction
 from engine.monster.battle_mode import MONSTER_BATTLE_CAPTURE_ATTEMPT_EVENT, MonsterBattleMode
 from engine.monster.battle_model import BattleStats, MonsterInstance, Move, Species
-from engine.monster.collection import MONSTER_PARTY_KEY, POCKET_BALL_COUNT_KEY
+from engine.monster.collection import MONSTER_INSTANCES_KEY, MONSTER_PARTY_KEY, POCKET_BALL_COUNT_KEY, serialize_monster_instance
+from engine.monster.progression import xp_required_for_level
 from engine.ui_controller import UIController
 from tests._typing import as_any
 
@@ -83,6 +84,7 @@ def _start_ui_battle(
     opponent_hp: int | None = None,
     player_moves: tuple[str, ...] = ("ember", "tackle"),
     rng: object | None = None,
+    return_context: dict[str, object] | None = None,
 ) -> MonsterBattleMode:
     mode = MonsterBattleMode(as_any(window))
     window.monster_battle_mode = mode
@@ -91,7 +93,7 @@ def _start_ui_battle(
         opponent_monster=MonsterInstance(OPPONENT_SPECIES, level=10, current_hp=opponent_hp, known_moves=("tackle",)),
         moves={move.id: move for move in (TACKLE, EMBER, KO)},
         type_chart={"fire": {"water": 0.5}, "grass": {"water": 2.0}},
-        return_context={"scene_path": "scenes/field.json"},
+        return_context=return_context or {"scene_path": "scenes/field.json"},
         rng=rng,
         opponent_action_provider=lambda _controller: MoveAction("opponent", "tackle"),
     )
@@ -277,10 +279,43 @@ def test_lethal_turn_shows_faint_line_then_ends_after_queue_drains() -> None:
     _press(window, optional_arcade.arcade.key.ENTER)
     assert overlay.log_line == "Shelltide fainted!"
     assert mode.active is True
-    _press(window, optional_arcade.arcade.key.ENTER)
+    while mode.active:
+        _press(window, optional_arcade.arcade.key.ENTER)
 
     assert mode.active is False
     assert window.paused is False
+
+
+def test_battle_win_persists_xp_level_and_learn_lines() -> None:
+    window = _window()
+    starter = MonsterInstance(
+        PLAYER_SPECIES,
+        level=10,
+        known_moves=("ko",),
+        experience=xp_required_for_level(10),
+    )
+    values = window.game_state_controller.state.values
+    values[MONSTER_PARTY_KEY] = ["starter_0001"]
+    values[MONSTER_INSTANCES_KEY] = {"starter_0001": serialize_monster_instance(starter)}
+    mode = _start_ui_battle(
+        window,
+        opponent_hp=5,
+        player_moves=("ko",),
+        return_context={"scene_path": "scenes/field.json", "player_instance_id": "starter_0001"},
+    )
+    overlay = mode.overlay
+    assert overlay is not None
+
+    _submit_first_move(window)
+
+    row = values[MONSTER_INSTANCES_KEY]["starter_0001"]
+    assert row["level"] == 11
+    assert row["xp"] >= xp_required_for_level(11)
+    assert "ember" in row["known_moves"]
+    queued_lines = [step.line for step in overlay.presentation_queue]
+    assert any("gained" in line and "XP" in line for line in queued_lines)
+    assert any("grew to Lv 11" in line for line in queued_lines)
+    assert any("learned ember" in line for line in queued_lines)
 
 
 def test_debug_f12_launches_through_real_dispatch_when_debug_mode_enabled() -> None:

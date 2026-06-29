@@ -102,7 +102,7 @@ def test_caught_monster_goes_to_party_then_box_when_party_is_full() -> None:
 def test_monster_collection_survives_save_manager_roundtrip(tmp_path: Path) -> None:
     window = _window_for_save()
     values = window.game_state_controller.state.values
-    caught = add_caught_monster(values, MonsterInstance(HIGH_RATE, level=7, current_hp=12))
+    caught = add_caught_monster(values, MonsterInstance(HIGH_RATE, level=7, current_hp=12, experience=240))
     values[POCKET_BALL_COUNT_KEY] = 2
 
     manager = SaveManager(window, save_dir=str(tmp_path))
@@ -120,6 +120,7 @@ def test_monster_collection_survives_save_manager_roundtrip(tmp_path: Path) -> N
     assert restored[POCKET_BALL_COUNT_KEY] == 2
     assert restored[MONSTER_PARTY_KEY] == [caught.instance_id]
     assert restored[MONSTER_INSTANCES_KEY][caught.instance_id]["species_id"] == "highrate"
+    assert restored[MONSTER_INSTANCES_KEY][caught.instance_id]["xp"] == 240
 
 
 def _window_for_save() -> types.SimpleNamespace:
