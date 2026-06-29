@@ -73,6 +73,8 @@ build a party → eventually breed them.
 | MON-0f-polish | **turn pacing** — resolved turn is presented step-by-step (held menu; advance on Enter/Space or a ~0.7s dt timer; HP drops *with* its log line, not at submit); lethal turn shows the faint line then ends. | `engine/monster/battle_mode.py` |
 | MON-0g | **capture + party** — pure seeded catch formula (`capture_rate` + HP fraction); Bag→ball decrements/blocks-at-0/continues-on-fail; caught monster → party (or box when full); `monster_party`/`box`/`instances`/ball count survive a real `SaveManager` save→load round-trip. | `engine/monster/capture.py`, `engine/monster/collection.py` |
 | MON-0h | **XP + level** — pure XP curve + victory XP + `apply_experience` (level/stat recalc via `derive_stats` + auto-learn next learnset move); win grants XP with paced "gained/grew/learned" log lines; xp/level/known_moves persist through save. | `engine/monster/progression.py` |
+| MON-0g-fix | capture-success **feedback pacing** — "Gotcha! X was caught!" + "Sent to your party!/Box!" presented with a beat before the battle ends (was ending instantly, read as a crash). | `engine/monster/battle_mode.py` |
+| MON-0i | **menu toolkit + party view** — runtime menu stack (top-only input) + focus model (Up/Down/Enter/Esc) + selectable list + detail panel + confirm modal, from `ui/widgets.py`, routed through the real input path. First consumer: a **party view** opened with **Ctrl+M** that lists caught monsters + shows stats. | `engine/ui/menu_toolkit.py`, `engine/monster/party_menu.py` |
 
 > **Launch-key lesson (MON-0f):** debug hotkeys belong as explicit branches in
 > `engine/game_runtime/input_dispatch.py` (like F6/F9), gated on `engine_config.debug_mode` — NOT in the
@@ -80,22 +82,20 @@ build a party → eventually breed them.
 > predicates, and shadowed three attempts). A unit test on `input_controller.on_key_press` will not catch
 > this — test through `input_dispatch.on_key_press` with the real bindings, and **dogfood the live key**.
 
-**REMAINING Phase 0 — build each as its own slice (goal / scope / tests):**
+### ✅ PHASE 0 COMPLETE — GATE PASSED (2026-06-29)
 
-### MON-0i — Menu toolkit + party view  **(REQUIRED EARLY — not polish)** *(next)*
-- **Goal:** stop hand-coding every menu before party/box/breeding make it unbearable — and finally *see*
-  your caught monsters.
-- **Scope (minimal):** a reusable runtime **menu stack** (push/pop, top-only input) + **focus model**
-  (up/down/Enter/Esc) + a vertical **selectable list** + a detail **panel** + a **confirm modal**, assembled
-  from `engine/ui/widgets.py` primitives, routed through the real `UIController` input path. First consumer:
-  a **party view** opened from the overworld that lists `monster_party` and shows a selected monster's
-  basic stats. Defer tabs/grid/scroll/box-UI until a slice needs them.
-- **Tests (drive real input):** stack push/pop routing; up/down/Enter/Esc focus + activation; modal blocks
-  the lower menu; party view lists caught monsters and selection shows stats. **Dogfood live.**
+The full proving loop runs live on `main`: **overworld encounter → paced turn-based battle → weaken →
+Bag→Pocket Ball catch ("Gotcha!") → caught monster persists through save → Ctrl+M party menu lists it.**
 
-> **Phase-0 GATE:** after MON-0a–0g (+ MON-0i), *play it* — grass → battle → catch → it's in your party.
-> If the architecture feels sound and the menu grind is tolerable **with** the toolkit, commit to the full
-> campaign. If the UI fights you even with MON-0i, RPG Maker is the honest fallback.
+**Gate verdict (the decision Phase 0 existed to make): COMMIT to the full campaign.** The battle
+architecture is sound and the menu-UI grind is tolerable with the toolkit. "Meh" front-end graphics are
+*explicitly accepted* — UI/sprite assets will be generated later (e.g. PixelLab AI); **the crown is
+AI-authoring + the action/turn hybrid, not out-polishing RPG Maker's GUI.** Do not chase UI polish over
+capability.
+
+**Debug controls:** `F3` debug mode → `F12` start a fixture battle · `Ctrl+M` open the party menu.
+
+**→ NEXT: Phase 1 (battle depth).** See below.
 
 ---
 
