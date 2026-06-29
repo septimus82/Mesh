@@ -26,6 +26,7 @@ class Species:
     base_stats: BattleStats
     types: tuple[str, ...]
     learnset: tuple[str, ...] = ()
+    capture_rate: int = 150
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +45,7 @@ class MonsterInstance:
     current_hp: int | None = None
     known_moves: tuple[str, ...] = ()
     stats: BattleStats | None = None
+    experience: int = 0
 
     def __post_init__(self) -> None:
         level = max(1, int(self.level))
@@ -52,6 +54,7 @@ class MonsterInstance:
         object.__setattr__(self, "level", level)
         object.__setattr__(self, "stats", stats)
         object.__setattr__(self, "current_hp", hp)
+        object.__setattr__(self, "experience", max(0, int(self.experience)))
 
     @property
     def fainted(self) -> bool:

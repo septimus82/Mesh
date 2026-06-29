@@ -80,6 +80,7 @@ def test_valid_fixtures_load_catalog_with_expected_counts(valid_fixture_dir: Pat
     assert len(catalog.moves) == 2
     assert catalog.type_chart["fire"]["grass"] == 2.0
     assert "grass" in catalog.known_types
+    assert catalog.species["sprout"].capture_rate == 190
 
 
 def test_unknown_learnset_move_reports_species_and_move_id(valid_fixture_dir: Path) -> None:
@@ -178,6 +179,35 @@ def test_learnset_object_entries_load_move_ids(valid_fixture_dir: Path) -> None:
     assert result.ok is True
     assert catalog is not None
     assert catalog.species["sprout"].learnset == ("tackle", "ember")
+
+
+def test_missing_capture_rate_uses_default() -> None:
+    species, result = parse_species(
+        {
+            "species": [
+                {
+                    "id": "sprout",
+                    "types": ["grass"],
+                    "base_stats": {"hp": 30, "atk": 10, "defense": 10, "spd": 8},
+                    "learnset": ["tackle"],
+                }
+            ]
+        }
+    )
+
+    assert result.ok is True
+    assert species["sprout"].capture_rate == 150
+
+
+def test_invalid_capture_rate_reports_validation_error(valid_fixture_dir: Path) -> None:
+    species_payload = json.loads((valid_fixture_dir / "monster_species.json").read_text(encoding="utf-8"))
+    species_payload["species"][0]["capture_rate"] = 999
+    _write_json(valid_fixture_dir / "monster_species.json", species_payload)
+
+    _, result = load_monster_catalog(valid_fixture_dir)
+
+    assert result.ok is False
+    assert any("capture_rate" in err and "between 1 and 255" in err for err in result.errors)
 
 
 def test_parse_helpers_accept_inline_payloads() -> None:
