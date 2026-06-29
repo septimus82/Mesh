@@ -15,8 +15,16 @@ from engine.events import MeshEvent
 from engine.text_draw import TextCache, draw_text_cached
 from engine.ui_overlays.common import UIElement, _draw_tb_rectangle_filled, _draw_tb_rectangle_outline
 
-from .battle_controller import BattleResult, MonsterBattleController, OpponentActionProvider
-from .battle_model import MonsterInstance, Move, RandomLike, TypeChart
+from .battle_controller import BattleLogEntry, BattleResult, MonsterBattleController, OpponentActionProvider
+from .battle_model import MonsterInstance, Move, RandomLike, TypeChart, resolve_move
+from .capture import CaptureResult, resolve_capture
+from .collection import (
+    DEFAULT_POCKET_BALL_COUNT,
+    add_caught_monster,
+    consume_pocket_ball,
+    ensure_monster_collection,
+    get_pocket_ball_count,
+)
 
 if TYPE_CHECKING:
     from engine.game import GameWindow
@@ -234,7 +242,7 @@ class MonsterBattleOverlay(UIElement):
                 actions.append((f"move:{move.id}", f"{move.id} {move.type} PP {move.pp}"))
             return actions or [("back", "Back")]
         if self.menu_state == "bag":
-            return [("capture:pocket_ball", "Pocket Ball"), ("back", "Back")]
+            return [("capture:pocket_ball", f"Pocket Ball x{self.mode.pocket_ball_count()}"), ("back", "Back")]
         if self.menu_state == "ended":
             return [("close", "Close")]
         return [("menu:fight", "Fight"), ("menu:bag", "Bag"), ("run", "Run")]
@@ -274,7 +282,6 @@ class MonsterBattleOverlay(UIElement):
             return
         if action.startswith("capture:"):
             self.mode.attempt_capture(item_id=action.split(":", 1)[1])
-            self.menu_state = "ended" if not self.mode.active else "root"
             self.selected_index = 0
             return
         if action == "run":
@@ -353,6 +360,7 @@ class MonsterBattleMode:
             rng=rng,
             opponent_action_provider=opponent_action_provider,
         )
+        self._ensure_collection_state()
         self.overlay = MonsterBattleOverlay(self.window, self)
         self.overlay.show()
         self.overlay.set_intro_log()
@@ -389,26 +397,59 @@ class MonsterBattleMode:
 
         return self.end_battle(result)
 
-    def attempt_capture(self, *, item_id: str = "pocket_ball") -> BattleResult:
+    def attempt_capture(self, *, item_id: str = "pocket_ball") -> CaptureResult | None:
         if not self.active or self.controller is None:
             raise RuntimeError("monster battle mode is not active")
+        values = self._state_values()
+        balls_before = get_pocket_ball_count(values)
+        if not consume_pocket_ball(values):
+            self._emit_capture_attempt(
+                {
+                    "item_id": str(item_id),
+                    "species_id": self.controller.opponent.species.id,
+                    "level": self.controller.opponent.level,
+                    "caught": False,
+                    "blocked": True,
+                    "balls_before": balls_before,
+                    "balls_remaining": 0,
+                    "return_context": dict(self.return_context),
+                },
+            )
+            if self.overlay is not None:
+                self.overlay.log_line = "No Pocket Balls left!"
+                self.overlay.menu_state = "bag"
+            return None
+        capture = resolve_capture(self.controller.opponent, ball_bonus=1.0, rng=self._capture_rng())
         payload = {
             "item_id": str(item_id),
             "species_id": self.controller.opponent.species.id,
             "level": self.controller.opponent.level,
+            "caught": capture.caught,
+            "roll": capture.roll,
+            "chance": capture.chance,
+            "balls_remaining": get_pocket_ball_count(values),
             "return_context": dict(self.return_context),
         }
         self._emit_capture_attempt(payload)
-        result = BattleResult(
-            cast(Any, "caught"),
-            winning_side="player",
-            losing_side="opponent",
-            turns=self.controller.turn_number,
-        )
-        if self.overlay is not None:
-            self.overlay.log_line = f"Threw {item_id}! Capture stub succeeded."
-        self.end_battle(result)
-        return result
+        if capture.caught:
+            caught = add_caught_monster(values, self.controller.opponent)
+            result = BattleResult(
+                cast(Any, "caught"),
+                winning_side="player",
+                losing_side="opponent",
+                turns=self.controller.turn_number,
+            )
+            if self.overlay is not None:
+                self.overlay.log_line = f"Gotcha! {_display_name(self.controller.opponent)} was caught."
+            self.return_context.update({"caught_instance_id": caught.instance_id, "caught_storage": caught.storage})
+            self.end_battle(result)
+            return capture
+
+        self._resolve_failed_capture_response(item_id=item_id, capture=capture)
+        return capture
+
+    def pocket_ball_count(self) -> int:
+        return get_pocket_ball_count(self._state_values())
 
     def run_from_battle(self) -> BattleResult:
         if not self.active or self.controller is None:
@@ -475,6 +516,33 @@ class MonsterBattleMode:
             values[MONSTER_BATTLE_RESULT_KEY] = dict(payload)
             values[MONSTER_BATTLE_RETURN_CONTEXT_KEY] = dict(payload.get("return_context", {}))
 
+    def _state_values(self) -> dict[str, Any]:
+        controller = getattr(self.window, "game_state_controller", None)
+        state = getattr(controller, "state", None)
+        values = getattr(state, "values", None)
+        if not isinstance(values, dict):
+            values = {}
+            if state is not None:
+                state.values = values
+                state.variables = values
+        ensure_monster_collection(values)
+        return values
+
+    def _ensure_collection_state(self) -> None:
+        values = self._state_values()
+        values.setdefault("pocket_ball_count", DEFAULT_POCKET_BALL_COUNT)
+        ensure_monster_collection(values)
+
+    def _capture_rng(self) -> RandomLike:
+        if self.controller is not None and self.controller.rng is not None:
+            return self.controller.rng
+        import random  # noqa: PLC0415
+
+        rng = random.Random(0)
+        if self.controller is not None:
+            self.controller.rng = rng
+        return rng
+
     def _emit_ended(self, payload: dict[str, Any]) -> None:
         emitter = getattr(self.window, "emit_event", None)
         event = MeshEvent(MONSTER_BATTLE_ENDED_EVENT, dict(payload))
@@ -530,6 +598,66 @@ class MonsterBattleMode:
             if entry.target_fainted:
                 steps.append(BattlePresentationStep(f"{target} fainted!", player_hp, opponent_hp))
         return steps
+
+    def _resolve_failed_capture_response(self, *, item_id: str, capture: CaptureResult) -> None:
+        if self.controller is None or self.overlay is None:
+            return
+        before_player_hp = int(self.overlay.displayed_player_hp if self.overlay.displayed_player_hp is not None else self.controller.player.current_hp)
+        before_opponent_hp = int(
+            self.overlay.displayed_opponent_hp if self.overlay.displayed_opponent_hp is not None else self.controller.opponent.current_hp,
+        )
+        try:
+            opponent_action = self.controller._choose_opponent_action()
+            move = self.controller._require_move(opponent_action.move_id)
+        except Exception:  # noqa: BLE001  # REASON: failed capture should still return control if no opponent move is available
+            self.overlay.begin_turn_presentation(
+                [
+                    BattlePresentationStep(
+                        f"Threw {item_id}! {_display_name(self.controller.opponent)} broke free.",
+                        before_player_hp,
+                        before_opponent_hp,
+                    )
+                ],
+                result=None,
+            )
+            return
+
+        resolution = resolve_move(
+            self.controller.opponent,
+            self.controller.player,
+            move,
+            self.controller.type_chart,
+            self.controller.rng,
+        )
+        self.controller.player = resolution.defender
+        self.controller.turn_log.append(
+            BattleLogEntry(
+                turn=self.controller.turn_number,
+                side="opponent",
+                move_id=move.id,
+                damage=resolution.damage,
+                hit=resolution.hit,
+                target_fainted=resolution.fainted,
+            ),
+        )
+        result = None
+        if self.controller.player.fainted:
+            self.controller.result = BattleResult("lost", winning_side="opponent", losing_side="player", turns=self.controller.turn_number)
+            self.controller.phase = "lost"
+            result = self.controller.result
+        else:
+            self.controller.turn_number += 1
+            self.controller.phase = "choose_action"
+
+        steps = [
+            BattlePresentationStep(
+                f"Threw {item_id}! {_display_name(self.controller.opponent)} broke free.",
+                before_player_hp,
+                before_opponent_hp,
+            ),
+        ]
+        steps.extend(self._build_presentation_steps(len(self.controller.turn_log) - 1, before_player_hp, before_opponent_hp))
+        self.overlay.begin_turn_presentation(steps, result=result)
 
 
 def start_monster_battle(window: "GameWindow", **kwargs: Any) -> MonsterBattleController:

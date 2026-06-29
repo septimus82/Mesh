@@ -26,6 +26,7 @@ class Species:
     base_stats: BattleStats
     types: tuple[str, ...]
     learnset: tuple[str, ...] = ()
+    capture_rate: int = 150
 
 
 @dataclass(frozen=True, slots=True)

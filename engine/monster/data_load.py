@@ -16,6 +16,9 @@ DEFAULT_DATA_DIR = Path("assets/data")
 SPECIES_FILENAME = "monster_species.json"
 MOVES_FILENAME = "monster_moves.json"
 TYPE_CHART_FILENAME = "monster_type_chart.json"
+DEFAULT_CAPTURE_RATE = 150
+MIN_CAPTURE_RATE = 1
+MAX_CAPTURE_RATE = 255
 
 
 @dataclass(frozen=True, slots=True)
@@ -112,6 +115,17 @@ def _parse_learnset(raw: Any, *, label: str) -> tuple[tuple[str, ...], str | Non
     return tuple(move_ids), None
 
 
+def _parse_capture_rate(raw: Any, *, label: str) -> tuple[int, str | None]:
+    if raw is None:
+        return DEFAULT_CAPTURE_RATE, None
+    if not isinstance(raw, (int, float)) or isinstance(raw, bool):
+        return DEFAULT_CAPTURE_RATE, f"{label}.capture_rate must be a number"
+    value = int(raw)
+    if value < MIN_CAPTURE_RATE or value > MAX_CAPTURE_RATE:
+        return DEFAULT_CAPTURE_RATE, f"{label}.capture_rate must be between {MIN_CAPTURE_RATE} and {MAX_CAPTURE_RATE}"
+    return value, None
+
+
 def parse_moves(payload: Any, *, source: str = "moves") -> tuple[dict[str, Move], ValidationResult]:
     root, err = _require_mapping(payload, label=source)
     if err is not None:
@@ -206,11 +220,16 @@ def parse_species(payload: Any, *, source: str = "species") -> tuple[dict[str, S
         if learn_err:
             errors.append(learn_err)
             continue
+        capture_rate, capture_err = _parse_capture_rate(row.get("capture_rate"), label=label)
+        if capture_err:
+            errors.append(capture_err)
+            continue
         species[species_id] = Species(
             id=species_id,
             base_stats=stats,
             types=tuple(types),
             learnset=learnset,
+            capture_rate=capture_rate,
         )
     return species, ValidationResult(ok=not errors, errors=tuple(errors))
 

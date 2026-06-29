@@ -8,10 +8,12 @@ import pytest
 import engine.optional_arcade as optional_arcade
 from engine.config import load_config
 from engine.game_runtime import input_dispatch
+from engine.game_state_controller import GameState
 from engine.input_controller import InputController
 from engine.monster.battle_controller import MoveAction
 from engine.monster.battle_mode import MONSTER_BATTLE_CAPTURE_ATTEMPT_EVENT, MonsterBattleMode
 from engine.monster.battle_model import BattleStats, MonsterInstance, Move, Species
+from engine.monster.collection import MONSTER_PARTY_KEY, POCKET_BALL_COUNT_KEY
 from engine.ui_controller import UIController
 from tests._typing import as_any
 
@@ -43,6 +45,14 @@ class _Console:
         return False
 
 
+class _Rng:
+    def __init__(self, *values: float) -> None:
+        self.values = list(values)
+
+    def random(self) -> float:
+        return self.values.pop(0) if self.values else 0.0
+
+
 def _window() -> types.SimpleNamespace:
     window = types.SimpleNamespace()
     window.width = 1280
@@ -61,6 +71,7 @@ def _window() -> types.SimpleNamespace:
     window.monster_battle_mode_active = False
     window._mesh_event_queue = []
     window.emit_event = lambda event: window._mesh_event_queue.append(event)
+    window.game_state_controller = types.SimpleNamespace(state=GameState())
     window.console_log = MagicMock()
     return window
 
@@ -71,6 +82,7 @@ def _start_ui_battle(
     player_hp: int | None = None,
     opponent_hp: int | None = None,
     player_moves: tuple[str, ...] = ("ember", "tackle"),
+    rng: object | None = None,
 ) -> MonsterBattleMode:
     mode = MonsterBattleMode(as_any(window))
     window.monster_battle_mode = mode
@@ -80,6 +92,7 @@ def _start_ui_battle(
         moves={move.id: move for move in (TACKLE, EMBER, KO)},
         type_chart={"fire": {"water": 0.5}, "grass": {"water": 2.0}},
         return_context={"scene_path": "scenes/field.json"},
+        rng=rng,
         opponent_action_provider=lambda _controller: MoveAction("opponent", "tackle"),
     )
     return mode
@@ -111,7 +124,7 @@ def test_keyboard_fight_then_move_submits_move_and_advances_turn() -> None:
 
 def test_mouse_bag_ball_routes_capture_attempt_action() -> None:
     window = _window()
-    mode = _start_ui_battle(window)
+    mode = _start_ui_battle(window, rng=_Rng(0.0))
     overlay = mode.overlay
     assert overlay is not None
 
@@ -124,6 +137,45 @@ def test_mouse_bag_ball_routes_capture_attempt_action() -> None:
     assert mode.active is False
     assert window.paused is False
     assert any(event.type == MONSTER_BATTLE_CAPTURE_ATTEMPT_EVENT for event in window._mesh_event_queue)
+    values = window.game_state_controller.state.values
+    assert values[POCKET_BALL_COUNT_KEY] == 2
+    assert len(values[MONSTER_PARTY_KEY]) == 1
+
+
+def test_capture_failure_consumes_ball_and_battle_continues() -> None:
+    window = _window()
+    mode = _start_ui_battle(window, rng=_Rng(0.99, 0.0))
+    overlay = mode.overlay
+    assert overlay is not None
+    values = window.game_state_controller.state.values
+
+    overlay.button_rects = {"menu:bag": (10.0, 10.0, 80.0, 30.0)}
+    assert window.input_controller.on_mouse_press(20.0, 20.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+    overlay.button_rects = {"capture:pocket_ball": (10.0, 10.0, 120.0, 30.0)}
+    assert window.input_controller.on_mouse_press(20.0, 20.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+
+    assert mode.active is True
+    assert values[POCKET_BALL_COUNT_KEY] == 2
+    assert overlay.menu_state == "presenting"
+    assert "broke free" in overlay.presentation_queue[0].line
+
+
+def test_capture_with_zero_balls_is_blocked() -> None:
+    window = _window()
+    mode = _start_ui_battle(window, rng=_Rng(0.0))
+    overlay = mode.overlay
+    assert overlay is not None
+    window.game_state_controller.state.values[POCKET_BALL_COUNT_KEY] = 0
+
+    overlay.button_rects = {"menu:bag": (10.0, 10.0, 80.0, 30.0)}
+    assert window.input_controller.on_mouse_press(20.0, 20.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+    overlay.button_rects = {"capture:pocket_ball": (10.0, 10.0, 120.0, 30.0)}
+    assert window.input_controller.on_mouse_press(20.0, 20.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+
+    assert mode.active is True
+    assert overlay.menu_state == "bag"
+    assert overlay.log_line == "No Pocket Balls left!"
+    assert window.game_state_controller.state.values[POCKET_BALL_COUNT_KEY] == 0
 
 
 def test_keyboard_run_routes_flee_and_ends_battle_mode() -> None:
