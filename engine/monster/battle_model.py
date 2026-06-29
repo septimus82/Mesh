@@ -30,12 +30,19 @@ class Species:
 
 
 @dataclass(frozen=True, slots=True)
+class MoveStatusInflict:
+    condition: str
+    chance: float
+
+
+@dataclass(frozen=True, slots=True)
 class Move:
     id: str
     type: str
     power: int
     accuracy: int
     pp: int
+    status_inflict: MoveStatusInflict | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +53,8 @@ class MonsterInstance:
     known_moves: tuple[str, ...] = ()
     stats: BattleStats | None = None
     experience: int = 0
+    status_condition: str | None = None
+    status_turns: int = 0
 
     def __post_init__(self) -> None:
         level = max(1, int(self.level))
@@ -55,6 +64,7 @@ class MonsterInstance:
         object.__setattr__(self, "stats", stats)
         object.__setattr__(self, "current_hp", hp)
         object.__setattr__(self, "experience", max(0, int(self.experience)))
+        object.__setattr__(self, "status_turns", max(0, int(self.status_turns)))
 
     @property
     def fainted(self) -> bool:

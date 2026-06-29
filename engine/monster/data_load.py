@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from .battle_model import BattleStats, Move, Species, TypeChart
+from .battle_model import BattleStats, Move, MoveStatusInflict, Species, TypeChart
 
 DEFAULT_DATA_DIR = Path("assets/data")
 SPECIES_FILENAME = "monster_species.json"
@@ -19,6 +19,7 @@ TYPE_CHART_FILENAME = "monster_type_chart.json"
 DEFAULT_CAPTURE_RATE = 150
 MIN_CAPTURE_RATE = 1
 MAX_CAPTURE_RATE = 255
+KNOWN_STATUS_CONDITIONS = frozenset({"poison", "sleep"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -126,6 +127,24 @@ def _parse_capture_rate(raw: Any, *, label: str) -> tuple[int, str | None]:
     return value, None
 
 
+def _parse_status_inflict(raw: Any, *, label: str) -> tuple[MoveStatusInflict | None, str | None]:
+    if raw is None:
+        return None, None
+    mapping, err = _require_mapping(raw, label=f"{label}.status_inflict")
+    if err is not None:
+        return None, err
+    condition = mapping.get("condition")
+    if not isinstance(condition, str) or condition.strip() not in KNOWN_STATUS_CONDITIONS:
+        return None, f"{label}.status_inflict.condition must be one of: {', '.join(sorted(KNOWN_STATUS_CONDITIONS))}"
+    chance = mapping.get("chance")
+    if not isinstance(chance, (int, float)) or isinstance(chance, bool):
+        return None, f"{label}.status_inflict.chance must be a number"
+    chance_value = float(chance)
+    if chance_value < 0.0 or chance_value > 1.0:
+        return None, f"{label}.status_inflict.chance must be between 0 and 1"
+    return MoveStatusInflict(condition=condition.strip(), chance=chance_value), None
+
+
 def parse_moves(payload: Any, *, source: str = "moves") -> tuple[dict[str, Move], ValidationResult]:
     root, err = _require_mapping(payload, label=source)
     if err is not None:
@@ -162,12 +181,17 @@ def parse_moves(payload: Any, *, source: str = "moves") -> tuple[dict[str, Move]
                 errors.append(f"{label}.{field} must be a number")
                 break
         else:
+            status_inflict, status_err = _parse_status_inflict(row.get("status_inflict"), label=label)
+            if status_err is not None:
+                errors.append(status_err)
+                continue
             moves[move_id] = Move(
                 id=move_id,
                 type=move_type.strip(),
                 power=int(row["power"]),
                 accuracy=int(row["accuracy"]),
                 pp=int(row["pp"]),
+                status_inflict=status_inflict,
             )
     return moves, ValidationResult(ok=not errors, errors=tuple(errors))
 

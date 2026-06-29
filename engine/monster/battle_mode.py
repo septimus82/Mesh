@@ -612,6 +612,28 @@ class MonsterBattleMode:
         opponent_hp = int(before_opponent_hp)
         steps: list[BattlePresentationStep] = []
         for entry in entries:
+            if entry.kind == "status":
+                subject = _display_name(self.controller.player if entry.side == "player" else self.controller.opponent)
+                if entry.status_event == "poisoned":
+                    line = f"{subject} was poisoned!"
+                elif entry.status_event == "poison_damage":
+                    if entry.side == "player":
+                        player_hp = max(0, player_hp - int(entry.status_damage))
+                    else:
+                        opponent_hp = max(0, opponent_hp - int(entry.status_damage))
+                    line = f"{subject} is hurt by poison!"
+                elif entry.status_event == "fell_asleep":
+                    line = f"{subject} fell asleep!"
+                elif entry.status_event == "woke_up":
+                    line = f"{subject} woke up!"
+                elif entry.status_event == "asleep_skip":
+                    line = f"{subject} is fast asleep!"
+                else:
+                    line = f"{subject} was affected!"
+                steps.append(BattlePresentationStep(line, player_hp, opponent_hp))
+                if entry.target_fainted:
+                    steps.append(BattlePresentationStep(f"{subject} fainted!", player_hp, opponent_hp))
+                continue
             if entry.side == "player":
                 actor = _display_name(self.controller.player)
                 target = _display_name(self.controller.opponent)

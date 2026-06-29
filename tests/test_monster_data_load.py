@@ -210,6 +210,44 @@ def test_invalid_capture_rate_reports_validation_error(valid_fixture_dir: Path) 
     assert any("capture_rate" in err and "between 1 and 255" in err for err in result.errors)
 
 
+def test_move_status_inflict_parses_and_validates() -> None:
+    moves, ok_result = parse_moves(
+        {
+            "moves": [
+                {
+                    "id": "sleep_powder",
+                    "type": "normal",
+                    "power": 0,
+                    "accuracy": 100,
+                    "pp": 15,
+                    "status_inflict": {"condition": "sleep", "chance": 0.75},
+                }
+            ]
+        }
+    )
+    assert ok_result.ok is True
+    assert moves["sleep_powder"].status_inflict is not None
+    assert moves["sleep_powder"].status_inflict.condition == "sleep"
+    assert moves["sleep_powder"].status_inflict.chance == 0.75
+
+    _, bad_result = parse_moves(
+        {
+            "moves": [
+                {
+                    "id": "bad",
+                    "type": "normal",
+                    "power": 0,
+                    "accuracy": 100,
+                    "pp": 15,
+                    "status_inflict": {"condition": "burn", "chance": 1.5},
+                }
+            ]
+        }
+    )
+    assert bad_result.ok is False
+    assert any("status_inflict" in err for err in bad_result.errors)
+
+
 def test_parse_helpers_accept_inline_payloads() -> None:
     moves, move_result = parse_moves({"moves": [{"id": "tackle", "type": "normal", "power": 40, "accuracy": 100, "pp": 35}]})
     species, species_result = parse_species(

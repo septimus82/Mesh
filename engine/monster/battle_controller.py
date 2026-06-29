@@ -11,6 +11,7 @@ from typing import Callable, Literal, Mapping
 
 from .battle_model import MonsterInstance, Move, MoveResolution, RandomLike, TypeChart, resolve_move
 from .data_load import MonsterCatalog
+from .status import POISON, SLEEP, apply_status, can_act, inflict_event_for, tick_end_of_turn
 
 BattleSideId = Literal["player", "opponent"]
 BattlePhase = Literal["choose_action", "resolve", "apply_faints", "won", "lost"]
@@ -31,10 +32,13 @@ class MoveAction:
 class BattleLogEntry:
     turn: int
     side: BattleSideId
-    move_id: str
-    damage: int
-    hit: bool
-    target_fainted: bool
+    kind: Literal["move", "status"] = "move"
+    move_id: str = ""
+    damage: int = 0
+    hit: bool = False
+    target_fainted: bool = False
+    status_event: str = ""
+    status_damage: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,10 +122,19 @@ class MonsterBattleController:
             key=lambda action: (-self._monster_for(action.side).stats.spd, 0 if action.side == "player" else 1),
         )
         for action in ordered:
-            attacker = self._monster_for(action.side)
+            attacker_side = action.side
+            attacker = self._monster_for(attacker_side)
             if attacker.fainted:
                 continue
-            defender_side = self._other_side(action.side)
+
+            may_act, status_events, attacker = can_act(attacker, self.rng)
+            self._set_monster(attacker_side, attacker)
+            for event in status_events:
+                self._append_status_log(attacker_side, event.kind)
+            if not may_act:
+                continue
+
+            defender_side = self._other_side(attacker_side)
             defender = self._monster_for(defender_side)
             if defender.fainted:
                 continue
@@ -129,6 +142,34 @@ class MonsterBattleController:
             resolution = resolve_move(attacker, defender, move, self.type_chart, self.rng)
             self._set_monster(defender_side, resolution.defender)
             self._append_log(action, resolution)
+            if resolution.hit:
+                self._try_inflict_status(defender_side, move)
+
+        for side in ("player", "opponent"):
+            monster = self._monster_for(side)
+            if monster.fainted:
+                continue
+            updated, tick_events = tick_end_of_turn(monster)
+            self._set_monster(side, updated)
+            for event in tick_events:
+                self._append_status_log(
+                    side,
+                    event.kind,
+                    damage=event.damage,
+                    target_fainted=updated.fainted and event.kind == "poison_damage",
+                )
+
+    def _try_inflict_status(self, defender_side: BattleSideId, move: Move) -> None:
+        inflict = move.status_inflict
+        if inflict is None or inflict.condition not in {POISON, SLEEP}:
+            return
+        roll = 0.0 if self.rng is None else float(self.rng.random())
+        if roll >= float(inflict.chance):
+            return
+        defender = self._monster_for(defender_side)
+        updated = apply_status(defender, inflict.condition)
+        self._set_monster(defender_side, updated)
+        self._append_status_log(defender_side, inflict_event_for(inflict.condition))
 
     def _apply_faints(self) -> None:
         player_fainted = self.player.fainted
@@ -168,10 +209,30 @@ class MonsterBattleController:
             BattleLogEntry(
                 turn=self.turn_number,
                 side=action.side,
+                kind="move",
                 move_id=action.move_id,
                 damage=resolution.damage,
                 hit=resolution.hit,
                 target_fainted=resolution.fainted,
+            ),
+        )
+
+    def _append_status_log(
+        self,
+        side: BattleSideId,
+        status_event: str,
+        *,
+        damage: int = 0,
+        target_fainted: bool = False,
+    ) -> None:
+        self.turn_log.append(
+            BattleLogEntry(
+                turn=self.turn_number,
+                side=side,
+                kind="status",
+                status_event=status_event,
+                status_damage=damage,
+                target_fainted=target_fainted,
             ),
         )
 
