@@ -701,6 +701,13 @@ class GameWindow(engine.optional_arcade.arcade.Window):
 
         return self.monster_battle_mode.end_battle(result)
 
+    def open_monster_party_view(self) -> Any:
+        """Open the runtime monster party view."""
+
+        from engine.monster.party_menu import open_monster_party_view  # noqa: PLC0415
+
+        return open_monster_party_view(self)
+
     def start_debug_monster_battle(self) -> Any:
         """Start a fixture monster battle for MON-0f dogfooding."""
 

@@ -91,6 +91,16 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
     if not editor_active and window.ui_controller.on_key_press(key, modifiers):
         return
 
+    if (
+        not editor_active
+        and key == optional_arcade.arcade.key.M
+        and (modifiers & optional_arcade.arcade.key.MOD_CTRL)
+    ):
+        opener = getattr(window, "open_monster_party_view", None)
+        if callable(opener):
+            opener()
+        return
+
     if key == optional_arcade.arcade.key.ESCAPE:
         overlay = getattr(window, "settings_overlay", None)
         toggle = getattr(overlay, "toggle", None) if overlay is not None else None
