@@ -231,34 +231,36 @@ def test_lethal_turn_shows_faint_line_then_ends_after_queue_drains() -> None:
     assert window.paused is False
 
 
-def test_debug_shift_f11_launches_fixture_battle_through_key_router() -> None:
-    window = _window()
-    window.show_debug = True
-    window.start_debug_monster_battle = MagicMock(return_value=True)
-
-    handled = window.input_controller.on_key_press(
-        optional_arcade.arcade.key.F11,
-        optional_arcade.arcade.key.MOD_SHIFT,
-    )
-
-    assert handled is True
-    window.start_debug_monster_battle.assert_called_once_with()
-
-
-def test_debug_shift_f11_launches_through_real_dispatch_without_dev_browser() -> None:
+def test_debug_f12_launches_through_real_dispatch_when_debug_mode_enabled() -> None:
     window = _window()
     window.engine_config = load_config("config.json")
+    window.engine_config.debug_mode = True
     window.input_controller = InputController(as_any(window))
-    window.show_debug = True
     window.start_debug_monster_battle = MagicMock(return_value=True)
     dev_browser = types.SimpleNamespace(toggle=MagicMock())
     window.dev_browser_overlay = dev_browser
 
     input_dispatch.on_key_press(
         as_any(window),
-        optional_arcade.arcade.key.F11,
-        optional_arcade.arcade.key.MOD_SHIFT,
+        optional_arcade.arcade.key.F12,
+        0,
     )
 
     window.start_debug_monster_battle.assert_called_once_with()
     dev_browser.toggle.assert_not_called()
+
+
+def test_debug_f12_does_not_launch_when_debug_mode_disabled() -> None:
+    window = _window()
+    window.engine_config = load_config("config.json")
+    window.engine_config.debug_mode = False
+    window.input_controller = InputController(as_any(window))
+    window.start_debug_monster_battle = MagicMock(return_value=True)
+
+    input_dispatch.on_key_press(
+        as_any(window),
+        optional_arcade.arcade.key.F12,
+        0,
+    )
+
+    window.start_debug_monster_battle.assert_not_called()

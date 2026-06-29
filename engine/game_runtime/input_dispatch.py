@@ -98,6 +98,13 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
             toggle()
             return
 
+    if key == optional_arcade.arcade.key.F12:
+        if bool(getattr(window.engine_config, "debug_mode", False)):
+            starter = getattr(window, "start_debug_monster_battle", None)
+            if callable(starter):
+                starter()
+        return
+
     window.input_controller.on_key_press(key, modifiers)
 
     if window.game_over:
