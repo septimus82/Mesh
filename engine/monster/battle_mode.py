@@ -391,6 +391,7 @@ class MonsterBattleMode:
         self.return_context: dict[str, Any] = {}
         self._prior_paused = False
         self.active = False
+        self.player_party_instance_ids: list[str | None] = []
 
     def start_battle(
         self,
@@ -399,6 +400,7 @@ class MonsterBattleMode:
         opponent_monster: MonsterInstance,
         moves: Mapping[str, Move],
         player_party: Sequence[MonsterInstance] | None = None,
+        player_party_instance_ids: Sequence[str | None] | None = None,
         return_context: Mapping[str, Any] | None = None,
         type_chart: TypeChart | None = None,
         rng: RandomLike | None = None,
@@ -411,6 +413,11 @@ class MonsterBattleMode:
 
         self._prior_paused = bool(getattr(self.window, "paused", False))
         self.return_context = dict(return_context or {})
+        party = list(player_party) if player_party is not None else [player_monster]
+        if player_party_instance_ids is not None:
+            self.player_party_instance_ids = list(player_party_instance_ids)
+        else:
+            self.player_party_instance_ids = [None] * len(party)
         self.controller = MonsterBattleController(
             player=player_monster,
             opponent=opponent_monster,
@@ -607,6 +614,7 @@ class MonsterBattleMode:
         self.controller = None
         self.overlay = None
         self.return_context = {}
+        self.player_party_instance_ids = []
         self.active = False
         self.window.monster_battle_mode_active = False
         self.window.paused = self._prior_paused
@@ -882,11 +890,11 @@ class MonsterBattleMode:
         if self.controller is None:
             return
         values = self._state_values()
-        party_ids = values[MONSTER_PARTY_KEY]
         instances = values[MONSTER_INSTANCES_KEY]
-        for index, monster in enumerate(self.controller.player_party):
-            if index < len(party_ids):
-                instances[str(party_ids[index])] = serialize_monster_instance(monster)
+        for monster, instance_id in zip(self.controller.player_party, self.player_party_instance_ids, strict=False):
+            if instance_id is None:
+                continue
+            instances[str(instance_id)] = serialize_monster_instance(monster)
 
 
 def start_monster_battle(window: "GameWindow", **kwargs: Any) -> MonsterBattleController:

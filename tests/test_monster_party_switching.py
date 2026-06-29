@@ -226,9 +226,10 @@ def test_load_battle_party_from_game_state() -> None:
     fallback = MonsterInstance(WEAK, level=1, known_moves=("tackle",))
     species = {"lead": LEAD, "bench": BENCH}
 
-    party = load_battle_party_from_values(values, species, fallback=fallback)
+    party, instance_ids = load_battle_party_from_values(values, species, fallback=fallback)
 
     assert len(party) == 2
+    assert instance_ids == ["a", "b"]
     assert party[0].species.id == "lead"
     assert party[0].level == 4
     assert party[1].species.id == "bench"
@@ -238,10 +239,11 @@ def test_load_battle_party_falls_back_when_empty() -> None:
     values = {MONSTER_PARTY_KEY: [], MONSTER_INSTANCES_KEY: {}}
     fallback = MonsterInstance(WEAK, level=7, known_moves=("tackle",))
 
-    party = load_battle_party_from_values(values, {"weak": WEAK}, fallback=fallback)
+    party, instance_ids = load_battle_party_from_values(values, {"weak": WEAK}, fallback=fallback)
 
     assert len(party) == 1
     assert party[0].level == 7
+    assert instance_ids == [None]
 
 
 def test_switch_screen_disables_fainted_and_active_monsters() -> None:

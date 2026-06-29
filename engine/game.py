@@ -736,12 +736,13 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         state_values = getattr(state, "values", None)
         if isinstance(state_values, dict):
             values = state_values
-        party = load_battle_party_from_values(values, catalog.species, fallback=fallback)
+        party, party_instance_ids = load_battle_party_from_values(values, catalog.species, fallback=fallback)
         active = party[0]
         self.console_log("[MonsterBattle] Starting debug battle: Sproutling vs Shelltide")
         return self.start_monster_battle(
             player_monster=active,
             player_party=party,
+            player_party_instance_ids=party_instance_ids,
             opponent_monster=MonsterInstance(opponent_species, level=6, known_moves=opponent_species.learnset),
             moves=catalog.moves,
             type_chart=catalog.type_chart,

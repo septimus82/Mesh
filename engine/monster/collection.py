@@ -80,11 +80,16 @@ def load_battle_party_from_values(
     species_by_id: Mapping[str, Species],
     *,
     fallback: MonsterInstance,
-) -> list[MonsterInstance]:
-    """Build battle-ready party instances from persisted collection state."""
+) -> tuple[list[MonsterInstance], list[str | None]]:
+    """Build battle-ready party instances from persisted collection state.
+
+    Returns the party plus parallel instance ids captured at load time. The fallback
+    monster uses ``None`` when the persisted party is empty.
+    """
 
     ensure_monster_collection(values)
     party: list[MonsterInstance] = []
+    instance_ids: list[str | None] = []
     for instance_id in values[MONSTER_PARTY_KEY]:
         row = values[MONSTER_INSTANCES_KEY].get(str(instance_id))
         if not isinstance(row, dict):
@@ -104,7 +109,10 @@ def load_battle_party_from_values(
                 experience=int(row.get("xp", row.get("experience", 0)) or 0),
             )
         )
-    return party or [fallback]
+        instance_ids.append(str(instance_id))
+    if party:
+        return party, instance_ids
+    return [fallback], [None]
 
 
 def _next_instance_id(instances: MutableMapping[str, Any], species_id: str) -> str:
