@@ -130,6 +130,11 @@ def handle_mouse_press(controller: "InputController", x: float, y: float, button
     setattr(window, "_mouse_x", float(x))
     setattr(window, "_mouse_y", float(y))
 
+    ui_controller = getattr(window, "ui_controller", None)
+    ui_mouse = getattr(ui_controller, "on_mouse_press", None) if ui_controller is not None else None
+    if callable(ui_mouse) and ui_mouse(float(x), float(y), int(button), int(modifiers)):
+        return True
+
     event = MouseEvent(kind="press", button=int(button), x=float(x), y=float(y), modifiers=int(modifiers))
     snapshot = get_capture_focus_snapshot(controller, modifiers)
     return mouse_router.route_and_dispatch_mouse(controller, event, snapshot)

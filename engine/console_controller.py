@@ -367,6 +367,7 @@ class ConsoleController:
                     ("F9", "Toggle paused state"),
                     ("F10", "Toggle scene inspector overlay"),
                     ("F11", "Toggle tile paint mode (debug)"),
+                    ("Shift+F11", "Start debug monster battle (debug)"),
                     ("F12", "Toggle selection lock from hover (debug)"),
                     ("Esc", "Toggle settings overlay"),
                     ("Q", "Toggle quest log"),
