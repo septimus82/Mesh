@@ -99,10 +99,23 @@ capability.
 
 ---
 
+## Framing (decided 2026-06-29) — engine first, content is scratch paper
+
+We are building a **reusable turn-based monster-battle ENGINE on Mesh** (the gap the audit found), NOT a
+Pokémon-clone *game*. The monster content (sproutling/shelltide/debug battles) is **throwaway test
+scaffolding**; the deliverable is the engine layer (pure controller, party/box, capture, status, switching,
+trainers, breeding — data-driven + AI-authorable). The genre primitives are table-stakes any monster RPG
+needs — but **cloning Pokémon feature-for-feature with no twist = "a worse Pokémon"** (and Nintendo
+litigates). The shippable game wears the user's OWN differentiation + the action/AI-authoring hybrid, layered
+on top of this engine. So: finish the core battle primitives, **then pause cloning and define the twist.**
+
 ## Phases beyond 0 (higher level — slice these later)
 
-- **Phase 1 — Battle depth:** full move/type/status systems, monster switching, multi-monster parties,
-  trainer/enemy battle AI, evolution.
+- **Phase 1 — Battle depth:** DONE so far — status effects (MON-1a, poison/sleep), multi-monster party +
+  player switching (MON-1b), trainer battles: multi-monster opponent + enemy auto-switch (MON-1c). Type
+  effectiveness already lives in the MON-0a damage formula. *Remaining classic primitive:* **evolution**
+  (MON-1d) — and that's roughly the "battle engine feature-complete" line where we stop and define the
+  user's differentiator before going wider.
 - **Phase 2 — Monster systems:** PC box/storage, **breeding** (compatibility → egg → stat/move inheritance
   — the genre differentiator), held items, the bag, shops.
 - **Phase 3 — The game:** the actual world (towns/routes), story, gym/progression, the monster roster,
