@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, MutableMapping
+from typing import Any, Mapping, MutableMapping
 
-from .battle_model import MonsterInstance
+from .battle_model import MonsterInstance, Species
 
 MONSTER_PARTY_KEY = "monster_party"
 MONSTER_BOX_KEY = "monster_box"
@@ -73,6 +73,38 @@ def serialize_monster_instance(monster: MonsterInstance) -> dict[str, Any]:
         "current_hp": int(monster.current_hp or 0),
         "known_moves": list(monster.known_moves),
     }
+
+
+def load_battle_party_from_values(
+    values: MutableMapping[str, Any],
+    species_by_id: Mapping[str, Species],
+    *,
+    fallback: MonsterInstance,
+) -> list[MonsterInstance]:
+    """Build battle-ready party instances from persisted collection state."""
+
+    ensure_monster_collection(values)
+    party: list[MonsterInstance] = []
+    for instance_id in values[MONSTER_PARTY_KEY]:
+        row = values[MONSTER_INSTANCES_KEY].get(str(instance_id))
+        if not isinstance(row, dict):
+            continue
+        species_id = str(row.get("species_id", ""))
+        species = species_by_id.get(species_id)
+        if species is None:
+            continue
+        known_moves = row.get("known_moves")
+        moves = tuple(str(move_id) for move_id in known_moves) if isinstance(known_moves, list) else species.learnset
+        party.append(
+            MonsterInstance(
+                species,
+                level=int(row.get("level", 1) or 1),
+                current_hp=int(row.get("current_hp", 0) or 0),
+                known_moves=moves,
+                experience=int(row.get("xp", row.get("experience", 0)) or 0),
+            )
+        )
+    return party or [fallback]
 
 
 def _next_instance_id(instances: MutableMapping[str, Any], species_id: str) -> str:

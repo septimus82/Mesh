@@ -16,6 +16,7 @@ class SelectableItem:
     id: str
     label: str
     detail_lines: tuple[str, ...] = ()
+    enabled: bool = True
 
 
 class MenuScreen(Protocol):
@@ -90,6 +91,7 @@ class SelectableListScreen:
         self.empty_detail = str(empty_detail)
         self.list_widget = ScrollList([item.label for item in self.items], row_height=34, selected_index=0)
         self.activated_item_id: str | None = None
+        self._select_first_enabled()
 
     @property
     def selected_index(self) -> int:
@@ -115,7 +117,7 @@ class SelectableListScreen:
             return True
         if key in (arcade_key.ENTER, arcade_key.RETURN, arcade_key.SPACE):
             item = self.focused_item
-            if item is not None:
+            if item is not None and item.enabled:
                 self.activated_item_id = item.id
                 if self.on_activate is not None:
                     self.on_activate(item)
@@ -126,12 +128,24 @@ class SelectableListScreen:
         return True
 
     def _move_focus(self, delta: int) -> None:
-        if self.list_widget.ensure_visible(self.selected_index + int(delta)):
-            return
         if not self.items:
             self.list_widget.selected_index = -1
             return
-        self.list_widget.selected_index = max(0, min(self.selected_index + int(delta), len(self.items) - 1))
+        count = len(self.items)
+        index = self.selected_index
+        for _ in range(count):
+            index = (index + int(delta)) % count
+            if self.items[index].enabled:
+                if not self.list_widget.ensure_visible(index):
+                    self.list_widget.selected_index = index
+                return
+
+    def _select_first_enabled(self) -> None:
+        for index, item in enumerate(self.items):
+            if item.enabled:
+                self.list_widget.selected_index = index
+                return
+        self.list_widget.selected_index = 0 if self.items else -1
 
 
 class ConfirmModalScreen:

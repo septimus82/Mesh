@@ -712,6 +712,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         """Start a fixture monster battle for MON-0f dogfooding."""
 
         from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
+        from engine.monster.collection import load_battle_party_from_values  # noqa: PLC0415
         from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
 
         mode = getattr(self, "monster_battle_mode", None)
@@ -728,9 +729,19 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         except KeyError as exc:
             self.console_log(f"[MonsterBattle] Missing debug species: {exc}")
             return None
+        fallback = MonsterInstance(player_species, level=8, known_moves=player_species.learnset)
+        values: dict[str, Any] = {}
+        controller = getattr(self, "game_state_controller", None)
+        state = getattr(controller, "state", None)
+        state_values = getattr(state, "values", None)
+        if isinstance(state_values, dict):
+            values = state_values
+        party = load_battle_party_from_values(values, catalog.species, fallback=fallback)
+        active = party[0]
         self.console_log("[MonsterBattle] Starting debug battle: Sproutling vs Shelltide")
         return self.start_monster_battle(
-            player_monster=MonsterInstance(player_species, level=8, known_moves=player_species.learnset),
+            player_monster=active,
+            player_party=party,
             opponent_monster=MonsterInstance(opponent_species, level=6, known_moves=opponent_species.learnset),
             moves=catalog.moves,
             type_chart=catalog.type_chart,
