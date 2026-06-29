@@ -1,0 +1,18 @@
+{
+  "types": ["normal", "fire", "water", "grass"],
+  "chart": {
+    "fire": {
+      "grass": 2.0,
+      "water": 0.5,
+      "fire": 0.5
+    },
+    "grass": {
+      "water": 2.0,
+      "fire": 0.5
+    },
+    "water": {
+      "fire": 2.0,
+      "grass": 0.5
+    }
+  }
+}
