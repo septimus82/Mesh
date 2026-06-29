@@ -344,7 +344,7 @@ def test_lethal_turn_shows_faint_line_then_ends_after_queue_drains() -> None:
     assert "Sproutling used ko" in overlay.log_line
     assert overlay.snapshot()["opponent_hp"] == 0
     _press(window, optional_arcade.arcade.key.ENTER)
-    assert overlay.log_line == "Shelltide fainted!"
+    assert overlay.log_line == "Foe Shelltide fainted!"
     assert mode.active is True
     while mode.active:
         _press(window, optional_arcade.arcade.key.ENTER)

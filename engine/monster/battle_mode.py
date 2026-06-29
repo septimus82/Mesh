@@ -401,6 +401,7 @@ class MonsterBattleMode:
         moves: Mapping[str, Move],
         player_party: Sequence[MonsterInstance] | None = None,
         player_party_instance_ids: Sequence[str | None] | None = None,
+        opponent_party: Sequence[MonsterInstance] | None = None,
         return_context: Mapping[str, Any] | None = None,
         type_chart: TypeChart | None = None,
         rng: RandomLike | None = None,
@@ -422,6 +423,7 @@ class MonsterBattleMode:
             player=player_monster,
             opponent=opponent_monster,
             player_party=player_party,
+            opponent_party=opponent_party,
             moves=moves,
             type_chart=type_chart,
             rng=rng,
@@ -710,13 +712,19 @@ class MonsterBattleMode:
         steps: list[BattlePresentationStep] = []
         for entry in entries:
             if entry.kind == "switch":
-                monster = self.controller.player_party[entry.party_index]
-                name = _display_name(monster)
-                if entry.switch_kind == "recall":
-                    line = f"Come back, {name}!"
+                if entry.side == "player":
+                    monster = self.controller.player_party[entry.party_index]
+                    name = _display_name(monster)
+                    if entry.switch_kind == "recall":
+                        line = f"Come back, {name}!"
+                    else:
+                        line = f"Go, {name}!"
+                        player_hp = int(monster.current_hp or 0)
                 else:
-                    line = f"Go, {name}!"
-                    player_hp = int(monster.current_hp or 0)
+                    monster = self.controller.opponent_party[entry.party_index]
+                    name = _display_name(monster)
+                    line = f"Trainer sent out {name}!"
+                    opponent_hp = int(monster.current_hp or 0)
                 steps.append(BattlePresentationStep(line, player_hp, opponent_hp))
                 continue
             if entry.kind == "status":
@@ -739,7 +747,8 @@ class MonsterBattleMode:
                     line = f"{subject} was affected!"
                 steps.append(BattlePresentationStep(line, player_hp, opponent_hp))
                 if entry.target_fainted:
-                    steps.append(BattlePresentationStep(f"{subject} fainted!", player_hp, opponent_hp))
+                    faint_name = _faint_line(self.controller, entry)
+                    steps.append(BattlePresentationStep(faint_name, player_hp, opponent_hp))
                 continue
             if entry.side == "player":
                 actor = _display_name(self.controller.player)
@@ -757,7 +766,8 @@ class MonsterBattleMode:
                 line = f"{actor} used {entry.move_id}, but it missed!"
             steps.append(BattlePresentationStep(line, player_hp, opponent_hp))
             if entry.target_fainted:
-                steps.append(BattlePresentationStep(f"{target} fainted!", player_hp, opponent_hp))
+                faint_name = _faint_line(self.controller, entry)
+                steps.append(BattlePresentationStep(faint_name, player_hp, opponent_hp))
         return steps
 
     def _apply_victory_progression_steps(self, before_player_hp: int, before_opponent_hp: int) -> list[BattlePresentationStep]:
@@ -910,6 +920,20 @@ def start_monster_battle(window: "GameWindow", **kwargs: Any) -> MonsterBattleCo
 def _display_name(monster: MonsterInstance) -> str:
     raw = monster.species.id.replace("_", " ").replace("-", " ")
     return raw.title()
+
+
+def _faint_line(controller: MonsterBattleController, entry: BattleLogEntry) -> str:
+    if entry.party_index >= 0:
+        opponent_fainted = (entry.kind == "move" and entry.side == "player") or (
+            entry.kind == "status" and entry.side == "opponent"
+        )
+        if opponent_fainted:
+            monster = controller.opponent_party[entry.party_index]
+            return f"Foe {_display_name(monster)} fainted!"
+        monster = controller.player_party[entry.party_index]
+        return f"{_display_name(monster)} fainted!"
+    subject = _display_name(controller.player if entry.side == "opponent" else controller.opponent)
+    return f"{subject} fainted!"
 
 
 def _contains(rect: tuple[float, float, float, float], x: float, y: float) -> bool:
