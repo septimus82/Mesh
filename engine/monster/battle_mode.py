@@ -449,10 +449,32 @@ class MonsterBattleMode:
                 losing_side="opponent",
                 turns=self.controller.turn_number,
             )
-            if self.overlay is not None:
-                self.overlay.log_line = f"Gotcha! {_display_name(self.controller.opponent)} was caught."
             self.return_context.update({"caught_instance_id": caught.instance_id, "caught_storage": caught.storage})
-            self.end_battle(result)
+            if self.overlay is not None:
+                player_hp = int(
+                    self.overlay.displayed_player_hp
+                    if self.overlay.displayed_player_hp is not None
+                    else self.controller.player.current_hp,
+                )
+                opponent_hp = int(
+                    self.overlay.displayed_opponent_hp
+                    if self.overlay.displayed_opponent_hp is not None
+                    else self.controller.opponent.current_hp,
+                )
+                storage_line = "Sent to the Box!" if caught.storage == "box" else "Sent to your party!"
+                self.overlay.begin_turn_presentation(
+                    [
+                        BattlePresentationStep(
+                            f"Gotcha! {_display_name(self.controller.opponent)} was caught!",
+                            player_hp,
+                            opponent_hp,
+                        ),
+                        BattlePresentationStep(storage_line, player_hp, opponent_hp),
+                    ],
+                    result=result,
+                )
+            else:
+                self.end_battle(result)
             return capture
 
         self._resolve_failed_capture_response(item_id=item_id, capture=capture)

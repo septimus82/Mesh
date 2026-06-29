@@ -13,7 +13,7 @@ from engine.input_controller import InputController
 from engine.monster.battle_controller import MoveAction
 from engine.monster.battle_mode import MONSTER_BATTLE_CAPTURE_ATTEMPT_EVENT, MonsterBattleMode
 from engine.monster.battle_model import BattleStats, MonsterInstance, Move, Species
-from engine.monster.collection import MONSTER_INSTANCES_KEY, MONSTER_PARTY_KEY, POCKET_BALL_COUNT_KEY, serialize_monster_instance
+from engine.monster.collection import MONSTER_BOX_KEY, MONSTER_INSTANCES_KEY, MONSTER_PARTY_KEY, POCKET_BALL_COUNT_KEY, serialize_monster_instance
 from engine.monster.progression import xp_required_for_level
 from engine.ui_controller import UIController
 from tests._typing import as_any
@@ -136,12 +136,78 @@ def test_mouse_bag_ball_routes_capture_attempt_action() -> None:
     overlay.button_rects = {"capture:pocket_ball": (10.0, 10.0, 120.0, 30.0)}
     assert window.input_controller.on_mouse_press(20.0, 20.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
 
-    assert mode.active is False
-    assert window.paused is False
-    assert any(event.type == MONSTER_BATTLE_CAPTURE_ATTEMPT_EVENT for event in window._mesh_event_queue)
+    assert mode.active is True
+    assert overlay.menu_state == "presenting"
+    queued_lines = [step.line for step in overlay.presentation_queue]
+    assert any("Gotcha!" in line and "was caught!" in line for line in queued_lines)
+    assert any("Sent to your party!" in line for line in queued_lines)
     values = window.game_state_controller.state.values
     assert values[POCKET_BALL_COUNT_KEY] == 2
     assert len(values[MONSTER_PARTY_KEY]) == 1
+    assert any(event.type == MONSTER_BATTLE_CAPTURE_ATTEMPT_EVENT for event in window._mesh_event_queue)
+
+    while mode.active:
+        _press(window, optional_arcade.arcade.key.ENTER)
+
+    assert mode.active is False
+    assert window.paused is False
+
+
+def test_capture_success_paces_gotcha_lines_before_battle_ends() -> None:
+    window = _window()
+    mode = _start_ui_battle(window, rng=_Rng(0.0))
+    overlay = mode.overlay
+    assert overlay is not None
+
+    overlay.button_rects = {"menu:bag": (10.0, 10.0, 80.0, 30.0)}
+    assert window.input_controller.on_mouse_press(20.0, 20.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+    overlay.button_rects = {"capture:pocket_ball": (10.0, 10.0, 120.0, 30.0)}
+    assert window.input_controller.on_mouse_press(20.0, 20.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+
+    assert overlay.menu_state == "presenting"
+    assert mode.active is True
+    assert len(window.game_state_controller.state.values[MONSTER_PARTY_KEY]) == 1
+
+    _press(window, optional_arcade.arcade.key.ENTER)
+    assert "Gotcha!" in overlay.log_line
+    assert mode.active is True
+
+    _press(window, optional_arcade.arcade.key.ENTER)
+    assert overlay.log_line == "Sent to your party!"
+    assert mode.active is True
+
+    _press(window, optional_arcade.arcade.key.ENTER)
+    assert mode.active is False
+    assert len(window.game_state_controller.state.values[MONSTER_PARTY_KEY]) == 1
+
+
+def test_capture_success_to_box_shows_box_line() -> None:
+    window = _window()
+    values = window.game_state_controller.state.values
+    values[MONSTER_PARTY_KEY] = [f"mon_{index:04d}" for index in range(1, 7)]
+    values[MONSTER_INSTANCES_KEY] = {
+        instance_id: serialize_monster_instance(MonsterInstance(PLAYER_SPECIES, level=5))
+        for instance_id in values[MONSTER_PARTY_KEY]
+    }
+    mode = _start_ui_battle(window, rng=_Rng(0.0))
+    overlay = mode.overlay
+    assert overlay is not None
+
+    overlay.button_rects = {"menu:bag": (10.0, 10.0, 80.0, 30.0)}
+    assert window.input_controller.on_mouse_press(20.0, 20.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+    overlay.button_rects = {"capture:pocket_ball": (10.0, 10.0, 120.0, 30.0)}
+    assert window.input_controller.on_mouse_press(20.0, 20.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+
+    assert overlay.menu_state == "presenting"
+    assert any("Sent to the Box!" in step.line for step in overlay.presentation_queue)
+    assert len(values[MONSTER_PARTY_KEY]) == 6
+    assert len(values[MONSTER_BOX_KEY]) == 1
+
+    while mode.active:
+        _press(window, optional_arcade.arcade.key.ENTER)
+
+    assert mode.active is False
+    assert len(values[MONSTER_BOX_KEY]) == 1
 
 
 def test_capture_failure_consumes_ball_and_battle_continues() -> None:
