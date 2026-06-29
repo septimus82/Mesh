@@ -69,6 +69,15 @@ from .progression import (
     level_for_experience,
     xp_required_for_level,
 )
+from .status import (
+    POISON,
+    SLEEP,
+    StatusCondition,
+    StatusEvent,
+    apply_status,
+    can_act,
+    tick_end_of_turn,
+)
 
 __all__ = [
     "BattleStats",
@@ -98,7 +107,11 @@ __all__ = [
     "MoveResolution",
     "MonsterInstance",
     "POCKET_BALL_COUNT_KEY",
+    "POISON",
+    "SLEEP",
     "Species",
+    "StatusCondition",
+    "StatusEvent",
     "TypeChart",
     "ValidationResult",
     "add_caught_monster",
@@ -121,6 +134,7 @@ __all__ = [
     "resolve_capture",
     "serialize_monster_instance",
     "start_monster_battle",
+    "tick_end_of_turn",
     "type_multiplier",
     "validate_referential_integrity",
     "xp_required_for_level",
