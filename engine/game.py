@@ -749,6 +749,53 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             return_context={"source": "debug_key", "scene_path": getattr(self.scene_controller, "current_scene_path", "")},
         )
 
+    def start_debug_trainer_monster_battle(self) -> Any:
+        """Start a fixture trainer battle with a multi-monster opponent team."""
+
+        from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
+        from engine.monster.collection import load_battle_party_from_values  # noqa: PLC0415
+        from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
+
+        mode = getattr(self, "monster_battle_mode", None)
+        if mode is not None and getattr(mode, "active", False):
+            return getattr(mode, "controller", None)
+
+        catalog, validation = load_monster_catalog()
+        if not validation.ok or catalog is None:
+            self.console_log(f"[MonsterBattle] Catalog load failed: {'; '.join(validation.errors)}")
+            return None
+        try:
+            player_species = catalog.species["sproutling"]
+            lead_species = catalog.species["shelltide"]
+            bench_species = catalog.species["sproutling"]
+        except KeyError as exc:
+            self.console_log(f"[MonsterBattle] Missing debug species: {exc}")
+            return None
+        fallback = MonsterInstance(player_species, level=8, known_moves=player_species.learnset)
+        values: dict[str, Any] = {}
+        controller = getattr(self, "game_state_controller", None)
+        state = getattr(controller, "state", None)
+        state_values = getattr(state, "values", None)
+        if isinstance(state_values, dict):
+            values = state_values
+        party, party_instance_ids = load_battle_party_from_values(values, catalog.species, fallback=fallback)
+        opponent_party = [
+            MonsterInstance(lead_species, level=7, current_hp=28, known_moves=lead_species.learnset),
+            MonsterInstance(bench_species, level=5, current_hp=22, known_moves=bench_species.learnset),
+        ]
+        active = party[0]
+        self.console_log("[MonsterBattle] Starting debug trainer battle: 2-monster opponent team")
+        return self.start_monster_battle(
+            player_monster=active,
+            player_party=party,
+            player_party_instance_ids=party_instance_ids,
+            opponent_monster=opponent_party[0],
+            opponent_party=opponent_party,
+            moves=catalog.moves,
+            type_chart=catalog.type_chart,
+            return_context={"source": "trainer_debug_key", "scene_path": getattr(self.scene_controller, "current_scene_path", "")},
+        )
+
     def _stop_asset_hot_reload_watcher(self) -> None:
         from engine.asset_hot_reload_watcher import stop_hot_reload_watcher  # noqa: PLC0415
 

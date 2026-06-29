@@ -55,7 +55,7 @@ OpponentActionProvider = Callable[["MonsterBattleController"], MoveAction | str 
 
 
 class MonsterBattleController:
-    """Headless monster battle loop with a multi-monster player party."""
+    """Headless monster battle loop with multi-monster player and opponent parties."""
 
     def __init__(
         self,
@@ -65,6 +65,8 @@ class MonsterBattleController:
         moves: Mapping[str, Move],
         player_party: Sequence[MonsterInstance] | None = None,
         active_index: int = 0,
+        opponent_party: Sequence[MonsterInstance] | None = None,
+        opponent_active_index: int = 0,
         type_chart: TypeChart | None = None,
         rng: RandomLike | None = None,
         opponent_action_provider: OpponentActionProvider | None = None,
@@ -77,7 +79,16 @@ class MonsterBattleController:
         self.player_party[index] = player
         self.active_index = index
         self.player = self.player_party[self.active_index]
-        self.opponent = opponent
+
+        opp_party = list(opponent_party) if opponent_party is not None else [opponent]
+        if not opp_party:
+            opp_party = [opponent]
+        opp_index = max(0, min(int(opponent_active_index), len(opp_party) - 1))
+        self.opponent_party = list(opp_party)
+        self.opponent_party[opp_index] = opponent
+        self.opponent_active_index = opp_index
+        self.opponent = self.opponent_party[self.opponent_active_index]
+
         self.moves = dict(moves)
         self.type_chart = type_chart
         self.rng = rng
@@ -132,8 +143,8 @@ class MonsterBattleController:
         self.active_index = index
         self.player = self.player_party[index]
         if not forced:
-            self._append_switch_log(old_index, kind="recall")
-        self._append_switch_log(index, kind="send_out")
+            self._append_switch_log("player", old_index, kind="recall")
+        self._append_switch_log("player", index, kind="send_out")
 
         if forced:
             self.phase = "choose_action"
@@ -162,6 +173,8 @@ class MonsterBattleController:
             "opponent_hp": self.opponent.current_hp,
             "active_index": self.active_index,
             "party_size": len(self.player_party),
+            "opponent_active_index": self.opponent_active_index,
+            "opponent_party_size": len(self.opponent_party),
             "result": self.result,
             "turn_log": tuple(self.turn_log),
         }
@@ -227,22 +240,45 @@ class MonsterBattleController:
         self._append_status_log(defender_side, inflict_event_for(inflict.condition))
 
     def _apply_faints(self) -> None:
-        player_fainted = self.player.fainted
-        opponent_fainted = self.opponent.fainted
-        if opponent_fainted and not player_fainted:
-            self.phase = "won"
-            self.result = BattleResult("won", winning_side="player", losing_side="opponent", turns=self.turn_number)
-        elif opponent_fainted and player_fainted:
-            self.phase = "won"
-            self.result = BattleResult("won", winning_side="player", losing_side="opponent", turns=self.turn_number)
-        elif player_fainted and not opponent_fainted:
-            if self._has_bench():
-                self.phase = "must_switch"
-            else:
-                self.phase = "lost"
-                self.result = BattleResult("lost", winning_side="opponent", losing_side="player", turns=self.turn_number)
+        self._auto_switch_opponent_if_needed()
 
-    def _has_bench(self) -> bool:
+        opponent_all_fainted = all(monster.fainted for monster in self.opponent_party)
+        player_all_fainted = all(monster.fainted for monster in self.player_party)
+
+        if opponent_all_fainted:
+            self.phase = "won"
+            self.result = BattleResult("won", winning_side="player", losing_side="opponent", turns=self.turn_number)
+            return
+
+        if player_all_fainted:
+            self.phase = "lost"
+            self.result = BattleResult("lost", winning_side="opponent", losing_side="player", turns=self.turn_number)
+            return
+
+        if self.player.fainted and self._has_player_bench():
+            self.phase = "must_switch"
+
+    def _auto_switch_opponent_if_needed(self) -> None:
+        if not self.opponent.fainted:
+            return
+        if all(monster.fainted for monster in self.opponent_party):
+            return
+        next_index = self._next_opponent_bench_index()
+        if next_index is None:
+            return
+        self.opponent_active_index = next_index
+        self.opponent = self.opponent_party[next_index]
+        self._append_switch_log("opponent", next_index, kind="send_out")
+
+    def _next_opponent_bench_index(self) -> int | None:
+        count = len(self.opponent_party)
+        for offset in range(1, count):
+            index = (self.opponent_active_index + offset) % count
+            if not self.opponent_party[index].fainted:
+                return index
+        return None
+
+    def _has_player_bench(self) -> bool:
         return any(not monster.fainted for index, monster in enumerate(self.player_party) if index != self.active_index)
 
     def _choose_opponent_action(self) -> MoveAction:
@@ -265,6 +301,9 @@ class MonsterBattleController:
         raise InvalidBattleActionError("Opponent has no usable move")
 
     def _append_log(self, action: MoveAction, resolution: MoveResolution) -> None:
+        fainted_index = -1
+        if resolution.fainted:
+            fainted_index = self.opponent_active_index if action.side == "player" else self.active_index
         self.turn_log.append(
             BattleLogEntry(
                 turn=self.turn_number,
@@ -274,14 +313,15 @@ class MonsterBattleController:
                 damage=resolution.damage,
                 hit=resolution.hit,
                 target_fainted=resolution.fainted,
+                party_index=fainted_index,
             ),
         )
 
-    def _append_switch_log(self, party_index: int, *, kind: str) -> None:
+    def _append_switch_log(self, side: BattleSideId, party_index: int, *, kind: str) -> None:
         self.turn_log.append(
             BattleLogEntry(
                 turn=self.turn_number,
-                side="player",
+                side=side,
                 kind="switch",
                 switch_kind=kind,
                 party_index=int(party_index),
@@ -296,6 +336,9 @@ class MonsterBattleController:
         damage: int = 0,
         target_fainted: bool = False,
     ) -> None:
+        fainted_index = -1
+        if target_fainted:
+            fainted_index = self.opponent_active_index if side == "opponent" else self.active_index
         self.turn_log.append(
             BattleLogEntry(
                 turn=self.turn_number,
@@ -304,6 +347,7 @@ class MonsterBattleController:
                 status_event=status_event,
                 status_damage=damage,
                 target_fainted=target_fainted,
+                party_index=fainted_index,
             ),
         )
 
@@ -324,6 +368,7 @@ class MonsterBattleController:
             self.player_party[self.active_index] = monster
             self.player = monster
         else:
+            self.opponent_party[self.opponent_active_index] = monster
             self.opponent = monster
 
     def _other_side(self, side: BattleSideId) -> BattleSideId:
@@ -337,6 +382,8 @@ def controller_from_catalog(
     opponent: MonsterInstance,
     player_party: Sequence[MonsterInstance] | None = None,
     active_index: int = 0,
+    opponent_party: Sequence[MonsterInstance] | None = None,
+    opponent_active_index: int = 0,
     rng: RandomLike | None = None,
     opponent_action_provider: OpponentActionProvider | None = None,
 ) -> MonsterBattleController:
@@ -347,6 +394,8 @@ def controller_from_catalog(
         opponent=opponent,
         player_party=player_party,
         active_index=active_index,
+        opponent_party=opponent_party,
+        opponent_active_index=opponent_active_index,
         moves=catalog.moves,
         type_chart=catalog.type_chart,
         rng=rng,
