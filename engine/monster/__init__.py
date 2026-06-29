@@ -15,6 +15,14 @@ from .battle_controller import (
     MoveAction,
     controller_from_catalog,
 )
+from .battle_mode import (
+    MONSTER_BATTLE_ENDED_EVENT,
+    MONSTER_BATTLE_RESULT_KEY,
+    MONSTER_BATTLE_RETURN_CONTEXT_KEY,
+    MonsterBattleMode,
+    MonsterBattleOverlay,
+    start_monster_battle,
+)
 from .battle_model import (
     BattleStats,
     MonsterInstance,
@@ -46,8 +54,13 @@ __all__ = [
     "BattleResult",
     "BattleSideId",
     "InvalidBattleActionError",
+    "MONSTER_BATTLE_ENDED_EVENT",
+    "MONSTER_BATTLE_RESULT_KEY",
+    "MONSTER_BATTLE_RETURN_CONTEXT_KEY",
     "MonsterCatalog",
     "MonsterBattleController",
+    "MonsterBattleMode",
+    "MonsterBattleOverlay",
     "Move",
     "MoveAction",
     "MoveResolution",
@@ -65,6 +78,7 @@ __all__ = [
     "parse_species",
     "parse_type_chart",
     "resolve_move",
+    "start_monster_battle",
     "type_multiplier",
     "validate_referential_integrity",
 ]
