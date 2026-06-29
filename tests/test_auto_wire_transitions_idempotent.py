@@ -69,6 +69,7 @@ def test_auto_wire_transitions_idempotent(tmp_path, monkeypatch):
 
     # 1. First Run (Real Execution)
     executor = PlanExecutor(dry_run=False)
+    executor.backup_mgr.backup_file = lambda path: None
     executor.execute(plan, ai_safe=True)
 
     # Verify transitions added

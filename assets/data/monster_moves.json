@@ -1,0 +1,25 @@
+{
+  "moves": [
+    {
+      "id": "tackle",
+      "type": "normal",
+      "power": 40,
+      "accuracy": 100,
+      "pp": 35
+    },
+    {
+      "id": "ember",
+      "type": "fire",
+      "power": 40,
+      "accuracy": 100,
+      "pp": 25
+    },
+    {
+      "id": "splash",
+      "type": "water",
+      "power": 40,
+      "accuracy": 100,
+      "pp": 25
+    }
+  ]
+}
