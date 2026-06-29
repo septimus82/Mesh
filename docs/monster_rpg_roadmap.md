@@ -70,6 +70,7 @@ build a party → eventually breed them.
 | MON-0d | runtime battle **mode** shell (pause overworld + blocking placeholder overlay + result→`GameState.values` + `monster_battle_ended` event) | `engine/monster/battle_mode.py` |
 | MON-0e | overworld encounter trigger (deterministic weighted roll → `start_monster_battle` + return context; `enabled`/flag/cooldown gates) | `engine/behaviours/monster_encounter_zone.py`, `engine/monster/encounter.py` |
 | MON-0f | **playable battle UI** — HP bars/text, log, Fight/Bag/Run, move list, real mouse+keyboard input seam. Dogfood verdict: *primitive but functional = Phase-0 UI question PASSED*. Debug launch: **F3 then F12**. | `engine/monster/battle_mode.py` |
+| MON-0f-polish | **turn pacing** — resolved turn is presented step-by-step (held menu; advance on Enter/Space or a ~0.7s dt timer; HP drops *with* its log line, not at submit); lethal turn shows the faint line then ends. | `engine/monster/battle_mode.py` |
 
 > **Launch-key lesson (MON-0f):** debug hotkeys belong as explicit branches in
 > `engine/game_runtime/input_dispatch.py` (like F6/F9), gated on `engine_config.debug_mode` — NOT in the
@@ -79,13 +80,7 @@ build a party → eventually breed them.
 
 **REMAINING Phase 0 — build each as its own slice (goal / scope / tests):**
 
-### MON-0f-polish — Battle pacing/readability *(queued; small)*
-- **Goal:** you can *read* a turn. Right now action→resolution is instantaneous (dogfood note).
-- **Scope:** step the battle log/animation so each line ("X used Tackle", then the HP change) lands with a
-  short beat / advance-on-keypress, instead of resolving the whole turn in one frame.
-- **Tests:** a resolved turn produces ordered log steps; the overlay advances them on tick/keypress.
-
-### MON-0g — Capture + party persistence
+### MON-0g — Capture + party persistence  *(next)*
 - **Goal:** catch a monster and keep it.
 - **Scope:** a ball item + a catch formula (HP% / status / `capture_rate`); consume the ball, generate a
   monster instance id, add to the party (or the box if the party is full); persist
