@@ -510,7 +510,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         # Single shared instance: the controller's lightweight-typed `quests`
         # slot now holds the canonical full manager (lightweight retired in a
         # later slice).
-        self.game_state_controller.quests = self.quest_manager  # type: ignore[assignment]
+        setattr(self.game_state_controller, "quests", self.quest_manager)
         self.particle_manager = ParticleManager(self)
         self.editor_controller = EditorModeController(self)
         self.ai_debug_overlay = AIDebugOverlay()

@@ -117,13 +117,18 @@ def _request_json(
 def _load_verified_session(root: str | Path, *, timeout: float = 2.0) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     raw_root = Path(root).resolve()
     server_root = _resolve_discovery_root(raw_root)
-    workspace_root = _workspace_root(server_root)
-    info = read_live_session_file(server_root)
+    info = read_live_session_file(raw_root)
+    if not isinstance(info, dict) and raw_root != server_root:
+        info = read_live_session_file(server_root)
     if not isinstance(info, dict):
-        return None, _probe_for_other_session(raw_root, server_root) or _failure("no_live_session")
+        failure: dict[str, Any] = _failure("no_live_session")
+        if raw_root == server_root:
+            failure = _probe_for_other_session(raw_root, server_root) or failure
+        return None, failure
+    declared_workspace = _workspace_root(str(info.get("workspace_root") or raw_root))
     if info.get("schema_version") != SESSION_SCHEMA_VERSION:
         return None, _failure("invalid_live_session", "Unsupported live session schema")
-    if _workspace_root(str(info.get("workspace_root") or "")) != workspace_root:
+    if _workspace_root(str(info.get("workspace_root") or "")) != declared_workspace:
         return None, _failure("workspace_mismatch")
     if str(info.get("host") or "") != LOOPBACK_HOST:
         return None, _failure("invalid_live_session", "Live session host must be 127.0.0.1")
@@ -137,7 +142,7 @@ def _load_verified_session(root: str | Path, *, timeout: float = 2.0) -> tuple[d
         return None, _failure("no_live_session")
     if health.get("session_id") != info.get("session_id"):
         return None, _failure("session_mismatch")
-    if _workspace_root(str(health.get("workspace_root") or "")) != workspace_root:
+    if _workspace_root(str(health.get("workspace_root") or "")) != declared_workspace:
         return None, _failure("workspace_mismatch")
     return info, None
 

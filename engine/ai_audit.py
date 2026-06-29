@@ -7,10 +7,10 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
-from .content_index import ContentIndex
-from .paths import resolve_path
-from .repo_root import find_repo_root
-from .tooling.content_inventory import discover_scene_paths
+from engine.content_index import ContentIndex
+from engine.paths import resolve_path
+from engine.repo_root import find_repo_root
+from engine.tooling_runtime.discovery import discover_scene_paths
 
 
 @dataclass

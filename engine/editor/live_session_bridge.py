@@ -188,7 +188,7 @@ class EditorLiveSessionBridge:
                 break
             try:
                 work.result = work.func()
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001  # REASON: live bridge work items return structured errors to MCP callers
                 work.result = {"ok": False, "mode": "live_editor", "reason": "exception", "message": str(exc)}
             finally:
                 work.event.set()

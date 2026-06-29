@@ -47,7 +47,7 @@ class EditorMainThreadDispatcher:
                 break
             try:
                 call.result = call.func()
-            except BaseException as exc:  # noqa: BLE001
+            except BaseException as exc:  # noqa: BLE001  # REASON: main-thread dispatch must capture worker failures for awaiters
                 call.error = exc
             finally:
                 if call.event is not None:

@@ -742,9 +742,9 @@ def list_scene_templates() -> list[str]:
     Read live from the scaffold registry (:data:`engine.tooling.scaffold.TEMPLATES`)
     so the surfaced list can never drift from what the tool actually supports.
     """
-    from engine.tooling.scaffold import TEMPLATES
+    from engine.tooling_runtime.scaffold import list_scene_template_names
 
-    return sorted(TEMPLATES.keys())
+    return list_scene_template_names()
 
 
 def playable_scene_recipe() -> list[dict[str, Any]]:

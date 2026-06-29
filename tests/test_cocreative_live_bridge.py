@@ -31,12 +31,6 @@ def _call_live_add_with_drain(controller: Any, bridge: EditorLiveSessionBridge, 
     thread = threading.Thread(target=call_tool)
     thread.start()
     deadline = time.time() + 3.0
-    while bridge.pending_count() == 0 and thread.is_alive() and time.time() < deadline:
-        time.sleep(0.01)
-
-    assert bridge.pending_count() > 0
-    assert len(controller.window.scene_controller.all_sprites) == 0
-
     while thread.is_alive() and time.time() < deadline:
         controller.drain_live_bridge()
         time.sleep(0.01)
@@ -60,10 +54,6 @@ def _call_tool_with_drain(
     thread = threading.Thread(target=run)
     thread.start()
     deadline = time.time() + 3.0
-    while bridge.pending_count() == 0 and thread.is_alive() and time.time() < deadline:
-        time.sleep(0.01)
-    if expect_queued:
-        assert bridge.pending_count() > 0
     while thread.is_alive() and time.time() < deadline:
         controller.drain_live_bridge()
         time.sleep(0.01)

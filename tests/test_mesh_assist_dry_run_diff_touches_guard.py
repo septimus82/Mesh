@@ -4,12 +4,15 @@ from pathlib import Path
 from unittest.mock import patch
 
 import engine.paths
+from engine.paths import reset_path_caches, set_content_roots
 from engine.tooling import assist_command
 
 
 def test_mesh_assist_dry_run_diff_touches_guard(tmp_path, monkeypatch, capsys):
     engine.paths._CONTENT_ROOTS = None
     engine.paths._CACHED_CONFIG = None
+    reset_path_caches()
+    set_content_roots([tmp_path])
 
     monkeypatch.chdir(tmp_path)
     (tmp_path / "artifacts").mkdir()

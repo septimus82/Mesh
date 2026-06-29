@@ -54,6 +54,7 @@ def _make_controller(events: list[str] | None = None) -> Any:
     controller._tilemap_batcher = None
     controller.tilemap_instance = None
     controller._background_layers = []
+    controller._foreground_layers = []
     controller._background_planes = []
     controller._background_plane_texture_cache = {}
     controller._render_culled_count = 0

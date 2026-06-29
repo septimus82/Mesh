@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import engine.paths
+from engine.paths import reset_path_caches, set_content_roots
 from engine.tooling.plan_executor import PlanExecutor
 from engine.tooling.plan_types import Plan
 
@@ -11,6 +12,8 @@ def test_auto_wire_target_scene_contract(tmp_path, monkeypatch):
     # Clear path cache to ensure we use tmp_path
     engine.paths._CONTENT_ROOTS = None
     engine.paths._CACHED_CONFIG = None
+    reset_path_caches()
+    set_content_roots([tmp_path])
 
     monkeypatch.chdir(tmp_path)
 
@@ -46,8 +49,8 @@ def test_auto_wire_target_scene_contract(tmp_path, monkeypatch):
     # Create world
     world_data = {
         "scenes": {
-            "region_hub": {"path": str(hub_path)},
-            "region_interior": {"path": str(interior_path)}
+            "region_hub": {"path": "packs/core_regions/scenes/Hub.json"},
+            "region_interior": {"path": "packs/core_regions/scenes/Interior.json"},
         }
     }
     world_path.write_text(json.dumps(world_data, indent=2), encoding="utf-8")
@@ -58,7 +61,7 @@ def test_auto_wire_target_scene_contract(tmp_path, monkeypatch):
             {
                 "type": "auto_wire_transitions",
                 "args": {
-                    "world_path": str(world_path)
+                    "world_path": "worlds/w.json"
                 },
                 "description": "Auto Wire"
             }
@@ -66,9 +69,9 @@ def test_auto_wire_target_scene_contract(tmp_path, monkeypatch):
         "inputs": {
             "meta": {
                 "touches": [
-                    str(hub_path).replace("\\", "/"),
-                    str(interior_path).replace("\\", "/"),
-                    str(world_path).replace("\\", "/")
+                    "packs/core_regions/scenes/Hub.json",
+                    "packs/core_regions/scenes/Interior.json",
+                    "worlds/w.json",
                 ]
             }
         }

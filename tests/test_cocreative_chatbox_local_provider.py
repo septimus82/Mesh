@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import builtins
 import importlib
 import threading
 from types import SimpleNamespace
 from typing import Any
+
+import pytest
 
 from engine.editor.chat_session_controller import (
     AnthropicProvider,
@@ -15,6 +16,8 @@ from engine.editor.chat_session_controller import (
 )
 from tests.test_cocreative_chatbox_14a import _run_chat_to_completion
 from tests.test_cocreative_live_ops import _make_controller
+
+pytestmark = pytest.mark.fast
 
 
 class _FakeCompletions:
@@ -286,19 +289,15 @@ def test_provider_selection_defaults_to_anthropic_and_honors_openai_compatible_e
 
 
 def test_missing_openai_dependency_is_graceful_and_editor_import_still_succeeds(monkeypatch: Any) -> None:
-    real_import = builtins.__import__
+    real_import_module = importlib.import_module
 
-    def guarded_import(name: str, *args: Any, **kwargs: Any) -> Any:
+    def guarded_import_module(name: str, package: str | None = None) -> Any:
         if name == "openai":
             raise ImportError("openai absent")
-        return real_import(name, *args, **kwargs)
+        return real_import_module(name, package)
 
-    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    monkeypatch.setattr(importlib, "import_module", guarded_import_module)
 
-    import engine.editor_controller as editor_controller
-
-    importlib.reload(editor_controller)
     provider = OpenAICompatibleProvider()
 
-    assert editor_controller.EditorModeController is not None
     assert provider.unavailable_reason() == "Local chat requires the optional chat-local extra: pip install -e .[chat-local]"

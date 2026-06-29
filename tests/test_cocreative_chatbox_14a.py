@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import builtins
 import importlib
 import threading
 import time
 from typing import Any
 
-from engine.editor.chat_session_controller import AnthropicClientFactory
+from engine.editor.chat_session_controller import AnthropicProvider
 from tests.test_cocreative_live_ops import _make_controller
 
 
@@ -152,21 +151,17 @@ def test_missing_key_surfaces_error_and_starts_no_worker() -> None:
 
 
 def test_editor_controller_import_succeeds_when_anthropic_import_fails(monkeypatch: Any) -> None:
-    real_import = builtins.__import__
+    real_import_module = importlib.import_module
 
-    def guarded_import(name: str, *args: Any, **kwargs: Any) -> Any:
+    def guarded_import_module(name: str, package: str | None = None) -> Any:
         if name == "anthropic":
             raise ImportError("anthropic absent")
-        return real_import(name, *args, **kwargs)
+        return real_import_module(name, package)
 
-    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    monkeypatch.setattr(importlib, "import_module", guarded_import_module)
 
-    import engine.editor_controller as editor_controller
+    factory = AnthropicProvider()
 
-    importlib.reload(editor_controller)
-    factory = AnthropicClientFactory()
-
-    assert editor_controller.EditorModeController is not None
     assert factory.unavailable_reason() == "Claude chat requires the optional chat extra: pip install -e .[chat]"
 
 

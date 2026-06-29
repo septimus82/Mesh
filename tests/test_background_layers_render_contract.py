@@ -30,7 +30,7 @@ from engine.background_layers import (
     draw_background_layers,
 )
 
-pytestmark = [pytest.mark.fast]
+pytestmark = [pytest.mark.integration]
 
 
 class _FakeTexture:
