@@ -65,12 +65,18 @@ def _window() -> types.SimpleNamespace:
     return window
 
 
-def _start_ui_battle(window: types.SimpleNamespace, *, player_hp: int | None = None) -> MonsterBattleMode:
+def _start_ui_battle(
+    window: types.SimpleNamespace,
+    *,
+    player_hp: int | None = None,
+    opponent_hp: int | None = None,
+    player_moves: tuple[str, ...] = ("ember", "tackle"),
+) -> MonsterBattleMode:
     mode = MonsterBattleMode(as_any(window))
     window.monster_battle_mode = mode
     mode.start_battle(
-        player_monster=MonsterInstance(PLAYER_SPECIES, level=10, current_hp=player_hp, known_moves=("ember", "tackle")),
-        opponent_monster=MonsterInstance(OPPONENT_SPECIES, level=10, known_moves=("tackle",)),
+        player_monster=MonsterInstance(PLAYER_SPECIES, level=10, current_hp=player_hp, known_moves=player_moves),
+        opponent_monster=MonsterInstance(OPPONENT_SPECIES, level=10, current_hp=opponent_hp, known_moves=("tackle",)),
         moves={move.id: move for move in (TACKLE, EMBER, KO)},
         type_chart={"fire": {"water": 0.5}, "grass": {"water": 2.0}},
         return_context={"scene_path": "scenes/field.json"},
@@ -83,20 +89,24 @@ def _press(window: types.SimpleNamespace, key: int, modifiers: int = 0) -> bool:
     return bool(window.input_controller.on_key_press(key, modifiers))
 
 
+def _submit_first_move(window: types.SimpleNamespace) -> None:
+    assert _press(window, optional_arcade.arcade.key.ENTER) is True
+    assert _press(window, optional_arcade.arcade.key.ENTER) is True
+
+
 def test_keyboard_fight_then_move_submits_move_and_advances_turn() -> None:
     window = _window()
     mode = _start_ui_battle(window)
     overlay = mode.overlay
     assert overlay is not None
 
-    assert _press(window, optional_arcade.arcade.key.ENTER) is True
-    assert overlay.menu_state == "fight"
-    assert _press(window, optional_arcade.arcade.key.ENTER) is True
+    _submit_first_move(window)
 
     assert mode.controller is not None
     assert mode.controller.turn_number == 2
     assert mode.controller.turn_log[0].side == "player"
     assert mode.controller.turn_log[0].move_id == "ember"
+    assert overlay.menu_state == "presenting"
 
 
 def test_mouse_bag_ball_routes_capture_attempt_action() -> None:
@@ -149,12 +159,76 @@ def test_hp_and_log_snapshot_update_after_resolved_turn() -> None:
     assert overlay is not None
     before = overlay.snapshot()
 
-    _press(window, optional_arcade.arcade.key.ENTER)
+    _submit_first_move(window)
+    submitted = overlay.snapshot()
+
+    assert submitted["opponent_hp"] == before["opponent_hp"]
+    assert submitted["presenting"] is True
     _press(window, optional_arcade.arcade.key.ENTER)
     after = overlay.snapshot()
-
     assert after["opponent_hp"] < before["opponent_hp"]
     assert "Sproutling used ember" in str(after["log_line"])
+
+
+def test_presenting_state_holds_command_menu_until_turn_lines_drain() -> None:
+    window = _window()
+    mode = _start_ui_battle(window)
+    overlay = mode.overlay
+    assert overlay is not None
+    _submit_first_move(window)
+    assert overlay.menu_state == "presenting"
+    queued = len(overlay.presentation_queue)
+
+    _press(window, optional_arcade.arcade.key.DOWN)
+    _press(window, optional_arcade.arcade.key.ENTER)
+
+    assert overlay.menu_state == "presenting"
+    assert len(overlay.presentation_queue) == queued - 1
+    assert mode.controller is not None
+    assert len(mode.controller.turn_log) == 2
+
+
+def test_dt_timer_reveals_log_lines_in_order_and_returns_menu() -> None:
+    window = _window()
+    mode = _start_ui_battle(window)
+    overlay = mode.overlay
+    assert overlay is not None
+    _submit_first_move(window)
+
+    window.ui_controller.update(0.69)
+    assert overlay.log_line == "..."
+    window.ui_controller.update(0.01)
+    first_line = overlay.log_line
+    assert "Sproutling used ember" in first_line
+    window.ui_controller.update(0.70)
+    second_line = overlay.log_line
+    assert "Shelltide used tackle" in second_line
+    window.ui_controller.update(0.70)
+
+    assert overlay.menu_state == "root"
+    assert overlay.log_line == second_line
+    assert mode.active is True
+
+
+def test_lethal_turn_shows_faint_line_then_ends_after_queue_drains() -> None:
+    window = _window()
+    mode = _start_ui_battle(window, opponent_hp=5, player_moves=("ko",))
+    overlay = mode.overlay
+    assert overlay is not None
+    _submit_first_move(window)
+
+    assert overlay.menu_state == "presenting"
+    assert mode.active is True
+    _press(window, optional_arcade.arcade.key.ENTER)
+    assert "Sproutling used ko" in overlay.log_line
+    assert overlay.snapshot()["opponent_hp"] == 0
+    _press(window, optional_arcade.arcade.key.ENTER)
+    assert overlay.log_line == "Shelltide fainted!"
+    assert mode.active is True
+    _press(window, optional_arcade.arcade.key.ENTER)
+
+    assert mode.active is False
+    assert window.paused is False
 
 
 def test_debug_shift_f11_launches_fixture_battle_through_key_router() -> None:
