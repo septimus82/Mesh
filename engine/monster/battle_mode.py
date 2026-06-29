@@ -8,11 +8,12 @@ resolution remain in the pure controller modules.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import TYPE_CHECKING, Any, Literal, Mapping, cast
+from typing import TYPE_CHECKING, Any, Literal, Mapping, Sequence, cast
 
 import engine.optional_arcade as optional_arcade
 from engine.events import MeshEvent
 from engine.text_draw import TextCache, draw_text_cached
+from engine.ui.menu_toolkit import MenuStackOverlay, SelectableItem, SelectableListScreen
 from engine.ui_overlays.common import UIElement, _draw_tb_rectangle_filled, _draw_tb_rectangle_outline
 
 from .battle_controller import BattleLogEntry, BattleResult, MonsterBattleController, OpponentActionProvider
@@ -251,7 +252,7 @@ class MonsterBattleOverlay(UIElement):
             return [("capture:pocket_ball", f"Pocket Ball x{self.mode.pocket_ball_count()}"), ("back", "Back")]
         if self.menu_state == "ended":
             return [("close", "Close")]
-        return [("menu:fight", "Fight"), ("menu:bag", "Bag"), ("run", "Run")]
+        return [("menu:fight", "Fight"), ("menu:bag", "Bag"), ("menu:switch", "Switch"), ("run", "Run")]
 
     def _move_selection(self, delta: int) -> None:
         actions = self._current_actions()
@@ -278,6 +279,9 @@ class MonsterBattleOverlay(UIElement):
             self.menu_state = "bag"
             self.selected_index = 0
             self.log_line = "Choose an item."
+            return
+        if action == "menu:switch":
+            self.mode.open_switch_screen(forced=False)
             return
         if action == "back":
             self._back()
@@ -325,8 +329,56 @@ class MonsterBattleOverlay(UIElement):
             self.menu_state = "ended"
             self.mode.complete_presented_battle(result)
             return
+        controller = self.mode.controller
+        if controller is not None and controller.phase == "must_switch":
+            self.menu_state = "root"
+            self.selected_index = 0
+            self.mode.open_switch_screen(forced=True)
+            return
         self.menu_state = "root"
         self.selected_index = 0
+
+
+class BattleSwitchScreen(SelectableListScreen):
+    """In-battle party picker built on the shared menu toolkit."""
+
+    def __init__(self, mode: "MonsterBattleMode", *, forced: bool) -> None:
+        self.mode = mode
+        self.forced = forced
+        controller = mode.controller
+        items: list[SelectableItem] = []
+        if controller is not None:
+            for index, monster in enumerate(controller.player_party):
+                name = _display_name(monster)
+                max_hp = max(1, int(monster.stats.hp if monster.stats else monster.current_hp or 1))
+                hp = max(0, int(monster.current_hp or 0))
+                fainted = monster.fainted
+                suffix = "  FNT" if fainted else ""
+                label = f"{name}  Lv.{monster.level}  HP {hp}/{max_hp}{suffix}"
+                items.append(
+                    SelectableItem(
+                        id=str(index),
+                        label=label,
+                        detail_lines=(
+                            f"Species: {monster.species.id}",
+                            f"Level: {monster.level}",
+                            f"HP: {hp}/{max_hp}",
+                        ),
+                        enabled=not fainted and index != controller.active_index,
+                    ),
+                )
+        super().__init__(
+            title="Choose a monster",
+            items=items,
+            on_activate=lambda item: mode.submit_player_switch(int(item.id)),
+            empty_detail="No usable monsters.",
+        )
+
+    def on_key_press(self, key: int, modifiers: int, stack: MenuStackOverlay) -> bool:
+        arcade_key = optional_arcade.arcade.key
+        if self.forced and key == arcade_key.ESCAPE:
+            return True
+        return super().on_key_press(key, modifiers, stack)
 
 
 class MonsterBattleMode:
@@ -346,6 +398,7 @@ class MonsterBattleMode:
         player_monster: MonsterInstance,
         opponent_monster: MonsterInstance,
         moves: Mapping[str, Move],
+        player_party: Sequence[MonsterInstance] | None = None,
         return_context: Mapping[str, Any] | None = None,
         type_chart: TypeChart | None = None,
         rng: RandomLike | None = None,
@@ -361,6 +414,7 @@ class MonsterBattleMode:
         self.controller = MonsterBattleController(
             player=player_monster,
             opponent=opponent_monster,
+            player_party=player_party,
             moves=moves,
             type_chart=type_chart,
             rng=rng,
@@ -401,6 +455,40 @@ class MonsterBattleMode:
                 self._apply_victory_progression_steps(before_player_hp, before_opponent_hp)
             self.end_battle(result)
         return result
+
+    def submit_player_switch(self, party_index: int) -> BattleResult | None:
+        if not self.active or self.controller is None:
+            raise RuntimeError("monster battle mode is not active")
+        before_player_hp = int(
+            self.overlay.displayed_player_hp
+            if self.overlay is not None and self.overlay.displayed_player_hp is not None
+            else self.controller.player.current_hp,
+        )
+        before_opponent_hp = int(
+            self.overlay.displayed_opponent_hp
+            if self.overlay is not None and self.overlay.displayed_opponent_hp is not None
+            else self.controller.opponent.current_hp,
+        )
+        before_len = len(self.controller.turn_log)
+        self._pop_switch_screen_if_open()
+        result = self.controller.submit_switch(int(party_index))
+        if self.overlay is not None:
+            steps = self._build_presentation_steps(before_len, before_player_hp, before_opponent_hp)
+            if result is not None and result.outcome == "won":
+                steps.extend(self._apply_victory_progression_steps(before_player_hp, before_opponent_hp))
+            self.overlay.begin_turn_presentation(steps, result=result)
+            self.overlay.sync_displayed_hp()
+        elif result is not None:
+            if result.outcome == "won":
+                self._apply_victory_progression_steps(before_player_hp, before_opponent_hp)
+            self.end_battle(result)
+        return result
+
+    def open_switch_screen(self, *, forced: bool) -> None:
+        if not self.active or self.controller is None:
+            raise RuntimeError("monster battle mode is not active")
+        stack = self._ensure_menu_stack()
+        stack.push(BattleSwitchScreen(self, forced=forced))
 
     def complete_presented_battle(self, result: BattleResult) -> BattleResult:
         """End a completed battle after the overlay has shown its final line."""
@@ -509,6 +597,7 @@ class MonsterBattleMode:
 
         payload = self._result_payload(final_result)
         self._apply_result_payload(payload)
+        self._persist_party_to_instances()
         self._emit_ended(payload)
 
         if self.overlay is not None:
@@ -612,6 +701,16 @@ class MonsterBattleMode:
         opponent_hp = int(before_opponent_hp)
         steps: list[BattlePresentationStep] = []
         for entry in entries:
+            if entry.kind == "switch":
+                monster = self.controller.player_party[entry.party_index]
+                name = _display_name(monster)
+                if entry.switch_kind == "recall":
+                    line = f"Come back, {name}!"
+                else:
+                    line = f"Go, {name}!"
+                    player_hp = int(monster.current_hp or 0)
+                steps.append(BattlePresentationStep(line, player_hp, opponent_hp))
+                continue
             if entry.kind == "status":
                 subject = _display_name(self.controller.player if entry.side == "player" else self.controller.opponent)
                 if entry.status_event == "poisoned":
@@ -730,7 +829,7 @@ class MonsterBattleMode:
             self.controller.type_chart,
             self.controller.rng,
         )
-        self.controller.player = resolution.defender
+        self.controller._set_monster("player", resolution.defender)
         self.controller.turn_log.append(
             BattleLogEntry(
                 turn=self.controller.turn_number,
@@ -741,14 +840,11 @@ class MonsterBattleMode:
                 target_fainted=resolution.fainted,
             ),
         )
-        result = None
-        if self.controller.player.fainted:
-            self.controller.result = BattleResult("lost", winning_side="opponent", losing_side="player", turns=self.controller.turn_number)
-            self.controller.phase = "lost"
-            result = self.controller.result
-        else:
+        self.controller.phase = "apply_faints"
+        self.controller._apply_faints()
+        result = self.controller.result
+        if result is None and self.controller.phase == "choose_action":
             self.controller.turn_number += 1
-            self.controller.phase = "choose_action"
 
         steps = [
             BattlePresentationStep(
@@ -759,6 +855,38 @@ class MonsterBattleMode:
         ]
         steps.extend(self._build_presentation_steps(len(self.controller.turn_log) - 1, before_player_hp, before_opponent_hp))
         self.overlay.begin_turn_presentation(steps, result=result)
+
+    def _ensure_menu_stack(self) -> MenuStackOverlay:
+        stack = getattr(self.window, "monster_menu_stack", None)
+        if not isinstance(stack, MenuStackOverlay):
+            stack = MenuStackOverlay(self.window)
+            setattr(self.window, "monster_menu_stack", stack)
+        ui_controller = getattr(self.window, "ui_controller", None)
+        elements = getattr(ui_controller, "ui_elements", None)
+        if isinstance(elements, list):
+            if stack in elements:
+                elements.remove(stack)
+            elements.append(stack)
+        elif ui_controller is not None:
+            register = getattr(ui_controller, "register_ui_element", None)
+            if callable(register):
+                register(stack)
+        return stack
+
+    def _pop_switch_screen_if_open(self) -> None:
+        stack = getattr(self.window, "monster_menu_stack", None)
+        if isinstance(stack, MenuStackOverlay) and stack.screens:
+            stack.pop()
+
+    def _persist_party_to_instances(self) -> None:
+        if self.controller is None:
+            return
+        values = self._state_values()
+        party_ids = values[MONSTER_PARTY_KEY]
+        instances = values[MONSTER_INSTANCES_KEY]
+        for index, monster in enumerate(self.controller.player_party):
+            if index < len(party_ids):
+                instances[str(party_ids[index])] = serialize_monster_instance(monster)
 
 
 def start_monster_battle(window: "GameWindow", **kwargs: Any) -> MonsterBattleController:

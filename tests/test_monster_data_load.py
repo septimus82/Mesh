@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from engine.monster.battle_model import MonsterInstance, compute_damage, resolve_move
 from engine.monster.battle_controller import controller_from_catalog
+from engine.monster.battle_model import MonsterInstance, compute_damage, resolve_move
 from engine.monster.data_load import load_monster_catalog, parse_moves, parse_species, parse_type_chart
 
 pytestmark = pytest.mark.fast

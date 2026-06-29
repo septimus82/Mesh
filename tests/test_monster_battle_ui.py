@@ -252,6 +252,7 @@ def test_keyboard_run_routes_flee_and_ends_battle_mode() -> None:
 
     assert _press(window, optional_arcade.arcade.key.DOWN) is True
     assert _press(window, optional_arcade.arcade.key.DOWN) is True
+    assert _press(window, optional_arcade.arcade.key.DOWN) is True
     assert _press(window, optional_arcade.arcade.key.ENTER) is True
 
     assert mode.active is False

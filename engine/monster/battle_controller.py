@@ -7,14 +7,14 @@ The controller orchestrates MON-0a battle math using injected data and RNG.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Callable, Literal, Mapping
+from typing import Callable, Literal, Mapping, Sequence
 
 from .battle_model import MonsterInstance, Move, MoveResolution, RandomLike, TypeChart, resolve_move
 from .data_load import MonsterCatalog
 from .status import POISON, SLEEP, apply_status, can_act, inflict_event_for, tick_end_of_turn
 
 BattleSideId = Literal["player", "opponent"]
-BattlePhase = Literal["choose_action", "resolve", "apply_faints", "won", "lost"]
+BattlePhase = Literal["choose_action", "resolve", "apply_faints", "must_switch", "won", "lost"]
 BattleOutcome = Literal["won", "lost"]
 
 
@@ -32,13 +32,15 @@ class MoveAction:
 class BattleLogEntry:
     turn: int
     side: BattleSideId
-    kind: Literal["move", "status"] = "move"
+    kind: Literal["move", "status", "switch"] = "move"
     move_id: str = ""
     damage: int = 0
     hit: bool = False
     target_fainted: bool = False
     status_event: str = ""
     status_damage: int = 0
+    switch_kind: str = ""
+    party_index: int = -1
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,11 +55,7 @@ OpponentActionProvider = Callable[["MonsterBattleController"], MoveAction | str 
 
 
 class MonsterBattleController:
-    """Headless 1v1 monster battle loop.
-
-    ``submit_action("player", move)`` runs one full turn synchronously:
-    choose_action -> resolve -> apply_faints -> choose_action/won/lost.
-    """
+    """Headless monster battle loop with a multi-monster player party."""
 
     def __init__(
         self,
@@ -65,11 +63,20 @@ class MonsterBattleController:
         player: MonsterInstance,
         opponent: MonsterInstance,
         moves: Mapping[str, Move],
+        player_party: Sequence[MonsterInstance] | None = None,
+        active_index: int = 0,
         type_chart: TypeChart | None = None,
         rng: RandomLike | None = None,
         opponent_action_provider: OpponentActionProvider | None = None,
     ) -> None:
-        self.player = player
+        party = list(player_party) if player_party is not None else [player]
+        if not party:
+            party = [player]
+        index = max(0, min(int(active_index), len(party) - 1))
+        self.player_party = list(party)
+        self.player_party[index] = player
+        self.active_index = index
+        self.player = self.player_party[self.active_index]
         self.opponent = opponent
         self.moves = dict(moves)
         self.type_chart = type_chart
@@ -99,7 +106,48 @@ class MonsterBattleController:
         self.phase = "apply_faints"
         self._apply_faints()
 
-        if self.result is None:
+        if self.result is None and self.phase != "must_switch":
+            self.phase = "choose_action"
+            self.turn_number += 1
+        return self.result
+
+    def submit_switch(self, party_index: int) -> BattleResult | None:
+        """Switch the active player monster. Forced switches are free; voluntary switches cost the turn."""
+
+        if self.phase not in {"choose_action", "must_switch"}:
+            raise InvalidBattleActionError(f"Cannot switch while battle phase is '{self.phase}'")
+        if self.result is not None:
+            raise InvalidBattleActionError("Cannot switch after battle is complete")
+
+        index = int(party_index)
+        if index < 0 or index >= len(self.player_party):
+            raise InvalidBattleActionError(f"Invalid party index '{party_index}'")
+        if index == self.active_index:
+            raise InvalidBattleActionError("That monster is already active")
+        if self.player_party[index].fainted:
+            raise InvalidBattleActionError("Cannot switch to a fainted monster")
+
+        forced = self.phase == "must_switch"
+        old_index = self.active_index
+        self.active_index = index
+        self.player = self.player_party[index]
+        if not forced:
+            self._append_switch_log(old_index, kind="recall")
+        self._append_switch_log(index, kind="send_out")
+
+        if forced:
+            self.phase = "choose_action"
+            return self.result
+
+        opponent_action = self._choose_opponent_action()
+        self.phase = "resolve"
+        self._resolve_actions((opponent_action,))
+        self._apply_end_of_turn_ticks()
+
+        self.phase = "apply_faints"
+        self._apply_faints()
+
+        if self.result is None and self.phase != "must_switch":
             self.phase = "choose_action"
             self.turn_number += 1
         return self.result
@@ -112,6 +160,8 @@ class MonsterBattleController:
             "turn_number": self.turn_number,
             "player_hp": self.player.current_hp,
             "opponent_hp": self.opponent.current_hp,
+            "active_index": self.active_index,
+            "party_size": len(self.player_party),
             "result": self.result,
             "turn_log": tuple(self.turn_log),
         }
@@ -121,7 +171,11 @@ class MonsterBattleController:
             (player_action, opponent_action),
             key=lambda action: (-self._monster_for(action.side).stats.spd, 0 if action.side == "player" else 1),
         )
-        for action in ordered:
+        self._resolve_actions(ordered)
+        self._apply_end_of_turn_ticks()
+
+    def _resolve_actions(self, actions: Sequence[MoveAction]) -> None:
+        for action in actions:
             attacker_side = action.side
             attacker = self._monster_for(attacker_side)
             if attacker.fainted:
@@ -145,6 +199,7 @@ class MonsterBattleController:
             if resolution.hit:
                 self._try_inflict_status(defender_side, move)
 
+    def _apply_end_of_turn_ticks(self) -> None:
         for side in ("player", "opponent"):
             monster = self._monster_for(side)
             if monster.fainted:
@@ -177,13 +232,18 @@ class MonsterBattleController:
         if opponent_fainted and not player_fainted:
             self.phase = "won"
             self.result = BattleResult("won", winning_side="player", losing_side="opponent", turns=self.turn_number)
-        elif player_fainted and not opponent_fainted:
-            self.phase = "lost"
-            self.result = BattleResult("lost", winning_side="opponent", losing_side="player", turns=self.turn_number)
-        elif player_fainted and opponent_fainted:
-            # 1v1 deterministic tie-break: player action priority wins simultaneous double-faint.
+        elif opponent_fainted and player_fainted:
             self.phase = "won"
             self.result = BattleResult("won", winning_side="player", losing_side="opponent", turns=self.turn_number)
+        elif player_fainted and not opponent_fainted:
+            if self._has_bench():
+                self.phase = "must_switch"
+            else:
+                self.phase = "lost"
+                self.result = BattleResult("lost", winning_side="opponent", losing_side="player", turns=self.turn_number)
+
+    def _has_bench(self) -> bool:
+        return any(not monster.fainted for index, monster in enumerate(self.player_party) if index != self.active_index)
 
     def _choose_opponent_action(self) -> MoveAction:
         if self.opponent_action_provider is not None:
@@ -214,6 +274,17 @@ class MonsterBattleController:
                 damage=resolution.damage,
                 hit=resolution.hit,
                 target_fainted=resolution.fainted,
+            ),
+        )
+
+    def _append_switch_log(self, party_index: int, *, kind: str) -> None:
+        self.turn_log.append(
+            BattleLogEntry(
+                turn=self.turn_number,
+                side="player",
+                kind="switch",
+                switch_kind=kind,
+                party_index=int(party_index),
             ),
         )
 
@@ -250,6 +321,7 @@ class MonsterBattleController:
 
     def _set_monster(self, side: BattleSideId, monster: MonsterInstance) -> None:
         if side == "player":
+            self.player_party[self.active_index] = monster
             self.player = monster
         else:
             self.opponent = monster
@@ -263,6 +335,8 @@ def controller_from_catalog(
     *,
     player: MonsterInstance,
     opponent: MonsterInstance,
+    player_party: Sequence[MonsterInstance] | None = None,
+    active_index: int = 0,
     rng: RandomLike | None = None,
     opponent_action_provider: OpponentActionProvider | None = None,
 ) -> MonsterBattleController:
@@ -271,6 +345,8 @@ def controller_from_catalog(
     return MonsterBattleController(
         player=player,
         opponent=opponent,
+        player_party=player_party,
+        active_index=active_index,
         moves=catalog.moves,
         type_chart=catalog.type_chart,
         rng=rng,
