@@ -51,6 +51,7 @@ _BUILTIN_MODULES: tuple[str, ...] = (
     "engine.behaviours.listen_for_event",
     "engine.behaviours.main_menu",
     "engine.behaviours.message_on_zone_enter",
+    "engine.behaviours.monster_encounter_zone",
     "engine.behaviours.npc_schedule",
     "engine.behaviours.offer_perk_choice",
     "engine.behaviours.particle_emitter",
