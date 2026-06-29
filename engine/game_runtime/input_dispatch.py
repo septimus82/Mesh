@@ -78,6 +78,14 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
                 play_from_here()
             return
 
+    if key == optional_arcade.arcade.key.F12:
+        cfg = getattr(window, "engine_config", None)
+        if bool(getattr(cfg, "debug_mode", False)):
+            starter = getattr(window, "start_debug_monster_battle", None)
+            if callable(starter):
+                starter()
+        return
+
     # When the editor is active, give it first chance at general key input.
     _editor_handle = getattr(editor, "handle_input", None) if editor_active else None
     if callable(_editor_handle):
