@@ -109,7 +109,7 @@ from .logging_tools import get_logger
 from .migrations import migrate_payload
 from .monster.battle_mode import MonsterBattleMode
 from .particles import ParticleManager
-from .paths import resolve_path
+from .paths import pin_config, resolve_path
 from .perf import PerfStats
 from .quests import QuestManager
 from .render_queue import SpriteRenderQueue
@@ -468,6 +468,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.engine_config.fullscreen = fullscreen
         self.engine_config.vsync = vsync
         self.engine_config.resizable = resolved_resizable
+        pin_config(self.engine_config)
 
         # Text cache for overlays to avoid PerformanceWarning
         from engine.text_draw import TextCache
