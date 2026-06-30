@@ -9,6 +9,7 @@ from typing import Any
 from engine.monster.battle_model import MonsterInstance
 from engine.monster.data_load import MonsterCatalog, load_monster_catalog
 from engine.monster.encounter import EncounterRollResult, roll_monster_encounter
+from engine.paths import resolve_monster_data_dir
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
@@ -132,7 +133,9 @@ class MonsterEncounterZoneBehaviour(Behaviour):
         if isinstance(catalog, MonsterCatalog):
             return catalog
         data_dir = self.config.get("catalog_data_dir")
-        loaded, validation = load_monster_catalog(data_dir if data_dir else None)
+        loaded, validation = load_monster_catalog(
+            data_dir if data_dir else resolve_monster_data_dir(),
+        )
         if not validation.ok or loaded is None:
             self.last_error = "; ".join(validation.errors)
             return None

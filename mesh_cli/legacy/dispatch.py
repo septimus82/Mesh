@@ -315,6 +315,10 @@ def dispatch(
         from .. import new_project as new_project_commands
 
         return int(new_project_commands.handle(args))
+    if args.command == "new_project":
+        from .. import blank_project as blank_project_commands
+
+        return int(blank_project_commands.handle(args))
     if args.command == "content":
         from .. import content as content_commands
 

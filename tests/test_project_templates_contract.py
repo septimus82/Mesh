@@ -30,9 +30,9 @@ def test_apply_template_blank(tmp_path):
     assert start_scene.exists()
 
     data = json.loads(start_scene.read_text("utf-8"))
-    assert data["scene_id"] == "start"
-    # Should be empty
-    assert not data["layers"]["entities"]
+    assert data["name"] == "Start Scene"
+    players = [entity for entity in data.get("entities", []) if entity.get("tag") == "player"]
+    assert len(players) == 1
 
 def test_apply_template_lighting_playground(tmp_path):
     """Test lighting playground template."""
