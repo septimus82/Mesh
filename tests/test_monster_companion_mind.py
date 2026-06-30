@@ -12,12 +12,15 @@ from engine.monster.companion_mind import (
     ATTACK,
     BEHAVIOR_REGISTRY,
     DEFEND,
+    FLEE,
     HESITATE,
     BehaviorDefinition,
     CompanionMind,
     DecisionContext,
     LearnedWeights,
     Temperament,
+    companion_mind_from_dict,
+    companion_mind_to_dict,
     decide,
     praise,
     scold,
@@ -229,6 +232,42 @@ def test_bond_rises_slowly_under_repeated_praise() -> None:
 
     assert mind.bond > 0.0
     assert mind.bond <= 20.0
+
+
+def test_companion_mind_serialize_round_trip_matches_exactly() -> None:
+    mind = _mind(
+        aggression=61.0,
+        fear=22.5,
+        learn_attack=3.5,
+        learn_defend=-1.0,
+        learn_hesitate=2.0,
+        trust=63.0,
+        bond=9.5,
+        last_behavior=HESITATE,
+    )
+
+    restored = companion_mind_from_dict(companion_mind_to_dict(mind))
+
+    assert restored == mind
+
+
+def test_flee_excluded_from_pool_when_trust_and_bond_are_high_at_low_hp() -> None:
+    mind = _mind(trust=95.0, bond=90.0, fear=80.0)
+    ctx = DecisionContext(hp_fraction=0.1)
+
+    scores = score_behaviors(mind, ctx)
+
+    assert FLEE not in scores
+    assert set(scores.keys()) == {ATTACK, DEFEND, HESITATE}
+
+
+def test_flee_included_for_neglected_companion_at_low_hp() -> None:
+    mind = _mind(trust=8.0, bond=4.0, fear=75.0)
+    ctx = DecisionContext(hp_fraction=0.1)
+
+    scores = score_behaviors(mind, ctx)
+
+    assert FLEE in scores
 
 
 def test_reinforcement_clamps_trust_bond_and_fear() -> None:

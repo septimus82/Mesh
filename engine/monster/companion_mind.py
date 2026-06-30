@@ -8,11 +8,12 @@ updates learned weights, trust, bond, and fear without runtime imports.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from typing import Callable, Mapping, Protocol, Sequence
+from typing import Any, Callable, Mapping, Protocol, Sequence
 
 ATTACK = "ATTACK"
 DEFEND = "DEFEND"
 HESITATE = "HESITATE"
+FLEE = "FLEE"
 
 BehaviorId = str
 
@@ -27,6 +28,8 @@ LEARNED_MIN = -50.0
 LEARNED_MAX = 50.0
 RELATIONSHIP_MIN = 0.0
 RELATIONSHIP_MAX = 100.0
+FLEE_HP_THRESHOLD = 0.35
+FLEE_RELATIONSHIP_THRESHOLD = 40.0
 
 
 class RandomLike(Protocol):
@@ -63,7 +66,7 @@ class CompanionMind:
 class DecisionContext:
     """Opaque decision context; extended by later companion slices."""
 
-    pass
+    hp_fraction: float = 1.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,10 +154,26 @@ def _score_hesitate(mind: CompanionMind, _ctx: DecisionContext) -> float:
     return mind.temperament.fear * 0.5 + (100.0 - mind.trust) * 0.4 + mind.learned.HESITATE
 
 
+def _avg_relationship(mind: CompanionMind) -> float:
+    return (mind.trust + mind.bond) / 2.0
+
+
+def _flee_available(mind: CompanionMind, ctx: DecisionContext) -> bool:
+    return (
+        float(ctx.hp_fraction) < FLEE_HP_THRESHOLD
+        and _avg_relationship(mind) < FLEE_RELATIONSHIP_THRESHOLD
+    )
+
+
+def _score_flee(mind: CompanionMind, _ctx: DecisionContext) -> float:
+    return mind.temperament.fear + (100.0 - _avg_relationship(mind))
+
+
 BEHAVIOR_REGISTRY: tuple[BehaviorDefinition, ...] = (
     BehaviorDefinition(ATTACK, _always_available, _score_attack),
     BehaviorDefinition(DEFEND, _always_available, _score_defend),
     BehaviorDefinition(HESITATE, _always_available, _score_hesitate),
+    BehaviorDefinition(FLEE, _flee_available, _score_flee),
 )
 
 
@@ -204,3 +223,49 @@ def _weighted_random_choice(scores: Mapping[BehaviorId, float], rng: RandomLike)
         if threshold < cumulative:
             return behavior_id
     return next(reversed(scores))
+
+
+def companion_mind_to_dict(mind: CompanionMind) -> dict[str, Any]:
+    """Serialize a companion mind to a JSON-safe plain dict."""
+
+    last_behavior = mind.last_behavior
+    payload: dict[str, Any] = {
+        "temperament": {
+            "aggression": float(mind.temperament.aggression),
+            "fear": float(mind.temperament.fear),
+        },
+        "learned": {
+            ATTACK: float(mind.learned.ATTACK),
+            DEFEND: float(mind.learned.DEFEND),
+            HESITATE: float(mind.learned.HESITATE),
+        },
+        "trust": float(mind.trust),
+        "bond": float(mind.bond),
+        "last_behavior": str(last_behavior) if last_behavior is not None else None,
+    }
+    return payload
+
+
+def companion_mind_from_dict(data: Mapping[str, Any]) -> CompanionMind:
+    """Deserialize a companion mind from a plain dict."""
+
+    temperament_raw = data.get("temperament", {})
+    learned_raw = data.get("learned", {})
+    temperament = Temperament(
+        aggression=float(temperament_raw.get("aggression", 0.0) or 0.0) if isinstance(temperament_raw, Mapping) else 0.0,
+        fear=float(temperament_raw.get("fear", 0.0) or 0.0) if isinstance(temperament_raw, Mapping) else 0.0,
+    )
+    learned = LearnedWeights(
+        ATTACK=float(learned_raw.get(ATTACK, 0.0) or 0.0) if isinstance(learned_raw, Mapping) else 0.0,
+        DEFEND=float(learned_raw.get(DEFEND, 0.0) or 0.0) if isinstance(learned_raw, Mapping) else 0.0,
+        HESITATE=float(learned_raw.get(HESITATE, 0.0) or 0.0) if isinstance(learned_raw, Mapping) else 0.0,
+    )
+    raw_last = data.get("last_behavior")
+    last_behavior = str(raw_last) if raw_last is not None else None
+    return CompanionMind(
+        temperament=temperament,
+        learned=learned,
+        trust=float(data.get("trust", 50.0) or 50.0),
+        bond=float(data.get("bond", 0.0) or 0.0),
+        last_behavior=last_behavior,
+    )
