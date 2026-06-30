@@ -113,6 +113,24 @@
       "y": 400
     },
     {
+      "id": "hub_sproutling",
+      "name": "Sproutling",
+      "tag": "prop",
+      "sprite": "assets/sprites/sproutling.png",
+      "sprite_sheet": {
+        "columns": 7,
+        "rows": 1,
+        "frame_width": 107,
+        "frame_height": 109
+      },
+      "animations": {
+        "idle": { "fps": 6, "frames": [0, 1, 2, 3, 4, 5, 6], "loop": true }
+      },
+      "animation_state": "idle",
+      "x": 560,
+      "y": 400
+    },
+    {
       "id": "hub_welcome_sign",
       "name": "Welcome Sign",
       "tag": "prop",
