@@ -99,6 +99,18 @@
         "repeat_y": {
           "type": "boolean"
         },
+        "anchor": {
+          "type": "string",
+          "enum": [
+            "world_rect"
+          ]
+        },
+        "anchor_x": {
+          "type": "number"
+        },
+        "anchor_y": {
+          "type": "number"
+        },
         "z": {
           "type": "integer"
         }

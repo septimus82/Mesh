@@ -10,6 +10,13 @@ def test_background_world_center_interpolates_between_anchor_and_camera():
     assert compute_background_world_center(camera_x=100.0, camera_y=50.0, parallax=0.0) == (100.0, 50.0)
     assert compute_background_world_center(camera_x=100.0, camera_y=50.0, parallax=1.0) == (0.0, 0.0)
     assert compute_background_world_center(camera_x=100.0, camera_y=50.0, parallax=0.5) == (50.0, 25.0)
+    assert compute_background_world_center(
+        camera_x=100.0,
+        camera_y=50.0,
+        parallax=1.0,
+        anchor_x=701.0,
+        anchor_y=561.0,
+    ) == (701.0, 561.0)
 
 
 def test_background_screen_center_locks_parallax_zero_to_viewport_center():
