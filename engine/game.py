@@ -796,6 +796,55 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             return_context={"source": "trainer_debug_key", "scene_path": getattr(self.scene_controller, "current_scene_path", "")},
         )
 
+    def start_debug_companion_monster_battle(self) -> Any:
+        """Start a companion battle where the monster acts autonomously."""
+
+        from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
+        from engine.monster.collection import load_battle_party_from_values  # noqa: PLC0415
+        from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament  # noqa: PLC0415
+        from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
+
+        mode = getattr(self, "monster_battle_mode", None)
+        if mode is not None and getattr(mode, "active", False):
+            return getattr(mode, "controller", None)
+
+        catalog, validation = load_monster_catalog()
+        if not validation.ok or catalog is None:
+            self.console_log(f"[MonsterBattle] Catalog load failed: {'; '.join(validation.errors)}")
+            return None
+        try:
+            player_species = catalog.species["sproutling"]
+            opponent_species = catalog.species["shelltide"]
+        except KeyError as exc:
+            self.console_log(f"[MonsterBattle] Missing debug species: {exc}")
+            return None
+        fallback = MonsterInstance(player_species, level=8, known_moves=player_species.learnset)
+        values: dict[str, Any] = {}
+        controller = getattr(self, "game_state_controller", None)
+        state = getattr(controller, "state", None)
+        state_values = getattr(state, "values", None)
+        if isinstance(state_values, dict):
+            values = state_values
+        party, party_instance_ids = load_battle_party_from_values(values, catalog.species, fallback=fallback)
+        active = party[0]
+        mind = CompanionMind(
+            temperament=Temperament(aggression=65.0, fear=12.0),
+            learned=LearnedWeights(),
+            trust=50.0,
+        )
+        self.console_log("[MonsterBattle] Starting debug companion battle")
+        return self.start_monster_battle(
+            player_monster=active,
+            player_party=party,
+            player_party_instance_ids=party_instance_ids,
+            opponent_monster=MonsterInstance(opponent_species, level=6, current_hp=40, known_moves=opponent_species.learnset),
+            moves=catalog.moves,
+            type_chart=catalog.type_chart,
+            companion_mode=True,
+            companion_mind=mind,
+            return_context={"source": "companion_debug_key", "scene_path": getattr(self.scene_controller, "current_scene_path", "")},
+        )
+
     def _stop_asset_hot_reload_watcher(self) -> None:
         from engine.asset_hot_reload_watcher import stop_hot_reload_watcher  # noqa: PLC0415
 

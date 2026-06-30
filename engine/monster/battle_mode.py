@@ -31,6 +31,16 @@ from .collection import (
     get_pocket_ball_count,
     serialize_monster_instance,
 )
+from .companion_mind import (
+    ATTACK,
+    DEFEND,
+    CompanionMind,
+    DecisionContext,
+    decide,
+    praise,
+    scold,
+    wait,
+)
 from .progression import apply_experience, award_xp_for_victory
 
 if TYPE_CHECKING:
@@ -148,8 +158,12 @@ class MonsterBattleOverlay(UIElement):
         if controller is None:
             self.log_line = "A wild monster appeared!"
             return
-        name = _display_name(controller.opponent)
-        self.log_line = f"A wild {name} appeared!"
+        if self.mode.companion_mode:
+            name = _display_name(controller.player)
+            self.log_line = f"Go, {name}! Your companion is ready."
+        else:
+            name = _display_name(controller.opponent)
+            self.log_line = f"A wild {name} appeared!"
         self.sync_displayed_hp()
 
     def sync_displayed_hp(self) -> None:
@@ -252,6 +266,12 @@ class MonsterBattleOverlay(UIElement):
             return [("capture:pocket_ball", f"Pocket Ball x{self.mode.pocket_ball_count()}"), ("back", "Back")]
         if self.menu_state == "ended":
             return [("close", "Close")]
+        if self.mode.companion_mode and self.mode.companion_awaiting_reinforcement:
+            return [
+                ("companion:praise", "Praise"),
+                ("companion:scold", "Scold"),
+                ("companion:wait", "Wait"),
+            ]
         return [("menu:fight", "Fight"), ("menu:bag", "Bag"), ("menu:switch", "Switch"), ("run", "Run")]
 
     def _move_selection(self, delta: int) -> None:
@@ -282,6 +302,18 @@ class MonsterBattleOverlay(UIElement):
             return
         if action == "menu:switch":
             self.mode.open_switch_screen(forced=False)
+            return
+        if action == "companion:praise":
+            self.mode.submit_companion_reinforcement("praise")
+            self.selected_index = 0
+            return
+        if action == "companion:scold":
+            self.mode.submit_companion_reinforcement("scold")
+            self.selected_index = 0
+            return
+        if action == "companion:wait":
+            self.mode.submit_companion_reinforcement("wait")
+            self.selected_index = 0
             return
         if action == "back":
             self._back()
@@ -328,6 +360,18 @@ class MonsterBattleOverlay(UIElement):
         if result is not None and self.mode.active:
             self.menu_state = "ended"
             self.mode.complete_presented_battle(result)
+            return
+        if self.mode.companion_mode:
+            if self.mode._presenting_reinforcement:
+                self.mode._presenting_reinforcement = False
+                controller = self.mode.controller
+                if controller is not None and controller.result is None and controller.phase == "choose_action":
+                    self.mode._run_companion_monster_turn()
+                return
+            self.mode.companion_awaiting_reinforcement = True
+            self.menu_state = "root"
+            self.selected_index = 0
+            self.log_line = "How do you respond?"
             return
         controller = self.mode.controller
         if controller is not None and controller.phase == "must_switch":
@@ -392,6 +436,12 @@ class MonsterBattleMode:
         self._prior_paused = False
         self.active = False
         self.player_party_instance_ids: list[str | None] = []
+        self.companion_mode = False
+        self.companion_mind: CompanionMind | None = None
+        self.companion_ctx = DecisionContext()
+        self.companion_awaiting_reinforcement = False
+        self._presenting_reinforcement = False
+        self._last_companion_behavior: str = ""
 
     def start_battle(
         self,
@@ -402,6 +452,8 @@ class MonsterBattleMode:
         player_party: Sequence[MonsterInstance] | None = None,
         player_party_instance_ids: Sequence[str | None] | None = None,
         opponent_party: Sequence[MonsterInstance] | None = None,
+        companion_mode: bool = False,
+        companion_mind: CompanionMind | None = None,
         return_context: Mapping[str, Any] | None = None,
         type_chart: TypeChart | None = None,
         rng: RandomLike | None = None,
@@ -419,6 +471,12 @@ class MonsterBattleMode:
             self.player_party_instance_ids = list(player_party_instance_ids)
         else:
             self.player_party_instance_ids = [None] * len(party)
+        self.companion_mode = bool(companion_mode)
+        self.companion_mind = companion_mind if companion_mind is not None else CompanionMind()
+        self.companion_ctx = DecisionContext()
+        self.companion_awaiting_reinforcement = False
+        self._presenting_reinforcement = False
+        self._last_companion_behavior = ""
         self.controller = MonsterBattleController(
             player=player_monster,
             opponent=opponent_monster,
@@ -437,7 +495,99 @@ class MonsterBattleMode:
         self.active = True
         self.window.paused = True
         self.window.monster_battle_mode_active = True
+        if self.companion_mode:
+            self._run_companion_monster_turn()
         return self.controller
+
+    def submit_companion_reinforcement(self, kind: str) -> None:
+        if not self.active or not self.companion_mode or self.controller is None or self.companion_mind is None:
+            raise RuntimeError("companion battle mode is not active")
+        if not self.companion_awaiting_reinforcement:
+            raise RuntimeError("companion battle is not awaiting reinforcement")
+
+        before_player_hp = int(
+            self.overlay.displayed_player_hp
+            if self.overlay is not None and self.overlay.displayed_player_hp is not None
+            else self.controller.player.current_hp,
+        )
+        before_opponent_hp = int(
+            self.overlay.displayed_opponent_hp
+            if self.overlay is not None and self.overlay.displayed_opponent_hp is not None
+            else self.controller.opponent.current_hp,
+        )
+        reinforcement = str(kind)
+        if reinforcement == "praise":
+            self.companion_mind = praise(self.companion_mind)
+        elif reinforcement == "scold":
+            self.companion_mind = scold(self.companion_mind)
+        elif reinforcement == "wait":
+            self.companion_mind = wait(self.companion_mind)
+        else:
+            raise ValueError(f"Unknown companion reinforcement '{kind}'")
+
+        self.companion_awaiting_reinforcement = False
+        self._presenting_reinforcement = True
+        result = self.controller.result
+        if self.overlay is not None:
+            steps = _build_companion_reinforcement_steps(
+                reinforcement,
+                _display_name(self.controller.player),
+                before_player_hp,
+                before_opponent_hp,
+            )
+            self.overlay.begin_turn_presentation(steps, result=result)
+
+    def _run_companion_monster_turn(self) -> BattleResult | None:
+        if not self.companion_mode or self.controller is None or self.companion_mind is None:
+            raise RuntimeError("companion battle mode is not active")
+        if self.controller.result is not None:
+            return self.controller.result
+        if self.controller.phase != "choose_action":
+            return self.controller.result
+
+        before_player_hp = int(
+            self.overlay.displayed_player_hp
+            if self.overlay is not None and self.overlay.displayed_player_hp is not None
+            else self.controller.player.current_hp,
+        )
+        before_opponent_hp = int(
+            self.overlay.displayed_opponent_hp
+            if self.overlay is not None and self.overlay.displayed_opponent_hp is not None
+            else self.controller.opponent.current_hp,
+        )
+        before_len = len(self.controller.turn_log)
+        rng = self.controller.rng if self.controller.rng is not None else self._capture_rng()
+        self.companion_mind, decision = decide(self.companion_mind, self.companion_ctx, rng)
+        behavior = decision.behavior_id
+        self._last_companion_behavior = behavior
+
+        if behavior == ATTACK:
+            result = self.controller.submit_action("player", _first_damaging_move_id(self.controller))
+        elif behavior == DEFEND:
+            result = self.controller.submit_player_pass_turn(guarding=True)
+        else:
+            result = self.controller.submit_player_pass_turn(guarding=False)
+
+        self.companion_awaiting_reinforcement = False
+        self._presenting_reinforcement = False
+        if self.overlay is not None:
+            name = _display_name(self.controller.player)
+            steps = [
+                BattlePresentationStep(
+                    _companion_autonomous_line(behavior, name),
+                    before_player_hp,
+                    before_opponent_hp,
+                ),
+            ]
+            steps.extend(self._build_presentation_steps(before_len, before_player_hp, before_opponent_hp))
+            if result is not None and result.outcome == "won":
+                steps.extend(self._apply_victory_progression_steps(before_player_hp, before_opponent_hp))
+            self.overlay.begin_turn_presentation(steps, result=result)
+        elif result is not None:
+            if result.outcome == "won":
+                self._apply_victory_progression_steps(before_player_hp, before_opponent_hp)
+            self.end_battle(result)
+        return result
 
     def submit_player_move(self, move_id: str) -> BattleResult | None:
         if not self.active or self.controller is None:
@@ -617,6 +767,10 @@ class MonsterBattleMode:
         self.overlay = None
         self.return_context = {}
         self.player_party_instance_ids = []
+        self.companion_mode = False
+        self.companion_mind = None
+        self.companion_awaiting_reinforcement = False
+        self._presenting_reinforcement = False
         self.active = False
         self.window.monster_battle_mode_active = False
         self.window.paused = self._prior_paused
@@ -920,6 +1074,47 @@ def start_monster_battle(window: "GameWindow", **kwargs: Any) -> MonsterBattleCo
 def _display_name(monster: MonsterInstance) -> str:
     raw = monster.species.id.replace("_", " ").replace("-", " ")
     return raw.title()
+
+
+def _first_damaging_move_id(controller: MonsterBattleController) -> str:
+    for move_id in controller.player.known_moves or controller.player.species.learnset:
+        move = controller.moves.get(str(move_id))
+        if move is not None and int(move.power) > 0:
+            return str(move.id)
+    for move_id in controller.player.known_moves or controller.player.species.learnset:
+        if str(move_id) in controller.moves:
+            return str(move_id)
+    return str(sorted(controller.moves)[0])
+
+
+def _companion_autonomous_line(behavior: str, name: str) -> str:
+    if behavior == ATTACK:
+        return f"{name} attacks!"
+    if behavior == DEFEND:
+        return f"{name} braces."
+    return f"{name} hesitates."
+
+
+def _build_companion_reinforcement_steps(
+    kind: str,
+    name: str,
+    player_hp: int,
+    opponent_hp: int,
+) -> list[BattlePresentationStep]:
+    if kind == "praise":
+        return [
+            BattlePresentationStep(f"You praise {name}.", player_hp, opponent_hp),
+            BattlePresentationStep("It looks pleased.", player_hp, opponent_hp),
+        ]
+    if kind == "scold":
+        return [
+            BattlePresentationStep(f"You scold {name}.", player_hp, opponent_hp),
+            BattlePresentationStep("It flinches.", player_hp, opponent_hp),
+        ]
+    return [
+        BattlePresentationStep("You wait calmly.", player_hp, opponent_hp),
+        BattlePresentationStep("It watches you.", player_hp, opponent_hp),
+    ]
 
 
 def _faint_line(controller: MonsterBattleController, entry: BattleLogEntry) -> str:
