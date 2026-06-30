@@ -79,6 +79,7 @@ class TilemapInstance:
     layer_offsets: dict[str, tuple[float, float]] = field(default_factory=dict)
     layer_dimensions: tuple[int, int] = (0, 0)
     layer_lookup: dict[str, optional_arcade.arcade.SpriteList] = field(default_factory=dict)
+    collision_layer_names: frozenset[str] = field(default_factory=frozenset)
     tilesets: list["Tileset"] = field(default_factory=list)
 
 
@@ -176,6 +177,7 @@ class TilemapManager:
         )
         map_pixel_height = height * tile_height
 
+        collision_layer_names: set[str] = set()
         for config in configs:
             raw_layer = layer_lookup.get(config.name)
             if raw_layer is None:
@@ -197,6 +199,8 @@ class TilemapManager:
                     float(raw_layer.get("offsetx", 0.0)),
                     float(raw_layer.get("offsety", 0.0)),
                 )
+                instance.layer_names.append(config.name)
+                instance.layer_lookup[config.name] = sprites
             elif layer_type == "objectgroup":
                 sprites = self._build_object_layer(
                     raw_layer,
@@ -205,17 +209,15 @@ class TilemapManager:
                     map_pixel_height,
                     config,
                 )
+                if len(sprites) == 0:
+                    continue
+                instance.layer_names.append(config.name)
+                instance.layer_lookup[config.name] = sprites
             else:
                 print(f"[Mesh][Tilemap] WARNING: Layer '{config.name}' uses unsupported type '{layer_type}'")
                 continue
 
-            if len(sprites) == 0:
-                continue
-
-            instance.layer_names.append(config.name)
-            instance.layer_lookup[config.name] = sprites
-
-            if config.draw:
+            if config.draw and len(sprites) > 0:
                 instance.draw_layers.append(
                     TilemapDrawLayer(
                         id=config.name,
@@ -226,11 +228,14 @@ class TilemapManager:
                 )
 
             if config.collision:
+                collision_layer_names.add(config.name)
                 for sprite in sprites:
                     sprite_any = cast(Any, sprite)
                     sprite_any.mesh_is_solid = True
                     sprite_any.mesh_tag = config.collision_tag or "terrain"
                 instance.collision_sprites.extend(sprite for sprite in sprites)
+
+        instance.collision_layer_names = frozenset(collision_layer_names)
 
         instance.draw_layers = sort_tilemap_draw_layers(instance.draw_layers)
         instance.background_layers = [layer.sprites for layer in instance.draw_layers if layer.z < 0]

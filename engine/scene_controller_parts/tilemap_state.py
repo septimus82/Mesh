@@ -170,11 +170,26 @@ def set_tile(self, layer_name: str, col: int, row: int, gid: int) -> tuple[int, 
     map_pixel_height = height * tile_h
     center_x = (col + 0.5) * tile_w + offset[0]
     center_y = map_pixel_height - ((row + 0.5) * tile_h) + offset[1]
+    collision_layer = layer_name in getattr(self.tilemap_instance, "collision_layer_names", frozenset())
+    removed_sprite: Any | None = None
     if sprites:
         for sprite in list(sprites):
             if abs(sprite.center_x - center_x) < 0.1 and abs(sprite.center_y - center_y) < 0.1:
                 sprites.remove(sprite)
-    if gid != 0 and sprites is not None:
+                removed_sprite = sprite
+    if collision_layer and removed_sprite is not None:
+        try:
+            self.tilemap_instance.collision_sprites.remove(removed_sprite)
+        except ValueError:
+            pass
+        try:
+            self.solid_sprites.remove(removed_sprite)
+        except ValueError:
+            pass
+    if gid != 0:
+        if sprites is None:
+            sprites = optional_arcade.arcade.SpriteList(use_spatial_hash=True)
+            self.tilemap_instance.layer_lookup[layer_name] = sprites
         tileset = None
         for ts in self.tilemap_instance.tilesets:
             if ts.contains(gid):
@@ -191,6 +206,12 @@ def set_tile(self, layer_name: str, col: int, row: int, gid: int) -> tuple[int, 
                 sprite.center_y = center_y
                 sprite.scale = 1.0
                 sprites.append(sprite)
+                if collision_layer:
+                    sprite_any = cast(Any, sprite)
+                    sprite_any.mesh_is_solid = True
+                    sprite_any.mesh_tag = "terrain"
+                    self.tilemap_instance.collision_sprites.append(sprite)
+                    self.solid_sprites.append(sprite)
     self._mark_tilemap_tile_dirty(layer_name, col, row)
     return (old_gid, gid)
 
