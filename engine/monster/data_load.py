@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from .battle_model import BattleStats, Move, MoveStatusInflict, Species, TypeChart
+from .battle_model import BattleSprite, BattleStats, Move, MoveStatusInflict, Species, TypeChart
 
 DEFAULT_DATA_DIR = Path("assets/data")
 SPECIES_FILENAME = "monster_species.json"
@@ -125,6 +125,69 @@ def _parse_capture_rate(raw: Any, *, label: str) -> tuple[int, str | None]:
     if value < MIN_CAPTURE_RATE or value > MAX_CAPTURE_RATE:
         return DEFAULT_CAPTURE_RATE, f"{label}.capture_rate must be between {MIN_CAPTURE_RATE} and {MAX_CAPTURE_RATE}"
     return value, None
+
+
+def _parse_battle_sprite(raw: Any, *, label: str) -> tuple[BattleSprite | None, str | None]:
+    if raw is None:
+        return None, None
+    mapping, err = _require_mapping(raw, label=f"{label}.battle_sprite")
+    if err is not None:
+        return None, err
+
+    sheet = mapping.get("sheet")
+    if not isinstance(sheet, str) or not sheet.strip():
+        return None, f"{label}.battle_sprite.sheet must be a non-empty string"
+
+    def _positive_int(field: str) -> tuple[int | None, str | None]:
+        value = mapping.get(field)
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            return None, f"{label}.battle_sprite.{field} must be a positive number"
+        parsed = int(value)
+        if parsed <= 0:
+            return None, f"{label}.battle_sprite.{field} must be a positive number"
+        return parsed, None
+
+    columns, err = _positive_int("columns")
+    if err:
+        return None, err
+    rows, err = _positive_int("rows")
+    if err:
+        return None, err
+    frame_width, err = _positive_int("frame_width")
+    if err:
+        return None, err
+    frame_height, err = _positive_int("frame_height")
+    if err:
+        return None, err
+
+    idle_raw = mapping.get("idle_frames")
+    if not isinstance(idle_raw, list) or not idle_raw:
+        return None, f"{label}.battle_sprite.idle_frames must be a non-empty list of frame indices"
+    idle_frames: list[int] = []
+    for index, entry in enumerate(idle_raw):
+        if not isinstance(entry, (int, float)) or isinstance(entry, bool):
+            return None, f"{label}.battle_sprite.idle_frames[{index}] must be a number"
+        idle_frames.append(int(entry))
+
+    fps_raw = mapping.get("fps", 6)
+    if not isinstance(fps_raw, (int, float)) or isinstance(fps_raw, bool):
+        return None, f"{label}.battle_sprite.fps must be a number"
+    fps = float(fps_raw)
+    if fps <= 0.0:
+        return None, f"{label}.battle_sprite.fps must be greater than 0"
+
+    return (
+        BattleSprite(
+            sheet=sheet.strip(),
+            columns=int(columns),
+            rows=int(rows),
+            frame_width=int(frame_width),
+            frame_height=int(frame_height),
+            idle_frames=tuple(idle_frames),
+            fps=fps,
+        ),
+        None,
+    )
 
 
 def _parse_status_inflict(raw: Any, *, label: str) -> tuple[MoveStatusInflict | None, str | None]:
@@ -248,12 +311,17 @@ def parse_species(payload: Any, *, source: str = "species") -> tuple[dict[str, S
         if capture_err:
             errors.append(capture_err)
             continue
+        battle_sprite, battle_sprite_err = _parse_battle_sprite(row.get("battle_sprite"), label=label)
+        if battle_sprite_err:
+            errors.append(battle_sprite_err)
+            continue
         species[species_id] = Species(
             id=species_id,
             base_stats=stats,
             types=tuple(types),
             learnset=learnset,
             capture_rate=capture_rate,
+            battle_sprite=battle_sprite,
         )
     return species, ValidationResult(ok=not errors, errors=tuple(errors))
 

@@ -21,12 +21,24 @@ class BattleStats:
 
 
 @dataclass(frozen=True, slots=True)
+class BattleSprite:
+    sheet: str
+    columns: int
+    rows: int
+    frame_width: int
+    frame_height: int
+    idle_frames: tuple[int, ...]
+    fps: float = 6.0
+
+
+@dataclass(frozen=True, slots=True)
 class Species:
     id: str
     base_stats: BattleStats
     types: tuple[str, ...]
     learnset: tuple[str, ...] = ()
     capture_rate: int = 150
+    battle_sprite: BattleSprite | None = None
 
 
 @dataclass(frozen=True, slots=True)

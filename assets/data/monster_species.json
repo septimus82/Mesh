@@ -11,7 +11,16 @@
       },
       "learnset": ["tackle", "ember", "poison_sting", "sleep_powder"],
       "capture_rate": 190,
-      "sprite": "assets/monsters/sproutling.png"
+      "sprite": "assets/monsters/sproutling.png",
+      "battle_sprite": {
+        "sheet": "assets/sprites/sproutling.png",
+        "columns": 7,
+        "rows": 1,
+        "frame_width": 107,
+        "frame_height": 109,
+        "idle_frames": [0, 1, 2, 3, 4, 5, 6],
+        "fps": 6
+      }
     },
     {
       "id": "shelltide",
