@@ -51,8 +51,11 @@ def test_create_project(tmp_path: Path) -> None:
 
     # Check scene content
     scene = json.loads((target / "packs/core_regions/scenes/start.json").read_text(encoding="utf-8"))
-    assert scene["scene_id"] == "start"
+    assert scene["name"] == "Start Scene"
 
     # Check world content
     world = json.loads((target / "packs/core_regions/worlds/main.json").read_text(encoding="utf-8"))
     assert world["id"] == "main"
+    assert isinstance(world["scenes"], dict)
+    assert world["start_scene"] == "start"
+    assert world["scenes"]["start"]["tags"] == ["start"]

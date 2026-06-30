@@ -183,6 +183,22 @@ def resolve_path(path_str: str) -> Path:
     return p
 
 
+def is_path_under_content_roots(path: Path) -> bool:
+    """Return True when ``path`` resolves inside a configured project content root."""
+    try:
+        resolved = path.resolve()
+    except Exception:
+        _log_swallow("PATH-004", "engine/paths.py pass-only blanket swallow")
+        resolved = path
+    for root in get_content_roots():
+        try:
+            resolved.relative_to(root.resolve())
+            return True
+        except ValueError:
+            continue
+    return False
+
+
 def resolve_monster_data_dir() -> Path:
     """Resolve the directory containing monster catalog JSON files."""
 

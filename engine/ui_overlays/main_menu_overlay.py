@@ -660,21 +660,12 @@ class MainMenuOverlay(UIElement):
                     _log_swallow("MAIN-002", "engine/ui_overlays/main_menu_overlay.py pass-only blanket swallow")
                     pass
 
-        target_scene: str | None = None
-        world = getattr(self.window, "world_controller", None)
-        if world is not None:
-            getter = getattr(world, "get_start_scene_key", None)
-            start_key = getter() if callable(getter) else None
-            path_getter = getattr(world, "get_scene_path", None)
-            if start_key and callable(path_getter):
-                try:
-                    target_scene = str(path_getter(start_key) or "").strip() or None
-                except Exception:
-                    target_scene = None
+        from ..game_runtime.scene_flow import resolve_game_start_scene  # noqa: PLC0415
 
-        if target_scene is None:
-            cfg = getattr(self.window, "engine_config", None)
-            target_scene = str(getattr(cfg, "start_scene", "") or "").strip() or None
+        target_scene = resolve_game_start_scene(
+            engine_config=getattr(self.window, "engine_config", None),
+            world_controller=getattr(self.window, "world_controller", None),
+        )
 
         requester = getattr(self.window, "request_scene_change", None)
         if callable(requester) and target_scene is not None:

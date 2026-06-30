@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from engine.logging_tools import get_logger
+from engine.paths import is_path_under_content_roots, resolve_path
 from engine.scene_transition_policy_model import (
     SceneTransitionRequest,
     decide_scene_transition,
@@ -13,6 +14,45 @@ if TYPE_CHECKING:
 
 
 logger = get_logger(__name__)
+
+
+def resolve_game_start_scene(
+    *,
+    engine_config: Any,
+    world_controller: Any | None,
+) -> str | None:
+    """Resolve the playable start scene for the active project.
+
+  Prefer the loaded project world's start scene when it points at an existing
+  file under the project's content roots. Otherwise fall back to
+  ``engine_config.start_scene`` so engine/default worlds cannot leak in.
+    """
+    cfg_scene = str(getattr(engine_config, "start_scene", "") or "").strip() or None
+    if world_controller is None:
+        return cfg_scene
+
+    getter = getattr(world_controller, "get_start_scene_key", None)
+    start_key = getter() if callable(getter) else None
+    if not start_key:
+        return cfg_scene
+
+    path_getter = getattr(world_controller, "get_scene_path", None)
+    if not callable(path_getter):
+        return cfg_scene
+
+    try:
+        world_scene = str(path_getter(start_key) or "").strip() or None
+    except Exception:
+        return cfg_scene
+
+    if not world_scene:
+        return cfg_scene
+
+    resolved = resolve_path(world_scene)
+    if not resolved.exists() or not is_path_under_content_roots(resolved):
+        return cfg_scene
+
+    return world_scene
 
 
 def load_scene(window: "GameWindow", scene_path: str) -> dict[str, Any]:
