@@ -73,7 +73,7 @@ def launch_editor(
     editor._enable_editor_mode()
 
     if open_tile_paint:
-        tile_ctrl = editor.tile_controller
+        tile_ctrl = editor.tile
         if tile_ctrl.tilemap_available():
             tilemap = scene_data.get("tilemap") if isinstance(scene_data, dict) else None
             collision_id = (

@@ -225,7 +225,7 @@ class EditorDrawController:
         if instance is None:
             return
         draw_layer_ids = {layer.id for layer in instance.draw_layers}
-        layer_name = editor.tile_controller.current_tile_layer()
+        layer_name = editor.tile.current_tile_layer()
         if not layer_name or layer_name in draw_layer_ids:
             return
         sprites = instance.layer_lookup.get(layer_name)
