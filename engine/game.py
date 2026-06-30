@@ -844,7 +844,8 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             mind = CompanionMind(
                 temperament=Temperament(aggression=65.0, fear=12.0),
                 learned=LearnedWeights(),
-                trust=50.0,
+                trust=60.0,
+                bond=40.0,
             )
         self.console_log("[MonsterBattle] Starting debug companion battle")
         return self.start_monster_battle(
