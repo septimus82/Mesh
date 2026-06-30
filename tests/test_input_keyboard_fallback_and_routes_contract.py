@@ -102,7 +102,7 @@ def test_pause_menu_action_reachable_from_keyboard() -> None:
 def test_save_load_actions_reachable_in_gameplay_scope() -> None:
     window = _StubWindow(
         input_bindings={
-            "save_game": ["F8"],
+            "save_game": [],
             "quick_load": ["F9"],
             "quickload_last_save": ["F10"],
         },

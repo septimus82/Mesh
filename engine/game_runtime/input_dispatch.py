@@ -110,15 +110,24 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
 
     if key == optional_arcade.arcade.key.F12:
         if bool(getattr(window.engine_config, "debug_mode", False)):
-            if modifiers & optional_arcade.arcade.key.MOD_CTRL:
-                starter = getattr(window, "start_debug_companion_monster_battle", None)
-            elif modifiers & optional_arcade.arcade.key.MOD_SHIFT:
-                starter = getattr(window, "start_debug_trainer_monster_battle", None)
-            else:
-                starter = getattr(window, "start_debug_monster_battle", None)
+            starter = getattr(window, "start_debug_monster_battle", None)
             if callable(starter):
                 starter()
         return
+
+    if key == optional_arcade.arcade.key.F7:
+        if bool(getattr(window.engine_config, "debug_mode", False)):
+            starter = getattr(window, "start_debug_trainer_monster_battle", None)
+            if callable(starter):
+                starter()
+            return
+
+    if key == optional_arcade.arcade.key.F8:
+        if bool(getattr(window.engine_config, "debug_mode", False)):
+            starter = getattr(window, "start_debug_companion_monster_battle", None)
+            if callable(starter):
+                starter()
+            return
 
     window.input_controller.on_key_press(key, modifiers)
 

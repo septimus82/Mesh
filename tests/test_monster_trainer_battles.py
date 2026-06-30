@@ -217,7 +217,7 @@ class _Console:
         return False
 
 
-def test_shift_f12_launches_trainer_battle_when_debug_mode_enabled() -> None:
+def test_f7_launches_trainer_battle_when_debug_mode_enabled() -> None:
     window = types.SimpleNamespace()
     window.engine_config = load_config("config.json")
     window.engine_config.debug_mode = True
@@ -229,14 +229,35 @@ def test_shift_f12_launches_trainer_battle_when_debug_mode_enabled() -> None:
 
     input_dispatch.on_key_press(
         as_any(window),
-        optional_arcade.arcade.key.F12,
-        optional_arcade.arcade.key.MOD_SHIFT,
+        optional_arcade.arcade.key.F7,
+        0,
     )
 
     window.start_debug_trainer_monster_battle.assert_called_once_with()
 
 
-def test_f12_without_shift_still_launches_wild_battle() -> None:
+def test_f7_does_not_launch_trainer_battle_when_debug_mode_disabled() -> None:
+    window = types.SimpleNamespace()
+    window.engine_config = load_config("config.json")
+    window.engine_config.debug_mode = False
+    window.console_controller = _Console()
+    window.editor_controller = types.SimpleNamespace(active=False)
+    window.ui_controller = types.SimpleNamespace(on_key_press=lambda _key, _mods: False)
+    window.input_controller = InputController(as_any(window))
+    window.game_over = False
+    window.show_debug = False
+    window.start_debug_trainer_monster_battle = MagicMock(return_value=True)
+
+    input_dispatch.on_key_press(
+        as_any(window),
+        optional_arcade.arcade.key.F7,
+        0,
+    )
+
+    window.start_debug_trainer_monster_battle.assert_not_called()
+
+
+def test_f12_launches_wild_battle_when_debug_mode_enabled() -> None:
     window = types.SimpleNamespace()
     window.engine_config = load_config("config.json")
     window.engine_config.debug_mode = True
@@ -244,6 +265,7 @@ def test_f12_without_shift_still_launches_wild_battle() -> None:
     window.editor_controller = types.SimpleNamespace(active=False)
     window.ui_controller = types.SimpleNamespace(on_key_press=lambda _key, _mods: False)
     window.input_controller = InputController(as_any(window))
+    window.game_over = False
     window.start_debug_monster_battle = MagicMock(return_value=True)
     window.start_debug_trainer_monster_battle = MagicMock(return_value=True)
 

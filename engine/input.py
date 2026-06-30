@@ -317,7 +317,6 @@ class InputManager:
         self.bind("toggle_inspector", arcade_module.key.I)
         self.bind("pause_menu", arcade_module.key.ESCAPE)
         self.bind("quick_save", arcade_module.key.F5)
-        self.bind("save_game", arcade_module.key.F8)
         self.bind("quick_load", arcade_module.key.F9)
         self.bind("quickload_last_save", arcade_module.key.F10)
 
