@@ -6,10 +6,12 @@ from dataclasses import dataclass
 from typing import Any, Mapping, MutableMapping
 
 from .battle_model import MonsterInstance, Species
+from .companion_mind import CompanionMind, companion_mind_from_dict, companion_mind_to_dict
 
 MONSTER_PARTY_KEY = "monster_party"
 MONSTER_BOX_KEY = "monster_box"
 MONSTER_INSTANCES_KEY = "monster_instances"
+COMPANION_MIND_INSTANCE_KEY = "companion_mind"
 POCKET_BALL_COUNT_KEY = "pocket_ball_count"
 DEFAULT_POCKET_BALL_COUNT = 3
 MAX_PARTY_SIZE = 6
@@ -65,14 +67,38 @@ def add_caught_monster(values: MutableMapping[str, Any], monster: MonsterInstanc
     return AddCaughtMonsterResult(instance_id, storage, len(party), len(box))
 
 
-def serialize_monster_instance(monster: MonsterInstance) -> dict[str, Any]:
-    return {
+def serialize_monster_instance(monster: MonsterInstance, *, companion_mind: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    row: dict[str, Any] = {
         "species_id": monster.species.id,
         "level": int(monster.level),
         "xp": int(monster.experience),
         "current_hp": int(monster.current_hp or 0),
         "known_moves": list(monster.known_moves),
     }
+    if companion_mind is not None:
+        row[COMPANION_MIND_INSTANCE_KEY] = dict(companion_mind)
+    return row
+
+
+def load_companion_mind_for_instance(values: MutableMapping[str, Any], instance_id: str) -> CompanionMind | None:
+    ensure_monster_collection(values)
+    row = values[MONSTER_INSTANCES_KEY].get(str(instance_id))
+    if not isinstance(row, dict):
+        return None
+    payload = row.get(COMPANION_MIND_INSTANCE_KEY)
+    if not isinstance(payload, dict):
+        return None
+    return companion_mind_from_dict(payload)
+
+
+def persist_companion_mind(values: MutableMapping[str, Any], instance_id: str, mind: CompanionMind) -> None:
+    ensure_monster_collection(values)
+    instances = values[MONSTER_INSTANCES_KEY]
+    row = instances.get(str(instance_id))
+    if not isinstance(row, dict):
+        return
+    row[COMPANION_MIND_INSTANCE_KEY] = companion_mind_to_dict(mind)
+    instances[str(instance_id)] = row
 
 
 def load_battle_party_from_values(

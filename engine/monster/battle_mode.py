@@ -20,6 +20,7 @@ from .battle_controller import BattleLogEntry, BattleResult, MonsterBattleContro
 from .battle_model import MonsterInstance, Move, RandomLike, TypeChart, resolve_move
 from .capture import CaptureResult, resolve_capture
 from .collection import (
+    COMPANION_MIND_INSTANCE_KEY,
     DEFAULT_POCKET_BALL_COUNT,
     MAX_PARTY_SIZE,
     MONSTER_BOX_KEY,
@@ -29,11 +30,14 @@ from .collection import (
     consume_pocket_ball,
     ensure_monster_collection,
     get_pocket_ball_count,
+    load_companion_mind_for_instance,
+    persist_companion_mind,
     serialize_monster_instance,
 )
 from .companion_mind import (
     ATTACK,
     DEFEND,
+    FLEE,
     CompanionMind,
     DecisionContext,
     decide,
@@ -442,6 +446,7 @@ class MonsterBattleMode:
         self.companion_awaiting_reinforcement = False
         self._presenting_reinforcement = False
         self._last_companion_behavior: str = ""
+        self._companion_instance_id: str | None = None
 
     def start_battle(
         self,
@@ -472,6 +477,12 @@ class MonsterBattleMode:
         else:
             self.player_party_instance_ids = [None] * len(party)
         self.companion_mode = bool(companion_mode)
+        active_instance_id = self.player_party_instance_ids[0] if self.player_party_instance_ids else None
+        self._companion_instance_id = str(active_instance_id) if active_instance_id else None
+        if self.companion_mode and self._companion_instance_id:
+            loaded_mind = load_companion_mind_for_instance(self._state_values(), self._companion_instance_id)
+            if loaded_mind is not None:
+                companion_mind = loaded_mind
         self.companion_mind = companion_mind if companion_mind is not None else CompanionMind()
         self.companion_ctx = DecisionContext()
         self.companion_awaiting_reinforcement = False
@@ -557,9 +568,27 @@ class MonsterBattleMode:
         )
         before_len = len(self.controller.turn_log)
         rng = self.controller.rng if self.controller.rng is not None else self._capture_rng()
+        max_hp = max(1, int(self.controller.player.stats.hp if self.controller.player.stats else self.controller.player.current_hp or 1))
+        current_hp = max(0, int(self.controller.player.current_hp or 0))
+        self.companion_ctx = DecisionContext(hp_fraction=current_hp / max_hp)
         self.companion_mind, decision = decide(self.companion_mind, self.companion_ctx, rng)
         behavior = decision.behavior_id
         self._last_companion_behavior = behavior
+
+        if behavior == FLEE:
+            result = self._companion_flee_result()
+            self.companion_awaiting_reinforcement = False
+            self._presenting_reinforcement = False
+            if self.overlay is not None:
+                name = _display_name(self.controller.player)
+                steps = [
+                    BattlePresentationStep(f"{name} flees!", before_player_hp, before_opponent_hp),
+                    BattlePresentationStep("It abandoned you.", before_player_hp, before_opponent_hp),
+                ]
+                self.overlay.begin_turn_presentation(steps, result=result)
+            else:
+                self.end_battle(result)
+            return result
 
         if behavior == ATTACK:
             result = self.controller.submit_action("player", _first_damaging_move_id(self.controller))
@@ -754,9 +783,14 @@ class MonsterBattleMode:
         if final_result is None:
             raise RuntimeError("cannot end monster battle without a result")
 
+        if self.companion_mode and self.companion_mind is not None and self._companion_instance_id:
+            persist_companion_mind(self._state_values(), self._companion_instance_id, self.companion_mind)
+
         payload = self._result_payload(final_result)
         self._apply_result_payload(payload)
         self._persist_party_to_instances()
+        if self.companion_mode and str(getattr(final_result, "outcome", "")) == "fled":
+            self._remove_fled_companion_from_party()
         self._emit_ended(payload)
 
         if self.overlay is not None:
@@ -771,6 +805,7 @@ class MonsterBattleMode:
         self.companion_mind = None
         self.companion_awaiting_reinforcement = False
         self._presenting_reinforcement = False
+        self._companion_instance_id = None
         self.active = False
         self.window.monster_battle_mode_active = False
         self.window.paused = self._prior_paused
@@ -1058,7 +1093,32 @@ class MonsterBattleMode:
         for monster, instance_id in zip(self.controller.player_party, self.player_party_instance_ids, strict=False):
             if instance_id is None:
                 continue
-            instances[str(instance_id)] = serialize_monster_instance(monster)
+            existing = instances.get(str(instance_id))
+            mind_payload = existing.get(COMPANION_MIND_INSTANCE_KEY) if isinstance(existing, dict) else None
+            row = serialize_monster_instance(monster)
+            if isinstance(mind_payload, dict):
+                row[COMPANION_MIND_INSTANCE_KEY] = dict(mind_payload)
+            instances[str(instance_id)] = row
+
+    def _companion_flee_result(self) -> BattleResult:
+        if self.controller is None:
+            raise RuntimeError("monster battle mode is not active")
+        return BattleResult(
+            cast(Any, "fled"),
+            winning_side="opponent",
+            losing_side="player",
+            turns=self.controller.turn_number,
+        )
+
+    def _remove_fled_companion_from_party(self) -> None:
+        instance_id = self._companion_instance_id
+        if not instance_id:
+            return
+        values = self._state_values()
+        party = values[MONSTER_PARTY_KEY]
+        id_str = str(instance_id)
+        if id_str in party:
+            party.remove(id_str)
 
 
 def start_monster_battle(window: "GameWindow", **kwargs: Any) -> MonsterBattleController:
@@ -1092,6 +1152,8 @@ def _companion_autonomous_line(behavior: str, name: str) -> str:
         return f"{name} attacks!"
     if behavior == DEFEND:
         return f"{name} braces."
+    if behavior == FLEE:
+        return f"{name} flees!"
     return f"{name} hesitates."
 
 
