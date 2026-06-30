@@ -18,6 +18,8 @@ from mesh_cli import scene as scene_commands
 def handle(args: argparse.Namespace) -> int:
     if args.command == "play":
         return _handle_play(args)
+    if args.command == "edit":
+        return _handle_edit(args)
     if args.command == "demo":
         if getattr(args, "demo_command", None) in (None, "", "run"):
             return _handle_demo(args)
@@ -47,6 +49,22 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     # Play
     play_parser = subparsers.add_parser("play", help="Launch the game")
     play_parser.add_argument("scene_path", nargs="?", help="Optional start scene")
+
+    edit_parser = subparsers.add_parser(
+        "edit",
+        help="Launch the in-game editor for a standalone project (skips project browser)",
+    )
+    edit_parser.add_argument(
+        "project_path",
+        nargs="?",
+        help="Project directory containing config.json (default: current directory)",
+    )
+    edit_parser.add_argument(
+        "--scene",
+        dest="scene_path",
+        help="Optional scene path override",
+    )
+    edit_parser.set_defaults(func=_handle_edit)
 
     # Runtime-only play smoke
     play_runtime_parser = subparsers.add_parser(
@@ -198,6 +216,18 @@ def register(subparsers: argparse._SubParsersAction) -> None:
     # Dump State
     dump_state_parser = subparsers.add_parser("dump-state", help="Print a deterministic debug state snapshot")
     dump_state_parser.add_argument("--out", help="Optional path to write JSON instead of stdout")
+
+def _handle_edit(args: argparse.Namespace) -> int:
+    """Launch the in-game editor pinned to a project root."""
+    from engine.game_launch import launch_editor
+
+    return int(
+        launch_editor(
+            project_root=getattr(args, "project_path", None),
+            scene_path=getattr(args, "scene_path", None),
+        )
+    )
+
 
 def _handle_play(args: argparse.Namespace) -> int:
     """Launch the game window, optionally overriding the start scene."""

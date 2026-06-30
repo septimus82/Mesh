@@ -1,5 +1,6 @@
 """Main entry point for the Mesh 2D game engine demo."""
 
+import argparse
 import sys
 import warnings
 from collections import deque
@@ -35,6 +36,18 @@ from engine.game_runtime.scene_flow import resolve_game_start_scene
 
 def main() -> None:
     """Initialize Arcade, load the test scene, and start the game loop."""
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument(
+        "--edit",
+        action="store_true",
+        help="Open the in-game editor for this project (standalone entry)",
+    )
+    args, _unknown = parser.parse_known_args()
+    if args.edit:
+        from engine.game_launch import launch_editor
+
+        raise SystemExit(launch_editor())
+
     config = load_config()
     window = GameWindow(
         width=config.width,

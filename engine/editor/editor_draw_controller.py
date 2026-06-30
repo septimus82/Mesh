@@ -88,6 +88,8 @@ class EditorDrawController:
 
             draw_asset_placement_ghost(editor.asset_place_path, wx, wy)
 
+        self._draw_editor_collision_tile_overlay(editor)
+
         # Draw Palette Preview
         editor.palette.draw_palette_preview()
 
@@ -212,4 +214,30 @@ class EditorDrawController:
         for px, py in points:
             optional_arcade.arcade.draw_circle_filled(
                 px, py, 4, optional_arcade.arcade.color.YELLOW
+            )
+
+    def _draw_editor_collision_tile_overlay(self, editor: EditorModeController) -> None:
+        """Faint overlay for collision-only tile layers while tile paint is active."""
+        if not editor.tile_panel_active:
+            return
+        scene_controller = getattr(self._window, "scene_controller", None)
+        instance = getattr(scene_controller, "tilemap_instance", None) if scene_controller is not None else None
+        if instance is None:
+            return
+        draw_layer_ids = {layer.id for layer in instance.draw_layers}
+        layer_name = editor.tile_controller.current_tile_layer()
+        if not layer_name or layer_name in draw_layer_ids:
+            return
+        sprites = instance.layer_lookup.get(layer_name)
+        if sprites is None:
+            return
+        tile_w, tile_h = instance.tile_size
+        overlay_color = (255, 64, 64, 96)
+        for sprite in sprites:
+            _draw_rectangle_filled(
+                sprite.center_x,
+                sprite.center_y,
+                float(tile_w),
+                float(tile_h),
+                overlay_color,
             )
