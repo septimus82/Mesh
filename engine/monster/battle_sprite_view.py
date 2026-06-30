@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 from engine.animation import SpriteSheetCache, SpriteSheetSpec
 
-from .battle_model import BattleSprite, Species
+from .battle_model import BattleSprite, BattleSpriteClip, Species
 
 if TYPE_CHECKING:
     from engine.game import GameWindow
@@ -20,27 +20,64 @@ if TYPE_CHECKING:
 
 @dataclass
 class BattleSpriteAnimator:
-    """Cycles idle frames from a sliced sprite sheet."""
+    """Per-sprite clip state machine over a sliced sprite sheet."""
 
     textures: tuple[Any, ...]
-    idle_frames: tuple[int, ...]
-    fps: float
+    clips: dict[str, BattleSpriteClip]
+    active_clip_name: str = "idle"
     frame_cursor: int = 0
     elapsed: float = 0.0
+    last_requested_clip: str | None = None
+    last_effective_clip: str | None = None
+
+    def play_clip(self, name: str) -> str:
+        """Request a clip; returns the clip actually playing (idle fallback)."""
+        self.last_requested_clip = name
+        resolved = name if name in self.clips else "idle"
+        if resolved not in self.clips:
+            resolved = "idle"
+        self.last_effective_clip = resolved
+        self.active_clip_name = resolved
+        self.frame_cursor = 0
+        self.elapsed = 0.0
+        return resolved
+
+    def _active_clip(self) -> BattleSpriteClip | None:
+        clip = self.clips.get(self.active_clip_name)
+        if clip is not None:
+            return clip
+        return self.clips.get("idle")
 
     def update(self, dt: float) -> None:
-        if len(self.idle_frames) <= 1 or self.fps <= 0.0:
-            return
         self.elapsed += max(0.0, float(dt))
-        frame_duration = 1.0 / float(self.fps)
-        while self.elapsed >= frame_duration:
+        while True:
+            clip = self._active_clip()
+            if clip is None or len(clip.frames) <= 1 or clip.fps <= 0.0:
+                return
+            frame_duration = 1.0 / float(clip.fps)
+            if self.elapsed < frame_duration:
+                return
             self.elapsed -= frame_duration
-            self.frame_cursor = (self.frame_cursor + 1) % len(self.idle_frames)
+            next_cursor = self.frame_cursor + 1
+            if next_cursor >= len(clip.frames):
+                if clip.loop:
+                    self.frame_cursor = 0
+                    continue
+                idle = self.clips.get("idle")
+                if idle is None:
+                    self.frame_cursor = len(clip.frames) - 1
+                    return
+                self.active_clip_name = "idle"
+                self.frame_cursor = 0
+                self.elapsed = 0.0
+                continue
+            self.frame_cursor = next_cursor
 
     def current_texture(self) -> Any | None:
-        if not self.textures or not self.idle_frames:
+        clip = self._active_clip()
+        if clip is None or not self.textures or not clip.frames:
             return None
-        frame_index = self.idle_frames[self.frame_cursor % len(self.idle_frames)]
+        frame_index = clip.frames[self.frame_cursor % len(clip.frames)]
         if frame_index < 0 or frame_index >= len(self.textures):
             return None
         return self.textures[frame_index]
@@ -66,9 +103,13 @@ class BattleSpriteDisplay:
             return
         self._animator = BattleSpriteAnimator(
             textures=textures,
-            idle_frames=battle_sprite.idle_frames,
-            fps=float(battle_sprite.fps),
+            clips=dict(battle_sprite.clips),
         )
+
+    def play_clip(self, name: str) -> str | None:
+        if self._animator is None:
+            return None
+        return self._animator.play_clip(name)
 
     def update(self, dt: float) -> None:
         if self._animator is not None:
@@ -97,6 +138,18 @@ class BattleSpriteDisplay:
         if self._animator is None:
             return None
         return int(self._animator.frame_cursor)
+
+    @property
+    def last_requested_clip(self) -> str | None:
+        if self._animator is None:
+            return None
+        return self._animator.last_requested_clip
+
+    @property
+    def last_effective_clip(self) -> str | None:
+        if self._animator is None:
+            return None
+        return self._animator.last_effective_clip
 
     @property
     def has_sprite(self) -> bool:

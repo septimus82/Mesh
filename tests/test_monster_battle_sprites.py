@@ -9,7 +9,7 @@ import pytest
 
 from engine.monster.battle_controller import MoveAction
 from engine.monster.battle_mode import MonsterBattleMode
-from engine.monster.battle_model import BattleSprite, BattleStats, MonsterInstance, Move, Species
+from engine.monster.battle_model import BattleSprite, BattleSpriteClip, BattleStats, MonsterInstance, Move, Species
 from engine.monster.battle_sprite_view import BattleSpriteAnimator, BattleSpriteDisplay
 from engine.monster.data_load import load_monster_catalog, parse_species
 from engine.ui_controller import UIController
@@ -25,8 +25,7 @@ SPROUTLING_BATTLE_SPRITE = BattleSprite(
     rows=1,
     frame_width=107,
     frame_height=109,
-    idle_frames=(0, 1, 2, 3, 4, 5, 6),
-    fps=6.0,
+    clips={"idle": BattleSpriteClip(frames=(0, 1, 2, 3, 4, 5, 6), fps=6.0, loop=True)},
 )
 SPROUTLING = Species(
     id="sproutling",
@@ -52,8 +51,7 @@ BENCH = Species(
         rows=1,
         frame_width=32,
         frame_height=32,
-        idle_frames=(0, 1),
-        fps=4.0,
+        clips={"idle": BattleSpriteClip(frames=(0, 1), fps=4.0, loop=True)},
     ),
 )
 
@@ -89,7 +87,10 @@ def _window_with_assets(*textures: MagicMock) -> types.SimpleNamespace:
 
 def test_battle_sprite_animator_advances_idle_frame_over_dt() -> None:
     textures = tuple(_texture(f"frame_{index}") for index in range(3))
-    animator = BattleSpriteAnimator(textures=textures, idle_frames=(0, 1, 2), fps=10.0)
+    animator = BattleSpriteAnimator(
+        textures=textures,
+        clips={"idle": BattleSpriteClip(frames=(0, 1, 2), fps=10.0, loop=True)},
+    )
     assert animator.frame_cursor == 0
     animator.update(0.05)
     assert animator.frame_cursor == 0

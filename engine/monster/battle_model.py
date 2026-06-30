@@ -21,14 +21,28 @@ class BattleStats:
 
 
 @dataclass(frozen=True, slots=True)
+class BattleSpriteClip:
+    frames: tuple[int, ...]
+    fps: float = 6.0
+    loop: bool = True
+
+
+@dataclass(frozen=True, slots=True)
 class BattleSprite:
     sheet: str
     columns: int
     rows: int
     frame_width: int
     frame_height: int
-    idle_frames: tuple[int, ...]
-    fps: float = 6.0
+    clips: dict[str, BattleSpriteClip]
+
+    @property
+    def idle_frames(self) -> tuple[int, ...]:
+        return self.clips["idle"].frames
+
+    @property
+    def fps(self) -> float:
+        return self.clips["idle"].fps
 
 
 @dataclass(frozen=True, slots=True)
