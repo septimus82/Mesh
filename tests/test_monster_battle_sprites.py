@@ -126,6 +126,51 @@ def test_species_without_battle_sprite_falls_back_without_crashing() -> None:
     display.draw(400.0, 300.0)
 
 
+def test_shelltide_battle_sprite_parses_from_catalog() -> None:
+    catalog, result = load_monster_catalog()
+    assert result.ok is True
+    assert catalog is not None
+    battle_sprite = catalog.species["shelltide"].battle_sprite
+    assert battle_sprite is not None
+    assert battle_sprite.sheet == "assets/sprites/shelltide.png"
+    assert battle_sprite.columns == 7
+    assert battle_sprite.frame_width == 128
+    assert battle_sprite.frame_height == 128
+    assert battle_sprite.clips["idle"].frames == (0, 1, 2, 3, 4, 5, 6)
+    assert battle_sprite.clips["idle"].fps == 6.0
+    assert battle_sprite.clips["idle"].loop is True
+
+
+def test_overlay_resolves_shelltide_opponent_battle_sprite() -> None:
+    catalog, result = load_monster_catalog()
+    assert result.ok is True
+    assert catalog is not None
+    window = _window_with_assets(
+        *(_texture(f"sprout_{index}") for index in range(7)),
+        *(_texture(f"shell_{index}", width=128, height=128) for index in range(7)),
+    )
+    mode = MonsterBattleMode(as_any(window))
+    mode.start_battle(
+        player_monster=MonsterInstance(
+            catalog.species["sproutling"],
+            level=8,
+            known_moves=("tackle",),
+        ),
+        opponent_monster=MonsterInstance(
+            catalog.species["shelltide"],
+            level=6,
+            known_moves=("tackle",),
+        ),
+        moves={"tackle": TACKLE},
+        type_chart={},
+    )
+    overlay = mode.overlay
+    assert overlay is not None
+    assert overlay._player_sprite.has_sprite is True
+    assert overlay._opponent_sprite.has_sprite is True
+    assert overlay._opponent_sprite.species_id == "shelltide"
+
+
 def test_switch_updates_displayed_battle_sprite() -> None:
     window = _window_with_assets(
         *(_texture(f"sprout_{index}") for index in range(7)),
