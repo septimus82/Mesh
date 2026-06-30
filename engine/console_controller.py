@@ -367,7 +367,7 @@ class ConsoleController:
                     ("F7", "Start debug trainer monster battle (debug)"),
                     ("F8", "Start debug companion monster battle (debug)"),
                     ("F9", "Toggle paused state"),
-                    ("F10", "Toggle scene inspector overlay"),
+                    ("F10", "Breed first two party monsters into an egg (debug mode)"),
                     ("F11", "Toggle tile paint mode (debug)"),
                     ("F12", "Start debug wild monster battle (debug)"),
                     ("Esc", "Toggle settings overlay"),
