@@ -98,13 +98,14 @@ class BattleSpriteDisplay:
             self._animator = None
             return
         textures = _load_battle_sprite_textures(self._window, battle_sprite)
-        if not textures:
+        if not textures or not _battle_sprite_frames_ready(battle_sprite, textures):
             self._animator = None
             return
         self._animator = BattleSpriteAnimator(
             textures=textures,
             clips=dict(battle_sprite.clips),
         )
+        self._animator.play_clip("idle")
 
     def play_clip(self, name: str) -> str | None:
         if self._animator is None:
@@ -154,6 +155,16 @@ class BattleSpriteDisplay:
     @property
     def has_sprite(self) -> bool:
         return self._animator is not None
+
+
+def _battle_sprite_frames_ready(battle_sprite: BattleSprite, textures: tuple[Any, ...]) -> bool:
+    if not textures:
+        return False
+    last_index = -1
+    for clip in battle_sprite.clips.values():
+        if clip.frames:
+            last_index = max(last_index, max(clip.frames))
+    return last_index < len(textures)
 
 
 def _sheet_cache(window: GameWindow) -> SpriteSheetCache | None:
