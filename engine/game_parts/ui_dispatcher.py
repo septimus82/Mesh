@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from typing import TYPE_CHECKING, Sequence
 
 from engine.game_runtime import ui_wiring as game_ui_wiring
@@ -60,6 +61,21 @@ logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from engine.game import GameWindow
+
+
+def _is_web_runtime() -> bool:
+    return sys.platform == "emscripten" or os.environ.get("PYGBAG") == "1"
+
+
+def _should_open_main_menu_on_boot(window: "GameWindow") -> bool:
+    if _is_web_runtime():
+        return True
+    from engine.repo_root import get_launched_project_root  # noqa: PLC0415
+
+    if get_launched_project_root() is not None:
+        cfg = getattr(window, "engine_config", None)
+        return bool(getattr(cfg, "main_menu_scene", None))
+    return True
 
 
 def init_ui_dispatcher(window: "GameWindow") -> None:
@@ -258,7 +274,8 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
     window.transition_fade_overlay = TransitionFadeOverlay(window)
     window.register_ui_element(window.transition_fade_overlay)
 
-    window.main_menu_overlay.open()
+    if _should_open_main_menu_on_boot(window):
+        window.main_menu_overlay.open()
 
     preset_id = os.environ.get("MESH_ACTIVE_PRESET")
     preset_desc = os.environ.get("MESH_PRESET_DESCRIPTION")
