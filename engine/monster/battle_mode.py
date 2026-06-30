@@ -74,7 +74,7 @@ def _battle_combatant_layout(left: float, right: float, top: float) -> dict[str,
     """Sprite and HP anchor positions for classic JRPG side alignment."""
 
     return {
-        "opponent_sprite": (left + 204.0, top - 175.0),
+        "opponent_sprite": (left + 204.0, top - 228.0),
         "player_sprite": (right - 204.0, top - 317.0),
         "opponent_hp": (left + 24.0, top - 48.0),
         "player_hp": (right - 384.0, top - 190.0),
@@ -261,8 +261,6 @@ class MonsterBattleOverlay(UIElement):
         if controller is None:
             return
         layout = _battle_combatant_layout(left, right, top)
-        self._opponent_sprite.draw(*layout["opponent_sprite"])
-        self._player_sprite.draw(*layout["player_sprite"])
         self._draw_monster_block(
             controller.opponent,
             *layout["opponent_hp"],
@@ -275,6 +273,8 @@ class MonsterBattleOverlay(UIElement):
             width=360,
             hp=self.displayed_player_hp,
         )
+        self._opponent_sprite.draw(*layout["opponent_sprite"])
+        self._player_sprite.draw(*layout["player_sprite"])
 
     def _draw_monster_block(self, monster: MonsterInstance, x: float, y: float, *, width: float, hp: int | None = None) -> None:
         name = _display_name(monster)

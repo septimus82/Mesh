@@ -33,7 +33,21 @@
       },
       "learnset": ["tackle", "splash", "sleep_powder"],
       "capture_rate": 180,
-      "sprite": "assets/monsters/shelltide.png"
+      "sprite": "assets/monsters/shelltide.png",
+      "battle_sprite": {
+        "sheet": "assets/sprites/shelltide.png",
+        "columns": 7,
+        "rows": 1,
+        "frame_width": 128,
+        "frame_height": 128,
+        "clips": {
+          "idle": {
+            "frames": [0, 1, 2, 3, 4, 5, 6],
+            "fps": 6,
+            "loop": true
+          }
+        }
+      }
     }
   ]
 }
