@@ -287,6 +287,14 @@ class AnimationPlayer:
         texture = self._apply_blend(texture)
         if force or self.sprite.texture is not texture:
             self.sprite.texture = texture
+            sync_hit_box = getattr(self.sprite, "sync_hit_box_to_texture", None)
+            if callable(sync_hit_box):
+                try:
+                    sync_hit_box()
+                except Exception:  # noqa: BLE001  # REASON: hitbox refresh after frame swap is best-effort
+                    from engine.swallowed_exceptions import _log_swallow  # noqa: PLC0415
+
+                    _log_swallow("ANIM-001", "engine/animation.py hitbox sync after frame swap")
         self._dirty = False
 
     def _log(self, message: str) -> None:

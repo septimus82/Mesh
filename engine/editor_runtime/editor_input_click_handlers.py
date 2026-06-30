@@ -65,9 +65,11 @@ def _pick_entity_sprite_at_world(controller: EditorController, world_x: float, w
             if resolve_entity_id_for_sprite(sprite) is None:
                 continue
             collides = getattr(sprite, "collides_with_point", None)
-            hit_sprite = callable(collides) and collides(point)
             entity_data = getattr(sprite, "mesh_entity_data", None)
             bounds = resolve_entity_bounds(entity_data, sprite) if isinstance(entity_data, dict) else None
+            sheet = entity_data.get("sprite_sheet") if isinstance(entity_data, dict) else None
+            use_bounds_only = isinstance(sheet, dict) and bool(sheet) and bounds is not None
+            hit_sprite = (not use_bounds_only) and callable(collides) and collides(point)
             hit_bounds = bounds is not None and bounds.contains_point(world_x, world_y)
             if hit_sprite or hit_bounds:
                 candidates.append(sprite)
@@ -285,7 +287,7 @@ def handle_mouse_click(controller: EditorController, x: float, y: float, button:
                     controller.begin_alt_drag_duplicate(world_x, world_y)
                     return True
 
-            apply_selection(controller, clicked_sprite, shift=shift_held)
+            apply_selection(controller, clicked_sprite, shift=shift_held, click_world=(world_x, world_y))
         else:
             # Empty space click - start marquee selection instead of clearing
             from ..editor.marquee_select import should_start_marquee  # noqa: PLC0415

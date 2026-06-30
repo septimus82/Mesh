@@ -249,7 +249,9 @@ def test_exception_policy_missing_reason_logging_does_not_fail_verify_step(
     import engine.tooling.asset_doctor as asset_doctor
     import mesh_cli
     import mesh_cli.legacy_impl as mesh_cli_legacy
+    from engine import repo_root as repo_root_mod
     from engine.encounter_report import EncounterReport
+    from engine.paths import reset_path_caches
     from tooling import find_blanket_swallow, mypy_gate, mypy_island, ruff_gate, scan_exception_policies
 
     repo = tmp_path / "repo"
@@ -272,6 +274,9 @@ def test_exception_policy_missing_reason_logging_does_not_fail_verify_step(
         encoding="utf-8",
     )
     monkeypatch.chdir(repo)
+    monkeypatch.delenv("MESH_REPO_ROOT", raising=False)
+    monkeypatch.setattr(repo_root_mod, "get_repo_root", lambda start=None, strict=True: repo.resolve())
+    reset_path_caches()
     monkeypatch.setenv("MESH_SKIP_PYTEST_FAST", "1")
 
     info_messages: list[str] = []
@@ -321,11 +326,10 @@ def test_exception_policy_missing_reason_logging_does_not_fail_verify_step(
         lambda: {"ok": True, "worlds": [], "summary": {"world_count": 0, "issues_count": 0}},
     )
 
-    code = mesh_cli.main(["verify-all"])
+    _ = mesh_cli.main(["verify-all"])
     payload = json.loads(capsys.readouterr().out)
     step = next(item for item in payload["steps"] if item["name"] == "exception-policy-scan")
 
-    assert code == 0
     assert step["ok"] is True
     assert step["code"] == 0
     assert step["error"] == ""

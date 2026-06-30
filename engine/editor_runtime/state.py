@@ -16,6 +16,8 @@ def apply_selection(
     controller: Any,
     selected_entity: Any | None,
     shift: bool = False,
+    *,
+    click_world: tuple[float, float] | None = None,
 ) -> None:
     """Apply selection change side-effects (mirrors legacy editor_controller behavior).
 
@@ -56,15 +58,22 @@ def apply_selection(
         controller.selected_entity = None
 
     if selected_entity:
+        cancel_marquee = getattr(controller, "cancel_marquee", None)
+        if callable(cancel_marquee):
+            cancel_marquee()
+
         # Plain MOVE-tool clicks select and immediately prepare viewport drag.
         if controller.tool_mode == "MOVE" and clicked_id and not shift:
             transform_mode = getattr(controller, "transform_mode", TRANSFORM_MODE_MOVE)
             if transform_mode == TRANSFORM_MODE_MOVE:
                 controller.entity_dragging = True
-                controller.entity_drag_start_pos = (
-                    controller.selected_entity.center_x,
-                    controller.selected_entity.center_y,
-                )
+                if click_world is not None:
+                    controller.entity_drag_start_pos = (float(click_world[0]), float(click_world[1]))
+                else:
+                    controller.entity_drag_start_pos = (
+                        controller.selected_entity.center_x,
+                        controller.selected_entity.center_y,
+                    )
                 # Store start positions for all selected entities
                 _init_multiselect_drag_starts(controller)
             elif transform_mode == TRANSFORM_MODE_ROTATE:
@@ -123,6 +132,7 @@ def _init_multiselect_drag_starts(controller: Any) -> None:
     Stores current positions keyed by entity ID for computing deltas during drag.
     """
     from ..editor.editor_transform_ops import resolve_entity_id_for_sprite  # noqa: PLC0415
+    from .editor_input_click_handlers import _iter_entity_sprite_sources  # noqa: PLC0415
 
     drag_starts: Dict[str, tuple[float, float]] = {}
     selected_ids: List[str] = getattr(controller, "_selected_entity_ids", [])
@@ -131,22 +141,21 @@ def _init_multiselect_drag_starts(controller: Any) -> None:
         controller._multiselect_drag_starts = drag_starts
         return
 
-    # Get all entity sprites from scene controller
     sc = getattr(controller.window, "scene_controller", None)
     if sc is None:
         controller._multiselect_drag_starts = drag_starts
         return
 
-    entity_sprites = getattr(sc, "entity_sprites", None)
-    if not entity_sprites:
-        controller._multiselect_drag_starts = drag_starts
-        return
-
-    # Build a map of entity_id -> sprite for quick lookup
-    for sprite in entity_sprites:
-        eid = resolve_entity_id_for_sprite(sprite)
-        if eid and eid in selected_ids:
-            drag_starts[eid] = (sprite.center_x, sprite.center_y)
+    seen: set[int] = set()
+    for source in _iter_entity_sprite_sources(sc):
+        for sprite in list(source or []):
+            marker = id(sprite)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            eid = resolve_entity_id_for_sprite(sprite)
+            if eid and eid in selected_ids:
+                drag_starts[eid] = (sprite.center_x, sprite.center_y)
 
     controller._multiselect_drag_starts = drag_starts
 
@@ -162,19 +171,22 @@ def get_sprite_for_entity_id(controller: Any, entity_id: str) -> Any | None:
         Sprite if found, None otherwise.
     """
     from ..editor.editor_transform_ops import resolve_entity_id_for_sprite  # noqa: PLC0415
+    from .editor_input_click_handlers import _iter_entity_sprite_sources  # noqa: PLC0415
 
     sc = getattr(controller.window, "scene_controller", None)
     if sc is None:
         return None
 
-    entity_sprites = getattr(sc, "entity_sprites", None)
-    if not entity_sprites:
-        return None
-
-    for sprite in entity_sprites:
-        eid = resolve_entity_id_for_sprite(sprite)
-        if eid == entity_id:
-            return sprite
+    seen: set[int] = set()
+    for source in _iter_entity_sprite_sources(sc):
+        for sprite in list(source or []):
+            marker = id(sprite)
+            if marker in seen:
+                continue
+            seen.add(marker)
+            eid = resolve_entity_id_for_sprite(sprite)
+            if eid == entity_id:
+                return sprite
     return None
 
 
