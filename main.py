@@ -30,6 +30,7 @@ except (ImportError, AttributeError) as e:
 
 from engine.config import load_config
 from engine.game import GameWindow
+from engine.game_runtime.scene_flow import resolve_game_start_scene
 
 
 def main() -> None:
@@ -46,19 +47,25 @@ def main() -> None:
     )
 
     # Determine initial scene
-    initial_scene = config.main_menu_scene if config.main_menu_scene else config.start_scene
     spawn_id = None
-    wc = getattr(window, "world_controller", None)
-    if wc is not None:
-        start_key = wc.get_start_scene_key()
-        path = wc.get_scene_path(start_key) if start_key else None
-        if path:
-            initial_scene = path
-            spawn_id = wc.get_start_spawn()
-            window.game_state_controller.set_var("world_id", wc.id)
-            window.game_state_controller.set_var("world_scene_key", start_key)
-            if spawn_id:
-                window.set_next_spawn_point(spawn_id)
+    if config.main_menu_scene:
+        initial_scene = config.main_menu_scene
+    else:
+        wc = getattr(window, "world_controller", None)
+        project_start = resolve_game_start_scene(
+            engine_config=config,
+            world_controller=wc,
+        )
+        initial_scene = project_start or config.start_scene
+        if wc is not None:
+            start_key = wc.get_start_scene_key()
+            if start_key and project_start is not None and project_start == initial_scene:
+                spawn_id = wc.get_start_spawn()
+                window.game_state_controller.set_var("world_id", wc.id)
+                window.game_state_controller.set_var("world_scene_key", start_key)
+
+    if spawn_id:
+        window.set_next_spawn_point(spawn_id)
 
     # Capture the scene data for future systems (debug overlays, hot reload, etc.).
     scene_data: Dict[str, Any] = window.load_scene(initial_scene)

@@ -28,13 +28,20 @@ class WorldController:
         self._links: List[WorldLink] = []
         self._neighbors: Dict[str, List[str]] = {}
 
-        self._start_scene: str | None = world_data.get("start_scene")
+        self._start_scene: str | None = world_data.get("start_scene") or world_data.get("initial_scene_key")
         self._start_spawn: str | None = world_data.get("start_spawn")
 
         self._load_scenes(world_data.get("scenes") or {})
         self._load_links(world_data.get("links") or [])
+        if not self._start_scene:
+            for key, scene in self._scenes.items():
+                if "start" in scene.tags:
+                    self._start_scene = key
+                    break
 
-    def _load_scenes(self, scenes_data: Dict[str, Any]) -> None:
+    def _load_scenes(self, scenes_data: Any) -> None:
+        if not isinstance(scenes_data, dict):
+            return
         for key, raw in scenes_data.items():
             if not isinstance(raw, dict):
                 continue

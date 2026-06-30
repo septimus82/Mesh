@@ -37,6 +37,7 @@ except (ImportError, AttributeError):
 
 from engine.config import load_config
 from engine.game import GameWindow
+from engine.game_runtime.scene_flow import resolve_game_start_scene
 
 
 def main() -> None:
@@ -50,7 +51,14 @@ def main() -> None:
         config=config,
         config_path="config.json",
     )
-    initial_scene = config.main_menu_scene or config.start_scene
+    if config.main_menu_scene:
+        initial_scene = config.main_menu_scene
+    else:
+        wc = getattr(window, "world_controller", None)
+        initial_scene = resolve_game_start_scene(
+            engine_config=config,
+            world_controller=wc,
+        ) or config.start_scene
     window.load_scene(initial_scene)
     __import__("arcade").run()
 
@@ -148,14 +156,14 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
     world = {
         "id": "main",
         "name": "Main World",
-        "initial_scene_key": "start",
-        "scenes": [
-            {
-                "key": "start",
+        "start_scene": "start",
+        "scenes": {
+            "start": {
+                "label": "Start",
                 "path": "packs/core_regions/scenes/start.json",
-                "map_location": {"x": 0, "y": 0},
-            }
-        ],
+                "tags": ["start"],
+            },
+        },
     }
     json_io.write_json_atomic(root / "packs/core_regions/worlds/main.json", world)
 
