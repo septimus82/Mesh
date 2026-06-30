@@ -24,6 +24,9 @@ class BackgroundLayer:
     parallax: float = 1.0
     repeat_x: bool = False
     repeat_y: bool = False
+    anchor_x: float = 0.0
+    anchor_y: float = 0.0
+    anchor: str | None = None
 
 
 class BackgroundTextureCache:
@@ -131,6 +134,121 @@ def compute_background_screen_center(
     return (sx, sy)
 
 
+def resolve_background_layer_anchor(
+    layer: BackgroundLayer,
+    *,
+    texture_width: float,
+    texture_height: float,
+) -> tuple[float, float]:
+    """Resolve the world-space anchor used by ``compute_background_world_center``."""
+    anchor_mode = str(layer.anchor or "").strip()
+    if anchor_mode == "world_rect":
+        return (float(texture_width) / 2.0, float(texture_height) / 2.0)
+    return (float(layer.anchor_x), float(layer.anchor_y))
+
+
+def compute_texture_world_bounds(
+    *,
+    center_x: float,
+    center_y: float,
+    width: float,
+    height: float,
+) -> tuple[float, float, float, float]:
+    """Return ``(left, bottom, right, top)`` for a center-anchored texture quad."""
+    half_w = float(width) / 2.0
+    half_h = float(height) / 2.0
+    return (
+        float(center_x) - half_w,
+        float(center_y) - half_h,
+        float(center_x) + half_w,
+        float(center_y) + half_h,
+    )
+
+
+def clamp_camera_to_world_bounds(
+    target_x: float,
+    target_y: float,
+    *,
+    world_width: float,
+    world_height: float,
+    viewport_width: float,
+    viewport_height: float,
+    padding: float = 0.0,
+) -> tuple[float, float]:
+    """Clamp a camera center so the viewport stays inside ``[0,W]x[0,H]``."""
+    half_w = float(viewport_width) / 2.0
+    half_h = float(viewport_height) / 2.0
+    padded_half_w = half_w + float(padding)
+    padded_half_h = half_h + float(padding)
+
+    min_x = padded_half_w
+    max_x = max(padded_half_w, float(world_width) - padded_half_w)
+    min_y = padded_half_h
+    max_y = max(padded_half_h, float(world_height) - padded_half_h)
+
+    clamped_x = min(max(float(target_x), min_x), max_x)
+    clamped_y = min(max(float(target_y), min_y), max_y)
+    return (clamped_x, clamped_y)
+
+
+def compute_viewport_world_bounds(
+    *,
+    camera_x: float,
+    camera_y: float,
+    viewport_width: float,
+    viewport_height: float,
+) -> tuple[float, float, float, float]:
+    """Return ``(left, bottom, right, top)`` for the visible world rectangle."""
+    half_w = float(viewport_width) / 2.0
+    half_h = float(viewport_height) / 2.0
+    cx = float(camera_x)
+    cy = float(camera_y)
+    return (cx - half_w, cy - half_h, cx + half_w, cy + half_h)
+
+
+def viewport_is_inside_texture(
+    *,
+    camera_x: float,
+    camera_y: float,
+    viewport_width: float,
+    viewport_height: float,
+    texture_width: float,
+    texture_height: float,
+    layer: BackgroundLayer,
+) -> bool:
+    """Return True when the viewport lies fully inside a non-repeating layer texture."""
+    anchor_x, anchor_y = resolve_background_layer_anchor(
+        layer,
+        texture_width=float(texture_width),
+        texture_height=float(texture_height),
+    )
+    center_x, center_y = compute_background_world_center(
+        camera_x=float(camera_x),
+        camera_y=float(camera_y),
+        parallax=float(layer.parallax),
+        anchor_x=anchor_x,
+        anchor_y=anchor_y,
+    )
+    tex_left, tex_bottom, tex_right, tex_top = compute_texture_world_bounds(
+        center_x=center_x,
+        center_y=center_y,
+        width=float(texture_width),
+        height=float(texture_height),
+    )
+    view_left, view_bottom, view_right, view_top = compute_viewport_world_bounds(
+        camera_x=float(camera_x),
+        camera_y=float(camera_y),
+        viewport_width=float(viewport_width),
+        viewport_height=float(viewport_height),
+    )
+    return (
+        view_left >= tex_left
+        and view_bottom >= tex_bottom
+        and view_right <= tex_right
+        and view_top <= tex_top
+    )
+
+
 def parse_background_layers(scene_payload: dict[str, Any]) -> list[BackgroundLayer]:
     raw = scene_payload.get("background_layers")
     if raw is None:
@@ -181,6 +299,37 @@ def parse_background_layers(scene_payload: dict[str, Any]) -> list[BackgroundLay
         if "repeat" in entry and "repeat_x" not in entry:
             repeat_x = bool(entry.get("repeat", False))
 
+        anchor_x = 0.0
+        anchor_y = 0.0
+        if "anchor_x" in entry:
+            try:
+                anchor_x = float(entry.get("anchor_x"))
+            except (TypeError, ValueError):
+                logger.warning(
+                    "background_layers[%d].anchor_x must be a number; defaulting to 0.0", idx
+                )
+                anchor_x = 0.0
+        if "anchor_y" in entry:
+            try:
+                anchor_y = float(entry.get("anchor_y"))
+            except (TypeError, ValueError):
+                logger.warning(
+                    "background_layers[%d].anchor_y must be a number; defaulting to 0.0", idx
+                )
+                anchor_y = 0.0
+
+        anchor_mode: str | None = None
+        anchor_raw = entry.get("anchor")
+        if isinstance(anchor_raw, str) and anchor_raw.strip():
+            anchor_mode = anchor_raw.strip()
+            if anchor_mode not in {"world_rect"}:
+                logger.warning(
+                    "background_layers[%d].anchor '%s' is unknown; ignoring",
+                    idx,
+                    anchor_mode,
+                )
+                anchor_mode = None
+
         layers.append(
             BackgroundLayer(
                 id=layer_id,
@@ -189,6 +338,9 @@ def parse_background_layers(scene_payload: dict[str, Any]) -> list[BackgroundLay
                 parallax=parallax,
                 repeat_x=repeat_x,
                 repeat_y=repeat_y,
+                anchor_x=anchor_x,
+                anchor_y=anchor_y,
+                anchor=anchor_mode,
             )
         )
 
@@ -254,11 +406,21 @@ def draw_background_layers(
         if texture is None:
             continue
 
+        tile_w = max(1.0, float(texture.width))
+        tile_h = max(1.0, float(texture.height))
+        anchor_x, anchor_y = resolve_background_layer_anchor(
+            layer,
+            texture_width=tile_w,
+            texture_height=tile_h,
+        )
+
         if coordinate_space == "world":
             base_x, base_y = compute_background_world_center(
                 camera_x=float(camera_x),
                 camera_y=float(camera_y),
                 parallax=float(layer.parallax),
+                anchor_x=anchor_x,
+                anchor_y=anchor_y,
             )
         elif coordinate_space == "projected":
             base_x, base_y = compute_background_screen_center(
@@ -268,6 +430,8 @@ def draw_background_layers(
                 viewport_w=float(viewport_w),
                 viewport_h=float(viewport_h),
                 zoom=float(zoom),
+                anchor_x=anchor_x,
+                anchor_y=anchor_y,
             )
         else:
             offset_x, offset_y = compute_background_offset_px(
@@ -278,9 +442,6 @@ def draw_background_layers(
             )
             base_x = center_x + offset_x
             base_y = center_y + offset_y
-
-        tile_w = max(1.0, float(texture.width))
-        tile_h = max(1.0, float(texture.height))
 
         if not layer.repeat_x and not layer.repeat_y:
             draw(base_x, base_y, float(texture.width), float(texture.height), texture)
