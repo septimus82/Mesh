@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Sequence
 
 import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
+from .ai_chat_overlay import _truncate, wrap_transcript_text
 from .common import (
     UIElement,
     _draw_rectangle_filled,
@@ -15,6 +17,117 @@ from .common import (
 
 if TYPE_CHECKING:  # pragma: no cover
     from ..game import GameWindow
+
+DIALOGUE_PADDING = 24.0
+BODY_FONT_SIZE = 14.0
+SPEAKER_FONT_SIZE = 16.0
+CHOICE_FONT_SIZE = 13.0
+BODY_LINE_HEIGHT = 18.0
+CHOICE_LINE_HEIGHT = 20.0
+MIN_DIALOGUE_HEIGHT = 150.0
+MAX_DIALOGUE_HEIGHT = 360.0
+MAX_DIALOGUE_HEIGHT_RATIO = 0.42
+CHOICE_PREFIX_COLUMNS = 2
+
+
+@dataclass(frozen=True, slots=True)
+class DialogueLayout:
+    box_width: float
+    box_height: float
+    left: float
+    right: float
+    bottom: float
+    top: float
+    inner_width: float
+    inner_columns: int
+    visible_body_lines: tuple[str, ...]
+    body_page: int
+    body_page_count: int
+    speaker_y: float
+    body_y: float
+    choice_y_start: float
+    choice_label_columns: int
+
+
+def dialogue_inner_columns(inner_width_px: float, *, font_size: float = BODY_FONT_SIZE) -> int:
+    """Approximate wrapped column count for a proportional font at a pixel width."""
+
+    return max(1, int(float(inner_width_px) / max(6.0, float(font_size) * 0.58)))
+
+
+def wrap_dialogue_body(text: str, inner_width_px: float, *, font_size: float = BODY_FONT_SIZE) -> list[str]:
+    return wrap_transcript_text(text, dialogue_inner_columns(inner_width_px, font_size=font_size))
+
+
+def format_choice_label(text: str, *, max_columns: int) -> str:
+    usable = max(1, int(max_columns) - CHOICE_PREFIX_COLUMNS)
+    return _truncate(str(text or ""), usable)
+
+
+def compute_dialogue_layout(
+    *,
+    window_width: float,
+    window_height: float,
+    speaker: str,
+    wrapped_lines: Sequence[str],
+    body_page: int,
+    choice_labels: Sequence[str],
+) -> DialogueLayout:
+    box_width = max(320.0, float(window_width) - 48.0)
+    inner_width = box_width - (DIALOGUE_PADDING * 2.0)
+    inner_columns = dialogue_inner_columns(inner_width)
+    max_box_height = min(
+        max(MIN_DIALOGUE_HEIGHT, float(window_height) * MAX_DIALOGUE_HEIGHT_RATIO),
+        MAX_DIALOGUE_HEIGHT,
+    )
+
+    has_speaker = bool(str(speaker or "").strip())
+    speaker_block = 22.0 if has_speaker else 0.0
+    choice_count = len(tuple(choice_labels))
+    choice_block = CHOICE_LINE_HEIGHT * choice_count if choice_count > 0 else 0.0
+    vertical_chrome = (DIALOGUE_PADDING * 2.0) + speaker_block + choice_block + 8.0
+
+    lines_per_page = max(1, int((max_box_height - vertical_chrome) // BODY_LINE_HEIGHT))
+    source_lines = list(wrapped_lines) or [""]
+    pages: list[tuple[str, ...]] = [
+        tuple(source_lines[start : start + lines_per_page])
+        for start in range(0, len(source_lines), lines_per_page)
+    ]
+    if not pages:
+        pages = [("",)]
+
+    page_index = max(0, min(int(body_page), len(pages) - 1))
+    visible_lines = pages[page_index]
+    body_height = len(visible_lines) * BODY_LINE_HEIGHT
+    box_height = min(max_box_height, max(MIN_DIALOGUE_HEIGHT, vertical_chrome + body_height))
+
+    left = (float(window_width) - box_width) / 2.0
+    right = left + box_width
+    bottom = 24.0
+    top = bottom + box_height
+
+    speaker_y = top - (DIALOGUE_PADDING / 2.0)
+    body_y = top - DIALOGUE_PADDING - speaker_block
+    choice_y_start = bottom + DIALOGUE_PADDING + 8.0
+    choice_label_columns = dialogue_inner_columns(inner_width - 8.0, font_size=CHOICE_FONT_SIZE)
+
+    return DialogueLayout(
+        box_width=box_width,
+        box_height=box_height,
+        left=left,
+        right=right,
+        bottom=bottom,
+        top=top,
+        inner_width=inner_width,
+        inner_columns=inner_columns,
+        visible_body_lines=visible_lines,
+        body_page=page_index,
+        body_page_count=len(pages),
+        speaker_y=speaker_y,
+        body_y=body_y,
+        choice_y_start=choice_y_start,
+        choice_label_columns=choice_label_columns,
+    )
 
 
 class DialogueBox(UIElement):
@@ -29,6 +142,9 @@ class DialogueBox(UIElement):
         self._choices: list[dict[str, Any]] = []
         self._choice_index: int = -1
         self._choice_locked: bool = False
+        self._wrapped_body_lines: list[str] = []
+        self._body_page: int = 0
+        self._wrap_inner_width: float = 0.0
         self._text_cache = TextCache()
         speaker_color = getattr(optional_arcade.arcade.color, "ALPINE", optional_arcade.arcade.color.WHITE)
         self._speaker_text = optional_arcade.arcade.Text(
@@ -36,7 +152,7 @@ class DialogueBox(UIElement):
             x=0,
             y=0,
             color=speaker_color,
-            font_size=16,
+            font_size=SPEAKER_FONT_SIZE,
             anchor_y="top",
             bold=True,
         )
@@ -45,7 +161,7 @@ class DialogueBox(UIElement):
             x=0,
             y=0,
             color=optional_arcade.arcade.color.WHITE,
-            font_size=14,
+            font_size=BODY_FONT_SIZE,
             width=10,
             align="left",
             multiline=True,
@@ -92,6 +208,12 @@ class DialogueBox(UIElement):
             return False
         if self._choices:
             return False
+        layout = self._current_layout()
+        if layout.body_page + 1 < layout.body_page_count:
+            self._body_page = layout.body_page + 1
+            if hasattr(self.window, "audio"):
+                self.window.audio.play_sound("assets/sounds/ui_click.wav")
+            return True
         if self._queue:
             self._apply_entry(self._queue.pop(0))
             if hasattr(self.window, "audio"):
@@ -110,6 +232,9 @@ class DialogueBox(UIElement):
         self._choices = []
         self._choice_index = -1
         self._choice_locked = False
+        self._wrapped_body_lines = []
+        self._body_page = 0
+        self._wrap_inner_width = 0.0
         self._speaker_text.text = ""
         self._body_text.text = ""
 
@@ -117,10 +242,7 @@ class DialogueBox(UIElement):
         self.clear()
 
     def on_resize(self, width: int, height: int) -> None:  # noqa: ARG002
-        self._speaker_text.y = self.window.height - 54
-        self._speaker_text.x = 20
-        self._body_text.y = self.window.height - 80
-        self._body_text.x = 20
+        return
 
     def has_choices(self) -> bool:
         if not self._visible or not self._choices:
@@ -227,7 +349,6 @@ class DialogueBox(UIElement):
         if "choices" in entry:
             self._current_entry["choices"] = [dict(choice) for choice in entry["choices"]]
         self._speaker_text.text = entry.get("speaker", "")
-        self._body_text.text = entry.get("text", "")
         choices = entry.get("choices") or []
         if isinstance(choices, list):
             self._choices = [dict(choice) for choice in choices]
@@ -235,52 +356,113 @@ class DialogueBox(UIElement):
             self._choices = []
         self._choice_locked = False
         self._choice_index = self._compute_initial_choice_index()
+        self._body_page = 0
+        layout = self._current_layout_for_text(str(entry.get("text", "")))
+        self._wrap_inner_width = layout.inner_width
+        self._wrapped_body_lines = wrap_dialogue_body(
+            str(entry.get("text", "")),
+            layout.inner_width,
+        )
+
+    def _refresh_wrapped_body_if_needed(self) -> None:
+        if self._current_entry is None:
+            return
+        inner_width = max(320.0, float(self.window.width) - 48.0) - (DIALOGUE_PADDING * 2.0)
+        if abs(inner_width - self._wrap_inner_width) < 0.5:
+            return
+        self._wrap_inner_width = inner_width
+        self._wrapped_body_lines = wrap_dialogue_body(str(self._current_entry.get("text", "")), inner_width)
+        speaker = self._speaker_text.text if self._speaker_text.text else ""
+        choice_labels = [str(choice.get("text", "")) for choice in self._choices]
+        preview = compute_dialogue_layout(
+            window_width=float(self.window.width),
+            window_height=float(self.window.height),
+            speaker=speaker,
+            wrapped_lines=self._wrapped_body_lines,
+            body_page=self._body_page,
+            choice_labels=choice_labels,
+        )
+        if self._body_page >= preview.body_page_count:
+            self._body_page = max(0, preview.body_page_count - 1)
+
+    def _current_layout_for_text(self, text: str) -> DialogueLayout:
+        box_width = max(320.0, float(self.window.width) - 48.0)
+        inner_width = box_width - (DIALOGUE_PADDING * 2.0)
+        wrapped = wrap_dialogue_body(text, inner_width)
+        speaker = self._speaker_text.text if self._speaker_text.text else ""
+        choice_labels = [str(choice.get("text", "")) for choice in self._choices]
+        return compute_dialogue_layout(
+            window_width=float(self.window.width),
+            window_height=float(self.window.height),
+            speaker=speaker,
+            wrapped_lines=wrapped,
+            body_page=self._body_page,
+            choice_labels=choice_labels,
+        )
+
+    def _current_layout(self) -> DialogueLayout:
+        self._refresh_wrapped_body_if_needed()
+        speaker = self._speaker_text.text if self._speaker_text.text else ""
+        choice_labels = [str(choice.get("text", "")) for choice in self._choices]
+        return compute_dialogue_layout(
+            window_width=float(self.window.width),
+            window_height=float(self.window.height),
+            speaker=speaker,
+            wrapped_lines=self._wrapped_body_lines,
+            body_page=self._body_page,
+            choice_labels=choice_labels,
+        )
 
     def draw(self) -> None:
         if not self._visible:
             return
-        width = max(320.0, self.window.width - 48.0)
-        height = 150.0
-        left = (self.window.width - width) / 2.0
-        right = left + width
-        bottom = 24.0
-        top = bottom + height
+        layout = self._current_layout()
 
         _draw_rectangle_filled(
             center_x=self.window.width / 2.0,
-            center_y=bottom + height / 2.0,
-            width=width,
-            height=height,
+            center_y=layout.bottom + layout.box_height / 2.0,
+            width=layout.box_width,
+            height=layout.box_height,
             color=(10, 12, 20, 220),
         )
-        _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+        _draw_tb_rectangle_outline(
+            layout.left,
+            layout.right,
+            layout.top,
+            layout.bottom,
+            optional_arcade.arcade.color.SKY_BLUE,
+            2,
+        )
 
-        padding = 24.0
-        self._speaker_text.x = left + padding
-        self._speaker_text.y = top - padding / 2.0
-        self._speaker_text.draw()
+        text_x = layout.left + DIALOGUE_PADDING
+        if self._speaker_text.text:
+            self._speaker_text.x = text_x
+            self._speaker_text.y = layout.speaker_y
+            self._speaker_text.draw()
 
-        self._body_text.x = left + padding
-        self._body_text.y = top - padding - 16.0
-        self._body_text.width = int(width - padding * 2.0)
+        body_text = "\n".join(layout.visible_body_lines)
+        self._body_text.text = body_text
+        self._body_text.x = text_x
+        self._body_text.y = layout.body_y
+        self._body_text.width = int(layout.inner_width)
         self._body_text.draw()
 
         if self._choices:
-            choice_x = left + padding + 4.0
-            choice_y = bottom + padding + 8.0
-            line_height = 20.0
-            max_choice_width = width - padding * 2.0 - 8.0
+            choice_x = text_x + 4.0
+            choice_y = layout.choice_y_start
+            max_choice_width = layout.inner_width - 8.0
             for index, choice in enumerate(self._choices):
-                text = choice.get("text", "")
+                raw_text = str(choice.get("text", ""))
+                label = format_choice_label(raw_text, max_columns=layout.choice_label_columns)
                 disabled = bool(choice.get("disabled"))
                 is_selected = index == self._choice_index
                 bg_alpha = 120 if is_selected else 0
                 if bg_alpha:
                     _draw_rectangle_filled(
                         center_x=choice_x + max_choice_width / 2.0,
-                        center_y=choice_y + line_height / 2.0,
+                        center_y=choice_y + CHOICE_LINE_HEIGHT / 2.0,
                         width=max_choice_width,
-                        height=line_height,
+                        height=CHOICE_LINE_HEIGHT,
                         color=(80, 120, 200, bg_alpha),
                     )
                 prefix = "➤" if is_selected else "·"
@@ -288,16 +470,16 @@ class DialogueBox(UIElement):
                 if disabled:
                     color = optional_arcade.arcade.color.DARK_GRAY
                 draw_text_cached(
-                    f"{prefix} {text}",
+                    f"{prefix} {label}",
                     choice_x,
                     choice_y,
                     color=color,
-                    font_size=13,
+                    font_size=CHOICE_FONT_SIZE,
                     anchor_y="bottom",
                     width=int(max_choice_width),
                     cache=self._text_cache,
                 )
-                choice_y += line_height
+                choice_y += CHOICE_LINE_HEIGHT
 
     def _compute_initial_choice_index(self) -> int:
         if not self._choices:
