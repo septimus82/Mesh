@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from .battle_model import BattleSprite, BattleStats, Move, MoveStatusInflict, Species, TypeChart
+from .battle_model import BattleSprite, BattleSpriteClip, BattleStats, Move, MoveStatusInflict, Species, TypeChart
 
 DEFAULT_DATA_DIR = Path("assets/data")
 SPECIES_FILENAME = "monster_species.json"
@@ -127,6 +127,33 @@ def _parse_capture_rate(raw: Any, *, label: str) -> tuple[int, str | None]:
     return value, None
 
 
+KNOWN_BATTLE_CLIP_NAMES = frozenset({"idle", "attack", "defend", "hurt", "faint"})
+
+
+def _parse_battle_sprite_clip(raw: Any, *, label: str) -> tuple[BattleSpriteClip | None, str | None]:
+    mapping, err = _require_mapping(raw, label=label)
+    if err is not None:
+        return None, err
+    frames_raw = mapping.get("frames")
+    if not isinstance(frames_raw, list) or not frames_raw:
+        return None, f"{label}.frames must be a non-empty list of frame indices"
+    frames: list[int] = []
+    for index, entry in enumerate(frames_raw):
+        if not isinstance(entry, (int, float)) or isinstance(entry, bool):
+            return None, f"{label}.frames[{index}] must be a number"
+        frames.append(int(entry))
+    fps_raw = mapping.get("fps", 6)
+    if not isinstance(fps_raw, (int, float)) or isinstance(fps_raw, bool):
+        return None, f"{label}.fps must be a number"
+    fps = float(fps_raw)
+    if fps <= 0.0:
+        return None, f"{label}.fps must be greater than 0"
+    loop_raw = mapping.get("loop", True)
+    if not isinstance(loop_raw, bool):
+        return None, f"{label}.loop must be a boolean"
+    return BattleSpriteClip(frames=tuple(frames), fps=fps, loop=bool(loop_raw)), None
+
+
 def _parse_battle_sprite(raw: Any, *, label: str) -> tuple[BattleSprite | None, str | None]:
     if raw is None:
         return None, None
@@ -160,21 +187,43 @@ def _parse_battle_sprite(raw: Any, *, label: str) -> tuple[BattleSprite | None, 
     if err:
         return None, err
 
-    idle_raw = mapping.get("idle_frames")
-    if not isinstance(idle_raw, list) or not idle_raw:
-        return None, f"{label}.battle_sprite.idle_frames must be a non-empty list of frame indices"
-    idle_frames: list[int] = []
-    for index, entry in enumerate(idle_raw):
-        if not isinstance(entry, (int, float)) or isinstance(entry, bool):
-            return None, f"{label}.battle_sprite.idle_frames[{index}] must be a number"
-        idle_frames.append(int(entry))
-
-    fps_raw = mapping.get("fps", 6)
-    if not isinstance(fps_raw, (int, float)) or isinstance(fps_raw, bool):
-        return None, f"{label}.battle_sprite.fps must be a number"
-    fps = float(fps_raw)
-    if fps <= 0.0:
-        return None, f"{label}.battle_sprite.fps must be greater than 0"
+    clips_raw = mapping.get("clips")
+    if clips_raw is not None:
+        if not isinstance(clips_raw, dict):
+            return None, f"{label}.battle_sprite.clips must be an object"
+        clips: dict[str, BattleSpriteClip] = {}
+        for clip_name, clip_payload in clips_raw.items():
+            if not isinstance(clip_name, str) or clip_name.strip() not in KNOWN_BATTLE_CLIP_NAMES:
+                allowed = ", ".join(sorted(KNOWN_BATTLE_CLIP_NAMES))
+                return None, f"{label}.battle_sprite.clips has unknown clip '{clip_name}' (allowed: {allowed})"
+            clip, clip_err = _parse_battle_sprite_clip(
+                clip_payload,
+                label=f"{label}.battle_sprite.clips.{clip_name.strip()}",
+            )
+            if clip_err:
+                return None, clip_err
+            if clip is not None:
+                clips[clip_name.strip()] = clip
+        if "idle" not in clips:
+            return None, f"{label}.battle_sprite.clips must include required clip 'idle'"
+    else:
+        idle_raw = mapping.get("idle_frames")
+        if not isinstance(idle_raw, list) or not idle_raw:
+            return None, (
+                f"{label}.battle_sprite must include either clips.idle or legacy idle_frames"
+            )
+        idle_frames: list[int] = []
+        for index, entry in enumerate(idle_raw):
+            if not isinstance(entry, (int, float)) or isinstance(entry, bool):
+                return None, f"{label}.battle_sprite.idle_frames[{index}] must be a number"
+            idle_frames.append(int(entry))
+        fps_raw = mapping.get("fps", 6)
+        if not isinstance(fps_raw, (int, float)) or isinstance(fps_raw, bool):
+            return None, f"{label}.battle_sprite.fps must be a number"
+        fps = float(fps_raw)
+        if fps <= 0.0:
+            return None, f"{label}.battle_sprite.fps must be greater than 0"
+        clips = {"idle": BattleSpriteClip(frames=tuple(idle_frames), fps=fps, loop=True)}
 
     return (
         BattleSprite(
@@ -183,8 +232,7 @@ def _parse_battle_sprite(raw: Any, *, label: str) -> tuple[BattleSprite | None, 
             rows=int(rows),
             frame_width=int(frame_width),
             frame_height=int(frame_height),
-            idle_frames=tuple(idle_frames),
-            fps=fps,
+            clips=clips,
         ),
         None,
     )

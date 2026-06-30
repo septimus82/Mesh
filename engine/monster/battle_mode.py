@@ -66,6 +66,19 @@ class BattlePresentationStep:
     line: str
     player_hp: int
     opponent_hp: int
+    player_clip: str | None = None
+    opponent_clip: str | None = None
+
+
+def _battle_combatant_layout(left: float, right: float, top: float) -> dict[str, tuple[float, float]]:
+    """Sprite and HP anchor positions for classic JRPG side alignment."""
+
+    return {
+        "opponent_sprite": (left + 204.0, top - 175.0),
+        "player_sprite": (right - 204.0, top - 317.0),
+        "opponent_hp": (left + 24.0, top - 48.0),
+        "player_hp": (right - 384.0, top - 190.0),
+    }
 
 
 class MonsterBattleOverlay(UIElement):
@@ -247,19 +260,18 @@ class MonsterBattleOverlay(UIElement):
         controller = self.mode.controller
         if controller is None:
             return
-        self._opponent_sprite.draw(right - 170.0, top - 72.0)
-        self._player_sprite.draw(left + 190.0, top - 248.0)
+        layout = _battle_combatant_layout(left, right, top)
+        self._opponent_sprite.draw(*layout["opponent_sprite"])
+        self._player_sprite.draw(*layout["player_sprite"])
         self._draw_monster_block(
             controller.opponent,
-            left + 24,
-            top - 48,
+            *layout["opponent_hp"],
             width=360,
             hp=self.displayed_opponent_hp,
         )
         self._draw_monster_block(
             controller.player,
-            right - 384,
-            top - 190,
+            *layout["player_hp"],
             width=360,
             hp=self.displayed_player_hp,
         )
@@ -385,8 +397,15 @@ class MonsterBattleOverlay(UIElement):
             self.log_line = step.line
             self.displayed_player_hp = step.player_hp
             self.displayed_opponent_hp = step.opponent_hp
+            self._apply_presentation_clips(step)
             return
         self._finish_presentation()
+
+    def _apply_presentation_clips(self, step: BattlePresentationStep) -> None:
+        if step.player_clip:
+            self._player_sprite.play_clip(step.player_clip)
+        if step.opponent_clip:
+            self._opponent_sprite.play_clip(step.opponent_clip)
 
     def _finish_presentation(self) -> None:
         result = self._pending_battle_result
@@ -646,11 +665,17 @@ class MonsterBattleMode:
         self._presenting_reinforcement = False
         if self.overlay is not None:
             name = _display_name(self.controller.player)
+            companion_clip: str | None = None
+            if behavior == ATTACK:
+                companion_clip = "attack"
+            elif behavior == DEFEND:
+                companion_clip = "defend"
             steps = [
                 BattlePresentationStep(
                     _companion_autonomous_line(behavior, name),
                     before_player_hp,
                     before_opponent_hp,
+                    player_clip=companion_clip,
                 ),
             ]
             steps.extend(self._build_presentation_steps(before_len, before_player_hp, before_opponent_hp))
@@ -694,7 +719,12 @@ class MonsterBattleMode:
             self._presenting_companion_switch = True
             self.overlay.begin_turn_presentation(
                 [
-                    BattlePresentationStep(f"{fainted_name} fainted!", 0, before_opponent_hp),
+                    BattlePresentationStep(
+                        f"{fainted_name} fainted!",
+                        0,
+                        before_opponent_hp,
+                        player_clip="faint",
+                    ),
                     BattlePresentationStep(f"Go, {next_name}!", before_player_hp, before_opponent_hp),
                 ],
                 result=result,
@@ -1015,6 +1045,47 @@ class MonsterBattleMode:
                     else:
                         opponent_hp = max(0, opponent_hp - int(entry.status_damage))
                     line = f"{subject} is hurt by poison!"
+                    hurt_clip = "hurt"
+                    if entry.side == "player":
+                        steps.append(
+                            BattlePresentationStep(
+                                line,
+                                player_hp,
+                                opponent_hp,
+                                player_clip=hurt_clip,
+                            ),
+                        )
+                    else:
+                        steps.append(
+                            BattlePresentationStep(
+                                line,
+                                player_hp,
+                                opponent_hp,
+                                opponent_clip=hurt_clip,
+                            ),
+                        )
+                    if entry.target_fainted:
+                        faint_name = _faint_line(self.controller, entry)
+                        faint_clip = "faint"
+                        if entry.side == "player":
+                            steps.append(
+                                BattlePresentationStep(
+                                    faint_name,
+                                    player_hp,
+                                    opponent_hp,
+                                    player_clip=faint_clip,
+                                ),
+                            )
+                        else:
+                            steps.append(
+                                BattlePresentationStep(
+                                    faint_name,
+                                    player_hp,
+                                    opponent_hp,
+                                    opponent_clip=faint_clip,
+                                ),
+                            )
+                    continue
                 elif entry.status_event == "fell_asleep":
                     line = f"{subject} fell asleep!"
                 elif entry.status_event == "woke_up":
@@ -1026,26 +1097,60 @@ class MonsterBattleMode:
                 steps.append(BattlePresentationStep(line, player_hp, opponent_hp))
                 if entry.target_fainted:
                     faint_name = _faint_line(self.controller, entry)
-                    steps.append(BattlePresentationStep(faint_name, player_hp, opponent_hp))
+                    faint_player_clip = "faint" if entry.side == "player" else None
+                    faint_opponent_clip = "faint" if entry.side == "opponent" else None
+                    steps.append(
+                        BattlePresentationStep(
+                            faint_name,
+                            player_hp,
+                            opponent_hp,
+                            player_clip=faint_player_clip,
+                            opponent_clip=faint_opponent_clip,
+                        ),
+                    )
                 continue
+            player_clip: str | None = None
+            opponent_clip: str | None = None
             if entry.side == "player":
                 actor = _display_name(self.controller.player)
                 target = _display_name(self.controller.opponent)
+                player_clip = "attack"
                 if entry.hit:
                     opponent_hp = max(0, opponent_hp - int(entry.damage))
+                    opponent_clip = "hurt"
             else:
                 actor = _display_name(self.controller.opponent)
                 target = _display_name(self.controller.player)
+                opponent_clip = "attack"
                 if entry.hit:
                     player_hp = max(0, player_hp - int(entry.damage))
+                    player_clip = "hurt"
             if entry.hit:
                 line = f"{actor} used {entry.move_id}! {target} took {entry.damage} damage."
             else:
                 line = f"{actor} used {entry.move_id}, but it missed!"
-            steps.append(BattlePresentationStep(line, player_hp, opponent_hp))
+            steps.append(
+                BattlePresentationStep(
+                    line,
+                    player_hp,
+                    opponent_hp,
+                    player_clip=player_clip,
+                    opponent_clip=opponent_clip,
+                ),
+            )
             if entry.target_fainted:
                 faint_name = _faint_line(self.controller, entry)
-                steps.append(BattlePresentationStep(faint_name, player_hp, opponent_hp))
+                faint_player_clip = "faint" if entry.side == "opponent" else None
+                faint_opponent_clip = "faint" if entry.side == "player" else None
+                steps.append(
+                    BattlePresentationStep(
+                        faint_name,
+                        player_hp,
+                        opponent_hp,
+                        player_clip=faint_player_clip,
+                        opponent_clip=faint_opponent_clip,
+                    ),
+                )
         return steps
 
     def _apply_victory_progression_steps(self, before_player_hp: int, before_opponent_hp: int) -> list[BattlePresentationStep]:
