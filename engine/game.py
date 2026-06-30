@@ -867,6 +867,81 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             },
         )
 
+    def debug_breed_first_party_pair(self) -> bool:
+        """Debug-only: breed the first two party monsters into a hatching egg."""
+
+        import random  # noqa: PLC0415
+
+        from engine.monster.breeding import BreedingParent, breed_offspring  # noqa: PLC0415
+        from engine.monster.collection import (  # noqa: PLC0415
+            MONSTER_PARTY_KEY,
+            ensure_monster_collection,
+            load_companion_mind_for_instance,
+        )
+        from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament  # noqa: PLC0415
+        from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
+        from engine.monster.egg_lifecycle import (  # noqa: PLC0415
+            DEFAULT_EGG_HATCH_STEPS,
+            create_breeding_egg,
+            load_monster_instance_from_values,
+        )
+        from engine.paths import resolve_monster_data_dir  # noqa: PLC0415
+
+        if not bool(getattr(self.engine_config, "debug_mode", False)):
+            return False
+
+        catalog, validation = load_monster_catalog(resolve_monster_data_dir())
+        if not validation.ok or catalog is None:
+            self.console_log(f"[Breeding] Catalog load failed: {'; '.join(validation.errors)}")
+            return False
+
+        values: dict[str, Any] = {}
+        controller = getattr(self, "game_state_controller", None)
+        state = getattr(controller, "state", None)
+        state_values = getattr(state, "values", None)
+        if isinstance(state_values, dict):
+            values = state_values
+        ensure_monster_collection(values)
+
+        party_ids = [str(instance_id) for instance_id in values.get(MONSTER_PARTY_KEY, []) if str(instance_id).strip()]
+        if len(party_ids) < 2:
+            self.console_log("[Breeding] Need at least two party monsters to breed.")
+            return False
+
+        parent_a_id, parent_b_id = party_ids[0], party_ids[1]
+        parent_a_monster = load_monster_instance_from_values(values, parent_a_id, species_by_id=catalog.species)
+        parent_b_monster = load_monster_instance_from_values(values, parent_b_id, species_by_id=catalog.species)
+        if parent_a_monster is None or parent_b_monster is None:
+            self.console_log("[Breeding] Could not load parent monsters from party.")
+            return False
+
+        default_mind = CompanionMind(
+            temperament=Temperament(aggression=65.0, fear=12.0),
+            learned=LearnedWeights(),
+            trust=60.0,
+            bond=40.0,
+        )
+        parent_a_mind = load_companion_mind_for_instance(values, parent_a_id) or default_mind
+        parent_b_mind = load_companion_mind_for_instance(values, parent_b_id) or default_mind
+
+        offspring, mind = breed_offspring(
+            BreedingParent(parent_a_monster, parent_a_mind),
+            BreedingParent(parent_b_monster, parent_b_mind),
+            random.Random(),
+        )
+        egg_id = create_breeding_egg(
+            values,
+            offspring=offspring,
+            mind=mind,
+            parent_a_instance_id=parent_a_id,
+            parent_b_instance_id=parent_b_id,
+            hatch_steps=DEFAULT_EGG_HATCH_STEPS,
+        )
+        self.console_log(
+            f"[Breeding] Egg {egg_id} created ({offspring.species.id}); hatches in {DEFAULT_EGG_HATCH_STEPS} steps."
+        )
+        return True
+
     def _stop_asset_hot_reload_watcher(self) -> None:
         from engine.asset_hot_reload_watcher import stop_hot_reload_watcher  # noqa: PLC0415
 

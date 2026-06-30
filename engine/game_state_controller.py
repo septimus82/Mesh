@@ -461,6 +461,7 @@ class GameStateController:
         if dt <= 0.0:
             return
         state.playtime_seconds += dt
+        self._tick_monster_eggs()
         # Auto-complete quests whose requirements now match flags/counters
         self.quests.update_quest_states(self)
 
@@ -470,6 +471,33 @@ class GameStateController:
             return float(state.playtime_seconds)
         except (TypeError, ValueError):
             return 0.0
+
+    def _tick_monster_eggs(self) -> None:
+        state = self._ensure_game_state()
+        from engine.monster.egg_lifecycle import MONSTER_EGGS_KEY, tick_monster_eggs  # noqa: PLC0415
+
+        eggs = state.values.get(MONSTER_EGGS_KEY)
+        if not isinstance(eggs, list) or not eggs:
+            return
+
+        from engine.monster.data_load import MonsterCatalog, load_monster_catalog  # noqa: PLC0415
+        from engine.paths import resolve_monster_data_dir  # noqa: PLC0415
+
+        catalog = getattr(self.window, "monster_catalog", None)
+        if not isinstance(catalog, MonsterCatalog):
+            loaded, validation = load_monster_catalog(resolve_monster_data_dir())
+            if not validation.ok or loaded is None:
+                return
+            catalog = loaded
+            self.window.monster_catalog = catalog
+
+        events = tick_monster_eggs(state.values, species_by_id=catalog.species)
+        console_log = getattr(self.window, "console_log", None)
+        if not callable(console_log):
+            return
+        for event in events:
+            destination = "party" if event.storage == "party" else "box"
+            console_log(f"[Breeding] Egg hatched! {event.species_id} joined your {destination}.")
 
     # ------------------------------------------------------------------
     # Persistence helpers

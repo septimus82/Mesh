@@ -129,6 +129,13 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
                 starter()
             return
 
+    if key == optional_arcade.arcade.key.F11:
+        if bool(getattr(window.engine_config, "debug_mode", False)):
+            breeder = getattr(window, "debug_breed_first_party_pair", None)
+            if callable(breeder):
+                breeder()
+        return
+
     window.input_controller.on_key_press(key, modifiers)
 
     if window.game_over:
