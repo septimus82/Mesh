@@ -97,6 +97,7 @@ class MonsterBattleController:
         self.turn_number = 1
         self.turn_log: list[BattleLogEntry] = []
         self.result: BattleResult | None = None
+        self._guarding_this_turn = False
 
     def submit_action(self, side: BattleSideId, move: Move | str) -> BattleResult | None:
         """Submit a move for the player side and resolve a full turn."""
@@ -163,6 +164,29 @@ class MonsterBattleController:
             self.turn_number += 1
         return self.result
 
+    def submit_player_pass_turn(self, *, guarding: bool = False) -> BattleResult | None:
+        """Skip the player's action and let the opponent act (companion hesitate/defend)."""
+
+        if self.phase != "choose_action":
+            raise InvalidBattleActionError(f"Cannot pass while battle phase is '{self.phase}'")
+        if self.result is not None:
+            raise InvalidBattleActionError("Cannot pass after battle is complete")
+
+        self._guarding_this_turn = bool(guarding)
+        try:
+            opponent_action = self._choose_opponent_action()
+            self.phase = "resolve"
+            self._resolve_actions((opponent_action,))
+            self._apply_end_of_turn_ticks()
+            self.phase = "apply_faints"
+            self._apply_faints()
+            if self.result is None and self.phase != "must_switch":
+                self.phase = "choose_action"
+                self.turn_number += 1
+            return self.result
+        finally:
+            self._guarding_this_turn = False
+
     def snapshot(self) -> dict[str, object]:
         """Return a deterministic summary useful for tests and future handoff."""
 
@@ -207,6 +231,20 @@ class MonsterBattleController:
                 continue
             move = self._require_move(action.move_id)
             resolution = resolve_move(attacker, defender, move, self.type_chart, self.rng)
+            if self._guarding_this_turn and defender_side == "player" and resolution.hit:
+                full_damage = int(resolution.damage)
+                guarded_damage = max(0, int(full_damage * 0.75))
+                if guarded_damage != full_damage:
+                    healed_hp = min(
+                        defender.stats.hp if defender.stats else guarded_damage + (resolution.defender.current_hp or 0),
+                        (resolution.defender.current_hp or 0) + (full_damage - guarded_damage),
+                    )
+                    resolution = replace(
+                        resolution,
+                        damage=guarded_damage,
+                        defender=replace(resolution.defender, current_hp=healed_hp),
+                        fainted=healed_hp <= 0,
+                    )
             self._set_monster(defender_side, resolution.defender)
             self._append_log(action, resolution)
             if resolution.hit:
