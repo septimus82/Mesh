@@ -17,7 +17,8 @@ from engine.ui.menu_toolkit import MenuStackOverlay, SelectableItem, SelectableL
 from engine.ui_overlays.common import UIElement, _draw_tb_rectangle_filled, _draw_tb_rectangle_outline
 
 from .battle_controller import BattleLogEntry, BattleResult, MonsterBattleController, OpponentActionProvider
-from .battle_model import MonsterInstance, Move, RandomLike, TypeChart, resolve_move
+from .battle_model import MonsterInstance, Move, RandomLike, Species, TypeChart, resolve_move
+from .battle_sprite_view import BattleSpriteDisplay
 from .capture import CaptureResult, resolve_capture
 from .collection import (
     COMPANION_MIND_INSTANCE_KEY,
@@ -85,6 +86,8 @@ class MonsterBattleOverlay(UIElement):
         self._pending_battle_result: BattleResult | None = None
         self._presentation_elapsed = 0.0
         self._text_cache = TextCache(max_size=256)
+        self._player_sprite = BattleSpriteDisplay(window)
+        self._opponent_sprite = BattleSpriteDisplay(window)
 
     @property
     def blocks_input(self) -> bool:
@@ -103,7 +106,12 @@ class MonsterBattleOverlay(UIElement):
         self._draw_panel()
 
     def update(self, dt: float) -> None:
-        if not self.visible or self.menu_state != "presenting":
+        if not self.visible:
+            return
+        self._sync_battle_sprites_if_needed()
+        self._player_sprite.update(dt)
+        self._opponent_sprite.update(dt)
+        if self.menu_state != "presenting":
             return
         self._presentation_elapsed += max(0.0, float(dt))
         if self._presentation_elapsed >= PRESENTATION_STEP_SECONDS:
@@ -169,6 +177,27 @@ class MonsterBattleOverlay(UIElement):
             name = _display_name(controller.opponent)
             self.log_line = f"A wild {name} appeared!"
         self.sync_displayed_hp()
+        self.sync_battle_sprites()
+
+    def sync_battle_sprites(self) -> None:
+        controller = self.mode.controller
+        if controller is None:
+            self._player_sprite.reload(_empty_species())
+            self._opponent_sprite.reload(_empty_species())
+            return
+        self._player_sprite.reload(controller.player.species)
+        self._opponent_sprite.reload(controller.opponent.species)
+
+    def _sync_battle_sprites_if_needed(self) -> None:
+        controller = self.mode.controller
+        if controller is None:
+            return
+        player_id = controller.player.species.id
+        opponent_id = controller.opponent.species.id
+        if self._player_sprite.species_id != player_id:
+            self._player_sprite.reload(controller.player.species)
+        if self._opponent_sprite.species_id != opponent_id:
+            self._opponent_sprite.reload(controller.opponent.species)
 
     def sync_displayed_hp(self) -> None:
         controller = self.mode.controller
@@ -218,6 +247,8 @@ class MonsterBattleOverlay(UIElement):
         controller = self.mode.controller
         if controller is None:
             return
+        self._opponent_sprite.draw(right - 170.0, top - 72.0)
+        self._player_sprite.draw(left + 190.0, top - 248.0)
         self._draw_monster_block(
             controller.opponent,
             left + 24,
@@ -1215,6 +1246,16 @@ def start_monster_battle(window: "GameWindow", **kwargs: Any) -> MonsterBattleCo
         mode = MonsterBattleMode(window)
         window.monster_battle_mode = mode
     return mode.start_battle(**kwargs)
+
+
+def _empty_species() -> Species:
+    from .battle_model import BattleStats
+
+    return Species(
+        id="__none__",
+        base_stats=BattleStats(hp=1, atk=1, defense=1, spd=1),
+        types=("normal",),
+    )
 
 
 def _display_name(monster: MonsterInstance) -> str:
