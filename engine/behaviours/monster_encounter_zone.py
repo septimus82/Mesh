@@ -29,6 +29,7 @@ from .registry import register_behaviour
         {"name": "player_species_id", "description": "Temporary player-side species id for MON-0e", "type": "string", "default": ""},
         {"name": "player_level", "description": "Temporary player-side level for MON-0e", "type": "int", "default": 5},
         {"name": "encounter_table", "description": "Weighted encounter table", "type": "array", "default": []},
+        {"name": "companion_mode", "description": "Start a companion battle (auto-acting monster + Praise/Scold/Wait)", "type": "bool", "default": False},
     ],
 )
 class MonsterEncounterZoneBehaviour(Behaviour):
@@ -45,6 +46,7 @@ class MonsterEncounterZoneBehaviour(Behaviour):
         "player_species_id": ParamDef(str, default="", description="Temporary player-side species id for MON-0e"),
         "player_level": ParamDef(int, default=5, description="Temporary player-side level for MON-0e"),
         "encounter_table": ParamDef(list, default=[], description="Weighted encounter table"),
+        "companion_mode": ParamDef(bool, default=False, description="Start companion battle instead of command battler"),
     }
 
     def __init__(self, entity: Any, window: Any, **config: Any) -> None:
@@ -59,6 +61,7 @@ class MonsterEncounterZoneBehaviour(Behaviour):
         self.player_species_id = str(self.config.get("player_species_id", "") or "").strip()
         self.player_level = max(1, int(self.config.get("player_level", 5) or 5))
         self.encounter_table = list(self.config.get("encounter_table", []) or [])
+        self.companion_mode = bool(self.config.get("companion_mode", False))
         self.rng = self._build_rng(config)
         self.cooldown_remaining = 0.0
         self.last_roll: EncounterRollResult | None = None
@@ -89,14 +92,37 @@ class MonsterEncounterZoneBehaviour(Behaviour):
             self.last_error = "; ".join(roll.errors)
             return
 
-        player_monster = self._player_monster(catalog)
-        if player_monster is None:
-            return
         context = self._return_context(roll)
         self.last_return_context = dict(context)
         starter = getattr(self.window, "start_monster_battle", None)
         if not callable(starter):
             self.last_error = "window.start_monster_battle is unavailable"
+            return
+
+        if self.companion_mode:
+            resolved = self._resolve_companion_party(catalog)
+            if resolved is None:
+                return
+            party, party_instance_ids, mind, player_monster, instance_id = resolved
+            context["source"] = "companion_encounter_zone"
+            context["player_instance_id"] = instance_id
+            context["companion_mode"] = True
+            starter(
+                player_monster=player_monster,
+                player_party=party,
+                player_party_instance_ids=party_instance_ids,
+                opponent_monster=roll.monster,
+                moves=catalog.moves,
+                type_chart=catalog.type_chart,
+                companion_mode=True,
+                companion_mind=mind,
+                return_context=context,
+            )
+            self.cooldown_remaining = self.cooldown_seconds
+            return
+
+        player_monster = self._player_monster(catalog)
+        if player_monster is None:
             return
         starter(
             player_monster=player_monster,
@@ -154,6 +180,58 @@ class MonsterEncounterZoneBehaviour(Behaviour):
             return None
         species = catalog.species[species_id]
         return MonsterInstance(species, level=self.player_level, known_moves=species.learnset)
+
+    def _state_values(self) -> dict[str, Any]:
+        values: dict[str, Any] = {}
+        controller = getattr(self.window, "game_state_controller", None)
+        state = getattr(controller, "state", None)
+        state_values = getattr(state, "values", None)
+        if isinstance(state_values, dict):
+            values = state_values
+        return values
+
+    def _resolve_companion_party(
+        self,
+        catalog: MonsterCatalog,
+    ) -> tuple[list[MonsterInstance], list[str | None], Any, MonsterInstance, str] | None:
+        from engine.monster.collection import (  # noqa: PLC0415
+            add_caught_monster,
+            ensure_monster_collection,
+            load_battle_party_from_values,
+            load_companion_mind_for_instance,
+        )
+        from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament  # noqa: PLC0415
+
+        values = self._state_values()
+        ensure_monster_collection(values)
+
+        fallback_species = catalog.species.get("sproutling")
+        if fallback_species is None:
+            first_id = next(iter(catalog.species), "")
+            fallback_species = catalog.species.get(first_id)
+        if fallback_species is None:
+            self.last_error = "catalog has no species for companion fallback"
+            return None
+
+        fallback = MonsterInstance(fallback_species, level=8, known_moves=fallback_species.learnset)
+        party, party_instance_ids = load_battle_party_from_values(values, catalog.species, fallback=fallback)
+        if not party_instance_ids or party_instance_ids[0] is None:
+            debug_monster = MonsterInstance(fallback_species, level=8, known_moves=fallback_species.learnset)
+            stored = add_caught_monster(values, debug_monster)
+            party = [debug_monster]
+            party_instance_ids = [stored.instance_id]
+
+        active = party[0]
+        instance_id = str(party_instance_ids[0])
+        mind = load_companion_mind_for_instance(values, instance_id)
+        if mind is None:
+            mind = CompanionMind(
+                temperament=Temperament(aggression=65.0, fear=12.0),
+                learned=LearnedWeights(),
+                trust=60.0,
+                bond=40.0,
+            )
+        return party, party_instance_ids, mind, active, instance_id
 
     def _return_context(self, roll: EncounterRollResult) -> dict[str, Any]:
         scene_controller = getattr(self.window, "scene_controller", None)

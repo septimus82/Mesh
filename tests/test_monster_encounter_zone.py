@@ -9,7 +9,10 @@ import pytest
 from engine.behaviours import load_builtin_behaviours
 from engine.behaviours.monster_encounter_zone import MonsterEncounterZoneBehaviour
 from engine.behaviours.registry import BEHAVIOUR_REGISTRY
+from engine.game_state_controller import GameStateController
 from engine.monster.battle_model import BattleStats, Move, Species
+from engine.monster.collection import companion_mind_to_dict, ensure_monster_collection, serialize_monster_instance
+from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament
 from engine.monster.data_load import MonsterCatalog
 
 pytestmark = pytest.mark.fast
@@ -109,6 +112,8 @@ def test_entering_eligible_zone_starts_battle_with_expected_monster_and_return_c
         "species_id": "sproutling",
         "level": 4,
     }
+    assert kwargs.get("companion_mode") is not True
+    assert "companion_mind" not in kwargs
 
 
 def test_disabled_zone_or_cooldown_does_not_start_battle() -> None:
@@ -173,3 +178,104 @@ def test_unknown_species_id_records_validation_error_without_starting_battle() -
 
     window.start_monster_battle.assert_not_called()
     assert "unknown species 'missingno'" in behaviour.last_error
+
+
+def _companion_window(*, party: list[str] | None = None) -> types.SimpleNamespace:
+    window = _window()
+    window.game_state_controller = GameStateController(window)
+    values = window.game_state_controller.state.values
+    if party:
+        for instance_id in party:
+            values["monster_party"].append(instance_id)
+    return window
+
+
+def _seed_party(values: dict, *, instance_id: str = "sproutling_0001") -> None:
+    from engine.monster.battle_model import MonsterInstance
+
+    ensure_monster_collection(values)
+    monster = MonsterInstance(SPROUT, level=6, known_moves=SPROUT.learnset)
+    mind = CompanionMind(
+        temperament=Temperament(aggression=70.0, fear=10.0),
+        learned=LearnedWeights(),
+        trust=55.0,
+        bond=45.0,
+    )
+    values["monster_instances"][instance_id] = serialize_monster_instance(
+        monster,
+        companion_mind=companion_mind_to_dict(mind),
+    )
+    values["monster_party"] = [instance_id]
+
+
+def test_companion_mode_zone_starts_companion_battle_with_party_mind_and_wild_opponent() -> None:
+    window = _companion_window()
+    _seed_party(window.game_state_controller.state.values)
+    behaviour = MonsterEncounterZoneBehaviour(
+        _entity(),
+        window,
+        **_config(companion_mode=True, rng=random.Random(1)),
+    )
+
+    behaviour.update(0.016)
+
+    window.start_monster_battle.assert_called_once()
+    kwargs = window.start_monster_battle.call_args.kwargs
+    assert kwargs["companion_mode"] is True
+    assert kwargs["companion_mind"] is not None
+    assert kwargs["player_monster"].species.id == "sproutling"
+    assert kwargs["player_party"][0].species.id == "sproutling"
+    assert kwargs["player_party_instance_ids"] == ["sproutling_0001"]
+    assert kwargs["opponent_monster"].species.id == "sproutling"
+    assert kwargs["opponent_monster"].level == 4
+    assert kwargs["return_context"]["companion_mode"] is True
+    assert kwargs["return_context"]["player_instance_id"] == "sproutling_0001"
+
+
+def test_companion_mode_without_caught_monster_falls_back_without_crashing() -> None:
+    window = _companion_window()
+    behaviour = MonsterEncounterZoneBehaviour(
+        _entity(),
+        window,
+        **_config(companion_mode=True, rng=random.Random(1)),
+    )
+
+    behaviour.update(0.016)
+
+    window.start_monster_battle.assert_called_once()
+    kwargs = window.start_monster_battle.call_args.kwargs
+    assert kwargs["companion_mode"] is True
+    assert kwargs["companion_mind"] is not None
+    assert kwargs["player_monster"].species.id == "sproutling"
+    assert kwargs["player_party_instance_ids"][0]
+
+
+def test_companion_mode_preserves_deterministic_encounter_roll() -> None:
+    first_window = _window()
+    second_window = _window()
+    first = MonsterEncounterZoneBehaviour(
+        _entity(),
+        first_window,
+        **_config(
+            companion_mode=True,
+            encounter_table=[{"species_id": "sproutling", "min_level": 2, "max_level": 6, "weight": 1}],
+            rng=random.Random(42),
+        ),
+    )
+    second = MonsterEncounterZoneBehaviour(
+        _entity(),
+        second_window,
+        **_config(
+            companion_mode=True,
+            encounter_table=[{"species_id": "sproutling", "min_level": 2, "max_level": 6, "weight": 1}],
+            rng=random.Random(42),
+        ),
+    )
+
+    first.update(0.016)
+    second.update(0.016)
+
+    first_monster = first_window.start_monster_battle.call_args.kwargs["opponent_monster"]
+    second_monster = second_window.start_monster_battle.call_args.kwargs["opponent_monster"]
+    assert (first_monster.species.id, first_monster.level) == (second_monster.species.id, second_monster.level)
+    assert first_window.start_monster_battle.call_args.kwargs["companion_mode"] is True
