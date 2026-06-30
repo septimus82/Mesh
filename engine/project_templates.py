@@ -54,19 +54,42 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
 
 
 def _apply_blank(root: Path) -> None:
-    # Blank is the default scaffold, but we ensure specific minimal content here
-    # just in case scaffold changes or we need to override it.
-
-    # Minimal Scene
     scene = {
-        "format_version": 1,
-        "scene_id": "start",
         "name": "Start Scene",
-        "layers": {
-            "background": [],
-            "entities": [],
-            "foreground": []
-        }
+        "settings": {
+            "background_color": "dark_blue_gray",
+            "music": None,
+            "music_volume": 1.0,
+        },
+        "layers": [
+            {"name": "background"},
+            {"name": "entities"},
+            {"name": "foreground"},
+        ],
+        "entities": [
+            {
+                "id": "start_player_128_128_0_0",
+                "name": "Player",
+                "tag": "player",
+                "x": 128.0,
+                "y": 128.0,
+                "sprite": "assets/sprites/animated_player.png",
+                "sprite_sheet": {
+                    "columns": 4,
+                    "rows": 2,
+                    "frame_width": 64,
+                    "frame_height": 64,
+                },
+                "animations": {
+                    "idle": {"fps": 4, "frames": [0, 1, 2, 3], "loop": True},
+                    "walk": {"fps": 8, "frames": [4, 5, 6, 7], "loop": True},
+                },
+                "behaviours": ["PlayerController", "CameraFollow"],
+                "behaviour_config": {
+                    "CameraFollow": {"padding": 12, "zoom": 1.0},
+                },
+            },
+        ],
     }
     _write_json(root / "packs/core_regions/scenes/start.json", scene)
 

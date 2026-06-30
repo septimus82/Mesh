@@ -714,12 +714,13 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
         from engine.monster.collection import load_battle_party_from_values  # noqa: PLC0415
         from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
+        from engine.paths import resolve_monster_data_dir  # noqa: PLC0415
 
         mode = getattr(self, "monster_battle_mode", None)
         if mode is not None and getattr(mode, "active", False):
             return getattr(mode, "controller", None)
 
-        catalog, validation = load_monster_catalog()
+        catalog, validation = load_monster_catalog(resolve_monster_data_dir())
         if not validation.ok or catalog is None:
             self.console_log(f"[MonsterBattle] Catalog load failed: {'; '.join(validation.errors)}")
             return None
@@ -755,12 +756,13 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         from engine.monster.battle_model import MonsterInstance  # noqa: PLC0415
         from engine.monster.collection import load_battle_party_from_values  # noqa: PLC0415
         from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
+        from engine.paths import resolve_monster_data_dir  # noqa: PLC0415
 
         mode = getattr(self, "monster_battle_mode", None)
         if mode is not None and getattr(mode, "active", False):
             return getattr(mode, "controller", None)
 
-        catalog, validation = load_monster_catalog()
+        catalog, validation = load_monster_catalog(resolve_monster_data_dir())
         if not validation.ok or catalog is None:
             self.console_log(f"[MonsterBattle] Catalog load failed: {'; '.join(validation.errors)}")
             return None
@@ -808,12 +810,13 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         )
         from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament  # noqa: PLC0415
         from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
+        from engine.paths import resolve_monster_data_dir  # noqa: PLC0415
 
         mode = getattr(self, "monster_battle_mode", None)
         if mode is not None and getattr(mode, "active", False):
             return getattr(mode, "controller", None)
 
-        catalog, validation = load_monster_catalog()
+        catalog, validation = load_monster_catalog(resolve_monster_data_dir())
         if not validation.ok or catalog is None:
             self.console_log(f"[MonsterBattle] Catalog load failed: {'; '.join(validation.errors)}")
             return None

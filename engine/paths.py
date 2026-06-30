@@ -181,3 +181,9 @@ def resolve_path(path_str: str) -> Path:
         return roots[0] / p
 
     return p
+
+
+def resolve_monster_data_dir() -> Path:
+    """Resolve the directory containing monster catalog JSON files."""
+
+    return resolve_path("assets/data/monster_species.json").parent

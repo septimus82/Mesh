@@ -44,8 +44,10 @@ def test_create_project(tmp_path: Path) -> None:
 
     # Check config content
     config = json.loads((target / "config.json").read_text(encoding="utf-8"))
-    assert config["project_name"] == "My Game"
+    assert config["title"] == "My Game"
     assert config["start_scene"] == "packs/core_regions/scenes/start.json"
+    assert (target / "main.py").exists()
+    assert (target / "assets/data/monster_species.json").exists()
 
     # Check scene content
     scene = json.loads((target / "packs/core_regions/scenes/start.json").read_text(encoding="utf-8"))
