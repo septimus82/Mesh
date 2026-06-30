@@ -372,6 +372,16 @@ class MonsterBattleOverlay(UIElement):
                 if controller is not None and controller.result is None and controller.phase == "choose_action":
                     self.mode._run_companion_monster_turn()
                 return
+            if self.mode._presenting_companion_switch:
+                self.mode._presenting_companion_switch = False
+                controller = self.mode.controller
+                if controller is not None and controller.result is None and controller.phase == "choose_action":
+                    self.mode._run_companion_monster_turn()
+                return
+            controller = self.mode.controller
+            if controller is not None and controller.phase == "must_switch":
+                self.mode.auto_switch_companion_bench()
+                return
             self.mode.companion_awaiting_reinforcement = True
             self.menu_state = "root"
             self.selected_index = 0
@@ -445,6 +455,7 @@ class MonsterBattleMode:
         self.companion_ctx = DecisionContext()
         self.companion_awaiting_reinforcement = False
         self._presenting_reinforcement = False
+        self._presenting_companion_switch = False
         self._last_companion_behavior: str = ""
         self._companion_instance_id: str | None = None
 
@@ -487,6 +498,7 @@ class MonsterBattleMode:
         self.companion_ctx = DecisionContext()
         self.companion_awaiting_reinforcement = False
         self._presenting_reinforcement = False
+        self._presenting_companion_switch = False
         self._last_companion_behavior = ""
         self.controller = MonsterBattleController(
             player=player_monster,
@@ -553,6 +565,8 @@ class MonsterBattleMode:
             raise RuntimeError("companion battle mode is not active")
         if self.controller.result is not None:
             return self.controller.result
+        if self.controller.player.fainted:
+            return self.controller.result
         if self.controller.phase != "choose_action":
             return self.controller.result
 
@@ -616,6 +630,49 @@ class MonsterBattleMode:
             if result.outcome == "won":
                 self._apply_victory_progression_steps(before_player_hp, before_opponent_hp)
             self.end_battle(result)
+        return result
+
+    def auto_switch_companion_bench(self) -> BattleResult | None:
+        """Send out the next healthy companion when the active one faints."""
+
+        if not self.active or not self.companion_mode or self.controller is None:
+            raise RuntimeError("companion battle mode is not active")
+        if self.controller.phase != "must_switch":
+            return self.controller.result
+
+        next_index = self._next_player_bench_index()
+        if next_index is None:
+            return self.controller.result
+
+        fainted_name = _display_name(self.controller.player)
+        before_opponent_hp = int(
+            self.overlay.displayed_opponent_hp
+            if self.overlay is not None and self.overlay.displayed_opponent_hp is not None
+            else self.controller.opponent.current_hp,
+        )
+        next_name = _display_name(self.controller.player_party[next_index])
+
+        self._persist_active_companion_mind()
+        result = self.controller.submit_switch(next_index)
+        self._attach_companion_mind_for_active_index(next_index)
+
+        before_player_hp = int(self.controller.player.current_hp or 0)
+        self.companion_awaiting_reinforcement = False
+        self._presenting_reinforcement = False
+        if self.overlay is not None:
+            self._presenting_companion_switch = True
+            self.overlay.begin_turn_presentation(
+                [
+                    BattlePresentationStep(f"{fainted_name} fainted!", 0, before_opponent_hp),
+                    BattlePresentationStep(f"Go, {next_name}!", before_player_hp, before_opponent_hp),
+                ],
+                result=result,
+            )
+            self.overlay.sync_displayed_hp()
+        elif result is not None:
+            self.end_battle(result)
+        elif self.controller.phase == "choose_action":
+            self._run_companion_monster_turn()
         return result
 
     def submit_player_move(self, move_id: str) -> BattleResult | None:
@@ -784,7 +841,7 @@ class MonsterBattleMode:
             raise RuntimeError("cannot end monster battle without a result")
 
         if self.companion_mode and self.companion_mind is not None and self._companion_instance_id:
-            persist_companion_mind(self._state_values(), self._companion_instance_id, self.companion_mind)
+            self._persist_active_companion_mind()
 
         payload = self._result_payload(final_result)
         self._apply_result_payload(payload)
@@ -805,6 +862,7 @@ class MonsterBattleMode:
         self.companion_mind = None
         self.companion_awaiting_reinforcement = False
         self._presenting_reinforcement = False
+        self._presenting_companion_switch = False
         self._companion_instance_id = None
         self.active = False
         self.window.monster_battle_mode_active = False
@@ -1099,6 +1157,34 @@ class MonsterBattleMode:
             if isinstance(mind_payload, dict):
                 row[COMPANION_MIND_INSTANCE_KEY] = dict(mind_payload)
             instances[str(instance_id)] = row
+
+    def _persist_active_companion_mind(self) -> None:
+        if self.companion_mind is not None and self._companion_instance_id:
+            persist_companion_mind(self._state_values(), self._companion_instance_id, self.companion_mind)
+
+    def _attach_companion_mind_for_active_index(self, party_index: int) -> None:
+        if party_index < 0 or party_index >= len(self.player_party_instance_ids):
+            self._companion_instance_id = None
+            self.companion_mind = CompanionMind()
+            return
+        instance_id = self.player_party_instance_ids[party_index]
+        self._companion_instance_id = str(instance_id) if instance_id else None
+        if self._companion_instance_id:
+            loaded = load_companion_mind_for_instance(self._state_values(), self._companion_instance_id)
+            if loaded is not None:
+                self.companion_mind = loaded
+                return
+        self.companion_mind = CompanionMind()
+
+    def _next_player_bench_index(self) -> int | None:
+        if self.controller is None:
+            return None
+        count = len(self.controller.player_party)
+        for offset in range(1, count):
+            index = (self.controller.active_index + offset) % count
+            if not self.controller.player_party[index].fainted:
+                return index
+        return None
 
     def _companion_flee_result(self) -> BattleResult:
         if self.controller is None:
