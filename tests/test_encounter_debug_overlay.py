@@ -60,7 +60,7 @@ def test_encounter_debug_overlay_toggle_key() -> None:
 
     controller = type("C", (), {"window": _Window()})()
 
-    assert input_capture.handle_key_press(controller, arcade.key.F8, 0) is True
+    assert input_capture.handle_key_press(controller, arcade.key.F2, 0) is True
     assert overlay.visible is True
-    assert input_capture.handle_key_press(controller, arcade.key.F8, 0) is True
+    assert input_capture.handle_key_press(controller, arcade.key.F2, 0) is True
     assert overlay.visible is False

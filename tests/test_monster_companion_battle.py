@@ -61,6 +61,8 @@ def _window() -> types.SimpleNamespace:
     window.width = 1280
     window.height = 720
     window.paused = False
+    window.game_over = False
+    window.show_debug = False
     window.monster_battle_mode_active = False
     window.console_controller = _Console()
     window.editor_controller = types.SimpleNamespace(active=False)
@@ -224,7 +226,7 @@ def test_companion_battle_is_deterministic_under_fixed_seed() -> None:
     assert mode_a.companion_mind.last_behavior == mode_b.companion_mind.last_behavior
 
 
-def test_ctrl_f12_launches_companion_battle_when_debug_mode_enabled() -> None:
+def test_f8_launches_companion_battle_when_debug_mode_enabled() -> None:
     window = _window()
     window.engine_config = load_config("config.json")
     window.engine_config.debug_mode = True
@@ -232,8 +234,23 @@ def test_ctrl_f12_launches_companion_battle_when_debug_mode_enabled() -> None:
 
     input_dispatch.on_key_press(
         as_any(window),
-        optional_arcade.arcade.key.F12,
-        optional_arcade.arcade.key.MOD_CTRL,
+        optional_arcade.arcade.key.F8,
+        0,
     )
 
     window.start_debug_companion_monster_battle.assert_called_once_with()
+
+
+def test_f8_does_not_launch_companion_battle_when_debug_mode_disabled() -> None:
+    window = _window()
+    window.engine_config = load_config("config.json")
+    window.engine_config.debug_mode = False
+    window.start_debug_companion_monster_battle = MagicMock(return_value=True)
+
+    input_dispatch.on_key_press(
+        as_any(window),
+        optional_arcade.arcade.key.F8,
+        0,
+    )
+
+    window.start_debug_companion_monster_battle.assert_not_called()

@@ -103,9 +103,7 @@
     "quickload_last_save": [
       "F10"
     ],
-    "save_game": [
-      "F8"
-    ],
+    "save_game": [],
     "show_character": [
       "C"
     ],
@@ -127,9 +125,7 @@
     "toggle_inspector": [
       "I"
     ],
-    "toggle_shadowcast_debug": [
-      "F7"
-    ],
+    "toggle_shadowcast_debug": [],
     "toggle_shadowmask": [
       "F6"
     ],

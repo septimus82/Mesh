@@ -54,7 +54,7 @@ def format_encounter_debug_text(payload: dict[str, Any] | None) -> str:
     reserve_val = float(reserve) if reserve is not None else 0.0
 
     lines = [
-        "Encounter Debug (F8)",
+        "Encounter Debug (F2)",
         f"scene: {scene_path}",
         f"difficulty: {difficulty} preset: {preset}",
         f"budget: {budget_val:.2f} reserve: {reserve_val:.2f}",

@@ -1428,7 +1428,7 @@ def maybe_enqueue_lighting_toggle_tip(
     hud = getattr(window, "player_hud", None)
     enqueue = getattr(hud, "enqueue_toast", None) if hud is not None else None
     if callable(enqueue):
-        enqueue("Tip: F6 Shadow mask, F7 Debug rays", seconds=float(seconds))
+        enqueue("Tip: F6 Shadow mask", seconds=float(seconds))
         return True
     return False
 
