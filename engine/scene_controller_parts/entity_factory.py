@@ -48,7 +48,9 @@ def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
     if entity.get("prefab_id"):
         entity = scene_controller_module.get_prefab_manager().resolve(entity)
 
-    if not self.window.scene_loader.validate_entity(entity):
+    report = self.window.scene_loader.validate_entity(entity)
+    validation_ok = report.ok if hasattr(report, "ok") else bool(report)
+    if not validation_ok:
         return None
     sprite_path = entity.get("sprite") or "assets/placeholder.png"
     try:
@@ -185,6 +187,12 @@ def _attach_animator(self, sprite: Any, entity_data: dict[str, Any]) -> None:
         return
     if animator is not None:
         entity_data.setdefault("default_animation", animator.current_state)
+        sync_hit_box = getattr(sprite, "sync_hit_box_to_texture", None)
+        if callable(sync_hit_box):
+            try:
+                sync_hit_box()
+            except Exception:  # noqa: BLE001  # REASON: hitbox refresh after animator attach is best-effort
+                _log_swallow("SCEN-002", "engine/scene_controller_parts/entity_factory.py hitbox sync after animator")
 
 
 def _behaviour_config_copy(self, sprite: Any) -> dict[str, dict[str, Any]]:

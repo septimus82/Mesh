@@ -90,8 +90,14 @@ class AIChatOverlay(UIElement):
         if int(button) != int(optional_arcade.arcade.MOUSE_BUTTON_LEFT):
             return False
         controller = getattr(self.window, "editor_controller", None)
-        chat = getattr(controller, "chat", None) if controller is not None else None
+        if controller is None or not getattr(controller, "active", False):
+            return False
+        if not self._is_active_tab(controller):
+            return False
+        chat = getattr(controller, "chat", None)
         if chat is None:
+            return False
+        if not self._point_in_right_dock(float(x), float(y)):
             return False
         if self._input_rect is not None and _contains(self._input_rect, float(x), float(y)):
             chat.input_focused = True
@@ -218,6 +224,19 @@ class AIChatOverlay(UIElement):
         dock_ctl = getattr(controller, "dock", None)
         snapshot = dock_ctl.get_snapshot() if dock_ctl is not None and hasattr(dock_ctl, "get_snapshot") else dock_ctl
         return (getattr(snapshot, "right_tab", "Inspector") or "Inspector") == "AI Chat"
+
+    def _point_in_right_dock(self, x: float, y: float) -> bool:
+        controller = getattr(self.window, "editor_controller", None)
+        if controller is None:
+            return False
+        from engine.editor.editor_dock_query import get_effective_dock_widths
+        from engine.editor.editor_shell_layout import compute_editor_shell_layout
+
+        window_w = int(getattr(self.window, "width", 1280) or 1280)
+        window_h = int(getattr(self.window, "height", 720) or 720)
+        left_w, right_w = get_effective_dock_widths(controller, window_w)
+        dock = compute_editor_shell_layout(window_w, window_h, left_w, right_w).right_dock
+        return dock.left <= x <= dock.right and dock.bottom <= y <= dock.top
 
 
 def _contains(rect: tuple[float, float, float, float], x: float, y: float) -> bool:

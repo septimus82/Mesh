@@ -106,7 +106,7 @@ def handle_mouse_drag(
         # Get primary entity start position for delta calculation
         primary_id = getattr(controller, "_primary_entity_id", None)
         drag_starts = getattr(controller, "_multiselect_drag_starts", {})
-        primary_start = drag_starts.get(primary_id) if primary_id else controller.entity_drag_start_pos
+        primary_start = drag_starts.get(primary_id) if primary_id else None
 
         if primary_start:
             # Compute raw dragged position for primary
@@ -245,16 +245,20 @@ def handle_mouse_release(controller: EditorController, x: float, y: float, butto
                 group_cmd = MoveEntitiesCommand(moves=tuple(moves))
                 controller._push_command(group_cmd.to_dict())
                 logger.info("[Editor] Moved %d entities", len(moves))
-        elif controller.entity_drag_start_pos:
+        elif controller.selected_entity:
             # Single entity move
             from ..editor.editor_transform_ops import create_move_command_from_drag  # noqa: PLC0415
 
-            end_xy = (controller.selected_entity.center_x, controller.selected_entity.center_y)
-            entity_id = controller._get_display_name_for_sprite(controller.selected_entity)
-            move_cmd = create_move_command_from_drag(entity_id, controller.entity_drag_start_pos, end_xy)
-            if move_cmd is not None:
-                controller._push_command(move_cmd.to_dict())
-                logger.info("[Editor] Moved entity %s to %s", entity_id, end_xy)
+            primary_id = getattr(controller, "_primary_entity_id", None)
+            drag_starts = getattr(controller, "_multiselect_drag_starts", {})
+            start_pos = drag_starts.get(primary_id) if primary_id else None
+            if start_pos:
+                end_xy = (controller.selected_entity.center_x, controller.selected_entity.center_y)
+                entity_id = controller._get_display_name_for_sprite(controller.selected_entity)
+                move_cmd = create_move_command_from_drag(entity_id, start_pos, end_xy)
+                if move_cmd is not None:
+                    controller._push_command(move_cmd.to_dict())
+                    logger.info("[Editor] Moved entity %s to %s", entity_id, end_xy)
 
         controller.entity_drag_start_pos = None
         controller._multiselect_drag_starts = {}
