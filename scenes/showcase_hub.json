@@ -131,6 +131,53 @@
       "y": 380
     },
     {
+      "id": "hub_companion_grass_patch",
+      "name": "Companion Grass Patch",
+      "tag": "prop",
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["MonsterEncounterZone"],
+      "behaviour_config": {
+        "MonsterEncounterZone": {
+          "trigger_radius": 44,
+          "trigger_target": "Player",
+          "encounter_id": "hub_companion_grass",
+          "companion_mode": true,
+          "chance": 1.0,
+          "cooldown_seconds": 2.0,
+          "encounter_table": [
+            { "species_id": "shelltide", "level": 5, "weight": 1 },
+            { "species_id": "sproutling", "level": 4, "weight": 1 }
+          ]
+        }
+      },
+      "x": 480,
+      "y": 320
+    },
+    {
+      "id": "hub_companion_grass_sign",
+      "name": "Companion Grass Sign",
+      "tag": "prop",
+      "solid": true,
+      "sprite": "assets/placeholder.png",
+      "behaviours": ["Dialogue"],
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "speaker": "Sign",
+            "start": "root",
+            "nodes": {
+              "root": {
+                "text": "COMPANION GRASS\n\nWalk into the tall grass beside the Sproutling.\nYour party monster fights on its own — Praise, Scold, or Wait.",
+                "choices": [{ "text": "Close", "end": true }]
+              }
+            }
+          }
+        }
+      },
+      "x": 540,
+      "y": 320
+    },
+    {
       "id": "hub_welcome_sign",
       "name": "Welcome Sign",
       "tag": "prop",
