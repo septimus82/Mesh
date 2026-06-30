@@ -40,6 +40,8 @@ def _mind(
     learn_hesitate: float = 0.0,
     trust: float = 50.0,
     bond: float = 0.0,
+    mood: float = 0.0,
+    traits: tuple[str, ...] = (),
     last_behavior: str | None = None,
 ) -> CompanionMind:
     return CompanionMind(
@@ -51,6 +53,8 @@ def _mind(
         ),
         trust=trust,
         bond=bond,
+        mood=mood,
+        traits=traits,
         last_behavior=last_behavior,
     )
 
@@ -243,6 +247,8 @@ def test_companion_mind_serialize_round_trip_matches_exactly() -> None:
         learn_hesitate=2.0,
         trust=63.0,
         bond=9.5,
+        mood=14.0,
+        traits=("brave", "quick_learner"),
         last_behavior=HESITATE,
     )
 
