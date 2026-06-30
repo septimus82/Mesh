@@ -2,8 +2,10 @@
 
 **Purpose:** a self-contained plan so the project can continue *without* live direction — follow the
 recipe and the slice list below. Pair this with the architecture doc
-[`docs/design/monster_battle_core.md`](design/monster_battle_core.md) and the engine audit
-[`docs/design/vertical_slice_game.md`](design/vertical_slice_game.md).
+[`docs/design/monster_battle_core.md`](design/monster_battle_core.md), the engine audit
+[`docs/design/vertical_slice_game.md`](design/vertical_slice_game.md), and — most importantly for the
+*current* direction — the differentiator design
+[`docs/design/monster_game_differentiator.md`](design/monster_game_differentiator.md).
 
 ---
 
@@ -99,30 +101,44 @@ capability.
 
 ---
 
-## Framing (decided 2026-06-29) — engine first, content is scratch paper
+## Framing — engine first; the twist is now DEFINED (autonomous companion)
 
-We are building a **reusable turn-based monster-battle ENGINE on Mesh** (the gap the audit found), NOT a
-Pokémon-clone *game*. The monster content (sproutling/shelltide/debug battles) is **throwaway test
-scaffolding**; the deliverable is the engine layer (pure controller, party/box, capture, status, switching,
-trainers, breeding — data-driven + AI-authorable). The genre primitives are table-stakes any monster RPG
-needs — but **cloning Pokémon feature-for-feature with no twist = "a worse Pokémon"** (and Nintendo
-litigates). The shippable game wears the user's OWN differentiation + the action/AI-authoring hybrid, layered
-on top of this engine. So: finish the core battle primitives, **then pause cloning and define the twist.**
+We build a **reusable turn-based monster-battle ENGINE on Mesh**; the monster content is throwaway test
+scaffolding. The genre primitives (status/switching/trainers) are table-stakes — but cloning Pokémon with no
+twist = "a worse Pokémon" (and Nintendo litigates).
 
-## Phases beyond 0 (higher level — slice these later)
+**The twist is DEFINED (2026-06-30): the AUTONOMOUS COMPANION** — *train it, don't command it.* The monster
+is a semi-autonomous agent with a personality, shaped by **reinforcement + relationship**, ported from the
+user's proven RPG Maker prototype. Full design:
+[`docs/design/monster_game_differentiator.md`](design/monster_game_differentiator.md). It **flips the battle
+control layer** (Praise/Scold/Wait) onto the KEPT command-battler substrate — so **Mesh now has TWO RPG
+battle models on one substrate.** The command-battler (Phases 0–1) stays as the second model; the companion
+(Phase 2) is the user's actual game.
 
-- **Phase 1 — Battle depth:** DONE so far — status effects (MON-1a, poison/sleep), multi-monster party +
-  player switching (MON-1b), trainer battles: multi-monster opponent + enemy auto-switch (MON-1c). Type
-  effectiveness already lives in the MON-0a damage formula. *Remaining classic primitive:* **evolution**
-  (MON-1d) — and that's roughly the "battle engine feature-complete" line where we stop and define the
-  user's differentiator before going wider.
-- **Phase 2 — Monster systems:** PC box/storage, **breeding** (compatibility → egg → stat/move inheritance
-  — the genre differentiator), held items, the bag, shops.
-- **Phase 3 — The game:** the actual world (towns/routes), story, gym/progression, the monster roster,
-  built with AI authoring + your **RPGM PNG assets** (sprites/tilesets/battlers/parallaxes port directly —
-  they're just images; you already imported parallax assets successfully).
-- **Cross-cutting:** UI/menu polish; reconcile the two `QuestManager` modules (`engine.quests` is the
-  canonical runtime one).
+## Phases — status
+
+- **Phase 0 — Proving slice (DONE):** the command-battler loop (encounter → battle → catch → party); see the
+  DONE table above. Kept as Mesh's *second* RPG battle model.
+- **Phase 1 — Battle depth (DONE):** status effects (MON-1a), party + player switching (MON-1b), trainer
+  battles + enemy auto-switch (MON-1c). Type effectiveness lives in the MON-0a damage formula. (Evolution
+  MON-1d deferred — we pivoted to the companion rather than clone further.)
+- **Phase 2 — THE COMPANION GAME (the differentiator — the real game):**
+  - **DONE:** the companion **mind** (MON-2a, pure behavior registry + weighted-random decision);
+    **reinforcement + trust/bond** (MON-2b — praise/scold, asymmetric so loyalty is hard-won); **battle
+    control flip** (MON-2c — monster auto-acts, player Praise/Scold/Wait; debug **F8**) + launch fixes;
+    **mind persistence + FLEE** (MON-2d — training accumulates across saves; a neglected monster abandons
+    you) + bonded-starter & faint→auto-switch fixes; **battle sprites + animation-state wiring**
+    (MON-2v0/2v1/2v2 — the user's own Sproutling art on screen; idle now, attack/defend/hurt/faint clips
+    wired with idle fallback so future art drops in with no code change).
+  - **REMAINING:** **MON-2e** — mood + inheritable traits (finishes the mind; sets up breeding); opponent
+    art + a battle backdrop; **overworld → companion encounter** (start from the world, not a debug key);
+    breeding that inherits temperament / traits / learned habits.
+- **Phase 3 — The world & breeding:** the actual overworld game (towns/routes, story, progression), the
+  monster roster, **breeding** (personality inheritance from the prototype), PC box, bag/shops — built with
+  AI authoring + the user's own art.
+- **Cross-cutting:** UI/menu polish; reconcile the two `QuestManager` modules (`engine.quests` is canonical).
+
+**Debug battle keys (current):** `F3` debug → `F12` wild · `F7` trainer · `F8` companion · `Ctrl+M` party menu.
 
 ## Key references
 
