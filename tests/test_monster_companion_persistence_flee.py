@@ -134,6 +134,8 @@ def test_companion_mind_dict_round_trip_is_exact() -> None:
         learned=LearnedWeights(ATTACK=4.5, DEFEND=-2.0, HESITATE=1.25),
         trust=72.5,
         bond=11.0,
+        mood=-18.0,
+        traits=("timid", "loyal"),
         last_behavior=ATTACK,
     )
 
