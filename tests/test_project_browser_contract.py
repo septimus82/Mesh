@@ -5,8 +5,18 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
+
 from engine.projects import add_recent_project, get_recent_projects
+from engine.repo_root import clear_launched_project_root
 from tests._typing import as_any
+
+
+@pytest.fixture(autouse=True)
+def _reset_launched_project_root() -> None:
+    clear_launched_project_root()
+    yield
+    clear_launched_project_root()
 
 
 def _patch_arcade(monkeypatch) -> None:

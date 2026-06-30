@@ -71,6 +71,7 @@ See Also:
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Sequence
 
 import engine.optional_arcade
@@ -110,6 +111,7 @@ from .migrations import migrate_payload
 from .monster.battle_mode import MonsterBattleMode
 from .particles import ParticleManager
 from .paths import pin_config, resolve_path
+from .repo_root import is_standalone_project_root, pin_launched_project_root
 from .perf import PerfStats
 from .quests import QuestManager
 from .render_queue import SpriteRenderQueue
@@ -469,6 +471,17 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.engine_config.vsync = vsync
         self.engine_config.resizable = resolved_resizable
         pin_config(self.engine_config)
+        config_base_dir = getattr(self.engine_config, "_config_base_dir", None)
+        self.standalone_launch = False
+        if config_base_dir:
+            launch_root = Path(str(config_base_dir))
+            resolved_launch = launch_root.resolve()
+            self.launched_project_root = str(resolved_launch)
+            if is_standalone_project_root(launch_root):
+                pin_launched_project_root(launch_root, config=self.engine_config)
+                self.standalone_launch = True
+        else:
+            self.launched_project_root = None
 
         # Text cache for overlays to avoid PerformanceWarning
         from engine.text_draw import TextCache

@@ -159,10 +159,25 @@ class MainMenuOverlay(UIElement):
         self.visible = True
         self._selection_index = 0
         self._project_index = 0
-        self.state = "main" if _is_web_runtime() else "project_browser"
+        self.state = "main" if _is_web_runtime() or not self._should_show_project_browser() else "project_browser"
         self._settings_index = 0
         self._cache_valid = False
         setattr(self.window, "paused", True)
+
+    def _editor_allows_project_switch(self) -> bool:
+        editor = getattr(self.window, "editor_controller", None)
+        return bool(editor is not None and getattr(editor, "active", False))
+
+    def _should_show_project_browser(self) -> bool:
+        if _is_web_runtime():
+            return False
+        if self._editor_allows_project_switch():
+            return True
+        from ..repo_root import get_launched_project_root  # noqa: PLC0415
+
+        if get_launched_project_root() is not None:
+            return False
+        return True
 
     def close(self) -> None:
         self.visible = False
@@ -194,9 +209,16 @@ class MainMenuOverlay(UIElement):
 
     def _apply_project_root(self, root: str) -> None:
         from ..paths import reset_path_caches  # noqa: PLC0415
+        from ..repo_root import is_standalone_project_root, launched_project_root_blocks_switch, pin_launched_project_root  # noqa: PLC0415
 
         root_text = str(root or "").strip()
         if not root_text:
+            return
+        if launched_project_root_blocks_switch(root_text) and not self._editor_allows_project_switch():
+            logger.info(
+                "[MainMenu] Ignoring project-root switch to '%s' during standalone launch",
+                root_text,
+            )
             return
         editor = getattr(self.window, "editor_controller", None)
         flusher = getattr(editor, "_flush_workspace_autosave", None) if editor is not None else None
@@ -215,6 +237,9 @@ class MainMenuOverlay(UIElement):
 
         # Reload config and world from the new project root
         self._reload_project_config()
+        if is_standalone_project_root(Path(root_text)):
+            pin_launched_project_root(Path(root_text), config=self.window.engine_config)
+            setattr(self.window, "standalone_launch", True)
 
         # Reload workspace settings if editor is present
         if hasattr(self.window, "editor") and callable(getattr(self.window.editor, "load_workspace", None)):

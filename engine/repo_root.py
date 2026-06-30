@@ -11,6 +11,66 @@ from .logging_tools import get_logger
 _MARKERS: tuple[str, ...] = ("pyproject.toml", "config.json")
 _LOG = get_logger("engine.repo_root")
 
+_LAUNCHED_PROJECT_ROOT: Path | None = None
+
+
+def engine_source_root() -> Path:
+    """Return the Mesh engine source tree root (the directory containing ``engine/``)."""
+    return Path(__file__).resolve().parent.parent
+
+
+def pin_launched_project_root(root: Path, *, config: object | None = None) -> Path:
+    """Pin the launched game project root for standalone runs."""
+    global _LAUNCHED_PROJECT_ROOT
+
+    resolved = Path(root).expanduser().resolve()
+    _LAUNCHED_PROJECT_ROOT = resolved
+    os.environ["MESH_REPO_ROOT"] = str(resolved)
+
+    from engine.paths import pin_config, reset_path_caches  # noqa: PLC0415
+
+    reset_path_caches()
+    if config is not None:
+        pin_config(config)  # type: ignore[arg-type]
+
+    return resolved
+
+
+def get_launched_project_root() -> Path | None:
+    """Return the pinned standalone launch root, if any."""
+    return _LAUNCHED_PROJECT_ROOT
+
+
+def clear_launched_project_root() -> None:
+    """Clear the pinned launch root (tests/tooling)."""
+    global _LAUNCHED_PROJECT_ROOT
+    _LAUNCHED_PROJECT_ROOT = None
+    os.environ.pop("MESH_REPO_ROOT", None)
+
+
+def launched_project_root_blocks_switch(target: str) -> bool:
+    """Return True when ``target`` would switch away from a pinned launch root."""
+    if _LAUNCHED_PROJECT_ROOT is None:
+        return False
+    text = str(target or "").strip()
+    if not text:
+        return False
+    try:
+        candidate = Path(text).expanduser().resolve()
+    except Exception:
+        _log_swallow("REPO-002", "engine/repo_root.py pass-only blanket swallow")
+        return True
+    return candidate != _LAUNCHED_PROJECT_ROOT.resolve()
+
+
+def is_standalone_project_root(root: Path) -> bool:
+    """Return True when ``root`` is not the engine source checkout."""
+    try:
+        return Path(root).expanduser().resolve() != engine_source_root().resolve()
+    except Exception:
+        _log_swallow("REPO-003", "engine/repo_root.py pass-only blanket swallow")
+        return True
+
 
 def _has_any_marker(path: Path, markers: Iterable[str]) -> bool:
     for name in markers:
