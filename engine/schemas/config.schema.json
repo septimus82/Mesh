@@ -186,6 +186,10 @@
       "type": "object",
       "additionalProperties": true
     },
+    "resizable": {
+      "type": "boolean",
+      "default": true
+    },
     "scene_fade_enabled": {
       "type": "boolean"
     },
