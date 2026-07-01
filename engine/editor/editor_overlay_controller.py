@@ -3,8 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
-from engine.editor.creator_mode.creator_overlay_renderer import draw_creator_overlay
+from engine.logging_tools import get_logger
 from engine.ui_overlays.common import _draw_rectangle_filled
+
+logger = get_logger(__name__)
 
 
 class EditorOverlayController:
@@ -83,7 +85,16 @@ class EditorOverlayController:
         elif hasattr(editor, "ui_layers"):
             editor.ui_layers.draw_all()
 
-        draw_creator_overlay(editor)
+        creator_mode = getattr(editor, "creator_mode", None)
+        if getattr(creator_mode, "active", False):
+            try:
+                from engine.editor.creator_mode.creator_overlay_renderer import (  # noqa: PLC0415
+                    draw_creator_overlay,
+                )
+
+                draw_creator_overlay(editor)
+            except Exception:
+                logger.debug("Creator Mode overlay draw failed", exc_info=True)
 
     def _draw_playtesting_overlay(self) -> None:
         window = getattr(self._editor, "window", None)

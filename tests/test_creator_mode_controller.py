@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import subprocess
+import sys
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -10,12 +12,15 @@ import engine.optional_arcade as optional_arcade
 from engine.config import EngineConfig
 from engine.editor.creator_mode import (
     CreatorModeController,
-    build_creator_overlay_draw_commands,
     build_creator_overlay_model,
-    truncate_creator_overlay_text,
 )
 from engine.editor.creator_mode.creator_inspector import build_creator_inspector
-from engine.editor.creator_mode.creator_overlay_renderer import draw_creator_overlay
+import engine.editor.creator_mode.creator_overlay_renderer as creator_overlay_renderer
+from engine.editor.creator_mode.creator_overlay_renderer import (
+    build_creator_overlay_draw_commands,
+    draw_creator_overlay,
+    truncate_creator_overlay_text,
+)
 from engine.editor.creator_mode.creator_terms import classify_entity_snapshot, friendly_engine_term
 from engine.editor_controller import EditorModeController
 
@@ -27,6 +32,24 @@ def test_controller_starts_inactive() -> None:
 
     assert controller.active is False
     assert controller.build_snapshot().active is False
+
+
+def test_creator_mode_package_import_does_not_import_renderer() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; import engine.editor.creator_mode; "
+                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
+            ),
+        ],
+        capture_output=True,
+        check=True,
+        text=True,
+    )
+
+    assert result.stdout.strip() == "False"
 
 
 def test_toggle_show_hide_change_active_state() -> None:
@@ -502,6 +525,22 @@ def test_draw_creator_overlay_with_bad_snapshot_data_does_not_raise() -> None:
     )
 
     draw_creator_overlay(bad_editor)
+
+
+def test_draw_creator_overlay_with_draw_failure_does_not_raise(monkeypatch: pytest.MonkeyPatch) -> None:
+    controller = CreatorModeController()
+    controller.show()
+    editor = SimpleNamespace(
+        creator_mode_snapshot=controller.build_snapshot,
+        window=SimpleNamespace(width=1280, height=720),
+    )
+
+    def fail_draw(*_args, **_kwargs) -> None:
+        raise RuntimeError("draw failed")
+
+    monkeypatch.setattr(creator_overlay_renderer, "_draw_rectangle_filled", fail_draw)
+
+    draw_creator_overlay(editor)
 
 
 def test_editor_integration_owns_creator_mode_controller_without_mutating_scene_data() -> None:

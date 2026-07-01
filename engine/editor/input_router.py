@@ -15,7 +15,7 @@ def handle_mouse_click(self: Any, x: float, y: float, button: int, modifiers: in
 
 def handle_input(self: Any, key: int, modifiers: int) -> bool:
     """Handle keyboard input when editor is active. Returns True if consumed."""
-    if getattr(self, "active", False) and key == optional_arcade.arcade.key.F5 and not modifiers:
+    if getattr(self, "active", False) and _is_creator_mode_toggle_key(key, modifiers):
         toggle = getattr(self, "toggle_creator_mode", None)
         if callable(toggle):
             toggle()
@@ -25,6 +25,13 @@ def handle_input(self: Any, key: int, modifiers: int) -> bool:
     if panels is not None and panels.dispatch_input(key, modifiers):
         return True
     return editor_input.handle_input(self, key, modifiers)
+
+
+def _is_creator_mode_toggle_key(key: int, modifiers: int) -> bool:
+    arcade = getattr(optional_arcade, "arcade", None)
+    arcade_key = getattr(arcade, "key", None)
+    f5 = getattr(arcade_key, "F5", None)
+    return f5 is not None and key == f5 and not modifiers
 
 
 def on_text(self: Any, text: str) -> bool:

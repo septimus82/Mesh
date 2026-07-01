@@ -179,7 +179,10 @@ def draw_creator_overlay(editor: Any) -> None:
         commands = build_creator_overlay_draw_commands(model, width, height)
     except (AttributeError, TypeError, ValueError):
         return
-    _draw_commands(commands)
+    try:
+        _draw_commands(commands)
+    except Exception:
+        return
 
 
 def _draw_commands(commands: tuple[CreatorOverlayDrawCommand, ...]) -> None:
