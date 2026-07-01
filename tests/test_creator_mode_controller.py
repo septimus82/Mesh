@@ -12,8 +12,10 @@ from engine.editor.creator_mode import (
     CreatorModeController,
     build_creator_overlay_draw_commands,
     build_creator_overlay_model,
+    truncate_creator_overlay_text,
 )
 from engine.editor.creator_mode.creator_inspector import build_creator_inspector
+from engine.editor.creator_mode.creator_overlay_renderer import draw_creator_overlay
 from engine.editor.creator_mode.creator_terms import classify_entity_snapshot, friendly_engine_term
 from engine.editor_controller import EditorModeController
 
@@ -398,6 +400,108 @@ def test_overlay_draw_command_build_does_not_mutate_input_snapshot() -> None:
     build_creator_overlay_draw_commands(model, 1280, 720)
 
     assert entity_data == before
+
+
+def test_long_selected_title_is_truncated_in_draw_commands() -> None:
+    long_title = "North Gate " * 12
+    controller = CreatorModeController(
+        SimpleNamespace(
+            selected_entity={
+                "name": long_title,
+                "behaviour_config": {"SceneExit": {"target_scene": "town"}},
+            }
+        )
+    )
+    controller.show()
+
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    text = _command_text(commands)
+
+    assert long_title.strip() not in text
+    assert truncate_creator_overlay_text(long_title, 42) in text
+
+
+def test_long_inspector_value_is_truncated_in_draw_commands() -> None:
+    long_destination = "very_long_destination_map_" * 8
+    controller = CreatorModeController(
+        SimpleNamespace(
+            selected_entity={
+                "name": "North Gate",
+                "behaviour_config": {"SceneExit": {"target_scene": long_destination}},
+            }
+        )
+    )
+    controller.show()
+
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    text = _command_text(commands)
+
+    assert f"Destination Map: {long_destination}" not in text
+    assert "Destination Map: very_long_destination_map_" in text
+    assert "..." in text
+
+
+def test_very_small_window_produces_sane_overlay_commands() -> None:
+    controller = CreatorModeController()
+    controller.show()
+    model = build_creator_overlay_model(controller.build_snapshot())
+
+    commands = build_creator_overlay_draw_commands(model, 220, 140)
+
+    rects = [command for command in commands if command.kind == "rect"]
+    assert rects
+    assert all(command.width > 0 for command in rects)
+    assert all(command.height > 0 for command in rects)
+    assert all(command.x >= 0 for command in commands)
+    assert all(command.y >= 0 for command in commands)
+    assert "Read-only preview" in _command_text(commands)
+
+
+def test_missing_inspector_fields_are_distinct_in_draw_command_data() -> None:
+    controller = CreatorModeController(
+        SimpleNamespace(
+            selected_entity={
+                "behaviours": ["SceneExit"],
+                "behaviour_config": {"SceneExit": {"target_spawn": "entry"}},
+            }
+        )
+    )
+    controller.show()
+
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+
+    assert any(
+        command.kind == "text"
+        and command.region == "right"
+        and command.missing
+        and command.text.startswith("Destination Map:")
+        for command in commands
+    )
+
+
+def test_draw_creator_overlay_without_snapshot_method_does_not_raise() -> None:
+    draw_creator_overlay(SimpleNamespace())
+
+
+def test_draw_creator_overlay_with_bad_snapshot_data_does_not_raise() -> None:
+    bad_editor = SimpleNamespace(
+        creator_mode_snapshot=lambda: SimpleNamespace(active=True),
+        window=SimpleNamespace(width=1280, height=720),
+    )
+
+    draw_creator_overlay(bad_editor)
 
 
 def test_editor_integration_owns_creator_mode_controller_without_mutating_scene_data() -> None:
