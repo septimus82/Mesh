@@ -23,6 +23,7 @@ from engine.editor.creator_mode.creator_overlay_renderer import (
 )
 from engine.editor.creator_mode.creator_terms import classify_entity_snapshot, friendly_engine_term
 from engine.editor_controller import EditorModeController
+from engine.game_runtime import input_dispatch
 
 pytestmark = pytest.mark.fast
 
@@ -588,6 +589,37 @@ def test_editor_f5_does_not_toggle_creator_mode_when_editor_inactive() -> None:
     assert editor.creator_mode.active is False
 
 
+def test_editor_f5_toggles_creator_mode_with_lock_key_modifiers() -> None:
+    editor = EditorModeController(_MockWindow())
+    editor.active = True
+    caps = int(getattr(optional_arcade.arcade.key, "MOD_CAPSLOCK", 0) or 0)
+
+    consumed = editor.handle_input(optional_arcade.arcade.key.F5, caps)
+
+    assert consumed is True
+    assert editor.creator_mode.active is True
+
+
+def test_input_dispatch_f5_toggles_creator_mode_when_editor_active() -> None:
+    window = _DispatchWindow()
+    window.editor_controller.toggle()
+
+    input_dispatch.on_key_press(window, optional_arcade.arcade.key.F5, 0)
+
+    assert window.editor_controller.creator_mode.active is True
+    window.input_controller.on_key_press.assert_not_called()
+
+
+def test_input_dispatch_f5_with_caps_lock_toggles_creator_mode_when_editor_active() -> None:
+    window = _DispatchWindow()
+    window.editor_controller.toggle()
+    caps = int(getattr(optional_arcade.arcade.key, "MOD_CAPSLOCK", 0) or 0)
+
+    input_dispatch.on_key_press(window, optional_arcade.arcade.key.F5, caps)
+
+    assert window.editor_controller.creator_mode.active is True
+
+
 def test_friendly_engine_terms() -> None:
     assert friendly_engine_term("Entity") == "Thing"
     assert friendly_engine_term("Behaviour") == "What it does"
@@ -649,3 +681,18 @@ class _MockWindow:
         self.paused = False
         self.scene_controller = MagicMock()
         self.screen_to_world = MagicMock(return_value=(100, 100))
+
+
+class _DispatchWindow(_MockWindow):
+    def __init__(self) -> None:
+        super().__init__()
+        self.game_over = False
+        self.engine_config = EngineConfig()
+        self.console_controller = MagicMock(active=False)
+        self.ui_controller = MagicMock(on_key_press=lambda *_args: False)
+        self.settings_overlay = MagicMock()
+        self.input_controller = MagicMock(on_key_press=MagicMock())
+        self.pause_menu = MagicMock(visible=False)
+        self.console_log = lambda _message: None
+        self.editor_controller = EditorModeController(self)
+        self.editor_controller.window = self

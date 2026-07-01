@@ -7,6 +7,7 @@ from typing import Any, Optional
 import engine.optional_arcade as optional_arcade
 from engine.editor_light_occluder_ops import snap_world_point
 from engine.editor_runtime import input as editor_input
+from engine.editor_runtime.editor_input_router import _normalize_modifiers
 
 
 def handle_mouse_click(self: Any, x: float, y: float, button: int, modifiers: int) -> bool:
@@ -28,10 +29,11 @@ def handle_input(self: Any, key: int, modifiers: int) -> bool:
 
 
 def _is_creator_mode_toggle_key(key: int, modifiers: int) -> bool:
+    """True when F5 should toggle Creator Mode (ignore lock-key modifier bits)."""
     arcade = getattr(optional_arcade, "arcade", None)
     arcade_key = getattr(arcade, "key", None)
     f5 = getattr(arcade_key, "F5", None)
-    return f5 is not None and key == f5 and not modifiers
+    return f5 is not None and key == f5 and _normalize_modifiers(modifiers) == 0
 
 
 def on_text(self: Any, text: str) -> bool:
