@@ -125,6 +125,50 @@ def test_creator_mode_toggle_key_false_when_arcade_missing(monkeypatch):
     assert input_router._is_creator_mode_toggle_key(65474, 0) is False
 
 
+def test_creator_mode_toggle_key_ignores_lock_key_modifiers():
+    import engine.optional_arcade as optional_arcade
+
+    key = optional_arcade.arcade.key
+    caps = int(getattr(key, "MOD_CAPSLOCK", 0) or 0)
+    num = int(getattr(key, "MOD_NUMLOCK", 0) or 0)
+    scroll = int(getattr(key, "MOD_SCROLLLOCK", 0) or 0)
+
+    assert input_router._is_creator_mode_toggle_key(optional_arcade.arcade.key.F5, caps) is True
+    assert input_router._is_creator_mode_toggle_key(optional_arcade.arcade.key.F5, num) is True
+    assert input_router._is_creator_mode_toggle_key(optional_arcade.arcade.key.F5, scroll) is True
+    assert input_router._is_creator_mode_toggle_key(optional_arcade.arcade.key.F5, caps | num) is True
+
+
+def test_creator_mode_toggle_key_false_when_shift_held():
+    import engine.optional_arcade as optional_arcade
+
+    assert (
+        input_router._is_creator_mode_toggle_key(
+            optional_arcade.arcade.key.F5,
+            optional_arcade.arcade.key.MOD_SHIFT,
+        )
+        is False
+    )
+
+
+def test_editor_overlay_draw_calls_creator_renderer_when_active(monkeypatch):
+    calls: list[object] = []
+    editor = _overlay_editor(creator_active=True)
+    editor.creator_mode_snapshot = lambda: SimpleNamespace(active=True)
+
+    def _record_draw(ed: object) -> None:
+        calls.append(ed)
+
+    monkeypatch.setattr(
+        "engine.editor.creator_mode.creator_overlay_renderer.draw_creator_overlay",
+        _record_draw,
+    )
+
+    EditorOverlayController(editor).draw_overlay()
+
+    assert calls == [editor]
+
+
 def _overlay_editor(*, creator_active: bool):
     return SimpleNamespace(
         active=True,
