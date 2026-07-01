@@ -107,6 +107,101 @@ def test_player_controller_emits_attack_trace_and_hud_is_deterministic() -> None
     assert run_a["hud_dead"] is False
 
 
+def test_player_controller_publishes_velocity_for_animators() -> None:
+    input_schedule = _InputSchedule(
+        [
+            _FrameInput(move_x=1.0, move_y=0.0),
+            _FrameInput(move_x=0.0, move_y=0.0),
+        ]
+    )
+    window = SimpleNamespace()
+    window.input = input_schedule
+    window.scene_controller = SimpleNamespace(solid_sprites=None)
+    window.engine_config = SimpleNamespace(player_stats_enabled=False)
+    window._mesh_interact_consumed = False
+    window.player_input_blocked = lambda: False
+    window.is_input_locked = lambda: False
+    window.dialogue_blocks_input = lambda: False
+    window.move_entity_with_collision = lambda entity, dx, dy, dt=0.0: None
+
+    entity = SimpleNamespace(
+        mesh_entity_data={},
+        mesh_behaviours_runtime=[],
+        center_x=0.0,
+        center_y=0.0,
+        width=32.0,
+        height=32.0,
+        change_x=0.0,
+        change_y=0.0,
+    )
+
+    controller = PlayerController(entity, window, speed=100.0)
+    controller.update(0.1)
+    assert entity.mesh_velocity_x == 100.0
+    assert entity.mesh_velocity_y == 0.0
+    assert entity.change_x == 0.0
+    assert entity.change_y == 0.0
+
+    input_schedule.set_frame(1)
+    controller.update(0.1)
+    assert entity.mesh_velocity_x == 0.0
+    assert entity.mesh_velocity_y == 0.0
+    assert entity.change_x == 0.0
+    assert entity.change_y == 0.0
+
+
+def test_player_controller_does_not_double_move_in_runtime_movement_stage() -> None:
+    from engine.scene_controller import SceneController
+
+    class RuntimeSprite(SimpleNamespace):
+        def update(self) -> None:
+            self.center_x += self.change_x
+            self.center_y += self.change_y
+
+    input_schedule = _InputSchedule([_FrameInput(move_x=1.0, move_y=0.0)])
+    scene_controller = object.__new__(SceneController)
+    scene_controller.window = SimpleNamespace(strict_mode=False)
+    scene_controller.layers = {}
+
+    window = SimpleNamespace()
+    window.input = input_schedule
+    window.scene_controller = SimpleNamespace(solid_sprites=None)
+    window.engine_config = SimpleNamespace(player_stats_enabled=False)
+    window._mesh_interact_consumed = False
+    window.player_input_blocked = lambda: False
+    window.is_input_locked = lambda: False
+    window.dialogue_blocks_input = lambda: False
+
+    def _move_entity_with_collision(entity: Any, dx: float, dy: float, dt: float = 0.0) -> None:  # noqa: ARG001
+        entity.center_x = float(getattr(entity, "center_x", 0.0)) + float(dx)
+        entity.center_y = float(getattr(entity, "center_y", 0.0)) + float(dy)
+
+    window.move_entity_with_collision = _move_entity_with_collision
+
+    entity = RuntimeSprite(
+        mesh_name="Player",
+        mesh_entity_data={},
+        mesh_behaviours_runtime=[],
+        center_x=0.0,
+        center_y=0.0,
+        width=32.0,
+        height=32.0,
+        change_x=0.0,
+        change_y=0.0,
+        frozen=False,
+    )
+    scene_controller.layers = {"entities": [entity]}
+
+    controller = PlayerController(entity, window, speed=100.0)
+    controller.update(0.1)
+    scene_controller._update_movement_stage(0.1)
+
+    assert abs(entity.center_x - 10.0) < 0.000001
+    assert entity.center_y == 0.0
+    assert entity.change_x == 0.0
+    assert entity.change_y == 0.0
+
+
 def _run_player_loop_schedule() -> dict[str, Any]:
     frames = [
         _FrameInput(move_x=1.0, move_y=0.0, attack=False),

@@ -1,4 +1,7 @@
+from engine.behaviours import load_builtin_behaviours
 from engine.behaviours.registry import get_behaviour_info
+
+load_builtin_behaviours()
 
 
 def test_dialogue_schema_has_role():
@@ -16,3 +19,8 @@ def test_patrol_schema_has_aliases():
     field_names = [f["name"] for f in info.config_fields]
     assert "points" in field_names, "Patrol behaviour must have 'points' alias"
     assert "speed" in field_names, "Patrol behaviour must have 'speed' alias"
+
+def test_animator_animations_schema_is_dict():
+    info = get_behaviour_info("Animator")
+    field = next(f for f in info.config_fields if f["name"] == "animations")
+    assert field["type"] == "object"
