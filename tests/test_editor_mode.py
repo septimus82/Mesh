@@ -1,8 +1,12 @@
+import builtins
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import arcade
 
+import engine.editor.input_router as input_router
 from engine.config import EngineConfig
+from engine.editor.editor_overlay_controller import EditorOverlayController
 from engine.editor_controller import EditorModeController
 
 
@@ -75,3 +79,72 @@ def test_editor_save():
     with patch("engine.editor_runtime.ops.json_io.write_json_atomic") as mock_write:
         controller.save_current_scene()
         mock_write.assert_called_with("test_scene.json", {"entities": []})
+
+
+def test_editor_controller_instantiates_with_creator_mode():
+    controller = EditorModeController(MockWindow())
+
+    assert hasattr(controller, "creator_mode")
+
+
+def test_editor_overlay_draw_inactive_creator_mode_does_not_raise():
+    editor = _overlay_editor(creator_active=False)
+
+    EditorOverlayController(editor).draw_overlay()
+
+
+def test_editor_overlay_draw_creator_mode_renderer_import_failure_does_not_raise(monkeypatch):
+    editor = _overlay_editor(creator_active=True)
+    original_import = builtins.__import__
+
+    def failing_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "engine.editor.creator_mode.creator_overlay_renderer":
+            raise RuntimeError("renderer import failed")
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", failing_import)
+
+    EditorOverlayController(editor).draw_overlay()
+
+
+def test_creator_mode_toggle_key_false_when_f5_missing(monkeypatch):
+    monkeypatch.setattr(input_router.optional_arcade, "arcade", SimpleNamespace(key=SimpleNamespace()))
+
+    assert input_router._is_creator_mode_toggle_key(65474, 0) is False
+
+
+def test_creator_mode_toggle_key_false_when_key_namespace_missing(monkeypatch):
+    monkeypatch.setattr(input_router.optional_arcade, "arcade", SimpleNamespace())
+
+    assert input_router._is_creator_mode_toggle_key(65474, 0) is False
+
+
+def test_creator_mode_toggle_key_false_when_arcade_missing(monkeypatch):
+    monkeypatch.setattr(input_router.optional_arcade, "arcade", None)
+
+    assert input_router._is_creator_mode_toggle_key(65474, 0) is False
+
+
+def _overlay_editor(*, creator_active: bool):
+    return SimpleNamespace(
+        active=True,
+        creator_mode=SimpleNamespace(active=creator_active),
+        drain_main_thread_dispatcher=lambda: None,
+        drain_live_bridge=lambda: None,
+        build=SimpleNamespace(tick=lambda: None),
+        build_session=SimpleNamespace(is_running=False),
+        play_session=SimpleNamespace(is_playing=False),
+        _tick_workspace_autosave=lambda: None,
+        _update_status=lambda: None,
+        debug_overlay=SimpleNamespace(draw_debug_overlay=lambda _text: None),
+        _overlay_text_obj=None,
+        palette_active=False,
+        hierarchy=SimpleNamespace(draw_hierarchy_panel=lambda: None),
+        dialogue_panel_active=False,
+        animation=SimpleNamespace(draw_animation_panel_if_active=lambda: None),
+        tile=SimpleNamespace(draw_tile_panel_if_active=lambda: None),
+        unsaved_confirm=SimpleNamespace(is_open=False),
+        tour=SimpleNamespace(is_active=False),
+        panels=SimpleNamespace(draw_panels=lambda: None),
+        window=SimpleNamespace(width=1280, height=720),
+    )
