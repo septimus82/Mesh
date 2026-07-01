@@ -18,7 +18,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
         {
             "name": "animations",
             "description": "Mapping of state name to a list of texture paths",
-            "type": "string",
+            "type": "object",
             "default": {},
         },
         {
@@ -212,8 +212,8 @@ class SpriteAnimatorBehaviour(Behaviour):
             self._override_timer = 0.0
 
         if self._auto_state_enabled:
-            vx = getattr(self.entity, "change_x", 0.0)
-            vy = getattr(self.entity, "change_y", 0.0)
+            vx = getattr(self.entity, "mesh_velocity_x", getattr(self.entity, "change_x", 0.0))
+            vy = getattr(self.entity, "mesh_velocity_y", getattr(self.entity, "change_y", 0.0))
             speed = (vx * vx + vy * vy) ** 0.5
             target_clip = self._resolve_directional_clip(speed > self._speed_threshold)
             self._set_clip_if_changed(target_clip)

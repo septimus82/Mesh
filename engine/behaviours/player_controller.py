@@ -97,6 +97,8 @@ class PlayerController(Behaviour):
             vy = (vy / length) * speed
             self._update_facing_from_velocity(vx, vy)
         self._sync_animation_state(vx, vy)
+        self.entity.mesh_velocity_x = vx
+        self.entity.mesh_velocity_y = vy
 
         # Physics Facade V1: Use pure physics model if possible
         scene_controller = getattr(self.window, "scene_controller", None)

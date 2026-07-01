@@ -107,3 +107,30 @@ def test_prefab_schema_rejects_unknown_sprite_sheet_keys() -> None:
         validate(payload, "prefab.schema.json", "assets/prefabs.json")
 
     assert "bogus" in str(exc_info.value)
+
+
+def test_scene_schema_accepts_inline_tile_layers_with_source_path() -> None:
+    payload = {
+        "name": "Start Scene",
+        "layers": [{"name": "background"}, {"name": "entities"}],
+        "entities": [],
+        "tilemap": {
+            "path": "assets/tilemaps/passability.json",
+            "collision_layer_id": "blocked",
+            "width": 2,
+            "height": 2,
+            "tilewidth": 48,
+            "tileheight": 48,
+            "tile_layers": [
+                {
+                    "id": "blocked",
+                    "z": -200,
+                    "collision": True,
+                    "draw": False,
+                    "tiles": [1, 0, 0, 1],
+                }
+            ],
+        },
+    }
+
+    assert validate(payload, "scene.schema.json", "scenes/start.json") is payload

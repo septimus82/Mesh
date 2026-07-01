@@ -48,6 +48,30 @@ def test_animator_auto_idle_walk_switching():
     assert animator.current_state == "walk"
 
 
+def test_animator_prefers_mesh_velocity_and_falls_back_to_arcade_velocity():
+    sprite = DummySprite()
+    config = {
+        "animations": {
+            "idle": ["a.png", "b.png"],
+            "walk": ["c.png", "d.png"],
+        },
+        "enable_auto_state": True,
+        "idle_clip": "idle",
+        "walk_clip": "walk",
+        "speed_threshold": 1.0,
+    }
+    animator = make_animator(sprite, config)
+
+    sprite.change_x = 5.0
+    animator.update(0.1)
+    assert animator.current_state == "walk"
+
+    sprite.mesh_velocity_x = 0.0
+    sprite.mesh_velocity_y = 0.0
+    animator.update(0.1)
+    assert animator.current_state == "idle"
+
+
 def test_animator_state_override_wins_temporarily():
     sprite = DummySprite()
     config = {
