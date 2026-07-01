@@ -8,7 +8,11 @@ import pytest
 
 import engine.optional_arcade as optional_arcade
 from engine.config import EngineConfig
-from engine.editor.creator_mode import CreatorModeController, build_creator_overlay_model
+from engine.editor.creator_mode import (
+    CreatorModeController,
+    build_creator_overlay_draw_commands,
+    build_creator_overlay_model,
+)
 from engine.editor.creator_mode.creator_inspector import build_creator_inspector
 from engine.editor.creator_mode.creator_terms import classify_entity_snapshot, friendly_engine_term
 from engine.editor_controller import EditorModeController
@@ -259,6 +263,7 @@ def test_overlay_model_from_inactive_snapshot() -> None:
     assert overlay.title == "Creator Mode"
     assert overlay.selected_kind == "Thing"
     assert overlay.selected_summary == "No object selected."
+    assert overlay.bottom_title == "Things to Fix"
 
 
 def test_overlay_model_from_active_snapshot() -> None:
@@ -315,6 +320,84 @@ def test_overlay_model_includes_warnings() -> None:
     overlay = build_creator_overlay_model(controller.build_snapshot())
 
     assert overlay.warnings == ("Door has no destination map.",)
+
+
+def test_inactive_overlay_renderer_path_produces_no_draw_commands() -> None:
+    model = build_creator_overlay_model(CreatorModeController().build_snapshot())
+
+    commands = build_creator_overlay_draw_commands(model, 1280, 720)
+
+    assert commands == ()
+
+
+def test_active_overlay_draw_commands_include_shell_content() -> None:
+    controller = CreatorModeController()
+    controller.show()
+    model = build_creator_overlay_model(controller.build_snapshot())
+
+    commands = build_creator_overlay_draw_commands(model, 1280, 720)
+    text = _command_text(commands)
+
+    assert "Creator Mode" in text
+    assert "Read-only preview" in text
+    assert "Save | Test Play | Fix Problems | Advanced Mode" in text
+    assert "Map" in text
+    assert "Light" in text
+    assert "Things to Fix" in text
+
+
+def test_active_overlay_draw_commands_include_inspector_fields() -> None:
+    controller = CreatorModeController(
+        SimpleNamespace(
+            selected_entity={
+                "name": "North Gate",
+                "behaviour_config": {"SceneExit": {"target_scene": "town"}},
+            }
+        )
+    )
+    controller.show()
+    model = build_creator_overlay_model(controller.build_snapshot())
+
+    commands = build_creator_overlay_draw_commands(model, 1280, 720)
+    text = _command_text(commands)
+
+    assert "Door" in text
+    assert "North Gate" in text
+    assert "Destination Map: town" in text
+
+
+def test_active_overlay_draw_commands_include_warning_text() -> None:
+    controller = CreatorModeController(
+        SimpleNamespace(
+            selected_entity={
+                "behaviours": ["SceneExit"],
+                "behaviour_config": {"SceneExit": {"target_spawn": "entry"}},
+            }
+        )
+    )
+    controller.show()
+    model = build_creator_overlay_model(controller.build_snapshot())
+
+    commands = build_creator_overlay_draw_commands(model, 1280, 720)
+    text = _command_text(commands)
+
+    assert "Door has no destination map." in text
+
+
+def test_overlay_draw_command_build_does_not_mutate_input_snapshot() -> None:
+    entity_data = {
+        "name": "Torch",
+        "behaviours": ["LightSource"],
+        "behaviour_config": {"LightSource": {"radius": 32}},
+    }
+    before = deepcopy(entity_data)
+    controller = CreatorModeController(SimpleNamespace(selected_entity=entity_data))
+    controller.show()
+
+    model = build_creator_overlay_model(controller.build_snapshot())
+    build_creator_overlay_draw_commands(model, 1280, 720)
+
+    assert entity_data == before
 
 
 def test_editor_integration_owns_creator_mode_controller_without_mutating_scene_data() -> None:
@@ -409,6 +492,10 @@ def _field(inspector, label: str):
 
 def _field_value(inspector, label: str) -> str:
     return _field(inspector, label).value
+
+
+def _command_text(commands) -> str:
+    return "\n".join(command.text for command in commands if command.kind == "text")
 
 
 class _MockWindow:
