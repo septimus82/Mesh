@@ -23,6 +23,7 @@ from .behaviours.utils import (
     ZONE_TARGET_HITBOX,
     ZONE_TARGET_TRIGGER,
 )
+from .editor.creator_mode import CreatorModeController
 from .editor_palette import DEFAULT_PREFAB_PATH
 from .editor_runtime import ops as editor_ops
 from .import_tools import repair_package_submodule_attr
@@ -258,6 +259,7 @@ class EditorModeController:
     keymap: EditorKeymapController
     draw: EditorDrawController
     overlay: EditorOverlayController
+    creator_mode: CreatorModeController
     prefab: EditorPrefabController
     shape: EditorShapeController
     entity_ops: EditorEntityOpsController
@@ -332,6 +334,7 @@ class EditorModeController:
         self.confirm_modal_overlay: Any = None
         self.project_context_menu_overlay: Any = None
         self.session: EditorSessionController
+        self.creator_mode = CreatorModeController(self)
         _bootstrap_dependencies(self)
         _bootstrap_browser_state(self)
 
@@ -782,6 +785,14 @@ class EditorModeController:
     def draw_overlay(self) -> None:
         """Draws in screen space (UI)."""
         self.overlay.draw_overlay()
+
+    def toggle_creator_mode(self) -> bool:
+        """Toggle the read-only Creator Mode shell."""
+        return self.creator_mode.toggle()
+
+    def creator_mode_snapshot(self) -> Any:
+        """Return the read-only Creator Mode snapshot for UI rendering."""
+        return self.creator_mode.build_snapshot()
 
     def _resolve_prefab_source_path(self, prefab_id: str) -> tuple["Path", bool]:
         return self.prefab.resolve_prefab_source_path(prefab_id)
