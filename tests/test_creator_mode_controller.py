@@ -2,12 +2,16 @@ from __future__ import annotations
 
 from copy import deepcopy
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
-from engine.editor.creator_mode import CreatorModeController
+import engine.optional_arcade as optional_arcade
+from engine.config import EngineConfig
+from engine.editor.creator_mode import CreatorModeController, build_creator_overlay_model
 from engine.editor.creator_mode.creator_inspector import build_creator_inspector
 from engine.editor.creator_mode.creator_terms import classify_entity_snapshot, friendly_engine_term
+from engine.editor_controller import EditorModeController
 
 pytestmark = pytest.mark.fast
 
@@ -246,6 +250,118 @@ def test_build_creator_inspector_does_not_mutate_input_snapshot() -> None:
     assert entity_data == before
 
 
+def test_overlay_model_from_inactive_snapshot() -> None:
+    controller = CreatorModeController()
+
+    overlay = build_creator_overlay_model(controller.build_snapshot())
+
+    assert overlay.active is False
+    assert overlay.title == "Creator Mode"
+    assert overlay.selected_kind == "Thing"
+    assert overlay.selected_summary == "No object selected."
+
+
+def test_overlay_model_from_active_snapshot() -> None:
+    controller = CreatorModeController()
+    controller.show()
+
+    overlay = build_creator_overlay_model(controller.build_snapshot())
+
+    assert overlay.active is True
+    assert overlay.title == "Creator Mode"
+
+
+def test_overlay_model_includes_top_actions_and_left_tools() -> None:
+    overlay = build_creator_overlay_model(CreatorModeController().build_snapshot())
+
+    assert overlay.top_actions == ("Save", "Test Play", "Fix Problems", "Advanced Mode")
+    assert overlay.left_tools == (
+        "Map",
+        "Person",
+        "Door",
+        "Monster Area",
+        "Battle",
+        "Quest",
+        "Item",
+        "Light",
+    )
+
+
+def test_overlay_model_includes_inspector_fields() -> None:
+    controller = CreatorModeController(
+        SimpleNamespace(
+            selected_entity={
+                "name": "North Gate",
+                "behaviour_config": {"SceneExit": {"target_scene": "town"}},
+            }
+        )
+    )
+
+    overlay = build_creator_overlay_model(controller.build_snapshot())
+
+    assert ("Destination Map", "town", False) in overlay.inspector_fields
+
+
+def test_overlay_model_includes_warnings() -> None:
+    controller = CreatorModeController(
+        SimpleNamespace(
+            selected_entity={
+                "behaviours": ["SceneExit"],
+                "behaviour_config": {"SceneExit": {"target_spawn": "entry"}},
+            }
+        )
+    )
+
+    overlay = build_creator_overlay_model(controller.build_snapshot())
+
+    assert overlay.warnings == ("Door has no destination map.",)
+
+
+def test_editor_integration_owns_creator_mode_controller_without_mutating_scene_data() -> None:
+    window = _MockWindow()
+    entity_data = {
+        "name": "Town Door",
+        "behaviour_config": {"SceneExit": {"destination": "town"}},
+    }
+    before = deepcopy(entity_data)
+    editor = EditorModeController(window)
+    editor.selected_entity = SimpleNamespace(mesh_entity_data=entity_data)
+
+    snapshot = editor.creator_mode_snapshot()
+
+    assert isinstance(editor.creator_mode, CreatorModeController)
+    assert snapshot.selected_kind == "Door"
+    assert entity_data == before
+
+
+def test_editor_toggle_creator_mode_flips_active_state() -> None:
+    editor = EditorModeController(_MockWindow())
+
+    assert editor.creator_mode.active is False
+    assert editor.toggle_creator_mode() is True
+    assert editor.creator_mode.active is True
+    assert editor.toggle_creator_mode() is False
+
+
+def test_editor_f5_toggles_creator_mode_when_editor_active() -> None:
+    editor = EditorModeController(_MockWindow())
+    editor.active = True
+
+    consumed = editor.handle_input(optional_arcade.arcade.key.F5, 0)
+
+    assert consumed is True
+    assert editor.creator_mode.active is True
+
+
+def test_editor_f5_does_not_toggle_creator_mode_when_editor_inactive() -> None:
+    editor = EditorModeController(_MockWindow())
+
+    consumed = editor.handle_input(optional_arcade.arcade.key.F5, 0)
+
+    assert consumed is False
+    assert editor.creator_mode.active is False
+
+
 def test_friendly_engine_terms() -> None:
     assert friendly_engine_term("Entity") == "Thing"
     assert friendly_engine_term("Behaviour") == "What it does"
@@ -293,3 +409,13 @@ def _field(inspector, label: str):
 
 def _field_value(inspector, label: str) -> str:
     return _field(inspector, label).value
+
+
+class _MockWindow:
+    def __init__(self) -> None:
+        cfg = EngineConfig()
+        self.width = cfg.width
+        self.height = cfg.height
+        self.paused = False
+        self.scene_controller = MagicMock()
+        self.screen_to_world = MagicMock(return_value=(100, 100))

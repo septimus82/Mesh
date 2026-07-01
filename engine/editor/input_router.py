@@ -15,6 +15,12 @@ def handle_mouse_click(self: Any, x: float, y: float, button: int, modifiers: in
 
 def handle_input(self: Any, key: int, modifiers: int) -> bool:
     """Handle keyboard input when editor is active. Returns True if consumed."""
+    if getattr(self, "active", False) and key == optional_arcade.arcade.key.F5 and not modifiers:
+        toggle = getattr(self, "toggle_creator_mode", None)
+        if callable(toggle):
+            toggle()
+            return True
+
     panels = getattr(self, "panels", None)
     if panels is not None and panels.dispatch_input(key, modifiers):
         return True
