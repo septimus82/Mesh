@@ -64,21 +64,38 @@ class AssetManager:
         if columns <= 0:
             columns = 1
 
-        try:
-            # We need to load enough frames to reach start_frame + total_frames
-            count_to_load = start_frame + total_frames
+        count_to_load = start_frame + total_frames
 
-            textures = cast(
-                list[optional_arcade.arcade.Texture],
-                optional_arcade.arcade.load_spritesheet(
-                    resolved_path,
-                    frame_width,
-                    frame_height,
-                    columns,
-                    count_to_load,
-                    0,  # margin
-                ),
-            )
+        try:
+            try:
+                sheet = optional_arcade.arcade.load_spritesheet(resolved_path)
+            except TypeError:
+                sheet = None
+
+            get_texture_grid = getattr(sheet, "get_texture_grid", None) if sheet is not None else None
+            if callable(get_texture_grid):
+                textures = list(
+                    get_texture_grid(
+                        (frame_width, frame_height),
+                        columns,
+                        count_to_load,
+                        margin=(0, 0, 0, 0),
+                    )
+                )
+            else:
+                # Older Arcade versions and the headless fallback expose the
+                # pre-3.x helper signature directly.
+                textures = cast(
+                    list[optional_arcade.arcade.Texture],
+                    optional_arcade.arcade.load_spritesheet(
+                        resolved_path,
+                        frame_width,
+                        frame_height,
+                        columns,
+                        count_to_load,
+                        0,  # margin
+                    ),
+                )
 
             # Slice the specific range requested
             if start_frame > 0:
