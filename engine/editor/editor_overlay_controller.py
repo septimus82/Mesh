@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
+from engine.editor.creator_mode.creator_overlay_renderer import draw_creator_overlay
 from engine.ui_overlays.common import _draw_rectangle_filled
 
 
@@ -81,6 +82,8 @@ class EditorOverlayController:
             panels.draw_panels()
         elif hasattr(editor, "ui_layers"):
             editor.ui_layers.draw_all()
+
+        draw_creator_overlay(editor)
 
     def _draw_playtesting_overlay(self) -> None:
         window = getattr(self._editor, "window", None)

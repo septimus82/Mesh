@@ -28,6 +28,7 @@ class CreatorOverlayModel:
     selected_summary: str
     inspector_fields: tuple[tuple[str, str, bool], ...]
     warnings: tuple[str, ...]
+    bottom_title: str
 
 
 def build_creator_overlay_model(snapshot: CreatorModeSnapshot) -> CreatorOverlayModel:
@@ -47,4 +48,5 @@ def build_creator_overlay_model(snapshot: CreatorModeSnapshot) -> CreatorOverlay
             for field in inspector.fields
         ),
         warnings=tuple(inspector.warnings),
+        bottom_title=str(snapshot.bottom_panel_title or "Things to Fix"),
     )
