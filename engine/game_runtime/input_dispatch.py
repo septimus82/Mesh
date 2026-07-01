@@ -8,9 +8,34 @@ if TYPE_CHECKING:
     from engine.game import GameWindow
 
 
+def _normalized_function_modifiers(modifiers: int) -> int:
+    key_ns = getattr(optional_arcade.arcade, "key", None)
+    ignored = 0
+    for name in ("MOD_CAPSLOCK", "MOD_NUMLOCK", "MOD_SCROLLLOCK"):
+        ignored |= int(getattr(key_ns, name, 0) or 0)
+    return int(modifiers or 0) & ~ignored
+
+
+def _is_plain_function_key(key: int, modifiers: int, expected_key: int | None) -> bool:
+    return expected_key is not None and key == expected_key and _normalized_function_modifiers(modifiers) == 0
+
+
 def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noqa: ARG001
     editor = getattr(window, "editor_controller", None)
     editor_active = editor is not None and getattr(editor, "active", False)
+    arcade_key = getattr(optional_arcade.arcade, "key", None)
+
+    if _is_plain_function_key(key, modifiers, getattr(arcade_key, "F4", None)):
+        toggle = getattr(editor, "toggle", None) if editor is not None else None
+        if callable(toggle):
+            toggle()
+        return
+
+    if editor_active and _is_plain_function_key(key, modifiers, getattr(arcade_key, "F5", None)):
+        toggle_creator = getattr(editor, "toggle_creator_mode", None)
+        if callable(toggle_creator):
+            toggle_creator()
+        return
 
     # Console toggle should work even when menus/UI are capturing input.
     if key in (optional_arcade.arcade.key.GRAVE, optional_arcade.arcade.key.INSERT):

@@ -18,6 +18,7 @@ def _window(editor: object, calls: list[str]) -> SimpleNamespace:
         ui_controller=SimpleNamespace(on_key_press=lambda *_args: calls.append("ui") or True),
         settings_overlay=SimpleNamespace(toggle=lambda: calls.append("settings")),
         input_controller=SimpleNamespace(on_key_press=lambda *_args: calls.append("input")),
+        engine_config=SimpleNamespace(debug_mode=False),
         game_over=False,
         paused=False,
         pause_menu=SimpleNamespace(toggle=lambda: calls.append("pause"), visible=False),
@@ -92,6 +93,130 @@ def test_unhandled_editor_key_reaches_input_controller_without_game_ui_capture()
         handle_input=lambda *_args: calls.append("editor") or False,
     )
 
-    input_dispatch.on_key_press(as_any(_window(editor, calls)), optional_arcade.arcade.key.F4, 0)
+    input_dispatch.on_key_press(as_any(_window(editor, calls)), optional_arcade.arcade.key.A, 0)
 
     assert calls == ["editor", "input"]
+
+
+def test_f4_directly_toggles_editor_before_input_controller() -> None:
+    calls: list[str] = []
+    editor = SimpleNamespace(active=False, toggle=lambda: calls.append("toggle"))
+
+    input_dispatch.on_key_press(as_any(_window(editor, calls)), optional_arcade.arcade.key.F4, 0)
+
+    assert calls == ["toggle"]
+
+
+def test_f4_direct_toggle_ignores_capslock_modifier() -> None:
+    calls: list[str] = []
+    editor = SimpleNamespace(active=False, toggle=lambda: calls.append("toggle"))
+
+    input_dispatch.on_key_press(
+        as_any(_window(editor, calls)),
+        optional_arcade.arcade.key.F4,
+        optional_arcade.arcade.key.MOD_CAPSLOCK,
+    )
+
+    assert calls == ["toggle"]
+
+
+def test_f4_direct_toggle_ignores_numlock_modifier() -> None:
+    calls: list[str] = []
+    editor = SimpleNamespace(active=False, toggle=lambda: calls.append("toggle"))
+
+    input_dispatch.on_key_press(
+        as_any(_window(editor, calls)),
+        optional_arcade.arcade.key.F4,
+        optional_arcade.arcade.key.MOD_NUMLOCK,
+    )
+
+    assert calls == ["toggle"]
+
+
+def test_f4_direct_toggle_blocks_real_shift_modifier() -> None:
+    calls: list[str] = []
+    editor = SimpleNamespace(active=False, toggle=lambda: calls.append("toggle"))
+
+    input_dispatch.on_key_press(
+        as_any(_window(editor, calls)),
+        optional_arcade.arcade.key.F4,
+        optional_arcade.arcade.key.MOD_SHIFT,
+    )
+
+    assert calls == ["ui"]
+
+
+def test_f5_toggles_creator_mode_when_editor_active_before_input_controller() -> None:
+    calls: list[str] = []
+    creator = SimpleNamespace(active=False)
+
+    def toggle_creator() -> None:
+        creator.active = not creator.active
+        calls.append("creator")
+
+    editor = SimpleNamespace(
+        active=True,
+        creator_mode=creator,
+        toggle_creator_mode=toggle_creator,
+        build_session=SimpleNamespace(is_running=False),
+        play_session=SimpleNamespace(is_playing=False),
+        handle_input=lambda *_args: calls.append("editor") or False,
+    )
+
+    input_dispatch.on_key_press(as_any(_window(editor, calls)), optional_arcade.arcade.key.F5, 0)
+
+    assert calls == ["creator"]
+    assert creator.active is True
+
+
+def test_f5_creator_toggle_ignores_capslock_when_editor_active() -> None:
+    calls: list[str] = []
+    creator = SimpleNamespace(active=False)
+
+    def toggle_creator() -> None:
+        creator.active = not creator.active
+        calls.append("creator")
+
+    editor = SimpleNamespace(
+        active=True,
+        creator_mode=creator,
+        toggle_creator_mode=toggle_creator,
+        build_session=SimpleNamespace(is_running=False),
+        play_session=SimpleNamespace(is_playing=False),
+        handle_input=lambda *_args: calls.append("editor") or False,
+    )
+
+    input_dispatch.on_key_press(
+        as_any(_window(editor, calls)),
+        optional_arcade.arcade.key.F5,
+        optional_arcade.arcade.key.MOD_CAPSLOCK,
+    )
+
+    assert calls == ["creator"]
+    assert creator.active is True
+
+
+def test_f5_editor_active_does_not_reach_input_controller_or_quicksave_route() -> None:
+    calls: list[str] = []
+    editor = SimpleNamespace(
+        active=True,
+        toggle_creator_mode=lambda: calls.append("creator"),
+        build_session=SimpleNamespace(is_running=False),
+        play_session=SimpleNamespace(is_playing=False),
+        handle_input=lambda *_args: calls.append("editor") or False,
+    )
+
+    input_dispatch.on_key_press(as_any(_window(editor, calls)), optional_arcade.arcade.key.F5, 0)
+
+    assert calls == ["creator"]
+
+
+def test_f5_editor_inactive_still_reaches_existing_input_controller_path() -> None:
+    calls: list[str] = []
+    editor = SimpleNamespace(active=False)
+    window = _window(editor, calls)
+    window.ui_controller = SimpleNamespace(on_key_press=lambda *_args: False)
+
+    input_dispatch.on_key_press(as_any(window), optional_arcade.arcade.key.F5, 0)
+
+    assert calls == ["input"]
