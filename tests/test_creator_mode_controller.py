@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from engine.editor.creator_mode import CreatorModeController
+from engine.editor.creator_mode.creator_inspector import build_creator_inspector
 from engine.editor.creator_mode.creator_terms import classify_entity_snapshot, friendly_engine_term
 
 pytestmark = pytest.mark.fast
@@ -69,6 +70,182 @@ def test_snapshot_summarizes_selected_entity_without_mutation() -> None:
     assert entity_data == before
 
 
+def test_no_selection_inspector() -> None:
+    inspector = build_creator_inspector(None)
+
+    assert inspector.kind == "Thing"
+    assert inspector.title == ""
+    assert inspector.summary == "No object selected."
+    assert inspector.fields == ()
+    assert inspector.warnings == ()
+
+
+def test_door_inspector_with_destination_spawn_and_trigger() -> None:
+    inspector = build_creator_inspector(
+        {
+            "name": "North Gate",
+            "behaviours": ["SceneTransition"],
+            "behaviour_config": {
+                "SceneTransition": {
+                    "target_scene": "forest",
+                    "target_spawn_id": "south_entry",
+                    "listen_event": "interact",
+                    "locked": False,
+                }
+            },
+        }
+    )
+
+    assert inspector.kind == "Door"
+    assert _field_value(inspector, "Destination Map") == "forest"
+    assert _field_value(inspector, "Arrival Point") == "south_entry"
+    assert _field_value(inspector, "Trigger") == "interact"
+    assert _field_value(inspector, "Locked") == "No"
+    assert inspector.warnings == ()
+
+
+def test_door_inspector_warns_when_destination_missing() -> None:
+    inspector = build_creator_inspector(
+        {
+            "behaviours": ["SceneExit"],
+            "behaviour_config": {"SceneExit": {"target_spawn": "entry"}},
+        }
+    )
+
+    assert inspector.kind == "Door"
+    assert _field(inspector, "Destination Map").missing is True
+    assert inspector.warnings == ("Door has no destination map.",)
+
+
+def test_person_inspector_from_dialogue_and_quest_giver() -> None:
+    inspector = build_creator_inspector(
+        {
+            "name": "Mayor",
+            "behaviours": ["Dialogue", "QuestGiver"],
+            "behaviour_config": {
+                "Dialogue": {"conversation_id": "mayor_intro"},
+                "QuestGiver": {"quest_id": "find_lantern"},
+            },
+        }
+    )
+
+    assert inspector.kind == "Person"
+    assert _field_value(inspector, "Conversation") == "mayor_intro"
+    assert _field_value(inspector, "Quest") == "find_lantern"
+
+
+def test_monster_area_inspector_from_config() -> None:
+    inspector = build_creator_inspector(
+        {
+            "behaviours": ["MonsterEncounterZone"],
+            "behaviour_config": {
+                "MonsterEncounterZone": {
+                    "encounter_set": "forest_day",
+                    "monster": "slime",
+                    "chance": 0.25,
+                    "cooldown": 8,
+                }
+            },
+        }
+    )
+
+    assert inspector.kind == "Monster Area"
+    assert _field_value(inspector, "Encounter Set") == "forest_day"
+    assert _field_value(inspector, "Monster") == "slime"
+    assert _field_value(inspector, "Chance") == "0.25"
+    assert _field_value(inspector, "Cooldown") == "8"
+
+
+def test_shopkeeper_inspector_from_vendor_config() -> None:
+    inspector = build_creator_inspector(
+        {
+            "behaviours": ["Vendor"],
+            "behaviour_config": {"Vendor": {"stock": ["potion", "ether"], "currency": "gold"}},
+        }
+    )
+
+    assert inspector.kind == "Shopkeeper"
+    assert _field_value(inspector, "Stock") == "potion, ether"
+    assert _field_value(inspector, "Currency") == "gold"
+
+
+def test_enemy_inspector_from_health_and_enemy_ai() -> None:
+    inspector = build_creator_inspector(
+        {
+            "behaviours": ["Health", "EnemyAI"],
+            "behaviour_config": {
+                "Health": {"max_hp": 30},
+                "EnemyAI": {"target_tag": "player"},
+            },
+        }
+    )
+
+    assert inspector.kind == "Enemy"
+    assert _field_value(inspector, "Health") == "30"
+    assert _field_value(inspector, "AI") == "EnemyAI"
+    assert _field_value(inspector, "Target") == "player"
+
+
+def test_light_inspector() -> None:
+    inspector = build_creator_inspector(
+        {
+            "behaviours": ["LightSource"],
+            "behaviour_config": {
+                "LightSource": {
+                    "light_type": "point",
+                    "color": "#ffeeaa",
+                    "radius": 96,
+                    "intensity": 0.8,
+                }
+            },
+        }
+    )
+
+    assert inspector.kind == "Light"
+    assert _field_value(inspector, "Type") == "point"
+    assert _field_value(inspector, "Color") == "#ffeeaa"
+    assert _field_value(inspector, "Radius") == "96"
+    assert _field_value(inspector, "Intensity") == "0.8"
+
+
+def test_fallback_thing_inspector() -> None:
+    inspector = build_creator_inspector({"name": "Rock", "behaviours": ["StaticSprite"]})
+
+    assert inspector.kind == "Thing"
+    assert _field_value(inspector, "Name") == "Rock"
+    assert _field_value(inspector, "Behaviours") == "StaticSprite"
+
+
+def test_controller_snapshot_includes_inspector() -> None:
+    editor = SimpleNamespace(
+        selected_entity={
+            "name": "Town Door",
+            "behaviour_config": {"SceneExit": {"destination": "town"}},
+        }
+    )
+    controller = CreatorModeController(editor)
+
+    snapshot = controller.build_snapshot()
+
+    assert snapshot.inspector.kind == "Door"
+    assert snapshot.selected_kind == snapshot.inspector.kind
+    assert snapshot.selected_title == snapshot.inspector.title
+    assert _field_value(snapshot.inspector, "Destination Map") == "town"
+
+
+def test_build_creator_inspector_does_not_mutate_input_snapshot() -> None:
+    entity_data = {
+        "name": "Torch",
+        "behaviours": ["LightSource"],
+        "behaviour_config": {"LightSource": {"radius": 32}},
+    }
+    before = deepcopy(entity_data)
+
+    build_creator_inspector(entity_data)
+
+    assert entity_data == before
+
+
 def test_friendly_engine_terms() -> None:
     assert friendly_engine_term("Entity") == "Thing"
     assert friendly_engine_term("Behaviour") == "What it does"
@@ -108,3 +285,11 @@ def test_light_classification() -> None:
 def test_fallback_classification_is_thing() -> None:
     assert classify_entity_snapshot({"name": "Rock"}) == "Thing"
     assert classify_entity_snapshot(None) == "Thing"
+
+
+def _field(inspector, label: str):
+    return next(field for field in inspector.fields if field.label == label)
+
+
+def _field_value(inspector, label: str) -> str:
+    return _field(inspector, label).value

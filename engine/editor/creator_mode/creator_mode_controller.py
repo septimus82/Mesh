@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from .creator_inspector import build_creator_inspector
 from .creator_state import CreatorModeSnapshot
-from .creator_terms import classify_entity_snapshot, selected_title, summarize_entity_snapshot
 
 
 class CreatorModeController:
@@ -32,11 +32,13 @@ class CreatorModeController:
 
     def build_snapshot(self) -> CreatorModeSnapshot:
         selected = self._selected_entity_snapshot()
+        inspector = build_creator_inspector(selected)
         return CreatorModeSnapshot(
             active=self._active,
-            selected_kind=classify_entity_snapshot(selected),
-            selected_title=selected_title(selected),
-            selected_summary=summarize_entity_snapshot(selected),
+            selected_kind=inspector.kind,
+            selected_title=inspector.title,
+            selected_summary=inspector.summary,
+            inspector=inspector,
         )
 
     def _selected_entity_snapshot(self) -> Mapping[str, Any] | None:
