@@ -246,6 +246,8 @@ Expected tests:
 - CREATOR-1f does not accept/apply proposals; UI wiring remains future work.
 - CREATOR-1g adds a read-only staging readiness model.
 - CREATOR-1g does not stage or apply; UI wiring remains future work.
+- CREATOR-1h adds a read-only door panel presentation model.
+- CREATOR-1h does not render, stage, or apply; UI rendering/wiring remains future work.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.
