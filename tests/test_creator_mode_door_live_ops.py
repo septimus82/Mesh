@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import subprocess
 import sys
 
@@ -81,6 +82,38 @@ def test_existing_door_converts_scene_exit_to_supported_live_op_schema() -> None
             ),
         ),
     )
+
+
+def test_result_op_and_params_are_plain_dicts() -> None:
+    workflow = build_creator_door_workflow(_existing_door_request())
+
+    result = build_creator_door_live_ops(workflow)
+
+    assert isinstance(result.ops[0], dict)
+    assert isinstance(result.ops[0]["params"], dict)
+
+
+def test_result_ops_can_be_deep_copied_like_bridge_ops() -> None:
+    workflow = build_creator_door_workflow(_existing_door_request())
+    result = build_creator_door_live_ops(workflow)
+
+    copied = copy.deepcopy(list(result.ops))
+
+    assert copied == list(result.ops)
+
+
+def test_adapter_output_is_bridge_compatible_shape() -> None:
+    workflow = build_creator_door_workflow(_existing_door_request())
+    result = build_creator_door_live_ops(workflow)
+
+    ops = list(result.ops)
+
+    assert isinstance(ops, list)
+    assert isinstance(ops[0], dict)
+    assert ops[0]["type"] == "set_behaviour_params"
+    assert isinstance(ops[0]["params"], dict)
+    assert "entity_id" in ops[0]
+    assert "behaviour_name" in ops[0]
 
 
 def test_locked_existing_door_includes_required_flag_in_live_op_payload() -> None:

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from types import MappingProxyType
 
 from .creator_door_plan import CreatorDoorPlanOperation
 from .creator_door_workflow import CreatorDoorWorkflowModel
@@ -20,7 +19,7 @@ class CreatorDoorLiveOpsResult:
     """Read-only conversion result for existing live-op proposal dictionaries."""
 
     ok: bool
-    ops: tuple[Mapping[str, object], ...]
+    ops: tuple[dict[str, object], ...]
     errors: tuple[str, ...]
     warnings: tuple[str, ...]
 
@@ -80,11 +79,11 @@ def build_creator_door_live_ops(
         "scene_path": _text(payload, "source_scene"),
         "entity_id": source_entity_id,
         "behaviour_name": "SceneExit",
-        "params": MappingProxyType(params),
+        "params": dict(params),
     }
     return CreatorDoorLiveOpsResult(
         ok=True,
-        ops=(MappingProxyType(op),),
+        ops=(op,),
         errors=(),
         warnings=warnings,
     )
