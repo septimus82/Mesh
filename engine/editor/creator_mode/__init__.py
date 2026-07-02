@@ -14,6 +14,12 @@ from .creator_door_preview import (
     CreatorDoorPreviewStep,
     build_creator_door_preview,
 )
+from .creator_door_workflow import (
+    CreatorDoorWorkflowModel,
+    CreatorDoorWorkflowRequest,
+    build_creator_door_workflow,
+    build_creator_door_workflow_from_plan_request,
+)
 from .creator_inspector import CreatorInspectorField, CreatorInspectorModel, build_creator_inspector
 from .creator_mode_controller import CreatorModeController
 from .creator_overlay import CreatorOverlayLine, CreatorOverlayModel, build_creator_overlay_model
@@ -29,12 +35,16 @@ __all__ = [
     "CreatorDoorPreviewAction",
     "CreatorDoorPreviewModel",
     "CreatorDoorPreviewStep",
+    "CreatorDoorWorkflowModel",
+    "CreatorDoorWorkflowRequest",
     "CreatorModeController",
     "CreatorModeSnapshot",
     "CreatorOverlayLine",
     "CreatorOverlayModel",
     "build_creator_door_plan",
     "build_creator_door_preview",
+    "build_creator_door_workflow",
+    "build_creator_door_workflow_from_plan_request",
     "build_creator_inspector",
     "build_creator_overlay_model",
     "classify_entity_snapshot",
