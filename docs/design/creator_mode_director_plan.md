@@ -248,6 +248,8 @@ Expected tests:
 - CREATOR-1g does not stage or apply; UI wiring remains future work.
 - CREATOR-1h adds a read-only door panel presentation model.
 - CREATOR-1h does not render, stage, or apply; UI rendering/wiring remains future work.
+- CREATOR-1i renders the door panel read-only in Creator Mode.
+- CREATOR-1i does not stage, apply, or add clickable actions; manual F4/F5 dogfood is required.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.
