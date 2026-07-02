@@ -235,6 +235,9 @@ Expected tests:
 - Door Plan Preview Model is pure.
 - It only formats plans for human review.
 - Stage/Apply actions remain disabled.
+- Door Workflow Model combines the door plan and preview.
+- It remains pure/read-only.
+- It still does not stage or apply changes.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.
 - Proposal staging must be explicit and visible.
