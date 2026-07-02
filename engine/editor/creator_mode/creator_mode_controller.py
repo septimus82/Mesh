@@ -7,6 +7,7 @@ from typing import Any
 
 from .creator_door_panel import build_creator_door_panel
 from .creator_door_selection import build_creator_door_request_from_selection
+from .creator_door_staging import CreatorDoorStagingResult, stage_creator_door_proposal
 from .creator_door_workflow import build_creator_door_workflow
 from .creator_inspector import build_creator_inspector
 from .creator_state import CreatorModeSnapshot
@@ -32,6 +33,23 @@ class CreatorModeController:
 
     def hide(self) -> None:
         self._active = False
+
+    def stage_selected_door_proposal(self) -> CreatorDoorStagingResult:
+        """Stage a door proposal for the currently selected door entity."""
+
+        selected = self._selected_entity_snapshot()
+        request = build_creator_door_request_from_selection(
+            selected,
+            source_scene=self._current_scene_path(),
+        )
+        if request is None:
+            return CreatorDoorStagingResult(
+                ok=False,
+                errors=("No stageable door is selected.",),
+            )
+
+        workflow = build_creator_door_workflow(request)
+        return stage_creator_door_proposal(workflow, self._proposal_bridge())
 
     def build_snapshot(self) -> CreatorModeSnapshot:
         selected = self._selected_entity_snapshot()
