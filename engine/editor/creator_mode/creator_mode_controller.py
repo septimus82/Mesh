@@ -5,10 +5,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from .creator_door_panel import build_creator_door_panel
+from .creator_door_panel import (
+    CreatorDoorPanelAction,
+    CreatorDoorPanelModel,
+    build_creator_door_panel,
+)
 from .creator_door_selection import build_creator_door_request_from_selection
 from .creator_door_staging import CreatorDoorStagingResult, stage_creator_door_proposal
-from .creator_door_workflow import build_creator_door_workflow
+from .creator_door_workflow import CreatorDoorWorkflowRequest, build_creator_door_workflow
 from .creator_inspector import build_creator_inspector
 from .creator_state import CreatorModeSnapshot
 
@@ -23,6 +27,8 @@ class CreatorModeController:
         self._active = False
         self._last_action_message = ""
         self._last_action_ok: bool | None = None
+        self._last_staged_door_key = ""
+        self._last_staged_proposal_id = ""
 
     @property
     def last_action_message(self) -> str:
@@ -63,8 +69,23 @@ class CreatorModeController:
                 errors=("No stageable door is selected.",),
             )
 
+        request_key = self._door_request_key(request)
+        if request_key == self._last_staged_door_key and self._last_staged_proposal_id:
+            duplicate = CreatorDoorStagingResult(
+                ok=False,
+                errors=(f"Door proposal already staged: {self._last_staged_proposal_id}",),
+            )
+            self._store_staging_result(duplicate)
+            return duplicate
+
         workflow = build_creator_door_workflow(request)
-        return stage_creator_door_proposal(workflow, self._proposal_bridge())
+        result = stage_creator_door_proposal(workflow, self._proposal_bridge())
+        if result.ok:
+            proposal_id = str(result.proposal_id or "").strip()
+            if proposal_id:
+                self._last_staged_door_key = request_key
+                self._last_staged_proposal_id = proposal_id
+        return result
 
     def handle_overlay_click(self, x: float, y: float) -> CreatorDoorStagingResult | None:
         """Handle a Creator Mode overlay click when it hits an enabled action."""
@@ -104,6 +125,8 @@ class CreatorModeController:
     def _clear_last_action_state(self) -> None:
         self._last_action_message = ""
         self._last_action_ok = None
+        self._last_staged_door_key = ""
+        self._last_staged_proposal_id = ""
 
     def _store_staging_result(self, result: CreatorDoorStagingResult) -> None:
         if result.ok:
@@ -148,7 +171,52 @@ class CreatorModeController:
         if request is None:
             return None
         workflow = build_creator_door_workflow(request)
-        return build_creator_door_panel(workflow, self._proposal_bridge())
+        panel = build_creator_door_panel(workflow, self._proposal_bridge())
+        return self._apply_duplicate_stage_guard_to_panel(panel, request)
+
+    def _door_request_key(self, request: CreatorDoorWorkflowRequest) -> str:
+        """Stable key for duplicate-stage detection."""
+
+        return "|".join(
+            (
+                str(request.source_scene or ""),
+                str(request.source_entity_id or ""),
+                str(request.destination_scene or ""),
+                str(request.destination_spawn_id or ""),
+                str(request.trigger or ""),
+                "1" if request.locked else "0",
+                str(request.required_flag or ""),
+            )
+        )
+
+    def _apply_duplicate_stage_guard_to_panel(
+        self,
+        panel: CreatorDoorPanelModel,
+        request: CreatorDoorWorkflowRequest,
+    ) -> CreatorDoorPanelModel:
+        if not self._last_staged_proposal_id:
+            return panel
+        if self._door_request_key(request) != self._last_staged_door_key:
+            return panel
+
+        reason = f"Already staged: {self._last_staged_proposal_id}"
+        actions = tuple(
+            CreatorDoorPanelAction(
+                label=action.label,
+                enabled=False,
+                reason=reason,
+            )
+            if action.label == "Stage Proposal"
+            else action
+            for action in panel.actions
+        )
+        return CreatorDoorPanelModel(
+            title=panel.title,
+            status=panel.status,
+            summary=panel.summary,
+            sections=panel.sections,
+            actions=actions,
+        )
 
     def _current_scene_path(self) -> str:
         scene_controller = getattr(getattr(self._editor, "window", None), "scene_controller", None)
