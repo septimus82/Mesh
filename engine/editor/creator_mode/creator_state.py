@@ -31,6 +31,8 @@ class CreatorModeSnapshot:
     selected_summary: str = ""
     inspector: CreatorInspectorModel = field(default_factory=empty_creator_inspector)
     door_panel: CreatorDoorPanelModel | None = None
+    last_action_message: str = ""
+    last_action_ok: bool | None = None
     top_actions: tuple[str, ...] = TOP_ACTIONS
     left_tools: tuple[str, ...] = LEFT_TOOLS
     bottom_panel_title: str = BOTTOM_PANEL_TITLE

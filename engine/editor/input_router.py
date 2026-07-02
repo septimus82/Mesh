@@ -11,6 +11,13 @@ from engine.editor_runtime.editor_input_router import _normalize_modifiers
 
 
 def handle_mouse_click(self: Any, x: float, y: float, button: int, modifiers: int) -> bool:
+    if getattr(self, "active", False):
+        from engine.editor.creator_mode.creator_overlay_click import (  # noqa: PLC0415
+            try_handle_creator_mode_overlay_click,
+        )
+
+        if try_handle_creator_mode_overlay_click(self, x, y, button, modifiers):
+            return True
     return editor_input.handle_mouse_click(self, x, y, button, modifiers)
 
 

@@ -12,6 +12,8 @@ from .creator_door_workflow import build_creator_door_workflow
 from .creator_inspector import build_creator_inspector
 from .creator_state import CreatorModeSnapshot
 
+_DOOR_STAGE_PROPOSAL_ACTION = "door.stage_proposal"
+
 
 class CreatorModeController:
     """Owns Creator Mode visibility and read-only UI snapshots."""
@@ -19,6 +21,16 @@ class CreatorModeController:
     def __init__(self, editor: Any | None = None) -> None:
         self._editor = editor
         self._active = False
+        self._last_action_message = ""
+        self._last_action_ok: bool | None = None
+
+    @property
+    def last_action_message(self) -> str:
+        return self._last_action_message
+
+    @property
+    def last_action_ok(self) -> bool | None:
+        return self._last_action_ok
 
     @property
     def active(self) -> bool:
@@ -26,6 +38,8 @@ class CreatorModeController:
 
     def toggle(self) -> bool:
         self._active = not self._active
+        if not self._active:
+            self._clear_last_action_state()
         return self._active
 
     def show(self) -> None:
@@ -33,6 +47,7 @@ class CreatorModeController:
 
     def hide(self) -> None:
         self._active = False
+        self._clear_last_action_state()
 
     def stage_selected_door_proposal(self) -> CreatorDoorStagingResult:
         """Stage a door proposal for the currently selected door entity."""
@@ -51,6 +66,26 @@ class CreatorModeController:
         workflow = build_creator_door_workflow(request)
         return stage_creator_door_proposal(workflow, self._proposal_bridge())
 
+    def handle_overlay_click(self, x: float, y: float) -> CreatorDoorStagingResult | None:
+        """Handle a Creator Mode overlay click when it hits an enabled action."""
+
+        if not self._active:
+            return None
+
+        editor = self._editor
+        if editor is None:
+            return None
+
+        from .creator_overlay_click import resolve_creator_overlay_click_action  # noqa: PLC0415
+
+        action_id = resolve_creator_overlay_click_action(self, x, y)
+        if action_id != _DOOR_STAGE_PROPOSAL_ACTION:
+            return None
+
+        result = self.stage_selected_door_proposal()
+        self._store_staging_result(result)
+        return result
+
     def build_snapshot(self) -> CreatorModeSnapshot:
         selected = self._selected_entity_snapshot()
         inspector = build_creator_inspector(selected)
@@ -62,7 +97,27 @@ class CreatorModeController:
             selected_summary=inspector.summary,
             inspector=inspector,
             door_panel=door_panel,
+            last_action_message=self._last_action_message,
+            last_action_ok=self._last_action_ok,
         )
+
+    def _clear_last_action_state(self) -> None:
+        self._last_action_message = ""
+        self._last_action_ok = None
+
+    def _store_staging_result(self, result: CreatorDoorStagingResult) -> None:
+        if result.ok:
+            proposal_id = str(result.proposal_id or "").strip()
+            if proposal_id:
+                self._last_action_message = f"Door proposal staged: {proposal_id}"
+            else:
+                self._last_action_message = "Door proposal staged."
+            self._last_action_ok = True
+            return
+
+        message = result.errors[0] if result.errors else "Failed to stage door proposal."
+        self._last_action_message = str(message)
+        self._last_action_ok = False
 
     def _selected_entity_snapshot(self) -> Mapping[str, Any] | None:
         editor = self._editor

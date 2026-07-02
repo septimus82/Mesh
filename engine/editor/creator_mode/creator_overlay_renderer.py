@@ -10,6 +10,11 @@ from engine.ui_overlays.common import _draw_rectangle_filled
 
 from .creator_overlay import CreatorOverlayModel, build_creator_overlay_model
 
+DOOR_STAGE_PROPOSAL_ACTION_ID = "door.stage_proposal"
+STAGE_PROPOSAL_LABEL = "Stage Proposal"
+_GLYPH_WIDTH_RATIO = 0.58
+_ACTION_LINE_HEIGHT = 17.0
+
 MAX_TITLE_CHARS = 42
 MAX_ACTIONS_CHARS = 72
 MAX_TOOL_CHARS = 24
@@ -36,6 +41,31 @@ class CreatorOverlayDrawCommand:
     color: tuple[int, ...] = (255, 255, 255)
     font_size: int = 12
     missing: bool = False
+    action_id: str = ""
+    hit_left: float = 0.0
+    hit_right: float = 0.0
+    hit_top: float = 0.0
+    hit_bottom: float = 0.0
+
+
+def hit_test_creator_overlay_click(
+    commands: tuple[CreatorOverlayDrawCommand, ...],
+    x: float,
+    y: float,
+) -> str | None:
+    """Return the action id for a screen-space click, or None."""
+
+    px = float(x)
+    py = float(y)
+    for command in commands:
+        if not command.action_id:
+            continue
+        if (
+            command.hit_left <= px <= command.hit_right
+            and command.hit_bottom <= py <= command.hit_top
+        ):
+            return command.action_id
+    return None
 
 
 def truncate_creator_overlay_text(text: object, max_chars: int) -> str:
@@ -178,12 +208,33 @@ def _door_panel_text_commands(
     y = start_y
     rendered = 0
 
-    def add(text: object, font_size: int = 11, color: tuple[int, ...] = (220, 225, 232)) -> None:
+    def add(
+        text: object,
+        font_size: int = 11,
+        color: tuple[int, ...] = (220, 225, 232),
+        *,
+        action_id: str = "",
+    ) -> None:
         nonlocal y, rendered
         if rendered >= MAX_RENDERED_PANEL_LINES or y <= bottom_h + 6.0:
             return
-        commands.append(_text(str(text), "right", x, y, font_size, color, MAX_PANEL_CHARS))
-        y -= 17.0
+        line_text = str(text)
+        if action_id:
+            commands.append(
+                _clickable_text(
+                    line_text,
+                    "right",
+                    x,
+                    y,
+                    font_size,
+                    color,
+                    MAX_PANEL_CHARS,
+                    action_id=action_id,
+                )
+            )
+        else:
+            commands.append(_text(line_text, "right", x, y, font_size, color, MAX_PANEL_CHARS))
+        y -= _ACTION_LINE_HEIGHT
         rendered += 1
 
     add(panel.title, 12, (255, 255, 255))
@@ -197,7 +248,18 @@ def _door_panel_text_commands(
         detail = f"[{state}] {action.label}"
         if action.reason:
             detail = f"{detail} - {action.reason}"
-        add(detail, 10, (170, 218, 154) if action.enabled else (160, 166, 176))
+        clickable_id = ""
+        if action.enabled and action.label == STAGE_PROPOSAL_LABEL:
+            clickable_id = DOOR_STAGE_PROPOSAL_ACTION_ID
+        add(
+            detail,
+            10,
+            (170, 218, 154) if action.enabled else (160, 166, 176),
+            action_id=clickable_id,
+        )
+    if model.last_action_message:
+        color = (170, 218, 154) if model.last_action_ok else (245, 145, 145)
+        add(model.last_action_message, 10, color)
     return tuple(commands)
 
 
@@ -299,4 +361,35 @@ def _text(
         font_size=font_size,
         color=color,
         missing=missing,
+    )
+
+
+def _clickable_text(
+    text: str,
+    region: str,
+    x: float,
+    y: float,
+    font_size: int,
+    color: tuple[int, ...],
+    max_chars: int,
+    *,
+    action_id: str,
+) -> CreatorOverlayDrawCommand:
+    display = truncate_creator_overlay_text(text, max_chars)
+    width = max(8.0, len(display) * float(font_size) * _GLYPH_WIDTH_RATIO)
+    top = float(y)
+    bottom = top - _ACTION_LINE_HEIGHT
+    return CreatorOverlayDrawCommand(
+        kind="text",
+        region=region,
+        text=display,
+        x=x,
+        y=y,
+        font_size=font_size,
+        color=color,
+        action_id=action_id,
+        hit_left=float(x),
+        hit_right=float(x) + width,
+        hit_top=top,
+        hit_bottom=bottom,
     )
