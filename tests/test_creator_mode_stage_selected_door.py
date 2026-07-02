@@ -119,6 +119,76 @@ def test_hostile_bridge_accept_reject_apply_are_not_called() -> None:
     assert bridge.calls == ["stage_pending_proposal"]
 
 
+def test_second_stage_selected_door_call_does_not_call_bridge_again() -> None:
+    bridge = FakeBridge()
+    controller = CreatorModeController(_editor_with_selection(_door_entity(), live_bridge=bridge))
+
+    first = controller.stage_selected_door_proposal()
+    second = controller.stage_selected_door_proposal()
+
+    assert first.ok is True
+    assert second.ok is False
+    assert second.errors == ("Door proposal already staged: proposal-1",)
+    assert len(bridge.calls) == 1
+
+
+def test_duplicate_stage_returns_already_staged_message() -> None:
+    controller = CreatorModeController(_editor_with_selection(_door_entity(), live_bridge=FakeBridge()))
+
+    controller.stage_selected_door_proposal()
+    duplicate = controller.stage_selected_door_proposal()
+
+    assert duplicate.ok is False
+    assert duplicate.errors == ("Door proposal already staged: proposal-1",)
+    assert controller.last_action_message == "Door proposal already staged: proposal-1"
+    assert controller.last_action_ok is False
+
+
+def test_failed_staging_does_not_set_duplicate_guard() -> None:
+    bridge = FakeBridge()
+    controller = CreatorModeController(_editor_with_selection(_door_entity(), live_bridge=None))
+
+    blocked = controller.stage_selected_door_proposal()
+    assert blocked.ok is False
+
+    controller = CreatorModeController(_editor_with_selection(_door_entity(), live_bridge=bridge))
+    retry = controller.stage_selected_door_proposal()
+
+    assert retry.ok is True
+    assert len(bridge.calls) == 1
+
+
+def test_changing_destination_scene_allows_staging_again() -> None:
+    bridge = FakeBridge()
+    editor = _editor_with_selection(_door_entity(), live_bridge=bridge)
+    controller = CreatorModeController(editor)
+
+    assert controller.stage_selected_door_proposal().ok is True
+    editor.selected_entity = _door_entity(
+        config={"target_scene": "dungeon", "target_spawn": "north_gate_entry", "trigger": "interact"}
+    )
+    second = controller.stage_selected_door_proposal()
+
+    assert second.ok is True
+    assert len(bridge.calls) == 2
+
+
+def test_different_door_entity_allows_staging_again() -> None:
+    bridge = FakeBridge()
+    editor = _editor_with_selection(_door_entity(), live_bridge=bridge)
+    controller = CreatorModeController(editor)
+
+    assert controller.stage_selected_door_proposal().ok is True
+    editor.selected_entity = _door_entity(
+        config={"target_scene": "town", "target_spawn": "south_gate_entry", "trigger": "interact"}
+    )
+    editor.selected_entity["id"] = "door_south"
+    second = controller.stage_selected_door_proposal()
+
+    assert second.ok is True
+    assert len(bridge.calls) == 2
+
+
 def test_build_snapshot_does_not_stage(monkeypatch: pytest.MonkeyPatch) -> None:
     def fail(*_args, **_kwargs):
         raise AssertionError("build_snapshot must not stage")

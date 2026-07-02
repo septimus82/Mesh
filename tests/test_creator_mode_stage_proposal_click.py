@@ -329,6 +329,112 @@ def test_pure_modules_do_not_import_real_bridge_modules() -> None:
     assert result.stdout.strip() == "False"
 
 
+def test_second_click_on_same_door_does_not_call_bridge_again() -> None:
+    bridge = FakeBridge()
+    controller = CreatorModeController(_editor_with_selection(_door_entity(), live_bridge=bridge))
+    controller.show()
+    x, y = _stage_proposal_click_point(_draw_commands(controller))
+
+    assert controller.handle_overlay_click(x, y) is not None
+    assert controller.handle_overlay_click(x, y) is None
+    assert len(bridge.calls) == 1
+
+
+def test_second_explicit_stage_does_not_call_bridge_again() -> None:
+    bridge = FakeBridge()
+    controller = CreatorModeController(_editor_with_selection(_door_entity(), live_bridge=bridge))
+    controller.show()
+
+    assert controller.stage_selected_door_proposal().ok is True
+    duplicate = controller.stage_selected_door_proposal()
+
+    assert duplicate.ok is False
+    assert duplicate.errors == ("Door proposal already staged: proposal-1",)
+    assert len(bridge.calls) == 1
+
+
+def test_duplicate_explicit_stage_stores_already_staged_message() -> None:
+    controller = _ready_controller()
+    x, y = _stage_proposal_click_point(_draw_commands(controller))
+
+    controller.handle_overlay_click(x, y)
+    controller.stage_selected_door_proposal()
+
+    assert controller.last_action_ok is False
+    assert controller.last_action_message == "Door proposal already staged: proposal-1"
+
+
+def test_after_success_stage_proposal_renders_disabled_already_staged() -> None:
+    controller = _ready_controller()
+    x, y = _stage_proposal_click_point(_draw_commands(controller))
+    controller.handle_overlay_click(x, y)
+
+    text = _command_text(_draw_commands(controller))
+
+    assert "[Disabled] Stage Proposal - Already staged: proposal-1" in text
+
+
+def test_disabled_duplicate_stage_proposal_has_no_clickable_action_id() -> None:
+    controller = _ready_controller()
+    x, y = _stage_proposal_click_point(_draw_commands(controller))
+    controller.handle_overlay_click(x, y)
+
+    commands = _draw_commands(controller)
+    stage_lines = [command for command in commands if "Stage Proposal" in command.text]
+
+    assert stage_lines
+    assert stage_lines[0].action_id == ""
+
+
+def test_different_door_enables_stage_proposal_again() -> None:
+    bridge = FakeBridge()
+    editor = _editor_with_selection(_door_entity(), live_bridge=bridge)
+    controller = CreatorModeController(editor)
+    controller.show()
+    x, y = _stage_proposal_click_point(_draw_commands(controller))
+    controller.handle_overlay_click(x, y)
+
+    editor.selected_entity = _door_entity(
+        config={"target_scene": "town", "target_spawn": "south_gate_entry", "trigger": "interact"}
+    )
+    editor.selected_entity["id"] = "door_south"
+    commands = _draw_commands(controller)
+
+    assert "[Ready] Stage Proposal" in _command_text(commands)
+    assert any(command.action_id == DOOR_STAGE_PROPOSAL_ACTION_ID for command in commands)
+
+
+def test_changing_destination_scene_enables_stage_proposal_again() -> None:
+    bridge = FakeBridge()
+    editor = _editor_with_selection(_door_entity(), live_bridge=bridge)
+    controller = CreatorModeController(editor)
+    controller.show()
+    controller.handle_overlay_click(*_stage_proposal_click_point(_draw_commands(controller)))
+
+    editor.selected_entity = _door_entity(
+        config={"target_scene": "dungeon", "target_spawn": "north_gate_entry", "trigger": "interact"}
+    )
+    commands = _draw_commands(controller)
+
+    assert "[Ready] Stage Proposal" in _command_text(commands)
+    assert controller.stage_selected_door_proposal().ok is True
+    assert len(bridge.calls) == 2
+
+
+def test_failed_staging_does_not_set_duplicate_guard() -> None:
+    controller = CreatorModeController(_editor_with_selection(_door_entity(), live_bridge=None))
+    controller.show()
+
+    assert controller.stage_selected_door_proposal().ok is False
+
+    bridge = FakeBridge()
+    controller = CreatorModeController(_editor_with_selection(_door_entity(), live_bridge=bridge))
+    controller.show()
+
+    assert controller.stage_selected_door_proposal().ok is True
+    assert len(bridge.calls) == 1
+
+
 class FakeBridge:
     def __init__(self) -> None:
         self.calls: list[list[dict[str, object]]] = []
