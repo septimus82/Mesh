@@ -242,6 +242,8 @@ Expected tests:
 - CREATOR-1d added no staging or applying.
 - CREATOR-1e converts door workflows into live-op dictionaries only when representable.
 - CREATOR-1e does not stage, apply, or mutate.
+- CREATOR-1f stages door proposal ops through an injected existing bridge-like object only.
+- CREATOR-1f does not accept/apply proposals; UI wiring remains future work.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.
