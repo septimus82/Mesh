@@ -221,6 +221,8 @@ Expected tests:
 - Do not apply them.
 - Do not mutate scene JSON.
 - Can later stage through the proposal bridge.
+- Door Plan Builder is pure and returns proposed operations only.
+- It does not apply or stage changes yet.
 
 Expected tests:
 
