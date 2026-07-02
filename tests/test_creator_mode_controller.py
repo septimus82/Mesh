@@ -570,18 +570,22 @@ def test_editor_toggle_creator_mode_flips_active_state() -> None:
     assert editor.toggle_creator_mode() is False
 
 
-def test_editor_f5_toggles_creator_mode_when_editor_active() -> None:
+def test_editor_shift_f5_toggles_creator_mode_when_editor_active() -> None:
     editor = EditorModeController(_MockWindow())
     editor.active = True
 
-    consumed = editor.handle_input(optional_arcade.arcade.key.F5, 0)
+    consumed = editor.handle_input(
+        optional_arcade.arcade.key.F5,
+        optional_arcade.arcade.key.MOD_SHIFT,
+    )
 
     assert consumed is True
     assert editor.creator_mode.active is True
 
 
-def test_editor_f5_does_not_toggle_creator_mode_when_editor_inactive() -> None:
+def test_editor_plain_f5_does_not_toggle_creator_mode_when_editor_active() -> None:
     editor = EditorModeController(_MockWindow())
+    editor.active = True
 
     consumed = editor.handle_input(optional_arcade.arcade.key.F5, 0)
 
@@ -589,33 +593,56 @@ def test_editor_f5_does_not_toggle_creator_mode_when_editor_inactive() -> None:
     assert editor.creator_mode.active is False
 
 
-def test_editor_f5_toggles_creator_mode_with_lock_key_modifiers() -> None:
+def test_editor_shift_f5_does_not_toggle_creator_mode_when_editor_inactive() -> None:
+    editor = EditorModeController(_MockWindow())
+
+    consumed = editor.handle_input(
+        optional_arcade.arcade.key.F5,
+        optional_arcade.arcade.key.MOD_SHIFT,
+    )
+
+    assert consumed is False
+    assert editor.creator_mode.active is False
+
+
+def test_editor_shift_f5_toggles_creator_mode_with_lock_key_modifiers() -> None:
     editor = EditorModeController(_MockWindow())
     editor.active = True
     caps = int(getattr(optional_arcade.arcade.key, "MOD_CAPSLOCK", 0) or 0)
 
-    consumed = editor.handle_input(optional_arcade.arcade.key.F5, caps)
+    consumed = editor.handle_input(
+        optional_arcade.arcade.key.F5,
+        optional_arcade.arcade.key.MOD_SHIFT | caps,
+    )
 
     assert consumed is True
     assert editor.creator_mode.active is True
 
 
-def test_input_dispatch_f5_toggles_creator_mode_when_editor_active() -> None:
+def test_input_dispatch_shift_f5_toggles_creator_mode_when_editor_active() -> None:
     window = _DispatchWindow()
     window.editor_controller.toggle()
 
-    input_dispatch.on_key_press(window, optional_arcade.arcade.key.F5, 0)
+    input_dispatch.on_key_press(
+        window,
+        optional_arcade.arcade.key.F5,
+        optional_arcade.arcade.key.MOD_SHIFT,
+    )
 
     assert window.editor_controller.creator_mode.active is True
     window.input_controller.on_key_press.assert_not_called()
 
 
-def test_input_dispatch_f5_with_caps_lock_toggles_creator_mode_when_editor_active() -> None:
+def test_input_dispatch_shift_f5_with_caps_lock_toggles_creator_mode_when_editor_active() -> None:
     window = _DispatchWindow()
     window.editor_controller.toggle()
     caps = int(getattr(optional_arcade.arcade.key, "MOD_CAPSLOCK", 0) or 0)
 
-    input_dispatch.on_key_press(window, optional_arcade.arcade.key.F5, caps)
+    input_dispatch.on_key_press(
+        window,
+        optional_arcade.arcade.key.F5,
+        optional_arcade.arcade.key.MOD_SHIFT | caps,
+    )
 
     assert window.editor_controller.creator_mode.active is True
 

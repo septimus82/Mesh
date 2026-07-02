@@ -5,6 +5,9 @@ from types import SimpleNamespace
 import pytest
 
 import engine.optional_arcade as optional_arcade
+import engine.input_runtime.capture_key_router as capture_router
+from engine.input_runtime import capture_key_router_handlers_global as global_handlers
+from engine.input_runtime.capture_focus_query import get_capture_focus_snapshot
 from engine.game_runtime import input_dispatch
 from tests._typing import as_any
 
@@ -14,8 +17,14 @@ pytestmark = [pytest.mark.fast]
 def _window(editor: object, calls: list[str]) -> SimpleNamespace:
     return SimpleNamespace(
         editor_controller=editor,
+        show_debug=False,
+        command_palette_enabled=False,
+        command_palette_prompt_active=False,
         console_controller=SimpleNamespace(active=False),
-        ui_controller=SimpleNamespace(on_key_press=lambda *_args: calls.append("ui") or True),
+        ui_controller=SimpleNamespace(
+            input_blocked=False,
+            on_key_press=lambda *_args: calls.append("ui") or True,
+        ),
         settings_overlay=SimpleNamespace(toggle=lambda: calls.append("settings")),
         input_controller=SimpleNamespace(on_key_press=lambda *_args: calls.append("input")),
         engine_config=SimpleNamespace(debug_mode=False),
@@ -146,30 +155,7 @@ def test_f4_direct_toggle_blocks_real_shift_modifier() -> None:
     assert calls == ["ui"]
 
 
-def test_f5_toggles_creator_mode_when_editor_active_before_input_controller() -> None:
-    calls: list[str] = []
-    creator = SimpleNamespace(active=False)
-
-    def toggle_creator() -> None:
-        creator.active = not creator.active
-        calls.append("creator")
-
-    editor = SimpleNamespace(
-        active=True,
-        creator_mode=creator,
-        toggle_creator_mode=toggle_creator,
-        build_session=SimpleNamespace(is_running=False),
-        play_session=SimpleNamespace(is_playing=False),
-        handle_input=lambda *_args: calls.append("editor") or False,
-    )
-
-    input_dispatch.on_key_press(as_any(_window(editor, calls)), optional_arcade.arcade.key.F5, 0)
-
-    assert calls == ["creator"]
-    assert creator.active is True
-
-
-def test_f5_creator_toggle_ignores_capslock_when_editor_active() -> None:
+def test_shift_f5_toggles_creator_mode_when_editor_active_before_input_controller() -> None:
     calls: list[str] = []
     creator = SimpleNamespace(active=False)
 
@@ -189,14 +175,41 @@ def test_f5_creator_toggle_ignores_capslock_when_editor_active() -> None:
     input_dispatch.on_key_press(
         as_any(_window(editor, calls)),
         optional_arcade.arcade.key.F5,
-        optional_arcade.arcade.key.MOD_CAPSLOCK,
+        optional_arcade.arcade.key.MOD_SHIFT,
     )
 
     assert calls == ["creator"]
     assert creator.active is True
 
 
-def test_f5_editor_active_does_not_reach_input_controller_or_quicksave_route() -> None:
+def test_shift_f5_creator_toggle_ignores_capslock_when_editor_active() -> None:
+    calls: list[str] = []
+    creator = SimpleNamespace(active=False)
+
+    def toggle_creator() -> None:
+        creator.active = not creator.active
+        calls.append("creator")
+
+    editor = SimpleNamespace(
+        active=True,
+        creator_mode=creator,
+        toggle_creator_mode=toggle_creator,
+        build_session=SimpleNamespace(is_running=False),
+        play_session=SimpleNamespace(is_playing=False),
+        handle_input=lambda *_args: calls.append("editor") or False,
+    )
+
+    input_dispatch.on_key_press(
+        as_any(_window(editor, calls)),
+        optional_arcade.arcade.key.F5,
+        optional_arcade.arcade.key.MOD_SHIFT | optional_arcade.arcade.key.MOD_CAPSLOCK,
+    )
+
+    assert calls == ["creator"]
+    assert creator.active is True
+
+
+def test_f5_editor_active_reaches_quick_save_route(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
     editor = SimpleNamespace(
         active=True,
@@ -205,10 +218,24 @@ def test_f5_editor_active_does_not_reach_input_controller_or_quicksave_route() -
         play_session=SimpleNamespace(is_playing=False),
         handle_input=lambda *_args: calls.append("editor") or False,
     )
+    window = _window(editor, calls)
 
-    input_dispatch.on_key_press(as_any(_window(editor, calls)), optional_arcade.arcade.key.F5, 0)
+    def savegame_save(_window: object) -> bool:
+        calls.append("capture.savegame.save")
+        return True
 
-    assert calls == ["creator"]
+    def route_through_capture(key: int, modifiers: int) -> None:
+        controller = SimpleNamespace(window=window, manager=SimpleNamespace(is_key_bound_to_action=lambda *_args: False))
+        snapshot = get_capture_focus_snapshot(controller, modifiers)
+        if capture_router.route_and_dispatch(controller, key, modifiers, snapshot):
+            calls.append("input")
+
+    window.input_controller = SimpleNamespace(on_key_press=route_through_capture)
+    monkeypatch.setattr(global_handlers, "_handle_savegame_save", savegame_save)
+
+    input_dispatch.on_key_press(as_any(window), optional_arcade.arcade.key.F5, 0)
+
+    assert calls == ["editor", "capture.savegame.save", "input"]
 
 
 def test_f5_editor_inactive_still_reaches_existing_input_controller_path() -> None:

@@ -20,6 +20,17 @@ def _is_plain_function_key(key: int, modifiers: int, expected_key: int | None) -
     return expected_key is not None and key == expected_key and _normalized_function_modifiers(modifiers) == 0
 
 
+def _is_shift_function_key(key: int, modifiers: int, expected_key: int | None) -> bool:
+    key_ns = getattr(optional_arcade.arcade, "key", None)
+    shift = int(getattr(key_ns, "MOD_SHIFT", 0) or 0)
+    return (
+        expected_key is not None
+        and shift
+        and key == expected_key
+        and _normalized_function_modifiers(modifiers) == shift
+    )
+
+
 def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noqa: ARG001
     editor = getattr(window, "editor_controller", None)
     editor_active = editor is not None and getattr(editor, "active", False)
@@ -31,7 +42,7 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
             toggle()
         return
 
-    if editor_active and _is_plain_function_key(key, modifiers, getattr(arcade_key, "F5", None)):
+    if editor_active and _is_shift_function_key(key, modifiers, getattr(arcade_key, "F5", None)):
         toggle_creator = getattr(editor, "toggle_creator_mode", None)
         if callable(toggle_creator):
             toggle_creator()
