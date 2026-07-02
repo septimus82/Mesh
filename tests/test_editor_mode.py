@@ -125,7 +125,7 @@ def test_creator_mode_toggle_key_false_when_arcade_missing(monkeypatch):
     assert input_router._is_creator_mode_toggle_key(65474, 0) is False
 
 
-def test_creator_mode_toggle_key_ignores_lock_key_modifiers():
+def test_creator_mode_toggle_key_requires_shift_and_ignores_lock_key_modifiers():
     import engine.optional_arcade as optional_arcade
 
     key = optional_arcade.arcade.key
@@ -133,19 +133,21 @@ def test_creator_mode_toggle_key_ignores_lock_key_modifiers():
     num = int(getattr(key, "MOD_NUMLOCK", 0) or 0)
     scroll = int(getattr(key, "MOD_SCROLLLOCK", 0) or 0)
 
-    assert input_router._is_creator_mode_toggle_key(optional_arcade.arcade.key.F5, caps) is True
-    assert input_router._is_creator_mode_toggle_key(optional_arcade.arcade.key.F5, num) is True
-    assert input_router._is_creator_mode_toggle_key(optional_arcade.arcade.key.F5, scroll) is True
-    assert input_router._is_creator_mode_toggle_key(optional_arcade.arcade.key.F5, caps | num) is True
+    assert input_router._is_creator_mode_toggle_key(key.F5, 0) is False
+    assert input_router._is_creator_mode_toggle_key(key.F5, key.MOD_SHIFT) is True
+    assert input_router._is_creator_mode_toggle_key(key.F5, key.MOD_SHIFT | caps) is True
+    assert input_router._is_creator_mode_toggle_key(key.F5, key.MOD_SHIFT | num) is True
+    assert input_router._is_creator_mode_toggle_key(key.F5, key.MOD_SHIFT | scroll) is True
+    assert input_router._is_creator_mode_toggle_key(key.F5, key.MOD_SHIFT | caps | num) is True
 
 
-def test_creator_mode_toggle_key_false_when_shift_held():
+def test_creator_mode_toggle_key_false_when_ctrl_held():
     import engine.optional_arcade as optional_arcade
 
     assert (
         input_router._is_creator_mode_toggle_key(
             optional_arcade.arcade.key.F5,
-            optional_arcade.arcade.key.MOD_SHIFT,
+            optional_arcade.arcade.key.MOD_SHIFT | optional_arcade.arcade.key.MOD_CTRL,
         )
         is False
     )

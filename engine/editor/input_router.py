@@ -29,11 +29,12 @@ def handle_input(self: Any, key: int, modifiers: int) -> bool:
 
 
 def _is_creator_mode_toggle_key(key: int, modifiers: int) -> bool:
-    """True when F5 should toggle Creator Mode (ignore lock-key modifier bits)."""
+    """True when Shift+F5 should toggle Creator Mode."""
     arcade = getattr(optional_arcade, "arcade", None)
     arcade_key = getattr(arcade, "key", None)
     f5 = getattr(arcade_key, "F5", None)
-    return f5 is not None and key == f5 and _normalize_modifiers(modifiers) == 0
+    shift = int(getattr(arcade_key, "MOD_SHIFT", 0) or 0)
+    return f5 is not None and shift and key == f5 and _normalize_modifiers(modifiers) == shift
 
 
 def on_text(self: Any, text: str) -> bool:
