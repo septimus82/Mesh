@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .creator_door_panel import CreatorDoorPanelModel
 from .creator_state import CreatorModeSnapshot
 
 
@@ -29,6 +30,7 @@ class CreatorOverlayModel:
     inspector_fields: tuple[tuple[str, str, bool], ...]
     warnings: tuple[str, ...]
     bottom_title: str
+    door_panel: CreatorDoorPanelModel | None = None
 
 
 def build_creator_overlay_model(snapshot: CreatorModeSnapshot) -> CreatorOverlayModel:
@@ -49,4 +51,5 @@ def build_creator_overlay_model(snapshot: CreatorModeSnapshot) -> CreatorOverlay
         ),
         warnings=tuple(inspector.warnings),
         bottom_title=str(snapshot.bottom_panel_title or "Things to Fix"),
+        door_panel=snapshot.door_panel,
     )

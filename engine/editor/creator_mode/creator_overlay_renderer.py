@@ -16,8 +16,10 @@ MAX_TOOL_CHARS = 24
 MAX_SUMMARY_CHARS = 58
 MAX_FIELD_CHARS = 64
 MAX_WARNING_CHARS = 92
+MAX_PANEL_CHARS = 68
 MAX_RENDERED_FIELDS = 8
 MAX_RENDERED_WARNINGS = 2
+MAX_RENDERED_PANEL_LINES = 16
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,6 +147,10 @@ def build_creator_overlay_draw_commands(
         )
         y -= 18.0
 
+    if model.door_panel is not None and y > bottom_h + 24.0:
+        y -= 6.0
+        commands.extend(_door_panel_text_commands(model, right_x, y, bottom_h))
+
     bottom_lines = model.warnings or ("No problems shown in Creator Mode.",)
     commands.append(_text(model.bottom_title, "bottom", pad, bottom_h - 24.0, 12, (230, 234, 240)))
     y = bottom_h - 46.0
@@ -156,6 +162,51 @@ def build_creator_overlay_draw_commands(
         y -= 18.0
 
     return tuple(commands)
+
+
+def _door_panel_text_commands(
+    model: CreatorOverlayModel,
+    x: float,
+    start_y: float,
+    bottom_h: float,
+) -> tuple[CreatorOverlayDrawCommand, ...]:
+    panel = model.door_panel
+    if panel is None:
+        return ()
+
+    commands: list[CreatorOverlayDrawCommand] = []
+    y = start_y
+    rendered = 0
+
+    def add(text: object, font_size: int = 11, color: tuple[int, ...] = (220, 225, 232)) -> None:
+        nonlocal y, rendered
+        if rendered >= MAX_RENDERED_PANEL_LINES or y <= bottom_h + 6.0:
+            return
+        commands.append(_text(str(text), "right", x, y, font_size, color, MAX_PANEL_CHARS))
+        y -= 17.0
+        rendered += 1
+
+    add(panel.title, 12, (255, 255, 255))
+    add(panel.summary, 10, (190, 198, 208))
+    for section in panel.sections:
+        add(section.title, 11, (230, 234, 240))
+        for line in section.lines:
+            add(f"- {line.text}", 10, _severity_color(line.severity))
+    for action in panel.actions:
+        state = "Ready" if action.enabled else "Disabled"
+        detail = f"[{state}] {action.label}"
+        if action.reason:
+            detail = f"{detail} - {action.reason}"
+        add(detail, 10, (170, 218, 154) if action.enabled else (160, 166, 176))
+    return tuple(commands)
+
+
+def _severity_color(severity: str) -> tuple[int, ...]:
+    if severity == "error":
+        return (245, 145, 145)
+    if severity == "warning":
+        return (238, 190, 120)
+    return (220, 225, 232)
 
 
 def draw_creator_overlay(editor: Any) -> None:

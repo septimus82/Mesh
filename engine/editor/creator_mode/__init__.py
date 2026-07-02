@@ -15,6 +15,7 @@ from .creator_door_panel import (
     CreatorDoorPanelSection,
     build_creator_door_panel,
 )
+from .creator_door_selection import build_creator_door_request_from_selection
 from .creator_door_preview import (
     CreatorDoorPreviewAction,
     CreatorDoorPreviewModel,
@@ -66,6 +67,7 @@ __all__ = [
     "build_creator_door_plan",
     "build_creator_door_live_ops",
     "build_creator_door_panel",
+    "build_creator_door_request_from_selection",
     "build_creator_door_preview",
     "build_creator_door_staging_readiness",
     "build_creator_door_workflow",
