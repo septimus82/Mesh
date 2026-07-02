@@ -1,0 +1,84 @@
+"""Creator Mode overlay click dispatch (Stage Proposal only)."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import engine.optional_arcade as optional_arcade
+
+from .creator_overlay import build_creator_overlay_model
+from .creator_overlay_renderer import (
+    DOOR_STAGE_PROPOSAL_ACTION_ID,
+    STAGE_PROPOSAL_LABEL,
+    build_creator_overlay_draw_commands,
+    hit_test_creator_overlay_click,
+)
+
+_LEFT_BUTTON = getattr(getattr(optional_arcade, "arcade", None), "MOUSE_BUTTON_LEFT", 1)
+
+
+def try_handle_creator_mode_overlay_click(
+    editor: Any,
+    x: float,
+    y: float,
+    button: int,
+    modifiers: int = 0,  # noqa: ARG001
+) -> bool:
+    """Return True when a Creator Mode overlay click action was handled."""
+
+    if int(button) != int(_LEFT_BUTTON):
+        return False
+    if not getattr(editor, "active", False):
+        return False
+
+    creator = getattr(editor, "creator_mode", None)
+    if creator is None or not getattr(creator, "active", False):
+        return False
+
+    handler = getattr(creator, "handle_overlay_click", None)
+    if not callable(handler):
+        return False
+
+    return handler(float(x), float(y)) is not None
+
+
+def stage_proposal_action_enabled(model: Any) -> bool:
+    """True when the door panel exposes an enabled Stage Proposal action."""
+
+    panel = getattr(model, "door_panel", None)
+    if panel is None:
+        return False
+    for action in getattr(panel, "actions", ()):
+        if str(getattr(action, "label", "")) == STAGE_PROPOSAL_LABEL and bool(
+            getattr(action, "enabled", False)
+        ):
+            return True
+    return False
+
+
+def resolve_creator_overlay_click_action(
+    creator: Any,
+    x: float,
+    y: float,
+) -> str | None:
+    """Hit-test the current Creator Mode overlay for a clickable action id."""
+
+    if creator is None or not getattr(creator, "active", False):
+        return None
+
+    editor = getattr(creator, "_editor", None)
+    window = getattr(editor, "window", None)
+    width = float(getattr(window, "width", 1280) or 1280)
+    height = float(getattr(window, "height", 720) or 720)
+    snapshot = creator.build_snapshot()
+    model = build_creator_overlay_model(snapshot)
+    if not model.active:
+        return None
+
+    commands = build_creator_overlay_draw_commands(model, width, height)
+    action_id = hit_test_creator_overlay_click(commands, float(x), float(y))
+    if action_id != DOOR_STAGE_PROPOSAL_ACTION_ID:
+        return None
+    if not stage_proposal_action_enabled(model):
+        return None
+    return action_id

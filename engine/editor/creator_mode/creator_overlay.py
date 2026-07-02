@@ -31,6 +31,8 @@ class CreatorOverlayModel:
     warnings: tuple[str, ...]
     bottom_title: str
     door_panel: CreatorDoorPanelModel | None = None
+    last_action_message: str = ""
+    last_action_ok: bool | None = None
 
 
 def build_creator_overlay_model(snapshot: CreatorModeSnapshot) -> CreatorOverlayModel:
@@ -52,4 +54,6 @@ def build_creator_overlay_model(snapshot: CreatorModeSnapshot) -> CreatorOverlay
         warnings=tuple(inspector.warnings),
         bottom_title=str(snapshot.bottom_panel_title or "Things to Fix"),
         door_panel=snapshot.door_panel,
+        last_action_message=str(snapshot.last_action_message or ""),
+        last_action_ok=snapshot.last_action_ok,
     )

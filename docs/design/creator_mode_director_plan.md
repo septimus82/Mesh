@@ -252,6 +252,8 @@ Expected tests:
 - CREATOR-1i does not stage, apply, or add clickable actions; manual F4/F5 dogfood is required.
 - CREATOR-1j adds an explicit `CreatorModeController.stage_selected_door_proposal()` action to stage the selected door proposal through the existing staging adapter.
 - CREATOR-1j does not add clickable UI or input wiring; overlay rendering remains read-only display-only.
+- CREATOR-1k wires the Stage Proposal display action to explicit staging via overlay click hit-testing.
+- CREATOR-1k does not accept/apply proposals; manual click dogfood is required.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.
