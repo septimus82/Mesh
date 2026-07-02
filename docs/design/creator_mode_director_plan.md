@@ -45,6 +45,17 @@ Creator Mode should hide engine terms by default:
 
 Advanced Mode keeps the exact technical controls. Creator Mode translates common authoring intent into friendly language and, later, safe staged proposals.
 
+## Editor Key Bindings (current)
+
+These are the current in-editor toggles documented for Creator Mode dogfood and agent tasks:
+
+| Key | Action |
+|-----|--------|
+| **F4** | Toggle editor mode on/off |
+| **Shift+F5** | Toggle Creator Mode overlay on/off (requires editor mode active) |
+
+Plain **F5** is not the Creator Mode toggle. When the editor is inactive, F5 remains the existing global quick-save route.
+
 ## Existing Seams
 
 Mesh already has the right shape for an additive shell:
@@ -249,11 +260,12 @@ Expected tests:
 - CREATOR-1h adds a read-only door panel presentation model.
 - CREATOR-1h does not render, stage, or apply; UI rendering/wiring remains future work.
 - CREATOR-1i renders the door panel read-only in Creator Mode.
-- CREATOR-1i does not stage, apply, or add clickable actions; manual F4/F5 dogfood is required.
+- CREATOR-1i does not stage, apply, or add clickable actions; manual F4 / Shift+F5 dogfood is required.
 - CREATOR-1j adds an explicit `CreatorModeController.stage_selected_door_proposal()` action to stage the selected door proposal through the existing staging adapter.
 - CREATOR-1j does not add clickable UI or input wiring; overlay rendering remains read-only display-only.
 - CREATOR-1k wires the Stage Proposal display action to explicit staging via overlay click hit-testing.
 - CREATOR-1k does not accept/apply proposals; manual click dogfood is required.
+- CREATOR-1l updates Creator Mode toggle documentation to match the current binding (**Shift+F5**, not plain F5).
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.
@@ -315,24 +327,25 @@ Rollback expectation:
 ## Manual Dogfood Step For CREATOR-0
 
 1. Open a normal Mesh project in the existing editor.
-2. Toggle Creator Mode on.
-3. Confirm the viewport remains visible.
-4. Select a door/person/ordinary object.
-5. Confirm the right panel shows a friendly read-only summary.
-6. Toggle Advanced Mode.
-7. Confirm the existing editor controls still work.
-8. Close and inspect the scene file to confirm it did not change.
+2. Press **F4** to enter editor mode if needed.
+3. Press **Shift+F5** to toggle Creator Mode on.
+4. Confirm the viewport remains visible.
+5. Select a door/person/ordinary object.
+6. Confirm the right panel shows a friendly read-only summary.
+7. Press **Shift+F5** again to leave Creator Mode, or **F4** to exit editor mode.
+8. Confirm the existing editor controls still work.
+9. Close and inspect the scene file to confirm it did not change.
 
 ## Manual dogfood checklist
 
 - Launch Mesh.
-- Enter editor mode.
-- Press F5.
+- Press **F4** to enter editor mode.
+- Press **Shift+F5** to toggle Creator Mode on.
 - Confirm Creator Mode overlay appears.
 - Confirm it says "Read-only preview".
 - Select a door/person/monster area if available.
 - Confirm the right panel updates or at least does not crash.
-- Press F5 again.
+- Press **Shift+F5** again.
 - Confirm overlay hides.
 - Confirm normal editor still works.
 
