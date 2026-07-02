@@ -14,6 +14,7 @@ from .creator_door_preview import (
     CreatorDoorPreviewStep,
     build_creator_door_preview,
 )
+from .creator_door_staging import CreatorDoorStagingResult, stage_creator_door_proposal
 from .creator_door_workflow import (
     CreatorDoorWorkflowModel,
     CreatorDoorWorkflowRequest,
@@ -37,6 +38,7 @@ __all__ = [
     "CreatorDoorPreviewAction",
     "CreatorDoorPreviewModel",
     "CreatorDoorPreviewStep",
+    "CreatorDoorStagingResult",
     "CreatorDoorWorkflowModel",
     "CreatorDoorWorkflowRequest",
     "CreatorModeController",
@@ -52,4 +54,5 @@ __all__ = [
     "build_creator_overlay_model",
     "classify_entity_snapshot",
     "friendly_engine_term",
+    "stage_creator_door_proposal",
 ]
