@@ -232,6 +232,9 @@ Expected tests:
 
 ### CREATOR-1b - Stage Proposal integration
 
+- Door Plan Preview Model is pure.
+- It only formats plans for human review.
+- Stage/Apply actions remain disabled.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.
 - Proposal staging must be explicit and visible.
