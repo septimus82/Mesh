@@ -238,6 +238,8 @@ Expected tests:
 - Door Workflow Model combines the door plan and preview.
 - It remains pure/read-only.
 - It still does not stage or apply changes.
+- CREATOR-1d inspected the existing proposal bridge; CREATOR-1e must follow `docs/design/creator_mode_proposal_bridge_recon.md`.
+- CREATOR-1d added no staging or applying.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.
 - Proposal staging must be explicit and visible.
