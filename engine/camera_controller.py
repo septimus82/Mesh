@@ -975,7 +975,13 @@ class CameraController:
             _log_swallow("camera_resize", "HiDPI camera resize failed")
 
     def _match_camera_to_window(self, camera: Any, *, position: bool) -> None:
-        """Resize camera projection to logical window coords, viewport to framebuffer."""
+        """Resize camera projection to logical window coords, viewport to framebuffer.
+
+        When the process is DPI-unaware (Mesh default via ``dpi_bootstrap``),
+        logical window size equals the framebuffer and the two-pass split below
+        applies identical rects — harmless no-ops, but kept for correctness if
+        awareness ever changes.
+        """
         update_values = getattr(camera, "update_values", None)
         if not callable(update_values):
             match_window = getattr(camera, "match_window", None)
