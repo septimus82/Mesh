@@ -56,6 +56,7 @@ def test_fake_bridge_with_one_pending_shows_singular_text() -> None:
     assert status.rows[0].proposal_id == "proposal-1"
     assert status.rows[0].summary == "Set SceneExit params on door_north"
     assert status.rows[0].affected_count == 1
+    assert status.rows[0].affected_ids == ("door_north",)
 
 
 def test_fake_bridge_with_multiple_pending_shows_plural_text() -> None:
@@ -133,6 +134,28 @@ def test_affected_ids_malformed_becomes_zero() -> None:
     )
 
     assert status.rows[0].affected_count == 0
+    assert status.rows[0].affected_ids == ()
+
+
+def test_dry_run_details_are_sanitized_on_status_row() -> None:
+    status = build_creator_proposal_status(
+        FakeBridge(
+            [
+                {
+                    "proposal_id": "proposal-1",
+                    "dry_run": {
+                        "ok": True,
+                        "warnings": ["warn", 7],
+                        "errors": ["error", None],
+                    },
+                }
+            ]
+        )
+    )
+
+    assert status.rows[0].dry_run_ok is True
+    assert status.rows[0].dry_run_warnings == ("warn", "7")
+    assert status.rows[0].dry_run_errors == ("error",)
 
 
 def test_malformed_bridge_read_error_fails_closed_without_crash() -> None:

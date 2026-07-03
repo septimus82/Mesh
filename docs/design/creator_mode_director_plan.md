@@ -281,6 +281,9 @@ Expected tests:
 - CREATOR-1r does not call accept/reject/apply and does not add clickable actions or hitboxes.
 - CREATOR-1s shares one proposal status read across proposal status/list and accept-readiness derivation.
 - CREATOR-1s does not change UI behavior and does not call accept/reject/apply.
+- CREATOR-1t adds a read-only proposal review details model.
+- CREATOR-1t does not render new UI, call accept/reject/apply, or add clickable actions.
+- CREATOR-1t prepares dry-run and affected-id detail for later review UI.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.

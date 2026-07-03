@@ -49,6 +49,12 @@ from .creator_proposal_accept_readiness import (
     build_creator_proposal_accept_readiness,
     build_creator_proposal_accept_readiness_from_status,
 )
+from .creator_proposal_review_details import (
+    CreatorProposalReviewDetail,
+    CreatorProposalReviewDetailsModel,
+    build_creator_proposal_review_details,
+    build_creator_proposal_review_details_from_status,
+)
 from .creator_mode_controller import CreatorModeController
 from .creator_overlay import CreatorOverlayLine, CreatorOverlayModel, build_creator_overlay_model
 from .creator_state import CreatorModeSnapshot
@@ -80,6 +86,8 @@ __all__ = [
     "CreatorProposalListRow",
     "CreatorProposalAcceptReadinessModel",
     "CreatorProposalReviewAction",
+    "CreatorProposalReviewDetail",
+    "CreatorProposalReviewDetailsModel",
     "CreatorProposalReviewRow",
     "CreatorProposalStatusModel",
     "build_creator_door_plan",
@@ -94,6 +102,8 @@ __all__ = [
     "build_creator_overlay_model",
     "build_creator_proposal_accept_readiness",
     "build_creator_proposal_accept_readiness_from_status",
+    "build_creator_proposal_review_details",
+    "build_creator_proposal_review_details_from_status",
     "build_creator_proposal_status",
     "classify_entity_snapshot",
     "friendly_engine_term",
