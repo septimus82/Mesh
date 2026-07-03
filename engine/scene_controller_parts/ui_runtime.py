@@ -16,24 +16,24 @@ def _rebuild_ui_for_scene(self) -> None:
         if element is not None:
             self.window.register_ui_element(element)
 
-    self.window.register_ui_element(scene_controller_module.EntityInspector(self.window))
-    self.window.register_ui_element(scene_controller_module.AnimationStateOverlay(self.window))
-    self.window.register_ui_element(scene_controller_module.DevConsole(self.window))
+    self.window.register_ui_element(scene_controller_module.EntityInspector(self.window), editor_chrome=False)
+    self.window.register_ui_element(scene_controller_module.AnimationStateOverlay(self.window), editor_chrome=False)
+    self.window.register_ui_element(scene_controller_module.DevConsole(self.window), editor_chrome=False)
 
     self.window.ui_controller.inventory_overlay = scene_controller_module.InventoryOverlay(self.window)
-    self.window.register_ui_element(self.window.ui_controller.inventory_overlay)
+    self.window.register_ui_element(self.window.ui_controller.inventory_overlay, editor_chrome=False)
 
     self.window.ui_controller.dialogue_box = scene_controller_module.DialogueBox(self.window)
-    self.window.register_ui_element(self.window.ui_controller.dialogue_box)
+    self.window.register_ui_element(self.window.ui_controller.dialogue_box, editor_chrome=False)
 
     self.window.ui_controller.quest_log = scene_controller_module.QuestLog(self.window)
-    self.window.register_ui_element(self.window.ui_controller.quest_log)
+    self.window.register_ui_element(self.window.ui_controller.quest_log, editor_chrome=False)
 
     self.window.ui_controller.shop_panel = scene_controller_module.ShopPanel(self.window)
-    self.window.register_ui_element(self.window.ui_controller.shop_panel)
+    self.window.register_ui_element(self.window.ui_controller.shop_panel, editor_chrome=False)
 
     self.window.ui_controller.character_panel = scene_controller_module.CharacterPanel(self.window)
-    self.window.register_ui_element(self.window.ui_controller.character_panel)
+    self.window.register_ui_element(self.window.ui_controller.character_panel, editor_chrome=False)
 
     try:
         from engine.behaviours.health import Health  # noqa: PLC0415
@@ -52,7 +52,7 @@ def _rebuild_ui_for_scene(self) -> None:
                 "[Mesh][UI] Registering HealthBar for",
                 getattr(sprite, "mesh_name", "<unnamed>"),
             )
-            self.window.register_ui_element(scene_controller_module.HealthBar(self.window, sprite))
+            self.window.register_ui_element(scene_controller_module.HealthBar(self.window, sprite), editor_chrome=False)
 
 
 def bind_ui_runtime_methods(cls) -> None:

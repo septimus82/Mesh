@@ -11,9 +11,11 @@ def _register_default_overlay(
     window: "GameWindow",
     attr_name: str,
     overlay: "UIElement",
+    *,
+    editor_chrome: bool | None = None,
 ) -> None:
     setattr(window, attr_name, overlay)
-    window.register_ui_element(overlay)
+    window.register_ui_element(overlay, editor_chrome=editor_chrome)
 
 
 def init_default_overlays(
@@ -28,19 +30,21 @@ def init_default_overlays(
     GoldenSliceDemoHUDStripOverlay: type["UIElement"],
     DevBrowserOverlay: type["UIElement"],
 ) -> None:
-    _register_default_overlay(window, "player_hud", PlayerHUD(window))
-    _register_default_overlay(window, "game_over_screen", GameOverScreen(window))
-    _register_default_overlay(window, "pause_menu", PauseMenu(window))
-    _register_default_overlay(window, "help_overlay", HelpOverlay(window))
-    _register_default_overlay(window, "inspector_overlay", InspectorOverlay(window))
+    _register_default_overlay(window, "player_hud", PlayerHUD(window), editor_chrome=False)
+    _register_default_overlay(window, "game_over_screen", GameOverScreen(window), editor_chrome=False)
+    _register_default_overlay(window, "pause_menu", PauseMenu(window), editor_chrome=False)
+    _register_default_overlay(window, "help_overlay", HelpOverlay(window), editor_chrome=False)
+    _register_default_overlay(window, "inspector_overlay", InspectorOverlay(window), editor_chrome=False)
     _register_default_overlay(
         window,
         "variant_picker_overlay",
         GoldenSliceVariantPickerOverlay(window),
+        editor_chrome=False,
     )
     _register_default_overlay(
         window,
         "golden_slice_demo_hud",
         GoldenSliceDemoHUDStripOverlay(window),
+        editor_chrome=False,
     )
     _register_default_overlay(window, "dev_browser_overlay", DevBrowserOverlay(window))
