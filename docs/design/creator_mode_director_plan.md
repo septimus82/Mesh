@@ -298,6 +298,9 @@ Expected tests:
 - CREATOR-1x replaces Creator Mode accept/reject wording with inbox handoff wording (`Review: Use AI Proposals`).
 - CREATOR-1x does not click/focus/open the inbox.
 - CREATOR-1x does not call accept/reject/apply and does not expand the bottom panel.
+- CREATOR-1y dogfoods the official **AI Proposals** path with Creator-staged proposals (see `docs/design/creator_mode_official_inbox_dogfood.md`).
+- CREATOR-1y does not add Creator Mode accept/reject/focus/open.
+- Future focus/open work (CREATOR-1z) depends on human completion of the CREATOR-1y GUI checklist.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.

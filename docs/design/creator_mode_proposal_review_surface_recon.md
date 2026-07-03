@@ -241,6 +241,16 @@ This is the first implementation slice of the hybrid handoff decision (Option D)
 - No extra bottom-panel line; `bottom_h` unchanged; no click/focus/open behavior.
 - Future inbox focus/open remains a separate slice after CREATOR-1x.
 
+### CREATOR-1y — Official Inbox Dogfood With Creator-Staged Proposals
+
+**Status:** documented; **interactive GUI checklist incomplete** (see `docs/design/creator_mode_official_inbox_dogfood.md`).
+
+- Records the manual GUI dogfood procedure for Creator Mode staging → official AI Proposals accept/reject/stale guard.
+- Launch smoke **PASS** (`main.py --edit`); steps 4–20 **NOT RUN** in agent session (native window not automatable).
+- Supplementary automated inbox/live-ops tests **PASS** (10 tests); gap remains for Creator Mode click-path staging parity.
+- **CREATOR-1z blocked** until a human operator completes the GUI checklist with all passes.
+- If human dogfood fails, fix official Proposal Inbox path before more Creator Mode review UI.
+
 ### Alternative acceptable slice
 
 **CREATOR-1w docs-only:** manual dogfood checklist run against the **official** AI Proposals inbox using Creator Mode–staged door proposals (no new code). Useful if team wants human verification before any handoff label lands.
