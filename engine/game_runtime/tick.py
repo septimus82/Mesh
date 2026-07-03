@@ -147,7 +147,7 @@ def on_draw(window: "GameWindow") -> None:
             # LightLayer draws/composites in screen space; ensure we are on the GUI camera
             # before calling lighting.end() so the lighting output isn't transformed by the
             # world camera projection.
-            window.camera_controller.gui_camera.use()
+            window.camera_controller.use_gui_camera()
             lighting.end()
         elif not menu_visible:
             window.scene_controller.draw()
@@ -161,7 +161,7 @@ def on_draw(window: "GameWindow") -> None:
     if fog_overlay is not None and not menu_visible:
         window.camera.use()
         fog_overlay.draw_world()
-        window.camera_controller.gui_camera.use()
+        window.camera_controller.use_gui_camera()
 
     if render_queue is not None:
         render_queue.finalize(getattr(window, "perf_stats", None))
@@ -171,7 +171,7 @@ def on_draw(window: "GameWindow") -> None:
         pp.end(window)
 
     # Switch to GUI camera for UI elements
-    window.camera_controller.gui_camera.use()
+    window.camera_controller.use_gui_camera()
 
     if window.show_debug:
         window._draw_debug_overlay()

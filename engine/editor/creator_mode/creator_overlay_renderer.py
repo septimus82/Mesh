@@ -6,9 +6,12 @@ from dataclasses import dataclass
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
+from engine.logging_tools import get_logger
 from engine.ui_overlays.common import _draw_rectangle_filled
 
 from .creator_overlay import CreatorOverlayModel, build_creator_overlay_model
+
+logger = get_logger(__name__)
 
 DOOR_STAGE_PROPOSAL_ACTION_ID = "door.stage_proposal"
 STAGE_PROPOSAL_LABEL = "Stage Proposal"
@@ -392,16 +395,22 @@ def draw_creator_overlay(editor: Any) -> None:
         return
 
     window = getattr(editor, "window", None)
-    width = getattr(window, "width", 1280)
-    height = getattr(window, "height", 720)
+    width = int(getattr(window, "width", 1280) or 1280)
+    height = int(getattr(window, "height", 720) or 720)
     try:
         commands = build_creator_overlay_draw_commands(model, width, height)
     except (AttributeError, TypeError, ValueError):
+        logger.warning("Creator Mode overlay command build failed", exc_info=True)
         return
     try:
         _draw_commands(commands)
     except Exception:
-        return
+        logger.warning(
+            "Creator Mode overlay draw failed at %sx%s",
+            width,
+            height,
+            exc_info=True,
+        )
 
 
 def _draw_commands(commands: tuple[CreatorOverlayDrawCommand, ...]) -> None:

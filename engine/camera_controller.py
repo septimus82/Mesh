@@ -863,6 +863,27 @@ class CameraController:
     def on_resize(self, width: int, height: int) -> None:
         self.resize(width, height)
 
+    def sync_gui_camera_to_window(self) -> None:
+        """Match GUI/world cameras to the live window size when they diverge."""
+        window = self.window
+        width = int(getattr(window, "width", 0) or 0)
+        height = int(getattr(window, "height", 0) or 0)
+        if width <= 0 or height <= 0:
+            return
+        viewport = getattr(self.gui_camera, "viewport", None)
+        if viewport is not None:
+            try:
+                if int(viewport.width) == width and int(viewport.height) == height:
+                    return
+            except (AttributeError, TypeError, ValueError):
+                pass
+        self.resize(width, height)
+
+    def use_gui_camera(self) -> None:
+        """Activate the GUI camera after ensuring it matches the window size."""
+        self.sync_gui_camera_to_window()
+        self.gui_camera.use()
+
     def resize(self, width: int, height: int) -> None:
         try:
             matcher = getattr(self.camera, "match_window", None)
@@ -872,6 +893,12 @@ class CameraController:
             if callable(gui_matcher):
                 gui_matcher(viewport=True, projection=True, scissor=True, position=True)
         except Exception:
+            logger.warning(
+                "Camera match_window failed during resize (%sx%s)",
+                width,
+                height,
+                exc_info=True,
+            )
             _log_swallow("camera_resize", "match_window() failed")
 
     def start_camera_shake(
