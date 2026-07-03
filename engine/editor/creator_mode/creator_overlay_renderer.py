@@ -74,14 +74,10 @@ def hit_test_creator_overlay_click(
 
 def truncate_creator_overlay_text(text: object, max_chars: int) -> str:
     """Clamp overlay text to one line with an ellipsis."""
+    from engine.ui_overlays.common import truncate_text_to_char_limit
 
     value = str(text or "").replace("\r", " ").replace("\n", " ").strip()
-    limit = max(1, int(max_chars))
-    if len(value) <= limit:
-        return value
-    if limit <= 3:
-        return value[:limit]
-    return value[: limit - 3] + "..."
+    return truncate_text_to_char_limit(value, max_chars)
 
 
 def build_creator_overlay_draw_commands(

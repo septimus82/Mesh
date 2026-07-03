@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
-from .common import UIElement, _draw_tb_rectangle_filled, _draw_tb_rectangle_outline
+from .common import (
+    UIElement,
+    _draw_tb_rectangle_filled,
+    _draw_tb_rectangle_outline,
+    truncate_text_to_char_limit,
+    truncate_text_to_width,
+)
 from .theme import EDITOR_THEME
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -197,7 +203,7 @@ class AIChatOverlay(UIElement):
         _draw_tb_rectangle_outline(left, left + width, bottom + height, bottom, EDITOR_THEME.input_border_focused if focused else EDITOR_THEME.input_border, 1)
         value = str(getattr(chat, "current_input", "") if chat is not None else "")
         draw_text_cached(
-            _truncate(value or "Ask Claude to stage a proposal...", max(1, int(width / 6.0))),
+            truncate_text_to_width(value or "Ask Claude to stage a proposal...", width, 10.0),
             left + 6,
             bottom + 8,
             color=EDITOR_THEME.text_primary if value else EDITOR_THEME.text_dim,
@@ -293,9 +299,4 @@ def _split_long_word(word: str, width: int) -> list[str]:
 
 
 def _truncate(value: str, limit: int) -> str:
-    text = str(value or "")
-    if len(text) <= limit:
-        return text
-    if limit <= 3:
-        return text[:limit]
-    return text[: limit - 3] + "..."
+    return truncate_text_to_char_limit(value, limit)

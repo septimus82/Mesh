@@ -57,15 +57,59 @@ INSPECTOR_MAX_LINES = 8
 INSPECTOR_MAX_LINE_CHARS = 96
 INSPECTOR_MAX_LIST_ITEMS = 6
 
+TEXT_ELLIPSIS = "..."
+DEFAULT_GLYPH_WIDTH_RATIO = 0.6
+
+
+def text_char_capacity_for_width(
+    max_width_px: float,
+    font_size: float,
+    *,
+    glyph_width_ratio: float = DEFAULT_GLYPH_WIDTH_RATIO,
+) -> int:
+    """Estimate how many characters fit in a pixel width at a given font size."""
+    return max(1, int(max(0.0, float(max_width_px)) / max(1.0, float(font_size) * glyph_width_ratio)))
+
+
+def truncate_text_to_char_limit(
+    value: str,
+    limit: int,
+    *,
+    ellipsis: str = TEXT_ELLIPSIS,
+) -> str:
+    """Clamp text to a character limit, appending ellipsis when truncated."""
+    text = str(value or "")
+    max_chars = max(1, int(limit))
+    if len(text) <= max_chars:
+        return text
+    if len(ellipsis) >= max_chars:
+        return text[:max_chars]
+    return text[: max_chars - len(ellipsis)] + ellipsis
+
+
+def truncate_text_to_width(
+    text: str,
+    max_width_px: float,
+    font_size: float,
+    *,
+    glyph_width_ratio: float = DEFAULT_GLYPH_WIDTH_RATIO,
+    normalize_whitespace: bool = False,
+    ellipsis: str = TEXT_ELLIPSIS,
+) -> str:
+    """Clamp text to fit a pixel width, appending ellipsis when truncated."""
+    value = str(text or "")
+    if normalize_whitespace:
+        value = value.replace("\r", " ").replace("\n", " ").strip()
+    limit = text_char_capacity_for_width(
+        max_width_px,
+        font_size,
+        glyph_width_ratio=glyph_width_ratio,
+    )
+    return truncate_text_to_char_limit(value, limit, ellipsis=ellipsis)
+
 
 def _safe_truncate(value: str, max_len: int) -> str:
-    text = str(value or "")
-    limit = max(1, int(max_len))
-    if len(text) <= limit:
-        return text
-    if limit <= 3:
-        return text[:limit]
-    return text[: limit - 3] + "..."
+    return truncate_text_to_char_limit(value, max_len)
 
 
 
