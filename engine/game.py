@@ -513,6 +513,10 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         _init_audio_coordinator(self, audio_manager_cls=AudioManager)
         self.console_controller = ConsoleController(self)
         self.camera_controller = CameraController(self)
+        self.camera_controller.initialize_window_cameras()
+        from engine.resize_diagnostics import log_projection_state
+
+        log_projection_state(self.camera_controller, site="after_init_window_cameras")
         self.scene_controller = SceneController(self)
         self.input_controller = InputController(self)
         self.ui_controller = UIController(self)

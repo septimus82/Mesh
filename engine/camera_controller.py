@@ -101,6 +101,16 @@ def _arcade_lbwh_type() -> Any | None:
     return getattr(types_mod, "LBWH", None)
 
 
+def _arcade_vec2(x: float, y: float) -> Any:
+    arcade = optional_arcade.arcade
+    if arcade is not None:
+        vector_mod = getattr(getattr(arcade, "types", None), "vector_like", None)
+        vec2_type = getattr(vector_mod, "Vec2", None) if vector_mod is not None else None
+        if vec2_type is not None:
+            return vec2_type(x, y)
+    return (x, y)
+
+
 @dataclass(slots=True)
 class CameraArea:
     """Defines a rectangular region with custom camera behavior.
@@ -388,6 +398,14 @@ class CameraController:
         self.default_zoom_speed: float = 5.0
         self.default_padding: float = 0.0
         self.bounds: tuple[float, float, float, float] | None = None
+
+    def initialize_window_cameras(self) -> None:
+        """Apply HiDPI viewport/projection matching at boot before the first draw."""
+        width = int(getattr(self.window, "width", 0) or 0)
+        height = int(getattr(self.window, "height", 0) or 0)
+        if width <= 0 or height <= 0:
+            return
+        self.resize(width, height)
 
     def update_camera_follow(
         self,
@@ -971,10 +989,11 @@ class CameraController:
             return
 
         window = self.window
-        logical_rect = window.rect
+        logical_width = int(getattr(window, "width", 0) or 0)
+        logical_height = int(getattr(window, "height", 0) or 0)
         fb_width, fb_height = _framebuffer_size(window)
         lbwh_type = _arcade_lbwh_type()
-        if lbwh_type is None:
+        if lbwh_type is None or logical_width <= 0 or logical_height <= 0:
             match_window = getattr(camera, "match_window", None)
             if callable(match_window):
                 match_window(
@@ -985,14 +1004,24 @@ class CameraController:
                 )
             return
 
+        logical_rect = lbwh_type(0, 0, logical_width, logical_height)
         framebuffer_rect = lbwh_type(0, 0, fb_width, fb_height)
-        update_values(
-            logical_rect,
-            viewport=False,
-            projection=True,
-            scissor=False,
-            position=position,
-        )
+        if position:
+            # GUI overlays use bottom-left logical coordinates (0..width, 0..height).
+            # Camera2D defaults to center-origin projection; update_values() preserves
+            # rect.x/y and would keep that stale origin instead of resetting to 0,0.
+            projection_data = getattr(camera, "_projection_data", None)
+            if projection_data is not None:
+                projection_data.rect = logical_rect
+            camera.position = _arcade_vec2(0.0, 0.0)
+        else:
+            update_values(
+                logical_rect,
+                viewport=False,
+                projection=True,
+                scissor=False,
+                position=False,
+            )
         update_values(
             framebuffer_rect,
             viewport=True,

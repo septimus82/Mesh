@@ -119,6 +119,37 @@ def _format_sizes(window: "GameWindow") -> str:
     )
 
 
+def log_projection_state(
+    camera_controller: "CameraController",
+    *,
+    site: str,
+) -> None:
+    if not enabled():
+        return
+    window = camera_controller.window
+    seq = getattr(window, "_resize_diag_seq", "?")
+    for label, camera in (("world", camera_controller.camera), ("gui", camera_controller.gui_camera)):
+        projection = getattr(camera, "projection", None)
+        position = getattr(camera, "position", None)
+        viewport = getattr(camera, "viewport", None)
+        logger.warning(
+            "%s projection site=%s seq=%s camera=%s "
+            "lrbt=(%s,%s,%s,%s) position=%s viewport=%sx%s | %s",
+            _PREFIX,
+            site,
+            seq,
+            label,
+            getattr(projection, "left", None),
+            getattr(projection, "right", None),
+            getattr(projection, "bottom", None),
+            getattr(projection, "top", None),
+            position,
+            getattr(viewport, "width", None),
+            getattr(viewport, "height", None),
+            _format_sizes(window),
+        )
+
+
 def log_viewport_pipeline(
     window: "GameWindow",
     *,
