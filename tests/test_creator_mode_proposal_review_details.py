@@ -3,13 +3,17 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from engine.editor.creator_mode import (
+    CreatorModeController,
+    build_creator_overlay_model,
     build_creator_proposal_review_details,
     build_creator_proposal_review_details_from_status,
 )
+from engine.editor.creator_mode.creator_overlay_renderer import build_creator_overlay_draw_commands
 from engine.editor.creator_mode.creator_proposal_status import (
     CreatorProposalListRow,
     CreatorProposalStatusModel,
@@ -170,6 +174,163 @@ def test_hostile_bridge_proves_no_accept_reject_apply_or_stage_calls() -> None:
     assert bridge.calls == ["list_pending_proposals"]
 
 
+def test_snapshot_includes_review_details_derived_from_status() -> None:
+    bridge = FakeBridge(
+        [
+            {
+                "proposal_id": "proposal-1",
+                "preview_summary": "Preview",
+                "affected_ids": ["door_north"],
+                "dry_run": {"ok": True},
+            }
+        ]
+    )
+    controller = CreatorModeController(_editor_with_bridge(bridge))
+    controller.show()
+
+    snapshot = controller.build_snapshot()
+
+    assert snapshot.proposal_review_details.details[0].proposal_id == "proposal-1"
+    assert snapshot.proposal_review_details.details[0].affected_ids == ("door_north",)
+    assert snapshot.proposal_review_details.details[0].dry_run_ok is True
+    assert bridge.calls == ["list_pending_proposals"]
+
+
+def test_overlay_model_includes_proposal_review_details() -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1", "affected_ids": ["door_north"]}]))
+    )
+    controller.show()
+
+    model = build_creator_overlay_model(controller.build_snapshot())
+
+    assert model.proposal_review_details.details[0].proposal_id == "proposal-1"
+    assert model.proposal_review_details.details[0].affected_ids == ("door_north",)
+
+
+def test_render_shows_affected_id_detail_for_valid_proposal() -> None:
+    text = _render_text(
+        FakeBridge(
+            [
+                {
+                    "proposal_id": "proposal-1",
+                    "affected_ids": ["door_north"],
+                    "dry_run": {"ok": True},
+                }
+            ]
+        )
+    )
+
+    assert "Details: Affects door_north - Dry-run OK - W0/E0" in text
+
+
+def test_render_shows_affects_none_for_no_affected_ids() -> None:
+    text = _render_text(FakeBridge([{"proposal_id": "proposal-1"}]))
+
+    assert "Details: Affects none - Dry-run Unknown - W0/E0" in text
+
+
+def test_render_shows_dry_run_ok_failed_and_unknown() -> None:
+    text = _render_text(
+        FakeBridge(
+            [
+                {"proposal_id": "proposal-1", "dry_run": {"ok": True}},
+                {"proposal_id": "proposal-2", "dry_run": {"ok": False}},
+                {"proposal_id": "proposal-3"},
+            ]
+        )
+    )
+
+    assert "Details: Affects none - Dry-run OK - W0/E0" in text
+    assert "Details: Affects none - Dry-run Failed - W0/E0" in text
+    assert "Details: Affects none - Dry-run Unknown - W0/E0" in text
+
+
+def test_render_shows_warning_and_error_counts() -> None:
+    text = _render_text(
+        FakeBridge(
+            [
+                {
+                    "proposal_id": "proposal-1",
+                    "dry_run": {
+                        "ok": False,
+                        "warnings": ["warn"],
+                        "errors": ["error-1", "error-2"],
+                    },
+                }
+            ]
+        )
+    )
+
+    assert "Details: Affects none - Dry-run Failed - W1/E2" in text
+
+
+def test_rendered_detail_line_has_no_action_id_or_hitbox() -> None:
+    commands = _render_commands(
+        FakeBridge(
+            [
+                {
+                    "proposal_id": "proposal-1",
+                    "affected_ids": ["door_north"],
+                    "dry_run": {"ok": True},
+                }
+            ]
+        )
+    )
+    detail_commands = [
+        command
+        for command in commands
+        if command.text == "Details: Affects door_north - Dry-run OK - W0/E0"
+    ]
+
+    assert len(detail_commands) == 1
+    assert detail_commands[0].action_id == ""
+    assert detail_commands[0].hit_left == 0.0
+    assert detail_commands[0].hit_right == 0.0
+    assert detail_commands[0].hit_top == 0.0
+    assert detail_commands[0].hit_bottom == 0.0
+
+
+def test_more_than_three_proposals_only_render_details_for_first_three() -> None:
+    text = _render_text(
+        FakeBridge(
+            [
+                {
+                    "proposal_id": f"proposal-{index}",
+                    "preview_summary": f"Preview {index}",
+                    "affected_ids": [f"entity_{index}"],
+                }
+                for index in range(5)
+            ]
+        )
+    )
+
+    assert text.count("Details: Affects entity_") == 3
+    assert "Details: Affects entity_0 - Dry-run Unknown - W0/E0" in text
+    assert "Details: Affects entity_1 - Dry-run Unknown - W0/E0" in text
+    assert "Details: Affects entity_2 - Dry-run Unknown - W0/E0" in text
+    assert "Details: Affects entity_3 - Dry-run Unknown - W0/E0" not in text
+    assert "...and 2 more" in text
+
+
+def test_snapshot_model_and_render_do_not_accept_reject_apply_or_stage() -> None:
+    bridge = HostileBridge(
+        [
+            {
+                "proposal_id": "proposal-1",
+                "affected_ids": ["door_north"],
+                "dry_run": {"ok": True},
+            }
+        ]
+    )
+
+    text = _render_text(bridge)
+
+    assert "Review: Accept ready / Reject ready" in text
+    assert "Details: Affects door_north - Dry-run OK - W0/E0" in text
+    assert bridge.calls == ["list_pending_proposals"]
+
+
 def test_review_details_module_imports_without_arcade() -> None:
     result = subprocess.run(
         [
@@ -273,3 +434,29 @@ class HostileBridge(FakeBridge):
 
     def stage_pending_proposal(self, ops: list[dict[str, object]]) -> dict[str, object]:
         raise AssertionError("stage must not be called")
+
+
+def _editor_with_bridge(bridge: object) -> SimpleNamespace:
+    return SimpleNamespace(
+        selected_entity=None,
+        live_bridge=bridge,
+        window=SimpleNamespace(
+            width=1280,
+            height=720,
+            scene_controller=SimpleNamespace(current_scene_path="forest"),
+        ),
+    )
+
+
+def _render_commands(bridge: object):
+    controller = CreatorModeController(_editor_with_bridge(bridge))
+    controller.show()
+    return build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+
+
+def _render_text(bridge: object) -> str:
+    return "\n".join(command.text for command in _render_commands(bridge) if command.kind == "text")

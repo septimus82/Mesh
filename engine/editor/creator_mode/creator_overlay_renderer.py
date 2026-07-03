@@ -96,7 +96,7 @@ def build_creator_overlay_draw_commands(
     commands: list[CreatorOverlayDrawCommand] = []
 
     top_h = min(42.0, max(34.0, win_h * 0.18))
-    bottom_h = min(166.0, max(96.0, win_h * 0.23))
+    bottom_h = min(220.0, max(132.0, win_h * 0.30))
     pad = min(14.0, max(8.0, win_w * 0.03))
     side_gap = 8.0
     left_w = min(180.0, max(96.0, win_w * 0.28))
@@ -200,6 +200,9 @@ def build_creator_overlay_draw_commands(
     readiness_by_id = {
         row.proposal_id: row for row in model.proposal_accept_readiness.rows
     }
+    details_by_id = {
+        detail.proposal_id: detail for detail in model.proposal_review_details.details
+    }
     for row in model.proposal_status.rows[:MAX_RENDERED_PROPOSAL_ROWS]:
         if y <= 4.0:
             break
@@ -225,6 +228,20 @@ def build_creator_overlay_draw_commands(
                     y,
                     10,
                     (160, 166, 176),
+                    MAX_WARNING_CHARS,
+                )
+            )
+            y -= 15.0
+        detail_row = details_by_id.get(row.proposal_id)
+        if detail_row is not None and y > 4.0:
+            commands.append(
+                _text(
+                    _proposal_detail_line(detail_row),
+                    "bottom",
+                    pad + 18.0,
+                    y,
+                    10,
+                    (150, 158, 170),
                     MAX_WARNING_CHARS,
                 )
             )
@@ -260,6 +277,25 @@ def _proposal_review_line(row: Any) -> str:
         f"{_review_action_text(row.accept_action)} / "
         f"{_review_action_text(row.reject_action)}"
     )
+
+
+def _proposal_detail_line(detail: Any) -> str:
+    affected_ids = tuple(getattr(detail, "affected_ids", ()) or ())
+    affects = ", ".join(str(item) for item in affected_ids[:3]) if affected_ids else "none"
+    if len(affected_ids) > 3:
+        affects = f"{affects}, +{len(affected_ids) - 3} more"
+    dry_run = _dry_run_label(getattr(detail, "dry_run_ok", None))
+    warning_count = len(tuple(getattr(detail, "warnings", ()) or ()))
+    error_count = len(tuple(getattr(detail, "errors", ()) or ()))
+    return f"Details: Affects {affects} - Dry-run {dry_run} - W{warning_count}/E{error_count}"
+
+
+def _dry_run_label(value: Any) -> str:
+    if value is True:
+        return "OK"
+    if value is False:
+        return "Failed"
+    return "Unknown"
 
 
 def _review_action_text(action: Any) -> str:
