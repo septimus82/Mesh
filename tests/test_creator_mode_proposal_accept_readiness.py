@@ -217,7 +217,7 @@ def test_overlay_model_includes_accept_readiness_model() -> None:
     assert model.proposal_accept_readiness.rows[0].accept_action.enabled is True
 
 
-def test_render_shows_accept_and_reject_ready_for_valid_proposal() -> None:
+def test_render_shows_handoff_label_when_inbox_available() -> None:
     controller = CreatorModeController(_editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}])))
     controller.show()
 
@@ -227,11 +227,13 @@ def test_render_shows_accept_and_reject_ready_for_valid_proposal() -> None:
         720,
     )
 
-    assert "Review: Accept ready / Reject ready" in _command_text(commands)
+    assert "Review: Use AI Proposals" in _command_text(commands)
 
 
-def test_render_shows_disabled_reason_for_missing_proposal_id() -> None:
-    controller = CreatorModeController(_editor_with_bridge(FakeBridge([{"preview_summary": "Preview"}])))
+def test_render_shows_unavailable_handoff_when_inbox_missing() -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}]), include_proposal_inbox=False)
+    )
     controller.show()
 
     commands = build_creator_overlay_draw_commands(
@@ -241,12 +243,12 @@ def test_render_shows_disabled_reason_for_missing_proposal_id() -> None:
     )
 
     assert (
-        "Review: Accept disabled - Missing proposal id / Reject disabled - Missing proposal id"
+        "Review: AI Proposals unavailable - AI Proposals inbox unavailable"
         in _command_text(commands)
     )
 
 
-def test_rendered_readiness_line_has_no_action_id_or_hitbox() -> None:
+def test_rendered_handoff_line_has_no_action_id_or_hitbox() -> None:
     controller = CreatorModeController(_editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}])))
     controller.show()
 
@@ -255,7 +257,7 @@ def test_rendered_readiness_line_has_no_action_id_or_hitbox() -> None:
         1280,
         720,
     )
-    review_commands = [command for command in commands if command.text == "Review: Accept ready / Reject ready"]
+    review_commands = [command for command in commands if command.text == "Review: Use AI Proposals"]
 
     assert len(review_commands) == 1
     assert review_commands[0].action_id == ""
@@ -265,7 +267,40 @@ def test_rendered_readiness_line_has_no_action_id_or_hitbox() -> None:
     assert review_commands[0].hit_bottom == 0.0
 
 
-def test_more_than_three_pending_proposals_only_render_three_readiness_lines() -> None:
+def test_zero_pending_proposals_does_not_render_handoff_line() -> None:
+    controller = CreatorModeController(_editor_with_bridge(FakeBridge([])))
+    controller.show()
+
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    text = _command_text(commands)
+
+    assert "Review: Use AI Proposals" not in text
+    assert "Review: AI Proposals unavailable" not in text
+
+
+def test_render_shows_unavailable_reason_for_missing_proposal_id_without_inbox() -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(FakeBridge([{"preview_summary": "Preview"}]), include_proposal_inbox=False)
+    )
+    controller.show()
+
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+
+    assert (
+        "Review: AI Proposals unavailable - AI Proposals inbox unavailable"
+        in _command_text(commands)
+    )
+
+
+def test_more_than_three_pending_proposals_only_render_three_handoff_lines() -> None:
     controller = CreatorModeController(
         _editor_with_bridge(
             FakeBridge(
@@ -286,7 +321,7 @@ def test_more_than_three_pending_proposals_only_render_three_readiness_lines() -
         )
     )
 
-    assert text.count("Review: Accept ready / Reject ready") == 3
+    assert text.count("Review: Use AI Proposals") == 3
     assert "proposal-0 - Preview 0" in text
     assert "proposal-1 - Preview 1" in text
     assert "proposal-2 - Preview 2" in text
@@ -305,7 +340,7 @@ def test_snapshot_model_and_render_do_not_accept_reject_apply_or_stage() -> None
         720,
     )
 
-    assert "Review: Accept ready / Reject ready" in _command_text(commands)
+    assert "Review: Use AI Proposals" in _command_text(commands)
     assert bridge.calls == ["list_pending_proposals"]
 
 
@@ -419,8 +454,8 @@ class HostileBridge(FakeBridge):
         raise AssertionError("stage must not be called")
 
 
-def _editor_with_bridge(bridge: object) -> SimpleNamespace:
-    return SimpleNamespace(
+def _editor_with_bridge(bridge: object, *, include_proposal_inbox: bool = True) -> SimpleNamespace:
+    editor = SimpleNamespace(
         selected_entity=None,
         live_bridge=bridge,
         window=SimpleNamespace(
@@ -429,6 +464,9 @@ def _editor_with_bridge(bridge: object) -> SimpleNamespace:
             scene_controller=SimpleNamespace(current_scene_path="forest"),
         ),
     )
+    if include_proposal_inbox:
+        editor.proposal_inbox = SimpleNamespace()
+    return editor
 
 
 def _command_text(commands) -> str:

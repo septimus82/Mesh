@@ -326,7 +326,7 @@ def test_snapshot_model_and_render_do_not_accept_reject_apply_or_stage() -> None
 
     text = _render_text(bridge)
 
-    assert "Review: Accept ready / Reject ready" in text
+    assert "Review: Use AI Proposals" in text
     assert "Details: Affects door_north - Dry-run OK - W0/E0" in text
     assert bridge.calls == ["list_pending_proposals"]
 
@@ -436,8 +436,8 @@ class HostileBridge(FakeBridge):
         raise AssertionError("stage must not be called")
 
 
-def _editor_with_bridge(bridge: object) -> SimpleNamespace:
-    return SimpleNamespace(
+def _editor_with_bridge(bridge: object, *, include_proposal_inbox: bool = True) -> SimpleNamespace:
+    editor = SimpleNamespace(
         selected_entity=None,
         live_bridge=bridge,
         window=SimpleNamespace(
@@ -446,6 +446,9 @@ def _editor_with_bridge(bridge: object) -> SimpleNamespace:
             scene_controller=SimpleNamespace(current_scene_path="forest"),
         ),
     )
+    if include_proposal_inbox:
+        editor.proposal_inbox = SimpleNamespace()
+    return editor
 
 
 def _render_commands(bridge: object):

@@ -231,6 +231,16 @@ If bottom panel content must change later, prefer **trimming** (e.g. drop redund
 
 This is the first implementation slice of the hybrid handoff decision (Option D). It prepares UX copy and availability flags before any focus/open wiring (CREATOR-1x or later).
 
+### CREATOR-1x — Display-Only Proposal Inbox Handoff Label
+
+**Status:** implemented (display-only).
+
+- Renders handoff as plain text by **replacing** the per-row `Review: Accept ready / Reject ready` line.
+- Available handoff: `Review: Use AI Proposals`
+- Unavailable handoff with pending proposals: `Review: AI Proposals unavailable - {reason}`
+- No extra bottom-panel line; `bottom_h` unchanged; no click/focus/open behavior.
+- Future inbox focus/open remains a separate slice after CREATOR-1x.
+
 ### Alternative acceptable slice
 
 **CREATOR-1w docs-only:** manual dogfood checklist run against the **official** AI Proposals inbox using Creator Mode–staged door proposals (no new code). Useful if team wants human verification before any handoff label lands.

@@ -294,6 +294,10 @@ Expected tests:
 - CREATOR-1w adds read-only proposal inbox handoff state (`CreatorProposalHandoffModel`).
 - CREATOR-1w does not click/focus/open the AI Proposals inbox yet.
 - CREATOR-1w does not call accept/reject/apply and does not expand the bottom panel.
+- CREATOR-1x renders the read-only Proposal Inbox handoff label in Creator Mode.
+- CREATOR-1x replaces Creator Mode accept/reject wording with inbox handoff wording (`Review: Use AI Proposals`).
+- CREATOR-1x does not click/focus/open the inbox.
+- CREATOR-1x does not call accept/reject/apply and does not expand the bottom panel.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.
