@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 import random
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -870,14 +871,43 @@ class CameraController:
         height = int(getattr(window, "height", 0) or 0)
         if width <= 0 or height <= 0:
             return
+        diag_enabled = os.environ.get("MESH_RESIZE_DIAG", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        pre_viewport = (None, None)
+        if diag_enabled:
+            from engine import resize_diagnostics
+
+            pre_viewport = resize_diagnostics.gui_camera_viewport(self)
         viewport = getattr(self.gui_camera, "viewport", None)
         if viewport is not None:
             try:
                 if int(viewport.width) == width and int(viewport.height) == height:
+                    if diag_enabled:
+                        from engine import resize_diagnostics
+
+                        resize_diagnostics.log_gui_camera_sync(
+                            self,
+                            synced=False,
+                            pre_viewport=pre_viewport,
+                            post_viewport=pre_viewport,
+                        )
                     return
             except (AttributeError, TypeError, ValueError):
                 pass
         self.resize(width, height)
+        if diag_enabled:
+            from engine import resize_diagnostics
+
+            resize_diagnostics.log_gui_camera_sync(
+                self,
+                synced=True,
+                pre_viewport=pre_viewport,
+                post_viewport=resize_diagnostics.gui_camera_viewport(self),
+            )
 
     def use_gui_camera(self) -> None:
         """Activate the GUI camera after ensuring it matches the window size."""
