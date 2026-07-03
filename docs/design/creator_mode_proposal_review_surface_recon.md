@@ -251,6 +251,16 @@ This is the first implementation slice of the hybrid handoff decision (Option D)
 - **CREATOR-1z blocked** until a human operator completes the GUI checklist with all passes.
 - If human dogfood fails, fix official Proposal Inbox path before more Creator Mode review UI.
 
+### CREATOR-1z-pre — Display Proposal ID in AI Proposals Dock
+
+**Status:** implemented (display-only).
+
+- Renders `ID: {proposal_id}` on each AI Proposals dock card using existing `list_pending()` row data.
+- Text-only; no new buttons, hitboxes, or click handlers on the ID line.
+- Accept/Reject button behavior unchanged.
+- Supports sequential dogfood id parity: Creator Mode row id ↔ AI Proposals `ID:` line.
+- **CREATOR-1z** focus/open remains blocked until human dogfood passes.
+
 ### Alternative acceptable slice
 
 **CREATOR-1w docs-only:** manual dogfood checklist run against the **official** AI Proposals inbox using Creator Mode–staged door proposals (no new code). Useful if team wants human verification before any handoff label lands.

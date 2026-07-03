@@ -301,6 +301,8 @@ Expected tests:
 - CREATOR-1y dogfoods the official **AI Proposals** path with Creator-staged proposals (see `docs/design/creator_mode_official_inbox_dogfood.md`).
 - CREATOR-1y does not add Creator Mode accept/reject/focus/open.
 - Future focus/open work (CREATOR-1z) depends on human completion of the CREATOR-1y GUI checklist.
+- CREATOR-1z-pre displays `proposal_id` as plain text in the official AI Proposals dock (`ID: {proposal_id}`).
+- CREATOR-1z-pre is display-only; it does not change accept/reject behavior or add clickable actions.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.

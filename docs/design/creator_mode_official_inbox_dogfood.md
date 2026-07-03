@@ -74,8 +74,23 @@ Details: Affects {door_entity_id} - Dry-run OK - W0/E0
 
 - Tab: **AI Proposals** (right dock)
 - Header: `AI Proposals (N)`
-- Same `proposal_id` and preview summary as Creator Mode row
+- Preview summary matching Creator Mode row
+- **ID line (CREATOR-1z-pre):** `ID: {proposal_id}` as plain text (e.g. `ID: c79a77a28df8423584c048c45a1b45dd`)
 - **Accept** / **Reject** buttons on the official overlay only
+
+### Sequential verification (Creator Mode vs AI Proposals)
+
+Creator Mode overlay and the **AI Proposals** dock are **not** visible at the same time. Dogfood verification is **sequential**:
+
+1. **Shift+F5** — enter Creator Mode; stage proposal; note `{proposal_id}` from the bottom-panel row (`{proposal_id} - {preview_summary}`).
+2. **Shift+F5** — leave Creator Mode (or switch focus away from Creator Mode overlay).
+3. Open **AI Proposals** right-dock tab.
+4. Compare the dock card **ID:** line to the Creator Mode row id — they must match exactly.
+5. Accept/reject only through AI Proposals buttons, never through Creator Mode.
+
+Exact proposal id parity is now checked by reading the Creator Mode row prefix and the AI Proposals `ID:` line.
+
+**CREATOR-1z** focus/open remains **blocked** until human dogfood passes with this id parity check.
 
 ## Supplementary automated verification (official path)
 

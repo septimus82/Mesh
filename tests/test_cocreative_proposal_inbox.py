@@ -216,12 +216,81 @@ def test_ai_proposals_overlay_click_not_reached_from_other_right_tab(
         bridge.stop()
 
 
-def _install_and_draw_inbox_overlay(controller: Any, monkeypatch: pytest.MonkeyPatch) -> ProposalInboxOverlay:
+def test_ai_proposals_overlay_renders_proposal_id_line(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    controller = _make_controller()
+    bridge = EditorLiveSessionBridge(controller, tmp_path)
+    bridge.start(write_discovery=True)
+    drawn: list[str] = []
+    try:
+        staged = _stage_with_drain(controller, bridge, tmp_path, [_guard_add_op("id_line_guard")])
+        _install_and_draw_inbox_overlay(controller, monkeypatch, text_sink=drawn)
+
+        assert f"ID: {staged['proposal_id']}" in drawn
+    finally:
+        bridge.stop()
+
+
+def test_ai_proposals_overlay_skips_id_line_when_proposal_id_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    controller = _make_controller()
+    drawn: list[str] = []
+
+    class InboxStub:
+        def list_pending(self) -> list[dict[str, object]]:
+            return [{"preview_summary": "Preview without id", "dry_run": {"ok": True}, "affected_ids": []}]
+
+    controller.proposal_inbox = InboxStub()
+    _install_and_draw_inbox_overlay(controller, monkeypatch, text_sink=drawn)
+
+    assert not any(text.startswith("ID:") for text in drawn)
+
+
+def test_ai_proposals_id_line_is_not_clickable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    controller = _make_controller()
+    bridge = EditorLiveSessionBridge(controller, tmp_path)
+    bridge.start(write_discovery=True)
+    drawn: list[str] = []
+    try:
+        staged = _stage_with_drain(controller, bridge, tmp_path, [_guard_add_op("id_click_guard")])
+        overlay = _install_and_draw_inbox_overlay(controller, monkeypatch, text_sink=drawn)
+        id_line = f"ID: {staged['proposal_id']}"
+
+        assert id_line in drawn
+        assert set(overlay._button_rects) == {
+            (staged["proposal_id"], "accept"),
+            (staged["proposal_id"], "reject"),
+        }
+        assert overlay.on_mouse_press(640.0, 360.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is False
+    finally:
+        bridge.stop()
+
+
+def _install_and_draw_inbox_overlay(
+    controller: Any,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    text_sink: list[str] | None = None,
+) -> ProposalInboxOverlay:
     import engine.ui_overlays.proposal_inbox_overlay as overlay_module
 
     monkeypatch.setattr(overlay_module, "_draw_tb_rectangle_filled", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(overlay_module, "_draw_tb_rectangle_outline", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(overlay_module, "draw_text_cached", lambda *_args, **_kwargs: None)
+
+    if text_sink is not None:
+        def _capture(text: object, *_args, **_kwargs) -> None:
+            text_sink.append(str(text))
+
+        monkeypatch.setattr(overlay_module, "draw_text_cached", _capture)
+    else:
+        monkeypatch.setattr(overlay_module, "draw_text_cached", lambda *_args, **_kwargs: None)
+
     controller.window.editor_controller = controller
     overlay = ProposalInboxOverlay(controller.window)
     controller.window.proposal_inbox_overlay = overlay
