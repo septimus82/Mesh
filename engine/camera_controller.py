@@ -76,6 +76,31 @@ if ArcadeCamera is None:  # pragma: no cover - only used when optional_arcade.ar
 
     ArcadeCamera = _MissingArcadeCamera
 
+
+def _framebuffer_size(window: "GameWindow") -> tuple[int, int]:
+    """Physical drawable size; falls back to logical size when scale is 1.0."""
+    get_framebuffer_size = getattr(window, "get_framebuffer_size", None)
+    if callable(get_framebuffer_size):
+        try:
+            width, height = get_framebuffer_size()
+            return max(1, int(width)), max(1, int(height))
+        except (TypeError, ValueError):
+            logger.warning("get_framebuffer_size() returned invalid values", exc_info=True)
+    logical_width = int(getattr(window, "width", 0) or 0)
+    logical_height = int(getattr(window, "height", 0) or 0)
+    return max(1, logical_width), max(1, logical_height)
+
+
+def _arcade_lbwh_type() -> Any | None:
+    arcade = optional_arcade.arcade
+    if arcade is None:
+        return None
+    types_mod = getattr(arcade, "types", None)
+    if types_mod is None:
+        return None
+    return getattr(types_mod, "LBWH", None)
+
+
 @dataclass(slots=True)
 class CameraArea:
     """Defines a rectangular region with custom camera behavior.
@@ -867,10 +892,11 @@ class CameraController:
     def sync_gui_camera_to_window(self) -> None:
         """Match GUI/world cameras to the live window size when they diverge."""
         window = self.window
-        width = int(getattr(window, "width", 0) or 0)
-        height = int(getattr(window, "height", 0) or 0)
-        if width <= 0 or height <= 0:
+        logical_width = int(getattr(window, "width", 0) or 0)
+        logical_height = int(getattr(window, "height", 0) or 0)
+        if logical_width <= 0 or logical_height <= 0:
             return
+        framebuffer_width, framebuffer_height = _framebuffer_size(window)
         diag_enabled = os.environ.get("MESH_RESIZE_DIAG", "").strip().lower() in {
             "1",
             "true",
@@ -885,7 +911,10 @@ class CameraController:
         viewport = getattr(self.gui_camera, "viewport", None)
         if viewport is not None:
             try:
-                if int(viewport.width) == width and int(viewport.height) == height:
+                if (
+                    int(viewport.width) == framebuffer_width
+                    and int(viewport.height) == framebuffer_height
+                ):
                     if diag_enabled:
                         from engine import resize_diagnostics
 
@@ -898,7 +927,7 @@ class CameraController:
                     return
             except (AttributeError, TypeError, ValueError):
                 pass
-        self.resize(width, height)
+        self.resize(logical_width, logical_height)
         if diag_enabled:
             from engine import resize_diagnostics
 
@@ -916,20 +945,61 @@ class CameraController:
 
     def resize(self, width: int, height: int) -> None:
         try:
-            matcher = getattr(self.camera, "match_window", None)
-            if callable(matcher):
-                matcher(viewport=True, projection=True, scissor=True, position=False)
-            gui_matcher = getattr(self.gui_camera, "match_window", None)
-            if callable(gui_matcher):
-                gui_matcher(viewport=True, projection=True, scissor=True, position=True)
+            self._match_camera_to_window(self.camera, position=False)
+            self._match_camera_to_window(self.gui_camera, position=True)
         except Exception:
             logger.warning(
-                "Camera match_window failed during resize (%sx%s)",
+                "Camera resize failed during resize (%sx%s)",
                 width,
                 height,
                 exc_info=True,
             )
-            _log_swallow("camera_resize", "match_window() failed")
+            _log_swallow("camera_resize", "HiDPI camera resize failed")
+
+    def _match_camera_to_window(self, camera: Any, *, position: bool) -> None:
+        """Resize camera projection to logical window coords, viewport to framebuffer."""
+        update_values = getattr(camera, "update_values", None)
+        if not callable(update_values):
+            match_window = getattr(camera, "match_window", None)
+            if callable(match_window):
+                match_window(
+                    viewport=True,
+                    projection=True,
+                    scissor=True,
+                    position=position,
+                )
+            return
+
+        window = self.window
+        logical_rect = window.rect
+        fb_width, fb_height = _framebuffer_size(window)
+        lbwh_type = _arcade_lbwh_type()
+        if lbwh_type is None:
+            match_window = getattr(camera, "match_window", None)
+            if callable(match_window):
+                match_window(
+                    viewport=True,
+                    projection=True,
+                    scissor=True,
+                    position=position,
+                )
+            return
+
+        framebuffer_rect = lbwh_type(0, 0, fb_width, fb_height)
+        update_values(
+            logical_rect,
+            viewport=False,
+            projection=True,
+            scissor=False,
+            position=position,
+        )
+        update_values(
+            framebuffer_rect,
+            viewport=True,
+            projection=False,
+            scissor=True,
+            position=False,
+        )
 
     def start_camera_shake(
         self,

@@ -22,13 +22,18 @@ class _HeadlessWindow:
         self.ctx = SimpleNamespace(screen=SimpleNamespace(viewport=(0, 0, width, height)))
         self.world_width = None
         self.world_height = None
+        self._framebuffer = (width, height)
         self.set_size(width, height)
 
     def set_size(self, width: int, height: int) -> None:
         self.width = width
         self.height = height
         self.rect = _Rect(0, 0, width, height)
+        self._framebuffer = (width, height)
         self.ctx.screen.viewport = (0, 0, width, height)
+
+    def get_framebuffer_size(self) -> tuple[int, int]:
+        return self._framebuffer
 
 
 def _visible_rect(camera) -> tuple[float, float, float, float]:  # noqa: ANN001

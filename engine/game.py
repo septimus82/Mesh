@@ -990,13 +990,6 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         self.engine_config.width = int(width)
         self.engine_config.height = int(height)
         self.console_visible_line_count = max(4, min(12, height // 60 or 4))
-        if self.camera_controller is not None:
-            self.camera_controller.on_resize(int(width), int(height))
-            log_viewport_pipeline(
-                self,
-                site="after_camera_controller_on_resize",
-                camera_controller=self.camera_controller,
-            )
         if getattr(self, "ui_controller", None) is not None:
             resize = getattr(self.ui_controller, "on_resize", None)
             if callable(resize):
@@ -1009,6 +1002,14 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         lighting = getattr(self, "lighting", None)
         if lighting is not None:
             lighting.resize(int(width), int(height))
+        # Run last so camera viewport (framebuffer-sized) wins over arcade's logical viewport.
+        if self.camera_controller is not None:
+            self.camera_controller.on_resize(int(width), int(height))
+            log_viewport_pipeline(
+                self,
+                site="after_camera_controller_on_resize",
+                camera_controller=self.camera_controller,
+            )
 
     # ------------------------------------------------------------------
     # Console: delegated to ConsoleController
