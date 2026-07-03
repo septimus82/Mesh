@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING, Any
 import engine.optional_arcade as optional_arcade
 
 from ..text_draw import TextCache, draw_text_cached
-from .common import UIElement, _draw_tb_rectangle_filled, _draw_tb_rectangle_outline
+from .common import (
+    UIElement,
+    _draw_tb_rectangle_filled,
+    _draw_tb_rectangle_outline,
+    text_char_capacity_for_width,
+    truncate_text_to_char_limit,
+)
 from .theme import EDITOR_THEME
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -217,13 +223,8 @@ def _contains(rect: tuple[float, float, float, float], x: float, y: float) -> bo
 
 
 def _char_capacity(width: float, font_size: int) -> int:
-    return max(1, int(max(0.0, width) / max(1.0, float(font_size) * 0.6)))
+    return text_char_capacity_for_width(width, float(font_size))
 
 
 def _truncate(value: str, limit: int) -> str:
-    text = str(value or "")
-    if len(text) <= limit:
-        return text
-    if limit <= 3:
-        return text[:limit]
-    return text[: limit - 3] + "..."
+    return truncate_text_to_char_limit(value, limit)

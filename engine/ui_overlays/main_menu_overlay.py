@@ -17,6 +17,7 @@ from .common import (
     UIElement,
     _draw_rectangle_filled,
     _draw_tb_rectangle_outline,
+    truncate_text_to_width,
 )
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -729,9 +730,13 @@ class MainMenuOverlay(UIElement):
         anchor_x: str = "left",
         anchor_y: str = "top",
         bold: bool = False,
+        max_width_px: float | None = None,
     ) -> None:
+        display = str(text or "")
+        if max_width_px is not None:
+            display = truncate_text_to_width(display, max_width_px, font_size)
         optional_arcade.arcade.Text(
-            text=text,
+            text=display,
             x=x,
             y=y,
             color=color,
@@ -774,6 +779,8 @@ class MainMenuOverlay(UIElement):
         )
 
     def _draw_menu_title(self, layout: ProjectBrowserLayout, subtitle: str) -> None:
+        panel = layout.panel
+        title_width = panel.width - 40.0
         self._draw_menu_text(
             "MESH",
             layout.title_x,
@@ -782,6 +789,7 @@ class MainMenuOverlay(UIElement):
             font_size=34,
             anchor_x="center",
             bold=True,
+            max_width_px=title_width,
         )
         self._draw_menu_text(
             subtitle,
@@ -790,6 +798,7 @@ class MainMenuOverlay(UIElement):
             color=(142, 178, 190, 255),
             font_size=15,
             anchor_x="center",
+            max_width_px=title_width,
         )
 
     def _draw_menu_cards(
@@ -821,6 +830,7 @@ class MainMenuOverlay(UIElement):
             _draw_tb_rectangle_outline(card.left, card.right, card.top, card.bottom, border, 2 if selected else 1)
 
             text_left = card.left + 18.0
+            text_width = max(0.0, card.width - 36.0)
             self._draw_menu_text(
                 str(label),
                 text_left,
@@ -828,6 +838,7 @@ class MainMenuOverlay(UIElement):
                 color=(232, 242, 244, 255),
                 font_size=16,
                 bold=selected,
+                max_width_px=text_width,
             )
             if subtitle:
                 self._draw_menu_text(
@@ -836,6 +847,7 @@ class MainMenuOverlay(UIElement):
                     card.top - 32.0,
                     color=(150, 164, 174, 230),
                     font_size=11,
+                    max_width_px=text_width,
                 )
 
     def _draw_menu_footer(self, layout: ProjectBrowserLayout, text: str) -> None:
@@ -854,6 +866,7 @@ class MainMenuOverlay(UIElement):
             color=(166, 187, 196, 230),
             font_size=12,
             anchor_x="center",
+            max_width_px=panel.width - 68.0,
         )
 
     def _input_legend(self) -> str:
@@ -945,6 +958,7 @@ class MainMenuOverlay(UIElement):
             color=(232, 242, 244, 255),
             font_size=16,
             anchor_y="center",
+            max_width_px=max(0.0, field.width - 36.0),
         )
         if error:
             self._draw_menu_text(
@@ -953,6 +967,7 @@ class MainMenuOverlay(UIElement):
                 field.bottom - 18.0,
                 color=(255, 220, 120, 255),
                 font_size=12,
+                max_width_px=max(0.0, field.width - 36.0),
             )
         self._draw_menu_footer(layout, footer)
 
