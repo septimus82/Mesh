@@ -275,6 +275,8 @@ Expected tests:
 - CREATOR-1p documents the existing proposal accept/apply path.
 - CREATOR-1p does not implement accept/apply.
 - Future accept/apply work must preserve revision guard and undo batch semantics.
+- CREATOR-1q adds a read-only proposal accept/reject readiness model.
+- CREATOR-1q does not call accept/reject/apply and does not add clickable actions.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.
