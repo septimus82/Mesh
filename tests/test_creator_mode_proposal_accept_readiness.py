@@ -11,8 +11,13 @@ from engine.editor.creator_mode import (
     CreatorModeController,
     build_creator_overlay_model,
     build_creator_proposal_accept_readiness,
+    build_creator_proposal_accept_readiness_from_status,
 )
 from engine.editor.creator_mode.creator_overlay_renderer import build_creator_overlay_draw_commands
+from engine.editor.creator_mode.creator_proposal_status import (
+    CreatorProposalListRow,
+    CreatorProposalStatusModel,
+)
 
 pytestmark = pytest.mark.fast
 
@@ -116,6 +121,80 @@ def test_broken_bridge_fails_closed_with_warning() -> None:
     assert model.available is False
     assert model.summary == "Proposal review actions unavailable."
     assert model.warnings
+
+
+def test_from_status_unavailable_status_returns_unavailable_model() -> None:
+    model = build_creator_proposal_accept_readiness_from_status(
+        CreatorProposalStatusModel(
+            available=False,
+            pending_count=0,
+            summary="Proposal review status unavailable.",
+            warnings=("Bridge unavailable.",),
+        )
+    )
+
+    assert model.available is False
+    assert model.summary == "Proposal review actions unavailable."
+    assert model.warnings == ("Bridge unavailable.",)
+
+
+def test_from_status_zero_rows_returns_available_empty_model() -> None:
+    model = build_creator_proposal_accept_readiness_from_status(
+        CreatorProposalStatusModel(
+            available=True,
+            pending_count=0,
+            summary="No staged proposals.",
+            rows=(),
+        )
+    )
+
+    assert model.available is True
+    assert model.rows == ()
+    assert model.summary == "No proposals waiting for review."
+
+
+def test_from_status_valid_proposal_row_creates_enabled_actions() -> None:
+    model = build_creator_proposal_accept_readiness_from_status(
+        CreatorProposalStatusModel(
+            available=True,
+            pending_count=1,
+            summary="1 proposal waiting for review",
+            rows=(CreatorProposalListRow("proposal-1", "Preview"),),
+        )
+    )
+
+    assert model.rows[0].proposal_id == "proposal-1"
+    assert model.rows[0].accept_action.enabled is True
+    assert model.rows[0].reject_action.enabled is True
+
+
+def test_from_status_missing_proposal_id_row_creates_disabled_actions() -> None:
+    model = build_creator_proposal_accept_readiness_from_status(
+        CreatorProposalStatusModel(
+            available=True,
+            pending_count=1,
+            summary="1 proposal waiting for review",
+            rows=(CreatorProposalListRow("proposal", "Preview"),),
+        )
+    )
+
+    assert model.rows[0].proposal_id == "proposal"
+    assert model.rows[0].accept_action.enabled is False
+    assert model.rows[0].accept_action.reason == "Missing proposal id"
+    assert model.rows[0].reject_action.enabled is False
+    assert model.rows[0].reject_action.reason == "Missing proposal id"
+
+
+def test_build_snapshot_reads_pending_proposals_once() -> None:
+    bridge = FakeBridge([{"proposal_id": "proposal-1"}])
+    controller = CreatorModeController(_editor_with_bridge(bridge))
+    controller.show()
+
+    snapshot = controller.build_snapshot()
+
+    assert snapshot.proposal_status.rows[0].proposal_id == "proposal-1"
+    assert snapshot.proposal_accept_readiness.rows[0].proposal_id == "proposal-1"
+    assert bridge.calls == ["list_pending_proposals"]
 
 
 def test_snapshot_includes_accept_readiness_model() -> None:
@@ -227,7 +306,7 @@ def test_snapshot_model_and_render_do_not_accept_reject_apply_or_stage() -> None
     )
 
     assert "Review: Accept ready / Reject ready" in _command_text(commands)
-    assert bridge.calls == ["list_pending_proposals", "list_pending_proposals"]
+    assert bridge.calls == ["list_pending_proposals"]
 
 
 def test_accept_readiness_module_imports_without_arcade() -> None:

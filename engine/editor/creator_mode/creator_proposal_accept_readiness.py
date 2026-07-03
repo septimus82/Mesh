@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .creator_proposal_status import CreatorProposalListRow, build_creator_proposal_status
+from .creator_proposal_status import (
+    CreatorProposalListRow,
+    CreatorProposalStatusModel,
+    build_creator_proposal_status,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +50,14 @@ def build_creator_proposal_accept_readiness(
     """Build display-only proposal review action readiness from a bridge-like object."""
 
     status = build_creator_proposal_status(bridge)
+    return build_creator_proposal_accept_readiness_from_status(status)
+
+
+def build_creator_proposal_accept_readiness_from_status(
+    status: CreatorProposalStatusModel,
+) -> CreatorProposalAcceptReadinessModel:
+    """Build display-only proposal review action readiness from proposal status."""
+
     if not status.available:
         return CreatorProposalAcceptReadinessModel(
             available=False,
