@@ -962,6 +962,9 @@ class MainMenuOverlay(UIElement):
 
         width = min(560.0, max(320.0, self.window.width - 120.0))
         height = min(380.0, max(240.0, self.window.height - 200.0))
+        from engine.resize_diagnostics import maybe_log_menu_draw_sizes
+
+        maybe_log_menu_draw_sizes(self.window, panel_width=width, panel_height=height)
         left = (self.window.width - width) / 2.0
         right = left + width
         bottom = (self.window.height - height) / 2.0

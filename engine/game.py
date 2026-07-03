@@ -983,6 +983,9 @@ class GameWindow(engine.optional_arcade.arcade.Window):
 
     def on_resize(self, width: int, height: int) -> None:
         super().on_resize(width, height)
+        from engine.resize_diagnostics import note_window_resize
+
+        note_window_resize(self, int(width), int(height))
         self.engine_config.width = int(width)
         self.engine_config.height = int(height)
         self.console_visible_line_count = max(4, min(12, height // 60 or 4))
