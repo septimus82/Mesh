@@ -2,6 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from .dpi_bootstrap import set_process_dpi_unaware
+
+# Must run before ``import arcade`` (pyglet sets per-monitor DPI awareness at import).
+set_process_dpi_unaware()
+
 from . import arcade_fallback
 
 _arcade: Any = None

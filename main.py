@@ -1,5 +1,10 @@
 """Main entry point for the Mesh 2D game engine demo."""
 
+from engine.dpi_bootstrap import set_process_dpi_unaware
+
+# Must precede pyglet (pyglet forces per-monitor DPI awareness at import time).
+set_process_dpi_unaware()
+
 import argparse
 import sys
 import warnings
