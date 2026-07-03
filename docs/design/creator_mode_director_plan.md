@@ -286,6 +286,11 @@ Expected tests:
 - CREATOR-1t prepares dry-run and affected-id detail for later review UI.
 - CREATOR-1u displays read-only proposal review details from the shared proposal status read.
 - CREATOR-1u does not call accept/reject/apply and does not add clickable actions or hitboxes.
+- CREATOR-1v documents proposal review **surface ownership** (where review UI should live).
+- CREATOR-1v recommends **hybrid handoff**: Creator Mode keeps compact read-only summary; official **AI Proposals** inbox owns accept/reject.
+- CREATOR-1v recommends **avoiding further bottom-panel expansion** for review/mutation.
+- CREATOR-1v does not implement accept/reject/apply, buttons, or input routing.
+- Future accept/reject work should prefer **official Proposal Inbox handoff** before any Creator Mode mutation trigger.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.
