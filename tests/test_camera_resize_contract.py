@@ -90,3 +90,13 @@ def test_resize_tolerates_cameras_without_match_window() -> None:
     controller.gui_camera = SimpleNamespace()
 
     controller.resize(1600, 900)
+
+
+def test_sync_gui_camera_to_window_is_noop_when_already_matched() -> None:
+    window = _HeadlessWindow(1280, 720)
+    controller = CameraController(window)
+    controller.resize(1280, 720)
+
+    controller.sync_gui_camera_to_window()
+
+    assert _visible_rect(controller.gui_camera) == (0.0, 0.0, 1280.0, 720.0)

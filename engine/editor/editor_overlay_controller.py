@@ -66,7 +66,7 @@ class EditorOverlayController:
 
                 draw_creator_overlay(editor)
             except Exception:
-                logger.debug("Creator Mode overlay draw failed", exc_info=True)
+                logger.warning("Creator Mode overlay draw failed", exc_info=True)
             return
 
         dock_shell_active = self._dock_shell_active()
