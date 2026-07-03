@@ -12,6 +12,10 @@ class CreatorProposalListRow:
     proposal_id: str
     summary: str
     affected_count: int = 0
+    affected_ids: tuple[str, ...] = ()
+    dry_run_ok: bool | None = None
+    dry_run_warnings: tuple[str, ...] = ()
+    dry_run_errors: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,14 +91,49 @@ def _sanitize_pending_row(row: object) -> CreatorProposalListRow:
             proposal_id="proposal",
             summary="No preview summary",
             affected_count=0,
+            dry_run_warnings=("Dry-run details unavailable.",),
         )
 
     proposal_id = str(row.get("proposal_id") or "proposal").strip() or "proposal"
     summary = str(row.get("preview_summary") or "No preview summary").strip() or "No preview summary"
-    affected_ids = row.get("affected_ids")
-    affected_count = len(affected_ids) if isinstance(affected_ids, list) else 0
+    affected_ids = _sanitize_string_list(row.get("affected_ids"))
+    dry_run = row.get("dry_run")
+    dry_run_ok, dry_run_warnings, dry_run_errors = _sanitize_dry_run(dry_run)
     return CreatorProposalListRow(
         proposal_id=proposal_id,
         summary=summary,
-        affected_count=affected_count,
+        affected_count=len(affected_ids),
+        affected_ids=affected_ids,
+        dry_run_ok=dry_run_ok,
+        dry_run_warnings=dry_run_warnings,
+        dry_run_errors=dry_run_errors,
     )
+
+
+def _sanitize_dry_run(dry_run: object) -> tuple[bool | None, tuple[str, ...], tuple[str, ...]]:
+    if dry_run is None:
+        return None, (), ()
+    if not isinstance(dry_run, dict):
+        return None, ("Dry-run details unavailable.",), ()
+
+    ok = dry_run.get("ok")
+    if not isinstance(ok, bool):
+        success = dry_run.get("success")
+        ok = success if isinstance(success, bool) else None
+
+    return (
+        ok,
+        _sanitize_string_list(dry_run.get("warnings")),
+        _sanitize_string_list(dry_run.get("errors")),
+    )
+
+
+def _sanitize_string_list(value: object) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    sanitized: list[str] = []
+    for item in value:
+        text = str(item or "").strip()
+        if text:
+            sanitized.append(text)
+    return tuple(sanitized)
