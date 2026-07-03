@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -13,7 +15,9 @@ from engine.editor.live_session_bridge import EditorLiveSessionBridge
 from engine.editor.proposal_inbox import ProposalInbox
 from engine.ui_overlays.proposal_inbox_overlay import ProposalInboxOverlay
 from tests.test_cocreative_live_bridge import _stage_with_drain
-from tests.test_cocreative_live_ops import _entity_by_name, _entity_names, _guard_add_op, _make_controller
+from engine.editor.creator_mode import build_creator_door_workflow, stage_creator_door_proposal
+from engine.editor.creator_mode.creator_door_workflow import CreatorDoorWorkflowRequest
+from tests.test_cocreative_live_ops import _entity_by_name, _entity_names, _guard_add_op, _make_controller, _FakeSprite
 
 
 def _guard_patrol_ops(name: str) -> list[dict[str, Any]]:
@@ -26,6 +30,81 @@ def _guard_patrol_ops(name: str) -> list[dict[str, Any]]:
             "params": {"speed": 2.5, "points": [[0, 0], [32, 0]]},
         },
     ]
+
+
+def _creator_door_ops(
+    *,
+    scene_path: str = "scenes/live.json",
+    entity_id: str = "door_north",
+    destination_scene: str = "dungeon",
+    destination_spawn: str = "north_entry",
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "set_behaviour_params",
+            "scene_path": scene_path,
+            "entity_id": entity_id,
+            "behaviour_name": "SceneExit",
+            "params": {
+                "target_scene": destination_scene,
+                "target_spawn": destination_spawn,
+                "trigger": "interact",
+            },
+        }
+    ]
+
+
+def _install_creator_door_entity(controller: Any) -> dict[str, Any]:
+    scene_controller = controller.window.scene_controller
+    door: dict[str, Any] = {
+        "id": "door_north",
+        "name": "North Gate",
+        "x": 10,
+        "y": 20,
+        "behaviours": ["SceneExit"],
+        "behaviour_config": {
+            "SceneExit": {
+                "target_scene": "town",
+                "target_spawn": "entry",
+                "trigger": "interact",
+            }
+        },
+    }
+    scene_controller._loaded_scene_data["entities"].append(door)
+    scene_controller.add_sprite_to_layer(_FakeSprite(door))
+    return door
+
+
+def _stage_creator_door_with_drain(
+    controller: Any,
+    bridge: EditorLiveSessionBridge,
+    tmp_path: Path,
+) -> dict[str, Any]:
+    scene_path = str(controller.window.scene_controller.current_scene_path)
+    workflow = build_creator_door_workflow(
+        CreatorDoorWorkflowRequest(
+            source_scene=scene_path,
+            destination_scene="dungeon",
+            destination_spawn_id="north_entry",
+            source_entity_id="door_north",
+        )
+    )
+    container: dict[str, Any] = {}
+
+    def run() -> None:
+        container["result"] = stage_creator_door_proposal(workflow, bridge)
+
+    thread = threading.Thread(target=run)
+    thread.start()
+    deadline = time.time() + 3.0
+    while thread.is_alive() and time.time() < deadline:
+        controller.drain_live_bridge()
+        time.sleep(0.01)
+    thread.join(timeout=1.0)
+    assert not thread.is_alive()
+    result = container["result"]
+    assert result.ok is True
+    return {"proposal_id": result.proposal_id, "preview": result.preview_summary}
 
 
 def test_proposal_inbox_lists_two_staged_bridge_proposals_without_mutation(tmp_path: Path) -> None:
@@ -268,6 +347,137 @@ def test_ai_proposals_id_line_is_not_clickable(
             (staged["proposal_id"], "reject"),
         }
         assert overlay.on_mouse_press(640.0, 360.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is False
+    finally:
+        bridge.stop()
+
+
+def test_ai_proposals_creator_door_accept_click_applies_through_official_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    door = _install_creator_door_entity(controller)
+    bridge = EditorLiveSessionBridge(controller, tmp_path)
+    bridge.start(write_discovery=True)
+    try:
+        staged = _stage_creator_door_with_drain(controller, bridge, tmp_path)
+        pending = controller.proposal_inbox.list_pending()
+        assert pending[0]["dry_run"]["ok"] is True
+        assert len(scene_controller.all_sprites) == 1
+        assert door["behaviour_config"]["SceneExit"]["target_scene"] == "town"
+
+        overlay = _install_and_draw_inbox_overlay(controller, monkeypatch)
+        x, y = _button_center(overlay, staged["proposal_id"], "accept")
+
+        handled = controller.handle_mouse_click(x, y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0)
+
+        assert handled is True
+        assert controller.proposal_inbox.list_pending() == []
+        assert door["behaviour_config"]["SceneExit"]["target_scene"] == "dungeon"
+        assert door["behaviour_config"]["SceneExit"]["target_spawn"] == "north_entry"
+        assert len(controller.undo.undo_stack) == 1
+        assert controller.undo.undo_stack[0]["type"] == "ApplyAIOpBatch"
+
+        assert controller.undo.undo() is True
+        assert door["behaviour_config"]["SceneExit"]["target_scene"] == "town"
+        assert door["behaviour_config"]["SceneExit"]["target_spawn"] == "entry"
+    finally:
+        bridge.stop()
+
+
+def test_ai_proposals_accept_hitbox_regression_with_id_line_present(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    controller = _make_controller()
+    bridge = EditorLiveSessionBridge(controller, tmp_path)
+    bridge.start(write_discovery=True)
+    drawn: list[str] = []
+    try:
+        staged = _stage_with_drain(controller, bridge, tmp_path, [_guard_add_op("hitbox_guard")])
+        overlay = _install_and_draw_inbox_overlay(controller, monkeypatch, text_sink=drawn)
+        proposal_id = staged["proposal_id"]
+        id_line = f"ID: {proposal_id}"
+
+        assert id_line in drawn
+        assert (proposal_id, "accept") in overlay._button_rects
+        left, bottom, width, height = overlay._button_rects[(proposal_id, "accept")]
+        center_x, center_y = _button_center(overlay, proposal_id, "accept")
+
+        assert left <= center_x <= left + width
+        assert bottom <= center_y <= bottom + height
+        assert overlay.on_mouse_press(left - 1.0, center_y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is False
+        assert overlay.on_mouse_press(left + width + 1.0, center_y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is False
+        assert overlay.on_mouse_press(center_x, center_y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+        assert controller.proposal_inbox.list_pending() == []
+    finally:
+        bridge.stop()
+
+
+def test_ai_proposals_failed_dry_run_disables_accept_click(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    door = _install_creator_door_entity(controller)
+    bridge = EditorLiveSessionBridge(controller, tmp_path)
+    bridge.start(write_discovery=True)
+    try:
+        staged = _stage_with_drain(
+            controller,
+            bridge,
+            tmp_path,
+            _creator_door_ops(scene_path="forest"),
+        )
+        pending = controller.proposal_inbox.list_pending()
+        assert pending[0]["dry_run"]["ok"] is False
+
+        overlay = _install_and_draw_inbox_overlay(controller, monkeypatch)
+        assert (staged["proposal_id"], "accept") not in overlay._button_rects
+        assert (staged["proposal_id"], "reject") in overlay._button_rects
+
+        reject_x, reject_y = _button_center(overlay, staged["proposal_id"], "reject")
+        assert controller.handle_mouse_click(reject_x, reject_y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+        assert controller.proposal_inbox.list_pending() == []
+        assert door["behaviour_config"]["SceneExit"]["target_scene"] == "town"
+        assert controller.undo.undo_stack == []
+        assert len(scene_controller.all_sprites) == 1
+    finally:
+        bridge.stop()
+
+
+def test_ai_proposals_stale_accept_click_is_fail_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    bridge = EditorLiveSessionBridge(controller, tmp_path)
+    bridge.start(write_discovery=True)
+    try:
+        staged = _stage_with_drain(controller, bridge, tmp_path, [_guard_add_op("stale_click_guard")])
+        overlay = _install_and_draw_inbox_overlay(controller, monkeypatch)
+        x, y = _button_center(overlay, staged["proposal_id"], "accept")
+
+        from tests.test_cocreative_live_ops import _add_entity
+
+        _add_entity(controller, "human_edit")
+        revision = controller.content_revision
+        sprite_count = len(scene_controller.all_sprites)
+        entity_payload = list(scene_controller._loaded_scene_data["entities"])
+
+        overlay.draw()
+        x, y = _button_center(overlay, staged["proposal_id"], "accept")
+        handled = controller.handle_mouse_click(x, y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0)
+
+        assert handled is True
+        assert len(controller.proposal_inbox.list_pending()) == 1
+        assert len(scene_controller.all_sprites) == sprite_count
+        assert scene_controller._loaded_scene_data["entities"] == entity_payload
+        assert controller.content_revision == revision
+        assert "stale_click_guard" not in _entity_names(scene_controller.build_scene_snapshot(compact=False))
     finally:
         bridge.stop()
 

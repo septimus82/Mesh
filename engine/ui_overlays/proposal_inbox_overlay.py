@@ -161,12 +161,21 @@ class ProposalInboxOverlay(UIElement):
                 cache=self._text_cache,
             )
 
-            button_y = y - ROW_H + 18
+            # Keep buttons anchored below the four text lines (preview, id, meta, status).
+            button_y = y - (LINE_H * 4) - BUTTON_H - 6
             reject_rect = (dock.right - PADDING - BUTTON_W, button_y, BUTTON_W, BUTTON_H)
             accept_rect = (reject_rect[0] - BUTTON_W - 8, button_y, BUTTON_W, BUTTON_H)
-            self._draw_button(accept_rect, "Accept", EDITOR_THEME.action_text)
+            # Accept is only clickable after a successful dry-run. Failed proposals stay
+            # visible for review, but accept remains fail-closed in ProposalInbox too.
+            accept_enabled = dry_run.get("ok") is True
+            self._draw_button(
+                accept_rect,
+                "Accept",
+                EDITOR_THEME.action_text if accept_enabled else EDITOR_THEME.text_dim,
+            )
             self._draw_button(reject_rect, "Reject", EDITOR_THEME.text_dim)
-            self._button_rects[(proposal_id, "accept")] = accept_rect
+            if accept_enabled:
+                self._button_rects[(proposal_id, "accept")] = accept_rect
             self._button_rects[(proposal_id, "reject")] = reject_rect
 
             y -= ROW_H + 8
