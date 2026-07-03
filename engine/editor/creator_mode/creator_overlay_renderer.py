@@ -96,7 +96,7 @@ def build_creator_overlay_draw_commands(
     commands: list[CreatorOverlayDrawCommand] = []
 
     top_h = min(42.0, max(34.0, win_h * 0.18))
-    bottom_h = min(128.0, max(74.0, win_h * 0.22))
+    bottom_h = min(166.0, max(96.0, win_h * 0.23))
     pad = min(14.0, max(8.0, win_w * 0.03))
     side_gap = 8.0
     left_w = min(180.0, max(96.0, win_w * 0.28))
@@ -197,6 +197,9 @@ def build_creator_overlay_draw_commands(
         )
     )
     y = bottom_h - 60.0
+    readiness_by_id = {
+        row.proposal_id: row for row in model.proposal_accept_readiness.rows
+    }
     for row in model.proposal_status.rows[:MAX_RENDERED_PROPOSAL_ROWS]:
         if y <= 4.0:
             break
@@ -212,6 +215,20 @@ def build_creator_overlay_draw_commands(
             )
         )
         y -= 15.0
+        readiness_row = readiness_by_id.get(row.proposal_id)
+        if readiness_row is not None and y > 4.0:
+            commands.append(
+                _text(
+                    _proposal_review_line(readiness_row),
+                    "bottom",
+                    pad + 18.0,
+                    y,
+                    10,
+                    (160, 166, 176),
+                    MAX_WARNING_CHARS,
+                )
+            )
+            y -= 15.0
     hidden_count = max(0, model.proposal_status.pending_count - MAX_RENDERED_PROPOSAL_ROWS)
     if hidden_count and y > 4.0:
         commands.append(
@@ -235,6 +252,23 @@ def build_creator_overlay_draw_commands(
         y -= 18.0
 
     return tuple(commands)
+
+
+def _proposal_review_line(row: Any) -> str:
+    return (
+        "Review: "
+        f"{_review_action_text(row.accept_action)} / "
+        f"{_review_action_text(row.reject_action)}"
+    )
+
+
+def _review_action_text(action: Any) -> str:
+    state = "ready" if bool(getattr(action, "enabled", False)) else "disabled"
+    text = f"{getattr(action, 'label', '')} {state}".strip()
+    reason = str(getattr(action, "reason", "") or "").strip()
+    if reason:
+        return f"{text} - {reason}"
+    return text
 
 
 def _door_panel_text_commands(

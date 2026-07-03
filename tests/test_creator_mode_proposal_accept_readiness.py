@@ -3,10 +3,16 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
-from engine.editor.creator_mode import build_creator_proposal_accept_readiness
+from engine.editor.creator_mode import (
+    CreatorModeController,
+    build_creator_overlay_model,
+    build_creator_proposal_accept_readiness,
+)
+from engine.editor.creator_mode.creator_overlay_renderer import build_creator_overlay_draw_commands
 
 pytestmark = pytest.mark.fast
 
@@ -110,6 +116,118 @@ def test_broken_bridge_fails_closed_with_warning() -> None:
     assert model.available is False
     assert model.summary == "Proposal review actions unavailable."
     assert model.warnings
+
+
+def test_snapshot_includes_accept_readiness_model() -> None:
+    controller = CreatorModeController(_editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}])))
+    controller.show()
+
+    snapshot = controller.build_snapshot()
+
+    assert snapshot.proposal_accept_readiness.available is True
+    assert snapshot.proposal_accept_readiness.rows[0].proposal_id == "proposal-1"
+
+
+def test_overlay_model_includes_accept_readiness_model() -> None:
+    controller = CreatorModeController(_editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}])))
+    controller.show()
+
+    model = build_creator_overlay_model(controller.build_snapshot())
+
+    assert model.proposal_accept_readiness.available is True
+    assert model.proposal_accept_readiness.rows[0].accept_action.enabled is True
+
+
+def test_render_shows_accept_and_reject_ready_for_valid_proposal() -> None:
+    controller = CreatorModeController(_editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}])))
+    controller.show()
+
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+
+    assert "Review: Accept ready / Reject ready" in _command_text(commands)
+
+
+def test_render_shows_disabled_reason_for_missing_proposal_id() -> None:
+    controller = CreatorModeController(_editor_with_bridge(FakeBridge([{"preview_summary": "Preview"}])))
+    controller.show()
+
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+
+    assert (
+        "Review: Accept disabled - Missing proposal id / Reject disabled - Missing proposal id"
+        in _command_text(commands)
+    )
+
+
+def test_rendered_readiness_line_has_no_action_id_or_hitbox() -> None:
+    controller = CreatorModeController(_editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}])))
+    controller.show()
+
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    review_commands = [command for command in commands if command.text == "Review: Accept ready / Reject ready"]
+
+    assert len(review_commands) == 1
+    assert review_commands[0].action_id == ""
+    assert review_commands[0].hit_left == 0.0
+    assert review_commands[0].hit_right == 0.0
+    assert review_commands[0].hit_top == 0.0
+    assert review_commands[0].hit_bottom == 0.0
+
+
+def test_more_than_three_pending_proposals_only_render_three_readiness_lines() -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(
+            FakeBridge(
+                [
+                    {"proposal_id": f"proposal-{index}", "preview_summary": f"Preview {index}"}
+                    for index in range(5)
+                ]
+            )
+        )
+    )
+    controller.show()
+
+    text = _command_text(
+        build_creator_overlay_draw_commands(
+            build_creator_overlay_model(controller.build_snapshot()),
+            1280,
+            720,
+        )
+    )
+
+    assert text.count("Review: Accept ready / Reject ready") == 3
+    assert "proposal-0 - Preview 0" in text
+    assert "proposal-1 - Preview 1" in text
+    assert "proposal-2 - Preview 2" in text
+    assert "proposal-3 - Preview 3" not in text
+    assert "...and 2 more" in text
+
+
+def test_snapshot_model_and_render_do_not_accept_reject_apply_or_stage() -> None:
+    bridge = HostileBridge([{"proposal_id": "proposal-1"}])
+    controller = CreatorModeController(_editor_with_bridge(bridge))
+    controller.show()
+
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+
+    assert "Review: Accept ready / Reject ready" in _command_text(commands)
+    assert bridge.calls == ["list_pending_proposals", "list_pending_proposals"]
 
 
 def test_accept_readiness_module_imports_without_arcade() -> None:
@@ -220,3 +338,19 @@ class HostileBridge(FakeBridge):
 
     def stage_pending_proposal(self, ops: list[dict[str, object]]) -> dict[str, object]:
         raise AssertionError("stage must not be called")
+
+
+def _editor_with_bridge(bridge: object) -> SimpleNamespace:
+    return SimpleNamespace(
+        selected_entity=None,
+        live_bridge=bridge,
+        window=SimpleNamespace(
+            width=1280,
+            height=720,
+            scene_controller=SimpleNamespace(current_scene_path="forest"),
+        ),
+    )
+
+
+def _command_text(commands) -> str:
+    return "\n".join(command.text for command in commands if command.kind == "text")
