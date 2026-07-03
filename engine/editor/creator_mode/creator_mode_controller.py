@@ -15,6 +15,7 @@ from .creator_door_staging import CreatorDoorStagingResult, stage_creator_door_p
 from .creator_door_workflow import CreatorDoorWorkflowRequest, build_creator_door_workflow
 from .creator_inspector import build_creator_inspector
 from .creator_proposal_accept_readiness import build_creator_proposal_accept_readiness_from_status
+from .creator_proposal_review_details import build_creator_proposal_review_details_from_status
 from .creator_proposal_status import build_creator_proposal_status
 from .creator_state import CreatorModeSnapshot
 
@@ -123,6 +124,9 @@ class CreatorModeController:
             door_panel=door_panel,
             proposal_status=proposal_status,
             proposal_accept_readiness=build_creator_proposal_accept_readiness_from_status(
+                proposal_status,
+            ),
+            proposal_review_details=build_creator_proposal_review_details_from_status(
                 proposal_status,
             ),
             last_action_message=self._last_action_message,

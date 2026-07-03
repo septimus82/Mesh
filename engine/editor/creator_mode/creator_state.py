@@ -10,6 +10,10 @@ from .creator_proposal_accept_readiness import (
     CreatorProposalAcceptReadinessModel,
     build_creator_proposal_accept_readiness,
 )
+from .creator_proposal_review_details import (
+    CreatorProposalReviewDetailsModel,
+    build_creator_proposal_review_details,
+)
 from .creator_proposal_status import CreatorProposalStatusModel, unavailable_creator_proposal_status
 
 TOP_ACTIONS: tuple[str, ...] = ("Save", "Test Play", "Fix Problems", "Advanced Mode")
@@ -41,6 +45,9 @@ class CreatorModeSnapshot:
     )
     proposal_accept_readiness: CreatorProposalAcceptReadinessModel = field(
         default_factory=lambda: build_creator_proposal_accept_readiness(None)
+    )
+    proposal_review_details: CreatorProposalReviewDetailsModel = field(
+        default_factory=lambda: build_creator_proposal_review_details(None)
     )
     last_action_message: str = ""
     last_action_ok: bool | None = None
