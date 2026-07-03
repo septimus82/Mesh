@@ -291,6 +291,9 @@ Expected tests:
 - CREATOR-1v recommends **avoiding further bottom-panel expansion** for review/mutation.
 - CREATOR-1v does not implement accept/reject/apply, buttons, or input routing.
 - Future accept/reject work should prefer **official Proposal Inbox handoff** before any Creator Mode mutation trigger.
+- CREATOR-1w adds read-only proposal inbox handoff state (`CreatorProposalHandoffModel`).
+- CREATOR-1w does not click/focus/open the AI Proposals inbox yet.
+- CREATOR-1w does not call accept/reject/apply and does not expand the bottom panel.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.

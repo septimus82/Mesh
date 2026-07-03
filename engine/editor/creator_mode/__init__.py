@@ -36,6 +36,10 @@ from .creator_door_workflow import (
 )
 from .creator_door_live_ops import CreatorDoorLiveOpsResult, build_creator_door_live_ops
 from .creator_inspector import CreatorInspectorField, CreatorInspectorModel, build_creator_inspector
+from .creator_proposal_handoff import (
+    CreatorProposalHandoffModel,
+    build_creator_proposal_handoff,
+)
 from .creator_proposal_status import (
     CreatorProposalListRow,
     CreatorProposalStatusModel,
@@ -83,6 +87,7 @@ __all__ = [
     "CreatorModeSnapshot",
     "CreatorOverlayLine",
     "CreatorOverlayModel",
+    "CreatorProposalHandoffModel",
     "CreatorProposalListRow",
     "CreatorProposalAcceptReadinessModel",
     "CreatorProposalReviewAction",
@@ -104,6 +109,7 @@ __all__ = [
     "build_creator_proposal_accept_readiness_from_status",
     "build_creator_proposal_review_details",
     "build_creator_proposal_review_details_from_status",
+    "build_creator_proposal_handoff",
     "build_creator_proposal_status",
     "classify_entity_snapshot",
     "friendly_engine_term",

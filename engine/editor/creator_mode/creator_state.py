@@ -14,6 +14,10 @@ from .creator_proposal_review_details import (
     CreatorProposalReviewDetailsModel,
     build_creator_proposal_review_details,
 )
+from .creator_proposal_handoff import (
+    CreatorProposalHandoffModel,
+    build_creator_proposal_handoff,
+)
 from .creator_proposal_status import CreatorProposalStatusModel, unavailable_creator_proposal_status
 
 TOP_ACTIONS: tuple[str, ...] = ("Save", "Test Play", "Fix Problems", "Advanced Mode")
@@ -48,6 +52,12 @@ class CreatorModeSnapshot:
     )
     proposal_review_details: CreatorProposalReviewDetailsModel = field(
         default_factory=lambda: build_creator_proposal_review_details(None)
+    )
+    proposal_handoff: CreatorProposalHandoffModel = field(
+        default_factory=lambda: build_creator_proposal_handoff(
+            None,
+            unavailable_creator_proposal_status(),
+        )
     )
     last_action_message: str = ""
     last_action_ok: bool | None = None
