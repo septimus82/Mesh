@@ -80,6 +80,35 @@ def test_log_gui_camera_sync_only_during_post_resize_window(
     )
 
 
+def test_visual_enabled_with_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MESH_RESIZE_DPI_VIS", "1")
+    assert resize_diagnostics.visual_enabled() is True
+
+
+def test_log_viewport_pipeline_noop_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MESH_RESIZE_DIAG", raising=False)
+    window = SimpleNamespace(width=1280, height=720, ctx=SimpleNamespace(viewport=(0, 0, 1280, 720)))
+    resize_diagnostics.log_viewport_pipeline(window, site="test")
+
+
+def test_log_viewport_pipeline_logs_when_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MESH_RESIZE_DIAG", "1")
+    window = SimpleNamespace(
+        width=1610,
+        height=808,
+        ctx=SimpleNamespace(viewport=(0, 0, 1610, 808)),
+        viewport=(0, 0, 1610, 808),
+        _resize_diag_seq=29,
+    )
+    window.get_size = lambda: (1610, 808)
+    window.get_framebuffer_size = lambda: (2013, 1011)
+    window.scale = 1.25
+    resize_diagnostics.log_viewport_pipeline(window, site="test_site")
+    # Logging goes to configured logger; call should not raise.
+
+
 def test_sync_gui_camera_to_window_unchanged_when_diag_disabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
