@@ -12,7 +12,9 @@ from engine.editor.creator_mode import (
     build_creator_overlay_model,
     build_creator_proposal_handoff,
 )
+from engine.editor.creator_mode.creator_overlay_renderer import build_creator_overlay_draw_commands
 from engine.editor.creator_mode.creator_proposal_status import (
+    CreatorProposalListRow,
     CreatorProposalStatusModel,
     unavailable_creator_proposal_status,
 )
@@ -209,9 +211,110 @@ def test_package_import_does_not_eagerly_import_renderer() -> None:
     assert result.stdout.strip() == "False"
 
 
-def _status_with_pending(count: int) -> CreatorProposalStatusModel:
-    from engine.editor.creator_mode.creator_proposal_status import CreatorProposalListRow
+def test_render_shows_use_ai_proposals_when_handoff_available() -> None:
+    bridge = FakeBridge([{"proposal_id": "proposal-1", "preview_summary": "Preview"}])
+    controller = CreatorModeController(_editor_with_bridge(bridge, proposal_inbox=SimpleNamespace()))
+    controller.show()
 
+    text = _command_text(
+        build_creator_overlay_draw_commands(
+            build_creator_overlay_model(controller.build_snapshot()),
+            1280,
+            720,
+        )
+    )
+
+    assert "Review: Use AI Proposals" in text
+    assert "Details: Affects" in text
+
+
+def test_render_shows_unavailable_reason_when_inbox_missing() -> None:
+    bridge = FakeBridge([{"proposal_id": "proposal-1", "preview_summary": "Preview"}])
+    controller = CreatorModeController(_editor_with_bridge(bridge, proposal_inbox=None))
+    controller.show()
+
+    text = _command_text(
+        build_creator_overlay_draw_commands(
+            build_creator_overlay_model(controller.build_snapshot()),
+            1280,
+            720,
+        )
+    )
+
+    assert "Review: AI Proposals unavailable - AI Proposals inbox unavailable" in text
+
+
+def test_zero_pending_proposals_does_not_render_handoff_review_line() -> None:
+    controller = CreatorModeController(_editor_with_bridge(FakeBridge([]), proposal_inbox=SimpleNamespace()))
+    controller.show()
+
+    text = _command_text(
+        build_creator_overlay_draw_commands(
+            build_creator_overlay_model(controller.build_snapshot()),
+            1280,
+            720,
+        )
+    )
+
+    assert "Review: Use AI Proposals" not in text
+    assert "Review: AI Proposals unavailable" not in text
+
+
+def test_rendered_handoff_review_line_has_no_action_id_or_hitbox() -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}]), proposal_inbox=SimpleNamespace())
+    )
+    controller.show()
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    review_commands = [command for command in commands if command.text == "Review: Use AI Proposals"]
+
+    assert len(review_commands) == 1
+    assert review_commands[0].action_id == ""
+    assert review_commands[0].hit_left == 0.0
+    assert review_commands[0].hit_right == 0.0
+
+
+def test_bottom_panel_height_unchanged_at_720p() -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}]), proposal_inbox=SimpleNamespace())
+    )
+    controller.show()
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    bottom_rects = [command for command in commands if command.kind == "rect" and command.region == "bottom"]
+
+    assert len(bottom_rects) == 1
+    assert bottom_rects[0].height == 216.0
+
+
+def test_more_than_three_pending_still_renders_and_more() -> None:
+    rows = [{"proposal_id": f"proposal-{index}", "preview_summary": f"Preview {index}"} for index in range(5)]
+    controller = CreatorModeController(_editor_with_bridge(FakeBridge(rows), proposal_inbox=SimpleNamespace()))
+    controller.show()
+    text = _command_text(
+        build_creator_overlay_draw_commands(
+            build_creator_overlay_model(controller.build_snapshot()),
+            1280,
+            720,
+        )
+    )
+
+    assert text.count("Review: Use AI Proposals") == 3
+    assert "...and 2 more" in text
+
+
+def _command_text(commands) -> str:
+    return "\n".join(command.text for command in commands if command.kind == "text")
+
+
+def _status_with_pending(count: int) -> CreatorProposalStatusModel:
     proposal_rows = tuple(
         CreatorProposalListRow(proposal_id=f"proposal-{index}", summary=f"Preview {index}")
         for index in range(count)

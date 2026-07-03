@@ -197,9 +197,6 @@ def build_creator_overlay_draw_commands(
         )
     )
     y = bottom_h - 60.0
-    readiness_by_id = {
-        row.proposal_id: row for row in model.proposal_accept_readiness.rows
-    }
     details_by_id = {
         detail.proposal_id: detail for detail in model.proposal_review_details.details
     }
@@ -218,20 +215,21 @@ def build_creator_overlay_draw_commands(
             )
         )
         y -= 15.0
-        readiness_row = readiness_by_id.get(row.proposal_id)
-        if readiness_row is not None and y > 4.0:
-            commands.append(
-                _text(
-                    _proposal_review_line(readiness_row),
-                    "bottom",
-                    pad + 18.0,
-                    y,
-                    10,
-                    (160, 166, 176),
-                    MAX_WARNING_CHARS,
+        if model.proposal_status.pending_count > 0 and y > 4.0:
+            review_text = _proposal_handoff_review_line(model.proposal_handoff)
+            if review_text:
+                commands.append(
+                    _text(
+                        review_text,
+                        "bottom",
+                        pad + 18.0,
+                        y,
+                        10,
+                        (160, 166, 176),
+                        MAX_WARNING_CHARS,
+                    )
                 )
-            )
-            y -= 15.0
+                y -= 15.0
         detail_row = details_by_id.get(row.proposal_id)
         if detail_row is not None and y > 4.0:
             commands.append(
@@ -271,12 +269,16 @@ def build_creator_overlay_draw_commands(
     return tuple(commands)
 
 
-def _proposal_review_line(row: Any) -> str:
-    return (
-        "Review: "
-        f"{_review_action_text(row.accept_action)} / "
-        f"{_review_action_text(row.reject_action)}"
-    )
+def _proposal_handoff_review_line(handoff: Any) -> str:
+    if bool(getattr(handoff, "available", False)):
+        return "Review: Use AI Proposals"
+    reason = str(getattr(handoff, "reason", "") or "").strip()
+    if reason:
+        return f"Review: AI Proposals unavailable - {reason}"
+    pending_count = int(getattr(handoff, "pending_count", 0) or 0)
+    if pending_count <= 0:
+        return ""
+    return "Review: AI Proposals unavailable"
 
 
 def _proposal_detail_line(detail: Any) -> str:
@@ -296,15 +298,6 @@ def _dry_run_label(value: Any) -> str:
     if value is False:
         return "Failed"
     return "Unknown"
-
-
-def _review_action_text(action: Any) -> str:
-    state = "ready" if bool(getattr(action, "enabled", False)) else "disabled"
-    text = f"{getattr(action, 'label', '')} {state}".strip()
-    reason = str(getattr(action, "reason", "") or "").strip()
-    if reason:
-        return f"{text} - {reason}"
-    return text
 
 
 def _door_panel_text_commands(
