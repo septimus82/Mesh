@@ -54,6 +54,21 @@ class EditorOverlayController:
         editor._tick_workspace_autosave()
         editor._update_status()
 
+        creator_mode = getattr(editor, "creator_mode", None)
+        if getattr(creator_mode, "active", False):
+            confirm = getattr(editor, "unsaved_confirm", None)
+            if confirm is not None and confirm.is_open:
+                confirm.draw()
+            try:
+                from engine.editor.creator_mode.creator_overlay_renderer import (  # noqa: PLC0415
+                    draw_creator_overlay,
+                )
+
+                draw_creator_overlay(editor)
+            except Exception:
+                logger.debug("Creator Mode overlay draw failed", exc_info=True)
+            return
+
         dock_shell_active = self._dock_shell_active()
         if not dock_shell_active:
             editor.debug_overlay.draw_debug_overlay(editor._overlay_text_obj)
@@ -84,17 +99,6 @@ class EditorOverlayController:
             panels.draw_panels()
         elif hasattr(editor, "ui_layers"):
             editor.ui_layers.draw_all()
-
-        creator_mode = getattr(editor, "creator_mode", None)
-        if getattr(creator_mode, "active", False):
-            try:
-                from engine.editor.creator_mode.creator_overlay_renderer import (  # noqa: PLC0415
-                    draw_creator_overlay,
-                )
-
-                draw_creator_overlay(editor)
-            except Exception:
-                logger.debug("Creator Mode overlay draw failed", exc_info=True)
 
     def _draw_playtesting_overlay(self) -> None:
         window = getattr(self._editor, "window", None)
