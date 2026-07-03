@@ -25,6 +25,7 @@ MAX_PANEL_CHARS = 68
 MAX_RENDERED_FIELDS = 8
 MAX_RENDERED_WARNINGS = 2
 MAX_RENDERED_PANEL_LINES = 16
+MAX_RENDERED_PROPOSAL_ROWS = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,7 +96,7 @@ def build_creator_overlay_draw_commands(
     commands: list[CreatorOverlayDrawCommand] = []
 
     top_h = min(42.0, max(34.0, win_h * 0.18))
-    bottom_h = min(92.0, max(58.0, win_h * 0.28))
+    bottom_h = min(128.0, max(74.0, win_h * 0.22))
     pad = min(14.0, max(8.0, win_w * 0.03))
     side_gap = 8.0
     left_w = min(180.0, max(96.0, win_w * 0.28))
@@ -195,7 +196,37 @@ def build_creator_overlay_draw_commands(
             MAX_WARNING_CHARS,
         )
     )
-    y = bottom_h - 64.0
+    y = bottom_h - 60.0
+    for row in model.proposal_status.rows[:MAX_RENDERED_PROPOSAL_ROWS]:
+        if y <= 4.0:
+            break
+        commands.append(
+            _text(
+                f"{row.proposal_id} - {row.summary}",
+                "bottom",
+                pad + 8.0,
+                y,
+                10,
+                (190, 198, 208),
+                MAX_WARNING_CHARS,
+            )
+        )
+        y -= 15.0
+    hidden_count = max(0, model.proposal_status.pending_count - MAX_RENDERED_PROPOSAL_ROWS)
+    if hidden_count and y > 4.0:
+        commands.append(
+            _text(
+                f"...and {hidden_count} more",
+                "bottom",
+                pad + 8.0,
+                y,
+                10,
+                (160, 166, 176),
+                MAX_WARNING_CHARS,
+            )
+        )
+        y -= 15.0
+
     for line in bottom_lines[:MAX_RENDERED_WARNINGS]:
         if y <= 4.0:
             break

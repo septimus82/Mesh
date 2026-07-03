@@ -37,6 +37,7 @@ from .creator_door_workflow import (
 from .creator_door_live_ops import CreatorDoorLiveOpsResult, build_creator_door_live_ops
 from .creator_inspector import CreatorInspectorField, CreatorInspectorModel, build_creator_inspector
 from .creator_proposal_status import (
+    CreatorProposalListRow,
     CreatorProposalStatusModel,
     build_creator_proposal_status,
     unavailable_creator_proposal_status,
@@ -69,6 +70,7 @@ __all__ = [
     "CreatorModeSnapshot",
     "CreatorOverlayLine",
     "CreatorOverlayModel",
+    "CreatorProposalListRow",
     "CreatorProposalStatusModel",
     "build_creator_door_plan",
     "build_creator_door_live_ops",
