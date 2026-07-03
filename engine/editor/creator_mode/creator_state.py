@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 from .creator_inspector import CreatorInspectorModel, empty_creator_inspector
 from .creator_door_panel import CreatorDoorPanelModel
+from .creator_proposal_status import CreatorProposalStatusModel, unavailable_creator_proposal_status
 
 TOP_ACTIONS: tuple[str, ...] = ("Save", "Test Play", "Fix Problems", "Advanced Mode")
 LEFT_TOOLS: tuple[str, ...] = (
@@ -31,6 +32,9 @@ class CreatorModeSnapshot:
     selected_summary: str = ""
     inspector: CreatorInspectorModel = field(default_factory=empty_creator_inspector)
     door_panel: CreatorDoorPanelModel | None = None
+    proposal_status: CreatorProposalStatusModel = field(
+        default_factory=unavailable_creator_proposal_status
+    )
     last_action_message: str = ""
     last_action_ok: bool | None = None
     top_actions: tuple[str, ...] = TOP_ACTIONS

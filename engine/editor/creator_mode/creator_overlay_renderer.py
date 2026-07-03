@@ -183,7 +183,19 @@ def build_creator_overlay_draw_commands(
 
     bottom_lines = model.warnings or ("No problems shown in Creator Mode.",)
     commands.append(_text(model.bottom_title, "bottom", pad, bottom_h - 24.0, 12, (230, 234, 240)))
-    y = bottom_h - 46.0
+    status_color = (190, 198, 208) if model.proposal_status.available else (160, 166, 176)
+    commands.append(
+        _text(
+            model.proposal_status.summary,
+            "bottom",
+            pad + 8.0,
+            bottom_h - 42.0,
+            11,
+            status_color,
+            MAX_WARNING_CHARS,
+        )
+    )
+    y = bottom_h - 64.0
     for line in bottom_lines[:MAX_RENDERED_WARNINGS]:
         if y <= 4.0:
             break
