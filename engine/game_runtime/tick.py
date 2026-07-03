@@ -172,9 +172,10 @@ def on_draw(window: "GameWindow") -> None:
 
     # Switch to GUI camera for UI elements
     window.camera_controller.use_gui_camera()
-    from engine.resize_diagnostics import maybe_log_draw_frame_sizes
+    from engine.resize_diagnostics import maybe_draw_dpi_visual_markers, maybe_log_draw_frame_sizes
 
     maybe_log_draw_frame_sizes(window, window.camera_controller, site="tick.ui_draw")
+    maybe_draw_dpi_visual_markers(window)
 
     if window.show_debug:
         window._draw_debug_overlay()

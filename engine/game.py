@@ -983,14 +983,20 @@ class GameWindow(engine.optional_arcade.arcade.Window):
 
     def on_resize(self, width: int, height: int) -> None:
         super().on_resize(width, height)
-        from engine.resize_diagnostics import note_window_resize
+        from engine.resize_diagnostics import log_viewport_pipeline, note_window_resize
 
         note_window_resize(self, int(width), int(height))
+        log_viewport_pipeline(self, site="after_super_on_resize")
         self.engine_config.width = int(width)
         self.engine_config.height = int(height)
         self.console_visible_line_count = max(4, min(12, height // 60 or 4))
         if self.camera_controller is not None:
             self.camera_controller.on_resize(int(width), int(height))
+            log_viewport_pipeline(
+                self,
+                site="after_camera_controller_on_resize",
+                camera_controller=self.camera_controller,
+            )
         if getattr(self, "ui_controller", None) is not None:
             resize = getattr(self.ui_controller, "on_resize", None)
             if callable(resize):
