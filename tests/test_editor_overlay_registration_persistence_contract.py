@@ -60,7 +60,9 @@ def test_editor_overlays_persist_across_scene_ui_rebuild(monkeypatch) -> None:
     window.engine_config = types.SimpleNamespace()
     window.ui_controller = UIController(as_any(window))
     window.clear_ui_elements = lambda: window.ui_controller.clear_ui_elements()
-    window.register_ui_element = lambda element: window.ui_controller.register_ui_element(element)
+    window.register_ui_element = lambda element, **kwargs: window.ui_controller.register_ui_element(
+        element, **kwargs
+    )
 
     editor_overlays = {attr_name: object() for attr_name in _EDITOR_OVERLAY_ATTRS}
     for attr_name, overlay in editor_overlays.items():

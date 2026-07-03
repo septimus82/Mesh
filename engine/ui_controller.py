@@ -23,6 +23,16 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+
+def creator_mode_hiding_editor_chrome(window: "GameWindow") -> bool:
+    """True when Creator Mode is active and Advanced editor chrome should not draw."""
+    editor = getattr(window, "editor_controller", None)
+    if editor is None or not getattr(editor, "active", False):
+        return False
+    creator = getattr(editor, "creator_mode", None)
+    return bool(getattr(creator, "active", False))
+
+
 class UIController:
     def __init__(self, window: GameWindow):
         self.window = window
@@ -33,7 +43,9 @@ class UIController:
         self.shop_panel: ShopPanel | None = None
         self.character_panel: CharacterPanel | None = None
 
-    def register_ui_element(self, element: UIElement) -> None:
+    def register_ui_element(self, element: UIElement, *, editor_chrome: bool | None = None) -> None:
+        if editor_chrome is not None:
+            element.editor_chrome = bool(editor_chrome)
         self.ui_elements.append(element)
 
     def clear_ui_elements(self) -> None:
@@ -78,32 +90,35 @@ class UIController:
             element.update(dt)
 
     def draw(self) -> None:
+        hide_editor_chrome = creator_mode_hiding_editor_chrome(self.window)
         for element in self.ui_elements:
+            if hide_editor_chrome and getattr(element, "editor_chrome", True):
+                continue
             element.draw()
 
     def rebuild_for_scene(self) -> None:
         self.clear_ui_elements()
         logger.info("Rebuilding UI for scene")
-        self.register_ui_element(EntityInspector(self.window))
-        self.register_ui_element(AnimationStateOverlay(self.window))
-        self.register_ui_element(DevConsole(self.window))
+        self.register_ui_element(EntityInspector(self.window), editor_chrome=False)
+        self.register_ui_element(AnimationStateOverlay(self.window), editor_chrome=False)
+        self.register_ui_element(DevConsole(self.window), editor_chrome=False)
         self.inventory_overlay = InventoryOverlay(self.window)
-        self.register_ui_element(self.inventory_overlay)
+        self.register_ui_element(self.inventory_overlay, editor_chrome=False)
         self.dialogue_box = DialogueBox(self.window)
-        self.register_ui_element(self.dialogue_box)
+        self.register_ui_element(self.dialogue_box, editor_chrome=False)
         self.quest_log = QuestLog(self.window)
-        self.register_ui_element(self.quest_log)
+        self.register_ui_element(self.quest_log, editor_chrome=False)
         self.shop_panel = ShopPanel(self.window)
-        self.register_ui_element(self.shop_panel)
+        self.register_ui_element(self.shop_panel, editor_chrome=False)
         self.character_panel = CharacterPanel(self.window)
-        self.register_ui_element(self.character_panel)
+        self.register_ui_element(self.character_panel, editor_chrome=False)
 
     def register_health_bar(self, sprite: Sprite) -> None:
         logger.info(
             "Registering HealthBar for %s",
             getattr(sprite, "mesh_name", "<unnamed>"),
         )
-        self.register_ui_element(HealthBar(self.window, sprite))
+        self.register_ui_element(HealthBar(self.window, sprite), editor_chrome=False)
 
     @property
     def input_blocked(self) -> bool:

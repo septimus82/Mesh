@@ -92,7 +92,9 @@ def _install_draw_stubs(monkeypatch: pytest.MonkeyPatch) -> None:
 def _make_window() -> SimpleNamespace:
     window = SimpleNamespace(width=800, height=600, text_cache=None)
     window.ui_controller = UIController(window)
-    window.register_ui_element = lambda element: window.ui_controller.register_ui_element(element)
+    window.register_ui_element = lambda element, **kwargs: window.ui_controller.register_ui_element(
+        element, **kwargs
+    )
     window.clear_ui_elements = lambda: window.ui_controller.clear_ui_elements()
     window.engine_config = SimpleNamespace(debug_mode=False)
     window.scene_controller = SimpleNamespace(

@@ -224,18 +224,18 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
     window.register_ui_element(window.find_everything_overlay)
 
     window.interact_prompt_overlay = InteractPromptOverlay(window, provider=ui_providers.interact_prompt_provider)
-    window.register_ui_element(window.interact_prompt_overlay)
+    window.register_ui_element(window.interact_prompt_overlay, editor_chrome=False)
     window.objective_tracker_overlay = ObjectiveTrackerOverlay(window, provider=ui_providers.objective_tracker_provider)
-    window.register_ui_element(window.objective_tracker_overlay)
+    window.register_ui_element(window.objective_tracker_overlay, editor_chrome=False)
 
     window.demo_complete_overlay = DemoCompleteOverlay(window)
-    window.register_ui_element(window.demo_complete_overlay)
+    window.register_ui_element(window.demo_complete_overlay, editor_chrome=False)
     window.main_menu_overlay = MainMenuOverlay(window)
-    window.register_ui_element(window.main_menu_overlay)
+    window.register_ui_element(window.main_menu_overlay, editor_chrome=False)
 
     window.settings_overlay = SettingsOverlay(window)
     window.settings_overlay.apply()
-    window.register_ui_element(window.settings_overlay)
+    window.register_ui_element(window.settings_overlay, editor_chrome=False)
 
     from engine.ui_overlays.perf import PerfOverlay  # noqa: PLC0415
     from engine.ui_overlays.profiler_overlay import ProfilerOverlay  # noqa: PLC0415
@@ -269,10 +269,10 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
     window.register_ui_element(window.editor_cursor_hint_overlay)
 
     window.fog_overlay = FogOverlay(window)
-    window.register_ui_element(window.fog_overlay)
+    window.register_ui_element(window.fog_overlay, editor_chrome=False)
 
     window.transition_fade_overlay = TransitionFadeOverlay(window)
-    window.register_ui_element(window.transition_fade_overlay)
+    window.register_ui_element(window.transition_fade_overlay, editor_chrome=False)
 
     if _should_open_main_menu_on_boot(window):
         window.main_menu_overlay.open()
@@ -286,8 +286,13 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
         window.player_hud.enqueue_toast(f"Preset: {preset_id}{desc_text}{notes_text}")
 
 
-def register_ui_element(self: "GameWindow", element: UIElement) -> None:
-    self.ui_controller.register_ui_element(element)
+def register_ui_element(
+    self: "GameWindow",
+    element: UIElement,
+    *,
+    editor_chrome: bool | None = None,
+) -> None:
+    self.ui_controller.register_ui_element(element, editor_chrome=editor_chrome)
 
 
 def clear_ui_elements(self: "GameWindow") -> None:

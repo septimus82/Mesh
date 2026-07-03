@@ -25,7 +25,9 @@ def test_help_overlay_persists_across_scene_ui_rebuild(monkeypatch) -> None:
     window.engine_config = types.SimpleNamespace()
     window.ui_controller = UIController(as_any(window))
     window.clear_ui_elements = lambda: window.ui_controller.clear_ui_elements()
-    window.register_ui_element = lambda element: window.ui_controller.register_ui_element(element)
+    window.register_ui_element = lambda element, **kwargs: window.ui_controller.register_ui_element(
+        element, **kwargs
+    )
 
     window.player_hud = PlayerHUD(as_any(window))
     window.game_over_screen = GameOverScreen(as_any(window))

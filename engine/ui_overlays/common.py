@@ -20,8 +20,11 @@ def _get_arcade() -> Any:
 class UIElement:
     """Base class for overlay elements that can update and draw."""
 
-    def __init__(self, window: "GameWindow") -> None:
+    editor_chrome: bool
+
+    def __init__(self, window: "GameWindow", *, editor_chrome: bool = True) -> None:
         self.window = window
+        self.editor_chrome = bool(editor_chrome)
 
     def update(self, dt: float) -> None:  # pragma: no cover - default no-op
         return
