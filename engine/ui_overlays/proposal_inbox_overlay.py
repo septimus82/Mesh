@@ -16,7 +16,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 PADDING = 8.0
 LINE_H = 18.0
-ROW_H = 96.0
+ROW_H = 114.0
 BUTTON_W = 58.0
 BUTTON_H = 20.0
 
@@ -131,13 +131,22 @@ class ProposalInboxOverlay(UIElement):
                 font_size=11,
                 cache=self._text_cache,
             )
+            if proposal_id:
+                draw_text_cached(
+                    _truncate(f"ID: {proposal_id}", _char_capacity(text_right - text_left, 10)),
+                    text_left,
+                    y - (LINE_H * 2) + 4,
+                    color=EDITOR_THEME.text_dim,
+                    font_size=10,
+                    cache=self._text_cache,
+                )
             meta = f"Affected: {len(affected_ids)}"
             if affected_ids:
                 meta = f"{meta}  {', '.join(str(item) for item in affected_ids[:3])}"
             draw_text_cached(
                 _truncate(meta, _char_capacity(text_right - text_left, 10)),
                 text_left,
-                y - (LINE_H * 2) + 4,
+                y - (LINE_H * 3) + 4,
                 color=EDITOR_THEME.text_dim,
                 font_size=10,
                 cache=self._text_cache,
@@ -146,7 +155,7 @@ class ProposalInboxOverlay(UIElement):
             draw_text_cached(
                 status,
                 text_left,
-                y - (LINE_H * 3) + 4,
+                y - (LINE_H * 4) + 4,
                 color=EDITOR_THEME.action_text if dry_run.get("ok") is True else EDITOR_THEME.warning_text,
                 font_size=10,
                 cache=self._text_cache,
