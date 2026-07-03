@@ -268,6 +268,8 @@ Expected tests:
 - CREATOR-1l updates Creator Mode toggle documentation to match the current binding (**Shift+F5**, not plain F5).
 - CREATOR-1m prevents duplicate staging of the same selected door proposal after a successful stage.
 - CREATOR-1m does not accept/apply proposals and does not add new clickable actions.
+- CREATOR-1n adds read-only staged proposal status in Creator Mode.
+- CREATOR-1n does not accept/apply/reject proposals and does not add new clickable actions.
 - Non-representable door workflows fail closed.
 - Creator Mode may stage a proposal using the existing safe live proposal bridge.
 - Human still reviews before applying.

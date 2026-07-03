@@ -14,6 +14,7 @@ from .creator_door_selection import build_creator_door_request_from_selection
 from .creator_door_staging import CreatorDoorStagingResult, stage_creator_door_proposal
 from .creator_door_workflow import CreatorDoorWorkflowRequest, build_creator_door_workflow
 from .creator_inspector import build_creator_inspector
+from .creator_proposal_status import build_creator_proposal_status
 from .creator_state import CreatorModeSnapshot
 
 _DOOR_STAGE_PROPOSAL_ACTION = "door.stage_proposal"
@@ -118,6 +119,7 @@ class CreatorModeController:
             selected_summary=inspector.summary,
             inspector=inspector,
             door_panel=door_panel,
+            proposal_status=build_creator_proposal_status(self._proposal_bridge()),
             last_action_message=self._last_action_message,
             last_action_ok=self._last_action_ok,
         )
