@@ -219,15 +219,17 @@ If bottom panel content must change later, prefer **trimming** (e.g. drop redund
 
 ### Recommended: CREATOR-1w — Read-Only Proposal Inbox Handoff Model
 
+**Status:** implemented (model-only).
+
 **Goal:**
 
 - Expose whether the official Proposal Inbox / AI Proposals dock is available and focusable (e.g. editor has `proposal_inbox`, dock tab `"AI Proposals"` registered).
 - Expose a **display-only** label such as `Review in Proposal Inbox` (or `AI Proposals dock`) on the snapshot/overlay model.
 - **No click yet**, no `action_id`, no hitbox, no input routing.
 - **No** accept/reject/apply calls.
-- Pure module(s) under `engine/editor/creator_mode/*` + tests; optional one-line renderer text addition in a follow-up if CREATOR-1w stays model-only.
+- Pure module(s) under `engine/editor/creator_mode/*` + tests; CREATOR-1w shipped **model-only** (no renderer line added; bottom panel height unchanged).
 
-This prepares UX copy and availability flags before any focus/open wiring (CREATOR-1x or later).
+This is the first implementation slice of the hybrid handoff decision (Option D). It prepares UX copy and availability flags before any focus/open wiring (CREATOR-1x or later).
 
 ### Alternative acceptable slice
 

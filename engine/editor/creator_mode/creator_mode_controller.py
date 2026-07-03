@@ -16,6 +16,7 @@ from .creator_door_workflow import CreatorDoorWorkflowRequest, build_creator_doo
 from .creator_inspector import build_creator_inspector
 from .creator_proposal_accept_readiness import build_creator_proposal_accept_readiness_from_status
 from .creator_proposal_review_details import build_creator_proposal_review_details_from_status
+from .creator_proposal_handoff import build_creator_proposal_handoff
 from .creator_proposal_status import build_creator_proposal_status
 from .creator_state import CreatorModeSnapshot
 
@@ -129,6 +130,7 @@ class CreatorModeController:
             proposal_review_details=build_creator_proposal_review_details_from_status(
                 proposal_status,
             ),
+            proposal_handoff=build_creator_proposal_handoff(self._editor, proposal_status),
             last_action_message=self._last_action_message,
             last_action_ok=self._last_action_ok,
         )
