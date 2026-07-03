@@ -119,6 +119,9 @@ def _restore_editor_sprite_ghosting(snapshots: list, sprites_by_id: dict) -> Non
 
 
 def on_draw(window: "GameWindow") -> None:
+    # Match cameras before clear/draw so GL viewport covers the full framebuffer at boot.
+    window.camera_controller.sync_gui_camera_to_window()
+
     # --- Post-processing: capture world rendering into offscreen FBO ---
     pp = getattr(window, "post_process_pipeline", None)
     if pp is not None:
