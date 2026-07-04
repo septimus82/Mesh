@@ -139,8 +139,8 @@ def test_mouse_bag_ball_routes_capture_attempt_action() -> None:
     assert mode.active is True
     assert overlay.menu_state == "presenting"
     queued_lines = [step.line for step in overlay.presentation_queue]
-    assert any("Gotcha!" in line and "was caught!" in line for line in queued_lines)
-    assert any("Sent to your party!" in line for line in queued_lines)
+    assert any("was captured!" in line for line in queued_lines)
+    assert any("Added" in line and "to your party!" in line for line in queued_lines)
     values = window.game_state_controller.state.values
     assert values[POCKET_BALL_COUNT_KEY] == 2
     assert len(values[MONSTER_PARTY_KEY]) == 1
@@ -153,7 +153,7 @@ def test_mouse_bag_ball_routes_capture_attempt_action() -> None:
     assert window.paused is False
 
 
-def test_capture_success_paces_gotcha_lines_before_battle_ends() -> None:
+def test_capture_success_paces_capture_lines_before_battle_ends() -> None:
     window = _window()
     mode = _start_ui_battle(window, rng=_Rng(0.0))
     overlay = mode.overlay
@@ -169,11 +169,11 @@ def test_capture_success_paces_gotcha_lines_before_battle_ends() -> None:
     assert len(window.game_state_controller.state.values[MONSTER_PARTY_KEY]) == 1
 
     _press(window, optional_arcade.arcade.key.ENTER)
-    assert "Gotcha!" in overlay.log_line
+    assert "was captured!" in overlay.log_line
     assert mode.active is True
 
     _press(window, optional_arcade.arcade.key.ENTER)
-    assert overlay.log_line == "Sent to your party!"
+    assert overlay.log_line == "Added Shelltide to your party!"
     assert mode.active is True
 
     _press(window, optional_arcade.arcade.key.ENTER)
@@ -199,7 +199,7 @@ def test_capture_success_to_box_shows_box_line() -> None:
     assert window.input_controller.on_mouse_press(20.0, 20.0, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
 
     assert overlay.menu_state == "presenting"
-    assert any("Sent to the Box!" in step.line for step in overlay.presentation_queue)
+    assert any("Sent to the box!" in step.line for step in overlay.presentation_queue)
     assert len(values[MONSTER_PARTY_KEY]) == 6
     assert len(values[MONSTER_BOX_KEY]) == 1
 
@@ -225,7 +225,7 @@ def test_capture_failure_consumes_ball_and_battle_continues() -> None:
     assert mode.active is True
     assert values[POCKET_BALL_COUNT_KEY] == 2
     assert overlay.menu_state == "presenting"
-    assert "broke free" in overlay.presentation_queue[0].line
+    assert "slipped free" in overlay.presentation_queue[0].line
 
 
 def test_capture_with_zero_balls_is_blocked() -> None:
@@ -344,7 +344,7 @@ def test_lethal_turn_shows_faint_line_then_ends_after_queue_drains() -> None:
     assert "Sproutling used ko" in overlay.log_line
     assert overlay.snapshot()["opponent_hp"] == 0
     _press(window, optional_arcade.arcade.key.ENTER)
-    assert overlay.log_line == "Foe Shelltide fainted!"
+    assert overlay.log_line == "Foe Shelltide is down!"
     assert mode.active is True
     while mode.active:
         _press(window, optional_arcade.arcade.key.ENTER)
@@ -381,7 +381,7 @@ def test_battle_win_persists_xp_level_and_learn_lines() -> None:
     assert "ember" in row["known_moves"]
     queued_lines = [step.line for step in overlay.presentation_queue]
     assert any("gained" in line and "XP" in line for line in queued_lines)
-    assert any("grew to Lv 11" in line for line in queued_lines)
+    assert any("reached Lv 11" in line for line in queued_lines)
     assert any("learned ember" in line for line in queued_lines)
 
 

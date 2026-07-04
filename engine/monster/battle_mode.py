@@ -184,15 +184,16 @@ class MonsterBattleOverlay(UIElement):
 
     def set_intro_log(self) -> None:
         controller = self.mode.controller
+        terms = self.mode.terms
         if controller is None:
-            self.log_line = "A wild monster appeared!"
+            self.log_line = terms.intro_wild_unknown
             return
         if self.mode.companion_mode:
             name = _display_name(controller.player)
-            self.log_line = f"Go, {name}! Your companion is ready."
+            self.log_line = terms.format_intro_companion(name=name)
         else:
             name = _display_name(controller.opponent)
-            self.log_line = f"A wild {name} appeared!"
+            self.log_line = terms.format_intro_wild(name=name)
         self.sync_displayed_hp()
         self.sync_battle_sprites()
 
@@ -235,7 +236,7 @@ class MonsterBattleOverlay(UIElement):
         self.presentation_queue = list(steps)
         self._pending_battle_result = result
         self._presentation_elapsed = 0.0
-        self.log_line = "..."
+        self.log_line = self.mode.terms.presentation_pending
         if not self.presentation_queue:
             self._finish_presentation()
 
@@ -251,7 +252,7 @@ class MonsterBattleOverlay(UIElement):
         self.button_rects.clear()
         self._draw_combatants(left, right, top)
         draw_text_cached(
-            self.log_line or "Choose an action.",
+            self.log_line or self.mode.terms.choose_action,
             left + 24,
             bottom + 118,
             color=(245, 245, 245, 255),
@@ -358,15 +359,15 @@ class MonsterBattleOverlay(UIElement):
         if action == "menu:fight":
             self.menu_state = "fight"
             self.selected_index = 0
-            self.log_line = "Choose a move."
+            self.log_line = self.mode.terms.choose_move
             return
         if action == "menu:bag":
             if self.mode.companion_mode and self.mode.companion_awaiting_reinforcement and not self.mode._opponent_is_wild():
-                self.log_line = "Can't catch trainer monsters!"
+                self.log_line = self.mode.terms.cant_catch_trainer
                 return
             self.menu_state = "bag"
             self.selected_index = 0
-            self.log_line = "Choose an item."
+            self.log_line = self.mode.terms.choose_item
             return
         if action == "menu:switch":
             self.mode.open_switch_screen(forced=False)
@@ -411,11 +412,11 @@ class MonsterBattleOverlay(UIElement):
             self.menu_state = "root"
             self.selected_index = 0
             if self.mode.companion_mode and self.mode.companion_awaiting_reinforcement:
-                self.log_line = "How do you respond?"
+                self.log_line = self.mode.terms.how_respond
             else:
-                self.log_line = "Choose an action."
+                self.log_line = self.mode.terms.choose_action
         else:
-            self.log_line = "Choose an action."
+            self.log_line = self.mode.terms.choose_action
 
     def _advance_presentation(self) -> None:
         self._presentation_elapsed = 0.0
@@ -471,7 +472,7 @@ class MonsterBattleOverlay(UIElement):
             self.mode.companion_awaiting_reinforcement = True
             self.menu_state = "root"
             self.selected_index = 0
-            self.log_line = "How do you respond?"
+            self.log_line = self.mode.terms.how_respond
             return
         controller = self.mode.controller
         if controller is not None and controller.phase == "must_switch":
@@ -681,6 +682,7 @@ class MonsterBattleMode:
                 _display_name(self.controller.player),
                 before_player_hp,
                 before_opponent_hp,
+                self.terms,
             )
             self.overlay.begin_turn_presentation(steps, result=result)
 
@@ -721,12 +723,12 @@ class MonsterBattleMode:
                 name = _display_name(self.controller.player)
                 steps = [
                     BattlePresentationStep(
-                        f"{name} flees!",
+                        self.terms.format_companion_flees(name=name),
                         before_player_hp,
                         before_opponent_hp,
                         player_clip="flee",
                     ),
-                    BattlePresentationStep("It abandoned you.", before_player_hp, before_opponent_hp),
+                    BattlePresentationStep(self.terms.companion_abandoned, before_player_hp, before_opponent_hp),
                 ]
                 self.overlay.begin_turn_presentation(steps, result=result)
             else:
@@ -752,7 +754,7 @@ class MonsterBattleMode:
                 companion_clip = "defend"
             steps = [
                 BattlePresentationStep(
-                    _companion_autonomous_line(behavior, name),
+                    _companion_autonomous_line(behavior, name, self.terms),
                     before_player_hp,
                     before_opponent_hp,
                     player_clip=companion_clip,
@@ -761,6 +763,12 @@ class MonsterBattleMode:
             steps.extend(self._build_presentation_steps(before_len, before_player_hp, before_opponent_hp))
             if result is not None and result.outcome == "won":
                 steps.extend(self._apply_victory_progression_steps(before_player_hp, before_opponent_hp))
+            self._append_defeat_step_if_lost(
+                steps,
+                result,
+                player_hp=steps[-1].player_hp if steps else before_player_hp,
+                opponent_hp=steps[-1].opponent_hp if steps else before_opponent_hp,
+            )
             self.overlay.begin_turn_presentation(steps, result=result)
         elif result is not None:
             if result.outcome == "won":
@@ -800,12 +808,16 @@ class MonsterBattleMode:
             self.overlay.begin_turn_presentation(
                 [
                     BattlePresentationStep(
-                        f"{fainted_name} fainted!",
+                        self.terms.format_ko(name=fainted_name),
                         0,
                         before_opponent_hp,
                         player_clip="faint",
                     ),
-                    BattlePresentationStep(f"Go, {next_name}!", before_player_hp, before_opponent_hp),
+                    BattlePresentationStep(
+                        self.terms.format_player_send_out(name=next_name),
+                        before_player_hp,
+                        before_opponent_hp,
+                    ),
                 ],
                 result=result,
             )
@@ -835,6 +847,12 @@ class MonsterBattleMode:
             steps = self._build_presentation_steps(before_len, before_player_hp, before_opponent_hp)
             if result is not None and result.outcome == "won":
                 steps.extend(self._apply_victory_progression_steps(before_player_hp, before_opponent_hp))
+            self._append_defeat_step_if_lost(
+                steps,
+                result,
+                player_hp=steps[-1].player_hp if steps else before_player_hp,
+                opponent_hp=steps[-1].opponent_hp if steps else before_opponent_hp,
+            )
             self.overlay.begin_turn_presentation(steps, result=result)
         elif result is not None:
             if result.outcome == "won":
@@ -862,6 +880,12 @@ class MonsterBattleMode:
             steps = self._build_presentation_steps(before_len, before_player_hp, before_opponent_hp)
             if result is not None and result.outcome == "won":
                 steps.extend(self._apply_victory_progression_steps(before_player_hp, before_opponent_hp))
+            self._append_defeat_step_if_lost(
+                steps,
+                result,
+                player_hp=steps[-1].player_hp if steps else before_player_hp,
+                opponent_hp=steps[-1].opponent_hp if steps else before_opponent_hp,
+            )
             self.overlay.begin_turn_presentation(steps, result=result)
             self.overlay.sync_displayed_hp()
         elif result is not None:
@@ -935,11 +959,16 @@ class MonsterBattleMode:
                     if self.overlay.displayed_opponent_hp is not None
                     else self.controller.opponent.current_hp,
                 )
-                storage_line = "Sent to the Box!" if caught.storage == "box" else "Sent to your party!"
+                opponent_name = _display_name(self.controller.opponent)
+                storage_line = (
+                    self.terms.sent_to_box
+                    if caught.storage == "box"
+                    else self.terms.format_sent_to_party(name=opponent_name)
+                )
                 self.overlay.begin_turn_presentation(
                     [
                         BattlePresentationStep(
-                            f"Gotcha! {_display_name(self.controller.opponent)} was caught!",
+                            self.terms.format_capture_success(name=opponent_name),
                             player_hp,
                             opponent_hp,
                             opponent_clip="capture",
@@ -970,7 +999,7 @@ class MonsterBattleMode:
             turns=self.controller.turn_number,
         )
         if self.overlay is not None:
-            self.overlay.log_line = "Got away safely!"
+            self.overlay.log_line = self.terms.run_away_safe
         self.end_battle(result)
         return result
 
@@ -1106,6 +1135,19 @@ class MonsterBattleMode:
         if callable(emit_event):
             emit_event(event)
 
+    def _append_defeat_step_if_lost(
+        self,
+        steps: list[BattlePresentationStep],
+        result: BattleResult | None,
+        *,
+        player_hp: int,
+        opponent_hp: int,
+    ) -> None:
+        if result is not None and str(getattr(result, "outcome", "") or "") == "lost":
+            steps.append(
+                BattlePresentationStep(self.terms.defeat_no_fighters, int(player_hp), int(opponent_hp)),
+            )
+
     def _build_presentation_steps(
         self,
         before_len: int,
@@ -1116,37 +1158,38 @@ class MonsterBattleMode:
             return []
         entries = self.controller.turn_log[before_len:]
         if not entries:
-            return [BattlePresentationStep("Nothing happened.", before_player_hp, before_opponent_hp)]
+            return [BattlePresentationStep(self.terms.nothing_happened, before_player_hp, before_opponent_hp)]
         player_hp = int(before_player_hp)
         opponent_hp = int(before_opponent_hp)
         steps: list[BattlePresentationStep] = []
+        terms = self.terms
         for entry in entries:
             if entry.kind == "switch":
                 if entry.side == "player":
                     monster = self.controller.player_party[entry.party_index]
                     name = _display_name(monster)
                     if entry.switch_kind == "recall":
-                        line = f"Come back, {name}!"
+                        line = terms.format_player_recall(name=name)
                     else:
-                        line = f"Go, {name}!"
+                        line = terms.format_player_send_out(name=name)
                         player_hp = int(monster.current_hp or 0)
                 else:
                     monster = self.controller.opponent_party[entry.party_index]
                     name = _display_name(monster)
-                    line = f"Trainer sent out {name}!"
+                    line = terms.format_opponent_send_out(name=name)
                     opponent_hp = int(monster.current_hp or 0)
                 steps.append(BattlePresentationStep(line, player_hp, opponent_hp))
                 continue
             if entry.kind == "status":
                 subject = _display_name(self.controller.player if entry.side == "player" else self.controller.opponent)
                 if entry.status_event == "poisoned":
-                    line = f"{subject} was poisoned!"
+                    line = terms.format_poisoned(name=subject)
                 elif entry.status_event == "poison_damage":
                     if entry.side == "player":
                         player_hp = max(0, player_hp - int(entry.status_damage))
                     else:
                         opponent_hp = max(0, opponent_hp - int(entry.status_damage))
-                    line = f"{subject} is hurt by poison!"
+                    line = terms.format_poison_damage(name=subject)
                     hurt_clip = "hurt"
                     if entry.side == "player":
                         steps.append(
@@ -1167,7 +1210,7 @@ class MonsterBattleMode:
                             ),
                         )
                     if entry.target_fainted:
-                        faint_name = _faint_line(self.controller, entry)
+                        faint_name = _faint_line(self.controller, entry, terms)
                         faint_player_clip, faint_opponent_clip = _faint_presentation_clips(entry)
                         steps.append(
                             BattlePresentationStep(
@@ -1180,11 +1223,11 @@ class MonsterBattleMode:
                         )
                     continue
                 elif entry.status_event == "fell_asleep":
-                    line = f"{subject} fell asleep!"
+                    line = terms.format_fell_asleep(name=subject)
                 elif entry.status_event == "woke_up":
-                    line = f"{subject} woke up!"
+                    line = terms.format_woke_up(name=subject)
                 elif entry.status_event == "asleep_skip":
-                    line = f"{subject} is fast asleep!"
+                    line = terms.format_asleep_skip(name=subject)
                     status_player, status_opponent = _status_clip_for_side(entry.side)
                     steps.append(
                         BattlePresentationStep(
@@ -1197,10 +1240,10 @@ class MonsterBattleMode:
                     )
                     continue
                 else:
-                    line = f"{subject} was affected!"
+                    line = terms.format_status_affected(name=subject)
                 steps.append(BattlePresentationStep(line, player_hp, opponent_hp))
                 if entry.target_fainted:
-                    faint_name = _faint_line(self.controller, entry)
+                    faint_name = _faint_line(self.controller, entry, terms)
                     faint_player_clip, faint_opponent_clip = _faint_presentation_clips(entry)
                     steps.append(
                         BattlePresentationStep(
@@ -1246,9 +1289,9 @@ class MonsterBattleMode:
                         damage=int(entry.damage),
                     )
             if entry.hit:
-                line = f"{actor} used {entry.move_id}! {target} took {entry.damage} damage."
+                line = terms.format_move_hit(actor=actor, move=entry.move_id, target=target, damage=int(entry.damage))
             else:
-                line = f"{actor} used {entry.move_id}, but it missed!"
+                line = terms.format_move_miss(actor=actor, move=entry.move_id)
             steps.append(
                 BattlePresentationStep(
                     line,
@@ -1259,7 +1302,7 @@ class MonsterBattleMode:
                 ),
             )
             if entry.target_fainted:
-                faint_name = _faint_line(self.controller, entry)
+                faint_name = _faint_line(self.controller, entry, terms)
                 faint_player_clip, faint_opponent_clip = _faint_presentation_clips(entry)
                 steps.append(
                     BattlePresentationStep(
@@ -1282,17 +1325,30 @@ class MonsterBattleMode:
         self.return_context.update({"player_instance_id": instance_id, "xp_gained": progression.xp_gained})
         hp = int(progression.instance.current_hp or before_player_hp)
         opponent_hp = int(self.controller.opponent.current_hp if self.controller.opponent.current_hp is not None else before_opponent_hp)
+        terms = self.terms
         steps = [
             BattlePresentationStep(
-                f"{_display_name(progression.instance)} gained {progression.xp_gained} XP!",
+                terms.format_xp_gain(name=_display_name(progression.instance), xp=progression.xp_gained),
                 hp,
                 opponent_hp,
             ),
         ]
         for level in range(progression.previous_level + 1, progression.instance.level + 1):
-            steps.append(BattlePresentationStep(f"{_display_name(progression.instance)} grew to Lv {level}!", hp, opponent_hp))
+            steps.append(
+                BattlePresentationStep(
+                    terms.format_level_up(name=_display_name(progression.instance), level=level),
+                    hp,
+                    opponent_hp,
+                ),
+            )
         for move_id in progression.moves_learned:
-            steps.append(BattlePresentationStep(f"{_display_name(progression.instance)} learned {move_id}!", hp, opponent_hp))
+            steps.append(
+                BattlePresentationStep(
+                    terms.format_learn_move(name=_display_name(progression.instance), move=move_id),
+                    hp,
+                    opponent_hp,
+                ),
+            )
         return steps
 
     def _persist_player_monster(self, monster: MonsterInstance) -> str:
@@ -1378,6 +1434,12 @@ class MonsterBattleMode:
             ),
         ]
         steps.extend(self._build_presentation_steps(len(self.controller.turn_log) - 1, before_player_hp, before_opponent_hp))
+        self._append_defeat_step_if_lost(
+            steps,
+            result,
+            player_hp=steps[-1].player_hp if steps else before_player_hp,
+            opponent_hp=steps[-1].opponent_hp if steps else before_opponent_hp,
+        )
         self.overlay.begin_turn_presentation(steps, result=result)
 
     def _ensure_menu_stack(self) -> MenuStackOverlay:
@@ -1532,14 +1594,14 @@ def _log_special_move_resolution(
     )
 
 
-def _companion_autonomous_line(behavior: str, name: str) -> str:
+def _companion_autonomous_line(behavior: str, name: str, terms: BattleTerms) -> str:
     if behavior == ATTACK:
-        return f"{name} attacks!"
+        return terms.format_companion_attack(name=name)
     if behavior == DEFEND:
-        return f"{name} braces."
+        return terms.format_companion_defend(name=name)
     if behavior == FLEE:
-        return f"{name} flees!"
-    return f"{name} hesitates."
+        return terms.format_companion_flee_line(name=name)
+    return terms.format_companion_hesitate(name=name)
 
 
 def _build_companion_reinforcement_steps(
@@ -1547,30 +1609,31 @@ def _build_companion_reinforcement_steps(
     name: str,
     player_hp: int,
     opponent_hp: int,
+    terms: BattleTerms,
 ) -> list[BattlePresentationStep]:
     if kind == "praise":
         return [
             BattlePresentationStep(
-                f"You praise {name}.",
+                terms.format_praise_1(name=name),
                 player_hp,
                 opponent_hp,
                 player_clip="cheer",
             ),
-            BattlePresentationStep("It looks pleased.", player_hp, opponent_hp),
+            BattlePresentationStep(terms.praise_2, player_hp, opponent_hp),
         ]
     if kind == "scold":
         return [
             BattlePresentationStep(
-                f"You scold {name}.",
+                terms.format_scold_1(name=name),
                 player_hp,
                 opponent_hp,
                 player_clip="cower",
             ),
-            BattlePresentationStep("It flinches.", player_hp, opponent_hp),
+            BattlePresentationStep(terms.scold_2, player_hp, opponent_hp),
         ]
     return [
-        BattlePresentationStep("You wait calmly.", player_hp, opponent_hp),
-        BattlePresentationStep("It watches you.", player_hp, opponent_hp),
+        BattlePresentationStep(terms.wait_1, player_hp, opponent_hp),
+        BattlePresentationStep(terms.wait_2, player_hp, opponent_hp),
     ]
 
 
@@ -1593,18 +1656,18 @@ def _status_clip_for_side(side: str) -> tuple[str | None, str | None]:
     return None, "status"
 
 
-def _faint_line(controller: MonsterBattleController, entry: BattleLogEntry) -> str:
+def _faint_line(controller: MonsterBattleController, entry: BattleLogEntry, terms: BattleTerms) -> str:
     if entry.party_index >= 0:
         opponent_fainted = (entry.kind == "move" and entry.side == "player") or (
             entry.kind == "status" and entry.side == "opponent"
         )
         if opponent_fainted:
             monster = controller.opponent_party[entry.party_index]
-            return f"Foe {_display_name(monster)} fainted!"
+            return terms.format_ko_foe(name=_display_name(monster))
         monster = controller.player_party[entry.party_index]
-        return f"{_display_name(monster)} fainted!"
+        return terms.format_ko(name=_display_name(monster))
     subject = _display_name(controller.player if entry.side == "opponent" else controller.opponent)
-    return f"{subject} fainted!"
+    return terms.format_ko(name=subject)
 
 
 def _contains(rect: tuple[float, float, float, float], x: float, y: float) -> bool:

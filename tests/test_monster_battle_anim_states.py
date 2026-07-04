@@ -195,7 +195,7 @@ def test_presentation_requests_attack_hurt_and_faint_clips() -> None:
     assert move_step.player_clip == "attack"
     assert move_step.opponent_clip == "hurt"
 
-    faint_step = next(step for step in steps if "fainted" in step.line.lower())
+    faint_step = next(step for step in steps if "is down" in step.line.lower())
     assert faint_step.opponent_clip == "faint"
     assert faint_step.player_clip == "victory"
 

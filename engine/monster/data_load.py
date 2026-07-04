@@ -6,7 +6,7 @@ Pure module: no GameWindow, scenes, save, event bus, UI, or arcade imports.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -18,14 +18,7 @@ SPECIES_FILENAME = "monster_species.json"
 MOVES_FILENAME = "monster_moves.json"
 TYPE_CHART_FILENAME = "monster_type_chart.json"
 TERMS_FILENAME = "monster_terms.json"
-KNOWN_BATTLE_TERM_KEYS = frozenset(
-    {
-        "capture_item_name",
-        "capture_item_plural",
-        "capture_item_menu_label",
-        "move_resource_label",
-    }
-)
+KNOWN_BATTLE_TERM_KEYS = frozenset(field.name for field in fields(BattleTerms))
 DEFAULT_CAPTURE_RATE = 150
 MIN_CAPTURE_RATE = 1
 MAX_CAPTURE_RATE = 255
@@ -328,12 +321,7 @@ def parse_battle_terms(payload: Any, *, source: str = "terms") -> tuple[BattleTe
     if errors:
         return DEFAULT_BATTLE_TERMS, ValidationResult(ok=False, errors=tuple(errors))
 
-    terms = BattleTerms(
-        capture_item_name=values["capture_item_name"],
-        capture_item_plural=values["capture_item_plural"],
-        capture_item_menu_label=values["capture_item_menu_label"],
-        move_resource_label=values["move_resource_label"],
-    )
+    terms = BattleTerms(**values)
     return terms, ValidationResult(ok=True)
 
 
