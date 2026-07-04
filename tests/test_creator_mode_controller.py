@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from copy import deepcopy
 import subprocess
 import sys
+from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
+import engine.editor.creator_mode.creator_overlay_renderer as creator_overlay_renderer
 import engine.optional_arcade as optional_arcade
 from engine.config import EngineConfig
 from engine.editor.creator_mode import (
@@ -15,7 +16,6 @@ from engine.editor.creator_mode import (
     build_creator_overlay_model,
 )
 from engine.editor.creator_mode.creator_inspector import build_creator_inspector
-import engine.editor.creator_mode.creator_overlay_renderer as creator_overlay_renderer
 from engine.editor.creator_mode.creator_overlay_renderer import (
     build_creator_overlay_draw_commands,
     draw_creator_overlay,

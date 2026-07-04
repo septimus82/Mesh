@@ -111,11 +111,11 @@ from .migrations import migrate_payload
 from .monster.battle_mode import MonsterBattleMode
 from .particles import ParticleManager
 from .paths import pin_config, resolve_path
-from .repo_root import is_standalone_project_root, pin_launched_project_root
 from .perf import PerfStats
 from .quests import QuestManager
 from .render_queue import SpriteRenderQueue
 from .render_queue_arcade import ArcadeSpriteBatcher
+from .repo_root import is_standalone_project_root, pin_launched_project_root
 from .save_manager import SaveManager
 from .scene_controller import SceneController
 from .scene_loader import SceneLoader

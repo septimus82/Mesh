@@ -6,8 +6,8 @@ from dataclasses import dataclass
 
 from .creator_door_panel import CreatorDoorPanelModel
 from .creator_proposal_accept_readiness import CreatorProposalAcceptReadinessModel
-from .creator_proposal_review_details import CreatorProposalReviewDetailsModel
 from .creator_proposal_handoff import CreatorProposalHandoffModel
+from .creator_proposal_review_details import CreatorProposalReviewDetailsModel
 from .creator_proposal_status import CreatorProposalStatusModel
 from .creator_state import CreatorModeSnapshot
 

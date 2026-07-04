@@ -28,3 +28,4 @@ saves/
 /final.patch
 /final.files.txt
 /context.json
+.pytest-debug-temp/

@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .creator_inspector import CreatorInspectorModel, empty_creator_inspector
 from .creator_door_panel import CreatorDoorPanelModel
+from .creator_inspector import CreatorInspectorModel, empty_creator_inspector
 from .creator_proposal_accept_readiness import (
     CreatorProposalAcceptReadinessModel,
     build_creator_proposal_accept_readiness,
 )
-from .creator_proposal_review_details import (
-    CreatorProposalReviewDetailsModel,
-    build_creator_proposal_review_details,
-)
 from .creator_proposal_handoff import (
     CreatorProposalHandoffModel,
     build_creator_proposal_handoff,
+)
+from .creator_proposal_review_details import (
+    CreatorProposalReviewDetailsModel,
+    build_creator_proposal_review_details,
 )
 from .creator_proposal_status import CreatorProposalStatusModel, unavailable_creator_proposal_status
 

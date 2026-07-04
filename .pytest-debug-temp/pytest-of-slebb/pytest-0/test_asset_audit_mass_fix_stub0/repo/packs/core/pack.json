@@ -1,9 +1,0 @@
-{
-  "asset_audit": {
-    "allow_external": [
-      "assets/**"
-    ]
-  },
-  "id": "core",
-  "version": "1.0.0"
-}

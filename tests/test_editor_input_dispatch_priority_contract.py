@@ -4,11 +4,11 @@ from types import SimpleNamespace
 
 import pytest
 
-import engine.optional_arcade as optional_arcade
 import engine.input_runtime.capture_key_router as capture_router
+import engine.optional_arcade as optional_arcade
+from engine.game_runtime import input_dispatch
 from engine.input_runtime import capture_key_router_handlers_global as global_handlers
 from engine.input_runtime.capture_focus_query import get_capture_focus_snapshot
-from engine.game_runtime import input_dispatch
 from tests._typing import as_any
 
 pytestmark = [pytest.mark.fast]

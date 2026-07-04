@@ -5,11 +5,11 @@ from engine.dpi_bootstrap import set_process_dpi_unaware
 # Must precede pyglet (pyglet forces per-monitor DPI awareness at import time).
 set_process_dpi_unaware()
 
-import argparse
-import sys
-import warnings
-from collections import deque
-from typing import Any, Dict
+import argparse  # noqa: E402 # REASON: DPI bootstrap must precede pyglet import
+import sys  # noqa: E402 # REASON: DPI bootstrap must precede pyglet import
+import warnings  # noqa: E402 # REASON: DPI bootstrap must precede pyglet import
+from collections import deque  # noqa: E402 # REASON: DPI bootstrap must precede pyglet import
+from typing import Any, Dict  # noqa: E402 # REASON: DPI bootstrap must precede pyglet import
 
 # Suppress arcade draw_text PerformanceWarning as refactoring all UI to Text objects is pending
 warnings.filterwarnings("ignore", message=".*draw_text is an extremely slow function.*")
@@ -34,9 +34,9 @@ except (ImportError, AttributeError) as e:
     print(f"[Mesh][Patch] Failed to apply Pyglet patch: {e}")
     pass
 
-from engine.config import load_config
-from engine.game import GameWindow
-from engine.game_runtime.scene_flow import resolve_game_start_scene
+from engine.config import load_config  # noqa: E402 # REASON: DPI bootstrap must precede pyglet import
+from engine.game import GameWindow  # noqa: E402 # REASON: DPI bootstrap must precede pyglet import
+from engine.game_runtime.scene_flow import resolve_game_start_scene  # noqa: E402 # REASON: DPI bootstrap must precede pyglet import
 
 
 def main() -> None:

@@ -10,8 +10,8 @@ from engine.editor.creator_mode import (
     CreatorModeController,
     build_creator_door_request_from_selection,
     build_creator_overlay_model,
+    creator_door_staging,
 )
-from engine.editor.creator_mode import creator_door_staging
 from engine.editor.creator_mode.creator_overlay_renderer import (
     build_creator_overlay_draw_commands,
     truncate_creator_overlay_text,

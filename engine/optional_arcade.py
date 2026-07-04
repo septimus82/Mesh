@@ -7,7 +7,7 @@ from .dpi_bootstrap import set_process_dpi_unaware
 # Must run before ``import arcade`` (pyglet sets per-monitor DPI awareness at import).
 set_process_dpi_unaware()
 
-from . import arcade_fallback
+from . import arcade_fallback  # noqa: E402 # REASON: DPI bootstrap must precede pyglet import
 
 _arcade: Any = None
 _arcade_gl: Any = None

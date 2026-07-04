@@ -3,7 +3,6 @@ from __future__ import annotations
 import subprocess
 import sys
 from types import SimpleNamespace
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -11,13 +10,12 @@ import engine.editor.input_router as input_router
 from engine.editor.creator_mode import (
     CreatorModeController,
     build_creator_overlay_model,
+    creator_door_staging,
 )
-from engine.editor.creator_mode import creator_door_staging
 from engine.editor.creator_mode.creator_overlay_click import try_handle_creator_mode_overlay_click
 from engine.editor.creator_mode.creator_overlay_renderer import (
     DOOR_STAGE_PROPOSAL_ACTION_ID,
     build_creator_overlay_draw_commands,
-    hit_test_creator_overlay_click,
 )
 
 pytestmark = pytest.mark.fast

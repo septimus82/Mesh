@@ -11,7 +11,6 @@ from .collection import (
     add_caught_monster,
     companion_mind_to_dict,
     ensure_monster_collection,
-    load_companion_mind_for_instance,
     persist_companion_mind,
     serialize_monster_instance,
 )
