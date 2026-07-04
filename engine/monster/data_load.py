@@ -11,11 +11,21 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .battle_model import BattleSprite, BattleSpriteClip, BattleStats, Move, MoveStatusInflict, Species, TypeChart
+from .battle_terms import DEFAULT_BATTLE_TERMS, BattleTerms
 
 DEFAULT_DATA_DIR = Path("assets/data")
 SPECIES_FILENAME = "monster_species.json"
 MOVES_FILENAME = "monster_moves.json"
 TYPE_CHART_FILENAME = "monster_type_chart.json"
+TERMS_FILENAME = "monster_terms.json"
+KNOWN_BATTLE_TERM_KEYS = frozenset(
+    {
+        "capture_item_name",
+        "capture_item_plural",
+        "capture_item_menu_label",
+        "move_resource_label",
+    }
+)
 DEFAULT_CAPTURE_RATE = 150
 MIN_CAPTURE_RATE = 1
 MAX_CAPTURE_RATE = 255
@@ -289,6 +299,44 @@ def _parse_status_inflict(raw: Any, *, label: str) -> tuple[MoveStatusInflict | 
     return MoveStatusInflict(condition=condition.strip(), chance=chance_value), None
 
 
+def parse_battle_terms(payload: Any, *, source: str = "terms") -> tuple[BattleTerms, ValidationResult]:
+    if payload is None:
+        return DEFAULT_BATTLE_TERMS, ValidationResult(ok=True)
+    mapping, err = _require_mapping(payload, label=source)
+    if err is not None:
+        return DEFAULT_BATTLE_TERMS, ValidationResult(ok=False, errors=(err,))
+
+    errors: list[str] = []
+    for key in mapping:
+        if key not in KNOWN_BATTLE_TERM_KEYS:
+            allowed = ", ".join(sorted(KNOWN_BATTLE_TERM_KEYS))
+            errors.append(f"{source} has unknown key '{key}' (allowed: {allowed})")
+
+    values: dict[str, str] = {}
+    for key in KNOWN_BATTLE_TERM_KEYS:
+        default = str(getattr(DEFAULT_BATTLE_TERMS, key))
+        if key not in mapping:
+            values[key] = default
+            continue
+        raw = mapping.get(key)
+        if not isinstance(raw, str) or not raw.strip():
+            errors.append(f"{source}.{key} must be a non-empty string")
+            values[key] = default
+            continue
+        values[key] = raw.strip()
+
+    if errors:
+        return DEFAULT_BATTLE_TERMS, ValidationResult(ok=False, errors=tuple(errors))
+
+    terms = BattleTerms(
+        capture_item_name=values["capture_item_name"],
+        capture_item_plural=values["capture_item_plural"],
+        capture_item_menu_label=values["capture_item_menu_label"],
+        move_resource_label=values["move_resource_label"],
+    )
+    return terms, ValidationResult(ok=True)
+
+
 def parse_moves(payload: Any, *, source: str = "moves") -> tuple[dict[str, Move], ValidationResult]:
     root, err = _require_mapping(payload, label=source)
     if err is not None:
@@ -546,6 +594,20 @@ def load_type_chart(path: Path) -> tuple[TypeChart, frozenset[str], ValidationRe
         return {}, frozenset(), read_result
     chart, known_types, parse_result = parse_type_chart(payload, source=str(path))
     return chart, known_types, _merge_results(read_result, parse_result)
+
+
+def load_battle_terms(data_dir: Path | str | None = None) -> tuple[BattleTerms, ValidationResult]:
+    """Load battle UI terminology from an optional project JSON file."""
+
+    base = Path(data_dir) if data_dir is not None else DEFAULT_DATA_DIR
+    path = base / TERMS_FILENAME
+    if not path.is_file():
+        return DEFAULT_BATTLE_TERMS, ValidationResult(ok=True)
+    payload, read_result = _read_json(path)
+    if not read_result.ok or payload is None:
+        return DEFAULT_BATTLE_TERMS, read_result
+    terms, parse_result = parse_battle_terms(payload, source=str(path))
+    return terms, _merge_results(read_result, parse_result)
 
 
 def load_monster_catalog(data_dir: Path | str | None = None) -> tuple[MonsterCatalog | None, ValidationResult]:
