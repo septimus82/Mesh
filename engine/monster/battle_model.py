@@ -18,6 +18,14 @@ class BattleStats:
     atk: int
     defense: int
     spd: int
+    sp_attack: int | None = None
+    sp_defense: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.sp_attack is None:
+            object.__setattr__(self, "sp_attack", int(self.atk))
+        if self.sp_defense is None:
+            object.__setattr__(self, "sp_defense", int(self.defense))
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,6 +77,7 @@ class Move:
     accuracy: int
     pp: int
     status_inflict: MoveStatusInflict | None = None
+    category: str = "physical"
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,6 +148,8 @@ def derive_stats(base: BattleStats, level: int) -> BattleStats:
         atk=max(1, int(base.atk) + half_level),
         defense=max(1, int(base.defense) + half_level),
         spd=max(1, int(base.spd) + half_level),
+        sp_attack=max(1, int(base.sp_attack) + half_level),
+        sp_defense=max(1, int(base.sp_defense) + half_level),
     )
 
 
@@ -206,14 +217,32 @@ def resolve_move(
 
     damage = compute_damage(
         level=attacker.level,
-        attacker_atk=attacker.stats.atk if attacker.stats else 1,
-        defender_def=defender.stats.defense if defender.stats else 1,
+        attacker_atk=_attacker_offense_stat(attacker, move),
+        defender_def=_defender_defense_stat(defender, move),
         move_power=move.power,
         type_mult=mult,
         rng=rng,
     )
     updated = defender.with_current_hp(int(defender.current_hp or 0) - damage)
     return MoveResolution(move.id, damage, mult, True, updated.fainted, updated)
+
+
+def _attacker_offense_stat(attacker: MonsterInstance, move: Move) -> int:
+    stats = attacker.stats
+    if stats is None:
+        return 1
+    if move.category == "special":
+        return int(stats.sp_attack)
+    return int(stats.atk)
+
+
+def _defender_defense_stat(defender: MonsterInstance, move: Move) -> int:
+    stats = defender.stats
+    if stats is None:
+        return 1
+    if move.category == "special":
+        return int(stats.sp_defense)
+    return int(stats.defense)
 
 
 def _accuracy_hits(accuracy: int, rng: RandomLike | None) -> bool:

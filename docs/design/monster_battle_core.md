@@ -189,7 +189,8 @@ Species may optionally define a sliced battle sheet plus named animation clips. 
 | Clip | When the battle overlay requests it |
 |------|-------------------------------------|
 | `idle` | Default loop (required when using `clips`) |
-| `attack` | Combatant uses an offensive move |
+| `attack` | Combatant uses a physical offensive move |
+| `special` | Combatant uses a special-category move (falls back to `attack`, then `idle`) |
 | `defend` | Combatant braces / guards |
 | `hurt` | Combatant takes damage |
 | `faint` | Combatant faints |
@@ -212,6 +213,7 @@ Species may optionally define a sliced battle sheet plus named animation clips. 
   "clips": {
     "idle": { "frames": [0, 1, 2, 3, 4, 5, 6], "fps": 6, "loop": true },
     "attack": { "frames": [7, 8, 9], "fps": 10, "loop": false },
+    "special": { "frames": [7, 8, 9, 10], "fps": 10, "loop": false },
     "defend": { "frames": [10, 11], "fps": 8, "loop": false },
     "hurt": { "frames": [12], "fps": 4, "loop": false },
     "faint": { "frames": [13, 14], "fps": 6, "loop": false },

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Literal, Mapping, Sequence, cast
 
 import engine.optional_arcade as optional_arcade
 from engine.events import MeshEvent
+from engine.logging_tools import get_logger
 from engine.text_draw import TextCache, draw_text_cached
 from engine.ui.menu_toolkit import MenuStackOverlay, SelectableItem, SelectableListScreen
 from engine.ui_overlays.common import UIElement, _draw_tb_rectangle_filled, _draw_tb_rectangle_outline
@@ -50,6 +51,8 @@ from .progression import apply_experience, award_xp_for_victory
 
 if TYPE_CHECKING:
     from engine.game import GameWindow
+
+logger = get_logger(__name__)
 
 
 MONSTER_BATTLE_RESULT_KEY = "monster_battle_last_result"
@@ -723,7 +726,8 @@ class MonsterBattleMode:
             name = _display_name(self.controller.player)
             companion_clip: str | None = None
             if behavior == ATTACK:
-                companion_clip = "attack"
+                move_id = _first_damaging_move_id(self.controller)
+                companion_clip = _attack_clip_for_move(self.controller.moves, move_id)
             elif behavior == DEFEND:
                 companion_clip = "defend"
             steps = [
@@ -1190,20 +1194,37 @@ class MonsterBattleMode:
                 continue
             player_clip: str | None = None
             opponent_clip: str | None = None
+            attack_clip = _attack_clip_for_move(self.controller.moves, entry.move_id)
             if entry.side == "player":
                 actor = _display_name(self.controller.player)
                 target = _display_name(self.controller.opponent)
-                player_clip = "attack"
+                player_clip = attack_clip
                 if entry.hit:
                     opponent_hp = max(0, opponent_hp - int(entry.damage))
                     opponent_clip = "hurt"
+                    _log_special_move_resolution(
+                        actor=actor,
+                        move_id=entry.move_id,
+                        move=self.controller.moves.get(entry.move_id),
+                        attacker=self.controller.player,
+                        defender=self.controller.opponent,
+                        damage=int(entry.damage),
+                    )
             else:
                 actor = _display_name(self.controller.opponent)
                 target = _display_name(self.controller.player)
-                opponent_clip = "attack"
+                opponent_clip = attack_clip
                 if entry.hit:
                     player_hp = max(0, player_hp - int(entry.damage))
                     player_clip = "hurt"
+                    _log_special_move_resolution(
+                        actor=actor,
+                        move_id=entry.move_id,
+                        move=self.controller.moves.get(entry.move_id),
+                        attacker=self.controller.opponent,
+                        defender=self.controller.player,
+                        damage=int(entry.damage),
+                    )
             if entry.hit:
                 line = f"{actor} used {entry.move_id}! {target} took {entry.damage} damage."
             else:
@@ -1455,6 +1476,38 @@ def _first_damaging_move_id(controller: MonsterBattleController) -> str:
         if str(move_id) in controller.moves:
             return str(move_id)
     return str(sorted(controller.moves)[0])
+
+
+def _attack_clip_for_move(moves: Mapping[str, Move], move_id: str) -> str:
+    move = moves.get(move_id)
+    if move is not None and move.category == "special":
+        return "special"
+    return "attack"
+
+
+def _log_special_move_resolution(
+    *,
+    actor: str,
+    move_id: str,
+    move: Move | None,
+    attacker: MonsterInstance,
+    defender: MonsterInstance,
+    damage: int,
+) -> None:
+    if move is None or move.category != "special":
+        return
+    attacker_stats = attacker.stats
+    defender_stats = defender.stats
+    if attacker_stats is None or defender_stats is None:
+        return
+    logger.info(
+        "[SpecialSplit] %s used %s (special): sp_attack=%d vs sp_defense=%d -> %d damage",
+        actor,
+        move_id,
+        int(attacker_stats.sp_attack),
+        int(defender_stats.sp_defense),
+        damage,
+    )
 
 
 def _companion_autonomous_line(behavior: str, name: str) -> str:

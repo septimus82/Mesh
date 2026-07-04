@@ -20,6 +20,11 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+_CLIP_FALLBACK_CHAINS: dict[str, tuple[str, ...]] = {
+    "special": ("attack", "idle"),
+}
+_DEFAULT_CLIP_FALLBACK: tuple[str, ...] = ("idle",)
+
 
 @dataclass
 class BattleSpriteAnimator:
@@ -34,14 +39,22 @@ class BattleSpriteAnimator:
     last_effective_clip: str | None = None
     _logged_missing_clip_fallback: bool = False
 
-    def play_clip(self, name: str) -> str:
-        """Request a clip; returns the clip actually playing (idle fallback)."""
+    def play_clip(self, name: str, *, fallbacks: tuple[str, ...] | None = None) -> str:
+        """Request a clip; returns the clip actually playing (fallback chain)."""
         self.last_requested_clip = name
-        resolved = name if name in self.clips else "idle"
-        if resolved not in self.clips:
-            resolved = "idle"
-        if name not in self.clips and not self._logged_missing_clip_fallback:
-            logger.debug("Battle clip '%s' not defined; falling back to idle", name)
+        if fallbacks is not None:
+            chain = (name, *fallbacks)
+        elif name in _CLIP_FALLBACK_CHAINS:
+            chain = (name, *_CLIP_FALLBACK_CHAINS[name])
+        else:
+            chain = (name, *_DEFAULT_CLIP_FALLBACK)
+        resolved = "idle"
+        for candidate in chain:
+            if candidate in self.clips:
+                resolved = candidate
+                break
+        if name not in self.clips and resolved != name and not self._logged_missing_clip_fallback:
+            logger.debug("Battle clip '%s' not defined; falling back to '%s'", name, resolved)
             self._logged_missing_clip_fallback = True
         self.last_effective_clip = resolved
         self.active_clip_name = resolved
