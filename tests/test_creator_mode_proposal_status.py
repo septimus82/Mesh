@@ -11,8 +11,8 @@ from engine.editor.creator_mode import (
     CreatorModeController,
     build_creator_overlay_model,
     build_creator_proposal_status,
+    creator_door_staging,
 )
-from engine.editor.creator_mode import creator_door_staging
 from engine.editor.creator_mode.creator_overlay_renderer import build_creator_overlay_draw_commands
 
 pytestmark = pytest.mark.fast

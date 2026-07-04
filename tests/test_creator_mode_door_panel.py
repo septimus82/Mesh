@@ -9,8 +9,8 @@ from engine.editor.creator_mode import (
     CreatorDoorWorkflowRequest,
     build_creator_door_panel,
     build_creator_door_workflow,
+    creator_door_staging,
 )
-from engine.editor.creator_mode import creator_door_staging
 from engine.editor.creator_mode.creator_door_panel import (
     CreatorDoorPanelLine,
     _dedupe_text,

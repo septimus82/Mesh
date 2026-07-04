@@ -9,8 +9,8 @@ import pytest
 from engine.editor.creator_mode import (
     CreatorModeController,
     build_creator_overlay_model,
+    creator_door_staging,
 )
-from engine.editor.creator_mode import creator_door_staging
 from engine.editor.creator_mode.creator_overlay_renderer import build_creator_overlay_draw_commands
 
 pytestmark = pytest.mark.fast

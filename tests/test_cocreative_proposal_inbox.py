@@ -9,15 +9,15 @@ from typing import Any
 import pytest
 
 import engine.optional_arcade as optional_arcade
+from engine.editor.creator_mode import build_creator_door_workflow, stage_creator_door_proposal
+from engine.editor.creator_mode.creator_door_workflow import CreatorDoorWorkflowRequest
 from engine.editor.dock_tab_registry import DOCK_TAB_TOOLTIPS, RIGHT_DOCK_TABS
 from engine.editor.editor_dock_controller import EditorDockController
 from engine.editor.live_session_bridge import EditorLiveSessionBridge
 from engine.editor.proposal_inbox import ProposalInbox
 from engine.ui_overlays.proposal_inbox_overlay import ProposalInboxOverlay
 from tests.test_cocreative_live_bridge import _stage_with_drain
-from engine.editor.creator_mode import build_creator_door_workflow, stage_creator_door_proposal
-from engine.editor.creator_mode.creator_door_workflow import CreatorDoorWorkflowRequest
-from tests.test_cocreative_live_ops import _entity_by_name, _entity_names, _guard_add_op, _make_controller, _FakeSprite
+from tests.test_cocreative_live_ops import _entity_by_name, _entity_names, _FakeSprite, _guard_add_op, _make_controller
 
 
 def _guard_patrol_ops(name: str) -> list[dict[str, Any]]:

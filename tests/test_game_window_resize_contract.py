@@ -64,6 +64,15 @@ def _build_window(
             day_night_calls.append(dict(kwargs))
         return SimpleNamespace()
 
+    def build_camera_controller(window: Any) -> SimpleNamespace:
+        return SimpleNamespace(
+            window=window,
+            camera=SimpleNamespace(),
+            gui_camera=SimpleNamespace(),
+            initialize_window_cameras=_noop,
+            on_resize=_noop,
+        )
+
     with ExitStack() as stack:
         stack.enter_context(patch("arcade.Window.__init__", side_effect=mock_window_init, autospec=True))
         stack.enter_context(patch("arcade.Window.get_size", lambda self: (self._width, self._height)))
@@ -90,7 +99,10 @@ def _build_window(
         stack.enter_context(patch("engine.plugin_system.PluginManager", return_value=SimpleNamespace(load_all=_noop, enable_all=_noop)))
         stack.enter_context(patch("engine.game.DayNightCycle", side_effect=build_day_night))
         for class_name in simple_classes:
-            stack.enter_context(patch(f"engine.game.{class_name}", return_value=SimpleNamespace()))
+            if class_name == "CameraController":
+                stack.enter_context(patch("engine.game.CameraController", side_effect=build_camera_controller))
+            else:
+                stack.enter_context(patch(f"engine.game.{class_name}", return_value=SimpleNamespace()))
 
         kwargs: dict[str, Any] = {"config": config}
         if resizable is not None:
@@ -193,8 +205,8 @@ def test_game_window_on_resize_updates_config_and_forwards_hooks() -> None:
     assert window.engine_config.width == 1600
     assert window.engine_config.height == 900
     assert calls == [
-        ("camera", 1600, 900),
         ("ui", 1600, 900),
         ("editor", 1600, 900),
         ("lighting", 1600, 900),
+        ("camera", 1600, 900),
     ]
