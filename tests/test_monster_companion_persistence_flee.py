@@ -14,6 +14,7 @@ from engine.monster.battle_controller import BattleResult
 from engine.monster.battle_mode import MONSTER_BATTLE_RESULT_KEY, MonsterBattleMode
 from engine.monster.battle_model import BattleStats, MonsterInstance, Move, Species
 from engine.monster.collection import (
+    MONSTER_INSTANCES_KEY,
     MONSTER_PARTY_KEY,
     add_caught_monster,
     load_companion_mind_for_instance,
@@ -240,4 +241,5 @@ def test_lone_companion_flee_ends_battle_with_failed_bond_outcome(monkeypatch: p
     result_payload = values[MONSTER_BATTLE_RESULT_KEY]
     assert result_payload["outcome"] == "fled"
     assert caught.instance_id not in values[MONSTER_PARTY_KEY]
+    assert caught.instance_id not in values[MONSTER_INSTANCES_KEY]
     assert overlay.log_line == "It abandoned you."

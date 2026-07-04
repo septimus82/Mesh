@@ -12,6 +12,8 @@ MONSTER_PARTY_KEY = "monster_party"
 MONSTER_BOX_KEY = "monster_box"
 MONSTER_INSTANCES_KEY = "monster_instances"
 COMPANION_MIND_INSTANCE_KEY = "companion_mind"
+COMPANION_STARTER_INSTANCE_KEY = "companion_starter"
+COMPANION_STARTER_GRANTED_KEY = "companion_starter_granted"
 POCKET_BALL_COUNT_KEY = "pocket_ball_count"
 DEFAULT_POCKET_BALL_COUNT = 3
 MAX_PARTY_SIZE = 6
@@ -99,6 +101,52 @@ def persist_companion_mind(values: MutableMapping[str, Any], instance_id: str, m
         return
     row[COMPANION_MIND_INSTANCE_KEY] = companion_mind_to_dict(mind)
     instances[str(instance_id)] = row
+
+
+def companion_starter_was_granted(values: Mapping[str, Any]) -> bool:
+    return bool(values.get(COMPANION_STARTER_GRANTED_KEY))
+
+
+def mark_companion_starter_granted(values: MutableMapping[str, Any]) -> None:
+    ensure_monster_collection(values)
+    values[COMPANION_STARTER_GRANTED_KEY] = True
+
+
+def is_companion_starter_instance(values: Mapping[str, Any], instance_id: str) -> bool:
+    row = values.get(MONSTER_INSTANCES_KEY, {}).get(str(instance_id))
+    if not isinstance(row, dict):
+        return False
+    return bool(row.get(COMPANION_STARTER_INSTANCE_KEY))
+
+
+def mark_companion_starter_instance(values: MutableMapping[str, Any], instance_id: str) -> None:
+    ensure_monster_collection(values)
+    row = values[MONSTER_INSTANCES_KEY].get(str(instance_id))
+    if isinstance(row, dict):
+        row[COMPANION_STARTER_INSTANCE_KEY] = True
+
+
+def remove_monster_from_collection(values: MutableMapping[str, Any], instance_id: str) -> bool:
+    """Remove an instance from party and instance storage."""
+    ensure_monster_collection(values)
+    id_str = str(instance_id)
+    party = values[MONSTER_PARTY_KEY]
+    removed = False
+    if id_str in party:
+        party.remove(id_str)
+        removed = True
+    if id_str in values[MONSTER_INSTANCES_KEY]:
+        del values[MONSTER_INSTANCES_KEY][id_str]
+        removed = True
+    return removed
+
+
+def default_companion_mind_for_instance(values: Mapping[str, Any], instance_id: str) -> CompanionMind:
+    from .companion_mind import bonded_starter_companion_mind, default_caught_companion_mind  # noqa: PLC0415
+
+    if is_companion_starter_instance(values, instance_id):
+        return bonded_starter_companion_mind()
+    return default_caught_companion_mind()
 
 
 def load_battle_party_from_values(

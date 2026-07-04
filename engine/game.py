@@ -826,7 +826,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             load_battle_party_from_values,
             load_companion_mind_for_instance,
         )
-        from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament  # noqa: PLC0415
+        from engine.monster.companion_mind import bonded_starter_companion_mind  # noqa: PLC0415
         from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
         from engine.paths import resolve_monster_data_dir  # noqa: PLC0415
 
@@ -862,12 +862,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         instance_id = str(party_instance_ids[0])
         mind = load_companion_mind_for_instance(values, instance_id)
         if mind is None:
-            mind = CompanionMind(
-                temperament=Temperament(aggression=65.0, fear=12.0),
-                learned=LearnedWeights(),
-                trust=60.0,
-                bond=40.0,
-            )
+            mind = bonded_starter_companion_mind()
         self.console_log("[MonsterBattle] Starting debug companion battle")
         return self.start_monster_battle(
             player_monster=active,
@@ -896,7 +891,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             ensure_monster_collection,
             load_companion_mind_for_instance,
         )
-        from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament  # noqa: PLC0415
+        from engine.monster.companion_mind import bonded_starter_companion_mind  # noqa: PLC0415
         from engine.monster.data_load import load_monster_catalog  # noqa: PLC0415
         from engine.monster.egg_lifecycle import (  # noqa: PLC0415
             DEFAULT_EGG_HATCH_STEPS,
@@ -933,12 +928,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             self.console_log("[Breeding] Could not load parent monsters from party.")
             return False
 
-        default_mind = CompanionMind(
-            temperament=Temperament(aggression=65.0, fear=12.0),
-            learned=LearnedWeights(),
-            trust=60.0,
-            bond=40.0,
-        )
+        default_mind = bonded_starter_companion_mind()
         parent_a_mind = load_companion_mind_for_instance(values, parent_a_id) or default_mind
         parent_b_mind = load_companion_mind_for_instance(values, parent_b_id) or default_mind
 

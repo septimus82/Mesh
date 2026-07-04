@@ -954,22 +954,31 @@ class MonsterBattleMode:
         if final_result is None:
             raise RuntimeError("cannot end monster battle without a result")
 
-        if self.companion_mode and self.companion_mind is not None and self._companion_instance_id:
-            from engine.companion_diagnostics import log_companion_battle_end  # noqa: PLC0415
-
-            log_companion_battle_end(
-                instance_id=self._companion_instance_id,
-                mind=self.companion_mind,
-                outcome=str(getattr(final_result, "outcome", "") or ""),
-                trigger=str(self.return_context.get("source", "") or ""),
-            )
+        final_outcome = str(getattr(final_result, "outcome", "") or "")
+        companion_end_mind = self.companion_mind
+        companion_end_id = self._companion_instance_id
+        if self.companion_mode and companion_end_mind is not None and companion_end_id and final_outcome != "fled":
             self._persist_active_companion_mind()
 
         payload = self._result_payload(final_result)
         self._apply_result_payload(payload)
         self._persist_party_to_instances()
-        if self.companion_mode and str(getattr(final_result, "outcome", "")) == "fled":
+        if self.companion_mode and final_outcome == "fled":
             self._remove_fled_companion_from_party()
+
+        if self.companion_mode and companion_end_mind is not None and companion_end_id:
+            from engine.companion_diagnostics import log_companion_battle_end  # noqa: PLC0415
+
+            values = self._state_values()
+            party_ids = [str(item) for item in values.get(MONSTER_PARTY_KEY, []) if str(item).strip()]
+            log_companion_battle_end(
+                instance_id=companion_end_id,
+                mind=companion_end_mind,
+                outcome=final_outcome,
+                trigger=str(self.return_context.get("source", "") or ""),
+                party_ids=party_ids,
+            )
+
         self._emit_ended(payload)
 
         if self.overlay is not None:
@@ -1399,11 +1408,9 @@ class MonsterBattleMode:
         instance_id = self._companion_instance_id
         if not instance_id:
             return
-        values = self._state_values()
-        party = values[MONSTER_PARTY_KEY]
-        id_str = str(instance_id)
-        if id_str in party:
-            party.remove(id_str)
+        from engine.monster.collection import remove_monster_from_collection  # noqa: PLC0415
+
+        remove_monster_from_collection(self._state_values(), str(instance_id))
 
 
 def start_monster_battle(window: "GameWindow", **kwargs: Any) -> MonsterBattleController:

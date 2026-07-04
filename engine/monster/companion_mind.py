@@ -113,6 +113,26 @@ class CompanionMind:
     last_behavior: BehaviorId | None = None
 
 
+def bonded_starter_companion_mind() -> CompanionMind:
+    """Bonded starter baseline (MON-2d-fix): trust+bond average sits at the flee threshold."""
+    return CompanionMind(
+        temperament=Temperament(aggression=65.0, fear=12.0),
+        learned=LearnedWeights(),
+        trust=60.0,
+        bond=40.0,
+    )
+
+
+def default_caught_companion_mind() -> CompanionMind:
+    """Fresh mind for caught party members — not the bonded starter baseline."""
+    return CompanionMind(
+        temperament=Temperament(aggression=45.0, fear=25.0),
+        learned=LearnedWeights(),
+        trust=35.0,
+        bond=15.0,
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class DecisionContext:
     """Opaque decision context; extended by later companion slices."""

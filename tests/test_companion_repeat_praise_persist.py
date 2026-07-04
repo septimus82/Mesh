@@ -10,7 +10,7 @@ import pytest
 
 from engine.monster.battle_mode import MonsterBattleMode
 from engine.monster.battle_model import MonsterInstance
-from engine.monster.collection import load_companion_mind_for_instance
+from engine.monster.collection import add_caught_monster, load_companion_mind_for_instance
 from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament
 from tests.test_monster_encounter_zone import SHELL, SPROUT, TACKLE, _catalog
 
@@ -94,7 +94,6 @@ def test_two_consecutive_praised_battles_increase_bond(tmp_path: None = None) ->
     """Repeat persist works; Session A flatline was battles ending before praise."""
     window = _window()
     values = window.game_state_controller.state.values
-    from engine.monster.collection import add_caught_monster
 
     caught = add_caught_monster(values, MonsterInstance(SPROUT, level=8, current_hp=24, known_moves=("tackle",)))
     instance_id = caught.instance_id

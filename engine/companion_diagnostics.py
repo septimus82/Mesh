@@ -9,7 +9,7 @@ Enable with::
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, Sequence
 
 from engine.logging_tools import get_logger
 
@@ -73,14 +73,18 @@ def log_companion_battle_end(
     mind: Any,
     outcome: str = "",
     trigger: str = "",
+    party_ids: Sequence[str] | None = None,
 ) -> None:
-    """Emit one diagnostic line immediately before companion mind is persisted."""
+    """Emit one diagnostic line when a companion battle ends (after party mutations)."""
     if not enabled():
         return
     inst, bond, trust, weight_text, trigger_text = _format_mind_line(instance_id=instance_id, mind=mind, trigger=trigger)
     outcome_text = f" outcome={outcome}" if outcome else ""
+    party_text = ""
+    if party_ids is not None:
+        party_text = f" party=[{','.join(str(item) for item in party_ids)}]"
     logger.warning(
-        "%s battle_end instance=%s bond=%.1f trust=%.1f weights=[%s]%s%s",
+        "%s battle_end instance=%s bond=%.1f trust=%.1f weights=[%s]%s%s%s",
         _PREFIX,
         inst,
         bond,
@@ -88,4 +92,5 @@ def log_companion_battle_end(
         weight_text,
         trigger_text,
         outcome_text,
+        party_text,
     )
