@@ -161,6 +161,72 @@ This matches existing content patterns such as quests loading from `assets/data/
 }
 ```
 
+### Battle sprite clips (`battle_sprite.clips`)
+
+Species may optionally define a sliced battle sheet plus named animation clips. The loader validates clip names against a fixed vocabulary; missing clips at runtime fall back to `idle` without error.
+
+**Sheet layout** (on `battle_sprite`):
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `sheet` | string | yes | Path to the PNG sprite sheet |
+| `columns` | number | yes | Frames per row |
+| `rows` | number | yes | Row count |
+| `frame_width` | number | yes | Pixel width of one frame |
+| `frame_height` | number | yes | Pixel height of one frame |
+| `clips` | object | no* | Named clip definitions (*or legacy `idle_frames` + `fps`) |
+
+**Per-clip fields** (each entry under `clips`):
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `frames` | number[] | — | Frame indices into the sliced sheet (0-based) |
+| `fps` | number | `6` | Playback speed |
+| `loop` | boolean | `true` | Restart after the last frame |
+
+**Allowed clip names:**
+
+| Clip | When the battle overlay requests it |
+|------|-------------------------------------|
+| `idle` | Default loop (required when using `clips`) |
+| `attack` | Combatant uses an offensive move |
+| `defend` | Combatant braces / guards |
+| `hurt` | Combatant takes damage |
+| `faint` | Combatant faints |
+| `cheer` | Companion praised by the trainer |
+| `cower` | Companion scolded |
+| `flee` | Companion abandons the trainer |
+| `victory` | Player-side combatant wins the battle |
+| `capture` | Opponent during a Pocket Ball attempt (shake / broke free / Gotcha) |
+| `status` | Afflicted combatant at turn start (asleep skip) |
+
+**Worked example** (Shelltide with companion-era clips — art optional; undefined clips idle-fallback):
+
+```json
+"battle_sprite": {
+  "sheet": "assets/sprites/shelltide.png",
+  "columns": 7,
+  "rows": 2,
+  "frame_width": 128,
+  "frame_height": 128,
+  "clips": {
+    "idle": { "frames": [0, 1, 2, 3, 4, 5, 6], "fps": 6, "loop": true },
+    "attack": { "frames": [7, 8, 9], "fps": 10, "loop": false },
+    "defend": { "frames": [10, 11], "fps": 8, "loop": false },
+    "hurt": { "frames": [12], "fps": 4, "loop": false },
+    "faint": { "frames": [13, 14], "fps": 6, "loop": false },
+    "cheer": { "frames": [15, 16], "fps": 8, "loop": false },
+    "cower": { "frames": [17], "fps": 6, "loop": false },
+    "flee": { "frames": [18, 19, 20], "fps": 10, "loop": false },
+    "victory": { "frames": [21, 22], "fps": 8, "loop": true },
+    "capture": { "frames": [23, 24, 25], "fps": 12, "loop": true },
+    "status": { "frames": [26, 27], "fps": 4, "loop": true }
+  }
+}
+```
+
+Legacy species with only `idle_frames` continue to load unchanged; the loader synthesizes a single `idle` clip.
+
 ### Move Schema
 
 ```json

@@ -127,7 +127,21 @@ def _parse_capture_rate(raw: Any, *, label: str) -> tuple[int, str | None]:
     return value, None
 
 
-KNOWN_BATTLE_CLIP_NAMES = frozenset({"idle", "attack", "defend", "hurt", "faint"})
+KNOWN_BATTLE_CLIP_NAMES = frozenset(
+    {
+        "idle",
+        "attack",
+        "defend",
+        "hurt",
+        "faint",
+        "cheer",
+        "cower",
+        "flee",
+        "victory",
+        "capture",
+        "status",
+    }
+)
 
 
 def _parse_battle_sprite_clip(raw: Any, *, label: str) -> tuple[BattleSpriteClip | None, str | None]:

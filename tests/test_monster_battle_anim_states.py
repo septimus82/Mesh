@@ -197,6 +197,7 @@ def test_presentation_requests_attack_hurt_and_faint_clips() -> None:
 
     faint_step = next(step for step in steps if "fainted" in step.line.lower())
     assert faint_step.opponent_clip == "faint"
+    assert faint_step.player_clip == "victory"
 
 
 def test_overlay_applies_presentation_clip_requests() -> None:
