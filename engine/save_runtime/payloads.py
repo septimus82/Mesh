@@ -127,7 +127,19 @@ def build_snapshot_payload_from_controller(game_state: object) -> dict[str, Any]
     except (TypeError, ValueError):
         gold = 0
 
-    return {
+    game_state_block: dict[str, Any] | None = None
+    controller = getattr(window, "game_state_controller", None) if window is not None else None
+    export_state = getattr(controller, "export_state", None)
+    if callable(export_state):
+        try:
+            exported = export_state()
+            if isinstance(exported, dict):
+                game_state_block = exported
+        except Exception:  # noqa: BLE001  # REASON: snapshot resilience fallback
+            _log_swallow("PYLD-009", "snapshot export_state", once=True)
+            game_state_block = None
+
+    payload: dict[str, Any] = {
         "save_format_version": SAVE_FORMAT_VERSION,
         "version": constants.SNAPSHOT_VERSION,
         "world_file": str(world_file) if world_file else None,
@@ -137,6 +149,9 @@ def build_snapshot_payload_from_controller(game_state: object) -> dict[str, Any]
         "gold": gold,
         "flags": flags_true,
     }
+    if game_state_block is not None:
+        payload["game_state"] = game_state_block
+    return payload
 
 
 def load_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
@@ -297,7 +312,11 @@ def apply_loaded_payload(
             _finalize_apply_diagnostics(diagnostics_local, diagnostics)
             return False
         try:
-            apply_snapshot_to_game_state(controller, payload)
+            state_block = payload.get("game_state")
+            if isinstance(state_block, dict) and hasattr(controller, "import_state"):
+                controller.import_state(state_block)
+            else:
+                apply_snapshot_to_game_state(controller, payload)
         except Exception as exc:  # noqa: BLE001  # REASON: payloads fallback isolation
             _log_swallow("PYLD-003", "snapshot apply_state", once=True)
             _append_diagnostic(
