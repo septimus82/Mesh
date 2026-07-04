@@ -90,7 +90,23 @@ def _parse_base_stats(raw: Any, *, label: str) -> tuple[BattleStats | None, str 
     spd, err = _int_field("spd", "speed")
     if err:
         return None, err
-    return BattleStats(hp=hp, atk=atk, defense=defense, spd=spd), None
+
+    def _optional_int(key: str) -> int | None:
+        if key not in mapping:
+            return None
+        value = mapping[key]
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            return None
+        return int(value)
+
+    sp_attack = _optional_int("sp_attack")
+    if sp_attack is None:
+        sp_attack = int(atk)
+    sp_defense = _optional_int("sp_defense")
+    if sp_defense is None:
+        sp_defense = int(defense)
+
+    return BattleStats(hp=hp, atk=atk, defense=defense, spd=spd, sp_attack=sp_attack, sp_defense=sp_defense), None
 
 
 def _parse_learnset(raw: Any, *, label: str) -> tuple[tuple[str, ...], str | None]:
@@ -131,6 +147,7 @@ KNOWN_BATTLE_CLIP_NAMES = frozenset(
     {
         "idle",
         "attack",
+        "special",
         "defend",
         "hurt",
         "faint",
@@ -142,6 +159,8 @@ KNOWN_BATTLE_CLIP_NAMES = frozenset(
         "status",
     }
 )
+
+KNOWN_MOVE_CATEGORIES = frozenset({"physical", "special"})
 
 
 def _parse_battle_sprite_clip(raw: Any, *, label: str) -> tuple[BattleSpriteClip | None, str | None]:
@@ -310,6 +329,15 @@ def parse_moves(payload: Any, *, source: str = "moves") -> tuple[dict[str, Move]
             if status_err is not None:
                 errors.append(status_err)
                 continue
+            category_raw = row.get("category", "physical")
+            if category_raw is None:
+                category = "physical"
+            elif not isinstance(category_raw, str) or category_raw.strip() not in KNOWN_MOVE_CATEGORIES:
+                allowed = ", ".join(sorted(KNOWN_MOVE_CATEGORIES))
+                errors.append(f"{label}.category must be one of: {allowed}")
+                continue
+            else:
+                category = category_raw.strip()
             moves[move_id] = Move(
                 id=move_id,
                 type=move_type.strip(),
@@ -317,6 +345,7 @@ def parse_moves(payload: Any, *, source: str = "moves") -> tuple[dict[str, Move]
                 accuracy=int(row["accuracy"]),
                 pp=int(row["pp"]),
                 status_inflict=status_inflict,
+                category=category,
             )
     return moves, ValidationResult(ok=not errors, errors=tuple(errors))
 
