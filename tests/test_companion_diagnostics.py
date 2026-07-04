@@ -34,3 +34,8 @@ def test_companion_diagnostics_enabled_flag(monkeypatch: pytest.MonkeyPatch) -> 
             bond=48.0,
         ),
     )
+    companion_diagnostics.log_companion_battle_end(
+        instance_id="sproutling_0001",
+        mind=CompanionMind(bond=49.0, trust=74.0, learned=LearnedWeights(ATTACK=17.0)),
+        outcome="won",
+    )

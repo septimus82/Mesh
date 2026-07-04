@@ -314,11 +314,14 @@ class MonsterBattleOverlay(UIElement):
         if self.menu_state == "ended":
             return [("close", "Close")]
         if self.mode.companion_mode and self.mode.companion_awaiting_reinforcement:
-            return [
+            actions = [
                 ("companion:praise", "Praise"),
                 ("companion:scold", "Scold"),
                 ("companion:wait", "Wait"),
             ]
+            if self.mode._opponent_is_wild():
+                actions.append(("menu:bag", "Ball"))
+            return actions
         return [("menu:fight", "Fight"), ("menu:bag", "Bag"), ("menu:switch", "Switch"), ("run", "Run")]
 
     def _move_selection(self, delta: int) -> None:
@@ -343,6 +346,9 @@ class MonsterBattleOverlay(UIElement):
             self.log_line = "Choose a move."
             return
         if action == "menu:bag":
+            if self.mode.companion_mode and self.mode.companion_awaiting_reinforcement and not self.mode._opponent_is_wild():
+                self.log_line = "Can't catch trainer monsters!"
+                return
             self.menu_state = "bag"
             self.selected_index = 0
             self.log_line = "Choose an item."
@@ -370,6 +376,9 @@ class MonsterBattleOverlay(UIElement):
             self.selected_index = 0
             return
         if action.startswith("capture:"):
+            if self.mode.companion_mode and self.mode.companion_awaiting_reinforcement:
+                self.mode.companion_awaiting_reinforcement = False
+                self.mode._capture_from_companion_reinforcement = True
             self.mode.attempt_capture(item_id=action.split(":", 1)[1])
             self.selected_index = 0
             return
@@ -386,7 +395,10 @@ class MonsterBattleOverlay(UIElement):
         if self.menu_state in {"fight", "bag"}:
             self.menu_state = "root"
             self.selected_index = 0
-            self.log_line = "Choose an action."
+            if self.mode.companion_mode and self.mode.companion_awaiting_reinforcement:
+                self.log_line = "How do you respond?"
+            else:
+                self.log_line = "Choose an action."
         else:
             self.log_line = "Choose an action."
 
@@ -421,6 +433,15 @@ class MonsterBattleOverlay(UIElement):
                 controller = self.mode.controller
                 if controller is not None and controller.result is None and controller.phase == "choose_action":
                     self.mode._run_companion_monster_turn()
+                return
+            if self.mode._presenting_companion_capture_fail:
+                self.mode._presenting_companion_capture_fail = False
+                self.mode._capture_from_companion_reinforcement = False
+                controller = self.mode.controller
+                if controller is not None and controller.result is None and controller.phase == "choose_action":
+                    self.mode._run_companion_monster_turn()
+                elif controller is not None and controller.result is None and controller.phase == "must_switch":
+                    self.mode.auto_switch_companion_bench()
                 return
             if self.mode._presenting_companion_switch:
                 self.mode._presenting_companion_switch = False
@@ -508,6 +529,22 @@ class MonsterBattleMode:
         self._presenting_companion_switch = False
         self._last_companion_behavior: str = ""
         self._companion_instance_id: str | None = None
+        self._capture_from_companion_reinforcement = False
+        self._presenting_companion_capture_fail = False
+
+    def _opponent_is_wild(self) -> bool:
+        """True when the active opponent can be caught (wild encounter, not trainer)."""
+        if str(self.return_context.get("battle_type", "") or "").strip().lower() == "trainer":
+            return False
+        source = str(self.return_context.get("source", "") or "")
+        if "trainer" in source:
+            return False
+        controller = self.controller
+        if controller is not None:
+            party = getattr(controller, "opponent_party", None)
+            if party is not None and len(party) > 1:
+                return False
+        return True
 
     def start_battle(
         self,
@@ -885,6 +922,8 @@ class MonsterBattleMode:
                 self.end_battle(result)
             return capture
 
+        if self.companion_mode and self._capture_from_companion_reinforcement:
+            self._presenting_companion_capture_fail = True
         self._resolve_failed_capture_response(item_id=item_id, capture=capture)
         return capture
 
@@ -916,6 +955,14 @@ class MonsterBattleMode:
             raise RuntimeError("cannot end monster battle without a result")
 
         if self.companion_mode and self.companion_mind is not None and self._companion_instance_id:
+            from engine.companion_diagnostics import log_companion_battle_end  # noqa: PLC0415
+
+            log_companion_battle_end(
+                instance_id=self._companion_instance_id,
+                mind=self.companion_mind,
+                outcome=str(getattr(final_result, "outcome", "") or ""),
+                trigger=str(self.return_context.get("source", "") or ""),
+            )
             self._persist_active_companion_mind()
 
         payload = self._result_payload(final_result)
@@ -938,6 +985,8 @@ class MonsterBattleMode:
         self.companion_awaiting_reinforcement = False
         self._presenting_reinforcement = False
         self._presenting_companion_switch = False
+        self._capture_from_companion_reinforcement = False
+        self._presenting_companion_capture_fail = False
         self._companion_instance_id = None
         self.active = False
         self.window.monster_battle_mode_active = False
