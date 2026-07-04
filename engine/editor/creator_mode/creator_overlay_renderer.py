@@ -7,7 +7,12 @@ from typing import Any
 
 import engine.optional_arcade as optional_arcade
 from engine.logging_tools import get_logger
-from engine.ui_overlays.common import _draw_rectangle_filled
+from engine.ui_overlays.common import (
+    TEXT_ELLIPSIS,
+    _draw_rectangle_filled,
+    text_char_capacity_for_width,
+    truncate_text_to_char_limit,
+)
 
 from .creator_overlay import CreatorOverlayModel, build_creator_overlay_model
 
@@ -72,12 +77,66 @@ def hit_test_creator_overlay_click(
     return None
 
 
+def _panel_char_limit(max_width_px: float, font_size: int, upper_bound: int) -> int:
+    """Derive a char limit from panel width, capped by the legacy upper bound."""
+    width_limit = text_char_capacity_for_width(
+        max_width_px,
+        font_size,
+        glyph_width_ratio=_GLYPH_WIDTH_RATIO,
+    )
+    return min(int(upper_bound), width_limit)
+
+
+def _is_path_or_id(value: object) -> bool:
+    text = str(value or "")
+    if not text:
+        return False
+    if "/" in text or "\\" in text:
+        return True
+    if len(text) > 20 and "." in text:
+        return True
+    stripped = text.replace("-", "")
+    if len(stripped) >= 16 and all(ch in "0123456789abcdefABCDEF" for ch in stripped):
+        return True
+    return False
+
+
+def _truncate_middle(value: str, limit: int) -> str:
+    text = str(value or "")
+    max_chars = max(1, int(limit))
+    if len(text) <= max_chars:
+        return text
+    if len(TEXT_ELLIPSIS) >= max_chars:
+        return text[:max_chars]
+
+    filename = text.rsplit("/", 1)[-1] if "/" in text else ""
+    if filename and len(filename) < max_chars - len(TEXT_ELLIPSIS) - 1:
+        head_budget = max_chars - len(TEXT_ELLIPSIS) - len(filename)
+        if head_budget >= 1:
+            return text[:head_budget] + TEXT_ELLIPSIS + filename
+
+    remain = max_chars - len(TEXT_ELLIPSIS)
+    head = (remain + 1) // 2
+    tail = remain // 2
+    if tail <= 0:
+        return text[: max_chars - len(TEXT_ELLIPSIS)] + TEXT_ELLIPSIS
+    return text[:head] + TEXT_ELLIPSIS + text[-tail:]
+
+
 def truncate_creator_overlay_text(text: object, max_chars: int) -> str:
     """Clamp overlay text to one line with an ellipsis."""
-    from engine.ui_overlays.common import truncate_text_to_char_limit
-
     value = str(text or "").replace("\r", " ").replace("\n", " ").strip()
     return truncate_text_to_char_limit(value, max_chars)
+
+
+def truncate_creator_overlay_field_text(label: str, value: object, max_chars: int) -> str:
+    """Clamp an inspector field line; middle-truncate path-like values."""
+    prefix = f"{label}: "
+    raw_value = str(value or "").replace("\r", " ").replace("\n", " ").strip()
+    if _is_path_or_id(raw_value):
+        value_limit = max(1, max_chars - len(prefix))
+        return prefix + _truncate_middle(raw_value, value_limit)
+    return truncate_creator_overlay_text(f"{label}: {raw_value}", max_chars)
 
 
 def build_creator_overlay_draw_commands(
@@ -100,8 +159,15 @@ def build_creator_overlay_draw_commands(
     side_gap = 8.0
     left_w = min(180.0, max(96.0, win_w * 0.28))
     max_right_w = max(112.0, win_w - left_w - side_gap)
-    right_w = min(360.0, max(112.0, win_w * 0.34), max_right_w)
+    right_w = min(480.0, max(112.0, win_w * 0.34), max_right_w)
     center_h = max(1.0, win_h - top_h - bottom_h)
+
+    left_text_width = max(1.0, left_w - (pad + 8.0) - pad)
+    right_text_width = max(1.0, right_w - 2.0 * pad)
+    bottom_text_width = max(1.0, win_w - (pad + 8.0) - pad)
+    top_title_width = max(1.0, win_w - 2.0 * pad)
+    top_actions_x = min(210.0, left_w + pad)
+    top_actions_width = max(1.0, win_w - top_actions_x - pad)
 
     commands.extend(
         (
@@ -126,52 +192,122 @@ def build_creator_overlay_draw_commands(
         )
     )
 
-    commands.append(_text(model.title, "top", pad, win_h - 14.0, 16, (255, 255, 255), MAX_TITLE_CHARS))
-    commands.append(_text("Read-only preview", "top", pad, win_h - 32.0, 10, (190, 198, 208)))
+    commands.append(
+        _text(
+            model.title,
+            "top",
+            pad,
+            win_h - 14.0,
+            16,
+            (255, 255, 255),
+            _panel_char_limit(top_title_width, 16, MAX_TITLE_CHARS),
+        )
+    )
+    commands.append(
+        _text(
+            "Read-only preview",
+            "top",
+            pad,
+            win_h - 32.0,
+            10,
+            (190, 198, 208),
+            _panel_char_limit(top_title_width, 10, MAX_TITLE_CHARS),
+        )
+    )
     commands.append(
         _text(
             " | ".join(model.top_actions),
             "top",
-            min(210.0, left_w + pad),
+            top_actions_x,
             win_h - 24.0,
             12,
             (220, 225, 232),
-            MAX_ACTIONS_CHARS,
+            _panel_char_limit(top_actions_width, 12, MAX_ACTIONS_CHARS),
         )
     )
 
     y = win_h - top_h - 22.0
-    commands.append(_text("Tools", "left", pad, y, 12, (230, 234, 240)))
+    commands.append(
+        _text(
+            "Tools",
+            "left",
+            pad,
+            y,
+            12,
+            (230, 234, 240),
+            _panel_char_limit(left_text_width + 8.0, 12, MAX_TOOL_CHARS),
+        )
+    )
     for tool in model.left_tools:
         y -= 22.0
         if y <= bottom_h + 6.0:
             break
-        commands.append(_text(tool, "left", pad + 8.0, y, 12, (214, 220, 228), MAX_TOOL_CHARS))
+        commands.append(
+            _text(
+                tool,
+                "left",
+                pad + 8.0,
+                y,
+                12,
+                (214, 220, 228),
+                _panel_char_limit(left_text_width, 12, MAX_TOOL_CHARS),
+            )
+        )
 
     right_x = win_w - right_w + pad
     y = win_h - top_h - 22.0
     selected_title = model.selected_title or "No selection"
     commands.append(
-        _text(model.selected_kind or "Thing", "right", right_x, y, 13, (255, 255, 255), MAX_TITLE_CHARS)
+        _text(
+            model.selected_kind or "Thing",
+            "right",
+            right_x,
+            y,
+            13,
+            (255, 255, 255),
+            _panel_char_limit(right_text_width, 13, MAX_TITLE_CHARS),
+        )
     )
     y -= 20.0
-    commands.append(_text(selected_title, "right", right_x, y, 12, (220, 225, 232), MAX_TITLE_CHARS))
+    commands.append(
+        _text(
+            selected_title,
+            "right",
+            right_x,
+            y,
+            12,
+            (220, 225, 232),
+            _panel_char_limit(right_text_width, 12, MAX_TITLE_CHARS),
+        )
+    )
     y -= 22.0
-    commands.append(_text(model.selected_summary, "right", right_x, y, 11, (190, 198, 208), MAX_SUMMARY_CHARS))
+    commands.append(
+        _text(
+            model.selected_summary,
+            "right",
+            right_x,
+            y,
+            11,
+            (190, 198, 208),
+            _panel_char_limit(right_text_width, 11, MAX_SUMMARY_CHARS),
+        )
+    )
     y -= 26.0
     for label, value, missing in model.inspector_fields[:MAX_RENDERED_FIELDS]:
         if y <= bottom_h + 6.0:
             break
         color = (160, 166, 176) if missing else (220, 225, 232)
+        field_limit = _panel_char_limit(right_text_width, 11, MAX_FIELD_CHARS)
         commands.append(
-            _text(
-                f"{label}: {value}",
+            _field_text(
+                label,
+                value,
                 "right",
                 right_x,
                 y,
                 11,
                 color,
-                MAX_FIELD_CHARS,
+                field_limit,
                 missing=bool(missing),
             )
         )
@@ -179,10 +315,22 @@ def build_creator_overlay_draw_commands(
 
     if model.door_panel is not None and y > bottom_h + 24.0:
         y -= 6.0
-        commands.extend(_door_panel_text_commands(model, right_x, y, bottom_h))
+        commands.extend(
+            _door_panel_text_commands(model, right_x, y, bottom_h, right_text_width)
+        )
 
     bottom_lines = model.warnings or ("No problems shown in Creator Mode.",)
-    commands.append(_text(model.bottom_title, "bottom", pad, bottom_h - 24.0, 12, (230, 234, 240)))
+    commands.append(
+        _text(
+            model.bottom_title,
+            "bottom",
+            pad,
+            bottom_h - 24.0,
+            12,
+            (230, 234, 240),
+            _panel_char_limit(bottom_text_width + 8.0, 12, MAX_WARNING_CHARS),
+        )
+    )
     status_color = (190, 198, 208) if model.proposal_status.available else (160, 166, 176)
     commands.append(
         _text(
@@ -192,7 +340,7 @@ def build_creator_overlay_draw_commands(
             bottom_h - 42.0,
             11,
             status_color,
-            MAX_WARNING_CHARS,
+            _panel_char_limit(bottom_text_width, 11, MAX_WARNING_CHARS),
         )
     )
     y = bottom_h - 60.0
@@ -202,15 +350,24 @@ def build_creator_overlay_draw_commands(
     for row in model.proposal_status.rows[:MAX_RENDERED_PROPOSAL_ROWS]:
         if y <= 4.0:
             break
+        proposal_limit = _panel_char_limit(bottom_text_width, 10, MAX_WARNING_CHARS)
+        proposal_line = f"{row.proposal_id} - {row.summary}"
+        if _is_path_or_id(row.proposal_id):
+            id_limit = max(1, proposal_limit // 2)
+            summary_limit = max(1, proposal_limit - id_limit - 3)
+            proposal_line = (
+                f"{_truncate_middle(str(row.proposal_id), id_limit)} - "
+                f"{truncate_creator_overlay_text(row.summary, summary_limit)}"
+            )
         commands.append(
             _text(
-                f"{row.proposal_id} - {row.summary}",
+                proposal_line,
                 "bottom",
                 pad + 8.0,
                 y,
                 10,
                 (190, 198, 208),
-                MAX_WARNING_CHARS,
+                proposal_limit,
             )
         )
         y -= 15.0
@@ -225,7 +382,7 @@ def build_creator_overlay_draw_commands(
                         y,
                         10,
                         (160, 166, 176),
-                        MAX_WARNING_CHARS,
+                        _panel_char_limit(bottom_text_width - 10.0, 10, MAX_WARNING_CHARS),
                     )
                 )
                 y -= 15.0
@@ -239,7 +396,7 @@ def build_creator_overlay_draw_commands(
                     y,
                     10,
                     (150, 158, 170),
-                    MAX_WARNING_CHARS,
+                    _panel_char_limit(bottom_text_width - 10.0, 10, MAX_WARNING_CHARS),
                 )
             )
             y -= 15.0
@@ -253,7 +410,7 @@ def build_creator_overlay_draw_commands(
                 y,
                 10,
                 (160, 166, 176),
-                MAX_WARNING_CHARS,
+                _panel_char_limit(bottom_text_width, 10, MAX_WARNING_CHARS),
             )
         )
         y -= 15.0
@@ -262,7 +419,17 @@ def build_creator_overlay_draw_commands(
         if y <= 4.0:
             break
         color = (238, 190, 120) if model.warnings else (190, 198, 208)
-        commands.append(_text(str(line), "bottom", pad + 8.0, y, 11, color, MAX_WARNING_CHARS))
+        commands.append(
+            _text(
+                str(line),
+                "bottom",
+                pad + 8.0,
+                y,
+                11,
+                color,
+                _panel_char_limit(bottom_text_width, 11, MAX_WARNING_CHARS),
+            )
+        )
         y -= 18.0
 
     return tuple(commands)
@@ -304,6 +471,7 @@ def _door_panel_text_commands(
     x: float,
     start_y: float,
     bottom_h: float,
+    text_width: float,
 ) -> tuple[CreatorOverlayDrawCommand, ...]:
     panel = model.door_panel
     if panel is None:
@@ -324,6 +492,7 @@ def _door_panel_text_commands(
         if rendered >= MAX_RENDERED_PANEL_LINES or y <= bottom_h + 6.0:
             return
         line_text = str(text)
+        max_chars = _panel_char_limit(text_width, font_size, MAX_PANEL_CHARS)
         if action_id:
             commands.append(
                 _clickable_text(
@@ -333,12 +502,12 @@ def _door_panel_text_commands(
                     y,
                     font_size,
                     color,
-                    MAX_PANEL_CHARS,
+                    max_chars,
                     action_id=action_id,
                 )
             )
         else:
-            commands.append(_text(line_text, "right", x, y, font_size, color, MAX_PANEL_CHARS))
+            commands.append(_text(line_text, "right", x, y, font_size, color, max_chars))
         y -= _ACTION_LINE_HEIGHT
         rendered += 1
 
@@ -467,6 +636,30 @@ def _text(
         kind="text",
         region=region,
         text=truncate_creator_overlay_text(text, max_chars),
+        x=x,
+        y=y,
+        font_size=font_size,
+        color=color,
+        missing=missing,
+    )
+
+
+def _field_text(
+    label: str,
+    value: object,
+    region: str,
+    x: float,
+    y: float,
+    font_size: int,
+    color: tuple[int, ...],
+    max_chars: int,
+    *,
+    missing: bool = False,
+) -> CreatorOverlayDrawCommand:
+    return CreatorOverlayDrawCommand(
+        kind="text",
+        region=region,
+        text=truncate_creator_overlay_field_text(label, value, max_chars),
         x=x,
         y=y,
         font_size=font_size,
