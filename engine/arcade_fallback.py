@@ -371,7 +371,35 @@ def load_texture(file_name: str, **kwargs: Any) -> Texture:
     return Texture(file_name)
 
 
-def load_spritesheet(
+def load_spritesheet(file_name: str, **kwargs: Any) -> Any:
+    return SpriteSheet(file_name)
+
+
+class SpriteSheet:
+    """Headless shim matching Arcade 3 SpriteSheet.get_texture_grid."""
+
+    def __init__(self, file_name: str) -> None:
+        self.file_name = file_name
+
+    def get_texture_grid(
+        self,
+        *,
+        size: tuple[int, int],
+        columns: int,
+        count: int,
+        margin: tuple[int, int, int, int] = (0, 0, 0, 0),
+        hit_box_algorithm: Any = None,
+    ) -> List[Texture]:
+        del margin, hit_box_algorithm, columns
+        frame_width, frame_height = size
+        count = max(0, int(count))
+        return [
+            Texture(f"{self.file_name}:{idx}", width=frame_width, height=frame_height)
+            for idx in range(count)
+        ]
+
+
+def load_spritesheet_legacy(
     file_name: str,
     sprite_width: int,
     sprite_height: int,

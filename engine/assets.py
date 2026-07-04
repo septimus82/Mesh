@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import inspect
+from pathlib import Path
 from typing import Dict, Optional, cast
 
 import engine.optional_arcade as optional_arcade
@@ -10,6 +12,20 @@ from .logging_tools import get_logger
 from .paths import resolve_path
 
 logger = get_logger(__name__)
+
+
+def _uses_arcade3_spritesheet_api() -> bool:
+    """Arcade 3 returns a SpriteSheet from load_spritesheet(file_name) only."""
+    load_fn = getattr(optional_arcade.arcade, "load_spritesheet", None)
+    if not callable(load_fn):
+        return False
+    try:
+        params = inspect.signature(load_fn).parameters
+    except (TypeError, ValueError):
+        return False
+    if "sprite_width" in params or "columns" in params:
+        return False
+    return len(params) <= 1
 
 
 class AssetManager:
@@ -23,6 +39,9 @@ class AssetManager:
         return str(resolve_path(path))
 
     def _load_texture_internal(self, path: str) -> Optional[optional_arcade.arcade.Texture]:
+        if not Path(path).is_file():
+            logger.debug("Texture file not found: '%s'", path)
+            return None
         try:
             texture = optional_arcade.arcade.load_texture(path)
             logger.debug("Loaded texture '%s'", path)
@@ -53,6 +72,9 @@ class AssetManager:
     ) -> list[optional_arcade.arcade.Texture]:
         """Load and slice a sprite sheet into a list of textures."""
         resolved_path = self._resolve_path(path)
+        if not Path(resolved_path).is_file():
+            logger.error("Failed to load sprite sheet '%s': file not found", path)
+            return []
 
         # Load the full texture to get dimensions and calculate columns
         full_texture = self.get_texture(path)
@@ -68,17 +90,32 @@ class AssetManager:
             # We need to load enough frames to reach start_frame + total_frames
             count_to_load = start_frame + total_frames
 
-            textures = cast(
-                list[optional_arcade.arcade.Texture],
-                optional_arcade.arcade.load_spritesheet(
-                    resolved_path,
-                    frame_width,
-                    frame_height,
-                    columns,
-                    count_to_load,
-                    0,  # margin
-                ),
-            )
+            if _uses_arcade3_spritesheet_api():
+                sheet = optional_arcade.arcade.load_spritesheet(resolved_path)
+                get_grid = getattr(sheet, "get_texture_grid", None)
+                if not callable(get_grid):
+                    raise TypeError("Arcade SpriteSheet missing get_texture_grid")
+                textures = cast(
+                    list[optional_arcade.arcade.Texture],
+                    get_grid(
+                        size=(int(frame_width), int(frame_height)),
+                        columns=int(columns),
+                        count=int(count_to_load),
+                        margin=(0, 0, 0, 0),
+                    ),
+                )
+            else:
+                textures = cast(
+                    list[optional_arcade.arcade.Texture],
+                    optional_arcade.arcade.load_spritesheet(
+                        resolved_path,
+                        frame_width,
+                        frame_height,
+                        columns,
+                        count_to_load,
+                        0,  # margin
+                    ),
+                )
 
             # Slice the specific range requested
             if start_frame > 0:
@@ -101,12 +138,17 @@ class AssetManager:
             return self._placeholder
 
         placeholder_path = self._resolve_path("assets/placeholder.png")
-        try:
-            self._placeholder = optional_arcade.arcade.load_texture(placeholder_path)
-            logger.info("Using 'assets/placeholder.png' as fallback texture")
-        except Exception:
-            logger.info("Creating generated placeholder texture")
-            self._placeholder = optional_arcade.arcade.make_soft_square_texture(16, optional_arcade.arcade.color.MAGENTA, 255, 255)
+        if Path(placeholder_path).is_file():
+            texture = self._load_texture_internal(placeholder_path)
+            if texture is not None:
+                self._placeholder = texture
+                logger.info("Using 'assets/placeholder.png' as fallback texture")
+                return self._placeholder
+
+        logger.info("Creating generated placeholder texture")
+        color_module = optional_arcade.arcade.color
+        neutral = getattr(color_module, "LIGHT_GRAY", getattr(color_module, "GRAY", (180, 180, 180)))
+        self._placeholder = optional_arcade.arcade.make_soft_square_texture(32, neutral, 255, 255)
         return self._placeholder
 
     def clear(self) -> None:
