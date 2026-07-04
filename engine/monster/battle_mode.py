@@ -20,6 +20,7 @@ from engine.ui_overlays.common import UIElement, _draw_tb_rectangle_filled, _dra
 from .battle_controller import BattleLogEntry, BattleResult, MonsterBattleController, OpponentActionProvider
 from .battle_model import MonsterInstance, Move, RandomLike, Species, TypeChart, resolve_move
 from .battle_sprite_view import BattleSpriteDisplay
+from .battle_terms import DEFAULT_BATTLE_TERMS, BattleTerms
 from .capture import CaptureResult, resolve_capture
 from .collection import (
     COMPANION_MIND_INSTANCE_KEY,
@@ -310,10 +311,21 @@ class MonsterBattleOverlay(UIElement):
                 move = controller.moves.get(move_id)
                 if move is None:
                     continue
-                actions.append((f"move:{move.id}", f"{move.id} {move.type} PP {move.pp}"))
+                actions.append(
+                    (
+                        f"move:{move.id}",
+                        self.mode.terms.format_move_row(move_id=move.id, move_type=move.type, move_pp=move.pp),
+                    ),
+                )
             return actions or [("back", "Back")]
         if self.menu_state == "bag":
-            return [("capture:pocket_ball", f"Pocket Ball x{self.mode.pocket_ball_count()}"), ("back", "Back")]
+            return [
+                (
+                    "capture:pocket_ball",
+                    self.mode.terms.format_capture_bag_row(self.mode.pocket_ball_count()),
+                ),
+                ("back", "Back"),
+            ]
         if self.menu_state == "ended":
             return [("close", "Close")]
         if self.mode.companion_mode and self.mode.companion_awaiting_reinforcement:
@@ -323,7 +335,7 @@ class MonsterBattleOverlay(UIElement):
                 ("companion:wait", "Wait"),
             ]
             if self.mode._opponent_is_wild():
-                actions.append(("menu:bag", "Ball"))
+                actions.append(("menu:bag", self.mode.terms.capture_item_menu_label))
             return actions
         return [("menu:fight", "Fight"), ("menu:bag", "Bag"), ("menu:switch", "Switch"), ("run", "Run")]
 
@@ -534,6 +546,7 @@ class MonsterBattleMode:
         self._companion_instance_id: str | None = None
         self._capture_from_companion_reinforcement = False
         self._presenting_companion_capture_fail = False
+        self.terms: BattleTerms = DEFAULT_BATTLE_TERMS
 
     def _opponent_is_wild(self) -> bool:
         """True when the active opponent can be caught (wild encounter, not trainer)."""
@@ -569,6 +582,13 @@ class MonsterBattleMode:
 
         if self.active:
             raise RuntimeError("monster battle mode is already active")
+
+        from engine.paths import resolve_monster_data_dir  # noqa: PLC0415
+
+        from .data_load import load_battle_terms  # noqa: PLC0415
+
+        terms, terms_result = load_battle_terms(resolve_monster_data_dir())
+        self.terms = terms if terms_result.ok else DEFAULT_BATTLE_TERMS
 
         self._prior_paused = bool(getattr(self.window, "paused", False))
         self.return_context = dict(return_context or {})
@@ -880,7 +900,7 @@ class MonsterBattleMode:
                 },
             )
             if self.overlay is not None:
-                self.overlay.log_line = "No Pocket Balls left!"
+                self.overlay.log_line = self.terms.format_no_capture_items_left()
                 self.overlay.menu_state = "bag"
             return None
         capture = resolve_capture(self.controller.opponent, ball_bonus=1.0, rng=self._capture_rng())
@@ -1313,7 +1333,9 @@ class MonsterBattleMode:
             self.overlay.begin_turn_presentation(
                 [
                     BattlePresentationStep(
-                        f"Threw {item_id}! {_display_name(self.controller.opponent)} broke free.",
+                        self.terms.format_threw_capture_item(
+                            opponent_name=_display_name(self.controller.opponent),
+                        ),
                         before_player_hp,
                         before_opponent_hp,
                         opponent_clip="capture",
@@ -1349,7 +1371,7 @@ class MonsterBattleMode:
 
         steps = [
             BattlePresentationStep(
-                f"Threw {item_id}! {_display_name(self.controller.opponent)} broke free.",
+                self.terms.format_threw_capture_item(opponent_name=_display_name(self.controller.opponent)),
                 before_player_hp,
                 before_opponent_hp,
                 opponent_clip="capture",
