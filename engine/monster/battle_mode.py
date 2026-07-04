@@ -697,7 +697,12 @@ class MonsterBattleMode:
             if self.overlay is not None:
                 name = _display_name(self.controller.player)
                 steps = [
-                    BattlePresentationStep(f"{name} flees!", before_player_hp, before_opponent_hp),
+                    BattlePresentationStep(
+                        f"{name} flees!",
+                        before_player_hp,
+                        before_opponent_hp,
+                        player_clip="flee",
+                    ),
                     BattlePresentationStep("It abandoned you.", before_player_hp, before_opponent_hp),
                 ]
                 self.overlay.begin_turn_presentation(steps, result=result)
@@ -913,6 +918,7 @@ class MonsterBattleMode:
                             f"Gotcha! {_display_name(self.controller.opponent)} was caught!",
                             player_hp,
                             opponent_hp,
+                            opponent_clip="capture",
                         ),
                         BattlePresentationStep(storage_line, player_hp, opponent_hp),
                     ],
@@ -1138,25 +1144,16 @@ class MonsterBattleMode:
                         )
                     if entry.target_fainted:
                         faint_name = _faint_line(self.controller, entry)
-                        faint_clip = "faint"
-                        if entry.side == "player":
-                            steps.append(
-                                BattlePresentationStep(
-                                    faint_name,
-                                    player_hp,
-                                    opponent_hp,
-                                    player_clip=faint_clip,
-                                ),
-                            )
-                        else:
-                            steps.append(
-                                BattlePresentationStep(
-                                    faint_name,
-                                    player_hp,
-                                    opponent_hp,
-                                    opponent_clip=faint_clip,
-                                ),
-                            )
+                        faint_player_clip, faint_opponent_clip = _faint_presentation_clips(entry)
+                        steps.append(
+                            BattlePresentationStep(
+                                faint_name,
+                                player_hp,
+                                opponent_hp,
+                                player_clip=faint_player_clip,
+                                opponent_clip=faint_opponent_clip,
+                            ),
+                        )
                     continue
                 elif entry.status_event == "fell_asleep":
                     line = f"{subject} fell asleep!"
@@ -1164,13 +1161,23 @@ class MonsterBattleMode:
                     line = f"{subject} woke up!"
                 elif entry.status_event == "asleep_skip":
                     line = f"{subject} is fast asleep!"
+                    status_player, status_opponent = _status_clip_for_side(entry.side)
+                    steps.append(
+                        BattlePresentationStep(
+                            line,
+                            player_hp,
+                            opponent_hp,
+                            player_clip=status_player,
+                            opponent_clip=status_opponent,
+                        ),
+                    )
+                    continue
                 else:
                     line = f"{subject} was affected!"
                 steps.append(BattlePresentationStep(line, player_hp, opponent_hp))
                 if entry.target_fainted:
                     faint_name = _faint_line(self.controller, entry)
-                    faint_player_clip = "faint" if entry.side == "player" else None
-                    faint_opponent_clip = "faint" if entry.side == "opponent" else None
+                    faint_player_clip, faint_opponent_clip = _faint_presentation_clips(entry)
                     steps.append(
                         BattlePresentationStep(
                             faint_name,
@@ -1212,8 +1219,7 @@ class MonsterBattleMode:
             )
             if entry.target_fainted:
                 faint_name = _faint_line(self.controller, entry)
-                faint_player_clip = "faint" if entry.side == "opponent" else None
-                faint_opponent_clip = "faint" if entry.side == "player" else None
+                faint_player_clip, faint_opponent_clip = _faint_presentation_clips(entry)
                 steps.append(
                     BattlePresentationStep(
                         faint_name,
@@ -1289,6 +1295,7 @@ class MonsterBattleMode:
                         f"Threw {item_id}! {_display_name(self.controller.opponent)} broke free.",
                         before_player_hp,
                         before_opponent_hp,
+                        opponent_clip="capture",
                     )
                 ],
                 result=None,
@@ -1324,6 +1331,7 @@ class MonsterBattleMode:
                 f"Threw {item_id}! {_display_name(self.controller.opponent)} broke free.",
                 before_player_hp,
                 before_opponent_hp,
+                opponent_clip="capture",
             ),
         ]
         steps.extend(self._build_presentation_steps(len(self.controller.turn_log) - 1, before_player_hp, before_opponent_hp))
@@ -1467,18 +1475,47 @@ def _build_companion_reinforcement_steps(
 ) -> list[BattlePresentationStep]:
     if kind == "praise":
         return [
-            BattlePresentationStep(f"You praise {name}.", player_hp, opponent_hp),
+            BattlePresentationStep(
+                f"You praise {name}.",
+                player_hp,
+                opponent_hp,
+                player_clip="cheer",
+            ),
             BattlePresentationStep("It looks pleased.", player_hp, opponent_hp),
         ]
     if kind == "scold":
         return [
-            BattlePresentationStep(f"You scold {name}.", player_hp, opponent_hp),
+            BattlePresentationStep(
+                f"You scold {name}.",
+                player_hp,
+                opponent_hp,
+                player_clip="cower",
+            ),
             BattlePresentationStep("It flinches.", player_hp, opponent_hp),
         ]
     return [
         BattlePresentationStep("You wait calmly.", player_hp, opponent_hp),
         BattlePresentationStep("It watches you.", player_hp, opponent_hp),
     ]
+
+
+def _faint_presentation_clips(entry: BattleLogEntry) -> tuple[str | None, str | None]:
+    """Map a faint log entry to player/opponent battle clips (victory on player KO)."""
+    if entry.kind == "move":
+        if entry.side == "player":
+            return "victory", "faint"
+        return "faint", None
+    if entry.kind == "status":
+        if entry.side == "player":
+            return "faint", None
+        return "victory", "faint"
+    return None, None
+
+
+def _status_clip_for_side(side: str) -> tuple[str | None, str | None]:
+    if side == "player":
+        return "status", None
+    return None, "status"
 
 
 def _faint_line(controller: MonsterBattleController, entry: BattleLogEntry) -> str:

@@ -11,11 +11,14 @@ from typing import TYPE_CHECKING, Any
 
 import engine.optional_arcade as optional_arcade
 from engine.animation import SpriteSheetCache, SpriteSheetSpec
+from engine.logging_tools import get_logger
 
 from .battle_model import BattleSprite, BattleSpriteClip, Species
 
 if TYPE_CHECKING:
     from engine.game import GameWindow
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -29,6 +32,7 @@ class BattleSpriteAnimator:
     elapsed: float = 0.0
     last_requested_clip: str | None = None
     last_effective_clip: str | None = None
+    _logged_missing_clip_fallback: bool = False
 
     def play_clip(self, name: str) -> str:
         """Request a clip; returns the clip actually playing (idle fallback)."""
@@ -36,6 +40,9 @@ class BattleSpriteAnimator:
         resolved = name if name in self.clips else "idle"
         if resolved not in self.clips:
             resolved = "idle"
+        if name not in self.clips and not self._logged_missing_clip_fallback:
+            logger.debug("Battle clip '%s' not defined; falling back to idle", name)
+            self._logged_missing_clip_fallback = True
         self.last_effective_clip = resolved
         self.active_clip_name = resolved
         self.frame_cursor = 0
