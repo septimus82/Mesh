@@ -188,7 +188,7 @@ def test_failed_companion_capture_continues_battle() -> None:
     assert mode.active is True
     assert values[POCKET_BALL_COUNT_KEY] == 1
     assert overlay.menu_state == "presenting"
-    assert any("broke free" in step.line for step in overlay.presentation_queue)
+    assert any("slipped free" in step.line for step in overlay.presentation_queue)
     assert len(values[MONSTER_PARTY_KEY]) == 1
 
 

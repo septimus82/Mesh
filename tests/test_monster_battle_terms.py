@@ -148,7 +148,7 @@ def test_overlay_uses_spike_style_terms_when_configured() -> None:
     mode._capture_rng = _HighRoll  # type: ignore[method-assign]
     mode.attempt_capture(item_id="pocket_ball")
     assert overlay.presentation_queue
-    assert "Threw a Net!" in overlay.presentation_queue[0].line
+    assert "You threw a Net!" in overlay.presentation_queue[0].line
 
 
 def test_quick_save_round_trip_preserves_pocket_ball_count_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -18,6 +18,7 @@ from engine.monster.battle_mode import (
 )
 from engine.monster.battle_model import BattleSprite, BattleSpriteClip, BattleStats, MonsterInstance, Move, Species
 from engine.monster.battle_sprite_view import BattleSpriteAnimator
+from engine.monster.battle_terms import DEFAULT_BATTLE_TERMS
 from engine.monster.companion_mind import FLEE, CompanionMind, DecisionContext, DecisionResult, LearnedWeights, Temperament
 from engine.monster.data_load import KNOWN_BATTLE_CLIP_NAMES, parse_species
 from engine.ui_controller import UIController
@@ -182,16 +183,16 @@ def test_victory_clip_on_opponent_faint_step() -> None:
     before_len = len(mode.controller.turn_log)
     mode.controller.submit_action("player", "ko")
     steps = mode._build_presentation_steps(before_len, 30, 5)
-    faint_step = next(step for step in steps if "fainted" in step.line.lower())
+    faint_step = next(step for step in steps if "is down" in step.line.lower())
     assert faint_step.player_clip == "victory"
     assert faint_step.opponent_clip == "faint"
 
 
 def test_companion_reinforcement_steps_request_cheer_and_cower() -> None:
-    praise_steps = _build_companion_reinforcement_steps("praise", "Sproutling", 20, 15)
+    praise_steps = _build_companion_reinforcement_steps("praise", "Sproutling", 20, 15, DEFAULT_BATTLE_TERMS)
     assert praise_steps[0].player_clip == "cheer"
 
-    scold_steps = _build_companion_reinforcement_steps("scold", "Sproutling", 20, 15)
+    scold_steps = _build_companion_reinforcement_steps("scold", "Sproutling", 20, 15, DEFAULT_BATTLE_TERMS)
     assert scold_steps[0].player_clip == "cower"
 
 

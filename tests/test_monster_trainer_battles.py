@@ -206,8 +206,8 @@ def test_trainer_presentation_includes_foe_faint_and_sent_out_lines() -> None:
     steps = mode._build_presentation_steps(before_len, 30, 5)
     lines = [step.line for step in steps]
 
-    assert any("Foe Lead fainted!" in line for line in lines)
-    assert any("Trainer sent out Bench!" in line for line in lines)
+    assert any("Foe Lead is down!" in line for line in lines)
+    assert any("Bench joins the fight!" in line for line in lines)
 
 
 class _Console:
