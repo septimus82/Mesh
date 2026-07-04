@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament
+from engine.monster.companion_mind import CompanionMind, LearnedWeights
 
 pytestmark = pytest.mark.fast
 
@@ -38,4 +38,5 @@ def test_companion_diagnostics_enabled_flag(monkeypatch: pytest.MonkeyPatch) -> 
         instance_id="sproutling_0001",
         mind=CompanionMind(bond=49.0, trust=74.0, learned=LearnedWeights(ATTACK=17.0)),
         outcome="won",
+        party_ids=["sproutling_0001"],
     )

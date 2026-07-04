@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from engine import savegame
+from engine.monster.battle_model import MonsterInstance
 from engine.monster.collection import (
     MONSTER_INSTANCES_KEY,
     MONSTER_PARTY_KEY,
@@ -13,7 +14,6 @@ from engine.monster.collection import (
     persist_companion_mind,
 )
 from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament, praise
-from engine.monster.battle_model import MonsterInstance
 from tests.test_monster_encounter_zone import SPROUT
 
 pytestmark = pytest.mark.fast

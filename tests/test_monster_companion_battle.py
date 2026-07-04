@@ -126,7 +126,7 @@ def test_companion_root_menu_shows_praise_scold_wait() -> None:
 
     actions = overlay._current_actions()
     labels = [label for _, label in actions]
-    assert labels == ["Praise", "Scold", "Wait"]
+    assert labels == ["Praise", "Scold", "Wait", "Ball"]
     assert not any("Fight" in label for label in labels)
 
 

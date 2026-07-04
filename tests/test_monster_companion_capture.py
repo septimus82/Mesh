@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import random
 import types
-from typing import Any, cast
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest

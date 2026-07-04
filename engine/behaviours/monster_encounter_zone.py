@@ -195,12 +195,16 @@ class MonsterEncounterZoneBehaviour(Behaviour):
         catalog: MonsterCatalog,
     ) -> tuple[list[MonsterInstance], list[str | None], Any, MonsterInstance, str] | None:
         from engine.monster.collection import (  # noqa: PLC0415
+            MONSTER_PARTY_KEY,
             add_caught_monster,
+            companion_starter_was_granted,
+            default_companion_mind_for_instance,
             ensure_monster_collection,
             load_battle_party_from_values,
             load_companion_mind_for_instance,
+            mark_companion_starter_granted,
+            mark_companion_starter_instance,
         )
-        from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament  # noqa: PLC0415
 
         values = self._state_values()
         ensure_monster_collection(values)
@@ -213,24 +217,35 @@ class MonsterEncounterZoneBehaviour(Behaviour):
             self.last_error = "catalog has no species for companion fallback"
             return None
 
+        party_ids = [str(item) for item in values.get(MONSTER_PARTY_KEY, []) if str(item).strip()]
+        if not party_ids:
+            if not companion_starter_was_granted(values):
+                debug_monster = MonsterInstance(fallback_species, level=8, known_moves=fallback_species.learnset)
+                stored = add_caught_monster(values, debug_monster)
+                mark_companion_starter_instance(values, stored.instance_id)
+                mark_companion_starter_granted(values)
+                party_ids = [stored.instance_id]
+            else:
+                self.last_error = "companion party is empty after abandonment"
+                logger = getattr(self.window, "console_log", None)
+                message = "[Mesh][Companion] No companion available; encounter skipped."
+                if callable(logger):
+                    logger(message)
+                else:
+                    print(message)
+                return None
+
         fallback = MonsterInstance(fallback_species, level=8, known_moves=fallback_species.learnset)
         party, party_instance_ids = load_battle_party_from_values(values, catalog.species, fallback=fallback)
         if not party_instance_ids or party_instance_ids[0] is None:
-            debug_monster = MonsterInstance(fallback_species, level=8, known_moves=fallback_species.learnset)
-            stored = add_caught_monster(values, debug_monster)
-            party = [debug_monster]
-            party_instance_ids = [stored.instance_id]
+            self.last_error = "companion party could not be resolved"
+            return None
 
         active = party[0]
         instance_id = str(party_instance_ids[0])
         mind = load_companion_mind_for_instance(values, instance_id)
         if mind is None:
-            mind = CompanionMind(
-                temperament=Temperament(aggression=65.0, fear=12.0),
-                learned=LearnedWeights(),
-                trust=60.0,
-                bond=40.0,
-            )
+            mind = default_companion_mind_for_instance(values, instance_id)
         return party, party_instance_ids, mind, active, instance_id
 
     def _return_context(self, roll: EncounterRollResult) -> dict[str, Any]:

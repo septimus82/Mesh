@@ -4,14 +4,13 @@ import random
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
-
 from unittest.mock import MagicMock
 
 import pytest
 
 from engine import savegame
-from engine.monster.battle_model import MonsterInstance
 from engine.monster.battle_mode import MonsterBattleMode
+from engine.monster.battle_model import MonsterInstance
 from engine.monster.collection import (
     add_caught_monster,
     load_companion_mind_for_instance,
