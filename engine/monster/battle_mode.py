@@ -540,11 +540,25 @@ class MonsterBattleMode:
         self.companion_mode = bool(companion_mode)
         active_instance_id = self.player_party_instance_ids[0] if self.player_party_instance_ids else None
         self._companion_instance_id = str(active_instance_id) if active_instance_id else None
+        mind_source = "fallback"
+        loaded_mind = None
         if self.companion_mode and self._companion_instance_id:
             loaded_mind = load_companion_mind_for_instance(self._state_values(), self._companion_instance_id)
             if loaded_mind is not None:
                 companion_mind = loaded_mind
+                mind_source = "saved"
+            elif companion_mind is not None:
+                mind_source = "fallback_baseline"
         self.companion_mind = companion_mind if companion_mind is not None else CompanionMind()
+        if self.companion_mode:
+            from engine.companion_diagnostics import log_companion_battle_start  # noqa: PLC0415
+
+            log_companion_battle_start(
+                instance_id=self._companion_instance_id,
+                source=mind_source,
+                mind=self.companion_mind,
+                trigger=str(self.return_context.get("source", "") or ""),
+            )
         self.companion_ctx = DecisionContext()
         self.companion_awaiting_reinforcement = False
         self._presenting_reinforcement = False
