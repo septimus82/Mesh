@@ -461,7 +461,6 @@ class GameStateController:
         if dt <= 0.0:
             return
         state.playtime_seconds += dt
-        self._tick_monster_eggs()
         # Auto-complete quests whose requirements now match flags/counters
         self.quests.update_quest_states(self)
 
@@ -472,7 +471,31 @@ class GameStateController:
         except (TypeError, ValueError):
             return 0.0
 
-    def _tick_monster_eggs(self) -> None:
+    def record_overworld_walk_distance(self, distance_px: float) -> None:
+        """Quantize walked overworld distance into egg incubation steps."""
+
+        if distance_px <= 0.0:
+            return
+        state = self._ensure_game_state()
+        from engine.monster.overworld_egg_steps import record_overworld_walk_distance  # noqa: PLC0415
+
+        steps = record_overworld_walk_distance(state.values, float(distance_px))
+        if steps > 0:
+            self._tick_monster_eggs(steps=steps)
+
+    def _battle_terms(self) -> Any:
+        cached = getattr(self.window, "battle_terms", None)
+        if cached is not None:
+            return cached
+        from engine.monster.data_load import load_battle_terms  # noqa: PLC0415
+        from engine.paths import resolve_monster_data_dir  # noqa: PLC0415
+
+        terms, result = load_battle_terms(resolve_monster_data_dir())
+        resolved = terms if result.ok else terms
+        self.window.battle_terms = resolved
+        return resolved
+
+    def _tick_monster_eggs(self, *, steps: int = 1) -> None:
         state = self._ensure_game_state()
         from engine.monster.egg_lifecycle import MONSTER_EGGS_KEY, tick_monster_eggs  # noqa: PLC0415
 
@@ -491,13 +514,14 @@ class GameStateController:
             catalog = loaded
             self.window.monster_catalog = catalog
 
-        events = tick_monster_eggs(state.values, species_by_id=catalog.species)
+        events = tick_monster_eggs(state.values, species_by_id=catalog.species, steps=max(1, int(steps)))
         console_log = getattr(self.window, "console_log", None)
         if not callable(console_log):
             return
+        terms = self._battle_terms()
         for event in events:
-            destination = "party" if event.storage == "party" else "box"
-            console_log(f"[Breeding] Egg hatched! {event.species_id} joined your {destination}.")
+            display_name = str(event.species_id).replace("_", " ").replace("-", " ").title()
+            console_log(terms.format_egg_hatched(name=display_name))
 
     # ------------------------------------------------------------------
     # Persistence helpers

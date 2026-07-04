@@ -65,6 +65,11 @@ class BattleTerms:
     wait_2: str = "It watches you."
     defeat_no_fighters: str = "You have no one left who can fight."
     no_capture_items_left: str = "No {plural} left!"
+    egg_created: str = "A warm egg rests at the shrine."
+    egg_hatched: str = "The egg stirs... {name} emerges!"
+    breeding_not_enough_bonded: str = "Your companions need a stronger bond first."
+    breeding_egg_waiting: str = "An egg is already waiting to hatch."
+    breeding_cooldown: str = "The shrine needs a moment."
 
     def format_move_row(self, *, move_id: str, move_type: str, move_pp: int) -> str:
         return f"{move_id} {move_type} {self.move_resource_label} {move_pp}"
@@ -162,6 +167,9 @@ class BattleTerms:
 
     def format_scold_1(self, *, name: str) -> str:
         return _render(self.scold_1, name=name)
+
+    def format_egg_hatched(self, *, name: str) -> str:
+        return _render(self.egg_hatched, name=name)
 
     def all_template_values(self) -> tuple[str, ...]:
         return tuple(str(getattr(self, field.name)) for field in fields(self))

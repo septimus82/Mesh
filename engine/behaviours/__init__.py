@@ -23,6 +23,7 @@ _BUILTIN_MODULES: tuple[str, ...] = (
     "engine.behaviours.action_list_runner",
     "engine.behaviours.auto_animation_by_movement",
     "engine.behaviours.animator",
+    "engine.behaviours.breeding_shrine_zone",
     "engine.behaviours.camera_follow",
     "engine.behaviours.patrol_chase",
     "engine.behaviours.collectible",
