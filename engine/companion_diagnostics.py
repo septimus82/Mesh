@@ -35,6 +35,15 @@ def _top_learned_weights(learned: Any, limit: int = 3) -> list[tuple[str, float]
     return rows[: max(1, int(limit))]
 
 
+def _format_mind_line(*, instance_id: str | None, mind: Any, trigger: str = "") -> tuple[str, float, float, str, str]:
+    weights = _top_learned_weights(getattr(mind, "learned", None), limit=3)
+    weight_text = ", ".join(f"{name}={value:.1f}" for name, value in weights) or "none"
+    trust = float(getattr(mind, "trust", 0.0) or 0.0)
+    bond = float(getattr(mind, "bond", 0.0) or 0.0)
+    trigger_text = f" trigger={trigger}" if trigger else ""
+    return str(instance_id or "none"), bond, trust, weight_text, trigger_text
+
+
 def log_companion_battle_start(
     *,
     instance_id: str | None,
@@ -45,18 +54,38 @@ def log_companion_battle_start(
     """Emit one diagnostic line when a companion battle begins."""
     if not enabled():
         return
-    weights = _top_learned_weights(getattr(mind, "learned", None), limit=3)
-    weight_text = ", ".join(f"{name}={value:.1f}" for name, value in weights) or "none"
-    trust = float(getattr(mind, "trust", 0.0) or 0.0)
-    bond = float(getattr(mind, "bond", 0.0) or 0.0)
-    trigger_text = f" trigger={trigger}" if trigger else ""
+    inst, bond, trust, weight_text, trigger_text = _format_mind_line(instance_id=instance_id, mind=mind, trigger=trigger)
     logger.warning(
         "%s battle_start instance=%s source=%s bond=%.1f trust=%.1f weights=[%s]%s",
         _PREFIX,
-        str(instance_id or "none"),
+        inst,
         str(source or "unknown"),
         bond,
         trust,
         weight_text,
         trigger_text,
+    )
+
+
+def log_companion_battle_end(
+    *,
+    instance_id: str | None,
+    mind: Any,
+    outcome: str = "",
+    trigger: str = "",
+) -> None:
+    """Emit one diagnostic line immediately before companion mind is persisted."""
+    if not enabled():
+        return
+    inst, bond, trust, weight_text, trigger_text = _format_mind_line(instance_id=instance_id, mind=mind, trigger=trigger)
+    outcome_text = f" outcome={outcome}" if outcome else ""
+    logger.warning(
+        "%s battle_end instance=%s bond=%.1f trust=%.1f weights=[%s]%s%s",
+        _PREFIX,
+        inst,
+        bond,
+        trust,
+        weight_text,
+        trigger_text,
+        outcome_text,
     )
