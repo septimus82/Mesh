@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament
+from engine.monster.companion_mind import CompanionMind, LearnedWeights
 
 pytestmark = pytest.mark.fast
 
