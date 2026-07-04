@@ -4,17 +4,14 @@ from __future__ import annotations
 
 import random
 from types import SimpleNamespace
-from typing import Any, cast
-
 from unittest.mock import MagicMock
 
 import pytest
 
-from engine.monster.battle_controller import BattleResult
 from engine.monster.battle_mode import MonsterBattleMode
 from engine.monster.battle_model import MonsterInstance
 from engine.monster.collection import load_companion_mind_for_instance
-from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament, praise
+from engine.monster.companion_mind import CompanionMind, LearnedWeights, Temperament
 from tests.test_monster_encounter_zone import SHELL, SPROUT, TACKLE, _catalog
 
 pytestmark = pytest.mark.fast

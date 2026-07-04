@@ -176,7 +176,7 @@ def test_companion_faint_with_bench_auto_switches_and_battle_continues() -> None
     assert mode.companion_mind.trust == pytest.approx(72.0)
     assert mode.companion_mind.bond == pytest.approx(45.0)
     labels = [label for _, label in mode.overlay._current_actions()]
-    assert labels == ["Praise", "Scold", "Wait"]
+    assert labels == ["Praise", "Scold", "Wait", "Ball"]
 
 
 def test_companion_faint_without_bench_ends_lost() -> None:
