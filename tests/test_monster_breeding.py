@@ -106,7 +106,8 @@ def test_offspring_species_comes_from_a_parent() -> None:
     assert len(species_ids) == 2
 
 
-def test_offspring_starts_born_into_care_trust_and_bond() -> None:
+def test_offspring_starts_stranger_baseline_trust_and_bond() -> None:
+    """Hatchlings deliberately start below flee threshold (director option 1: stranger baseline)."""
     parent_a = _parent(SPROUT, aggression=80.0, fear=10.0, traits=(LOYAL,))
     parent_b = _parent(SHELL, aggression=20.0, fear=80.0, traits=(QUICK_LEARNER,))
 

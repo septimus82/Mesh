@@ -180,7 +180,7 @@ def test_hatchling_battle_diag_reflects_inherited_mind(monkeypatch: pytest.Monke
     captured: list[str] = []
 
     def _capture(**kwargs: object) -> None:
-        captured.append(str(kwargs))
+        captured.append(kwargs)
 
     monkeypatch.setattr("engine.companion_diagnostics.log_companion_battle_start", _capture)
 
@@ -198,6 +198,11 @@ def test_hatchling_battle_diag_reflects_inherited_mind(monkeypatch: pytest.Monke
     assert len(events) == 1
     hatchling_id = events[0].instance_id
     hatch_mind = events[0].mind
+    from engine.monster.breeding import BORN_INTO_CARE_BOND, BORN_INTO_CARE_TRUST
+
+    # Stranger baseline by design: below flee threshold until the player trains the hatchling.
+    assert hatch_mind.bond == pytest.approx(BORN_INTO_CARE_BOND)
+    assert hatch_mind.trust == pytest.approx(BORN_INTO_CARE_TRUST)
     assert hatch_mind.temperament.aggression != 50.0 or hatch_mind.learned.ATTACK != 0.0
 
     window = types.SimpleNamespace()
@@ -237,6 +242,8 @@ def test_hatchling_battle_diag_reflects_inherited_mind(monkeypatch: pytest.Monke
     )
 
     assert captured
-    assert hatchling_id in captured[0]
-    assert "ATTACK=" in captured[0] or "learned" in captured[0].lower()
-    assert "bond" in captured[0].lower()
+    assert captured[0]["instance_id"] == hatchling_id
+    diag_mind = captured[0]["mind"]
+    assert float(getattr(diag_mind, "bond", 0.0)) == pytest.approx(BORN_INTO_CARE_BOND)
+    assert float(getattr(diag_mind, "trust", 0.0)) == pytest.approx(BORN_INTO_CARE_TRUST)
+    assert float(getattr(getattr(diag_mind, "learned", None), "ATTACK", 0.0)) > 0.0
