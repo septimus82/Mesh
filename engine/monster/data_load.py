@@ -166,6 +166,23 @@ KNOWN_BATTLE_CLIP_NAMES = frozenset(
 KNOWN_MOVE_CATEGORIES = frozenset({"physical", "special"})
 
 
+def _parse_optional_positive_int(
+    mapping: dict[str, Any],
+    field: str,
+    *,
+    label: str,
+) -> tuple[int | None, str | None]:
+    if field not in mapping:
+        return None, None
+    value = mapping[field]
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return None, f"{label}.{field} must be a positive number"
+    parsed = int(value)
+    if parsed <= 0:
+        return None, f"{label}.{field} must be a positive number"
+    return parsed, None
+
+
 def _parse_battle_sprite_clip(raw: Any, *, label: str) -> tuple[BattleSpriteClip | None, str | None]:
     mapping, err = _require_mapping(raw, label=label)
     if err is not None:
@@ -187,7 +204,66 @@ def _parse_battle_sprite_clip(raw: Any, *, label: str) -> tuple[BattleSpriteClip
     loop_raw = mapping.get("loop", True)
     if not isinstance(loop_raw, bool):
         return None, f"{label}.loop must be a boolean"
-    return BattleSpriteClip(frames=tuple(frames), fps=fps, loop=bool(loop_raw)), None
+    sheet_raw = mapping.get("sheet")
+    sheet: str | None = None
+    if sheet_raw is not None:
+        if not isinstance(sheet_raw, str) or not sheet_raw.strip():
+            return None, f"{label}.sheet must be a non-empty string"
+        sheet = sheet_raw.strip()
+    frame_width, fw_err = _parse_optional_positive_int(mapping, "frame_width", label=label)
+    if fw_err:
+        return None, fw_err
+    frame_height, fh_err = _parse_optional_positive_int(mapping, "frame_height", label=label)
+    if fh_err:
+        return None, fh_err
+    columns, cols_err = _parse_optional_positive_int(mapping, "columns", label=label)
+    if cols_err:
+        return None, cols_err
+    return (
+        BattleSpriteClip(
+            frames=tuple(frames),
+            fps=fps,
+            loop=bool(loop_raw),
+            sheet=sheet,
+            frame_width=frame_width,
+            frame_height=frame_height,
+            columns=columns,
+        ),
+        None,
+    )
+
+
+def _clip_grid_capacity(
+    clip: BattleSpriteClip,
+    *,
+    parent_columns: int,
+    parent_rows: int,
+) -> int:
+    columns = clip.columns if clip.columns is not None else parent_columns
+    return int(columns) * int(parent_rows)
+
+
+def _validate_battle_sprite_clip_frames(
+    clips: dict[str, BattleSpriteClip],
+    *,
+    label: str,
+    parent_columns: int,
+    parent_rows: int,
+) -> str | None:
+    for clip_name, clip in clips.items():
+        capacity = _clip_grid_capacity(
+            clip,
+            parent_columns=parent_columns,
+            parent_rows=parent_rows,
+        )
+        clip_label = f"{label}.battle_sprite.clips.{clip_name}"
+        for index, frame_index in enumerate(clip.frames):
+            if frame_index < 0 or frame_index >= capacity:
+                return (
+                    f"{clip_label}.frames[{index}] index {frame_index} is out of range "
+                    f"for clip grid (0..{capacity - 1})"
+                )
+    return None
 
 
 def _parse_battle_sprite(raw: Any, *, label: str) -> tuple[BattleSprite | None, str | None]:
@@ -260,6 +336,15 @@ def _parse_battle_sprite(raw: Any, *, label: str) -> tuple[BattleSprite | None, 
         if fps <= 0.0:
             return None, f"{label}.battle_sprite.fps must be greater than 0"
         clips = {"idle": BattleSpriteClip(frames=tuple(idle_frames), fps=fps, loop=True)}
+
+    frame_err = _validate_battle_sprite_clip_frames(
+        clips,
+        label=label,
+        parent_columns=int(columns),
+        parent_rows=int(rows),
+    )
+    if frame_err:
+        return None, frame_err
 
     return (
         BattleSprite(

@@ -33,6 +33,10 @@ class BattleSpriteClip:
     frames: tuple[int, ...]
     fps: float = 6.0
     loop: bool = True
+    sheet: str | None = None
+    frame_width: int | None = None
+    frame_height: int | None = None
+    columns: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
