@@ -100,6 +100,9 @@ class PlayerController(Behaviour):
         self.entity.mesh_velocity_x = vx
         self.entity.mesh_velocity_y = vy
 
+        before_x = float(getattr(self.entity, "center_x", 0.0))
+        before_y = float(getattr(self.entity, "center_y", 0.0))
+
         # Physics Facade V1: Use pure physics model if possible
         scene_controller = getattr(self.window, "scene_controller", None)
         solid_sprites = getattr(scene_controller, "solid_sprites", None)
@@ -110,6 +113,15 @@ class PlayerController(Behaviour):
         else:
             # Fallback for legacy / headless without scene
             self.window.move_entity_with_collision(self.entity, vx * dt, vy * dt)
+
+        after_x = float(getattr(self.entity, "center_x", 0.0))
+        after_y = float(getattr(self.entity, "center_y", 0.0))
+        walked = math.hypot(after_x - before_x, after_y - before_y)
+        if walked > 0.0:
+            controller = getattr(self.window, "game_state_controller", None)
+            recorder = getattr(controller, "record_overworld_walk_distance", None)
+            if callable(recorder):
+                recorder(walked)
 
         # Sensors V1
         if scene_controller and hasattr(scene_controller, "sensors_runtime"):

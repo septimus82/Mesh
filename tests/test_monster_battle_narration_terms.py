@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from engine.monster.battle_terms import DEFAULT_BATTLE_TERMS, POKEMON_CLONE_DENYLIST
-from engine.monster.data_load import parse_battle_terms
+from engine.monster.data_load import KNOWN_BATTLE_TERM_KEYS, parse_battle_terms
 
 pytestmark = pytest.mark.fast
 
@@ -28,6 +28,7 @@ pytestmark = pytest.mark.fast
         ("format_xp_gain", {"name": "L", "xp": 40}, "L gained 40 XP!"),
         ("format_level_up", {"name": "M", "level": 11}, "M reached Lv 11!"),
         ("format_learn_move", {"name": "N", "move": "ember"}, "N learned ember!"),
+        ("format_egg_hatched", {"name": "Hatchling"}, "The egg stirs... Hatchling emerges!"),
     ],
 )
 def test_default_templates_render_placeholders(method: str, kwargs: dict[str, object], expected: str) -> None:
@@ -53,6 +54,41 @@ def test_default_terms_contain_no_pokemon_clone_phrasing() -> None:
     combined = " ".join(DEFAULT_BATTLE_TERMS.all_template_values()).lower()
     for forbidden in POKEMON_CLONE_DENYLIST:
         assert forbidden not in combined, f"default battle terms contain forbidden phrase: {forbidden!r}"
+
+
+def test_breeding_term_keys_are_known_and_denylist_clean() -> None:
+    for key in (
+        "egg_created",
+        "egg_hatched",
+        "breeding_not_enough_bonded",
+        "breeding_egg_waiting",
+        "breeding_cooldown",
+    ):
+        assert key in KNOWN_BATTLE_TERM_KEYS
+    combined = " ".join(
+        str(getattr(DEFAULT_BATTLE_TERMS, key))
+        for key in (
+            "egg_created",
+            "egg_hatched",
+            "breeding_not_enough_bonded",
+            "breeding_egg_waiting",
+            "breeding_cooldown",
+        )
+    ).lower()
+    for forbidden in POKEMON_CLONE_DENYLIST:
+        assert forbidden not in combined, f"breeding defaults contain forbidden phrase: {forbidden!r}"
+
+
+def test_parse_battle_terms_applies_breeding_overrides() -> None:
+    terms, result = parse_battle_terms(
+        {
+            "egg_created": "Petals swirl... a warm egg rests beneath the sakura tree.",
+            "egg_hatched": "The egg stirs among fallen petals... {name} emerges!",
+        },
+    )
+    assert result.ok is True
+    assert "sakura" in terms.egg_created
+    assert terms.format_egg_hatched(name="Blosskit") == "The egg stirs among fallen petals... Blosskit emerges!"
 
 
 def test_wild_appeared_pattern_not_in_defaults() -> None:

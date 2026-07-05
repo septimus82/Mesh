@@ -24,9 +24,11 @@ from engine.monster.companion_mind import CompanionMind, LearnedWeights, Tempera
 from engine.monster.egg_lifecycle import (
     DEFAULT_EGG_HATCH_STEPS,
     MONSTER_EGGS_KEY,
+    STEPS_REMAINING_KEY,
     create_breeding_egg,
     tick_monster_eggs,
 )
+from engine.monster.overworld_egg_steps import OVERWORLD_PIXELS_PER_EGG_STEP
 from engine.save_manager import SaveManager
 from tests._typing import as_any
 
@@ -176,7 +178,32 @@ def test_game_state_controller_emits_hatch_notice(tmp_path: Path) -> None:  # no
     )
     create_breeding_egg(values, offspring=offspring, mind=mind, hatch_steps=1)
 
-    window.game_state_controller.update(0.016)
+    window.game_state_controller.record_overworld_walk_distance(OVERWORLD_PIXELS_PER_EGG_STEP)
 
     window.console_log.assert_called()
-    assert "hatched" in str(window.console_log.call_args.args[0]).lower()
+    assert "emerges" in str(window.console_log.call_args.args[0]).lower()
+
+
+def test_pending_egg_survives_save_roundtrip_mid_incubation(tmp_path: Path) -> None:
+    values: dict = {}
+    offspring, mind = breed_offspring(
+        BreedingParent(MonsterInstance(SPROUT, level=1, known_moves=SPROUT.learnset), _mind(55.0, 25.0)),
+        BreedingParent(MonsterInstance(SHELL, level=1, known_moves=SHELL.learnset), _mind(35.0, 35.0)),
+        random.Random(11),
+    )
+    create_breeding_egg(values, offspring=offspring, mind=mind, hatch_steps=120)
+
+    source_window = _window_for_save()
+    source_window.game_state_controller.state.values = values
+
+    save_path = tmp_path / "egg_mid_incubation.json"
+    manager = SaveManager(as_any(source_window))
+    manager.save_game(str(save_path))
+
+    fresh = _window_for_save()
+    fresh.game_state_controller.state.values = {}
+    SaveManager(as_any(fresh)).load_game(str(save_path))
+    loaded_values = fresh.game_state_controller.state.values
+    eggs = loaded_values.get(MONSTER_EGGS_KEY, [])
+    assert len(eggs) == 1
+    assert eggs[0][STEPS_REMAINING_KEY] == 120
