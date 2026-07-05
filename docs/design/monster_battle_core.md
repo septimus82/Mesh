@@ -183,6 +183,10 @@ Species may optionally define a sliced battle sheet plus named animation clips. 
 | `frames` | number[] | — | Frame indices into the sliced sheet (0-based) |
 | `fps` | number | `6` | Playback speed |
 | `loop` | boolean | `true` | Restart after the last frame |
+| `sheet` | string | parent `battle_sprite.sheet` | Optional per-clip PNG override |
+| `frame_width` | number | parent `battle_sprite.frame_width` | Frame width when using a clip sheet |
+| `frame_height` | number | parent `battle_sprite.frame_height` | Frame height when using a clip sheet |
+| `columns` | number | parent `battle_sprite.columns` | Frames per row when using a clip sheet |
 
 **Allowed clip names:**
 

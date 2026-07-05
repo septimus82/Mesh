@@ -127,6 +127,15 @@ def mock_arcade_window(monkeypatch):
 
         yield mock_get
 
+@pytest.fixture(autouse=True)
+def _clear_battle_clip_sheet_texture_cache() -> None:
+    from engine.monster.battle_sprite_view import clear_clip_sheet_texture_cache
+
+    clear_clip_sheet_texture_cache()
+    yield
+    clear_clip_sheet_texture_cache()
+
+
 @pytest.fixture
 def mock_arcade_background():
     """

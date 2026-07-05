@@ -20,18 +20,42 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+SheetPoolKey = tuple[str, int, int, int]
+
+_CLIP_SHEET_TEXTURE_CACHE: dict[SheetPoolKey, tuple[Any, ...]] = {}
+
 _CLIP_FALLBACK_CHAINS: dict[str, tuple[str, ...]] = {
     "special": ("attack", "idle"),
 }
 _DEFAULT_CLIP_FALLBACK: tuple[str, ...] = ("idle",)
 
 
+def _sheet_pool_key(clip: BattleSpriteClip, battle_sprite: BattleSprite) -> SheetPoolKey:
+    return (
+        clip.sheet or battle_sprite.sheet,
+        clip.frame_width or battle_sprite.frame_width,
+        clip.frame_height or battle_sprite.frame_height,
+        clip.columns or battle_sprite.columns,
+    )
+
+
+def _parent_sheet_pool_key(battle_sprite: BattleSprite) -> SheetPoolKey:
+    return (
+        battle_sprite.sheet,
+        battle_sprite.frame_width,
+        battle_sprite.frame_height,
+        battle_sprite.columns,
+    )
+
+
 @dataclass
 class BattleSpriteAnimator:
-    """Per-sprite clip state machine over a sliced sprite sheet."""
+    """Per-sprite clip state machine over one or more sliced sprite sheets."""
 
     textures: tuple[Any, ...]
     clips: dict[str, BattleSpriteClip]
+    battle_sprite: BattleSprite | None = None
+    texture_pools: dict[SheetPoolKey, tuple[Any, ...]] | None = None
     active_clip_name: str = "idle"
     frame_cursor: int = 0
     elapsed: float = 0.0
@@ -68,6 +92,13 @@ class BattleSpriteAnimator:
             return clip
         return self.clips.get("idle")
 
+    def _textures_for_clip(self, clip: BattleSpriteClip) -> tuple[Any, ...]:
+        if self.battle_sprite is not None and self.texture_pools is not None:
+            pool = self.texture_pools.get(_sheet_pool_key(clip, self.battle_sprite))
+            if pool:
+                return pool
+        return self.textures
+
     def update(self, dt: float) -> None:
         self.elapsed += max(0.0, float(dt))
         while True:
@@ -95,12 +126,15 @@ class BattleSpriteAnimator:
 
     def current_texture(self) -> Any | None:
         clip = self._active_clip()
-        if clip is None or not self.textures or not clip.frames:
+        if clip is None or not clip.frames:
+            return None
+        textures = self._textures_for_clip(clip)
+        if not textures:
             return None
         frame_index = clip.frames[self.frame_cursor % len(clip.frames)]
-        if frame_index < 0 or frame_index >= len(self.textures):
+        if frame_index < 0 or frame_index >= len(textures):
             return None
-        return self.textures[frame_index]
+        return textures[frame_index]
 
 
 class BattleSpriteDisplay:
@@ -117,13 +151,17 @@ class BattleSpriteDisplay:
         if battle_sprite is None:
             self._animator = None
             return
-        textures = _load_battle_sprite_textures(self._window, battle_sprite)
-        if not textures or not _battle_sprite_frames_ready(battle_sprite, textures):
+        texture_pools = _load_battle_sprite_texture_pools(self._window, battle_sprite)
+        parent_key = _parent_sheet_pool_key(battle_sprite)
+        default_textures = texture_pools.get(parent_key, ())
+        if not default_textures or not _battle_sprite_frames_ready(battle_sprite, texture_pools):
             self._animator = None
             return
         self._animator = BattleSpriteAnimator(
-            textures=textures,
+            textures=default_textures,
             clips=dict(battle_sprite.clips),
+            battle_sprite=battle_sprite,
+            texture_pools=texture_pools,
         )
         self._animator.play_clip("idle")
 
@@ -177,14 +215,17 @@ class BattleSpriteDisplay:
         return self._animator is not None
 
 
-def _battle_sprite_frames_ready(battle_sprite: BattleSprite, textures: tuple[Any, ...]) -> bool:
-    if not textures:
-        return False
-    last_index = -1
+def _battle_sprite_frames_ready(
+    battle_sprite: BattleSprite,
+    texture_pools: dict[SheetPoolKey, tuple[Any, ...]],
+) -> bool:
     for clip in battle_sprite.clips.values():
-        if clip.frames:
-            last_index = max(last_index, max(clip.frames))
-    return last_index < len(textures)
+        textures = texture_pools.get(_sheet_pool_key(clip, battle_sprite), ())
+        if not textures:
+            return False
+        if clip.frames and max(clip.frames) >= len(textures):
+            return False
+    return True
 
 
 def _sheet_cache(window: GameWindow) -> SpriteSheetCache | None:
@@ -199,7 +240,7 @@ def _sheet_cache(window: GameWindow) -> SpriteSheetCache | None:
     return SpriteSheetCache(assets)
 
 
-def _load_battle_sprite_textures(window: GameWindow, battle_sprite: BattleSprite) -> tuple[Any, ...]:
+def _load_parent_sheet_textures(window: GameWindow, battle_sprite: BattleSprite) -> tuple[Any, ...]:
     cache = _sheet_cache(window)
     if cache is None:
         return ()
@@ -214,3 +255,61 @@ def _load_battle_sprite_textures(window: GameWindow, battle_sprite: BattleSprite
     if sheet is None:
         return ()
     return tuple(sheet.frames)
+
+
+def _max_frame_index_for_key(
+    battle_sprite: BattleSprite,
+    key: SheetPoolKey,
+) -> int:
+    last_index = -1
+    for clip in battle_sprite.clips.values():
+        if _sheet_pool_key(clip, battle_sprite) != key or not clip.frames:
+            continue
+        last_index = max(last_index, max(clip.frames))
+    return last_index
+
+
+def _load_battle_sprite_texture_pools(
+    window: GameWindow,
+    battle_sprite: BattleSprite,
+) -> dict[SheetPoolKey, tuple[Any, ...]]:
+    parent_key = _parent_sheet_pool_key(battle_sprite)
+    keys_needed: set[SheetPoolKey] = {parent_key}
+    for clip in battle_sprite.clips.values():
+        keys_needed.add(_sheet_pool_key(clip, battle_sprite))
+
+    pools: dict[SheetPoolKey, tuple[Any, ...]] = {}
+    assets = getattr(window, "assets", None)
+
+    for key in keys_needed:
+        if key in _CLIP_SHEET_TEXTURE_CACHE:
+            pools[key] = _CLIP_SHEET_TEXTURE_CACHE[key]
+            continue
+
+        if key == parent_key:
+            textures = _load_parent_sheet_textures(window, battle_sprite)
+        elif assets is None:
+            textures = ()
+        else:
+            sheet, frame_width, frame_height, _columns = key
+            total_frames = _max_frame_index_for_key(battle_sprite, key) + 1
+            if total_frames <= 0:
+                total_frames = 1
+            textures = tuple(
+                assets.load_sprite_sheet(
+                    sheet,
+                    int(frame_width),
+                    int(frame_height),
+                    int(total_frames),
+                )
+            )
+
+        _CLIP_SHEET_TEXTURE_CACHE[key] = textures
+        pools[key] = textures
+
+    return pools
+
+
+def clear_clip_sheet_texture_cache() -> None:
+    """Reset cached per-clip sheet textures (for tests and hot reload)."""
+    _CLIP_SHEET_TEXTURE_CACHE.clear()
