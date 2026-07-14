@@ -82,6 +82,7 @@ class BattleAudioPlayback:
         self._intro_consumed = False
         self._music_snapshot: MusicPlaybackSnapshot | None = None
         self._battle_started = False
+        self._music_override_active = False
         self._music_restored = False
 
     def attach(self, audio: Any | None) -> None:
@@ -94,21 +95,35 @@ class BattleAudioPlayback:
         audio = self._audio
         if audio is None:
             return
+
+        snapshot_fn = getattr(audio, "snapshot_music", None)
+        transition_fn = getattr(audio, "transition_music", None)
+        restore_fn = getattr(audio, "restore_music", None)
+        if not callable(snapshot_fn) or not callable(transition_fn) or not callable(restore_fn):
+            logger.debug("Battle music handoff unsupported: missing audio seam methods")
+            return
+
         try:
-            snapshot = getattr(audio, "snapshot_music", None)
-            if callable(snapshot):
-                self._music_snapshot = snapshot()
-            transition = getattr(audio, "transition_music", None)
-            if callable(transition):
-                transition(
-                    BATTLE_MUSIC_PATH,
-                    fade_out_s=BATTLE_MUSIC_FADE_OUT_S,
-                    fade_in_s=BATTLE_MUSIC_FADE_IN_S,
-                    volume=BATTLE_MUSIC_VOLUME,
-                    loop=BATTLE_MUSIC_LOOP,
-                )
+            self._music_snapshot = snapshot_fn()
+        except Exception as exc:  # noqa: BLE001  # REASON: battle entry must survive audio failures
+            logger.debug("Battle music snapshot failed: %s", exc)
+            self._music_snapshot = None
+            return
+
+        try:
+            transition_fn(
+                BATTLE_MUSIC_PATH,
+                fade_out_s=BATTLE_MUSIC_FADE_OUT_S,
+                fade_in_s=BATTLE_MUSIC_FADE_IN_S,
+                volume=BATTLE_MUSIC_VOLUME,
+                loop=BATTLE_MUSIC_LOOP,
+            )
         except Exception as exc:  # noqa: BLE001  # REASON: battle entry must survive audio failures
             logger.debug("Battle music start failed: %s", exc)
+            self._music_snapshot = None
+            return
+
+        self._music_override_active = True
 
     def consume_intro(self, cue: str | None) -> None:
         if cue is None or self._intro_consumed:
@@ -164,11 +179,12 @@ class BattleAudioPlayback:
             logger.debug("Battle cue playback failed for %s: %s", cue, exc)
 
     def _restore_music_once(self) -> None:
-        if self._music_restored or not self._battle_started:
+        if self._music_restored or not self._music_override_active:
             return
         self._music_restored = True
         snapshot = self._music_snapshot
         self._music_snapshot = None
+        self._music_override_active = False
         audio = self._audio
         if audio is None or snapshot is None:
             return
@@ -191,3 +207,9 @@ def approved_battle_sound_map_keys() -> frozenset[str]:
 
 def approved_battle_sound_map_matches_vocabulary() -> bool:
     return approved_battle_sound_map_keys() == frozenset(APPROVED_BATTLE_SOUND_CUES)
+
+
+def default_battle_audio_asset_paths() -> tuple[str, ...]:
+    paths = {spec.path for spec in DEFAULT_BATTLE_SOUND_MAP.values()}
+    paths.add(BATTLE_MUSIC_PATH)
+    return tuple(sorted(paths))

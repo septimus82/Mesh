@@ -112,7 +112,15 @@ def _copy_engine_asset(rel_path: str, dest_root: Path) -> None:
 
 
 def _copy_monster_starter_pack(root: Path) -> None:
+    from .monster.battle_audio import default_battle_audio_asset_paths
+
+    copied: set[str] = set()
     for rel_path in _MONSTER_STARTER_FILES:
+        _copy_engine_asset(rel_path, root)
+        copied.add(rel_path)
+    for rel_path in default_battle_audio_asset_paths():
+        if rel_path in copied:
+            continue
         _copy_engine_asset(rel_path, root)
 
 

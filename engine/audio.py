@@ -482,6 +482,16 @@ class AudioManager:
         self._play_music_internal(path, volume=volume, loop=loop, start_volume_scale=1.0)
 
     def snapshot_music(self) -> MusicPlaybackSnapshot:
+        transition = self._music_transition
+        if transition is not None:
+            if transition.phase == "out":
+                if transition.target_path:
+                    return MusicPlaybackSnapshot(
+                        path=str(transition.target_path),
+                        volume=float(transition.target_volume),
+                        loop=bool(transition.loop),
+                    )
+                return MusicPlaybackSnapshot(path=None, volume=0.0, loop=False)
         return MusicPlaybackSnapshot(
             path=self._music_path,
             volume=float(self._music_base_volume),

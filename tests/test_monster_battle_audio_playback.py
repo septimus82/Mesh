@@ -335,6 +335,95 @@ def test_audio_manager_snapshot_and_restore_path_volume_loop(
     assert restored.loop is False
 
 
+def _stub_audio_manager_music(monkeypatch: pytest.MonkeyPatch) -> AudioManager:
+    manager = AudioManager()
+    monkeypatch.setattr(manager, "get_sound", lambda _path: object())
+    monkeypatch.setattr(
+        audio_mod.optional_arcade.arcade,
+        "Sound",
+        lambda *_args, **_kwargs: MagicMock(play=lambda **_kw: MagicMock()),
+    )
+    return manager
+
+
+def test_snapshot_with_no_transition_uses_active_track(monkeypatch: pytest.MonkeyPatch) -> None:
+    manager = _stub_audio_manager_music(monkeypatch)
+    manager.play_music("assets/music/forest_theme.wav", volume=0.75, loop=False)
+    snapshot = manager.snapshot_music()
+    assert snapshot.path == "assets/music/forest_theme.wav"
+    assert snapshot.volume == pytest.approx(0.75)
+    assert snapshot.loop is False
+
+
+def test_snapshot_during_pending_forest_to_dungeon_transition(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = _stub_audio_manager_music(monkeypatch)
+    manager.play_music("assets/music/forest_theme.wav", volume=0.75, loop=True)
+    manager.transition_music(
+        "assets/music/dungeon_theme.wav",
+        fade_out_s=1.0,
+        fade_in_s=1.0,
+        volume=0.6,
+        loop=False,
+    )
+    snapshot = manager.snapshot_music()
+    assert snapshot.path == "assets/music/dungeon_theme.wav"
+    assert snapshot.volume == pytest.approx(0.6)
+    assert snapshot.loop is False
+
+
+def test_snapshot_during_pending_fade_to_silence(monkeypatch: pytest.MonkeyPatch) -> None:
+    manager = _stub_audio_manager_music(monkeypatch)
+    manager.play_music("assets/music/forest_theme.wav", volume=0.75, loop=True)
+    manager.transition_music("", fade_out_s=1.0, fade_in_s=0.0, volume=0.0, loop=False)
+    snapshot = manager.snapshot_music()
+    assert snapshot.path is None
+    assert snapshot.volume == pytest.approx(0.0)
+    assert snapshot.loop is False
+
+
+def test_snapshot_during_incoming_transition_uses_incoming_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = _stub_audio_manager_music(monkeypatch)
+    manager.play_music("assets/music/forest_theme.wav", volume=0.75, loop=True)
+    manager.transition_music(
+        "assets/music/dungeon_theme.wav",
+        fade_out_s=0.0,
+        fade_in_s=1.0,
+        volume=0.6,
+        loop=False,
+    )
+    manager.update(0.0)
+    snapshot = manager.snapshot_music()
+    assert snapshot.path == "assets/music/dungeon_theme.wav"
+    assert snapshot.volume == pytest.approx(0.6)
+    assert snapshot.loop is False
+
+
+def test_battle_begin_during_scene_crossfade_restores_intended_target(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = _stub_audio_manager_music(monkeypatch)
+    manager.play_music("assets/music/forest_theme.wav", volume=0.75, loop=True)
+    manager.transition_music(
+        "assets/music/dungeon_theme.wav",
+        fade_out_s=1.0,
+        fade_in_s=1.0,
+        volume=0.6,
+        loop=False,
+    )
+    playback = BattleAudioPlayback()
+    playback.attach(manager)
+    playback.begin_battle()
+    playback.end_battle()
+    restored = manager.snapshot_music()
+    assert restored.path == "assets/music/dungeon_theme.wav"
+    assert restored.volume == pytest.approx(0.6)
+    assert restored.loop is False
+
+
 def test_begin_battle_snapshots_scene_music_before_transition() -> None:
     audio = RecordingAudio()
     playback = BattleAudioPlayback()
@@ -410,6 +499,88 @@ def test_battle_music_failure_does_not_prevent_battle_entry() -> None:
     assert mode.active is True
     mode.run_from_battle()
     assert mode.active is False
+
+
+class TransitionOnlyAudio:
+    def __init__(self) -> None:
+        self.sound_calls: list[tuple[str, float]] = []
+
+    def transition_music(self, *_args: Any, **_kwargs: Any) -> None:
+        return None
+
+    def play_sound(self, path: str, volume: float = 1.0) -> None:
+        self.sound_calls.append((path, float(volume)))
+
+
+def test_missing_snapshot_and_restore_does_not_start_battle_music() -> None:
+    audio = TransitionOnlyAudio()
+    playback = BattleAudioPlayback()
+    playback.attach(audio)
+    playback.begin_battle()
+    assert playback._music_override_active is False
+    playback.dispatch_step_cues((BATTLE_ACTION,))
+    assert playback._battle_started is True
+
+
+def test_snapshot_failure_does_not_replace_scene_music() -> None:
+    class SnapshotFailAudio(RecordingAudio):
+        def snapshot_music(self) -> MusicPlaybackSnapshot:
+            raise RuntimeError("snapshot failed")
+
+    audio = SnapshotFailAudio()
+    playback = BattleAudioPlayback()
+    playback.attach(audio)
+    playback.begin_battle()
+    assert playback._music_override_active is False
+    assert len(audio.transition_calls) == 0
+
+
+class RestoreMissingAudio(RecordingAudio):
+    restore_music = None  # type: ignore[assignment]
+
+
+def test_missing_restore_does_not_start_battle_music() -> None:
+    audio = RestoreMissingAudio()
+    playback = BattleAudioPlayback()
+    playback.attach(audio)
+    playback.begin_battle()
+    assert playback._music_override_active is False
+    assert len(audio.transition_calls) == 0
+
+
+def test_cue_sfx_still_play_when_music_handoff_unsupported() -> None:
+    audio = TransitionOnlyAudio()
+    playback = BattleAudioPlayback()
+    playback.attach(audio)
+    playback.begin_battle()
+    playback.dispatch_step_cues((BATTLE_ACTION, BATTLE_HIT))
+    assert len(audio.sound_calls) >= 1
+    assert audio.sound_calls[0][0] == DEFAULT_BATTLE_SOUND_MAP[BATTLE_ACTION].path
+
+
+def test_failed_battle_transition_does_not_restore_scene_music() -> None:
+    class FailTransitionAudio(RecordingAudio):
+        def transition_music(self, *_args: Any, **_kwargs: Any) -> None:
+            raise RuntimeError("transition failed")
+
+    audio = FailTransitionAudio()
+    playback = BattleAudioPlayback()
+    playback.attach(audio)
+    playback.begin_battle()
+    playback.end_battle()
+    assert playback._music_override_active is False
+    assert len(audio.restore_calls) == 0
+
+
+def test_successful_override_restores_exactly_once() -> None:
+    audio = RecordingAudio()
+    playback = BattleAudioPlayback()
+    playback.attach(audio)
+    playback.begin_battle()
+    assert playback._music_override_active is True
+    playback.end_battle()
+    playback.end_battle()
+    assert len(audio.restore_calls) == 1
 
 
 def test_defeat_battle_restores_scene_music() -> None:
