@@ -242,3 +242,11 @@ class UIController:
             if callable(handler) and handler(x, y, button, modifiers):
                 return True
         return False
+
+    def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool:
+        """Dispatch mouse scroll to UI elements. Returns True if handled."""
+        for element in reversed(self.ui_elements):
+            handler = getattr(element, "on_mouse_scroll", None)
+            if callable(handler) and handler(x, y, scroll_x, scroll_y):
+                return True
+        return False

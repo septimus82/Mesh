@@ -154,6 +154,10 @@ def handle_mouse_release(controller: "InputController", x: float, y: float, butt
 
 def handle_mouse_scroll(controller: "InputController", x: float, y: float, scroll_x: float, scroll_y: float) -> bool:  # noqa: ARG001
     window = controller.window
+    ui_controller = getattr(window, "ui_controller", None)
+    ui_scroll = getattr(ui_controller, "on_mouse_scroll", None) if ui_controller is not None else None
+    if callable(ui_scroll) and ui_scroll(float(x), float(y), float(scroll_x), float(scroll_y)):
+        return True
     editor = getattr(window, "editor_controller", None)
     if editor is not None and getattr(editor, "active", False) and getattr(editor, "_find_everything_open", False):
         search = getattr(editor, "search", None)
