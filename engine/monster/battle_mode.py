@@ -19,7 +19,6 @@ from engine.ui_overlays.common import UIElement, _draw_tb_rectangle_filled, _dra
 
 from .battle_controller import BattleLogEntry, BattleResult, MonsterBattleController, OpponentActionProvider
 from .battle_model import MonsterInstance, Move, RandomLike, Species, TypeChart, resolve_move
-from .battle_sprite_view import BattleSpriteDisplay
 from .battle_sound_cues import (
     BATTLE_ACTION,
     BATTLE_COMPANION_PRAISE,
@@ -34,6 +33,7 @@ from .battle_sound_cues import (
     faint_step_audio_cues,
     move_resolution_audio_cues,
 )
+from .battle_sprite_view import BattleSpriteDisplay
 from .battle_terms import DEFAULT_BATTLE_TERMS, BattleTerms
 from .capture import CaptureResult, resolve_capture
 from .collection import (
