@@ -7,6 +7,8 @@ import pytest
 
 import engine.optional_arcade as optional_arcade
 from engine.input import InputManager
+from engine.input_runtime import capture_runtime
+from engine.ui_controller import UIController
 from engine.ui_overlays.pause_menu import PauseMenu
 from engine.ui_overlays.widgets import Button, ScrollList, Slider, Toggle
 from tests._typing import as_any
@@ -79,6 +81,29 @@ def _click(menu: PauseMenu, action_id: str) -> bool:
     layout = menu.layout_current_state()
     target = next(target for target in layout.hit_targets if target.action_id == action_id)
     return menu.on_mouse_press(target.rect.center_x, target.rect.center_y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0)
+
+
+def _selected_setting_actions(menu: PauseMenu) -> set[str]:
+    layout = menu.layout_current_state()
+    selected: set[str] = set()
+    for instruction in layout.instructions:
+        payload = instruction.payload
+        if isinstance(payload, dict) and payload.get("selected") is True:
+            action_id = payload.get("action_id")
+            if isinstance(action_id, str) and action_id.startswith("pause.settings."):
+                selected.add(action_id)
+    return selected
+
+
+def _scroll_to_action(menu: PauseMenu, action_id: str, *, max_steps: int = 80) -> None:
+    for _ in range(max_steps):
+        layout = menu.layout_current_state()
+        if action_id in layout.action_ids:
+            return
+        viewport = layout.list_viewport
+        assert viewport is not None
+        assert menu.on_mouse_scroll(viewport.center_x, viewport.center_y, 0.0, -1.0) is True
+    raise AssertionError(f"{action_id} never became visible")
 
 
 def test_main_action_ids_are_stable_unique_and_non_destructive_click_matches_enter(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -257,6 +282,156 @@ def test_load_no_saves_has_back_and_leaving_clears_stale_targets() -> None:
     assert menu.state == "main"
 
 
+def test_settings_selection_styling_follows_keyboard_and_gamepad_navigation() -> None:
+    window = _window()
+    menu = PauseMenu(as_any(window))
+    menu.visible = True
+    menu.state = "settings"
+
+    assert _selected_setting_actions(menu) == {"pause.settings.music_volume"}
+
+    assert menu.on_key_press(optional_arcade.arcade.key.DOWN, 0) is True
+    assert _selected_setting_actions(menu) == {"pause.settings.sfx_volume"}
+
+    assert menu.on_key_press(optional_arcade.arcade.key.DOWN, 0) is True
+    assert _selected_setting_actions(menu) == {"pause.settings.fog_enabled"}
+
+    assert menu.on_key_press(optional_arcade.arcade.key.DOWN, 0) is True
+    assert _selected_setting_actions(menu) == {"pause.settings.soft_shadows_enabled"}
+
+    menu._settings_index = 4
+    menu._invalidate_layout()
+    assert _selected_setting_actions(menu) == {"pause.settings.back"}
+
+    manager = InputManager()
+    window.input = manager
+    manager.set_gamepad_state(
+        actions_down={"move_up"},
+        axis_values={("move_left", "move_right"): 0.0, ("move_down", "move_up"): 0.0},
+        supported_actions={"move_down", "move_up", "move_left", "move_right"},
+        source_active=True,
+    )
+    manager.update(0.016)
+    menu.update(0.016)
+    assert _selected_setting_actions(menu) == {"pause.settings.soft_shadows_enabled"}
+
+
+def test_save_mouse_wheel_reaches_new_save_and_back(monkeypatch: pytest.MonkeyPatch) -> None:
+    slots = [f"slot_{i:02d}" for i in range(30)]
+    window = _window(slots=slots)
+    menu = PauseMenu(as_any(window))
+    menu.visible = True
+    menu.state = "save"
+    menu.save_slots = window.save_manager.list_saves()
+
+    initial = menu.layout_current_state()
+    assert "pause.save.new" not in initial.action_ids
+    assert initial.list_viewport is not None
+
+    _scroll_to_action(menu, "pause.save.new")
+    assert "pause.save.new" in menu.layout_current_state().action_ids
+    monkeypatch.setattr(menu, "_new_save_slot_name", lambda: "save_mouse_wheel")
+    assert _click(menu, "pause.save.new") is True
+    assert window.save_manager.saved == ["save_mouse_wheel"]
+
+    menu.state = "save"
+    menu.save_slots = window.save_manager.list_saves()
+    menu.selected_save_index = 0
+    menu._invalidate_layout()
+    _scroll_to_action(menu, "pause.save.back")
+    assert _click(menu, "pause.save.back") is True
+    assert menu.state == "main"
+
+
+def test_load_mouse_wheel_reaches_later_slot_and_back() -> None:
+    slots = [f"slot_{i:02d}" for i in range(30)]
+    window = _window(slots=slots)
+    menu = PauseMenu(as_any(window))
+    menu.visible = True
+    menu.state = "load"
+    menu.save_slots = window.save_manager.list_saves()
+
+    assert "pause.load.slot.20" not in menu.layout_current_state().action_ids
+    _scroll_to_action(menu, "pause.load.slot.20")
+    assert _click(menu, "pause.load.slot.20") is True
+    assert window.save_manager.loaded == ["slot_20"]
+
+    menu.visible = True
+    menu.state = "load"
+    menu.save_slots = window.save_manager.list_saves()
+    menu.selected_save_index = 0
+    menu._invalidate_layout()
+    _scroll_to_action(menu, "pause.load.back")
+    assert _click(menu, "pause.load.back") is True
+    assert menu.state == "main"
+
+
+def test_pause_menu_scroll_is_modal_clamped_and_resize_discards_stale_targets() -> None:
+    window = _window(slots=[f"slot_{i:02d}" for i in range(30)])
+    menu = PauseMenu(as_any(window))
+    menu.visible = True
+    menu.state = "save"
+    menu.save_slots = window.save_manager.list_saves()
+    layout = menu.layout_current_state()
+    viewport = layout.list_viewport
+    assert viewport is not None
+    old_first_target = layout.hit_targets[0]
+
+    assert menu.on_mouse_scroll(viewport.center_x, viewport.center_y, 0.0, -1000.0) is True
+    max_offset = menu._save_scroll.scroll_offset
+    assert max_offset > 0.0
+    assert menu.on_mouse_scroll(viewport.center_x, viewport.center_y, 0.0, -1000.0) is True
+    assert menu._save_scroll.scroll_offset == max_offset
+    assert menu.on_mouse_scroll(viewport.center_x, viewport.center_y, 0.0, 1000.0) is True
+    assert menu._save_scroll.scroll_offset == 0.0
+
+    selected_before = menu.selected_save_index
+    state_before = menu.state
+    assert menu.on_mouse_scroll(5.0, 5.0, 0.0, -3.0) is True
+    assert menu.selected_save_index == selected_before
+    assert menu.state == state_before
+
+    window.width = 1200
+    window.height = 900
+    menu.on_resize(window.width, window.height)
+    new_first_target = menu.layout_current_state().hit_targets[0]
+    assert (old_first_target.rect.center_x, old_first_target.rect.center_y) != (
+        new_first_target.rect.center_x,
+        new_first_target.rect.center_y,
+    )
+    assert menu.on_mouse_press(old_first_target.rect.center_x, old_first_target.rect.center_y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+    assert window.save_manager.saved != ["slot_00"]
+
+
+def test_capture_scroll_route_offers_pause_menu_before_behind_handlers() -> None:
+    window = _window(slots=[f"slot_{i:02d}" for i in range(30)])
+    ui = UIController(as_any(window))
+    menu = PauseMenu(as_any(window))
+    menu.visible = True
+    menu.state = "save"
+    menu.save_slots = window.save_manager.list_saves()
+    ui.register_ui_element(menu)
+    behind_events: list[str] = []
+    window.ui_controller = ui
+    window.editor_controller = SimpleNamespace(
+        active=True,
+        asset_browser=SimpleNamespace(
+            handle_asset_browser_mouse_scroll=lambda *_args: behind_events.append("behind") or True
+        ),
+    )
+    controller = SimpleNamespace(window=window)
+    viewport = menu.layout_current_state().list_viewport
+    assert viewport is not None
+
+    assert capture_runtime.handle_mouse_scroll(as_any(controller), viewport.center_x, viewport.center_y, 0.0, -1.0) is True
+    assert menu._save_scroll.scroll_offset == 1.0
+    assert behind_events == []
+
+    menu.visible = False
+    assert capture_runtime.handle_mouse_scroll(as_any(controller), viewport.center_x, viewport.center_y, 0.0, -1.0) is True
+    assert behind_events == ["behind"]
+
+
 def test_settings_widgets_click_keyboard_and_gamepad_apply_and_persist() -> None:
     window = _window()
     saves: list[bool] = []
@@ -281,6 +456,10 @@ def test_settings_widgets_click_keyboard_and_gamepad_apply_and_persist() -> None
 
     music_target = next(target for target in layout.hit_targets if target.action_id == "pause.settings.music_volume")
     assert menu.on_mouse_press(music_target.rect.right - 1.0, music_target.rect.center_y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
+    music_widget = widgets["pause.settings.music_volume"]
+    assert isinstance(music_widget, Slider)
+    assert music_widget.dragging is False
+    assert music_widget.on_mouse_drag(music_target.rect.left, music_target.rect.center_y) is False
     assert window.runtime_settings.music_volume > 0.95
     assert window.audio.music_calls[-1] > 0.95
     assert saves

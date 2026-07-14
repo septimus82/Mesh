@@ -44,6 +44,7 @@ class PauseMenuLayout:
     window_size: tuple[int, int]
     instructions: list[DrawInstruction] = field(default_factory=list)
     hit_targets: list[PauseHitTarget] = field(default_factory=list)
+    list_viewport: Rect | None = None
 
     def target_at(self, x: float, y: float) -> PauseHitTarget | None:
         for target in self.hit_targets:
@@ -215,7 +216,6 @@ class PauseMenu(UIElement):
         self.selected_save_index = self._clamp_index(self.selected_save_index, len(items))
         self._save_scroll.items = items
         self._save_scroll.selected_index = self.selected_save_index
-        self._save_scroll.ensure_visible(self.selected_save_index)
         list_layout = self._save_scroll.layout(list_bounds)
         instructions = [
             DrawInstruction("panel_bg", {"rect": panel_bounds, "style_token": "pause_panel"}),
@@ -234,6 +234,7 @@ class PauseMenu(UIElement):
             window_size=self._window_size(),
             instructions=instructions,
             hit_targets=hit_targets,
+            list_viewport=list_bounds,
         )
 
     def _layout_load(self) -> PauseMenuLayout:
@@ -250,7 +251,6 @@ class PauseMenu(UIElement):
         self.selected_save_index = self._clamp_index(self.selected_save_index, len(items))
         self._load_scroll.items = items
         self._load_scroll.selected_index = self.selected_save_index
-        self._load_scroll.ensure_visible(self.selected_save_index)
         list_layout = self._load_scroll.layout(list_bounds)
         instructions = [
             DrawInstruction("panel_bg", {"rect": panel_bounds, "style_token": "pause_panel"}),
@@ -271,6 +271,7 @@ class PauseMenu(UIElement):
             window_size=self._window_size(),
             instructions=instructions,
             hit_targets=hit_targets,
+            list_viewport=list_bounds,
         )
 
     def _layout_settings(self) -> PauseMenuLayout:
@@ -288,20 +289,58 @@ class PauseMenu(UIElement):
             rows.append(widget)
         stack = VStack(children=rows, spacing=10.0, align="stretch")
         result = Panel(children=[stack], padding=Padding.uniform(18.0), bg_style_token="pause_panel").layout(panel_bounds)
+        instructions = list(result.instructions)
         for index, (key, _label, _kind) in enumerate(self._SETTINGS_ROWS):
             widget = self._settings_widgets[key]
             rect = getattr(widget, "last_rect", None)
             if isinstance(rect, Rect):
-                hit_targets.append(PauseHitTarget(self._settings_action_id(key), rect, index, widget))
+                action_id = self._settings_action_id(key)
+                self._decorate_settings_row(instructions, action_id=action_id, rect=rect, selected=index == self._settings_index)
+                hit_targets.append(PauseHitTarget(action_id, rect, index, widget))
         return PauseMenuLayout(
             state="settings",
             selected_index=self.selected_index,
             selected_save_index=self.selected_save_index,
             settings_index=self._settings_index,
             window_size=self._window_size(),
-            instructions=result.instructions,
+            instructions=instructions,
             hit_targets=hit_targets,
         )
+
+    def _decorate_settings_row(
+        self,
+        instructions: list[DrawInstruction],
+        *,
+        action_id: str,
+        rect: Rect,
+        selected: bool,
+    ) -> None:
+        if selected:
+            instructions.insert(
+                1,
+                DrawInstruction(
+                    "button_bg",
+                    {
+                        "rect": rect,
+                        "style_token": "selected",
+                        "selected": True,
+                        "action_id": action_id,
+                    },
+                ),
+            )
+        for instruction in instructions:
+            payload = instruction.payload if isinstance(instruction.payload, dict) else {}
+            if instruction.kind == "button_bg" and payload.get("action_id") == action_id:
+                payload["selected"] = bool(selected)
+                continue
+            instruction_rect = payload.get("rect")
+            if instruction_rect == rect or (
+                isinstance(instruction_rect, Rect)
+                and rect.left <= instruction_rect.center_x <= rect.right
+                and rect.bottom <= instruction_rect.center_y <= rect.top
+            ):
+                payload["selected"] = bool(selected)
+                payload["action_id"] = action_id
 
     def _sync_settings_widgets(self, settings: Any) -> None:
         music = self._settings_widgets["music_volume"]
@@ -549,10 +588,12 @@ class PauseMenu(UIElement):
             self.state = "save"
             self.save_slots = list(self.window.save_manager.list_saves())
             self.selected_save_index = 0
+            self._save_scroll.scroll_offset = 0.0
         elif action_id == "pause.main.load":
             self.state = "load"
             self.save_slots = list(self.window.save_manager.list_saves())
             self.selected_save_index = 0
+            self._load_scroll.scroll_offset = 0.0
         elif action_id == "pause.main.quit":
             optional_arcade.arcade.close_window()
         elif action_id.startswith("pause.save.slot."):
@@ -684,9 +725,24 @@ class PauseMenu(UIElement):
             widget = target.widget
             if isinstance(widget, Slider):
                 if widget.on_mouse_press(float(x), float(y)):
+                    widget.on_mouse_release(float(x), float(y))
                     return self._activate_action(target.action_id, value=widget.value)
                 return True
             if isinstance(widget, Toggle):
                 return self._activate_action(target.action_id)
             return self._activate_action(target.action_id)
+        return True
+
+    def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool:  # noqa: ARG002
+        if not self.visible:
+            return False
+        layout = self.layout_current_state()
+        if self.state not in {"save", "load"}:
+            return True
+        viewport = layout.list_viewport
+        if viewport is None or not viewport.contains(float(x), float(y)):
+            return True
+        scroll = self._save_scroll if self.state == "save" else self._load_scroll
+        if scroll.on_mouse_wheel(float(scroll_y)):
+            self._invalidate_layout()
         return True
