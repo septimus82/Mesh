@@ -22,19 +22,17 @@ from .battle_model import MonsterInstance, Move, RandomLike, Species, TypeChart,
 from .battle_sprite_view import BattleSpriteDisplay
 from .battle_sound_cues import (
     BATTLE_ACTION,
-    BATTLE_CAPTURE_FAIL,
-    BATTLE_CAPTURE_SUCCESS,
-    BATTLE_CAPTURE_THROW,
     BATTLE_COMPANION_PRAISE,
     BATTLE_COMPANION_SCOLD,
     BATTLE_COMPANION_WAIT,
     BATTLE_DEFEAT,
-    BATTLE_FAINT,
     BATTLE_HIT,
     BATTLE_START,
     BATTLE_SWITCH,
-    faint_presentation_audio_cue,
-    move_resolution_audio_cue,
+    BATTLE_VICTORY,
+    capture_attempt_audio_cues,
+    faint_step_audio_cues,
+    move_resolution_audio_cues,
 )
 from .battle_terms import DEFAULT_BATTLE_TERMS, BattleTerms
 from .capture import CaptureResult, resolve_capture
@@ -88,7 +86,7 @@ class BattlePresentationStep:
     opponent_hp: int
     player_clip: str | None = None
     opponent_clip: str | None = None
-    audio_cue: str | None = None
+    audio_cues: tuple[str, ...] = ()
 
 
 def _battle_combatant_layout(left: float, right: float, top: float) -> dict[str, tuple[float, float]]:
@@ -445,8 +443,8 @@ class MonsterBattleOverlay(UIElement):
             self.displayed_player_hp = step.player_hp
             self.displayed_opponent_hp = step.opponent_hp
             self._apply_presentation_clips(step)
-            if step.audio_cue is not None:
-                logger.debug("Battle presentation audio cue: %s", step.audio_cue)
+            if step.audio_cues:
+                logger.debug("Battle presentation audio cues: %s", ", ".join(step.audio_cues))
             return
         self._finish_presentation()
 
@@ -773,13 +771,14 @@ class MonsterBattleMode:
                 companion_clip = _attack_clip_for_move(self.controller.moves, move_id)
             elif behavior == DEFEND:
                 companion_clip = "defend"
+            companion_cues: tuple[str, ...] = () if behavior == ATTACK else (BATTLE_ACTION,)
             steps = [
                 BattlePresentationStep(
                     _companion_autonomous_line(behavior, name, self.terms),
                     before_player_hp,
                     before_opponent_hp,
                     player_clip=companion_clip,
-                    audio_cue=BATTLE_ACTION,
+                    audio_cues=companion_cues,
                 ),
             ]
             steps.extend(self._build_presentation_steps(before_len, before_player_hp, before_opponent_hp))
@@ -834,13 +833,13 @@ class MonsterBattleMode:
                         0,
                         before_opponent_hp,
                         player_clip="faint",
-                        audio_cue=BATTLE_FAINT,
+                        audio_cues=faint_step_audio_cues(),
                     ),
                     BattlePresentationStep(
                         self.terms.format_player_send_out(name=next_name),
                         before_player_hp,
                         before_opponent_hp,
-                        audio_cue=BATTLE_SWITCH,
+                        audio_cues=(BATTLE_SWITCH,),
                     ),
                 ],
                 result=result,
@@ -996,7 +995,7 @@ class MonsterBattleMode:
                             player_hp,
                             opponent_hp,
                             opponent_clip="capture",
-                            audio_cue=BATTLE_CAPTURE_SUCCESS,
+                            audio_cues=capture_attempt_audio_cues(caught=True),
                         ),
                         BattlePresentationStep(storage_line, player_hp, opponent_hp),
                     ],
@@ -1174,7 +1173,7 @@ class MonsterBattleMode:
                     self.terms.defeat_no_fighters,
                     int(player_hp),
                     int(opponent_hp),
-                    audio_cue=BATTLE_DEFEAT,
+                    audio_cues=(BATTLE_DEFEAT,),
                 ),
             )
 
@@ -1219,7 +1218,7 @@ class MonsterBattleMode:
                         line,
                         player_hp,
                         opponent_hp,
-                        audio_cue=BATTLE_SWITCH,
+                        audio_cues=(BATTLE_SWITCH,),
                     ),
                 )
                 continue
@@ -1241,7 +1240,7 @@ class MonsterBattleMode:
                                 player_hp,
                                 opponent_hp,
                                 player_clip=hurt_clip,
-                                audio_cue=BATTLE_HIT,
+                                audio_cues=(BATTLE_HIT,),
                             ),
                         )
                     else:
@@ -1251,7 +1250,7 @@ class MonsterBattleMode:
                                 player_hp,
                                 opponent_hp,
                                 opponent_clip=hurt_clip,
-                                audio_cue=BATTLE_HIT,
+                                audio_cues=(BATTLE_HIT,),
                             ),
                         )
                     if entry.target_fainted:
@@ -1264,10 +1263,7 @@ class MonsterBattleMode:
                                 opponent_hp,
                                 player_clip=faint_player_clip,
                                 opponent_clip=faint_opponent_clip,
-                                audio_cue=faint_presentation_audio_cue(
-                                    player_clip=faint_player_clip,
-                                    opponent_clip=faint_opponent_clip,
-                                ),
+                                audio_cues=faint_step_audio_cues(),
                             ),
                         )
                     continue
@@ -1301,17 +1297,13 @@ class MonsterBattleMode:
                             opponent_hp,
                             player_clip=faint_player_clip,
                             opponent_clip=faint_opponent_clip,
-                            audio_cue=faint_presentation_audio_cue(
-                                player_clip=faint_player_clip,
-                                opponent_clip=faint_opponent_clip,
-                            ),
+                            audio_cues=faint_step_audio_cues(),
                         ),
                     )
                 continue
             player_clip: str | None = None
             opponent_clip: str | None = None
             attack_clip = _attack_clip_for_move(self.controller.moves, entry.move_id)
-            move = self.controller.moves.get(entry.move_id)
             if entry.side == "player":
                 actor = _display_name(self.controller.player)
                 target = _display_name(self.controller.opponent)
@@ -1346,11 +1338,6 @@ class MonsterBattleMode:
                 line = terms.format_move_hit(actor=actor, move=entry.move_id, target=target, damage=int(entry.damage))
             else:
                 line = terms.format_move_miss(actor=actor, move=entry.move_id)
-            defender_types = (
-                self.controller.opponent.species.types
-                if entry.side == "player"
-                else self.controller.player.species.types
-            )
             steps.append(
                 BattlePresentationStep(
                     line,
@@ -1358,11 +1345,9 @@ class MonsterBattleMode:
                     opponent_hp,
                     player_clip=player_clip,
                     opponent_clip=opponent_clip,
-                    audio_cue=move_resolution_audio_cue(
+                    audio_cues=move_resolution_audio_cues(
                         hit=entry.hit,
-                        move=move,
-                        defender_types=defender_types,
-                        type_chart=self.controller.type_chart,
+                        type_multiplier=float(entry.type_multiplier),
                     ),
                 ),
             )
@@ -1376,10 +1361,7 @@ class MonsterBattleMode:
                         opponent_hp,
                         player_clip=faint_player_clip,
                         opponent_clip=faint_opponent_clip,
-                        audio_cue=faint_presentation_audio_cue(
-                            player_clip=faint_player_clip,
-                            opponent_clip=faint_opponent_clip,
-                        ),
+                        audio_cues=faint_step_audio_cues(),
                     ),
                 )
         return steps
@@ -1400,6 +1382,7 @@ class MonsterBattleMode:
                 terms.format_xp_gain(name=_display_name(progression.instance), xp=progression.xp_gained),
                 hp,
                 opponent_hp,
+                audio_cues=(BATTLE_VICTORY,),
             ),
         ]
         for level in range(progression.previous_level + 1, progression.instance.level + 1):
@@ -1464,7 +1447,7 @@ class MonsterBattleMode:
                         before_player_hp,
                         before_opponent_hp,
                         opponent_clip="capture",
-                        audio_cue=BATTLE_CAPTURE_FAIL,
+                        audio_cues=capture_attempt_audio_cues(caught=False),
                     )
                 ],
                 result=None,
@@ -1487,6 +1470,7 @@ class MonsterBattleMode:
                 damage=resolution.damage,
                 hit=resolution.hit,
                 target_fainted=resolution.fainted,
+                type_multiplier=float(resolution.type_multiplier),
             ),
         )
         self.controller.phase = "apply_faints"
@@ -1501,7 +1485,7 @@ class MonsterBattleMode:
                 before_player_hp,
                 before_opponent_hp,
                 opponent_clip="capture",
-                audio_cue=BATTLE_CAPTURE_THROW,
+                audio_cues=capture_attempt_audio_cues(caught=False),
             ),
         ]
         steps.extend(self._build_presentation_steps(len(self.controller.turn_log) - 1, before_player_hp, before_opponent_hp))
@@ -1689,7 +1673,7 @@ def _build_companion_reinforcement_steps(
                 player_hp,
                 opponent_hp,
                 player_clip="cheer",
-                audio_cue=BATTLE_COMPANION_PRAISE,
+                audio_cues=(BATTLE_COMPANION_PRAISE,),
             ),
             BattlePresentationStep(terms.praise_2, player_hp, opponent_hp),
         ]
@@ -1700,12 +1684,12 @@ def _build_companion_reinforcement_steps(
                 player_hp,
                 opponent_hp,
                 player_clip="cower",
-                audio_cue=BATTLE_COMPANION_SCOLD,
+                audio_cues=(BATTLE_COMPANION_SCOLD,),
             ),
             BattlePresentationStep(terms.scold_2, player_hp, opponent_hp),
         ]
     return [
-        BattlePresentationStep(terms.wait_1, player_hp, opponent_hp, audio_cue=BATTLE_COMPANION_WAIT),
+        BattlePresentationStep(terms.wait_1, player_hp, opponent_hp, audio_cues=(BATTLE_COMPANION_WAIT,)),
         BattlePresentationStep(terms.wait_2, player_hp, opponent_hp),
     ]
 

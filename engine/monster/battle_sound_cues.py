@@ -5,9 +5,7 @@ Pure module: no asset paths, audio playback, or GameWindow dependencies.
 
 from __future__ import annotations
 
-from typing import Final, Sequence
-
-from .battle_model import Move, TypeChart, type_multiplier
+from typing import Final
 
 BATTLE_START: Final = "battle.start"
 BATTLE_ACTION: Final = "battle.action"
@@ -25,25 +23,25 @@ BATTLE_COMPANION_PRAISE: Final = "battle.companion_praise"
 BATTLE_COMPANION_SCOLD: Final = "battle.companion_scold"
 BATTLE_COMPANION_WAIT: Final = "battle.companion_wait"
 
-KNOWN_BATTLE_SOUND_CUES: frozenset[str] = frozenset(
-    {
-        BATTLE_START,
-        BATTLE_ACTION,
-        BATTLE_HIT,
-        BATTLE_RESISTED,
-        BATTLE_SUPER_EFFECTIVE,
-        BATTLE_SWITCH,
-        BATTLE_CAPTURE_THROW,
-        BATTLE_CAPTURE_FAIL,
-        BATTLE_CAPTURE_SUCCESS,
-        BATTLE_FAINT,
-        BATTLE_VICTORY,
-        BATTLE_DEFEAT,
-        BATTLE_COMPANION_PRAISE,
-        BATTLE_COMPANION_SCOLD,
-        BATTLE_COMPANION_WAIT,
-    }
+APPROVED_BATTLE_SOUND_CUES: tuple[str, ...] = (
+    BATTLE_START,
+    BATTLE_ACTION,
+    BATTLE_HIT,
+    BATTLE_RESISTED,
+    BATTLE_SUPER_EFFECTIVE,
+    BATTLE_SWITCH,
+    BATTLE_CAPTURE_THROW,
+    BATTLE_CAPTURE_FAIL,
+    BATTLE_CAPTURE_SUCCESS,
+    BATTLE_FAINT,
+    BATTLE_VICTORY,
+    BATTLE_DEFEAT,
+    BATTLE_COMPANION_PRAISE,
+    BATTLE_COMPANION_SCOLD,
+    BATTLE_COMPANION_WAIT,
 )
+
+KNOWN_BATTLE_SOUND_CUES: frozenset[str] = frozenset(APPROVED_BATTLE_SOUND_CUES)
 
 
 def effectiveness_audio_cue(multiplier: float) -> str | None:
@@ -54,30 +52,21 @@ def effectiveness_audio_cue(multiplier: float) -> str | None:
     return None
 
 
-def move_resolution_audio_cue(
-    *,
-    hit: bool,
-    move: Move | None,
-    defender_types: Sequence[str],
-    type_chart: TypeChart | None,
-) -> str:
+def move_resolution_audio_cues(*, hit: bool, type_multiplier: float) -> tuple[str, ...]:
     if not hit:
-        return BATTLE_ACTION
-    if move is not None:
-        multiplier = type_multiplier(move.type, defender_types, type_chart)
-        effectiveness = effectiveness_audio_cue(multiplier)
-        if effectiveness is not None:
-            return effectiveness
-    return BATTLE_HIT
+        return (BATTLE_ACTION,)
+    cues: list[str] = [BATTLE_ACTION, BATTLE_HIT]
+    effectiveness = effectiveness_audio_cue(type_multiplier)
+    if effectiveness is not None:
+        cues.append(effectiveness)
+    return tuple(cues)
 
 
-def faint_presentation_audio_cue(
-    *,
-    player_clip: str | None,
-    opponent_clip: str | None,
-) -> str | None:
-    if player_clip == "victory":
-        return BATTLE_VICTORY
-    if player_clip == "faint" or opponent_clip == "faint":
-        return BATTLE_FAINT
-    return None
+def faint_step_audio_cues() -> tuple[str, ...]:
+    return (BATTLE_FAINT,)
+
+
+def capture_attempt_audio_cues(*, caught: bool) -> tuple[str, ...]:
+    if caught:
+        return (BATTLE_CAPTURE_THROW, BATTLE_CAPTURE_SUCCESS)
+    return (BATTLE_CAPTURE_THROW, BATTLE_CAPTURE_FAIL)
