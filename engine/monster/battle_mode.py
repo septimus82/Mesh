@@ -17,6 +17,7 @@ from engine.text_draw import TextCache, draw_text_cached
 from engine.ui.menu_toolkit import MenuStackOverlay, SelectableItem, SelectableListScreen
 from engine.ui_overlays.common import UIElement, _draw_tb_rectangle_filled, _draw_tb_rectangle_outline
 
+from .battle_audio import BattleAudioPlayback
 from .battle_controller import BattleLogEntry, BattleResult, MonsterBattleController, OpponentActionProvider
 from .battle_model import MonsterInstance, Move, RandomLike, Species, TypeChart, resolve_move
 from .battle_sound_cues import (
@@ -141,6 +142,7 @@ class MonsterBattleOverlay(UIElement):
     def update(self, dt: float) -> None:
         if not self.visible:
             return
+        self.mode.update_battle_audio(dt)
         self._sync_battle_sprites_if_needed()
         self._player_sprite.update(dt)
         self._opponent_sprite.update(dt)
@@ -443,6 +445,7 @@ class MonsterBattleOverlay(UIElement):
             self.displayed_player_hp = step.player_hp
             self.displayed_opponent_hp = step.opponent_hp
             self._apply_presentation_clips(step)
+            self.mode.dispatch_presentation_audio(step.audio_cues)
             if step.audio_cues:
                 logger.debug("Battle presentation audio cues: %s", ", ".join(step.audio_cues))
             return
@@ -567,6 +570,27 @@ class MonsterBattleMode:
         self._capture_from_companion_reinforcement = False
         self._presenting_companion_capture_fail = False
         self.terms: BattleTerms = DEFAULT_BATTLE_TERMS
+        self._battle_audio: BattleAudioPlayback | None = None
+
+    def dispatch_presentation_audio(self, cues: tuple[str, ...]) -> None:
+        if self._battle_audio is not None:
+            self._battle_audio.dispatch_step_cues(cues)
+
+    def update_battle_audio(self, dt: float) -> None:
+        if self._battle_audio is not None:
+            self._battle_audio.update(dt)
+
+    def _begin_battle_audio(self) -> None:
+        self._battle_audio = BattleAudioPlayback()
+        self._battle_audio.attach(getattr(self.window, "audio", None))
+        self._battle_audio.begin_battle()
+        if self.overlay is not None:
+            self._battle_audio.consume_intro(self.overlay.intro_audio_cue)
+
+    def _close_battle_audio(self) -> None:
+        if self._battle_audio is not None:
+            self._battle_audio.end_battle()
+            self._battle_audio = None
 
     def _opponent_is_wild(self) -> bool:
         """True when the active opponent can be caught (wild encounter, not trainer)."""
@@ -658,6 +682,7 @@ class MonsterBattleMode:
         self.overlay = MonsterBattleOverlay(self.window, self)
         self.overlay.show()
         self.overlay.set_intro_log()
+        self._begin_battle_audio()
         self._register_overlay(self.overlay)
         self.active = True
         self.window.paused = True
@@ -1036,6 +1061,8 @@ class MonsterBattleMode:
         final_result = result or self.controller.result
         if final_result is None:
             raise RuntimeError("cannot end monster battle without a result")
+
+        self._close_battle_audio()
 
         final_outcome = str(getattr(final_result, "outcome", "") or "")
         companion_end_mind = self.companion_mind
