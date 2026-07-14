@@ -146,6 +146,15 @@ def _normalize_path_key(path: str) -> str:
     return str(path or "").replace("\\", "/").strip().lower()
 
 
+@dataclass(frozen=True, slots=True)
+class MusicPlaybackSnapshot:
+    """Logical music track state for snapshot/restore across temporary overrides."""
+
+    path: str | None
+    volume: float
+    loop: bool
+
+
 class AudioManager:
     """Thin audio facade that caches short sounds and manages music playback."""
 
@@ -158,6 +167,8 @@ class AudioManager:
         self.sfx_volume: float = 1.0
         self.music_volume: float = 1.0
         self._music_base_volume: float = 1.0
+        self._music_path: str | None = None
+        self._music_loop: bool = True
         self._music_transition: _MusicTransition | None = None
         self._music_transition_scale: float = 1.0
 
@@ -470,6 +481,47 @@ class AudioManager:
         self._music_transition_scale = 1.0
         self._play_music_internal(path, volume=volume, loop=loop, start_volume_scale=1.0)
 
+    def snapshot_music(self) -> MusicPlaybackSnapshot:
+        transition = self._music_transition
+        if transition is not None:
+            if transition.phase == "out":
+                if transition.target_path:
+                    return MusicPlaybackSnapshot(
+                        path=str(transition.target_path),
+                        volume=float(transition.target_volume),
+                        loop=bool(transition.loop),
+                    )
+                return MusicPlaybackSnapshot(path=None, volume=0.0, loop=False)
+        return MusicPlaybackSnapshot(
+            path=self._music_path,
+            volume=float(self._music_base_volume),
+            loop=bool(self._music_loop),
+        )
+
+    def restore_music(
+        self,
+        snapshot: MusicPlaybackSnapshot,
+        *,
+        fade_out_s: float = 0.25,
+        fade_in_s: float = 0.25,
+    ) -> None:
+        if snapshot.path:
+            self.transition_music(
+                snapshot.path,
+                fade_out_s=fade_out_s,
+                fade_in_s=fade_in_s,
+                volume=snapshot.volume,
+                loop=snapshot.loop,
+            )
+            return
+        self.transition_music(
+            "",
+            fade_out_s=fade_out_s,
+            fade_in_s=fade_in_s,
+            volume=0.0,
+            loop=False,
+        )
+
     def transition_music(
         self,
         path: str,
@@ -574,6 +626,8 @@ class AudioManager:
         self._music_player = None
         self._music = None
         self._music_base_volume = 1.0
+        self._music_path = None
+        self._music_loop = True
         if clear_transition:
             self._music_transition = None
             self._music_transition_scale = 1.0
@@ -589,6 +643,8 @@ class AudioManager:
 
         self._music = music
         self._music_base_volume = max(0.0, min(float(volume), 1.0))
+        self._music_loop = bool(loop)
+        self._music_path = str(path)
         self._music_transition_scale = max(0.0, min(float(start_volume_scale), 1.0))
         try:
             final_volume = (
@@ -604,6 +660,8 @@ class AudioManager:
             logger.error("Failed to play music '%s': %s", path, exc)
             self._music = None
             self._music_player = None
+            self._music_path = None
+            self._music_loop = True
 
 
 @dataclass
