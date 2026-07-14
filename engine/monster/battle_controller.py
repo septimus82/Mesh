@@ -41,6 +41,7 @@ class BattleLogEntry:
     status_damage: int = 0
     switch_kind: str = ""
     party_index: int = -1
+    type_multiplier: float = 1.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -352,6 +353,7 @@ class MonsterBattleController:
                 hit=resolution.hit,
                 target_fainted=resolution.fainted,
                 party_index=fainted_index,
+                type_multiplier=float(resolution.type_multiplier),
             ),
         )
 
