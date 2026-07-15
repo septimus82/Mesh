@@ -40,7 +40,11 @@ def launch_editor(
     reset_path_caches()
 
     config = load_config(str(config_path))
+    if scene_path:
+        config.start_scene = str(scene_path)
+        setattr(config, "_mesh_editor_scene_override", str(scene_path))
     pin_config(config)
+    setattr(config, "_mesh_launch_mode", "editor")
 
     if is_standalone_project_root(root):
         pin_launched_project_root(root, config=config)
@@ -64,6 +68,8 @@ def launch_editor(
 
     try:
         scene_data: dict[str, Any] = window.load_scene(initial_scene)
+        window.scene_controller._pending_scene_path = None
+        window.scene_controller._pending_scene_change = None
     except Exception as exc:  # noqa: BLE001  # REASON: editor launch should report scene load failures before opening the window loop
         print(f"[Mesh][CLI] Failed to load scene '{initial_scene}': {exc}")
         os.chdir(previous_cwd)
