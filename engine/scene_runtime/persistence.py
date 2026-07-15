@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING, Any, Dict
 
 from engine.swallowed_exceptions import _log_swallow
@@ -12,8 +13,14 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
     """Build a JSON-serializable snapshot of the current scene state."""
     from ..scene_serializer import compact_scene_payload
 
-    # Start with the original loaded data to preserve metadata (tilemaps, etc)
-    snapshot = dict(controller._loaded_scene_data)
+    authored_payload = getattr(controller, "_loaded_scene_source_data", None)
+    if not isinstance(authored_payload, dict):
+        authored_payload = getattr(controller, "_loaded_scene_data", {})
+
+    # Start from the authored scene, not the runtime scene. Runtime scene data can
+    # contain resolved encounter placeholders, injected lighting state, and other
+    # transient values that are not valid authored scene JSON.
+    snapshot = copy.deepcopy(authored_payload) if isinstance(authored_payload, dict) else {}
 
     # Update settings
     if "settings" not in snapshot:
@@ -40,9 +47,6 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
     else:
         snapshot["state"] = controller.window.game_state.snapshot()
 
-    # Rebuild entities list from current sprites
-    entities = []
-
     def _coerce_scene_float(value: Any, default: float = 0.0) -> float:
         try:
             return float(value)
@@ -50,14 +54,31 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
             _log_swallow("scene_snapshot_float", "Error coercing scene float")
             return float(default)
 
+    authored_entities = snapshot.get("entities")
+    entities: list[dict[str, Any]] = []
+    authored_entity_by_key: dict[tuple[str, str], int] = {}
+    if isinstance(authored_entities, list):
+        for entity in authored_entities:
+            if not isinstance(entity, dict):
+                continue
+            entity_index = len(entities)
+            entities.append(copy.deepcopy(entity))
+            for key_name in ("id", "name", "mesh_name", "prefab_id"):
+                value = entity.get(key_name)
+                if isinstance(value, str) and value.strip():
+                    authored_entity_by_key[(key_name, value.strip())] = entity_index
+
+    updated_entity_indexes: set[int] = set()
+
     for sprite in controller.all_sprites:
         # Start with the original entity data if available
         entity_data = getattr(sprite, "mesh_entity_data", {})
         if not isinstance(entity_data, dict):
             entity_data = {}
 
-        # Create a copy to modify
-        current_data = dict(entity_data)
+        authored_entity_index = _find_authored_entity_index_for_sprite(entity_data, authored_entity_by_key)
+        current_data = copy.deepcopy(entities[authored_entity_index]) if authored_entity_index is not None else {}
+        _merge_authored_entity_fields(current_data, entity_data)
 
         # Update core transform properties
         current_data["x"] = _coerce_scene_float(getattr(sprite, "center_x", 0.0))
@@ -98,22 +119,17 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
             if normalized_behaviours:
                 current_data["behaviours"] = normalized_behaviours
 
-        # Clean up runtime-only fields
-        keys_to_remove = [k for k in current_data.keys() if k.startswith("_")]
-        for k in keys_to_remove:
-            current_data.pop(k, None)
+        _remove_runtime_only_entity_fields(current_data)
 
-        entities.append(current_data)
+        if authored_entity_index is None:
+            entities.append(current_data)
+        else:
+            entities[authored_entity_index] = current_data
+            updated_entity_indexes.add(authored_entity_index)
 
-    # Sort entities for determinism
-    def _entity_sort_key(e: Dict[str, Any]) -> tuple:
-        return (
-            str(e.get("id", "")),
-            str(e.get("prefab_id", "")),
-            float(e.get("x", 0.0)),
-            float(e.get("y", 0.0)),
-        )
-    entities.sort(key=_entity_sort_key)
+    for index, entity in enumerate(entities):
+        if index not in updated_entity_indexes:
+            _remove_runtime_only_entity_fields(entity)
 
     snapshot["entities"] = entities
 
@@ -128,6 +144,7 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
         overrides["layers"] = dict(controller.tilemap_instance.layer_data)
         tilemap["overrides"] = overrides
         snapshot["tilemap"] = tilemap
+    _remove_runtime_tilemap_fields(snapshot)
 
     # Normalize using SceneLoader to ensure valid schema
     # We use a temporary loader instance or the existing one
@@ -137,6 +154,129 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
         snapshot = compact_scene_payload(snapshot)
 
     return snapshot
+
+
+_AUTHORED_ENTITY_FIELDS = {
+    "alpha",
+    "animation_blend",
+    "animation_frame_rate",
+    "animation_root_motion",
+    "animation_state",
+    "animations",
+    "behaviour_config",
+    "behaviours",
+    "collision_poly",
+    "depth_z",
+    "dialogue",
+    "dialogue_lines",
+    "encounter_cost",
+    "encounter_group",
+    "follow_speed",
+    "follow_target",
+    "forbid_flags",
+    "id",
+    "layer",
+    "mesh_name",
+    "name",
+    "occluder_poly",
+    "on_trigger",
+    "patrol_points",
+    "patrol_speed",
+    "prefab_id",
+    "prefab_overrides",
+    "render_layer",
+    "require_flags",
+    "rotation",
+    "scale",
+    "solid",
+    "spawn_id",
+    "sprite",
+    "sprite_sheet",
+    "tag",
+    "tags",
+    "tint",
+    "trigger_radius",
+    "trigger_target",
+    "type",
+    "variant_id",
+    "x",
+    "y",
+}
+
+
+_SPRITE_SYNC_ENTITY_FIELDS = {
+    "alpha",
+    "behaviour_config",
+    "behaviours",
+    "collision_poly",
+    "depth_z",
+    "layer",
+    "mesh_name",
+    "occluder_poly",
+    "prefab_overrides",
+    "render_layer",
+    "rotation",
+    "scale",
+    "solid",
+    "tag",
+    "tags",
+    "tint",
+    "x",
+    "y",
+}
+
+_PREFAB_OWNED_ENTITY_FIELDS = {"name", "sprite"}
+
+
+def _find_authored_entity_index_for_sprite(
+    entity_data: dict[str, Any],
+    authored_entity_by_key: dict[tuple[str, str], int],
+) -> int | None:
+    for key_name in ("id", "name", "mesh_name", "prefab_id"):
+        value = entity_data.get(key_name)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        authored_index = authored_entity_by_key.get((key_name, value.strip()))
+        if authored_index is not None:
+            return authored_index
+    return None
+
+
+def _merge_authored_entity_fields(target: dict[str, Any], source: dict[str, Any]) -> None:
+    is_existing_authored_entity = bool(target)
+    has_prefab = isinstance(target.get("prefab_id"), str) and bool(str(target.get("prefab_id")).strip())
+    for key, value in source.items():
+        if key.startswith("x_"):
+            target[key] = copy.deepcopy(value)
+            continue
+        if key not in _AUTHORED_ENTITY_FIELDS:
+            continue
+        if is_existing_authored_entity:
+            if key not in _SPRITE_SYNC_ENTITY_FIELDS:
+                continue
+            if has_prefab and key in _PREFAB_OWNED_ENTITY_FIELDS:
+                continue
+        if key in _AUTHORED_ENTITY_FIELDS:
+            target[key] = copy.deepcopy(value)
+
+
+def _remove_runtime_only_entity_fields(entity: dict[str, Any]) -> None:
+    for key in list(entity.keys()):
+        if key.startswith("_"):
+            entity.pop(key, None)
+            continue
+        if key not in _AUTHORED_ENTITY_FIELDS and not key.startswith("x_"):
+            entity.pop(key, None)
+    if isinstance(entity.get("prefab_id"), str) and str(entity.get("prefab_id")).strip():
+        for key in _PREFAB_OWNED_ENTITY_FIELDS:
+            entity.pop(key, None)
+
+
+def _remove_runtime_tilemap_fields(snapshot: dict[str, Any]) -> None:
+    tilemap = snapshot.get("tilemap")
+    if not isinstance(tilemap, dict):
+        return
+    tilemap.pop("resolved_path", None)
 
 
 def apply_scene_state(controller: SceneController, state_block: Any) -> None:
