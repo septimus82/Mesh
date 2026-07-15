@@ -1219,6 +1219,14 @@ def interact_prompt_provider(window: Any) -> Any:
     dialogue = getattr(window, "dialogue_controller", None)
     if dialogue is not None and bool(getattr(dialogue, "active", False)):
         return None
+    dialogue_blocks = getattr(window, "dialogue_blocks_input", None)
+    if callable(dialogue_blocks):
+        try:
+            if bool(dialogue_blocks()):
+                return None
+        except _PROVIDER_FALLBACK_EXCEPTIONS:
+            _log_swallow("UOVP-021", "engine.ui_overlays.providers blanket exception fallback")
+            return None
     try:
         return resolve_interaction_candidate(window)
     except _PROVIDER_FALLBACK_EXCEPTIONS:

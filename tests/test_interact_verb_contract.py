@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from types import SimpleNamespace
 from typing import Any
 
@@ -260,6 +261,67 @@ def test_keyboard_router_records_interact_without_direct_execution(monkeypatch: 
     assert input_capture.handle_key_press(controller, KEY_K, 0) is False
     assert KEY_K in manager.get_keys_down()
     assert KEY_K in controller._keys
+
+
+def test_custom_key_capture_to_player_controller_executes_once_without_router_execution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import engine.interaction as interaction
+    from engine.input_runtime import capture as input_capture
+
+    calls: list[str] = []
+    actor = _sprite("player", 0, 0, [], facing="right", tag="player")
+    target = _sprite("target", 10, 0, [_Behaviour("target", calls)])
+    manager = InputManager()
+    manager.bind("interact", KEY_K)
+    window = _window(actor, [actor, target])
+    window.input = manager
+    window.input_controller = SimpleNamespace(manager=manager)
+    controller = PlayerController(actor, as_any(window), speed=0.0)
+    capture_controller = SimpleNamespace(
+        manager=manager,
+        _keys=set(),
+        is_input_locked=lambda: False,
+        window=SimpleNamespace(
+            show_debug=False,
+            console_controller=SimpleNamespace(active=False, process_key=lambda *_args: False),
+            ui_controller=SimpleNamespace(input_blocked=False, on_key_press=lambda *_args: False),
+            editor_controller=SimpleNamespace(active=False),
+            cutscene_controller=None,
+        ),
+    )
+
+    original_perform = interaction.perform_interaction
+
+    def _guarded_perform(*args: Any, **kwargs: Any) -> bool:
+        for frame in inspect.stack():
+            if frame.filename.endswith("capture_key_router_handlers_global.py"):
+                raise AssertionError("keyboard router must not perform world interaction")
+        return original_perform(*args, **kwargs)
+
+    monkeypatch.setattr(interaction, "perform_interaction", _guarded_perform)
+
+    assert input_capture.handle_key_press(capture_controller, KEY_K, 0) is False
+    assert KEY_K in manager.get_keys_down()
+    manager.update(0.016)
+    controller.update(0.016)
+    manager.update(0.016)
+    controller.update(0.016)
+    assert calls == ["target"]
+
+    assert input_capture.handle_key_press(capture_controller, KEY_K, 0) is False
+    manager.update(0.016)
+    controller.update(0.016)
+    assert calls == ["target"]
+
+    input_capture.handle_key_release(capture_controller, KEY_K, 0)
+    manager.update(0.016)
+    controller.update(0.016)
+    assert input_capture.handle_key_press(capture_controller, KEY_K, 0) is False
+    manager.update(0.016)
+    controller.update(0.016)
+    assert calls == ["target", "target"]
+    assert not hasattr(window, "_mesh_interact_consumed")
 
 
 def test_interactable_behaviour_event_cooldown_one_shot_tags_and_state() -> None:

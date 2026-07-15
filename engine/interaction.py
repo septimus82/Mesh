@@ -233,11 +233,17 @@ def _candidate_label(entity: Any, behaviours: tuple[Any, ...], actor: Any | None
         if label:
             return label
     payload = _entity_payload(entity)
-    for key in ("interact_label", "label", "name", "mesh_name"):
+    label = _clean_label(payload.get("interact_label"), allow_generic=False)
+    if label:
+        return label
+    for key in ("label", "name", "mesh_name"):
         label = _clean_label(payload.get(key), allow_generic=True)
         if label:
             return label
-    for attr in ("interact_label", "label", "name", "mesh_name"):
+    label = _clean_label(getattr(entity, "interact_label", None), allow_generic=False)
+    if label:
+        return label
+    for attr in ("label", "name", "mesh_name"):
         label = _clean_label(getattr(entity, attr, None), allow_generic=True)
         if label:
             return label
@@ -415,18 +421,16 @@ def pick_interactable(
     get_flag: Callable[[str, bool], bool] | None = None,
     actor: Any | None = None,
 ) -> Any | None:
-    # Legacy compatibility seam: callers that only provide player_pos still get
-    # entity selection, now via the same candidate machinery. Without an actor,
-    # facing and can_interact_with(actor) hooks are unavailable, so a lightweight
-    # actor shim is used only for pure distance-based legacy calls.
     if actor is None:
         actor = exclude_entity
     if actor is None:
-        actor = type("_InteractionActor", (), {})()
-        actor.center_x = float(player_pos[0])
-        actor.center_y = float(player_pos[1])
-        actor.mesh_entity_data = {}
-        actor.mesh_behaviours_runtime = []
+        return _pick_interactable_legacy(
+            entities,
+            player_pos=player_pos,
+            max_dist=max_dist,
+            exclude_entity=exclude_entity,
+            get_flag=get_flag,
+        )
     candidate = select_interaction_candidate(
         entities,
         actor=actor,
@@ -436,13 +440,59 @@ def pick_interactable(
     return None if candidate is None else candidate.entity
 
 
+def _pick_interactable_legacy(
+    entities: Iterable[Any],
+    *,
+    player_pos: tuple[float, float],
+    max_dist: float,
+    exclude_entity: Any | None,
+    get_flag: Callable[[str, bool], bool] | None,
+) -> Any | None:
+    try:
+        px = float(player_pos[0])
+        py = float(player_pos[1])
+        capped = float(max_dist)
+    except (TypeError, ValueError, IndexError):
+        return None
+    if capped <= 0.0 or not math.isfinite(capped):
+        return None
+
+    best: tuple[float, str, Any] | None = None
+    for entity in entities:
+        if exclude_entity is not None and entity is exclude_entity:
+            continue
+        if not _passes_runtime_gates(entity, get_flag):
+            continue
+        behaviours = tuple(
+            behaviour
+            for behaviour in _behaviour_list(entity)
+            if callable(getattr(behaviour, "on_interact", None))
+        )
+        if not behaviours:
+            continue
+        entity_pos = _position(entity)
+        if entity_pos is None:
+            continue
+        radius = _effective_radius(entity, behaviours, capped)
+        distance = math.hypot(entity_pos[0] - px, entity_pos[1] - py)
+        if distance > radius:
+            continue
+        key = (float(distance), str(_entity_id(entity)), entity)
+        if best is None or key[:2] < best[:2]:
+            best = key
+    return None if best is None else best[2]
+
+
 def _resolve_interact_label(entity: Any | None) -> str:
     if isinstance(entity, InteractionCandidate):
         return entity.label
     if entity is None:
         return ""
     if isinstance(entity, dict):
-        for key in ("interact_label", "label", "name", "mesh_name"):
+        label = _clean_label(entity.get("interact_label"), allow_generic=False)
+        if label:
+            return label
+        for key in ("label", "name", "mesh_name"):
             label = _clean_label(entity.get(key), allow_generic=True)
             if label:
                 return label

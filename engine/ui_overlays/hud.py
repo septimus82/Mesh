@@ -13,6 +13,13 @@ from .common import (
     _draw_rectangle_filled,
 )
 
+_HUD_PROVIDER_EXCEPTIONS: tuple[type[Exception], ...] = (
+    AttributeError,
+    RuntimeError,
+    TypeError,
+    ValueError,
+)
+
 if TYPE_CHECKING:  # pragma: no cover
     from arcade import Sprite
 
@@ -56,16 +63,19 @@ class InteractPromptOverlay(UIElement):
 
     def draw(self) -> None:
         payload = None
-        if callable(self.provider):
+        has_provider = callable(self.provider)
+        if has_provider:
             try:
                 payload = self.provider(self.window)
-            except Exception:  # noqa: BLE001  # REASON: interact prompt overlay should keep drawing even if an optional provider callback fails
+            except _HUD_PROVIDER_EXCEPTIONS:
                 _log_swallow("HUD-001", "engine.ui_overlays.hud.InteractPromptOverlay.draw provider")
-                payload = None
+                return
+            if payload is None:
+                return
 
         from ..interaction import get_interact_prompt  # noqa: PLC0415
 
-        text = get_interact_prompt(self.window, payload)
+        text = get_interact_prompt(self.window, payload if has_provider else None)
         if not text:
             return
 
@@ -153,7 +163,7 @@ class ObjectiveTrackerOverlay(UIElement):
         if callable(self.provider):
             try:
                 value = self.provider(self.window)
-            except Exception:  # noqa: BLE001  # REASON: objective tracker overlay should keep drawing even if an optional provider callback fails
+            except _HUD_PROVIDER_EXCEPTIONS:
                 _log_swallow("HUD-002", "engine.ui_overlays.hud.ObjectiveTrackerOverlay.draw provider")
                 value = None
             if isinstance(value, (list, tuple)):
