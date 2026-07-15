@@ -1200,35 +1200,38 @@ def editor_command_palette_provider(window: Any) -> dict[str, Any]:
     }
 
 def interact_prompt_provider(window: Any) -> Any:
-    from engine.interaction import DEFAULT_INTERACT_MAX_DIST, pick_interactable
+    from engine.entity_select_mode import other_authoring_modes_active  # noqa: PLC0415
+    from engine.interaction import resolve_interaction_candidate  # noqa: PLC0415
 
-    scene = getattr(window, "scene_controller", None)
-    if scene is None:
+    if other_authoring_modes_active(window):
         return None
-    finder = getattr(scene, "_find_player_sprite", None)
-    if not callable(finder):
+    checker = getattr(window, "player_input_blocked", None)
+    if callable(checker):
+        try:
+            if bool(checker()):
+                return None
+        except _PROVIDER_FALLBACK_EXCEPTIONS:
+            _log_swallow("UOVP-019", "engine.ui_overlays.providers blanket exception fallback")
+            return None
+    ui = getattr(window, "ui_controller", None)
+    if ui is not None and bool(getattr(ui, "input_blocked", False)):
         return None
+    dialogue = getattr(window, "dialogue_controller", None)
+    if dialogue is not None and bool(getattr(dialogue, "active", False)):
+        return None
+    dialogue_blocks = getattr(window, "dialogue_blocks_input", None)
+    if callable(dialogue_blocks):
+        try:
+            if bool(dialogue_blocks()):
+                return None
+        except _PROVIDER_FALLBACK_EXCEPTIONS:
+            _log_swallow("UOVP-021", "engine.ui_overlays.providers blanket exception fallback")
+            return None
     try:
-        player_sprite = finder()
-    except _PROVIDER_FALLBACK_EXCEPTIONS:
-        _log_swallow("UOVP-019", "engine.ui_overlays.providers blanket exception fallback")
-        player_sprite = None
-    if player_sprite is None:
-        return None
-
-    try:
-        entities = list(window.all_sprites)
+        return resolve_interaction_candidate(window)
     except _PROVIDER_FALLBACK_EXCEPTIONS:
         _log_swallow("UOVP-020", "engine.ui_overlays.providers blanket exception fallback")
         return None
-    getter = getattr(window, "get_flag", None)
-    return pick_interactable(
-        entities,
-        player_pos=(float(player_sprite.center_x), float(player_sprite.center_y)),
-        max_dist=DEFAULT_INTERACT_MAX_DIST,
-        exclude_entity=player_sprite,
-        get_flag=getter if callable(getter) else None,
-    )
 
 def objective_tracker_provider(window: Any) -> Sequence[str]:
     from engine.ui import compute_objective_tracker_lines

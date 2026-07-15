@@ -205,10 +205,7 @@ class PlayerController(Behaviour):
 
     def _handle_interact(self, interact_triggered: bool) -> None:
         if interact_triggered:
-            if getattr(self.window, "_mesh_interact_consumed", False):
-                setattr(self.window, "_mesh_interact_consumed", False)
-            else:
-                self._perform_interaction()
+            self._perform_interaction()
             request_animation_state(self.entity, "interact", priority=25.0, ttl=0.35)
 
     def _handle_attack(self, attack_triggered: bool) -> None:
@@ -224,7 +221,7 @@ class PlayerController(Behaviour):
         from ..interaction import perform_interaction  # noqa: PLC0415
 
         try:
-            perform_interaction(window, max_dist=float(self.INTERACT_RADIUS))
+            perform_interaction(window, actor=self.entity, max_dist=float(self.INTERACT_RADIUS))
         except Exception as exc:  # noqa: BLE001  # REASON: interaction failures should be reported to the console without breaking input handling
             logger = getattr(window, "console_log", None)
             if callable(logger):

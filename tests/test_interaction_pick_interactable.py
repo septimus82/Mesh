@@ -47,3 +47,63 @@ def test_pick_interactable_respects_max_dist() -> None:
 
     assert pick_interactable([sprite], player_pos=(0.0, 0.0), max_dist=10.0) is None
 
+
+def test_pick_interactable_player_pos_legacy_does_not_require_actor_eligibility() -> None:
+    from engine.interaction import pick_interactable, select_interaction_candidate
+
+    class _PlayerOnlyBehaviour:
+        def can_interact_with(self, actor) -> bool:
+            return getattr(actor, "mesh_tag", None) == "player"
+
+        def on_interact(self, _window, _actor) -> None:
+            return
+
+    def _sprite(entity_id: str, x: float, *, gated: bool = False):
+        sprite = type("S", (), {})()
+        sprite.center_x = x
+        sprite.center_y = 0.0
+        sprite.width = 16.0
+        sprite.height = 16.0
+        sprite.mesh_tag = "npc"
+        sprite.mesh_entity_data = {"id": entity_id}
+        if gated:
+            sprite.mesh_entity_data["require_flags"] = ["flag.enabled"]
+        sprite.mesh_behaviours_runtime = [_PlayerOnlyBehaviour()]
+        return sprite
+
+    target_b = _sprite("b", 10.0)
+    target_a = _sprite("a", 10.0)
+    gated = _sprite("gated", 1.0, gated=True)
+
+    def get_flag(_name: str, default: bool = False) -> bool:
+        return default
+
+    assert (
+        pick_interactable(
+            [target_b, target_a, gated],
+            player_pos=(0.0, 0.0),
+            max_dist=20.0,
+            get_flag=get_flag,
+        )
+        is target_a
+    )
+
+    player = type("P", (), {})()
+    player.center_x = 0.0
+    player.center_y = 0.0
+    player.width = 16.0
+    player.height = 16.0
+    player.mesh_tag = "player"
+    player.mesh_entity_data = {"id": "player", "facing": "right"}
+    player.mesh_behaviours_runtime = []
+    assert select_interaction_candidate([target_b], actor=player) is not None
+
+    npc = type("P", (), {})()
+    npc.center_x = 0.0
+    npc.center_y = 0.0
+    npc.width = 16.0
+    npc.height = 16.0
+    npc.mesh_tag = "npc"
+    npc.mesh_entity_data = {"id": "npc", "facing": "right"}
+    npc.mesh_behaviours_runtime = []
+    assert select_interaction_candidate([target_b], actor=npc) is None

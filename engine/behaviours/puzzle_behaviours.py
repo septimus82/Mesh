@@ -120,6 +120,14 @@ class SwitchInteract(Behaviour):
 
         print(f"[Puzzle] Switch {self.entity} activated, emitted '{self.event_id}'")
 
+    def can_interact_with(self, _actor: Sprite) -> bool:
+        if self.activated and self.one_shot:
+            return False
+        return bool(self.event_id)
+
+    def get_interact_label(self, _actor: Sprite | None = None) -> str | None:
+        return str(getattr(self.entity, "mesh_name", "") or "Switch").strip() or "Switch"
+
 
 @register_behaviour(
     "DoorLock",
@@ -292,3 +300,9 @@ class RewardChest(Behaviour):
             source_entity_id=str(getattr(self.entity, "mesh_id", "") or ""),
             source_behaviour="RewardChest",
         )
+
+    def can_interact_with(self, _actor: Sprite) -> bool:
+        return bool(self.enabled and not self.looted)
+
+    def get_interact_label(self, _actor: Sprite | None = None) -> str | None:
+        return str(getattr(self.entity, "mesh_name", "") or "Chest").strip() or "Chest"

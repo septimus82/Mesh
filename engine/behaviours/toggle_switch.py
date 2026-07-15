@@ -72,3 +72,11 @@ class ToggleSwitch(Behaviour):
         }
         window.emit_event(MeshEvent(type="switch_toggled", payload=payload))
         window.console_log(f"{self.label} toggled {'ON' if self.state else 'OFF'}")
+
+    def can_interact_with(self, actor: Sprite) -> bool:
+        if not self.allowed_tag:
+            return True
+        return getattr(actor, "mesh_tag", None) == self.allowed_tag
+
+    def get_interact_label(self, _actor: Sprite | None = None) -> str | None:
+        return self.label

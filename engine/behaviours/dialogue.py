@@ -369,6 +369,19 @@ class Dialogue(Behaviour):
         if started:
             self._emit_line_event(stage="start", actor_name=actor_name)
 
+    def can_interact_with(self, _actor: Sprite) -> bool:
+        if self._is_box_active():
+            return True
+        if not self._script and not self._graph_nodes:
+            return False
+        return not bool(self.once and self._has_played)
+
+    def get_interact_label(self, _actor: Sprite | None = None) -> str | None:
+        role = str(self.config.get("role") or "").strip()
+        if role:
+            return role
+        return self.entity_name
+
     def subscribed_event_types(self) -> frozenset[str] | None:
         return frozenset({self.start_event}) if self.start_event else frozenset()
 

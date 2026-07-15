@@ -100,10 +100,8 @@ def _handle_interact_action(
     key: int | None = None,
     modifiers: int | None = None,
 ) -> bool:
-    """Handle interact key (E) - complex due to InputManager integration."""
-    window = controller.window
+    """Recognize interact key while leaving gameplay execution to PlayerController."""
     key_code = int(key) if key is not None else optional_arcade.arcade.key.E
-    _mods = int(modifiers) if modifiers is not None else 0
 
     # Only handle E key or keys bound to interact
     if not is_interact_key(controller, key_code):
@@ -121,23 +119,8 @@ def _handle_interact_action(
     if snapshot.is_capture_mode_enabled or snapshot.is_tile_paint_enabled or snapshot.is_entity_paint_enabled or snapshot.is_palette_mode_enabled:
         return True
 
-    # If UI is blocking, fall through to let InputManager record the key
-    if _player_input_blocked(window) or _ui_blocks_input(window):
-        return False
-
-    # Perform interaction
-    from engine.interaction import DEFAULT_INTERACT_MAX_DIST, perform_interaction  # noqa: PLC0415
-
-    if perform_interaction(window, max_dist=DEFAULT_INTERACT_MAX_DIST):
-        setattr(window, "_mesh_interact_consumed", True)
-        manager = getattr(controller, "manager", None)
-        press = getattr(manager, "press", None) if manager is not None else None
-        if callable(press):
-            press(key_code)
-        keys = getattr(controller, "_keys", None)
-        if isinstance(keys, set):
-            keys.add(key_code)
-        return True
+    # Let the generic input-recording path update InputManager. PlayerController
+    # is the sole owner of world interaction execution on the resulting action edge.
     return False
 
 
