@@ -57,7 +57,7 @@ def test_ready_panel_includes_what_will_happen_section() -> None:
 
     lines = _section_texts(panel, "What will happen")
     assert "Prepare door: Prepare door_north in the source map." in lines
-    assert "Set destination: Send the player to town at north_gate_entry when trigger is interact." in lines
+    assert "Configure selected door: Destination: Town. Arrival point: north_gate_entry. Use: Interact." in lines
 
 
 def test_ready_panel_includes_staging_section() -> None:
@@ -75,7 +75,7 @@ def test_ready_panel_includes_live_op_preview_text() -> None:
         FakeBridge(),
     )
 
-    assert "Set SceneExit params on door_north." in _section_texts(panel, "Staging")
+    assert "Set SceneTransition params on door_north." in _section_texts(panel, "Staging")
 
 
 def test_ready_panel_mirrors_stage_proposal_action_enabled() -> None:

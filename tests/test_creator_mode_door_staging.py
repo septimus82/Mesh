@@ -23,7 +23,7 @@ def test_valid_existing_door_workflow_stages_through_fake_bridge() -> None:
 
     assert result.ok is True
     assert result.proposal_id == "proposal-1"
-    assert result.preview_summary == "Set SceneExit params on 'door_north'"
+    assert result.preview_summary == "Set SceneTransition params on 'door_north'"
     assert len(bridge.calls) == 1
 
 
@@ -55,7 +55,7 @@ def test_fake_bridge_receives_deep_copied_ops_not_same_object() -> None:
     assert bridge.ops is not list(workflow.plan.operations)
     bridge.ops[0]["params"]["target_scene"] = "mutated"
     result = stage_creator_door_proposal(workflow, FakeBridge())
-    assert result.preview_summary == "Set SceneExit params on 'door_north'"
+    assert result.preview_summary == "Set SceneTransition params on 'door_north'"
 
 
 def test_blocked_workflow_does_not_call_bridge() -> None:
@@ -135,7 +135,7 @@ def test_result_includes_preview_summary_from_bridge_success_response() -> None:
         FakeBridge(),
     )
 
-    assert result.preview_summary == "Set SceneExit params on 'door_north'"
+    assert result.preview_summary == "Set SceneTransition params on 'door_north'"
 
 
 def test_result_uses_bridge_preview_when_proposal_summary_missing() -> None:
@@ -268,7 +268,7 @@ class FakeBridge:
             "ok": True,
             "proposal_id": "proposal-1",
             "proposal": {
-                "preview_summary": "Set SceneExit params on 'door_north'",
+                "preview_summary": "Set SceneTransition params on 'door_north'",
                 "dry_run": {"ok": True},
             },
             "preview": "fallback preview",

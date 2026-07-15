@@ -393,7 +393,7 @@ def test_different_door_enables_stage_proposal_again() -> None:
     controller.handle_overlay_click(x, y)
 
     editor.selected_entity = _door_entity(
-        config={"target_scene": "town", "target_spawn": "south_gate_entry", "trigger": "interact"}
+        config={"target_scene": "town", "spawn_id": "south_gate_entry"}
     )
     editor.selected_entity["id"] = "door_south"
     commands = _draw_commands(controller)
@@ -410,7 +410,7 @@ def test_changing_destination_scene_enables_stage_proposal_again() -> None:
     controller.handle_overlay_click(*_stage_proposal_click_point(_draw_commands(controller)))
 
     editor.selected_entity = _door_entity(
-        config={"target_scene": "dungeon", "target_spawn": "north_gate_entry", "trigger": "interact"}
+        config={"target_scene": "dungeon", "spawn_id": "north_gate_entry"}
     )
     commands = _draw_commands(controller)
 
@@ -442,8 +442,8 @@ class FakeBridge:
         return {
             "ok": True,
             "proposal_id": "proposal-1",
-            "proposal": {"preview_summary": "Set SceneExit params on door_north"},
-            "preview": "Set SceneExit params on door_north",
+            "proposal": {"preview_summary": "Set SceneTransition params on door_north"},
+            "preview": "Set SceneTransition params on door_north",
             "warnings": [],
         }
 
@@ -493,15 +493,14 @@ def _door_entity(config: dict[str, object] | None = None) -> dict[str, object]:
     return {
         "id": "door_north",
         "name": "North Gate",
-        "behaviours": ["SceneExit"],
+        "behaviours": ["SceneTransition"],
         "behaviour_config": {
-            "SceneExit": dict(
+            "SceneTransition": dict(
                 config
                 if config is not None
                 else {
                     "target_scene": "town",
-                    "target_spawn": "north_gate_entry",
-                    "trigger": "interact",
+                    "spawn_id": "north_gate_entry",
                 }
             )
         },

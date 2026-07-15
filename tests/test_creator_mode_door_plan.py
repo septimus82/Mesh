@@ -24,7 +24,7 @@ def test_valid_minimal_request_produces_ok_plan() -> None:
     assert plan.errors == ()
     assert [operation.op for operation in plan.operations] == [
         "ensure_door_entity",
-        "configure_scene_exit",
+        "configure_door_transition",
     ]
 
 
@@ -48,7 +48,7 @@ def test_valid_request_with_destination_spawn_produces_deterministic_operations(
     assert first.warnings == ()
     assert [operation.op for operation in first.operations] == [
         "ensure_door_entity",
-        "configure_scene_exit",
+        "configure_door_transition",
         "configure_lock",
     ]
     assert [operation.target for operation in first.operations] == ["door_north"] * 3
@@ -184,6 +184,10 @@ def test_operation_payload_contains_friendly_intent_fields() -> None:
         "locked": True,
         "required_flag": "gate_unlocked",
         "trigger": "auto",
+        "transition_behaviour": "SceneTransition",
+        "scene_exit_listen_event": "",
+        "interactable_event": "",
+        "entity_require_flags": (),
     }
 
 

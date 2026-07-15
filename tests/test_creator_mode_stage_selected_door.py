@@ -24,7 +24,7 @@ def test_valid_selected_door_stages_through_fake_bridge_when_explicitly_called()
 
     assert result.ok is True
     assert result.proposal_id == "proposal-1"
-    assert result.preview_summary == "Set SceneExit params on door_north"
+    assert result.preview_summary == "Set SceneTransition params on door_north"
     assert len(bridge.calls) == 1
 
 
@@ -99,7 +99,7 @@ def test_missing_bridge_returns_unavailable() -> None:
 
 def test_selected_door_missing_destination_returns_false_and_does_not_call_bridge() -> None:
     bridge = FakeBridge()
-    entity = _door_entity(config={"target_spawn": "north_gate_entry"})
+    entity = _door_entity(config={"spawn_id": "north_gate_entry"})
     controller = CreatorModeController(_editor_with_selection(entity, live_bridge=bridge))
 
     result = controller.stage_selected_door_proposal()
@@ -165,7 +165,7 @@ def test_changing_destination_scene_allows_staging_again() -> None:
 
     assert controller.stage_selected_door_proposal().ok is True
     editor.selected_entity = _door_entity(
-        config={"target_scene": "dungeon", "target_spawn": "north_gate_entry", "trigger": "interact"}
+        config={"target_scene": "dungeon", "spawn_id": "north_gate_entry"}
     )
     second = controller.stage_selected_door_proposal()
 
@@ -180,7 +180,7 @@ def test_different_door_entity_allows_staging_again() -> None:
 
     assert controller.stage_selected_door_proposal().ok is True
     editor.selected_entity = _door_entity(
-        config={"target_scene": "town", "target_spawn": "south_gate_entry", "trigger": "interact"}
+        config={"target_scene": "town", "spawn_id": "south_gate_entry"}
     )
     editor.selected_entity["id"] = "door_south"
     second = controller.stage_selected_door_proposal()
@@ -299,8 +299,8 @@ class FakeBridge:
         return {
             "ok": True,
             "proposal_id": "proposal-1",
-            "proposal": {"preview_summary": "Set SceneExit params on door_north"},
-            "preview": "Set SceneExit params on door_north",
+            "proposal": {"preview_summary": "Set SceneTransition params on door_north"},
+            "preview": "Set SceneTransition params on door_north",
             "warnings": [],
         }
 
@@ -327,15 +327,14 @@ def _door_entity(config: dict[str, object] | None = None) -> dict[str, object]:
     return {
         "id": "door_north",
         "name": "North Gate",
-        "behaviours": ["SceneExit"],
+        "behaviours": ["SceneTransition"],
         "behaviour_config": {
-            "SceneExit": dict(
+            "SceneTransition": dict(
                 config
                 if config is not None
                 else {
                     "target_scene": "town",
-                    "target_spawn": "north_gate_entry",
-                    "trigger": "interact",
+                    "spawn_id": "north_gate_entry",
                 }
             )
         },

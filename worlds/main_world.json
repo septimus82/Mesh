@@ -27,7 +27,7 @@
     {
       "from": "door_field",
       "to": "door_interior",
-      "via": "InteriorDoor"
+      "via": "FieldDoor"
     },
     {
       "from": "door_field",
@@ -37,7 +37,7 @@
     {
       "from": "door_interior",
       "to": "door_field",
-      "via": "FieldDoor"
+      "via": "InteriorDoor"
     },
     {
       "from": "upper_hall",

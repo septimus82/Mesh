@@ -63,8 +63,79 @@ def test_missing_source_entity_id_fails_closed_without_door_creation() -> None:
     )
 
 
-def test_existing_door_converts_scene_exit_to_supported_live_op_schema() -> None:
+def test_existing_door_converts_scene_transition_to_supported_live_op_schema() -> None:
     workflow = build_creator_door_workflow(_existing_door_request())
+
+    result = build_creator_door_live_ops(workflow)
+
+    assert result.ok is True
+    assert _ops_snapshot(result) == (
+        (
+            "set_behaviour_params",
+            "forest",
+            "door_north",
+            "SceneTransition",
+            (
+                ("target_scene", "town"),
+                ("spawn_id", "north_gate_entry"),
+                ("allow_interact", True),
+                ("trigger_on_touch", False),
+            ),
+        ),
+    )
+
+
+def test_touch_scene_transition_emits_touch_flags_and_player_target() -> None:
+    workflow = build_creator_door_workflow(
+        CreatorDoorWorkflowRequest(
+            source_scene="forest",
+            destination_scene="town",
+            destination_spawn_id="north_gate_entry",
+            source_entity_id="door_north",
+            trigger="touch",
+        )
+    )
+
+    result = build_creator_door_live_ops(workflow)
+
+    assert result.ok is True
+    assert dict(result.ops[0]["params"]) == {
+        "target_scene": "town",
+        "spawn_id": "north_gate_entry",
+        "allow_interact": False,
+        "trigger_on_touch": True,
+        "target_tag": "player",
+    }
+
+
+def test_scene_transition_auto_trigger_fails_closed() -> None:
+    workflow = build_creator_door_workflow(
+        CreatorDoorWorkflowRequest(
+            source_scene="forest",
+            destination_scene="town",
+            source_entity_id="door_north",
+            trigger="auto",
+        )
+    )
+
+    result = build_creator_door_live_ops(workflow)
+
+    assert result.ok is False
+    assert result.errors == ("Automatic Creator doors are not representable by SceneTransition.",)
+
+
+def test_legacy_scene_exit_requires_matching_interactable_event() -> None:
+    workflow = build_creator_door_workflow(
+        CreatorDoorWorkflowRequest(
+            source_scene="forest",
+            destination_scene="town",
+            destination_spawn_id="north_gate_entry",
+            source_entity_id="door_north",
+            transition_behaviour="SceneExit",
+            scene_exit_listen_event="use_exit",
+            interactable_event="use_exit",
+        )
+    )
 
     result = build_creator_door_live_ops(workflow)
 
@@ -78,9 +149,29 @@ def test_existing_door_converts_scene_exit_to_supported_live_op_schema() -> None
             (
                 ("target_scene", "town"),
                 ("target_spawn", "north_gate_entry"),
-                ("trigger", "interact"),
+                ("listen_event", "use_exit"),
             ),
         ),
+    )
+
+
+def test_unwired_legacy_scene_exit_fails_with_migration_guidance() -> None:
+    workflow = build_creator_door_workflow(
+        CreatorDoorWorkflowRequest(
+            source_scene="forest",
+            destination_scene="town",
+            source_entity_id="door_north",
+            transition_behaviour="SceneExit",
+            scene_exit_listen_event="use_exit",
+        )
+    )
+
+    result = build_creator_door_live_ops(workflow)
+
+    assert result.ok is False
+    assert result.errors == (
+        "This legacy door is not wired to an interaction event. "
+        "Use Advanced Mode or migrate it to SceneTransition.",
     )
 
 
@@ -116,7 +207,28 @@ def test_adapter_output_is_bridge_compatible_shape() -> None:
     assert "behaviour_name" in ops[0]
 
 
-def test_locked_existing_door_includes_required_flag_in_live_op_payload() -> None:
+def test_locked_existing_door_preserves_existing_entity_gate_without_lock_params() -> None:
+    workflow = build_creator_door_workflow(
+        CreatorDoorWorkflowRequest(
+            source_scene="forest",
+            destination_scene="town",
+            destination_spawn_id="north_gate_entry",
+            source_entity_id="door_north",
+            locked=True,
+            required_flag="gate_unlocked",
+            entity_require_flags=("gate_unlocked",),
+        )
+    )
+
+    result = build_creator_door_live_ops(workflow)
+
+    assert result.ok is True
+    params = dict(result.ops[0]["params"])  # type: ignore[arg-type]
+    assert "locked" not in params
+    assert "requires_flag" not in params
+
+
+def test_locked_existing_door_without_matching_entity_gate_fails_closed() -> None:
     workflow = build_creator_door_workflow(
         CreatorDoorWorkflowRequest(
             source_scene="forest",
@@ -130,10 +242,8 @@ def test_locked_existing_door_includes_required_flag_in_live_op_payload() -> Non
 
     result = build_creator_door_live_ops(workflow)
 
-    assert result.ok is True
-    params = dict(result.ops[0]["params"])  # type: ignore[arg-type]
-    assert params["locked"] is True
-    assert params["requires_flag"] == "gate_unlocked"
+    assert result.ok is False
+    assert result.errors == ("Locked Creator doors require an existing entity flag gate.",)
 
 
 def test_warnings_pass_through() -> None:

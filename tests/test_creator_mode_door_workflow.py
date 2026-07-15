@@ -107,8 +107,8 @@ def test_whitespace_trimming_passes_through_plan_and_preview() -> None:
 
     assert workflow.plan.title == "Door plan: North Gate"
     assert workflow.plan.summary == "Plan door from forest to town at north_gate_entry."
-    assert _step(workflow, "Set destination").detail == (
-        "Send the player to town at north_gate_entry when trigger is touch."
+    assert _step(workflow, "Configure selected door").detail == (
+        "Destination: Town. Arrival point: north_gate_entry. Use: Touch."
     )
 
 
@@ -191,6 +191,10 @@ def _workflow_request_snapshot(request: CreatorDoorWorkflowRequest):
         request.locked,
         request.required_flag,
         request.trigger,
+        request.transition_behaviour,
+        request.scene_exit_listen_event,
+        request.interactable_event,
+        request.entity_require_flags,
     )
 
 

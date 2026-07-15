@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from .creator_door_plan import CreatorDoorPlanOperation
 from .creator_door_workflow import CreatorDoorWorkflowModel
 
 _SUPPORTED_PLAN_OPS = frozenset(
-    {"ensure_door_entity", "configure_scene_exit", "configure_lock"}
+    {"ensure_door_entity", "configure_door_transition", "configure_scene_exit", "configure_lock"}
 )
 _CANNOT_REPRESENT = "Door workflow cannot be represented by current live ops."
+_LEGACY_INTERACT_ERROR = (
+    "This legacy door is not wired to an interaction event. "
+    "Use Advanced Mode or migrate it to SceneTransition."
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,7 +61,7 @@ def build_creator_door_live_ops(
             warnings=warnings,
         )
 
-    if not any(operation.op == "configure_scene_exit" for operation in workflow.plan.operations):
+    if not any(operation.op in {"configure_door_transition", "configure_scene_exit"} for operation in workflow.plan.operations):
         return CreatorDoorLiveOpsResult(
             ok=False,
             ops=(),
@@ -65,20 +69,36 @@ def build_creator_door_live_ops(
             warnings=warnings,
         )
 
-    params: dict[str, object] = {
-        "target_scene": _text(payload, "destination_scene"),
-        "target_spawn": _text(payload, "destination_spawn_id"),
-        "trigger": _text(payload, "trigger") or "interact",
-    }
+    if bool(payload.get("locked")):
+        required_flag = _text(payload, "required_flag")
+        if required_flag not in _strings(payload.get("entity_require_flags")):
+            return CreatorDoorLiveOpsResult(
+                ok=False,
+                ops=(),
+                errors=("Locked Creator doors require an existing entity flag gate.",),
+                warnings=warnings,
+            )
+
+    behaviour_name = _text(payload, "transition_behaviour")
+    params_result = _transition_params(payload, behaviour_name)
+    if params_result[0] is None:
+        return CreatorDoorLiveOpsResult(
+            ok=False,
+            ops=(),
+            errors=(params_result[1] or _CANNOT_REPRESENT,),
+            warnings=warnings,
+        )
+    params = params_result[0]
+
     if any(operation.op == "configure_lock" for operation in workflow.plan.operations):
-        params["locked"] = bool(payload.get("locked"))
-        params["requires_flag"] = _text(payload, "required_flag")
+        # Existing entity-level flag gates are preserved by leaving the gate untouched.
+        params = dict(params)
 
     op: dict[str, object] = {
         "type": "set_behaviour_params",
         "scene_path": _text(payload, "source_scene"),
         "entity_id": source_entity_id,
-        "behaviour_name": "SceneExit",
+        "behaviour_name": behaviour_name,
         "params": dict(params),
     }
     return CreatorDoorLiveOpsResult(
@@ -111,3 +131,53 @@ def _first_payload(
 
 def _text(payload: Mapping[str, object], key: str) -> str:
     return str(payload.get(key) or "").strip()
+
+
+def _transition_params(
+    payload: Mapping[str, object],
+    behaviour_name: str,
+) -> tuple[dict[str, object] | None, str]:
+    trigger = _text(payload, "trigger") or "interact"
+    target_scene = _text(payload, "destination_scene")
+    spawn_id = _text(payload, "destination_spawn_id")
+
+    if behaviour_name == "SceneTransition":
+        if trigger == "auto":
+            return None, "Automatic Creator doors are not representable by SceneTransition."
+        if trigger == "touch":
+            return {
+                "target_scene": target_scene,
+                "spawn_id": spawn_id,
+                "allow_interact": False,
+                "trigger_on_touch": True,
+                "target_tag": "player",
+            }, ""
+        return {
+            "target_scene": target_scene,
+            "spawn_id": spawn_id,
+            "allow_interact": True,
+            "trigger_on_touch": False,
+        }, ""
+
+    if behaviour_name == "SceneExit":
+        if trigger != "interact":
+            return None, _LEGACY_INTERACT_ERROR
+        listen_event = _text(payload, "scene_exit_listen_event") or "use_exit"
+        if _text(payload, "interactable_event") != listen_event:
+            return None, _LEGACY_INTERACT_ERROR
+        return {
+            "target_scene": target_scene,
+            "target_spawn": spawn_id,
+            "listen_event": listen_event,
+        }, ""
+
+    return None, "Selected door has no attached transition behaviour."
+
+
+def _strings(value: object) -> tuple[str, ...]:
+    if isinstance(value, str):
+        clean = value.strip()
+        return (clean,) if clean else ()
+    if isinstance(value, Sequence):
+        return tuple(str(item).strip() for item in value if str(item or "").strip())
+    return ()

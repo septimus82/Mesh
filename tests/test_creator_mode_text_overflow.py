@@ -31,15 +31,14 @@ def _door_entity(config: dict[str, object] | None = None) -> dict[str, object]:
     return {
         "id": "door_north",
         "name": "North Gate",
-        "behaviours": ["SceneExit"],
+        "behaviours": ["SceneTransition"],
         "behaviour_config": {
-            "SceneExit": dict(
+            "SceneTransition": dict(
                 config
                 if config is not None
                 else {
                     "target_scene": "town",
-                    "target_spawn": "north_gate_entry",
-                    "trigger": "interact",
+                    "spawn_id": "north_gate_entry",
                 }
             )
         },
@@ -50,7 +49,7 @@ def test_right_panel_text_respects_panel_width_at_font_size() -> None:
     long_scene = "scenes/deep/nested/path/" + ("segment/" * 20) + "lighting_showcase.json"
     controller = CreatorModeController(
         SimpleNamespace(
-            selected_entity=_door_entity(config={"target_scene": long_scene, "target_spawn": "entry"}),
+            selected_entity=_door_entity(config={"target_scene": long_scene, "spawn_id": "entry"}),
             window=SimpleNamespace(scene_controller=SimpleNamespace(current_scene_path="forest")),
         )
     )
@@ -80,7 +79,7 @@ def test_right_panel_path_field_uses_middle_truncation() -> None:
     long_scene = "scenes/deep/nested/path/" + ("segment/" * 20) + "lighting_showcase.json"
     controller = CreatorModeController(
         SimpleNamespace(
-            selected_entity=_door_entity(config={"target_scene": long_scene, "target_spawn": "entry"}),
+            selected_entity=_door_entity(config={"target_scene": long_scene, "spawn_id": "entry"}),
             window=SimpleNamespace(scene_controller=SimpleNamespace(current_scene_path="forest")),
         )
     )
