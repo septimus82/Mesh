@@ -1,5 +1,9 @@
+import pytest
+
 from engine.behaviours import load_builtin_behaviours
 from engine.behaviours.registry import get_behaviour_info
+
+pytestmark = [pytest.mark.fast]
 
 load_builtin_behaviours()
 

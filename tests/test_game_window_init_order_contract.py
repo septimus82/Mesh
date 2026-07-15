@@ -31,6 +31,21 @@ class _FakeSceneController:
         return {"path": scene_path}
 
 
+class _FakeCameraController:
+    def __init__(self) -> None:
+        self.gui_camera = SimpleNamespace(use=_noop)
+        self.initialized = False
+
+    def initialize_window_cameras(self) -> None:
+        self.initialized = True
+
+    def sync_gui_camera_to_window(self) -> None:
+        return
+
+    def use_gui_camera(self) -> None:
+        self.gui_camera.use()
+
+
 def _noop(*_: Any) -> None: pass
 
 
@@ -42,7 +57,7 @@ def _build_window_with_editor_restore(editor_cls: type) -> GameWindow:
     light = SimpleNamespace(set_ambient_tint=_noop, set_ambient_darkness_alpha=_noop)
     simple_classes = (
         "SceneLoader", "AssetManager", "AnimationFactory", "TilemapManager", "ConsoleController",
-        "CameraController", "InputController", "GameStateController", "SaveManager", "QuestManager",
+        "InputController", "GameStateController", "SaveManager", "QuestManager",
         "ParticleManager", "DayNightCycle",
     )
     patches = [
@@ -54,6 +69,7 @@ def _build_window_with_editor_restore(editor_cls: type) -> GameWindow:
         patch("engine.game.SceneController", _FakeSceneController),
         patch("engine.game.UIController", return_value=MagicMock()),
         patch("engine.game.LightManager", return_value=light),
+        patch("engine.game.CameraController", return_value=_FakeCameraController()),
         patch("engine.game.CutsceneController", return_value=SimpleNamespace(load_from_file=_noop)),
         patch("engine.game.EditorModeController", editor_cls),
         patch("engine.asset_hot_reload_watcher.maybe_start_hot_reload_watcher", return_value=None),
@@ -87,6 +103,7 @@ def test_scene_facing_runtime_attrs_exist_after_game_window_init() -> None:
         def __init__(self, window: GameWindow) -> None: self.window = window
     window = _build_window_with_editor_restore(PassiveEditor)
     assert all(getattr(window, name, None) is not None for name in SCENE_FACING_ATTRS)
+    assert window.camera_controller.initialized is True
 
 
 def test_mid_init_scene_load_uses_initialized_scene_state() -> None:

@@ -46,6 +46,17 @@ def _get_route_table() -> tuple[RouteSpec, ...]:
     return _ROUTE_TABLE
 
 
+def _route_modifiers(modifiers: int) -> int:
+    """Drop lock-key state bits before matching semantic key routes."""
+    key_mods = optional_arcade.arcade.key
+    lock_mask = (
+        int(getattr(key_mods, "MOD_CAPSLOCK", 0) or 0)
+        | int(getattr(key_mods, "MOD_NUMLOCK", 0) or 0)
+        | int(getattr(key_mods, "MOD_SCROLLLOCK", 0) or 0)
+    )
+    return int(modifiers) & ~lock_mask
+
+
 def route_and_dispatch(controller: Any, key: int, modifiers: int, snapshot: CaptureFocusSnapshot) -> bool:
     """Route a key press to an action and dispatch it.
 
@@ -64,7 +75,7 @@ def route_and_dispatch(controller: Any, key: int, modifiers: int, snapshot: Capt
     Returns:
         True if the key was consumed, False otherwise.
     """
-    combo = KeyCombo(key=int(key), mods=int(modifiers))
+    combo = KeyCombo(key=int(key), mods=_route_modifiers(modifiers))
 
     active_scopes = compute_active_scopes(snapshot)
     routes = _get_route_table()

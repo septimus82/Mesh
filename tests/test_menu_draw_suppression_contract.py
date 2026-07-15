@@ -20,6 +20,22 @@ class _SpyCamera:
         self._calls.append(f"{self._name}.use")
 
 
+class _CameraControllerSpy:
+    def __init__(self, calls: list[str]) -> None:
+        self._calls = calls
+        self.gui_camera = _SpyCamera(calls, "gui")
+
+    def initialize_window_cameras(self) -> None:
+        self._calls.append("camera.initialize")
+
+    def sync_gui_camera_to_window(self) -> None:
+        self._calls.append("camera.sync_gui")
+
+    def use_gui_camera(self) -> None:
+        self._calls.append("camera.use_gui")
+        self.gui_camera.use()
+
+
 class _DrawSpy:
     active = False
 
@@ -65,7 +81,7 @@ def _window(calls: list[str], *, menu_visible: bool) -> SimpleNamespace:
     return SimpleNamespace(
         clear=lambda: calls.append("window.clear"),
         camera=_SpyCamera(calls, "world"),
-        camera_controller=SimpleNamespace(gui_camera=_SpyCamera(calls, "gui")),
+        camera_controller=_CameraControllerSpy(calls),
         render_queue=None,
         perf_stats=None,
         lighting=None,
@@ -105,6 +121,7 @@ def test_main_menu_visible_suppresses_world_draws_and_fog_lifecycle_stays_intact
     assert "editor.draw_world" not in calls
     assert "fog.draw_world" not in calls
     assert calls == [
+        "camera.sync_gui",
         "post_process.begin",
         "window.clear",
         "world.use",
@@ -112,6 +129,7 @@ def test_main_menu_visible_suppresses_world_draws_and_fog_lifecycle_stays_intact
         "ghost.restore:True:True",
         "render_queue.finalize",
         "post_process.end",
+        "camera.use_gui",
         "gui.use",
         "ui.draw",
         "editor.draw_overlay",
@@ -125,11 +143,13 @@ def test_main_menu_hidden_preserves_world_draw_order() -> None:
     tick.on_draw(window)
 
     assert calls == [
+        "camera.sync_gui",
         "window.clear",
         "world.use",
         "scene.draw",
         "particles.draw",
         "editor.draw_world",
+        "camera.use_gui",
         "gui.use",
         "ui.draw",
         "editor.draw_overlay",

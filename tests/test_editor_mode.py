@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import arcade
+import pytest
 
 import engine.editor.input_router as input_router
 from engine.config import EngineConfig
@@ -81,18 +82,21 @@ def test_editor_save():
         mock_write.assert_called_with("test_scene.json", {"entities": []})
 
 
+@pytest.mark.integration
 def test_editor_controller_instantiates_with_creator_mode():
     controller = EditorModeController(MockWindow())
 
     assert hasattr(controller, "creator_mode")
 
 
+@pytest.mark.integration
 def test_editor_overlay_draw_inactive_creator_mode_does_not_raise():
     editor = _overlay_editor(creator_active=False)
 
     EditorOverlayController(editor).draw_overlay()
 
 
+@pytest.mark.integration
 def test_editor_overlay_draw_creator_mode_renderer_import_failure_does_not_raise(monkeypatch):
     editor = _overlay_editor(creator_active=True)
     original_import = builtins.__import__
@@ -107,24 +111,28 @@ def test_editor_overlay_draw_creator_mode_renderer_import_failure_does_not_raise
     EditorOverlayController(editor).draw_overlay()
 
 
+@pytest.mark.integration
 def test_creator_mode_toggle_key_false_when_f5_missing(monkeypatch):
     monkeypatch.setattr(input_router.optional_arcade, "arcade", SimpleNamespace(key=SimpleNamespace()))
 
     assert input_router._is_creator_mode_toggle_key(65474, 0) is False
 
 
+@pytest.mark.integration
 def test_creator_mode_toggle_key_false_when_key_namespace_missing(monkeypatch):
     monkeypatch.setattr(input_router.optional_arcade, "arcade", SimpleNamespace())
 
     assert input_router._is_creator_mode_toggle_key(65474, 0) is False
 
 
+@pytest.mark.integration
 def test_creator_mode_toggle_key_false_when_arcade_missing(monkeypatch):
     monkeypatch.setattr(input_router.optional_arcade, "arcade", None)
 
     assert input_router._is_creator_mode_toggle_key(65474, 0) is False
 
 
+@pytest.mark.integration
 def test_creator_mode_toggle_key_requires_shift_and_ignores_lock_key_modifiers():
     import engine.optional_arcade as optional_arcade
 
@@ -141,6 +149,7 @@ def test_creator_mode_toggle_key_requires_shift_and_ignores_lock_key_modifiers()
     assert input_router._is_creator_mode_toggle_key(key.F5, key.MOD_SHIFT | caps | num) is True
 
 
+@pytest.mark.integration
 def test_creator_mode_toggle_key_false_when_ctrl_held():
     import engine.optional_arcade as optional_arcade
 
@@ -153,6 +162,7 @@ def test_creator_mode_toggle_key_false_when_ctrl_held():
     )
 
 
+@pytest.mark.integration
 def test_editor_overlay_draw_calls_creator_renderer_when_active(monkeypatch):
     calls: list[object] = []
     editor = _overlay_editor(creator_active=True)

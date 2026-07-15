@@ -18,7 +18,7 @@ Engine fallback defaults are bound via `InputManager.bind_default_actions(arcade
 | `quick_load` | `F9` |
 | `quick_save` | `F5` |
 | `quickload_last_save` | `F10` |
-| `save_game` | `F8` |
+| `save_game` | `Ctrl+F5` |
 | `show_character` | `C` |
 | `show_inventory` | `TAB` |
 | `show_quests` | `J, Q` |

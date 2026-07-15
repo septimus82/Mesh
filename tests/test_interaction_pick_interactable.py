@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import pytest
+
+pytestmark = [pytest.mark.fast]
+
 
 def test_pick_interactable_nearest_and_tiebreak() -> None:
     from engine.interaction import pick_interactable

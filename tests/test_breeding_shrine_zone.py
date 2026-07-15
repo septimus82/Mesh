@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import random
 import types
+from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
 
+from engine.behaviours import breeding_shrine_zone as breeding_shrine_zone_module
 from engine.behaviours import load_builtin_behaviours
 from engine.behaviours.breeding_shrine_zone import BreedingShrineZoneBehaviour
 from engine.behaviours.registry import BEHAVIOUR_REGISTRY
@@ -89,6 +92,12 @@ def _config(**overrides: object) -> dict[str, object]:
     return base
 
 
+def _config_without_injected_rng(**overrides: object) -> dict[str, object]:
+    config = _config(**overrides)
+    config.pop("rng", None)
+    return config
+
+
 def _seed_bonded_party(values: dict, *, first_bond: float, second_bond: float) -> tuple[str, str]:
     ensure_monster_collection(values)
     from engine.monster.collection import add_caught_monster
@@ -102,6 +111,28 @@ def _seed_bonded_party(values: dict, *, first_bond: float, second_bond: float) -
         _mind(bond=second_bond, aggression=25.0, traits=("timid",))
     )
     return first.instance_id, second.instance_id
+
+
+def _remove_pending_eggs(values: dict) -> None:
+    values[MONSTER_EGGS_KEY] = []
+
+
+def _trigger_shrine_once(
+    behaviour: BreedingShrineZoneBehaviour,
+    values: dict,
+) -> dict:
+    behaviour.update(0.016)
+    assert behaviour.last_outcome == "success"
+    return dict(values[MONSTER_EGGS_KEY][-1])
+
+
+def _leave_and_reenter(
+    behaviour: BreedingShrineZoneBehaviour,
+    player: types.SimpleNamespace,
+) -> None:
+    player.center_x = 9999.0
+    behaviour.update(0.016)
+    player.center_x = 710.0
 
 
 def test_behaviour_registry_exposes_breeding_shrine_zone() -> None:
@@ -173,6 +204,194 @@ def test_zone_rejects_low_bond_with_terms_line() -> None:
     behaviour.update(0.016)
     assert behaviour.last_outcome == "not_enough_bonded"
     assert "bond" in str(window.console_log.call_args.args[0]).lower()
+
+
+def test_zone_saveable_state_contains_cooldown_inside_and_json_safe_rng_state() -> None:
+    window = _window(values={})
+    behaviour = BreedingShrineZoneBehaviour(_entity(), window, **_config())
+    behaviour.cooldown_remaining = 3.5
+    behaviour._was_inside = True
+    behaviour.last_outcome = "success"
+
+    saved = behaviour.saveable_state()
+    assert saved["cooldown_remaining"] == 3.5
+    assert saved["was_inside"] is True
+    assert isinstance(saved["rng_state"], list)
+    json.dumps(saved)
+
+
+def test_zone_rng_state_survives_json_round_trip_without_custom_encoder() -> None:
+    window = _window(values={})
+    behaviour = BreedingShrineZoneBehaviour(_entity(), window, **_config())
+    behaviour.rng.random()
+
+    saved = behaviour.saveable_state()
+    decoded = json.loads(json.dumps(saved))
+    restored = BreedingShrineZoneBehaviour(_entity(), _window(values={}), **_config(rng=random.Random(999)))
+    restored.restore_state(decoded)
+
+    expected_rng = random.Random()
+    expected_rng.setstate(behaviour.rng.getstate())
+    assert [restored.rng.random() for _ in range(5)] == [expected_rng.random() for _ in range(5)]
+
+
+def test_zone_restore_state_clamps_malformed_values_and_resets_outcome() -> None:
+    window = _window(values={})
+    behaviour = BreedingShrineZoneBehaviour(_entity(), window, **_config(trigger_radius=99.0, enabled=False))
+    behaviour.cooldown_remaining = 8.0
+    behaviour._was_inside = True
+    behaviour.last_outcome = "cooldown"
+
+    behaviour.restore_state({"cooldown_remaining": float("inf"), "was_inside": ""})
+    assert behaviour.cooldown_remaining == 0.0
+    assert behaviour._was_inside is False
+    assert behaviour.last_outcome == ""
+    assert behaviour.radius == 99.0
+    assert behaviour.enabled is False
+
+    behaviour.restore_state({"cooldown_remaining": -5, "was_inside": 1})
+    assert behaviour.cooldown_remaining == 0.0
+    assert behaviour._was_inside is True
+
+
+def test_zone_restore_inside_state_prevents_immediate_second_egg_until_reentry() -> None:
+    values: dict = {}
+    _seed_bonded_party(values, first_bond=60.0, second_bond=55.0)
+    player = _player()
+    window = _window(values=values)
+    window.find_sprite_by_name = MagicMock(side_effect=lambda name: player if name == "Player" else None)
+    first = BreedingShrineZoneBehaviour(_entity(), window, **_config(max_eggs=2))
+    first.update(0.016)
+    assert first.last_outcome == "success"
+    assert count_pending_eggs(values) == 1
+
+    restored = BreedingShrineZoneBehaviour(_entity(), window, **_config(max_eggs=2))
+    restored.restore_state(first.saveable_state())
+    restored.update(0.016)
+    assert restored.last_outcome == ""
+    assert count_pending_eggs(values) == 1
+
+    player.center_x = 9999.0
+    restored.update(0.016)
+    player.center_x = 710.0
+    restored.update(0.016)
+    assert restored.last_outcome == "success"
+    assert count_pending_eggs(values) == 2
+
+
+def test_seeded_zone_continues_offspring_sequence_after_json_restore() -> None:
+    def _timeline_without_save() -> dict:
+        values: dict = {}
+        _seed_bonded_party(values, first_bond=60.0, second_bond=55.0)
+        player = _player()
+        window = _window(values=values)
+        window.find_sprite_by_name = MagicMock(side_effect=lambda name: player if name == "Player" else None)
+        behaviour = BreedingShrineZoneBehaviour(
+            _entity(),
+            window,
+            **_config_without_injected_rng(seed=12345, max_eggs=1),
+        )
+        _trigger_shrine_once(behaviour, values)
+        _remove_pending_eggs(values)
+        _leave_and_reenter(behaviour, player)
+        return _trigger_shrine_once(behaviour, values)
+
+    def _timeline_with_restore() -> dict:
+        values: dict = {}
+        _seed_bonded_party(values, first_bond=60.0, second_bond=55.0)
+        player = _player()
+        window = _window(values=values)
+        window.find_sprite_by_name = MagicMock(side_effect=lambda name: player if name == "Player" else None)
+        first = BreedingShrineZoneBehaviour(
+            _entity(),
+            window,
+            **_config_without_injected_rng(seed=12345, max_eggs=1),
+        )
+        _trigger_shrine_once(first, values)
+        saved = json.loads(json.dumps(first.saveable_state()))
+        _remove_pending_eggs(values)
+
+        restored = BreedingShrineZoneBehaviour(
+            _entity(),
+            window,
+            **_config_without_injected_rng(seed=12345, max_eggs=1),
+        )
+        restored.restore_state(saved)
+        _leave_and_reenter(restored, player)
+        return _trigger_shrine_once(restored, values)
+
+    expected = _timeline_without_save()
+    actual = _timeline_with_restore()
+    assert actual["offspring"] == expected["offspring"]
+    assert actual["companion_mind"] == expected["companion_mind"]
+
+
+def test_unseeded_zone_restores_rng_sequence_from_saved_state() -> None:
+    rng = random.Random()
+    rng.random()
+    behaviour = BreedingShrineZoneBehaviour(_entity(), _window(values={}), **_config(rng=rng))
+    decoded = json.loads(json.dumps(behaviour.saveable_state()))
+
+    expected = [rng.random() for _ in range(6)]
+    restored = BreedingShrineZoneBehaviour(_entity(), _window(values={}), **_config(rng=random.Random()))
+    restored.restore_state(decoded)
+
+    assert [restored.rng.random() for _ in range(6)] == expected
+
+
+def test_zone_omits_rng_state_for_unsupported_injected_rng_and_restores_old_payload() -> None:
+    class RandomLikeWithoutState:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def random(self) -> float:
+            self.calls += 1
+            return 0.25
+
+    values: dict = {}
+    _seed_bonded_party(values, first_bond=60.0, second_bond=55.0)
+    rng = RandomLikeWithoutState()
+    player = _player()
+    window = _window(values=values)
+    window.find_sprite_by_name = MagicMock(side_effect=lambda name: player if name == "Player" else None)
+    behaviour = BreedingShrineZoneBehaviour(_entity(), window, **_config(rng=rng, max_eggs=2))
+    behaviour.cooldown_remaining = 2.0
+    behaviour._was_inside = True
+
+    saved = behaviour.saveable_state()
+    assert saved == {"cooldown_remaining": 2.0, "was_inside": True}
+
+    behaviour.restore_state({"cooldown_remaining": 0.0, "was_inside": False})
+    assert behaviour.rng is rng
+    _trigger_shrine_once(behaviour, values)
+    assert rng.calls > 0
+
+
+def test_zone_malformed_rng_state_keeps_constructor_rng_and_restores_other_fields() -> None:
+    rng = random.Random(31)
+    rng.random()
+    behaviour = BreedingShrineZoneBehaviour(_entity(), _window(values={}), **_config(rng=rng))
+    expected_rng = random.Random()
+    expected_rng.setstate(rng.getstate())
+    behaviour.last_outcome = "success"
+
+    # engine.log_utils.get_logger sets propagate=False, so caplog cannot see
+    # these records; assert the warning call directly instead.
+    with mock.patch.object(breeding_shrine_zone_module.LOGGER, "warning") as warn:
+        behaviour.restore_state(
+            {
+                "cooldown_remaining": 4.25,
+                "was_inside": True,
+                "rng_state": {"not": "a random state"},
+            }
+        )
+
+    assert behaviour.cooldown_remaining == 4.25
+    assert behaviour._was_inside is True
+    assert behaviour.last_outcome == ""
+    assert [behaviour.rng.random() for _ in range(5)] == [expected_rng.random() for _ in range(5)]
+    assert warn.call_count == 1
+    assert "Could not restore BreedingShrineZone RNG state" in str(warn.call_args)
 
 
 def test_hatchling_battle_diag_reflects_inherited_mind(monkeypatch: pytest.MonkeyPatch) -> None:

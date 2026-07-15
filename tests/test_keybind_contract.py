@@ -16,7 +16,7 @@ def test_core_keybinds_have_no_conflicts() -> None:
     bindings = raw.get("input_bindings")
     assert isinstance(bindings, dict)
 
-    core_actions = [
+    bare_key_actions = [
         # movement
         "move_up",
         "move_down",
@@ -34,16 +34,16 @@ def test_core_keybinds_have_no_conflicts() -> None:
         # save/load
         "quick_save",
         "quick_load",
-        "save_game",
         "quickload_last_save",
     ]
+    routed_modifier_actions = {"save_game"}
 
     # Explicitly allowed overlaps (key name, action_a, action_b) as sorted tuples.
     allowed_overlaps: set[tuple[str, str, str]] = set()
 
     key_to_actions: dict[str, list[str]] = {}
 
-    for action in core_actions:
+    for action in bare_key_actions:
         keys = bindings.get(action)
         assert isinstance(keys, list) and keys, f"Missing or empty binding for '{action}'"
 
@@ -70,3 +70,7 @@ def test_core_keybinds_have_no_conflicts() -> None:
             conflicts.append(f"{key_name}: {actions}")
 
     assert not conflicts, "Keybind conflicts in core controls:\n" + "\n".join(conflicts)
+
+    for action in routed_modifier_actions:
+        keys = bindings.get(action)
+        assert keys in (None, []), f"Routed modifier action '{action}' must not claim a bare-key binding"

@@ -35,7 +35,7 @@ Cycles sprite textures using named animation states.
 
 | Name | Description | Type | Default |
 | --- | --- | --- | --- |
-| animations | Mapping of state name to a list of texture paths | string | {} |
+| animations | Mapping of state name to a list of texture paths | object | {} |
 | animation_state | Initial animation state to play | string | idle |
 | animation_frame_rate | Frames per second for the active animation | float | 8.0 |
 | enable_auto_state | Automatically switch idle/walk based on movement | bool | False |
@@ -79,6 +79,34 @@ Example configuration snippet:
   "behaviour_config": {
     "AutoAnimationByMovement": {
       "idle": "<value>"
+    }
+  }
+}
+```
+
+## BreedingShrineZone
+Creates a breeding egg when two sufficiently bonded companions visit the shrine.
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| trigger_radius | Distance threshold for triggering | float | 0.0 |
+| trigger_target | Name of the player sprite to watch | string | - |
+| enabled | Whether the shrine can trigger | bool | True |
+| enabled_flag | Optional game-state flag required to enable the shrine | string | - |
+| cooldown_seconds | Cooldown after an attempt | float | 3.0 |
+| bond_threshold | Minimum companion bond required to breed | float | 50.0 |
+| max_eggs | Maximum pending eggs allowed | int | 1 |
+| hatch_steps | Egg steps required before hatching | int | 200 |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["BreedingShrineZone"],
+  "behaviour_config": {
+    "BreedingShrineZone": {
+      "trigger_radius": "<value>"
     }
   }
 }
@@ -390,6 +418,28 @@ Example configuration snippet:
   "behaviour_config": {
     "EmitEventOnEvent": {
       "listen_event": "<value>"
+    }
+  }
+}
+```
+
+## EncounterCleared
+Emits an event once all live entities with the configured tag are gone.
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| enemy_tag | Sprite tag counted as part of the encounter. | string | enemy |
+| clear_event | Event emitted when the encounter clears. | string | encounter_cleared |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["EncounterCleared"],
+  "behaviour_config": {
+    "EncounterCleared": {
+      "enemy_tag": "<value>"
     }
   }
 }
@@ -785,6 +835,37 @@ Example configuration snippet:
   "behaviour_config": {
     "MessageOnZoneEnter": {
       "zone_name": "<value>"
+    }
+  }
+}
+```
+
+## MonsterEncounterZone
+Starts a monster battle when the target enters an eligible encounter zone.
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| trigger_radius | Distance threshold for triggering | float | 0.0 |
+| trigger_target | Name of the player sprite to watch | string | - |
+| encounter_id | Stable encounter id for return context | string | - |
+| enabled | Whether encounters can trigger | bool | True |
+| enabled_flag | Optional game-state flag required to enable encounters | string | - |
+| cooldown_seconds | Cooldown after a roll/start | float | 1.0 |
+| chance | Encounter chance per eligible enter update | float | 1.0 |
+| player_species_id | Temporary player-side species id for MON-0e | string | - |
+| player_level | Temporary player-side level for MON-0e | int | 5 |
+| encounter_table | Weighted encounter table | array | [] |
+| companion_mode | Start a companion battle (auto-acting monster + Praise/Scold/Wait) | bool | False |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["MonsterEncounterZone"],
+  "behaviour_config": {
+    "MonsterEncounterZone": {
+      "trigger_radius": "<value>"
     }
   }
 }

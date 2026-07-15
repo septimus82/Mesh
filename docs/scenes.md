@@ -30,7 +30,7 @@ Engine version: 0.5.0
 
 - Entities: 8
 - Layers: background, entities, foreground
-- Tags: -
+- Tags: player
 - Warnings:
   - Entity 'Player' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'ArenaEntryTrigger' uses prefab_id 'cv_entry_trigger' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
@@ -62,7 +62,7 @@ Engine version: 0.5.0
 
 - Entities: 20
 - Layers: background, entities, foreground
-- Tags: -
+- Tags: player
 - Warnings:
   - Entity 'Episode01Player' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'Episode01EntryTrigger' uses prefab_id 'ep01_trigger' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
@@ -90,7 +90,7 @@ Engine version: 0.5.0
 
 - Entities: 25
 - Layers: background, entities, foreground
-- Tags: -
+- Tags: player
 - Warnings:
   - Entity 'Episode02Player' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'Episode02EntryTrigger' uses prefab_id 'ep02_trigger' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
@@ -123,7 +123,7 @@ Engine version: 0.5.0
 
 - Entities: 26
 - Layers: background, entities, foreground
-- Tags: -
+- Tags: player
 - Warnings:
   - Entity 'Episode03Player' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'Episode03EntryTrigger' uses prefab_id 'ep03_trigger' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
@@ -157,7 +157,7 @@ Engine version: 0.5.0
 
 - Entities: 26
 - Layers: background, entities, foreground
-- Tags: -
+- Tags: player
 - Warnings:
   - Entity 'Episode04Player' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'Episode04EntryTrigger' uses prefab_id 'ep04_trigger' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
@@ -191,7 +191,7 @@ Engine version: 0.5.0
 
 - Entities: 26
 - Layers: background, entities, foreground
-- Tags: -
+- Tags: player
 - Warnings:
   - Entity 'Episode05Player' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'Episode05EntryTrigger' uses prefab_id 'ep05_trigger' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
@@ -225,7 +225,7 @@ Engine version: 0.5.0
 
 - Entities: 25
 - Layers: background, entities, foreground
-- Tags: -
+- Tags: player
 - Warnings:
   - Entity 'Episode06Player' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'Episode06EntryTrigger' uses prefab_id 'ep06_trigger' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
@@ -252,6 +252,18 @@ Engine version: 0.5.0
   - Entity 'Episode06OutroStart' uses prefab_id 'ep06_controller' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'Episode06Complete' uses prefab_id 'ep06_controller' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'Episode06Campaign05Done' uses prefab_id 'campaign_controller' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
+
+## scenes/game1a_combat_room.json
+[ok] Valid
+
+- Entities: 5
+- Layers: background, entities, foreground
+- Tags: enemy, player, spawn_point
+- Warnings:
+  - Entity 'Player' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
+  - Entity 'Shadow Chaser A' uses prefab_id 'chaser_enemy' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
+  - Entity 'Shadow Chaser B' uses prefab_id 'chaser_enemy' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
+  - Entity[4] 'EncounterController': unknown field 'alpha' will be copied verbatim
 
 ## scenes/guard_patrol_chase_demo.json
 [ok] Valid
@@ -308,7 +320,7 @@ Engine version: 0.5.0
 
 - Entities: 15
 - Layers: background, entities, foreground
-- Tags: -
+- Tags: player
 - Warnings:
   - Entity 'PuzzlePlayer' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'RoomEntryTrigger' uses prefab_id 'puzzle_room_entry_trigger' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
@@ -331,7 +343,7 @@ Engine version: 0.5.0
 
 - Entities: 23
 - Layers: background, entities, foreground
-- Tags: -
+- Tags: player
 - Warnings:
   - Entity 'PuzzlePlayer' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'RoomEntryTrigger02' uses prefab_id 'puzzle_room2_entry_trigger' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
@@ -362,7 +374,7 @@ Engine version: 0.5.0
 
 - Entities: 16
 - Layers: background, entities, foreground
-- Tags: -
+- Tags: player
 - Warnings:
   - Entity 'PuzzlePlayer' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'RoomEntryTrigger03' uses prefab_id 'puzzle_room3_entry_trigger' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
@@ -407,7 +419,7 @@ Engine version: 0.5.0
 ## scenes/showcase_hub.json
 [ok] Valid
 
-- Entities: 12
+- Entities: 15
 - Layers: background, entities, foreground
 - Tags: exit, npc, player, prop, spawn_point
 
@@ -457,7 +469,7 @@ Engine version: 0.5.0
 
 - Entities: 13
 - Layers: background, entities, foreground
-- Tags: -
+- Tags: player
 - Warnings:
   - Entity 'Player' uses prefab_id 'player' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
   - Entity 'TownEntryTrigger' uses prefab_id 'town_entry_trigger' and must not set 'name'. Use mesh_name for instance naming or variant_id for display changes.
