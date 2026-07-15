@@ -106,6 +106,16 @@ class OfferPerkChoice(Behaviour):
         if self.interact_trigger:
             self._start_offer()
 
+    def can_interact_with(self, _actor: Sprite) -> bool:
+        if self._active:
+            return False
+        if not self.interact_trigger:
+            return False
+        return bool(self._get_available_perks())
+
+    def get_interact_label(self, _actor: Sprite | None = None) -> str | None:
+        return self.speaker
+
     def update(self, dt: float) -> None:
         if not self._active:
             return

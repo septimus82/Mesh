@@ -4,6 +4,8 @@ import arcade
 
 
 def test_interact_key_triggers_nearest_dialogue_entity() -> None:
+    from engine.behaviours.player_controller import PlayerController
+    from engine.input import InputManager
     from engine.input_runtime import capture as input_capture
 
     calls: list[str] = []
@@ -54,6 +56,7 @@ def test_interact_key_triggers_nearest_dialogue_entity() -> None:
         editor_controller = _Editor()
         show_debug = False
         scene_controller = _Scene()
+        input = None
 
         @property
         def all_sprites(self):
@@ -68,24 +71,25 @@ def test_interact_key_triggers_nearest_dialogue_entity() -> None:
         def dialogue_blocks_input(self) -> bool:
             return False
 
-    class _Manager:
-        def press(self, _key: int) -> None:
-            return
-
-        def release(self, _key: int) -> None:  # pragma: no cover
-            return
-
     window = _Window()
+    manager = InputManager()
+    manager.bind("interact", arcade.key.E)
+    window.input = manager
+    window.move_entity_with_collision = lambda entity, dx, dy, dt=0.0: None
     controller = type(
         "C",
         (),
         {
             "window": window,
-            "manager": _Manager(),
+            "manager": manager,
             "_keys": set(),
             "is_input_locked": lambda self: False,
         },
     )()
 
-    assert input_capture.handle_key_press(controller, arcade.key.E, 0) is True
+    player_controller = PlayerController(player, window, speed=0.0)
+
+    assert input_capture.handle_key_press(controller, arcade.key.E, 0) is False
+    manager.update(0.016)
+    player_controller.update(0.016)
     assert calls == ["near"]

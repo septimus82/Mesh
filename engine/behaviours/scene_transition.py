@@ -159,6 +159,23 @@ class SceneTransition(Behaviour):
             return
         self._trigger_transition(reason="interact", actor=actor)
 
+    def can_interact_with(self, _actor: Any) -> bool:
+        if not self.allow_interact:
+            return False
+        if not self.target_scene:
+            return False
+        if self.once and self._triggered:
+            return False
+        getter = getattr(self.window, "get_flag", None)
+        if callable(getter):
+            from engine.scene_entity_gating import runtime_entity_passes_flag_gates  # noqa: PLC0415
+
+            return bool(runtime_entity_passes_flag_gates(self.entity, get_flag=getter))
+        return True
+
+    def get_interact_label(self, _actor: Any | None = None) -> str | None:
+        return str(getattr(self.entity, "mesh_name", "") or "Door").strip() or "Door"
+
     def subscribed_event_types(self) -> frozenset[str] | None:
         return frozenset({self.event_type}) if self.event_type else frozenset()
 

@@ -39,7 +39,11 @@ def test_interact_uses_configured_keybind(monkeypatch) -> None:
     from engine.input import InputManager
     from engine.input_runtime import capture as input_capture
 
-    monkeypatch.setattr(engine.interaction, "perform_interaction", lambda *_a, **_k: True)
+    monkeypatch.setattr(
+        engine.interaction,
+        "perform_interaction",
+        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("router must not execute interaction")),
+    )
 
     class _Window:
         show_debug = False
@@ -52,7 +56,7 @@ def test_interact_uses_configured_keybind(monkeypatch) -> None:
     manager.bind("interact", arcade.key.K)
     controller = _Controller(_Window(), manager)
 
-    assert input_capture.handle_key_press(controller, arcade.key.K, 0) is True
-    assert bool(getattr(controller.window, "_mesh_interact_consumed", False)) is True
+    assert input_capture.handle_key_press(controller, arcade.key.K, 0) is False
+    assert not hasattr(controller.window, "_mesh_interact_consumed")
     assert arcade.key.K in controller._keys
     assert arcade.key.K in controller.manager.get_keys_down()

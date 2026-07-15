@@ -211,17 +211,42 @@ class InteractableBehaviour(Behaviour):
             source_behaviour="Interactable",
         )
 
-    def try_interact(self) -> bool:
+    def can_interact_with(self, actor: Any) -> bool:
+        """Return whether the provided actor may currently use this interaction."""
+        if not self.can_interact:
+            return False
+        if actor is None:
+            return False
+        entity_tags = set(getattr(actor, "mesh_tags", []) or [])
+        mesh_tag = getattr(actor, "mesh_tag", None)
+        if mesh_tag:
+            entity_tags.add(str(mesh_tag))
+        if self.target_tags and not (entity_tags & set(self.target_tags)):
+            return False
+        try:
+            dx = float(getattr(actor, "center_x")) - float(getattr(self.entity, "center_x"))
+            dy = float(getattr(actor, "center_y")) - float(getattr(self.entity, "center_y"))
+        except (TypeError, ValueError, AttributeError):
+            return False
+        return math.hypot(dx, dy) <= float(self.interact_radius)
+
+    def get_interact_label(self, _actor: Any = None) -> str | None:
+        return self.interact_label
+
+    def on_interact(self, window: Any, actor: Any) -> None:  # noqa: ARG002
+        self.try_interact(actor)
+
+    def try_interact(self, interactor: Any | None = None) -> bool:
         """Attempt to interact with this object.
         
         Returns:
             True if interaction occurred.
         """
-        if not self.can_interact:
-            return False
-
-        interactor = self._find_interactor_in_range()
         if interactor is None:
+            interactor = self._find_interactor_in_range()
+        if interactor is None:
+            return False
+        if not self.can_interact_with(interactor):
             return False
 
         # Perform interaction
@@ -248,17 +273,11 @@ class InteractableBehaviour(Behaviour):
             self._in_range_entity = None
 
     def subscribed_event_types(self) -> frozenset[str] | None:
-        return frozenset({"input_action", "key_action"})
+        return frozenset()
 
-    def on_event(self, event: MeshEvent) -> None:
-        """Handle input events for interaction."""
-        # Check for interact key press
-        if event.type == "input_action" or event.type == "key_action":
-            action = event.payload.get("action", "")
-            pressed = event.payload.get("pressed", False)
-
-            if action == self.interact_key and pressed:
-                self.try_interact()
+    def on_event(self, event: MeshEvent) -> None:  # noqa: ARG002
+        """Interactable no longer listens to input events directly."""
+        return
 
     # SaveableBehaviour protocol
     def saveable_state(self) -> Dict[str, Any]:

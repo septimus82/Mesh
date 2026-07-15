@@ -51,12 +51,12 @@ def test_main_menu_subscribed_event_types_returns_empty_frozenset() -> None:
     assert b.subscribed_event_types() == frozenset()
 
 
-def test_interactable_subscribed_event_types_returns_input_and_key_action() -> None:
-    """Lock: InteractableBehaviour always subscribes to input_action and key_action."""
+def test_interactable_subscribed_event_types_returns_empty_frozenset() -> None:
+    """Lock: InteractableBehaviour no longer listens for input events directly."""
     from engine.behaviours.interactable import InteractableBehaviour
 
     b = object.__new__(InteractableBehaviour)
-    assert b.subscribed_event_types() == frozenset({"input_action", "key_action"})
+    assert b.subscribed_event_types() == frozenset()
 
 
 def test_dialogue_subscribed_event_types_configured() -> None:

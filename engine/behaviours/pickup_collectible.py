@@ -122,6 +122,22 @@ class PickupCollectible(Behaviour):
         else:
             self.entity.visible = False
 
+    def can_interact_with(self, actor: Sprite) -> bool:
+        if self.once and self._already_collected:
+            return False
+        if bool(getattr(self.entity, "visible", True)) is False:
+            return False
+        if getattr(self.entity, "_sprite_list", True) is None:
+            return False
+        if self.allowed_tag:
+            actor_tag = getattr(actor, "mesh_tag", None)
+            if actor_tag != self.allowed_tag:
+                return False
+        return True
+
+    def get_interact_label(self, _actor: Sprite | None = None) -> str | None:
+        return str(self.config.get("interact_label") or self.config.get("label") or "Pick up").strip()
+
     # ------------------------------------------------------------------
     # Inventory helpers
     # ------------------------------------------------------------------
