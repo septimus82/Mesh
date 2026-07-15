@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 import random
 import types
+from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
 
+from engine.behaviours import breeding_shrine_zone as breeding_shrine_zone_module
 from engine.behaviours import load_builtin_behaviours
 from engine.behaviours.breeding_shrine_zone import BreedingShrineZoneBehaviour
 from engine.behaviours.registry import BEHAVIOUR_REGISTRY
@@ -365,7 +367,7 @@ def test_zone_omits_rng_state_for_unsupported_injected_rng_and_restores_old_payl
     assert rng.calls > 0
 
 
-def test_zone_malformed_rng_state_keeps_constructor_rng_and_restores_other_fields(caplog: pytest.LogCaptureFixture) -> None:
+def test_zone_malformed_rng_state_keeps_constructor_rng_and_restores_other_fields() -> None:
     rng = random.Random(31)
     rng.random()
     behaviour = BreedingShrineZoneBehaviour(_entity(), _window(values={}), **_config(rng=rng))
@@ -373,7 +375,9 @@ def test_zone_malformed_rng_state_keeps_constructor_rng_and_restores_other_field
     expected_rng.setstate(rng.getstate())
     behaviour.last_outcome = "success"
 
-    with caplog.at_level("WARNING", logger="engine.behaviours.breeding_shrine_zone"):
+    # engine.log_utils.get_logger sets propagate=False, so caplog cannot see
+    # these records; assert the warning call directly instead.
+    with mock.patch.object(breeding_shrine_zone_module.LOGGER, "warning") as warn:
         behaviour.restore_state(
             {
                 "cooldown_remaining": 4.25,
@@ -386,7 +390,8 @@ def test_zone_malformed_rng_state_keeps_constructor_rng_and_restores_other_field
     assert behaviour._was_inside is True
     assert behaviour.last_outcome == ""
     assert [behaviour.rng.random() for _ in range(5)] == [expected_rng.random() for _ in range(5)]
-    assert "Could not restore BreedingShrineZone RNG state" in caplog.text
+    assert warn.call_count == 1
+    assert "Could not restore BreedingShrineZone RNG state" in str(warn.call_args)
 
 
 def test_hatchling_battle_diag_reflects_inherited_mind(monkeypatch: pytest.MonkeyPatch) -> None:
