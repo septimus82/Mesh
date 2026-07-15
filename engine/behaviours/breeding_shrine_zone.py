@@ -6,12 +6,33 @@ import math
 import random
 from typing import Any
 
+from engine.log_utils import get_logger
 from engine.monster.breeding_shrine import attempt_breeding_at_shrine
 from engine.monster.data_load import MonsterCatalog, load_battle_terms, load_monster_catalog
 from engine.paths import resolve_monster_data_dir
 
 from .base import Behaviour, ParamDef
 from .registry import register_behaviour
+
+LOGGER = get_logger(__name__)
+
+
+def _rng_state_to_json(value: Any) -> Any:
+    if isinstance(value, tuple):
+        return [_rng_state_to_json(item) for item in value]
+    if isinstance(value, list):
+        return [_rng_state_to_json(item) for item in value]
+    if isinstance(value, int | float | str | bool) or value is None:
+        return value
+    raise TypeError(f"unsupported RNG state value: {type(value).__name__}")
+
+
+def _rng_state_from_json(value: Any) -> Any:
+    if isinstance(value, list):
+        return tuple(_rng_state_from_json(item) for item in value)
+    if isinstance(value, int | float | str | bool) or value is None:
+        return value
+    raise TypeError(f"unsupported RNG state value: {type(value).__name__}")
 
 
 @register_behaviour(
@@ -187,10 +208,17 @@ class BreedingShrineZoneBehaviour(Behaviour):
         return random.Random(int(seed)) if seed not in (None, "") else random.Random()
 
     def saveable_state(self) -> dict[str, Any]:
-        return {
+        state = {
             "cooldown_remaining": float(max(0.0, self.cooldown_remaining)),
             "was_inside": bool(self._was_inside),
         }
+        getstate = getattr(self.rng, "getstate", None)
+        if callable(getstate):
+            try:
+                state["rng_state"] = _rng_state_to_json(getstate())
+            except Exception as exc:  # noqa: BLE001  # REASON: injected RNGs may expose partial getstate implementations; save must omit unsupported RNG state instead of failing gameplay saves
+                LOGGER.warning("Could not serialize BreedingShrineZone RNG state: %s", exc)
+        return state
 
     def restore_state(self, state: dict[str, Any]) -> None:
         if not isinstance(state, dict):
@@ -204,4 +232,11 @@ class BreedingShrineZoneBehaviour(Behaviour):
             cooldown = 0.0
         self.cooldown_remaining = max(0.0, cooldown)
         self._was_inside = bool(state.get("was_inside", False))
+        if "rng_state" in state:
+            setstate = getattr(self.rng, "setstate", None)
+            if callable(setstate):
+                try:
+                    setstate(_rng_state_from_json(state.get("rng_state")))
+                except Exception as exc:  # noqa: BLE001  # REASON: malformed or incompatible saved RNG state should not prevent loading old or edited saves
+                    LOGGER.warning("Could not restore BreedingShrineZone RNG state: %s", exc)
         self.last_outcome = ""
