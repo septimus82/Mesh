@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 
 _ALLOWED_TRIGGERS = frozenset({"interact", "touch", "auto"})
+_ALLOWED_TRANSITION_BEHAVIOURS = frozenset({"SceneTransition", "SceneExit"})
 _DESTINATION_SPAWN_WARNING = "Door has no destination spawn point."
 
 
@@ -22,6 +23,10 @@ class CreatorDoorPlanRequest:
     locked: bool = False
     required_flag: str = ""
     trigger: str = "interact"
+    transition_behaviour: str = "SceneTransition"
+    scene_exit_listen_event: str = ""
+    interactable_event: str = ""
+    entity_require_flags: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,7 +70,7 @@ def build_creator_door_plan(request: CreatorDoorPlanRequest) -> CreatorDoorPlan:
 
     operations = (
         _operation("ensure_door_entity", normalized["source_entity_id"], normalized),
-        _operation("configure_scene_exit", normalized["source_entity_id"], normalized),
+        _operation("configure_door_transition", normalized["source_entity_id"], normalized),
     )
     if normalized["locked"]:
         operations += (_operation("configure_lock", normalized["source_entity_id"], normalized),)
@@ -91,6 +96,10 @@ def _normalize_request(request: CreatorDoorPlanRequest) -> dict[str, object]:
         "locked": bool(request.locked),
         "required_flag": _clean(request.required_flag),
         "trigger": trigger,
+        "transition_behaviour": _clean(request.transition_behaviour),
+        "scene_exit_listen_event": _clean(request.scene_exit_listen_event),
+        "interactable_event": _clean(request.interactable_event),
+        "entity_require_flags": tuple(_clean(flag) for flag in request.entity_require_flags if _clean(flag)),
     }
 
 
@@ -102,6 +111,8 @@ def _validate(normalized: Mapping[str, object]) -> tuple[str, ...]:
         errors.append("Destination scene is required.")
     if normalized["trigger"] not in _ALLOWED_TRIGGERS:
         errors.append("Trigger must be one of: interact, touch, auto.")
+    if normalized["transition_behaviour"] not in _ALLOWED_TRANSITION_BEHAVIOURS:
+        errors.append("Selected door has no attached transition behaviour.")
     if bool(normalized["locked"]) and not normalized["required_flag"]:
         errors.append("Locked doors require a required flag.")
     return tuple(errors)

@@ -44,11 +44,12 @@ def _creator_door_ops(
             "type": "set_behaviour_params",
             "scene_path": scene_path,
             "entity_id": entity_id,
-            "behaviour_name": "SceneExit",
+            "behaviour_name": "SceneTransition",
             "params": {
                 "target_scene": destination_scene,
-                "target_spawn": destination_spawn,
-                "trigger": "interact",
+                "spawn_id": destination_spawn,
+                "allow_interact": True,
+                "trigger_on_touch": False,
             },
         }
     ]
@@ -61,12 +62,11 @@ def _install_creator_door_entity(controller: Any) -> dict[str, Any]:
         "name": "North Gate",
         "x": 10,
         "y": 20,
-        "behaviours": ["SceneExit"],
+        "behaviours": ["SceneTransition"],
         "behaviour_config": {
-            "SceneExit": {
+            "SceneTransition": {
                 "target_scene": "town",
-                "target_spawn": "entry",
-                "trigger": "interact",
+                "spawn_id": "entry",
             }
         },
     }
@@ -369,7 +369,7 @@ def test_ai_proposals_creator_door_accept_click_applies_through_official_path(
         pending = controller.proposal_inbox.list_pending()
         assert pending[0]["dry_run"]["ok"] is True
         assert len(scene_controller.all_sprites) == 1
-        assert door["behaviour_config"]["SceneExit"]["target_scene"] == "town"
+        assert door["behaviour_config"]["SceneTransition"]["target_scene"] == "town"
 
         overlay = _install_and_draw_inbox_overlay(controller, monkeypatch)
         x, y = _button_center(overlay, staged["proposal_id"], "accept")
@@ -378,14 +378,14 @@ def test_ai_proposals_creator_door_accept_click_applies_through_official_path(
 
         assert handled is True
         assert controller.proposal_inbox.list_pending() == []
-        assert door["behaviour_config"]["SceneExit"]["target_scene"] == "dungeon"
-        assert door["behaviour_config"]["SceneExit"]["target_spawn"] == "north_entry"
+        assert door["behaviour_config"]["SceneTransition"]["target_scene"] == "dungeon"
+        assert door["behaviour_config"]["SceneTransition"]["spawn_id"] == "north_entry"
         assert len(controller.undo.undo_stack) == 1
         assert controller.undo.undo_stack[0]["type"] == "ApplyAIOpBatch"
 
         assert controller.undo.undo() is True
-        assert door["behaviour_config"]["SceneExit"]["target_scene"] == "town"
-        assert door["behaviour_config"]["SceneExit"]["target_spawn"] == "entry"
+        assert door["behaviour_config"]["SceneTransition"]["target_scene"] == "town"
+        assert door["behaviour_config"]["SceneTransition"]["spawn_id"] == "entry"
     finally:
         bridge.stop()
 
@@ -447,7 +447,7 @@ def test_ai_proposals_failed_dry_run_disables_accept_click(
         reject_x, reject_y = _button_center(overlay, staged["proposal_id"], "reject")
         assert controller.handle_mouse_click(reject_x, reject_y, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
         assert controller.proposal_inbox.list_pending() == []
-        assert door["behaviour_config"]["SceneExit"]["target_scene"] == "town"
+        assert door["behaviour_config"]["SceneTransition"]["target_scene"] == "town"
         assert controller.undo.undo_stack == []
         assert len(scene_controller.all_sprites) == 1
     finally:

@@ -68,7 +68,7 @@ def test_selected_door_with_valid_scene_exit_config_renders_door_panel_text() ->
 
 
 def test_selected_door_with_missing_destination_includes_blocked_problem_line() -> None:
-    entity = _door_entity(config={"target_spawn": "north_gate_entry"})
+    entity = _door_entity(config={"spawn_id": "north_gate_entry"})
     controller = CreatorModeController(_editor_with_selection(entity))
     controller.show()
 
@@ -152,7 +152,7 @@ def test_door_panel_overlay_output_is_deterministic() -> None:
 
 def test_long_door_panel_lines_are_truncated_by_overlay_rules() -> None:
     long_scene = "very_long_destination_map_" * 8
-    entity = _door_entity(config={"target_scene": long_scene, "target_spawn": "north_gate_entry"})
+    entity = _door_entity(config={"target_scene": long_scene, "spawn_id": "north_gate_entry"})
     controller = CreatorModeController(_editor_with_selection(entity, live_bridge=FakeBridge()))
     controller.show()
 
@@ -164,7 +164,9 @@ def test_long_door_panel_lines_are_truncated_by_overlay_rules() -> None:
     text = _command_text(commands)
 
     assert long_scene not in text
-    assert truncate_creator_overlay_text(f"- Set destination: Send the player to {long_scene}", 68) in text
+    friendly_scene = long_scene.replace("_", " ").title()
+    expected = f"- Configure selected door: Destination: {friendly_scene}."
+    assert truncate_creator_overlay_text(expected, 68) in text
 
 
 def test_door_selection_adapter_returns_none_for_non_door() -> None:
@@ -229,15 +231,14 @@ def _door_entity(config: dict[str, object] | None = None) -> dict[str, object]:
     return {
         "id": "door_north",
         "name": "North Gate",
-        "behaviours": ["SceneExit"],
+        "behaviours": ["SceneTransition"],
         "behaviour_config": {
-            "SceneExit": dict(
+            "SceneTransition": dict(
                 config
                 if config is not None
                 else {
                     "target_scene": "town",
-                    "target_spawn": "north_gate_entry",
-                    "trigger": "interact",
+                    "spawn_id": "north_gate_entry",
                 }
             )
         },

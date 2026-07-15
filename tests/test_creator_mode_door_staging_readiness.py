@@ -47,7 +47,7 @@ def test_ready_model_includes_live_op_preview_text() -> None:
         FakeBridge(),
     )
 
-    assert model.live_ops_preview == ("Set SceneExit params on door_north.",)
+    assert model.live_ops_preview == ("Set SceneTransition params on door_north.",)
 
 
 def test_missing_bridge_returns_bridge_unavailable() -> None:

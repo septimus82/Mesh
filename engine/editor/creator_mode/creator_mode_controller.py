@@ -197,8 +197,12 @@ class CreatorModeController:
                 str(request.destination_scene or ""),
                 str(request.destination_spawn_id or ""),
                 str(request.trigger or ""),
+                str(request.transition_behaviour or ""),
+                str(request.scene_exit_listen_event or ""),
+                str(request.interactable_event or ""),
                 "1" if request.locked else "0",
                 str(request.required_flag or ""),
+                ",".join(request.entity_require_flags),
             )
         )
 

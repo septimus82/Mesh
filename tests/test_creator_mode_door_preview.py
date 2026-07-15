@@ -63,11 +63,11 @@ def test_ensure_door_entity_maps_to_prepare_door() -> None:
     assert step.detail == "Prepare door_north in the source map."
 
 
-def test_configure_scene_exit_maps_to_set_destination() -> None:
+def test_configure_door_transition_maps_to_configure_selected_door() -> None:
     preview = build_creator_door_preview(_locked_preview_plan())
 
-    step = _step(preview, "Set destination")
-    assert "town" in step.detail
+    step = _step(preview, "Configure selected door")
+    assert "Town" in step.detail
 
 
 def test_configure_lock_maps_to_set_lock() -> None:
@@ -80,10 +80,10 @@ def test_configure_lock_maps_to_set_lock() -> None:
 def test_destination_step_includes_destination_scene_spawn_and_trigger() -> None:
     preview = build_creator_door_preview(_locked_preview_plan())
 
-    detail = _step(preview, "Set destination").detail
-    assert "town" in detail
+    detail = _step(preview, "Configure selected door").detail
+    assert "Town" in detail
     assert "north_gate_entry" in detail
-    assert "interact" in detail
+    assert "Interact" in detail
 
 
 def test_lock_step_includes_required_flag() -> None:

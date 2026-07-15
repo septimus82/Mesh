@@ -89,16 +89,16 @@ def _step_for_operation(operation: CreatorDoorPlanOperation) -> CreatorDoorPrevi
             title="Prepare door",
             detail=f"Prepare {target} in the source map.",
         )
-    if operation.op == "configure_scene_exit":
+    if operation.op in {"configure_door_transition", "configure_scene_exit"}:
         payload = operation.payload
-        destination = _payload_text(payload, "destination_scene") or "the destination map"
+        destination = _friendly_destination(_payload_text(payload, "destination_scene")) or "the destination map"
         spawn = _payload_text(payload, "destination_spawn_id")
-        trigger = _payload_text(payload, "trigger") or "interact"
+        trigger = _friendly_trigger(_payload_text(payload, "trigger") or "interact")
+        lines = [f"Destination: {destination}."]
         if spawn:
-            detail = f"Send the player to {destination} at {spawn} when trigger is {trigger}."
-        else:
-            detail = f"Send the player to {destination} when trigger is {trigger}."
-        return CreatorDoorPreviewStep(title="Set destination", detail=detail)
+            lines.append(f"Arrival point: {spawn}.")
+        lines.append(f"Use: {trigger}.")
+        return CreatorDoorPreviewStep(title="Configure selected door", detail=" ".join(lines))
     if operation.op == "configure_lock":
         required_flag = _payload_text(operation.payload, "required_flag") or "a required flag"
         return CreatorDoorPreviewStep(
@@ -118,3 +118,19 @@ def _target_label(target: str) -> str:
 
 def _payload_text(payload: Mapping[str, object], key: str) -> str:
     return str(payload.get(key) or "").strip()
+
+
+def _friendly_destination(value: str) -> str:
+    clean = str(value or "").strip().replace("\\", "/")
+    if clean.startswith("scenes/"):
+        clean = clean.removeprefix("scenes/")
+    if clean.endswith(".json"):
+        clean = clean.removesuffix(".json")
+    return clean.replace("_", " ").replace("-", " ").title()
+
+
+def _friendly_trigger(value: str) -> str:
+    clean = str(value or "").strip()
+    if not clean:
+        return ""
+    return clean.replace("_", " ").replace("-", " ").title()

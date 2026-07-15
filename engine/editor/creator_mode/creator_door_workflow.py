@@ -24,6 +24,10 @@ class CreatorDoorWorkflowRequest:
     locked: bool = False
     required_flag: str = ""
     trigger: str = "interact"
+    transition_behaviour: str = "SceneTransition"
+    scene_exit_listen_event: str = ""
+    interactable_event: str = ""
+    entity_require_flags: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +53,10 @@ def build_creator_door_workflow(
             locked=request.locked,
             required_flag=request.required_flag,
             trigger=request.trigger,
+            transition_behaviour=request.transition_behaviour,
+            scene_exit_listen_event=request.scene_exit_listen_event,
+            interactable_event=request.interactable_event,
+            entity_require_flags=request.entity_require_flags,
         )
     )
 
