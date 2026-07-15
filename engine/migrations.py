@@ -6,6 +6,7 @@ _MIGRATORS: Dict[str, List[Tuple[int, int, Callable[[Dict[str, Any]], Dict[str, 
 # Current schema versions - update these when adding new migrations
 SCENE_SCHEMA_VERSION = 1
 PREFAB_SCHEMA_VERSION = 1
+DEFAULT_LEGACY_LIGHT_MODE = "soft"
 
 
 def register_migrator(content_type: str, from_version: int, to_version: int, func: Callable[[Dict[str, Any]], Dict[str, Any]]) -> None:
@@ -31,9 +32,6 @@ def get_current_schema_version(content_type: str) -> int:
 
 def migrate_payload(content_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     """Apply all applicable migrations to the payload."""
-    if content_type not in _MIGRATORS:
-        return payload
-
     # Determine current version
     # Default to 1 if missing, or 0 if it's a trace (special case handled by caller usually, but we can support it)
     current_version = payload.get("schema_version", 1)
@@ -43,7 +41,7 @@ def migrate_payload(content_type: str, payload: Dict[str, Any]) -> Dict[str, Any
         current_version = 0
 
     # Find applicable migrations
-    migrators = _MIGRATORS[content_type]
+    migrators = _MIGRATORS.get(content_type, [])
 
     # Apply in chain
     for from_ver, to_ver, func in migrators:
@@ -57,6 +55,9 @@ def migrate_payload(content_type: str, payload: Dict[str, Any]) -> Dict[str, Any
                 print(f"[Mesh][Migration] ERROR migrating {content_type} v{from_ver}->v{to_ver}: {e}")
                 raise e
 
+    if content_type == "scene":
+        payload = migrate_scene_legacy_lights(payload)
+
     return payload
 
 
@@ -66,6 +67,31 @@ def migrate_scene(data: Dict[str, Any]) -> Dict[str, Any]:
     This is the canonical entry point for scene migration.
     """
     return migrate_payload("scene", data)
+
+
+def migrate_scene_legacy_lights(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Add the historical static-light mode default before scene schema validation."""
+
+    lights = payload.get("lights")
+    if not isinstance(lights, list):
+        return payload
+
+    migrated_lights: list[Any] | None = None
+    for index, light in enumerate(lights):
+        if not isinstance(light, dict) or light.get("mode"):
+            continue
+        if migrated_lights is None:
+            migrated_lights = list(lights)
+        migrated = dict(light)
+        migrated["mode"] = DEFAULT_LEGACY_LIGHT_MODE
+        migrated_lights[index] = migrated
+
+    if migrated_lights is None:
+        return payload
+
+    migrated_payload = dict(payload)
+    migrated_payload["lights"] = migrated_lights
+    return migrated_payload
 
 
 def migrate_prefab(data: Dict[str, Any]) -> Dict[str, Any]:
