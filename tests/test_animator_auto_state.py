@@ -1,5 +1,9 @@
 
+import pytest
+
 from engine.behaviours.animator import SpriteAnimatorBehaviour
+
+pytestmark = [pytest.mark.fast]
 
 
 class DummyAssets:

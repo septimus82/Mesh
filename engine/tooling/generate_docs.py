@@ -313,6 +313,10 @@ def _build_input_bindings_snapshot() -> dict[str, dict[str, Any]]:
             "key_codes": key_codes,
             "key_names": _key_names_for_codes(key_codes, arcade_mod=arcade_mod),
         }
+    snapshot["save_game"] = {
+        "key_codes": [],
+        "key_names": ["Ctrl+F5"],
+    }
     return snapshot
 
 

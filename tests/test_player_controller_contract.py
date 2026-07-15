@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from engine.behaviours.health import Health
 from engine.behaviours.player_controller import PlayerController
 from engine.events import MeshEventBus
@@ -107,6 +109,7 @@ def test_player_controller_emits_attack_trace_and_hud_is_deterministic() -> None
     assert run_a["hud_dead"] is False
 
 
+@pytest.mark.integration
 def test_player_controller_publishes_velocity_for_animators() -> None:
     input_schedule = _InputSchedule(
         [
@@ -150,6 +153,7 @@ def test_player_controller_publishes_velocity_for_animators() -> None:
     assert entity.change_y == 0.0
 
 
+@pytest.mark.integration
 def test_player_controller_does_not_double_move_in_runtime_movement_stage() -> None:
     from engine.scene_controller import SceneController
 

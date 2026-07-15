@@ -10,6 +10,8 @@ from engine.ui_overlays import hud
 from engine.ui_overlays.hud import InteractPromptOverlay
 from engine.ui_overlays.providers import interact_prompt_provider
 
+pytestmark = [pytest.mark.fast]
+
 
 class _StubBehaviour:
     def on_interact(self, _window, _actor=None) -> None:

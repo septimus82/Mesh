@@ -20,7 +20,8 @@ def test_generated_docs_content_matches_live_sources(tmp_path: Path) -> None:
     assert mesh_cli.main(["docs", "--out-dir", str(docs_dir)]) == 0
 
     behaviours = _headings(docs_dir / "behaviours.md")
-    assert len(behaviours) == 61
+    assert len(behaviours) == 62
+    assert "BreedingShrineZone" in behaviours
     assert "Combat" in behaviours
     assert "EnemyAI" in behaviours
     assert "Vendor" in behaviours

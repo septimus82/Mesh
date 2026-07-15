@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Optional, cast
 
 from engine.swallowed_exceptions import _log_swallow
 
@@ -31,7 +31,9 @@ def pin_launched_project_root(root: Path, *, config: object | None = None) -> Pa
 
     reset_path_caches()
     if config is not None:
-        pin_config(config)  # type: ignore[arg-type]
+        from engine.config import EngineConfig  # noqa: PLC0415
+
+        pin_config(cast(EngineConfig, config))
 
     return resolved
 

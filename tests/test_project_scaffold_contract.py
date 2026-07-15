@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from engine.project_scaffold import create_project, validate_new_project_target
 
 
@@ -61,6 +63,7 @@ def test_create_project(tmp_path: Path) -> None:
     assert world["scenes"]["start"]["tags"] == ["start"]
 
 
+@pytest.mark.integration
 def test_create_project_copies_default_battle_audio_assets(tmp_path: Path) -> None:
     from engine.monster.battle_audio import default_battle_audio_asset_paths
 
@@ -73,6 +76,7 @@ def test_create_project_copies_default_battle_audio_assets(tmp_path: Path) -> No
         assert copied.stat().st_size > 0, f"empty scaffolded battle audio asset: {rel_path}"
 
 
+@pytest.mark.integration
 def test_scaffold_battle_audio_paths_track_mapping_contract(tmp_path: Path) -> None:
     from engine.monster.battle_audio import (
         BATTLE_MUSIC_PATH,
@@ -90,6 +94,7 @@ def test_scaffold_battle_audio_paths_track_mapping_contract(tmp_path: Path) -> N
         assert (target / rel_path).is_file()
 
 
+@pytest.mark.integration
 def test_create_project_keeps_monster_starter_json_and_sprites(tmp_path: Path) -> None:
     target = tmp_path / "monster_starter_project"
     create_project(target, "Monster Starter")

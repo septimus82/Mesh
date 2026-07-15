@@ -9,6 +9,7 @@ window coordinates match the framebuffer on every monitor.
 from __future__ import annotations
 
 import sys
+from typing import Any, cast
 
 _applied = False
 
@@ -24,7 +25,8 @@ def set_process_dpi_unaware() -> None:
     try:
         import ctypes
 
-        user32 = ctypes.windll.user32  # type: ignore[attr-defined]
+        ctypes_module = cast(Any, ctypes)
+        user32 = ctypes_module.windll.user32
         set_context = getattr(user32, "SetProcessDpiAwarenessContext", None)
         if set_context is not None:
             # DPI_AWARENESS_CONTEXT_UNAWARE == (DPI_AWARENESS_CONTEXT)-1
@@ -32,7 +34,7 @@ def set_process_dpi_unaware() -> None:
             if set_context(unaware):
                 return
 
-        shcore = ctypes.windll.shcore  # type: ignore[attr-defined]
+        shcore = ctypes_module.windll.shcore
         set_awareness = getattr(shcore, "SetProcessDpiAwareness", None)
         if set_awareness is not None:
             process_dpi_unaware = 0

@@ -185,3 +185,23 @@ class BreedingShrineZoneBehaviour(Behaviour):
             return injected
         seed = raw_config.get("seed", raw_config.get("breeding_seed"))
         return random.Random(int(seed)) if seed not in (None, "") else random.Random()
+
+    def saveable_state(self) -> dict[str, Any]:
+        return {
+            "cooldown_remaining": float(max(0.0, self.cooldown_remaining)),
+            "was_inside": bool(self._was_inside),
+        }
+
+    def restore_state(self, state: dict[str, Any]) -> None:
+        if not isinstance(state, dict):
+            state = {}
+        raw_cooldown = state.get("cooldown_remaining", 0.0)
+        try:
+            cooldown = float(raw_cooldown)
+        except (TypeError, ValueError):
+            cooldown = 0.0
+        if not math.isfinite(cooldown):
+            cooldown = 0.0
+        self.cooldown_remaining = max(0.0, cooldown)
+        self._was_inside = bool(state.get("was_inside", False))
+        self.last_outcome = ""

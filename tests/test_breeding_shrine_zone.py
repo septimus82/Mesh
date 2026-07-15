@@ -175,6 +175,60 @@ def test_zone_rejects_low_bond_with_terms_line() -> None:
     assert "bond" in str(window.console_log.call_args.args[0]).lower()
 
 
+def test_zone_saveable_state_contains_cooldown_and_inside_only() -> None:
+    window = _window(values={})
+    behaviour = BreedingShrineZoneBehaviour(_entity(), window, **_config())
+    behaviour.cooldown_remaining = 3.5
+    behaviour._was_inside = True
+    behaviour.last_outcome = "success"
+
+    assert behaviour.saveable_state() == {"cooldown_remaining": 3.5, "was_inside": True}
+
+
+def test_zone_restore_state_clamps_malformed_values_and_resets_outcome() -> None:
+    window = _window(values={})
+    behaviour = BreedingShrineZoneBehaviour(_entity(), window, **_config(trigger_radius=99.0, enabled=False))
+    behaviour.cooldown_remaining = 8.0
+    behaviour._was_inside = True
+    behaviour.last_outcome = "cooldown"
+
+    behaviour.restore_state({"cooldown_remaining": float("inf"), "was_inside": ""})
+    assert behaviour.cooldown_remaining == 0.0
+    assert behaviour._was_inside is False
+    assert behaviour.last_outcome == ""
+    assert behaviour.radius == 99.0
+    assert behaviour.enabled is False
+
+    behaviour.restore_state({"cooldown_remaining": -5, "was_inside": 1})
+    assert behaviour.cooldown_remaining == 0.0
+    assert behaviour._was_inside is True
+
+
+def test_zone_restore_inside_state_prevents_immediate_second_egg_until_reentry() -> None:
+    values: dict = {}
+    _seed_bonded_party(values, first_bond=60.0, second_bond=55.0)
+    player = _player()
+    window = _window(values=values)
+    window.find_sprite_by_name = MagicMock(side_effect=lambda name: player if name == "Player" else None)
+    first = BreedingShrineZoneBehaviour(_entity(), window, **_config(max_eggs=2))
+    first.update(0.016)
+    assert first.last_outcome == "success"
+    assert count_pending_eggs(values) == 1
+
+    restored = BreedingShrineZoneBehaviour(_entity(), window, **_config(max_eggs=2))
+    restored.restore_state(first.saveable_state())
+    restored.update(0.016)
+    assert restored.last_outcome == ""
+    assert count_pending_eggs(values) == 1
+
+    player.center_x = 9999.0
+    restored.update(0.016)
+    player.center_x = 710.0
+    restored.update(0.016)
+    assert restored.last_outcome == "success"
+    assert count_pending_eggs(values) == 2
+
+
 def test_hatchling_battle_diag_reflects_inherited_mind(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MESH_COMPANION_DIAG", "1")
     captured: list[str] = []

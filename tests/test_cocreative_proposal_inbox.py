@@ -295,6 +295,7 @@ def test_ai_proposals_overlay_click_not_reached_from_other_right_tab(
         bridge.stop()
 
 
+@pytest.mark.integration
 def test_ai_proposals_overlay_renders_proposal_id_line(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -312,6 +313,7 @@ def test_ai_proposals_overlay_renders_proposal_id_line(
         bridge.stop()
 
 
+@pytest.mark.integration
 def test_ai_proposals_overlay_skips_id_line_when_proposal_id_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -328,6 +330,7 @@ def test_ai_proposals_overlay_skips_id_line_when_proposal_id_missing(
     assert not any(text.startswith("ID:") for text in drawn)
 
 
+@pytest.mark.integration
 def test_ai_proposals_id_line_is_not_clickable(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -351,6 +354,7 @@ def test_ai_proposals_id_line_is_not_clickable(
         bridge.stop()
 
 
+@pytest.mark.integration
 def test_ai_proposals_creator_door_accept_click_applies_through_official_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -386,6 +390,7 @@ def test_ai_proposals_creator_door_accept_click_applies_through_official_path(
         bridge.stop()
 
 
+@pytest.mark.integration
 def test_ai_proposals_accept_hitbox_regression_with_id_line_present(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -415,6 +420,7 @@ def test_ai_proposals_accept_hitbox_regression_with_id_line_present(
         bridge.stop()
 
 
+@pytest.mark.integration
 def test_ai_proposals_failed_dry_run_disables_accept_click(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -448,6 +454,7 @@ def test_ai_proposals_failed_dry_run_disables_accept_click(
         bridge.stop()
 
 
+@pytest.mark.integration
 def test_ai_proposals_stale_accept_click_is_fail_closed(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

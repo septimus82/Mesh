@@ -132,11 +132,13 @@ Command reference generated from GameWindow help sections.
 - **F4** -- Toggle editor mode
 - **F5** -- Quick save (debug)
 - **F6** -- Quick load (debug)
-- **F8** -- Toggle encounter debug overlay
+- **F2** -- Toggle encounter debug overlay
+- **F7** -- Start debug trainer monster battle (debug)
+- **F8** -- Start debug companion monster battle (debug)
 - **F9** -- Toggle paused state
-- **F10** -- Toggle scene inspector overlay
+- **F10** -- Breed first two party monsters into an egg (debug mode)
 - **F11** -- Toggle tile paint mode (debug)
-- **F12** -- Toggle selection lock from hover (debug)
+- **F12** -- Start debug wild monster battle (debug)
 - **Esc** -- Toggle settings overlay
 - **Q** -- Toggle quest log
 - **I** -- Toggle inventory overlay

@@ -57,7 +57,7 @@ def build_creator_proposal_status(bridge: object | None) -> CreatorProposalStatu
 
     try:
         pending = list_fn()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001  # REASON: proposal bridge reads are optional UI status and must fail closed instead of breaking Creator panels
         return unavailable_creator_proposal_status(
             warnings=(f"Could not read pending proposals: {exc}",),
         )
