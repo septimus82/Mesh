@@ -1,0 +1,3546 @@
+{
+  "collision_rules": {
+    "player:hazard": true,
+    "player:terrain": true
+  },
+  "description": "Outdoor area that links to door_interior.json via SceneTransition.",
+  "entities": [
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "dialogue_choice",
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "demo_objective_start",
+          "set_flags": {
+            "demo.objective_started": true
+          },
+          "toast": "Objective: Enter the cellar",
+          "toast_seconds": 3.0
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_demoobjectivehook_68_28_0_0",
+      "layer": "background",
+      "name": "DemoObjectiveHook",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": null,
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 68.0,
+      "y": 28.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "dialogue_choice",
+          "once": true,
+          "payload_field": "choice_id",
+          "payload_value": "demo_objective_upper_hall",
+          "set_flags": {
+            "demo.objective_upper_started": true
+          },
+          "toast": "Optional: Visit the upper hall",
+          "toast_seconds": 3.0
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_demoobjectiveupperhook_72_28_0_0",
+      "layer": "background",
+      "name": "DemoObjectiveUpperHallHook",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": null,
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 72.0,
+      "y": 28.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "root": {
+                "choices": [
+                  {
+                    "forbid_flags": [
+                      "demo.objective_started"
+                    ],
+                    "id": "demo_objective_start",
+                    "next": null,
+                    "once": true,
+                    "text": "Start demo route"
+                  },
+                  {
+                    "forbid_flags": [
+                      "demo.objective_upper_started"
+                    ],
+                    "id": "demo_objective_upper_hall",
+                    "next": null,
+                    "once": true,
+                    "text": "Optional: visit the upper hall"
+                  },
+                  {
+                    "end": true,
+                    "text": "Close"
+                  }
+                ],
+                "text": "Demo route: step through the interior door first.\nThen take the stairs down into the cellar."
+              }
+            },
+            "speaker": "Notice",
+            "start": "root"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "Dialogue"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_demoroutesign_336_216_0_0",
+      "layer": "entities",
+      "name": "DemoRouteSign",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/placeholder.png",
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 336.0,
+      "y": 216.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "SceneTransition": {
+          "allow_interact": true,
+          "spawn_id": "interior_entry",
+          "target_scene": "scenes/door_interior.json",
+          "trigger_on_touch": false
+        }
+      },
+      "behaviours": [
+        {
+          "params": {
+            "allow_interact": true,
+            "spawn_id": "interior_entry",
+            "target_scene": "scenes/door_interior.json",
+            "trigger_on_touch": false
+          },
+          "type": "SceneTransition"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_fielddoor_240_120_0_0",
+      "layer": "entities",
+      "name": "FieldDoor",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": null,
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 638.0,
+      "y": 298.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {},
+      "behaviours": [],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_fieldentrymarker_96_120_0_0",
+      "layer": "background",
+      "name": "FieldEntryMarker",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "spawn_id": "field_entry",
+      "sprite": null,
+      "sprite_sheet": {},
+      "tag": "spawn_point",
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 96.0,
+      "y": 120.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {
+        "idle": {
+          "fps": 4,
+          "frames": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "loop": true
+        },
+        "interact": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": false
+        },
+        "walk": {
+          "fps": 8,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "loop": true
+        }
+      },
+      "behaviour_config": {
+        "CameraFollow": {
+          "padding": 16,
+          "zoom": 1.0
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "PlayerController"
+        },
+        {
+          "params": {},
+          "type": "CameraFollow"
+        }
+      ],
+      "default_animation": "idle",
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_fieldplayer_368_216_0_0",
+      "layer": "entities",
+      "name": "FieldPlayer",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/sprites/animated_player.png",
+      "sprite_sheet": {
+        "columns": 4,
+        "frame_height": 64,
+        "frame_width": 64,
+        "rows": 2
+      },
+      "tag": "player",
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 368.0,
+      "y": 216.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {},
+      "behaviours": [],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_fieldreturnmarker_192_120_0_0",
+      "layer": "background",
+      "name": "FieldReturnMarker",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "spawn_id": "field_return",
+      "sprite": null,
+      "sprite_sheet": {},
+      "tag": "spawn_point",
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 192.0,
+      "y": 120.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "Dialogue": {
+          "dialogue": {
+            "nodes": {
+              "accepted": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "accept_ack",
+                    "text": "I'll grab it."
+                  }
+                ],
+                "text": "There's a crate near the door. Bring it back so I can inventory it."
+              },
+              "completed": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "completed_close",
+                    "text": "See you around."
+                  }
+                ],
+                "text": "Thanks again for the assist. The new rations are already spoken for."
+              },
+              "demo_objective": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "demo_objective_ack",
+                    "text": "Got it."
+                  }
+                ],
+                "text": "Demo route: step through the interior door first.\nThen take the stairs down into the cellar."
+              },
+              "intro": {
+                "choices": [
+                  {
+                    "forbid_flags": [
+                      "field_supplies_active",
+                      "field_supplies_complete"
+                    ],
+                    "id": "warden_offer_accept",
+                    "next": "accepted",
+                    "once": true,
+                    "text": "Need a hand with supplies?"
+                  },
+                  {
+                    "end": true,
+                    "forbid_flags": [
+                      "field_supplies_has_crate"
+                    ],
+                    "id": "status_waiting",
+                    "require_flags": [
+                      "field_supplies_active"
+                    ],
+                    "text": "I'm still looking for that crate."
+                  },
+                  {
+                    "id": "warden_turnin",
+                    "next": "turnin_ack",
+                    "require_flags": [
+                      "field_supplies_has_crate"
+                    ],
+                    "text": "Here's the crate you asked for."
+                  },
+                  {
+                    "id": "post_complete",
+                    "next": "completed",
+                    "require_flags": [
+                      "field_supplies_complete"
+                    ],
+                    "text": "Those rations holding up?"
+                  },
+                  {
+                    "forbid_flags": [
+                      "demo.objective_started"
+                    ],
+                    "id": "demo_objective_start",
+                    "next": "demo_objective",
+                    "once": true,
+                    "text": "Where should I go for the demo?"
+                  },
+                  {
+                    "forbid_flags": [
+                      "demo.objective_upper_started"
+                    ],
+                    "id": "demo_objective_upper_hall",
+                    "next": null,
+                    "once": true,
+                    "text": "Anything optional I should check out?"
+                  },
+                  {
+                    "end": true,
+                    "id": "idle_goodbye",
+                    "text": "Just passing by."
+                  }
+                ],
+                "text": "The outpost is down to a single crate of supplies. I could use another set of hands."
+              },
+              "turnin_ack": {
+                "choices": [
+                  {
+                    "end": true,
+                    "id": "turnin_done",
+                    "text": "Happy to help."
+                  }
+                ],
+                "text": "Perfect timing. The recruits would have gone hungry without you."
+              }
+            },
+            "speaker": "Field Warden",
+            "start": "intro"
+          },
+          "dialogue_lines": []
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "Dialogue"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_fieldwarden_150_150_0_0",
+      "layer": "entities",
+      "name": "FieldWarden",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": null,
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 150.0,
+      "y": 150.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "SceneTransition": {
+          "spawn_id": "default",
+          "target_scene": "door_interior"
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SceneTransition"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_interiordoor_120_120_0_0",
+      "layer": "background",
+      "name": "InteriorDoor",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": null,
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 120.0,
+      "y": 120.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "scene_transition",
+          "inc_counters": {
+            "door_uses": 1
+          },
+          "message": "Flag visited_interior set by {entity}",
+          "payload_field": "target_scene",
+          "payload_value": "scenes/door_interior.json",
+          "set_flags": {
+            "visited_interior": true
+          }
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_interiorvisittracker_24_24_0_0",
+      "layer": "background",
+      "name": "InteriorVisitTracker",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": null,
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 24.0,
+      "y": 24.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "quest_stage_completed",
+          "payload_field": "stage_id",
+          "payload_value": "collect_supply_crate",
+          "set_flags": {
+            "field_supplies_has_crate": true
+          }
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_questhookcrateready_36_28_0_0",
+      "layer": "background",
+      "name": "QuestHookCrateReady",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": null,
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 36.0,
+      "y": 28.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "clear_flags": [
+            "field_supplies_active",
+            "field_supplies_has_crate"
+          ],
+          "event_type": "quest_completed",
+          "payload_field": "quest_id",
+          "payload_value": "field_supplies"
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_questhookquestcomplete_52_28_0_0",
+      "layer": "background",
+      "name": "QuestHookQuestComplete",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": null,
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 52.0,
+      "y": 28.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "SetGameStateOnEvent": {
+          "event_type": "quest_stage_started",
+          "payload_field": "stage_id",
+          "payload_value": "collect_supply_crate",
+          "set_flags": {
+            "field_supplies_active": true
+          }
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "SetGameStateOnEvent"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_questhookstagestart_20_28_0_0",
+      "layer": "background",
+      "name": "QuestHookStageStart",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": null,
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 20.0,
+      "y": 28.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "ConditionalActivator": {
+          "require_flags": [
+            "visited_interior"
+          ]
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "ConditionalActivator"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_rewardchest_360_140_0_0",
+      "layer": "entities",
+      "name": "RewardChest",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": null,
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 360.0,
+      "y": 140.0
+    },
+    {
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "Collectible": {
+          "auto_remove": true,
+          "collect_by_name": "FieldPlayer"
+        },
+        "ConditionalActivator": {
+          "refresh_rate": 0.1,
+          "require_flags": [
+            "field_supplies_active"
+          ]
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "ConditionalActivator"
+        },
+        {
+          "params": {},
+          "type": "Collectible"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_supplycrate_320_140_0_0",
+      "layer": "entities",
+      "name": "SupplyCrate",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": null,
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "x": 320.0,
+      "y": 140.0
+    },
+    {
+      "Health": {},
+      "animation_blend": 0.0,
+      "animation_frame_rate": 8.0,
+      "animation_root_motion": false,
+      "animation_state": "idle",
+      "animations": {},
+      "behaviour_config": {
+        "Health": {
+          "max_hp": 10
+        }
+      },
+      "behaviours": [
+        {
+          "params": {},
+          "type": "EnemyAI"
+        }
+      ],
+      "dialogue": {},
+      "dialogue_lines": [],
+      "drop_table_id": "nature_drops",
+      "encounter_cost": 2.0,
+      "follow_speed": 100.0,
+      "follow_target": null,
+      "id": "door_field_themedenemy_288_256_0_0",
+      "layer": "entities",
+      "mesh_name": "ThemedEnemy",
+      "name": "Theme Enemy Placeholder",
+      "on_trigger": null,
+      "patrol_points": [],
+      "patrol_speed": 80.0,
+      "prefab_id": "plant_minion",
+      "rotation": 0.0,
+      "scale": 1.0,
+      "solid": false,
+      "sprite": "assets/placeholder.png",
+      "sprite_sheet": {},
+      "trigger_radius": null,
+      "trigger_target": null,
+      "variant_id": "mossy",
+      "x": 288.0,
+      "y": 256.0
+    }
+  ],
+  "layers": [
+    {
+      "name": "background"
+    },
+    {
+      "name": "entities"
+    },
+    {
+      "name": "foreground"
+    }
+  ],
+  "name": "Door Field",
+  "schema_version": 1,
+  "settings": {
+    "background_color": "dark_spring_green",
+    "encounter_budget": 10,
+    "encounter_budget_profile": "normal",
+    "encounter_seed": 12345,
+    "encounter_set_id": "moss_encounters",
+    "music": null,
+    "music_volume": 1.0,
+    "region_theme": "moss",
+    "use_theme_spawns": true,
+    "world_height": 384,
+    "world_width": 512
+  },
+  "state": {
+    "chapter": 1,
+    "counters": {},
+    "equipment": {
+      "accessory": null,
+      "armor": null,
+      "weapon": null
+    },
+    "flags": {
+      "hint_shown_controls": true
+    },
+    "level": 1,
+    "main_quest_id": null,
+    "perks": [],
+    "playtime_seconds": 0.0,
+    "quests": {
+      "quests": {
+        "Ashen_fetch_quest": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_relics",
+          "status": "active"
+        },
+        "Ashen_kill_quest": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_ranged",
+          "status": "active"
+        },
+        "cellar_exterminator": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_rats",
+          "status": "active"
+        },
+        "combat_vignette_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "demo_ridge_intro": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "find_key",
+          "status": "active"
+        },
+        "episode_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_02_ep02": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_03_ep03": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_04_ep04": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_05_ep05": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_06_ep06": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "field_supplies": {
+          "awaiting_stage": "collect_supply_crate",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "hollow_fetch_herbs": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_herbs",
+          "status": "active"
+        },
+        "hollow_kill_spiders": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_spiders",
+          "status": "active"
+        },
+        "mini_campaign_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "town",
+          "status": "active"
+        },
+        "mini_campaign_02": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "mini_campaign_03": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "mini_campaign_04": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "mini_campaign_05": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "puzzle_room_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "puzzle_room_02": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "puzzle_room_03": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "quest_act1_ack_route_a": {
+          "awaiting_stage": "ack_upper",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ack_route_b": {
+          "awaiting_stage": "ack_lower",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_arrival": {
+          "awaiting_stage": "arrival",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_complete": {
+          "awaiting_stage": "complete_ch1",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_depart_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_depart_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_gate_route": {
+          "awaiting_stage": "gate_route",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_gate_switch": {
+          "awaiting_stage": "gate_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ambush_clear": {
+          "awaiting_stage": "clear_ambush_lane",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_camp_briefing": {
+          "awaiting_stage": "accept_camp_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_complete_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_complete_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ruin_route": {
+          "awaiting_stage": "reach_ruin_marker",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ruin_switch": {
+          "awaiting_stage": "flip_ruin_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_archive_briefing": {
+          "awaiting_stage": "record_archive_orders",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_courtyard_clear": {
+          "awaiting_stage": "clear_courtyard",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_exit": {
+          "awaiting_stage": "move_forward",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_note": {
+          "awaiting_stage": "find_note",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_bastion_briefing": {
+          "awaiting_stage": "accept_bastion_brief",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_bastion_clear": {
+          "awaiting_stage": "clear_bastion_lane",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_complete_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_complete_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch5_gauntlet_clear": {
+          "awaiting_stage": "clear_gauntlet",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch5_summit_complete": {
+          "awaiting_stage": "seal_chapter5",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch6_approach_briefing": {
+          "awaiting_stage": "accept_ch6_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch6_warden_defeated": {
+          "awaiting_stage": "defeat_warden",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch7_after_resolve": {
+          "awaiting_stage": "resolve_aftermath",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter1_start": {
+          "awaiting_stage": "first_steps",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter2_start": {
+          "awaiting_stage": "chapter2_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter3_start": {
+          "awaiting_stage": "chapter3_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter4_start": {
+          "awaiting_stage": "chapter4_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter5_start": {
+          "awaiting_stage": "chapter5_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_convergence_a": {
+          "awaiting_stage": "reach_crossroads",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_convergence_b": {
+          "awaiting_stage": "reach_crossroads",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_prologue_complete": {
+          "awaiting_stage": "handoff",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_route_a": {
+          "awaiting_stage": "route_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_route_b": {
+          "awaiting_stage": "route_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch1_briefing": {
+          "awaiting_stage": "accept_threshold_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch1_complete": {
+          "awaiting_stage": "secure_safe_room",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch1_hazard_clear": {
+          "awaiting_stage": "cross_hazard_hall",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch2_complete": {
+          "awaiting_stage": "secure_sanctum",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch2_hazard_run_clear": {
+          "awaiting_stage": "cross_hazard_run",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch2_switch_learned": {
+          "awaiting_stage": "pull_hazard_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_choose_route": {
+          "awaiting_stage": "choose_route",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_complete": {
+          "awaiting_stage": "complete_rejoin",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_route_a_clear": {
+          "awaiting_stage": "route_a_clear",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_route_b_clear": {
+          "awaiting_stage": "route_b_clear",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch4_complete": {
+          "awaiting_stage": "complete_final",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch4_enter_hub": {
+          "awaiting_stage": "enter_hub",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch4_path_clear": {
+          "awaiting_stage": "clear_path",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch5_ante_briefing": {
+          "awaiting_stage": "ante_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch5_complete": {
+          "awaiting_stage": "resolve_epilogue",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch5_overseer_defeated": {
+          "awaiting_stage": "defeat_overseer",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch10_complete": {
+          "awaiting_stage": "act3_ch10_leave_sector",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch10_entry": {
+          "awaiting_stage": "act3_ch10_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch10_finalize": {
+          "awaiting_stage": "act3_ch10_finalize_uplink",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch1_complete": {
+          "awaiting_stage": "reach_relay",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch1_entry": {
+          "awaiting_stage": "act3_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch1_field_disabled": {
+          "awaiting_stage": "disable_field",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch2_complete": {
+          "awaiting_stage": "act3_ch2_leave_district",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch2_entry": {
+          "awaiting_stage": "act3_ch2_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch2_route_power": {
+          "awaiting_stage": "act3_ch2_route_power",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch3_commit": {
+          "awaiting_stage": "act3_ch3_commit_doctrine",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch3_complete": {
+          "awaiting_stage": "act3_ch3_cross_ward",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch3_entry": {
+          "awaiting_stage": "act3_ch3_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch4_complete": {
+          "awaiting_stage": "act3_ch4_leave_yard",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch4_entry": {
+          "awaiting_stage": "act3_ch4_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch4_tokens": {
+          "awaiting_stage": "act3_ch4_tokens_unlock",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch5_complete": {
+          "awaiting_stage": "act3_ch5_reach_far_gate",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch5_entry": {
+          "awaiting_stage": "act3_ch5_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch5_phase_latched": {
+          "awaiting_stage": "act3_ch5_latch_phase",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch6_complete": {
+          "awaiting_stage": "act3_ch6_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch6_entry": {
+          "awaiting_stage": "act3_ch6_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch6_shortcut": {
+          "awaiting_stage": "act3_ch6_use_shortcut",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch7_complete": {
+          "awaiting_stage": "act3_ch7_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch7_cross_threshold": {
+          "awaiting_stage": "act3_ch7_cross_threshold",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch7_entry": {
+          "awaiting_stage": "act3_ch7_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch8_complete": {
+          "awaiting_stage": "act3_ch8_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch8_entry": {
+          "awaiting_stage": "act3_ch8_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch8_normalized": {
+          "awaiting_stage": "act3_ch8_normalize_state",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch9_complete": {
+          "awaiting_stage": "act3_ch9_leave_annex",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch9_entry": {
+          "awaiting_stage": "act3_ch9_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch9_handoff": {
+          "awaiting_stage": "act3_ch9_accept_handoff",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_complete": {
+          "awaiting_stage": "act4_ch1_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_entry": {
+          "awaiting_stage": "act4_ch1_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_entry_stub": {
+          "awaiting_stage": "act4_ch1_entry_stub_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_taught": {
+          "awaiting_stage": "act4_ch1_induction_terminal",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_optional_note": {
+          "awaiting_stage": "find_note",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step1": {
+          "awaiting_stage": "find_cabin",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step2": {
+          "awaiting_stage": "light_hearth",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step3": {
+          "awaiting_stage": "return_trailhead",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "rat_catcher": {
+          "awaiting_stage": "find_statue",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_g_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_k_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_k_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_n_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_n_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_fetch_supplies": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_supplies",
+          "status": "active"
+        },
+        "ridge_kill_bandits": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_bandits",
+          "status": "active"
+        },
+        "ridge_variant_g_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_h_relay": {
+          "awaiting_stage": "reactivate_relay",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_i_cache": {
+          "awaiting_stage": "secure_cache",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_k_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_k_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_l_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "showcase_fetch": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "find_artifact",
+          "status": "active"
+        },
+        "showcase_kill": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "defeat_boss",
+          "status": "active"
+        },
+        "showcase_tour": {
+          "awaiting_stage": "intro",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "sniper_threat": {
+          "awaiting_stage": "defeat_sniper",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "town_schedule_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        }
+      },
+      "schema_version": 1
+    },
+    "values": {
+      "quests": {
+        "Ashen_fetch_quest": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_relics",
+          "status": "active"
+        },
+        "Ashen_kill_quest": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_ranged",
+          "status": "active"
+        },
+        "cellar_exterminator": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_rats",
+          "status": "active"
+        },
+        "combat_vignette_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "demo_ridge_intro": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "find_key",
+          "status": "active"
+        },
+        "episode_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_02_ep02": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_03_ep03": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_04_ep04": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_05_ep05": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_06_ep06": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "field_supplies": {
+          "awaiting_stage": "collect_supply_crate",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "hollow_fetch_herbs": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_herbs",
+          "status": "active"
+        },
+        "hollow_kill_spiders": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_spiders",
+          "status": "active"
+        },
+        "mini_campaign_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "town",
+          "status": "active"
+        },
+        "mini_campaign_02": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "mini_campaign_03": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "mini_campaign_04": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "mini_campaign_05": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "puzzle_room_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "puzzle_room_02": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "puzzle_room_03": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "quest_act1_ack_route_a": {
+          "awaiting_stage": "ack_upper",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ack_route_b": {
+          "awaiting_stage": "ack_lower",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_arrival": {
+          "awaiting_stage": "arrival",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_complete": {
+          "awaiting_stage": "complete_ch1",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_depart_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_depart_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_gate_route": {
+          "awaiting_stage": "gate_route",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_gate_switch": {
+          "awaiting_stage": "gate_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ambush_clear": {
+          "awaiting_stage": "clear_ambush_lane",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_camp_briefing": {
+          "awaiting_stage": "accept_camp_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_complete_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_complete_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ruin_route": {
+          "awaiting_stage": "reach_ruin_marker",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ruin_switch": {
+          "awaiting_stage": "flip_ruin_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_archive_briefing": {
+          "awaiting_stage": "record_archive_orders",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_courtyard_clear": {
+          "awaiting_stage": "clear_courtyard",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_exit": {
+          "awaiting_stage": "move_forward",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_note": {
+          "awaiting_stage": "find_note",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_bastion_briefing": {
+          "awaiting_stage": "accept_bastion_brief",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_bastion_clear": {
+          "awaiting_stage": "clear_bastion_lane",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_complete_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_complete_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch5_gauntlet_clear": {
+          "awaiting_stage": "clear_gauntlet",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch5_summit_complete": {
+          "awaiting_stage": "seal_chapter5",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch6_approach_briefing": {
+          "awaiting_stage": "accept_ch6_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch6_warden_defeated": {
+          "awaiting_stage": "defeat_warden",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch7_after_resolve": {
+          "awaiting_stage": "resolve_aftermath",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter1_start": {
+          "awaiting_stage": "first_steps",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter2_start": {
+          "awaiting_stage": "chapter2_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter3_start": {
+          "awaiting_stage": "chapter3_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter4_start": {
+          "awaiting_stage": "chapter4_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter5_start": {
+          "awaiting_stage": "chapter5_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_convergence_a": {
+          "awaiting_stage": "reach_crossroads",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_convergence_b": {
+          "awaiting_stage": "reach_crossroads",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_prologue_complete": {
+          "awaiting_stage": "handoff",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_route_a": {
+          "awaiting_stage": "route_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_route_b": {
+          "awaiting_stage": "route_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch1_briefing": {
+          "awaiting_stage": "accept_threshold_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch1_complete": {
+          "awaiting_stage": "secure_safe_room",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch1_hazard_clear": {
+          "awaiting_stage": "cross_hazard_hall",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch2_complete": {
+          "awaiting_stage": "secure_sanctum",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch2_hazard_run_clear": {
+          "awaiting_stage": "cross_hazard_run",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch2_switch_learned": {
+          "awaiting_stage": "pull_hazard_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_choose_route": {
+          "awaiting_stage": "choose_route",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_complete": {
+          "awaiting_stage": "complete_rejoin",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_route_a_clear": {
+          "awaiting_stage": "route_a_clear",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_route_b_clear": {
+          "awaiting_stage": "route_b_clear",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch4_complete": {
+          "awaiting_stage": "complete_final",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch4_enter_hub": {
+          "awaiting_stage": "enter_hub",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch4_path_clear": {
+          "awaiting_stage": "clear_path",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch5_ante_briefing": {
+          "awaiting_stage": "ante_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch5_complete": {
+          "awaiting_stage": "resolve_epilogue",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch5_overseer_defeated": {
+          "awaiting_stage": "defeat_overseer",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch10_complete": {
+          "awaiting_stage": "act3_ch10_leave_sector",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch10_entry": {
+          "awaiting_stage": "act3_ch10_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch10_finalize": {
+          "awaiting_stage": "act3_ch10_finalize_uplink",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch1_complete": {
+          "awaiting_stage": "reach_relay",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch1_entry": {
+          "awaiting_stage": "act3_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch1_field_disabled": {
+          "awaiting_stage": "disable_field",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch2_complete": {
+          "awaiting_stage": "act3_ch2_leave_district",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch2_entry": {
+          "awaiting_stage": "act3_ch2_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch2_route_power": {
+          "awaiting_stage": "act3_ch2_route_power",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch3_commit": {
+          "awaiting_stage": "act3_ch3_commit_doctrine",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch3_complete": {
+          "awaiting_stage": "act3_ch3_cross_ward",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch3_entry": {
+          "awaiting_stage": "act3_ch3_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch4_complete": {
+          "awaiting_stage": "act3_ch4_leave_yard",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch4_entry": {
+          "awaiting_stage": "act3_ch4_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch4_tokens": {
+          "awaiting_stage": "act3_ch4_tokens_unlock",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch5_complete": {
+          "awaiting_stage": "act3_ch5_reach_far_gate",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch5_entry": {
+          "awaiting_stage": "act3_ch5_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch5_phase_latched": {
+          "awaiting_stage": "act3_ch5_latch_phase",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch6_complete": {
+          "awaiting_stage": "act3_ch6_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch6_entry": {
+          "awaiting_stage": "act3_ch6_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch6_shortcut": {
+          "awaiting_stage": "act3_ch6_use_shortcut",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch7_complete": {
+          "awaiting_stage": "act3_ch7_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch7_cross_threshold": {
+          "awaiting_stage": "act3_ch7_cross_threshold",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch7_entry": {
+          "awaiting_stage": "act3_ch7_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch8_complete": {
+          "awaiting_stage": "act3_ch8_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch8_entry": {
+          "awaiting_stage": "act3_ch8_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch8_normalized": {
+          "awaiting_stage": "act3_ch8_normalize_state",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch9_complete": {
+          "awaiting_stage": "act3_ch9_leave_annex",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch9_entry": {
+          "awaiting_stage": "act3_ch9_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch9_handoff": {
+          "awaiting_stage": "act3_ch9_accept_handoff",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_complete": {
+          "awaiting_stage": "act4_ch1_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_entry": {
+          "awaiting_stage": "act4_ch1_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_entry_stub": {
+          "awaiting_stage": "act4_ch1_entry_stub_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_taught": {
+          "awaiting_stage": "act4_ch1_induction_terminal",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_optional_note": {
+          "awaiting_stage": "find_note",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step1": {
+          "awaiting_stage": "find_cabin",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step2": {
+          "awaiting_stage": "light_hearth",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step3": {
+          "awaiting_stage": "return_trailhead",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "rat_catcher": {
+          "awaiting_stage": "find_statue",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_g_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_k_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_k_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_n_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_n_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_fetch_supplies": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_supplies",
+          "status": "active"
+        },
+        "ridge_kill_bandits": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_bandits",
+          "status": "active"
+        },
+        "ridge_variant_g_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_h_relay": {
+          "awaiting_stage": "reactivate_relay",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_i_cache": {
+          "awaiting_stage": "secure_cache",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_k_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_k_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_l_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "showcase_fetch": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "find_artifact",
+          "status": "active"
+        },
+        "showcase_kill": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "defeat_boss",
+          "status": "active"
+        },
+        "showcase_tour": {
+          "awaiting_stage": "intro",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "sniper_threat": {
+          "awaiting_stage": "defeat_sniper",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "town_schedule_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        }
+      }
+    },
+    "variables": {
+      "quests": {
+        "Ashen_fetch_quest": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_relics",
+          "status": "active"
+        },
+        "Ashen_kill_quest": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_ranged",
+          "status": "active"
+        },
+        "cellar_exterminator": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_rats",
+          "status": "active"
+        },
+        "combat_vignette_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "demo_ridge_intro": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "find_key",
+          "status": "active"
+        },
+        "episode_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_02_ep02": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_03_ep03": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_04_ep04": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_05_ep05": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "episode_06_ep06": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "field_supplies": {
+          "awaiting_stage": "collect_supply_crate",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "hollow_fetch_herbs": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_herbs",
+          "status": "active"
+        },
+        "hollow_kill_spiders": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_spiders",
+          "status": "active"
+        },
+        "mini_campaign_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "town",
+          "status": "active"
+        },
+        "mini_campaign_02": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "mini_campaign_03": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "mini_campaign_04": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "mini_campaign_05": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "episode_01",
+          "status": "active"
+        },
+        "puzzle_room_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "puzzle_room_02": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "puzzle_room_03": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        },
+        "quest_act1_ack_route_a": {
+          "awaiting_stage": "ack_upper",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ack_route_b": {
+          "awaiting_stage": "ack_lower",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_arrival": {
+          "awaiting_stage": "arrival",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_complete": {
+          "awaiting_stage": "complete_ch1",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_depart_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_depart_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_gate_route": {
+          "awaiting_stage": "gate_route",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch1_gate_switch": {
+          "awaiting_stage": "gate_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ambush_clear": {
+          "awaiting_stage": "clear_ambush_lane",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_camp_briefing": {
+          "awaiting_stage": "accept_camp_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_complete_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_complete_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ruin_route": {
+          "awaiting_stage": "reach_ruin_marker",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch2_ruin_switch": {
+          "awaiting_stage": "flip_ruin_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_archive_briefing": {
+          "awaiting_stage": "record_archive_orders",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_courtyard_clear": {
+          "awaiting_stage": "clear_courtyard",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_exit": {
+          "awaiting_stage": "move_forward",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch3_note": {
+          "awaiting_stage": "find_note",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_bastion_briefing": {
+          "awaiting_stage": "accept_bastion_brief",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_bastion_clear": {
+          "awaiting_stage": "clear_bastion_lane",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_choice_a": {
+          "awaiting_stage": "choice_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_choice_b": {
+          "awaiting_stage": "choice_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_complete_a": {
+          "awaiting_stage": "depart_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch4_complete_b": {
+          "awaiting_stage": "depart_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch5_gauntlet_clear": {
+          "awaiting_stage": "clear_gauntlet",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch5_summit_complete": {
+          "awaiting_stage": "seal_chapter5",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch6_approach_briefing": {
+          "awaiting_stage": "accept_ch6_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch6_warden_defeated": {
+          "awaiting_stage": "defeat_warden",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_ch7_after_resolve": {
+          "awaiting_stage": "resolve_aftermath",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter1_start": {
+          "awaiting_stage": "first_steps",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter2_start": {
+          "awaiting_stage": "chapter2_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter3_start": {
+          "awaiting_stage": "chapter3_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter4_start": {
+          "awaiting_stage": "chapter4_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_chapter5_start": {
+          "awaiting_stage": "chapter5_start",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_convergence_a": {
+          "awaiting_stage": "reach_crossroads",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_convergence_b": {
+          "awaiting_stage": "reach_crossroads",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_prologue_complete": {
+          "awaiting_stage": "handoff",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_route_a": {
+          "awaiting_stage": "route_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act1_route_b": {
+          "awaiting_stage": "route_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch1_briefing": {
+          "awaiting_stage": "accept_threshold_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch1_complete": {
+          "awaiting_stage": "secure_safe_room",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch1_hazard_clear": {
+          "awaiting_stage": "cross_hazard_hall",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch2_complete": {
+          "awaiting_stage": "secure_sanctum",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch2_hazard_run_clear": {
+          "awaiting_stage": "cross_hazard_run",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch2_switch_learned": {
+          "awaiting_stage": "pull_hazard_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_choose_route": {
+          "awaiting_stage": "choose_route",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_complete": {
+          "awaiting_stage": "complete_rejoin",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_route_a_clear": {
+          "awaiting_stage": "route_a_clear",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch3_route_b_clear": {
+          "awaiting_stage": "route_b_clear",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch4_complete": {
+          "awaiting_stage": "complete_final",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch4_enter_hub": {
+          "awaiting_stage": "enter_hub",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch4_path_clear": {
+          "awaiting_stage": "clear_path",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch5_ante_briefing": {
+          "awaiting_stage": "ante_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch5_complete": {
+          "awaiting_stage": "resolve_epilogue",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act2_ch5_overseer_defeated": {
+          "awaiting_stage": "defeat_overseer",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch10_complete": {
+          "awaiting_stage": "act3_ch10_leave_sector",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch10_entry": {
+          "awaiting_stage": "act3_ch10_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch10_finalize": {
+          "awaiting_stage": "act3_ch10_finalize_uplink",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch1_complete": {
+          "awaiting_stage": "reach_relay",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch1_entry": {
+          "awaiting_stage": "act3_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch1_field_disabled": {
+          "awaiting_stage": "disable_field",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch2_complete": {
+          "awaiting_stage": "act3_ch2_leave_district",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch2_entry": {
+          "awaiting_stage": "act3_ch2_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch2_route_power": {
+          "awaiting_stage": "act3_ch2_route_power",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch3_commit": {
+          "awaiting_stage": "act3_ch3_commit_doctrine",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch3_complete": {
+          "awaiting_stage": "act3_ch3_cross_ward",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch3_entry": {
+          "awaiting_stage": "act3_ch3_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch4_complete": {
+          "awaiting_stage": "act3_ch4_leave_yard",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch4_entry": {
+          "awaiting_stage": "act3_ch4_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch4_tokens": {
+          "awaiting_stage": "act3_ch4_tokens_unlock",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch5_complete": {
+          "awaiting_stage": "act3_ch5_reach_far_gate",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch5_entry": {
+          "awaiting_stage": "act3_ch5_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch5_phase_latched": {
+          "awaiting_stage": "act3_ch5_latch_phase",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch6_complete": {
+          "awaiting_stage": "act3_ch6_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch6_entry": {
+          "awaiting_stage": "act3_ch6_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch6_shortcut": {
+          "awaiting_stage": "act3_ch6_use_shortcut",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch7_complete": {
+          "awaiting_stage": "act3_ch7_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch7_cross_threshold": {
+          "awaiting_stage": "act3_ch7_cross_threshold",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch7_entry": {
+          "awaiting_stage": "act3_ch7_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch8_complete": {
+          "awaiting_stage": "act3_ch8_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch8_entry": {
+          "awaiting_stage": "act3_ch8_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch8_normalized": {
+          "awaiting_stage": "act3_ch8_normalize_state",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch9_complete": {
+          "awaiting_stage": "act3_ch9_leave_annex",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch9_entry": {
+          "awaiting_stage": "act3_ch9_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act3_ch9_handoff": {
+          "awaiting_stage": "act3_ch9_accept_handoff",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_complete": {
+          "awaiting_stage": "act4_ch1_reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_entry": {
+          "awaiting_stage": "act4_ch1_entry_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_entry_stub": {
+          "awaiting_stage": "act4_ch1_entry_stub_briefing",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_act4_ch1_taught": {
+          "awaiting_stage": "act4_ch1_induction_terminal",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_optional_note": {
+          "awaiting_stage": "find_note",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step1": {
+          "awaiting_stage": "find_cabin",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step2": {
+          "awaiting_stage": "light_hearth",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "quest_prologue_step3": {
+          "awaiting_stage": "return_trailhead",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "rat_catcher": {
+          "awaiting_stage": "find_statue",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_g_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_j_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_k_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_k_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_m_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_n_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge2_variant_n_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_fetch_supplies": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "collect_supplies",
+          "status": "active"
+        },
+        "ridge_kill_bandits": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "kill_bandits",
+          "status": "active"
+        },
+        "ridge_variant_g_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_h_relay": {
+          "awaiting_stage": "reactivate_relay",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_i_cache": {
+          "awaiting_stage": "secure_cache",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_choice_a": {
+          "awaiting_stage": "secure_cache_a",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_choice_b": {
+          "awaiting_stage": "secure_cache_b",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_j_intro": {
+          "awaiting_stage": "reach_fork",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_k_route": {
+          "awaiting_stage": "reach_exit",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_k_switch": {
+          "awaiting_stage": "flip_switch",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "ridge_variant_l_beacon": {
+          "awaiting_stage": "reach_beacon",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "showcase_fetch": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "find_artifact",
+          "status": "active"
+        },
+        "showcase_kill": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "defeat_boss",
+          "status": "active"
+        },
+        "showcase_tour": {
+          "awaiting_stage": "intro",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "sniper_threat": {
+          "awaiting_stage": "defeat_sniper",
+          "completed_stages": [],
+          "current_stage": null,
+          "status": "inactive"
+        },
+        "town_schedule_01": {
+          "awaiting_stage": null,
+          "completed_stages": [],
+          "current_stage": "step0",
+          "status": "active"
+        }
+      }
+    },
+    "xp": 0
+  },
+  "version": 1
+}

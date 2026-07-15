@@ -11,6 +11,9 @@
         "$ref": "#/$defs/animation"
       }
     },
+    "alpha": {
+      "type": "number"
+    },
     "animation_blend": {
       "type": "number"
     },
@@ -116,6 +119,9 @@
     "require_flags": {
       "$ref": "#/$defs/nonEmptyStringArray"
     },
+    "render_layer": {
+      "type": "integer"
+    },
     "rotation": {
       "type": "number"
     },
@@ -143,6 +149,25 @@
     },
     "tags": {
       "$ref": "#/$defs/nonEmptyStringArray"
+    },
+    "tint": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 4
+        }
+      ]
+    },
+    "depth_z": {
+      "type": "number"
     },
     "trigger_radius": {
       "type": [

@@ -208,6 +208,9 @@
           "type": "string",
           "minLength": 1
         },
+        "intensity": {
+          "type": "number"
+        },
         "mode": {
           "type": "string",
           "minLength": 1
@@ -228,10 +231,29 @@
       },
       "required": [
         "color",
-        "mode",
-        "radius",
-        "x",
-        "y"
+        "mode"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "ambient"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": true,
+          "else": {
+            "required": [
+              "radius",
+              "x",
+              "y"
+            ]
+          }
+        }
       ],
       "additionalProperties": false
     },
