@@ -82,6 +82,7 @@ class _KeyNamespace:
     SPACE = 32
     DELETE = 65535
     INSERT = 65379
+    MENU = 65383
     HOME = 65360
     END = 65367
     PAGEUP = 65365

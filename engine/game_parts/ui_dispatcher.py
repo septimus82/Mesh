@@ -68,14 +68,21 @@ def _is_web_runtime() -> bool:
 
 
 def _should_open_main_menu_on_boot(window: "GameWindow") -> bool:
+    cfg = getattr(window, "engine_config", None)
+    if getattr(cfg, "_mesh_launch_mode", None) == "editor":
+        return False
     if _is_web_runtime():
         return True
     from engine.repo_root import get_launched_project_root  # noqa: PLC0415
 
     if get_launched_project_root() is not None:
-        cfg = getattr(window, "engine_config", None)
         return bool(getattr(cfg, "main_menu_scene", None))
     return True
+
+
+def _should_construct_main_menu_overlay(window: "GameWindow") -> bool:
+    cfg = getattr(window, "engine_config", None)
+    return getattr(cfg, "_mesh_launch_mode", None) != "editor"
 
 
 def init_ui_dispatcher(window: "GameWindow") -> None:
@@ -230,8 +237,11 @@ def init_ui_dispatcher(window: "GameWindow") -> None:
 
     window.demo_complete_overlay = DemoCompleteOverlay(window)
     window.register_ui_element(window.demo_complete_overlay, editor_chrome=False)
-    window.main_menu_overlay = MainMenuOverlay(window)
-    window.register_ui_element(window.main_menu_overlay, editor_chrome=False)
+    if _should_construct_main_menu_overlay(window):
+        window.main_menu_overlay = MainMenuOverlay(window)
+        window.register_ui_element(window.main_menu_overlay, editor_chrome=False)
+    else:
+        window.main_menu_overlay = None
 
     window.settings_overlay = SettingsOverlay(window)
     window.settings_overlay.apply()

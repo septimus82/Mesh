@@ -66,6 +66,9 @@ class EditorWorkspaceController:
         self._load_editor_ui_state()
         if is_safe_mode_enabled():
             return
+        cfg = getattr(self._editor.window, "engine_config", None)
+        if getattr(cfg, "_mesh_editor_scene_override", None):
+            return
         self._load_editor_session_state()
 
     def load_workspace_settings(self) -> None:
