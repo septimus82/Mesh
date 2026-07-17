@@ -1,4 +1,4 @@
-"""Creator Mode overlay click dispatch (Stage Proposal only)."""
+"""Creator Mode overlay click dispatch."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from .creator_overlay_renderer import (
     build_creator_overlay_draw_commands,
     hit_test_creator_overlay_click,
 )
+from .creator_proposal_handoff import PROPOSAL_OPEN_INBOX_ACTION_ID
 
 _LEFT_BUTTON = getattr(getattr(optional_arcade, "arcade", None), "MOUSE_BUTTON_LEFT", 1)
 
@@ -56,6 +57,17 @@ def stage_proposal_action_enabled(model: Any) -> bool:
     return False
 
 
+def proposal_open_inbox_action_enabled(model: Any) -> bool:
+    """True when the proposal handoff exposes the official inbox action."""
+
+    handoff = getattr(model, "proposal_handoff", None)
+    return (
+        bool(getattr(handoff, "enabled", False))
+        and str(getattr(handoff, "action_id", "") or "") == PROPOSAL_OPEN_INBOX_ACTION_ID
+        and int(getattr(handoff, "pending_count", 0) or 0) > 0
+    )
+
+
 def resolve_creator_overlay_click_action(
     creator: Any,
     x: float,
@@ -77,8 +89,12 @@ def resolve_creator_overlay_click_action(
 
     commands = build_creator_overlay_draw_commands(model, width, height)
     action_id = hit_test_creator_overlay_click(commands, float(x), float(y))
-    if action_id != DOOR_STAGE_PROPOSAL_ACTION_ID:
-        return None
-    if not stage_proposal_action_enabled(model):
-        return None
-    return action_id
+    if action_id == DOOR_STAGE_PROPOSAL_ACTION_ID:
+        if not stage_proposal_action_enabled(model):
+            return None
+        return action_id
+    if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:
+        if not proposal_open_inbox_action_enabled(model):
+            return None
+        return action_id
+    return None

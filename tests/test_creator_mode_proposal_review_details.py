@@ -326,7 +326,8 @@ def test_snapshot_model_and_render_do_not_accept_reject_apply_or_stage() -> None
 
     text = _render_text(bridge)
 
-    assert "Review: Use AI Proposals" in text
+    assert "Review in AI Proposals" in text
+    assert "Review: Use AI Proposals" not in text
     assert "Details: Affects door_north - Dry-run OK - W0/E0" in text
     assert bridge.calls == ["list_pending_proposals"]
 
@@ -440,6 +441,7 @@ def _editor_with_bridge(bridge: object, *, include_proposal_inbox: bool = True) 
     editor = SimpleNamespace(
         selected_entity=None,
         live_bridge=bridge,
+        dock=FakeDock(),
         window=SimpleNamespace(
             width=1280,
             height=720,
@@ -463,3 +465,29 @@ def _render_commands(bridge: object):
 
 def _render_text(bridge: object) -> str:
     return "\n".join(command.text for command in _render_commands(bridge) if command.kind == "text")
+
+
+class FakeDock:
+    right_tab = "Inspector"
+
+    def __init__(self) -> None:
+        self.right_collapsed = False
+        self.viewport_maximized = False
+
+    def get_right_collapsed(self) -> bool:
+        return self.right_collapsed
+
+    def toggle_right_dock(self, _host: object) -> None:
+        self.right_collapsed = not self.right_collapsed
+
+    def apply_tab_change(self, _host: object, dock: str, tab: str) -> bool:
+        if dock != "right" or tab != "AI Proposals":
+            return False
+        self.right_tab = tab
+        return True
+
+    def get_viewport_maximized(self) -> bool:
+        return self.viewport_maximized
+
+    def toggle_viewport_maximized(self, _host: object) -> None:
+        self.viewport_maximized = not self.viewport_maximized

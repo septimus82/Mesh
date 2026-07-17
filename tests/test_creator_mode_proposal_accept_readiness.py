@@ -8,6 +8,7 @@ from types import SimpleNamespace
 import pytest
 
 from engine.editor.creator_mode import (
+    PROPOSAL_OPEN_INBOX_ACTION_ID,
     CreatorModeController,
     build_creator_overlay_model,
     build_creator_proposal_accept_readiness,
@@ -227,7 +228,10 @@ def test_render_shows_handoff_label_when_inbox_available() -> None:
         720,
     )
 
-    assert "Review: Use AI Proposals" in _command_text(commands)
+    text = _command_text(commands)
+
+    assert "Review in AI Proposals" in text
+    assert "Review: Use AI Proposals" not in text
 
 
 def test_render_shows_unavailable_handoff_when_inbox_missing() -> None:
@@ -242,13 +246,10 @@ def test_render_shows_unavailable_handoff_when_inbox_missing() -> None:
         720,
     )
 
-    assert (
-        "Review: AI Proposals unavailable - AI Proposals inbox unavailable"
-        in _command_text(commands)
-    )
+    assert "AI Proposals unavailable - AI Proposals inbox unavailable" in _command_text(commands)
 
 
-def test_rendered_handoff_line_has_no_action_id_or_hitbox() -> None:
+def test_rendered_enabled_handoff_line_has_action_id_and_hitbox() -> None:
     controller = CreatorModeController(_editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}])))
     controller.show()
 
@@ -257,14 +258,12 @@ def test_rendered_handoff_line_has_no_action_id_or_hitbox() -> None:
         1280,
         720,
     )
-    review_commands = [command for command in commands if command.text == "Review: Use AI Proposals"]
+    review_commands = [command for command in commands if command.text == "Review in AI Proposals"]
 
     assert len(review_commands) == 1
-    assert review_commands[0].action_id == ""
-    assert review_commands[0].hit_left == 0.0
-    assert review_commands[0].hit_right == 0.0
-    assert review_commands[0].hit_top == 0.0
-    assert review_commands[0].hit_bottom == 0.0
+    assert review_commands[0].action_id == PROPOSAL_OPEN_INBOX_ACTION_ID
+    assert review_commands[0].hit_left < review_commands[0].hit_right
+    assert review_commands[0].hit_bottom < review_commands[0].hit_top
 
 
 def test_zero_pending_proposals_does_not_render_handoff_line() -> None:
@@ -278,8 +277,8 @@ def test_zero_pending_proposals_does_not_render_handoff_line() -> None:
     )
     text = _command_text(commands)
 
-    assert "Review: Use AI Proposals" not in text
-    assert "Review: AI Proposals unavailable" not in text
+    assert "Review in AI Proposals" not in text
+    assert "AI Proposals unavailable" not in text
 
 
 def test_render_shows_unavailable_reason_for_missing_proposal_id_without_inbox() -> None:
@@ -294,13 +293,10 @@ def test_render_shows_unavailable_reason_for_missing_proposal_id_without_inbox()
         720,
     )
 
-    assert (
-        "Review: AI Proposals unavailable - AI Proposals inbox unavailable"
-        in _command_text(commands)
-    )
+    assert "AI Proposals unavailable - AI Proposals inbox unavailable" in _command_text(commands)
 
 
-def test_more_than_three_pending_proposals_only_render_three_handoff_lines() -> None:
+def test_more_than_three_pending_proposals_render_one_handoff_line() -> None:
     controller = CreatorModeController(
         _editor_with_bridge(
             FakeBridge(
@@ -321,7 +317,7 @@ def test_more_than_three_pending_proposals_only_render_three_handoff_lines() -> 
         )
     )
 
-    assert text.count("Review: Use AI Proposals") == 3
+    assert text.count("Review in AI Proposals") == 1
     assert "proposal-0 - Preview 0" in text
     assert "proposal-1 - Preview 1" in text
     assert "proposal-2 - Preview 2" in text
@@ -340,7 +336,10 @@ def test_snapshot_model_and_render_do_not_accept_reject_apply_or_stage() -> None
         720,
     )
 
-    assert "Review: Use AI Proposals" in _command_text(commands)
+    text = _command_text(commands)
+
+    assert "Review in AI Proposals" in text
+    assert "Review: Use AI Proposals" not in text
     assert bridge.calls == ["list_pending_proposals"]
 
 
@@ -458,6 +457,7 @@ def _editor_with_bridge(bridge: object, *, include_proposal_inbox: bool = True) 
     editor = SimpleNamespace(
         selected_entity=None,
         live_bridge=bridge,
+        dock=FakeDock(),
         window=SimpleNamespace(
             width=1280,
             height=720,
@@ -471,3 +471,29 @@ def _editor_with_bridge(bridge: object, *, include_proposal_inbox: bool = True) 
 
 def _command_text(commands) -> str:
     return "\n".join(command.text for command in commands if command.kind == "text")
+
+
+class FakeDock:
+    right_tab = "Inspector"
+
+    def __init__(self) -> None:
+        self.right_collapsed = False
+        self.viewport_maximized = False
+
+    def get_right_collapsed(self) -> bool:
+        return self.right_collapsed
+
+    def toggle_right_dock(self, _host: object) -> None:
+        self.right_collapsed = not self.right_collapsed
+
+    def apply_tab_change(self, _host: object, dock: str, tab: str) -> bool:
+        if dock != "right" or tab != "AI Proposals":
+            return False
+        self.right_tab = tab
+        return True
+
+    def get_viewport_maximized(self) -> bool:
+        return self.viewport_maximized
+
+    def toggle_viewport_maximized(self, _host: object) -> None:
+        self.viewport_maximized = not self.viewport_maximized
