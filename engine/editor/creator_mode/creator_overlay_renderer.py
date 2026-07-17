@@ -372,16 +372,6 @@ def build_creator_overlay_draw_commands(
             )
         )
         y -= 15.0
-        if model.proposal_status.pending_count > 0 and y > 4.0:
-            review_command = _proposal_handoff_review_command(
-                model.proposal_handoff,
-                pad + 18.0,
-                y,
-                bottom_text_width - 10.0,
-            )
-            if review_command is not None:
-                commands.append(review_command)
-                y -= 15.0
         detail_row = details_by_id.get(row.proposal_id)
         if detail_row is not None and y > 4.0:
             commands.append(
@@ -410,6 +400,17 @@ def build_creator_overlay_draw_commands(
             )
         )
         y -= 15.0
+
+    if model.proposal_status.pending_count > 0 and y > 4.0:
+        review_command = _proposal_handoff_review_command(
+            model.proposal_handoff,
+            pad + 18.0,
+            y,
+            bottom_text_width - 10.0,
+        )
+        if review_command is not None:
+            commands.append(review_command)
+            y -= 15.0
 
     for line in bottom_lines[:MAX_RENDERED_WARNINGS]:
         if y <= 4.0:

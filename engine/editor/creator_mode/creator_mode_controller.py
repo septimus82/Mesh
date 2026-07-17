@@ -22,6 +22,7 @@ from .creator_proposal_status import build_creator_proposal_status
 from .creator_state import CreatorModeSnapshot
 
 _DOOR_STAGE_PROPOSAL_ACTION = "door.stage_proposal"
+_AI_PROPOSALS_TAB = "AI Proposals"
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,8 +144,18 @@ class CreatorModeController:
 
         dock = getattr(editor, "dock", None)
         set_collapsed = getattr(dock, "set_right_collapsed", None)
+        get_collapsed = getattr(dock, "get_right_collapsed", None)
         set_tab = getattr(dock, "set_right_tab", None)
-        if dock is None or not callable(set_collapsed) or not callable(set_tab):
+        get_maximized = getattr(dock, "get_viewport_maximized", None)
+        toggle_maximized = getattr(dock, "toggle_viewport_maximized", None)
+        if (
+            dock is None
+            or not callable(set_collapsed)
+            or not callable(get_collapsed)
+            or not callable(set_tab)
+            or not callable(get_maximized)
+            or not callable(toggle_maximized)
+        ):
             return CreatorProposalInboxNavigationResult(ok=False, reason="missing_dock_controller")
 
         pending = self._pending_proposals()
@@ -152,15 +163,94 @@ class CreatorModeController:
         if pending_count <= 0:
             return CreatorProposalInboxNavigationResult(ok=False, reason="no_pending_proposals")
 
+        original_tab = str(getattr(dock, "right_tab", "") or "")
+        original_collapsed = bool(get_collapsed())
+        original_maximized = bool(get_maximized())
+        viewport_restored = False
+        tab_changed = False
+        collapsed_changed = False
+
+        if original_maximized:
+            toggle_maximized(editor)
+            viewport_restored = True
+            if bool(get_maximized()):
+                self._restore_dock_navigation_state(
+                    dock=dock,
+                    original_tab=original_tab,
+                    original_collapsed=original_collapsed,
+                    original_maximized=original_maximized,
+                    viewport_restored=viewport_restored,
+                    tab_changed=tab_changed,
+                    collapsed_changed=collapsed_changed,
+                    editor=editor,
+                )
+                return CreatorProposalInboxNavigationResult(
+                    ok=False,
+                    reason="viewport_restore_failed",
+                    pending_count=pending_count,
+                )
+
+        if bool(get_collapsed()):
+            set_collapsed(False)
+            collapsed_changed = True
+            if bool(get_collapsed()):
+                self._restore_dock_navigation_state(
+                    dock=dock,
+                    original_tab=original_tab,
+                    original_collapsed=original_collapsed,
+                    original_maximized=original_maximized,
+                    viewport_restored=viewport_restored,
+                    tab_changed=tab_changed,
+                    collapsed_changed=collapsed_changed,
+                    editor=editor,
+                )
+                return CreatorProposalInboxNavigationResult(
+                    ok=False,
+                    reason="right_dock_expand_failed",
+                    pending_count=pending_count,
+                )
+
         current_tab = str(getattr(dock, "right_tab", "") or "")
-        if current_tab != "AI Proposals" and not bool(set_tab("AI Proposals")):
+        if current_tab != _AI_PROPOSALS_TAB:
+            if not bool(set_tab(_AI_PROPOSALS_TAB)):
+                self._restore_dock_navigation_state(
+                    dock=dock,
+                    original_tab=original_tab,
+                    original_collapsed=original_collapsed,
+                    original_maximized=original_maximized,
+                    viewport_restored=viewport_restored,
+                    tab_changed=tab_changed,
+                    collapsed_changed=collapsed_changed,
+                    editor=editor,
+                )
+                return CreatorProposalInboxNavigationResult(
+                    ok=False,
+                    reason="ai_proposals_tab_unavailable",
+                    pending_count=pending_count,
+                )
+            tab_changed = True
+
+        if (
+            bool(get_maximized())
+            or bool(get_collapsed())
+            or str(getattr(dock, "right_tab", "") or "") != _AI_PROPOSALS_TAB
+        ):
+            self._restore_dock_navigation_state(
+                dock=dock,
+                original_tab=original_tab,
+                original_collapsed=original_collapsed,
+                original_maximized=original_maximized,
+                viewport_restored=viewport_restored,
+                tab_changed=tab_changed,
+                collapsed_changed=collapsed_changed,
+                editor=editor,
+            )
             return CreatorProposalInboxNavigationResult(
                 ok=False,
-                reason="ai_proposals_tab_unavailable",
+                reason="ai_proposals_dock_not_visible",
                 pending_count=pending_count,
             )
 
-        set_collapsed(False)
         self.hide()
         return CreatorProposalInboxNavigationResult(ok=True, pending_count=pending_count)
 
@@ -305,3 +395,41 @@ class CreatorModeController:
         except Exception:  # noqa: BLE001  # REASON: navigation must fail closed if live bridge reads fail
             return []
         return pending if isinstance(pending, list) else []
+
+    def _restore_dock_navigation_state(
+        self,
+        *,
+        dock: object,
+        original_tab: str,
+        original_collapsed: bool,
+        original_maximized: bool,
+        viewport_restored: bool,
+        tab_changed: bool,
+        collapsed_changed: bool,
+        editor: object,
+    ) -> None:
+        """Best-effort restore after a failed navigation attempt."""
+
+        if tab_changed and original_tab:
+            set_tab = getattr(dock, "set_right_tab", None)
+            if callable(set_tab):
+                try:
+                    set_tab(original_tab)
+                except Exception:  # noqa: BLE001  # REASON: best-effort rollback must not mask original failure
+                    pass
+        if collapsed_changed:
+            set_collapsed = getattr(dock, "set_right_collapsed", None)
+            if callable(set_collapsed):
+                try:
+                    set_collapsed(original_collapsed)
+                except Exception:  # noqa: BLE001  # REASON: best-effort rollback must not mask original failure
+                    pass
+        if viewport_restored and original_maximized:
+            get_maximized = getattr(dock, "get_viewport_maximized", None)
+            toggle_maximized = getattr(dock, "toggle_viewport_maximized", None)
+            if callable(get_maximized) and callable(toggle_maximized):
+                try:
+                    if not bool(get_maximized()):
+                        toggle_maximized(editor)
+                except Exception:  # noqa: BLE001  # REASON: best-effort rollback must not mask original failure
+                    pass

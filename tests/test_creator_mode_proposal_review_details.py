@@ -441,6 +441,7 @@ def _editor_with_bridge(bridge: object, *, include_proposal_inbox: bool = True) 
     editor = SimpleNamespace(
         selected_entity=None,
         live_bridge=bridge,
+        dock=FakeDock(),
         window=SimpleNamespace(
             width=1280,
             height=720,
@@ -464,3 +465,29 @@ def _render_commands(bridge: object):
 
 def _render_text(bridge: object) -> str:
     return "\n".join(command.text for command in _render_commands(bridge) if command.kind == "text")
+
+
+class FakeDock:
+    right_tab = "Inspector"
+
+    def __init__(self) -> None:
+        self.right_collapsed = False
+        self.viewport_maximized = False
+
+    def set_right_tab(self, tab: str) -> bool:
+        if tab != "AI Proposals":
+            return False
+        self.right_tab = tab
+        return True
+
+    def set_right_collapsed(self, value: bool) -> None:
+        self.right_collapsed = bool(value)
+
+    def get_right_collapsed(self) -> bool:
+        return self.right_collapsed
+
+    def get_viewport_maximized(self) -> bool:
+        return self.viewport_maximized
+
+    def toggle_viewport_maximized(self, _host: object) -> None:
+        self.viewport_maximized = not self.viewport_maximized

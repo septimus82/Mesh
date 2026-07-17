@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from .creator_proposal_status import CreatorProposalStatusModel
 
 PROPOSAL_OPEN_INBOX_ACTION_ID = "proposal.open_inbox"
+_AI_PROPOSALS_TAB = "AI Proposals"
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,7 +48,8 @@ def build_creator_proposal_handoff(
             pending_count=0,
         )
 
-    if editor is not None and getattr(editor, "proposal_inbox", None) is not None:
+    reason = _handoff_unavailable_reason(editor)
+    if not reason:
         return CreatorProposalHandoffModel(
             available=True,
             enabled=True,
@@ -61,6 +63,40 @@ def build_creator_proposal_handoff(
         available=False,
         enabled=False,
         label="Review in AI Proposals",
-        reason="AI Proposals inbox unavailable",
+        reason=reason,
         pending_count=pending_count,
     )
+
+
+def _handoff_unavailable_reason(editor: object | None) -> str:
+    """Return a concise reason when the official inbox cannot be focused."""
+
+    if editor is None:
+        return "Editor unavailable"
+    if getattr(editor, "proposal_inbox", None) is None:
+        return "AI Proposals inbox unavailable"
+
+    dock = getattr(editor, "dock", None)
+    if dock is None:
+        return "Right dock unavailable"
+
+    required_methods = (
+        "set_right_collapsed",
+        "get_right_collapsed",
+        "set_right_tab",
+        "get_viewport_maximized",
+        "toggle_viewport_maximized",
+    )
+    for method_name in required_methods:
+        if not callable(getattr(dock, method_name, None)):
+            return "AI Proposals dock controls unavailable"
+
+    try:
+        from engine.editor.editor_dock_model import RIGHT_DOCK_TABS  # noqa: PLC0415
+    except Exception:  # noqa: BLE001  # REASON: optional UI model import must fail closed
+        return "AI Proposals tab unavailable"
+
+    if _AI_PROPOSALS_TAB not in RIGHT_DOCK_TABS:
+        return "AI Proposals tab unavailable"
+
+    return ""

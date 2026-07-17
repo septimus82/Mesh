@@ -25,10 +25,12 @@ from engine.editor.creator_mode.creator_proposal_status import (
 
 pytestmark = pytest.mark.fast
 
+_DEFAULT_DOCK = object()
+
 
 def test_pending_proposals_with_proposal_inbox_is_available() -> None:
     status = _status_with_pending(2)
-    editor = SimpleNamespace(proposal_inbox=SimpleNamespace())
+    editor = SimpleNamespace(proposal_inbox=SimpleNamespace(), dock=FakeDock())
 
     handoff = build_creator_proposal_handoff(editor, status)
 
@@ -50,6 +52,34 @@ def test_pending_proposals_without_proposal_inbox_is_unavailable() -> None:
     assert handoff.reason == "AI Proposals inbox unavailable"
     assert handoff.pending_count == 1
     assert handoff.enabled is False
+    assert handoff.action_id == ""
+
+
+def test_pending_proposals_without_dock_is_unavailable() -> None:
+    status = _status_with_pending(1)
+
+    handoff = build_creator_proposal_handoff(
+        SimpleNamespace(proposal_inbox=SimpleNamespace()),
+        status,
+    )
+
+    assert handoff.available is False
+    assert handoff.enabled is False
+    assert handoff.reason == "Right dock unavailable"
+    assert handoff.action_id == ""
+
+
+def test_pending_proposals_without_viewport_controls_is_unavailable() -> None:
+    status = _status_with_pending(1)
+
+    handoff = build_creator_proposal_handoff(
+        SimpleNamespace(proposal_inbox=SimpleNamespace(), dock=MissingViewportDock(right_tab="Inspector", right_collapsed=False)),
+        status,
+    )
+
+    assert handoff.available is False
+    assert handoff.enabled is False
+    assert handoff.reason == "AI Proposals dock controls unavailable"
     assert handoff.action_id == ""
 
 
@@ -75,7 +105,10 @@ def test_zero_proposals_shows_no_proposals_to_review() -> None:
 def test_unavailable_proposal_status_shows_review_unavailable() -> None:
     status = unavailable_creator_proposal_status(warnings=("Bridge read failed.",))
 
-    handoff = build_creator_proposal_handoff(SimpleNamespace(proposal_inbox=SimpleNamespace()), status)
+    handoff = build_creator_proposal_handoff(
+        SimpleNamespace(proposal_inbox=SimpleNamespace(), dock=FakeDock()),
+        status,
+    )
 
     assert handoff.available is False
     assert handoff.label == "Proposal review unavailable"
@@ -123,7 +156,7 @@ def test_overlay_model_includes_proposal_handoff() -> None:
 
 def test_hostile_proposal_inbox_proves_no_accept_reject_or_list_pending_calls() -> None:
     status = _status_with_pending(1)
-    editor = SimpleNamespace(proposal_inbox=HostileInbox())
+    editor = SimpleNamespace(proposal_inbox=HostileInbox(), dock=FakeDock())
 
     handoff = build_creator_proposal_handoff(editor, status)
 
@@ -407,7 +440,7 @@ def test_more_than_three_pending_still_renders_and_more() -> None:
         )
     )
 
-    assert text.count("Review in AI Proposals") == 3
+    assert text.count("Review in AI Proposals") == 1
     assert "...and 2 more" in text
 
 
@@ -429,6 +462,52 @@ def test_handoff_draw_commands_stay_inside_bottom_panel_at_required_sizes() -> N
         target = targets[0]
         assert bottom.x - bottom.width / 2 <= target.hit_left <= target.hit_right <= bottom.x + bottom.width / 2
         assert bottom.y - bottom.height / 2 <= target.hit_bottom <= target.hit_top <= bottom.y + bottom.height / 2
+
+
+@pytest.mark.parametrize("pending_count", (1, 3))
+def test_pending_proposals_render_exactly_one_handoff_action(pending_count: int) -> None:
+    rows = [
+        {"proposal_id": f"proposal-{index}", "preview_summary": f"Preview {index}"}
+        for index in range(pending_count)
+    ]
+    controller = CreatorModeController(_editor_with_bridge(FakeBridge(rows), proposal_inbox=SimpleNamespace()))
+    controller.show()
+
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    handoff_commands = [command for command in commands if command.text == "Review in AI Proposals"]
+
+    assert len(handoff_commands) == 1
+    assert len([command for command in commands if command.action_id == PROPOSAL_OPEN_INBOX_ACTION_ID]) == 1
+    assert all(command.action_id == "" for command in commands if command.text.startswith("proposal-"))
+
+
+def test_five_pending_proposals_render_one_handoff_and_overflow() -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(
+            FakeBridge(
+                [
+                    {"proposal_id": f"proposal-{index}", "preview_summary": f"Preview {index}"}
+                    for index in range(5)
+                ]
+            ),
+            proposal_inbox=SimpleNamespace(),
+        )
+    )
+    controller.show()
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    text = _command_text(commands)
+
+    assert text.count("Review in AI Proposals") == 1
+    assert len([command for command in commands if command.action_id == PROPOSAL_OPEN_INBOX_ACTION_ID]) == 1
+    assert "...and 2 more" in text
 
 
 def test_open_ai_proposals_inbox_navigates_without_mutating_pending_proposal() -> None:
@@ -481,9 +560,37 @@ def test_open_ai_proposals_inbox_when_tab_already_selected_still_leaves_creator_
     assert dock.right_tab == "AI Proposals"
 
 
+def test_open_ai_proposals_inbox_exits_viewport_maximization_before_navigation() -> None:
+    bridge = HostileBridge([{"proposal_id": "proposal-1"}])
+    dock = FakeDock(right_tab="Inspector", right_collapsed=True, viewport_maximized=True)
+    editor = _editor_with_bridge(
+        bridge,
+        proposal_inbox=HostileInbox(),
+        dock=dock,
+        active=True,
+        content_revision=7,
+        undo_stack=[{"type": "HumanEdit"}],
+    )
+    controller = CreatorModeController(editor)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is True
+    assert controller.active is False
+    assert editor.active is True
+    assert dock.viewport_maximized is False
+    assert dock.right_collapsed is False
+    assert dock.right_tab == "AI Proposals"
+    assert bridge.calls == ["list_pending_proposals"]
+    assert editor.proposal_inbox.calls == []
+    assert editor.content_revision == 7
+    assert len(editor.undo.undo_stack) == 1
+
+
 def test_open_ai_proposals_inbox_missing_dock_fails_closed() -> None:
     bridge = FakeBridge([{"proposal_id": "proposal-1"}])
-    editor = _editor_with_bridge(bridge, proposal_inbox=SimpleNamespace(), active=True)
+    editor = _editor_with_bridge(bridge, proposal_inbox=SimpleNamespace(), dock=None, active=True)
     controller = CreatorModeController(editor)
     controller.show()
 
@@ -523,6 +630,55 @@ def test_open_ai_proposals_inbox_missing_pending_fails_closed_without_dock_chang
     assert controller.active is True
     assert dock.right_collapsed is True
     assert dock.right_tab == "Inspector"
+
+
+def test_open_ai_proposals_inbox_missing_viewport_seam_fails_closed() -> None:
+    dock = MissingViewportDock(right_tab="Inspector", right_collapsed=True)
+    editor = _editor_with_bridge(
+        FakeBridge([{"proposal_id": "proposal-1"}]),
+        proposal_inbox=SimpleNamespace(),
+        dock=dock,
+        active=True,
+        content_revision=8,
+        undo_stack=[{"type": "HumanEdit"}],
+    )
+    controller = CreatorModeController(editor)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is False
+    assert result.reason == "missing_dock_controller"
+    assert controller.active is True
+    assert dock.right_collapsed is True
+    assert dock.right_tab == "Inspector"
+    assert editor.content_revision == 8
+    assert len(editor.undo.undo_stack) == 1
+
+
+def test_open_ai_proposals_inbox_failed_viewport_exit_restores_and_keeps_creator_active() -> None:
+    dock = FakeDock(right_tab="Inspector", right_collapsed=True, viewport_maximized=True, fail_toggle=True)
+    editor = _editor_with_bridge(
+        FakeBridge([{"proposal_id": "proposal-1"}]),
+        proposal_inbox=SimpleNamespace(),
+        dock=dock,
+        active=True,
+        content_revision=12,
+        undo_stack=[{"type": "HumanEdit"}],
+    )
+    controller = CreatorModeController(editor)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is False
+    assert result.reason == "viewport_restore_failed"
+    assert controller.active is True
+    assert dock.viewport_maximized is True
+    assert dock.right_collapsed is True
+    assert dock.right_tab == "Inspector"
+    assert editor.content_revision == 12
+    assert len(editor.undo.undo_stack) == 1
 
 
 def _command_text(commands) -> str:
@@ -599,7 +755,7 @@ def _editor_with_bridge(
     bridge: object,
     *,
     proposal_inbox: object | None = None,
-    dock: object | None = None,
+    dock: object | None = _DEFAULT_DOCK,
     active: bool = False,
     content_revision: int = 0,
     undo_stack: list[dict[str, object]] | None = None,
@@ -609,7 +765,7 @@ def _editor_with_bridge(
         selected_entity=None,
         live_bridge=bridge,
         proposal_inbox=proposal_inbox,
-        dock=dock,
+        dock=FakeDock() if dock is _DEFAULT_DOCK else dock,
         content_revision=content_revision,
         undo=SimpleNamespace(undo_stack=list(undo_stack or [])),
         window=SimpleNamespace(
@@ -621,9 +777,20 @@ def _editor_with_bridge(
 
 
 class FakeDock:
-    def __init__(self, *, right_tab: str, right_collapsed: bool) -> None:
+    def __init__(
+        self,
+        *,
+        right_tab: str = "Inspector",
+        right_collapsed: bool = False,
+        viewport_maximized: bool = False,
+        fail_toggle: bool = False,
+        fail_expand: bool = False,
+    ) -> None:
         self.right_tab = right_tab
         self.right_collapsed = right_collapsed
+        self.viewport_maximized = viewport_maximized
+        self.fail_toggle = fail_toggle
+        self.fail_expand = fail_expand
 
     def set_right_tab(self, tab: str) -> bool:
         if tab != "AI Proposals":
@@ -634,4 +801,35 @@ class FakeDock:
         return True
 
     def set_right_collapsed(self, value: bool) -> None:
+        if self.fail_expand and value is False:
+            return
         self.right_collapsed = bool(value)
+
+    def get_right_collapsed(self) -> bool:
+        return self.right_collapsed
+
+    def get_viewport_maximized(self) -> bool:
+        return self.viewport_maximized
+
+    def toggle_viewport_maximized(self, _host: object) -> None:
+        if self.fail_toggle:
+            return
+        self.viewport_maximized = not self.viewport_maximized
+
+
+class MissingViewportDock:
+    def __init__(self, *, right_tab: str, right_collapsed: bool) -> None:
+        self.right_tab = right_tab
+        self.right_collapsed = right_collapsed
+
+    def set_right_tab(self, tab: str) -> bool:
+        if tab != "AI Proposals":
+            return False
+        self.right_tab = tab
+        return True
+
+    def set_right_collapsed(self, value: bool) -> None:
+        self.right_collapsed = bool(value)
+
+    def get_right_collapsed(self) -> bool:
+        return self.right_collapsed

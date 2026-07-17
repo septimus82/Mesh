@@ -296,7 +296,7 @@ def test_render_shows_unavailable_reason_for_missing_proposal_id_without_inbox()
     assert "AI Proposals unavailable - AI Proposals inbox unavailable" in _command_text(commands)
 
 
-def test_more_than_three_pending_proposals_only_render_three_handoff_lines() -> None:
+def test_more_than_three_pending_proposals_render_one_handoff_line() -> None:
     controller = CreatorModeController(
         _editor_with_bridge(
             FakeBridge(
@@ -317,7 +317,7 @@ def test_more_than_three_pending_proposals_only_render_three_handoff_lines() -> 
         )
     )
 
-    assert text.count("Review in AI Proposals") == 3
+    assert text.count("Review in AI Proposals") == 1
     assert "proposal-0 - Preview 0" in text
     assert "proposal-1 - Preview 1" in text
     assert "proposal-2 - Preview 2" in text
@@ -457,6 +457,7 @@ def _editor_with_bridge(bridge: object, *, include_proposal_inbox: bool = True) 
     editor = SimpleNamespace(
         selected_entity=None,
         live_bridge=bridge,
+        dock=FakeDock(),
         window=SimpleNamespace(
             width=1280,
             height=720,
@@ -470,3 +471,29 @@ def _editor_with_bridge(bridge: object, *, include_proposal_inbox: bool = True) 
 
 def _command_text(commands) -> str:
     return "\n".join(command.text for command in commands if command.kind == "text")
+
+
+class FakeDock:
+    right_tab = "Inspector"
+
+    def __init__(self) -> None:
+        self.right_collapsed = False
+        self.viewport_maximized = False
+
+    def set_right_tab(self, tab: str) -> bool:
+        if tab != "AI Proposals":
+            return False
+        self.right_tab = tab
+        return True
+
+    def set_right_collapsed(self, value: bool) -> None:
+        self.right_collapsed = bool(value)
+
+    def get_right_collapsed(self) -> bool:
+        return self.right_collapsed
+
+    def get_viewport_maximized(self) -> bool:
+        return self.viewport_maximized
+
+    def toggle_viewport_maximized(self, _host: object) -> None:
+        self.viewport_maximized = not self.viewport_maximized
