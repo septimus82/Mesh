@@ -338,8 +338,11 @@ class EditorDockController:
         if dock == "right":
             if tab not in RIGHT_DOCK_TABS:
                 return False
+            was_ai_chat = self._right_tab == "AI Chat"
             if not self.set_right_tab(tab):
                 return False
+            if was_ai_chat and tab != "AI Chat":
+                _clear_ai_chat_input_focus(host)
             if tab != "Problems":
                 problems = getattr(host, "problems", None)
                 if problems is not None:
@@ -412,3 +415,18 @@ class EditorDockController:
         setter = getattr(self._session, "set_problems_panel_focused", None)
         if callable(setter):
             setter(problems_focus)
+
+
+def _clear_ai_chat_input_focus(host: Any) -> None:
+    chat = getattr(host, "chat", None)
+    if chat is not None:
+        try:
+            chat.input_focused = False
+        except Exception:
+            _log_swallow("EDIT-007", "engine/editor/editor_dock_controller.py pass-only blanket swallow")
+            pass
+
+    overlay = getattr(getattr(host, "window", None), "ai_chat_overlay", None)
+    clearer = getattr(overlay, "clear_input_focus", None) if overlay is not None else None
+    if callable(clearer):
+        clearer()
