@@ -32,6 +32,8 @@ class EditorLiveOpsController:
             return self._set_behaviour_params(op, push_undo=push_undo)
         if op_type == "delete_entity":
             return self._delete_entity(op, push_undo=push_undo)
+        if op_type == "move_entity":
+            return self._move_entity(op, push_undo=push_undo)
         return _result(False, f"Unsupported live operation type '{op_type}'")
 
     def stage_proposal(self, ops: list[dict[str, Any]]) -> LiveOpProposal:
@@ -235,6 +237,29 @@ class EditorLiveOpsController:
                 preview_lines.append(f"Delete entity '{entity_id}'")
                 continue
 
+            if op_type == "move_entity":
+                entity, target_x, target_y, warning = self._dry_run_move_entity(op, staged_scene)
+                if warning:
+                    warnings.append(f"Op {index}: {warning}")
+                    continue
+                if entity is None or target_x is None or target_y is None:
+                    warnings.append(f"Op {index}: failed to validate move_entity")
+                    continue
+
+                entity_id = _entity_identity(entity)
+                from_x = float(entity.get("x", 0.0) or 0.0)
+                from_y = float(entity.get("y", 0.0) or 0.0)
+                entity["x"] = float(target_x)
+                entity["y"] = float(target_y)
+                affected_ids.append(entity_id)
+                direction = str(op.get("direction") or "").strip()
+                direction_suffix = f" ({direction})" if direction else ""
+                preview_lines.append(
+                    f"Move '{entity_id}' from ({from_x:g}, {from_y:g}) "
+                    f"to ({float(target_x):g}, {float(target_y):g}){direction_suffix}"
+                )
+                continue
+
             if op_type:
                 warnings.append(f"Op {index}: unsupported live operation type '{op_type}'")
                 continue
@@ -359,6 +384,52 @@ class EditorLiveOpsController:
             data["command"] = command
         return _result(True, f"Deleted entity '{entity_name}'", data)
 
+    def _move_entity(self, op: dict[str, Any], *, push_undo: bool = True) -> dict[str, Any]:
+        scene_mismatch = self._scene_mismatch_message(op)
+        if scene_mismatch:
+            return _result(False, scene_mismatch)
+
+        entity_ref = _op_entity_ref(op)
+        if not entity_ref:
+            return _result(False, "move_entity requires entity_id")
+        try:
+            target_x = float(op.get("x"))
+            target_y = float(op.get("y"))
+        except (TypeError, ValueError):
+            return _result(False, "move_entity requires numeric x and y")
+
+        entity = self._find_live_entity(entity_ref)
+        if entity is None:
+            return _result(False, f"Entity '{entity_ref}' not found")
+
+        entity_name = _sprite_entity_name(entity)
+        entity_data = self._editor.window.scene_controller._ensure_entity_data_dict(entity)
+        before_x = float(entity_data.get("x", getattr(entity, "center_x", 0.0)) or 0.0)
+        before_y = float(entity_data.get("y", getattr(entity, "center_y", 0.0)) or 0.0)
+        command = {
+            "type": "MoveEntity",
+            "entity_name": entity_name,
+            "before": {"x": before_x, "y": before_y},
+            "after": {"x": float(target_x), "y": float(target_y)},
+        }
+        self._editor.window.scene_controller._apply_entity_mutation(
+            entity,
+            x=float(target_x),
+            y=float(target_y),
+        )
+        if push_undo:
+            self._editor._push_command(command)
+        self._refresh_editor_surfaces()
+        data: dict[str, Any] = {
+            "entity_name": entity_name,
+            "entity_id": entity_ref,
+            "x": float(target_x),
+            "y": float(target_y),
+        }
+        if not push_undo:
+            data["command"] = command
+        return _result(True, f"Moved entity '{entity_name}'", data)
+
     def _dry_run_set_behaviour_params(
         self, op: dict[str, Any], staged_scene: dict[str, Any]
     ) -> tuple[dict[str, Any] | None, str | None, dict[str, Any] | None, str | None]:
@@ -394,6 +465,25 @@ class EditorLiveOpsController:
         if entity is None:
             return None, f"Entity '{entity_ref}' not found"
         return entity, None
+
+    def _dry_run_move_entity(
+        self, op: dict[str, Any], staged_scene: dict[str, Any]
+    ) -> tuple[dict[str, Any] | None, float | None, float | None, str | None]:
+        scene_mismatch = self._scene_mismatch_message(op)
+        if scene_mismatch:
+            return None, None, None, scene_mismatch
+        entity_ref = _op_entity_ref(op)
+        if not entity_ref:
+            return None, None, None, "move_entity requires entity_id"
+        entity = _find_scene_entity(staged_scene, entity_ref)
+        if entity is None:
+            return None, None, None, f"Entity '{entity_ref}' not found"
+        try:
+            target_x = float(op.get("x"))
+            target_y = float(op.get("y"))
+        except (TypeError, ValueError):
+            return None, None, None, "move_entity requires numeric x and y"
+        return entity, target_x, target_y, None
 
     def _scene_mismatch_message(self, op: dict[str, Any]) -> str:
         scene_controller = getattr(self._editor.window, "scene_controller", None)

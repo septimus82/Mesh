@@ -610,3 +610,81 @@ def test_invalid_proposal_batch_refuses_accept_without_partial_apply() -> None:
     assert "valid_but_not_applied" not in _entity_names(scene_controller.build_scene_snapshot(compact=False))
     assert controller.undo.undo_stack == []
     assert controller.content_revision == revision
+
+
+def test_live_move_entity_updates_position_and_undo_redo() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    sprite = _add_entity(controller, "move_crate")
+    assert sprite.center_x == 64.0
+    assert sprite.center_y == 80.0
+    revision_after_add = controller.content_revision
+
+    result = controller.apply_live_op(
+        {
+            "type": "move_entity",
+            "entity_id": "move_crate",
+            "x": 96.0,
+            "y": 112.0,
+            "direction": "right",
+            "grid_step": 32.0,
+        }
+    )
+
+    assert result["ok"] is True
+    assert controller.content_revision == revision_after_add + 1
+    assert sprite.center_x == 96.0
+    assert sprite.center_y == 112.0
+    assert sprite.mesh_entity_data["x"] == 96.0
+    assert sprite.mesh_entity_data["y"] == 112.0
+    payload = _entity_by_name(scene_controller.build_scene_snapshot(compact=False), "move_crate")
+    assert payload["x"] == 96.0
+    assert payload["y"] == 112.0
+    assert controller.undo.undo_stack[-1]["type"] == "MoveEntity"
+
+    assert controller.undo.undo() is True
+    assert sprite.center_x == 64.0
+    assert sprite.center_y == 80.0
+
+    assert controller.undo.redo() is True
+    assert sprite.center_x == 96.0
+    assert sprite.center_y == 112.0
+
+
+def test_move_entity_proposal_accept_applies_once_via_batch() -> None:
+    controller = _make_controller()
+    scene_controller = controller.window.scene_controller
+    sprite = _add_entity(controller, "batch_move_crate")
+    revision = controller.content_revision
+
+    proposal = controller.stage_proposal(
+        [
+            {
+                "type": "move_entity",
+                "entity_id": "batch_move_crate",
+                "x": 128.0,
+                "y": 80.0,
+                "from_x": 64.0,
+                "from_y": 80.0,
+                "direction": "right",
+                "grid_step": 64.0,
+            }
+        ]
+    )
+    assert proposal.dry_run["ok"] is True
+    assert "Move 'batch_move_crate'" in proposal.preview_summary
+    assert sprite.center_x == 64.0
+
+    result = controller.accept_proposal(proposal)
+    assert result["ok"] is True
+    assert controller.content_revision == revision + 1
+    assert sprite.center_x == 128.0
+    assert controller.undo.undo_stack[-1]["type"] == "ApplyAIOpBatch"
+
+    assert controller.undo.undo() is True
+    assert sprite.center_x == 64.0
+    assert controller.undo.redo() is True
+    assert sprite.center_x == 128.0
+    payload = _entity_by_name(scene_controller.build_scene_snapshot(compact=False), "batch_move_crate")
+    assert payload["x"] == 128.0
+    assert payload["y"] == 80.0

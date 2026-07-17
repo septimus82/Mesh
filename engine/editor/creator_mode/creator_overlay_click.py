@@ -6,6 +6,7 @@ from typing import Any
 
 import engine.optional_arcade as optional_arcade
 
+from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
 from .creator_overlay import build_creator_overlay_model
 from .creator_overlay_renderer import (
     DOOR_STAGE_PROPOSAL_ACTION_ID,
@@ -57,6 +58,23 @@ def stage_proposal_action_enabled(model: Any) -> bool:
     return False
 
 
+def entity_move_action_enabled(model: Any, action_id: str) -> bool:
+    """True when the movement panel exposes the given enabled action."""
+
+    panel = getattr(model, "movement_panel", None)
+    if panel is None:
+        return False
+    target = str(action_id or "").strip()
+    if target not in ENTITY_MOVE_ACTION_ID_SET:
+        return False
+    for action in getattr(panel, "actions", ()):
+        if str(getattr(action, "action_id", "") or "") == target and bool(
+            getattr(action, "enabled", False)
+        ):
+            return True
+    return False
+
+
 def proposal_open_inbox_action_enabled(model: Any) -> bool:
     """True when the proposal handoff exposes the official inbox action."""
 
@@ -91,6 +109,10 @@ def resolve_creator_overlay_click_action(
     action_id = hit_test_creator_overlay_click(commands, float(x), float(y))
     if action_id == DOOR_STAGE_PROPOSAL_ACTION_ID:
         if not stage_proposal_action_enabled(model):
+            return None
+        return action_id
+    if action_id in ENTITY_MOVE_ACTION_ID_SET:
+        if not entity_move_action_enabled(model, action_id):
             return None
         return action_id
     if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:
