@@ -348,6 +348,18 @@ def build_creator_overlay_draw_commands(
     details_by_id = {
         detail.proposal_id: detail for detail in model.proposal_review_details.details
     }
+    if model.proposal_status.pending_count > 0 and y > 4.0:
+        review_command = _proposal_handoff_review_command(
+            model.proposal_handoff,
+            pad + 18.0,
+            y,
+            bottom_text_width - 10.0,
+        )
+        if review_command is not None:
+            commands.append(review_command)
+            y -= 15.0
+
+    rendered_rows = []
     for row in model.proposal_status.rows[:MAX_RENDERED_PROPOSAL_ROWS]:
         if y <= 4.0:
             break
@@ -371,22 +383,10 @@ def build_creator_overlay_draw_commands(
                 proposal_limit,
             )
         )
+        rendered_rows.append(row)
         y -= 15.0
-        detail_row = details_by_id.get(row.proposal_id)
-        if detail_row is not None and y > 4.0:
-            commands.append(
-                _text(
-                    _proposal_detail_line(detail_row),
-                    "bottom",
-                    pad + 18.0,
-                    y,
-                    10,
-                    (150, 158, 170),
-                    _panel_char_limit(bottom_text_width - 10.0, 10, MAX_WARNING_CHARS),
-                )
-            )
-            y -= 15.0
-    hidden_count = max(0, model.proposal_status.pending_count - MAX_RENDERED_PROPOSAL_ROWS)
+
+    hidden_count = max(0, model.proposal_status.pending_count - len(rendered_rows))
     if hidden_count and y > 4.0:
         commands.append(
             _text(
@@ -401,16 +401,22 @@ def build_creator_overlay_draw_commands(
         )
         y -= 15.0
 
-    if model.proposal_status.pending_count > 0 and y > 4.0:
-        review_command = _proposal_handoff_review_command(
-            model.proposal_handoff,
-            pad + 18.0,
-            y,
-            bottom_text_width - 10.0,
+    for row in rendered_rows:
+        detail_row = details_by_id.get(row.proposal_id)
+        if detail_row is None or y <= 4.0:
+            continue
+        commands.append(
+            _text(
+                _proposal_detail_line(detail_row),
+                "bottom",
+                pad + 18.0,
+                y,
+                10,
+                (150, 158, 170),
+                _panel_char_limit(bottom_text_width - 10.0, 10, MAX_WARNING_CHARS),
+            )
         )
-        if review_command is not None:
-            commands.append(review_command)
-            y -= 15.0
+        y -= 15.0
 
     for line in bottom_lines[:MAX_RENDERED_WARNINGS]:
         if y <= 4.0:

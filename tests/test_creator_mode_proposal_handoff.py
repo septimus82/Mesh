@@ -444,24 +444,42 @@ def test_more_than_three_pending_still_renders_and_more() -> None:
     assert "...and 2 more" in text
 
 
-def test_handoff_draw_commands_stay_inside_bottom_panel_at_required_sizes() -> None:
-    for width, height in ((1280, 720), (1024, 576), (320, 240)):
-        controller = CreatorModeController(
-            _editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}]), proposal_inbox=SimpleNamespace())
-        )
-        controller.show()
-        commands = build_creator_overlay_draw_commands(
-            build_creator_overlay_model(controller.build_snapshot()),
-            width,
-            height,
-        )
-        bottom = next(command for command in commands if command.kind == "rect" and command.region == "bottom")
-        targets = [command for command in commands if command.action_id == PROPOSAL_OPEN_INBOX_ACTION_ID]
+@pytest.mark.parametrize("width,height", ((1280, 720), (1024, 576), (320, 240)))
+@pytest.mark.parametrize("pending_count", (1, 3, 5))
+def test_enabled_handoff_hitbox_stays_inside_bottom_panel_at_required_sizes(
+    width: int,
+    height: int,
+    pending_count: int,
+) -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(FakeBridge(_pending_rows(pending_count)), proposal_inbox=SimpleNamespace())
+    )
+    controller.show()
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        width,
+        height,
+    )
+    bottom = next(command for command in commands if command.kind == "rect" and command.region == "bottom")
+    panel_left = bottom.x - bottom.width / 2
+    panel_right = bottom.x + bottom.width / 2
+    panel_bottom = bottom.y - bottom.height / 2
+    panel_top = bottom.y + bottom.height / 2
+    targets = [command for command in commands if command.action_id == PROPOSAL_OPEN_INBOX_ACTION_ID]
 
-        assert len(targets) == 1
-        target = targets[0]
-        assert bottom.x - bottom.width / 2 <= target.hit_left <= target.hit_right <= bottom.x + bottom.width / 2
-        assert bottom.y - bottom.height / 2 <= target.hit_bottom <= target.hit_top <= bottom.y + bottom.height / 2
+    assert len(targets) == 1
+    target = targets[0]
+    assert target.text == "Review in AI Proposals"
+    assert target.hit_left >= panel_left
+    assert target.hit_right <= panel_right
+    assert target.hit_bottom >= panel_bottom
+    assert target.hit_top <= panel_top
+    assert all(command.action_id == "" for command in commands if command.text.startswith("proposal-"))
+    assert hit_test_creator_overlay_click(
+        commands,
+        (target.hit_left + target.hit_right) / 2.0,
+        (target.hit_top + target.hit_bottom) / 2.0,
+    ) == PROPOSAL_OPEN_INBOX_ACTION_ID
 
 
 @pytest.mark.parametrize("pending_count", (1, 3))
@@ -508,6 +526,42 @@ def test_five_pending_proposals_render_one_handoff_and_overflow() -> None:
     assert text.count("Review in AI Proposals") == 1
     assert len([command for command in commands if command.action_id == PROPOSAL_OPEN_INBOX_ACTION_ID]) == 1
     assert "...and 2 more" in text
+
+
+@pytest.mark.parametrize("width,height", ((1280, 720), (1024, 576), (320, 240)))
+def test_five_pending_proposals_retain_overflow_when_layout_can_display_it(width: int, height: int) -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(FakeBridge(_pending_rows(5)), proposal_inbox=SimpleNamespace())
+    )
+    controller.show()
+
+    text = _command_text(
+        build_creator_overlay_draw_commands(
+            build_creator_overlay_model(controller.build_snapshot()),
+            width,
+            height,
+        )
+    )
+
+    assert "...and 2 more" in text
+
+
+def test_minimum_layout_prioritizes_handoff_over_dry_run_details() -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(FakeBridge(_pending_rows(5)), proposal_inbox=SimpleNamespace())
+    )
+    controller.show()
+    text = _command_text(
+        build_creator_overlay_draw_commands(
+            build_creator_overlay_model(controller.build_snapshot()),
+            320,
+            240,
+        )
+    )
+
+    assert "Review in AI Proposals" in text
+    assert "...and 2 more" in text
+    assert "Details: Affects" not in text
 
 
 def test_open_ai_proposals_inbox_navigates_without_mutating_pending_proposal() -> None:
@@ -774,6 +828,18 @@ def _editor_with_bridge(
             scene_controller=SimpleNamespace(current_scene_path="forest"),
         ),
     )
+
+
+def _pending_rows(count: int) -> list[dict[str, object]]:
+    return [
+        {
+            "proposal_id": f"proposal-{index}",
+            "preview_summary": f"Preview {index}",
+            "affected_ids": [f"entity_{index}"],
+            "dry_run": {"ok": True, "affected_ids": [f"entity_{index}"]},
+        }
+        for index in range(count)
+    ]
 
 
 class FakeDock:
