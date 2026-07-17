@@ -9,7 +9,14 @@ import engine.optional_arcade as optional_arcade
 from engine.editor.dock_tab_registry import DOCK_TAB_TOOLTIPS, RIGHT_DOCK_TABS
 from engine.editor.editor_dock_controller import EditorDockController
 from engine.editor.editor_focus_model import is_text_input_active_for_controller
+from engine.editor.editor_shell_layout import (
+    TAB_HEADER_HEIGHT,
+    compute_dock_tab_rects,
+    compute_editor_shell_layout,
+)
 from engine.editor_runtime.editor_input_shortcut_handlers import is_text_input_active
+from engine.input_runtime import capture_runtime
+from engine.ui_controller import UIController
 from engine.ui_overlays.ai_chat_overlay import AIChatOverlay, build_transcript_lines, wrap_transcript_text
 from tests.test_cocreative_chatbox_14a import _FakeClient, _FakeFactory, _run_chat_to_completion, _text, _tool_use
 from tests.test_cocreative_live_ops import _entity_names, _make_controller
@@ -146,6 +153,102 @@ def test_ai_chat_click_outside_input_releases_focus(monkeypatch: pytest.MonkeyPa
     left, bottom, width, height = rect
     assert controller.handle_mouse_click(left + width - 2, bottom + height - 2, optional_arcade.arcade.MOUSE_BUTTON_LEFT, 0) is True
 
+    assert controller.chat.input_focused is False
+
+
+def test_ai_chat_overlay_draws_below_shared_right_dock_tab_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    controller = _make_controller()
+    controller.window.width = 1280
+    controller.window.height = 720
+    fills: list[tuple[float, float, float, float]] = []
+    outlines: list[tuple[float, float, float, float]] = []
+
+    import engine.ui_overlays.ai_chat_overlay as overlay_module
+
+    def capture_fill(left: float, right: float, top: float, bottom: float, *_args: Any, **_kwargs: Any) -> None:
+        fills.append((left, right, top, bottom))
+
+    def capture_outline(left: float, right: float, top: float, bottom: float, *_args: Any, **_kwargs: Any) -> None:
+        outlines.append((left, right, top, bottom))
+
+    monkeypatch.setattr(overlay_module, "_draw_tb_rectangle_filled", capture_fill)
+    monkeypatch.setattr(overlay_module, "_draw_tb_rectangle_outline", capture_outline)
+    monkeypatch.setattr(overlay_module, "draw_text_cached", lambda *_args, **_kwargs: None)
+    controller.window.editor_controller = controller
+    overlay = AIChatOverlay(controller.window)
+    controller.window.ai_chat_overlay = overlay
+    controller.dock.set_right_tab("AI Chat", force=True)
+
+    overlay.draw()
+
+    layout = compute_editor_shell_layout(controller.window.width, controller.window.height)
+    content_header_top = layout.right_dock.top - TAB_HEADER_HEIGHT
+    assert fills[0] == pytest.approx((layout.right_dock.left, layout.right_dock.right, content_header_top, layout.right_dock.bottom))
+    assert outlines[0] == pytest.approx((layout.right_dock.left, layout.right_dock.right, content_header_top, layout.right_dock.bottom))
+
+
+def test_ai_chat_overlay_does_not_capture_shared_right_dock_tab_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    controller = _make_controller()
+    overlay = _install_and_draw_chat_overlay(controller, monkeypatch)
+    controller.chat.input_focused = True
+    layout = compute_editor_shell_layout(controller.window.width, controller.window.height)
+    ai_proposals_rect = compute_dock_tab_rects(layout).right_tab_rects["AI Proposals"]
+
+    handled = overlay.on_mouse_press(
+        ai_proposals_rect.center_x,
+        ai_proposals_rect.center_y,
+        optional_arcade.arcade.MOUSE_BUTTON_LEFT,
+        0,
+    )
+
+    assert handled is False
+    assert controller.dock.right_tab == "AI Chat"
+
+
+@pytest.mark.parametrize("target_tab", ["AI Proposals", "Inspector", "History", "Problems"])
+def test_ai_chat_tab_header_clicks_switch_right_tabs_and_blur_input(
+    target_tab: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    controller = _make_controller()
+    _install_and_draw_chat_overlay(controller, monkeypatch)
+    controller.chat.input_focused = True
+    layout = compute_editor_shell_layout(controller.window.width, controller.window.height)
+    target_rect = compute_dock_tab_rects(layout).right_tab_rects[target_tab]
+
+    handled = controller.handle_mouse_click(
+        target_rect.center_x,
+        target_rect.center_y,
+        optional_arcade.arcade.MOUSE_BUTTON_LEFT,
+        0,
+    )
+
+    assert handled is True
+    assert controller.dock.right_tab == target_tab
+    assert controller.chat.input_focused is False
+
+
+def test_ai_chat_window_capture_route_allows_tab_click_past_overlay(monkeypatch: pytest.MonkeyPatch) -> None:
+    controller = _make_controller()
+    overlay = _install_and_draw_chat_overlay(controller, monkeypatch)
+    controller.chat.input_focused = True
+    window = controller.window
+    window.ui_controller = UIController(window)
+    window.ui_controller.register_ui_element(overlay)
+    layout = compute_editor_shell_layout(window.width, window.height)
+    target_rect = compute_dock_tab_rects(layout).right_tab_rects["Inspector"]
+    input_controller = SimpleNamespace(window=window)
+
+    handled = capture_runtime.handle_mouse_press(
+        input_controller,
+        target_rect.center_x,
+        target_rect.center_y,
+        optional_arcade.arcade.MOUSE_BUTTON_LEFT,
+        0,
+    )
+
+    assert handled is True
+    assert controller.dock.right_tab == "Inspector"
     assert controller.chat.input_focused is False
 
 
