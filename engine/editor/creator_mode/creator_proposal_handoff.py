@@ -81,11 +81,11 @@ def _handoff_unavailable_reason(editor: object | None) -> str:
         return "Right dock unavailable"
 
     required_methods = (
-        "set_right_collapsed",
         "get_right_collapsed",
-        "set_right_tab",
+        "toggle_right_dock",
         "get_viewport_maximized",
         "toggle_viewport_maximized",
+        "apply_tab_change",
     )
     for method_name in required_methods:
         if not callable(getattr(dock, method_name, None)):

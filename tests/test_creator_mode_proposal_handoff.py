@@ -22,6 +22,7 @@ from engine.editor.creator_mode.creator_proposal_status import (
     CreatorProposalStatusModel,
     unavailable_creator_proposal_status,
 )
+from engine.editor.editor_dock_controller import EditorDockController
 
 pytestmark = pytest.mark.fast
 
@@ -74,6 +75,34 @@ def test_pending_proposals_without_viewport_controls_is_unavailable() -> None:
 
     handoff = build_creator_proposal_handoff(
         SimpleNamespace(proposal_inbox=SimpleNamespace(), dock=MissingViewportDock(right_tab="Inspector", right_collapsed=False)),
+        status,
+    )
+
+    assert handoff.available is False
+    assert handoff.enabled is False
+    assert handoff.reason == "AI Proposals dock controls unavailable"
+    assert handoff.action_id == ""
+
+
+def test_pending_proposals_without_apply_tab_change_is_unavailable() -> None:
+    status = _status_with_pending(1)
+
+    handoff = build_creator_proposal_handoff(
+        SimpleNamespace(proposal_inbox=SimpleNamespace(), dock=MissingApplyTabChangeDock()),
+        status,
+    )
+
+    assert handoff.available is False
+    assert handoff.enabled is False
+    assert handoff.reason == "AI Proposals dock controls unavailable"
+    assert handoff.action_id == ""
+
+
+def test_pending_proposals_without_canonical_expansion_is_unavailable() -> None:
+    status = _status_with_pending(1)
+
+    handoff = build_creator_proposal_handoff(
+        SimpleNamespace(proposal_inbox=SimpleNamespace(), dock=MissingToggleRightDock()),
         status,
     )
 
@@ -385,6 +414,7 @@ def test_click_inside_enabled_handoff_opens_ai_proposals_inbox() -> None:
     assert controller.active is False
     assert dock.right_collapsed is False
     assert dock.right_tab == "AI Proposals"
+    assert dock.apply_tab_calls == [("right", "AI Proposals")]
 
 
 def test_disabled_handoff_click_area_does_not_open_inbox() -> None:
@@ -592,6 +622,8 @@ def test_open_ai_proposals_inbox_navigates_without_mutating_pending_proposal() -
     assert editor.active is True
     assert dock.right_collapsed is False
     assert dock.right_tab == "AI Proposals"
+    assert dock.toggle_right_calls == 1
+    assert dock.apply_tab_calls == [("right", "AI Proposals")]
     assert bridge._rows == [proposal]
     assert bridge.calls == ["list_pending_proposals"]
     assert editor.proposal_inbox.calls == []
@@ -612,6 +644,8 @@ def test_open_ai_proposals_inbox_when_tab_already_selected_still_leaves_creator_
     assert controller.active is False
     assert dock.right_collapsed is False
     assert dock.right_tab == "AI Proposals"
+    assert dock.toggle_right_calls == 1
+    assert dock.apply_tab_calls == []
 
 
 def test_open_ai_proposals_inbox_exits_viewport_maximization_before_navigation() -> None:
@@ -636,6 +670,8 @@ def test_open_ai_proposals_inbox_exits_viewport_maximization_before_navigation()
     assert dock.viewport_maximized is False
     assert dock.right_collapsed is False
     assert dock.right_tab == "AI Proposals"
+    assert dock.toggle_right_calls == 1
+    assert dock.apply_tab_calls == [("right", "AI Proposals")]
     assert bridge.calls == ["list_pending_proposals"]
     assert editor.proposal_inbox.calls == []
     assert editor.content_revision == 7
@@ -733,6 +769,82 @@ def test_open_ai_proposals_inbox_failed_viewport_exit_restores_and_keeps_creator
     assert dock.right_tab == "Inspector"
     assert editor.content_revision == 12
     assert len(editor.undo.undo_stack) == 1
+
+
+def test_open_ai_proposals_inbox_apply_tab_failure_restores_and_keeps_creator_active() -> None:
+    dock = FakeDock(right_tab="Problems", right_collapsed=False, fail_apply_tab=True)
+    editor = _editor_with_bridge(
+        FakeBridge([{"proposal_id": "proposal-1"}]),
+        proposal_inbox=SimpleNamespace(),
+        dock=dock,
+        active=True,
+        content_revision=14,
+        undo_stack=[{"type": "HumanEdit"}],
+    )
+    controller = CreatorModeController(editor)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is False
+    assert result.reason == "ai_proposals_tab_unavailable"
+    assert controller.active is True
+    assert dock.right_tab == "Problems"
+    assert dock.right_collapsed is False
+    assert dock.apply_tab_calls == [("right", "AI Proposals")]
+    assert editor.content_revision == 14
+    assert len(editor.undo.undo_stack) == 1
+
+
+def test_open_ai_proposals_inbox_from_problems_uses_real_dock_transition_hooks() -> None:
+    bridge = HostileBridge([{"proposal_id": "proposal-1"}])
+    host = RealDockHost(bridge, right_tab="Problems", right_collapsed=False)
+    controller = CreatorModeController(host)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is True
+    assert controller.active is False
+    assert host.active is True
+    assert host.dock.right_tab == "AI Proposals"
+    assert host.search.sync_calls == 1
+    assert host.autosave_count == 1
+    assert host.search.focus_target == ""
+    assert host.content_revision == 0
+    assert host.undo.undo_stack == []
+    assert bridge.calls == ["list_pending_proposals"]
+
+
+def test_open_ai_proposals_inbox_from_history_clears_hidden_search_focus() -> None:
+    host = RealDockHost(FakeBridge([{"proposal_id": "proposal-1"}]), right_tab="History", right_collapsed=False)
+    host.search.focus_target = "history_search"
+    controller = CreatorModeController(host)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is True
+    assert controller.active is False
+    assert host.dock.right_tab == "AI Proposals"
+    assert host.search.sync_calls == 1
+    assert host.search.focus_target == ""
+    assert host.text_input_routed_to == "editor"
+
+
+def test_open_ai_proposals_inbox_already_ai_proposals_collapsed_uses_toggle_persistence() -> None:
+    host = RealDockHost(FakeBridge([{"proposal_id": "proposal-1"}]), right_tab="AI Proposals", right_collapsed=True)
+    controller = CreatorModeController(host)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is True
+    assert controller.active is False
+    assert host.dock.right_tab == "AI Proposals"
+    assert host.dock.get_right_collapsed() is False
+    assert host.autosave_count == 1
+    assert host.search.sync_calls == 0
 
 
 def _command_text(commands) -> str:
@@ -851,12 +963,16 @@ class FakeDock:
         viewport_maximized: bool = False,
         fail_toggle: bool = False,
         fail_expand: bool = False,
+        fail_apply_tab: bool = False,
     ) -> None:
         self.right_tab = right_tab
         self.right_collapsed = right_collapsed
         self.viewport_maximized = viewport_maximized
         self.fail_toggle = fail_toggle
         self.fail_expand = fail_expand
+        self.fail_apply_tab = fail_apply_tab
+        self.apply_tab_calls: list[tuple[str, str]] = []
+        self.toggle_right_calls = 0
 
     def set_right_tab(self, tab: str) -> bool:
         if tab != "AI Proposals":
@@ -871,8 +987,25 @@ class FakeDock:
             return
         self.right_collapsed = bool(value)
 
+    def toggle_right_dock(self, _host: object) -> None:
+        self.toggle_right_calls += 1
+        if self.fail_expand and self.right_collapsed:
+            return
+        self.right_collapsed = not self.right_collapsed
+
     def get_right_collapsed(self) -> bool:
         return self.right_collapsed
+
+    def apply_tab_change(self, _host: object, dock: str, tab: str) -> bool:
+        self.apply_tab_calls.append((dock, tab))
+        if self.fail_apply_tab:
+            return False
+        if dock != "right" or tab != "AI Proposals":
+            return False
+        if self.right_tab == tab:
+            return False
+        self.right_tab = tab
+        return True
 
     def get_viewport_maximized(self) -> bool:
         return self.viewport_maximized
@@ -899,3 +1032,99 @@ class MissingViewportDock:
 
     def get_right_collapsed(self) -> bool:
         return self.right_collapsed
+
+    def toggle_right_dock(self, _host: object) -> None:
+        self.right_collapsed = not self.right_collapsed
+
+    def apply_tab_change(self, _host: object, dock: str, tab: str) -> bool:
+        if dock != "right" or tab != "AI Proposals":
+            return False
+        self.right_tab = tab
+        return True
+
+
+class MissingApplyTabChangeDock:
+    right_tab = "Inspector"
+
+    def __init__(self) -> None:
+        self.right_collapsed = False
+        self.viewport_maximized = False
+
+    def get_right_collapsed(self) -> bool:
+        return self.right_collapsed
+
+    def toggle_right_dock(self, _host: object) -> None:
+        self.right_collapsed = not self.right_collapsed
+
+    def get_viewport_maximized(self) -> bool:
+        return self.viewport_maximized
+
+    def toggle_viewport_maximized(self, _host: object) -> None:
+        self.viewport_maximized = not self.viewport_maximized
+
+
+class MissingToggleRightDock:
+    right_tab = "Inspector"
+
+    def __init__(self) -> None:
+        self.right_collapsed = False
+        self.viewport_maximized = False
+
+    def get_right_collapsed(self) -> bool:
+        return self.right_collapsed
+
+    def get_viewport_maximized(self) -> bool:
+        return self.viewport_maximized
+
+    def toggle_viewport_maximized(self, _host: object) -> None:
+        self.viewport_maximized = not self.viewport_maximized
+
+    def apply_tab_change(self, _host: object, dock: str, tab: str) -> bool:
+        if dock != "right" or tab != "AI Proposals":
+            return False
+        self.right_tab = tab
+        return True
+
+
+class RealDockSearch:
+    def __init__(self) -> None:
+        self.sync_calls = 0
+        self.focus_target = "right_search"
+
+    def sync_search_focus(self) -> None:
+        self.sync_calls += 1
+        self.focus_target = ""
+
+
+class RealDockHost:
+    ENTITY_PANEL_FOCUS_INSPECTOR = "inspector"
+
+    def __init__(self, bridge: object, *, right_tab: str, right_collapsed: bool) -> None:
+        self.active = True
+        self.live_bridge = bridge
+        self.proposal_inbox = HostileInbox()
+        self.dock = EditorDockController(None, left_tab="Outliner", right_tab=right_tab, right_collapsed=right_collapsed)
+        self.search = RealDockSearch()
+        self.problems = SimpleNamespace(
+            preview_open=True,
+            close_preview=lambda _host: setattr(self.problems, "preview_open", False),
+        )
+        self.panels = SimpleNamespace(close_context_menu=lambda: setattr(self, "context_closed", True))
+        self.history = SimpleNamespace(on_open_tab=lambda: setattr(self, "history_opened", True))
+        self.entity_panels_active = False
+        self.entity_panels_focus = ""
+        self.asset_browser_active = False
+        self._problems_issues = ["issue"]
+        self.context_closed = False
+        self.autosave_count = 0
+        self.content_revision = 0
+        self.undo = SimpleNamespace(undo_stack=[])
+        self.text_input_routed_to = "history_search"
+        self.window = SimpleNamespace(width=1280, height=720, scene_controller=SimpleNamespace(current_scene_path="forest"))
+
+    def _autosave_workspace(self) -> None:
+        self.autosave_count += 1
+        self.text_input_routed_to = "editor"
+
+    def scan_scene_problems(self) -> None:
+        self._problems_issues = ["scanned"]

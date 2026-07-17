@@ -474,17 +474,17 @@ class FakeDock:
         self.right_collapsed = False
         self.viewport_maximized = False
 
-    def set_right_tab(self, tab: str) -> bool:
-        if tab != "AI Proposals":
+    def get_right_collapsed(self) -> bool:
+        return self.right_collapsed
+
+    def toggle_right_dock(self, _host: object) -> None:
+        self.right_collapsed = not self.right_collapsed
+
+    def apply_tab_change(self, _host: object, dock: str, tab: str) -> bool:
+        if dock != "right" or tab != "AI Proposals":
             return False
         self.right_tab = tab
         return True
-
-    def set_right_collapsed(self, value: bool) -> None:
-        self.right_collapsed = bool(value)
-
-    def get_right_collapsed(self) -> bool:
-        return self.right_collapsed
 
     def get_viewport_maximized(self) -> bool:
         return self.viewport_maximized

@@ -143,16 +143,16 @@ class CreatorModeController:
             return CreatorProposalInboxNavigationResult(ok=False, reason="missing_proposal_inbox")
 
         dock = getattr(editor, "dock", None)
-        set_collapsed = getattr(dock, "set_right_collapsed", None)
         get_collapsed = getattr(dock, "get_right_collapsed", None)
-        set_tab = getattr(dock, "set_right_tab", None)
+        toggle_right_dock = getattr(dock, "toggle_right_dock", None)
+        apply_tab_change = getattr(dock, "apply_tab_change", None)
         get_maximized = getattr(dock, "get_viewport_maximized", None)
         toggle_maximized = getattr(dock, "toggle_viewport_maximized", None)
         if (
             dock is None
-            or not callable(set_collapsed)
             or not callable(get_collapsed)
-            or not callable(set_tab)
+            or not callable(toggle_right_dock)
+            or not callable(apply_tab_change)
             or not callable(get_maximized)
             or not callable(toggle_maximized)
         ):
@@ -191,7 +191,7 @@ class CreatorModeController:
                 )
 
         if bool(get_collapsed()):
-            set_collapsed(False)
+            toggle_right_dock(editor)
             collapsed_changed = True
             if bool(get_collapsed()):
                 self._restore_dock_navigation_state(
@@ -212,7 +212,7 @@ class CreatorModeController:
 
         current_tab = str(getattr(dock, "right_tab", "") or "")
         if current_tab != _AI_PROPOSALS_TAB:
-            if not bool(set_tab(_AI_PROPOSALS_TAB)):
+            if not bool(apply_tab_change(editor, "right", _AI_PROPOSALS_TAB)):
                 self._restore_dock_navigation_state(
                     dock=dock,
                     original_tab=original_tab,
@@ -411,17 +411,19 @@ class CreatorModeController:
         """Best-effort restore after a failed navigation attempt."""
 
         if tab_changed and original_tab:
-            set_tab = getattr(dock, "set_right_tab", None)
-            if callable(set_tab):
+            apply_tab_change = getattr(dock, "apply_tab_change", None)
+            if callable(apply_tab_change):
                 try:
-                    set_tab(original_tab)
+                    apply_tab_change(editor, "right", original_tab)
                 except Exception:  # noqa: BLE001  # REASON: best-effort rollback must not mask original failure
                     pass
         if collapsed_changed:
-            set_collapsed = getattr(dock, "set_right_collapsed", None)
-            if callable(set_collapsed):
+            get_collapsed = getattr(dock, "get_right_collapsed", None)
+            toggle_right_dock = getattr(dock, "toggle_right_dock", None)
+            if callable(get_collapsed) and callable(toggle_right_dock):
                 try:
-                    set_collapsed(original_collapsed)
+                    if bool(get_collapsed()) != original_collapsed:
+                        toggle_right_dock(editor)
                 except Exception:  # noqa: BLE001  # REASON: best-effort rollback must not mask original failure
                     pass
         if viewport_restored and original_maximized:
