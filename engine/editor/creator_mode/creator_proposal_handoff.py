@@ -6,15 +6,19 @@ from dataclasses import dataclass
 
 from .creator_proposal_status import CreatorProposalStatusModel
 
+PROPOSAL_OPEN_INBOX_ACTION_ID = "proposal.open_inbox"
+
 
 @dataclass(frozen=True, slots=True)
 class CreatorProposalHandoffModel:
     """Display-only handoff toward the official AI Proposals inbox."""
 
     available: bool
+    enabled: bool
     label: str
     reason: str = ""
     pending_count: int = 0
+    action_id: str = ""
 
 
 def build_creator_proposal_handoff(
@@ -28,6 +32,7 @@ def build_creator_proposal_handoff(
     if not proposal_status.available:
         return CreatorProposalHandoffModel(
             available=False,
+            enabled=False,
             label="Proposal review unavailable",
             reason="Proposal status unavailable",
             pending_count=pending_count,
@@ -36,6 +41,7 @@ def build_creator_proposal_handoff(
     if pending_count <= 0:
         return CreatorProposalHandoffModel(
             available=False,
+            enabled=False,
             label="No proposals to review",
             reason="",
             pending_count=0,
@@ -44,13 +50,16 @@ def build_creator_proposal_handoff(
     if editor is not None and getattr(editor, "proposal_inbox", None) is not None:
         return CreatorProposalHandoffModel(
             available=True,
+            enabled=True,
             label="Review in AI Proposals",
             reason="",
             pending_count=pending_count,
+            action_id=PROPOSAL_OPEN_INBOX_ACTION_ID,
         )
 
     return CreatorProposalHandoffModel(
         available=False,
+        enabled=False,
         label="Review in AI Proposals",
         reason="AI Proposals inbox unavailable",
         pending_count=pending_count,

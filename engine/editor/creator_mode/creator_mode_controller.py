@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from .creator_door_panel import (
@@ -15,12 +16,21 @@ from .creator_door_staging import CreatorDoorStagingResult, stage_creator_door_p
 from .creator_door_workflow import CreatorDoorWorkflowRequest, build_creator_door_workflow
 from .creator_inspector import build_creator_inspector
 from .creator_proposal_accept_readiness import build_creator_proposal_accept_readiness_from_status
-from .creator_proposal_handoff import build_creator_proposal_handoff
+from .creator_proposal_handoff import PROPOSAL_OPEN_INBOX_ACTION_ID, build_creator_proposal_handoff
 from .creator_proposal_review_details import build_creator_proposal_review_details_from_status
 from .creator_proposal_status import build_creator_proposal_status
 from .creator_state import CreatorModeSnapshot
 
 _DOOR_STAGE_PROPOSAL_ACTION = "door.stage_proposal"
+
+
+@dataclass(frozen=True, slots=True)
+class CreatorProposalInboxNavigationResult:
+    """Result for Creator Mode to AI Proposals dock navigation."""
+
+    ok: bool
+    reason: str = ""
+    pending_count: int = 0
 
 
 class CreatorModeController:
@@ -91,7 +101,11 @@ class CreatorModeController:
                 self._last_staged_proposal_id = proposal_id
         return result
 
-    def handle_overlay_click(self, x: float, y: float) -> CreatorDoorStagingResult | None:
+    def handle_overlay_click(
+        self,
+        x: float,
+        y: float,
+    ) -> CreatorDoorStagingResult | CreatorProposalInboxNavigationResult | None:
         """Handle a Creator Mode overlay click when it hits an enabled action."""
 
         if not self._active:
@@ -104,12 +118,51 @@ class CreatorModeController:
         from .creator_overlay_click import resolve_creator_overlay_click_action  # noqa: PLC0415
 
         action_id = resolve_creator_overlay_click_action(self, x, y)
+        if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:
+            return self.open_ai_proposals_inbox()
         if action_id != _DOOR_STAGE_PROPOSAL_ACTION:
             return None
 
         result = self.stage_selected_door_proposal()
         self._store_staging_result(result)
         return result
+
+    def open_ai_proposals_inbox(self) -> CreatorProposalInboxNavigationResult:
+        """Leave Creator Mode and show the official AI Proposals dock tab."""
+
+        if not self._active:
+            return CreatorProposalInboxNavigationResult(ok=False, reason="creator_inactive")
+
+        editor = self._editor
+        if editor is None:
+            return CreatorProposalInboxNavigationResult(ok=False, reason="missing_editor")
+
+        inbox = getattr(editor, "proposal_inbox", None)
+        if inbox is None:
+            return CreatorProposalInboxNavigationResult(ok=False, reason="missing_proposal_inbox")
+
+        dock = getattr(editor, "dock", None)
+        set_collapsed = getattr(dock, "set_right_collapsed", None)
+        set_tab = getattr(dock, "set_right_tab", None)
+        if dock is None or not callable(set_collapsed) or not callable(set_tab):
+            return CreatorProposalInboxNavigationResult(ok=False, reason="missing_dock_controller")
+
+        pending = self._pending_proposals()
+        pending_count = len(pending)
+        if pending_count <= 0:
+            return CreatorProposalInboxNavigationResult(ok=False, reason="no_pending_proposals")
+
+        current_tab = str(getattr(dock, "right_tab", "") or "")
+        if current_tab != "AI Proposals" and not bool(set_tab("AI Proposals")):
+            return CreatorProposalInboxNavigationResult(
+                ok=False,
+                reason="ai_proposals_tab_unavailable",
+                pending_count=pending_count,
+            )
+
+        set_collapsed(False)
+        self.hide()
+        return CreatorProposalInboxNavigationResult(ok=True, pending_count=pending_count)
 
     def build_snapshot(self) -> CreatorModeSnapshot:
         selected = self._selected_entity_snapshot()
@@ -241,3 +294,14 @@ class CreatorModeController:
 
     def _proposal_bridge(self) -> object:
         return getattr(self._editor, "live_bridge", None)
+
+    def _pending_proposals(self) -> list[object]:
+        bridge = self._proposal_bridge()
+        list_pending = getattr(bridge, "list_pending_proposals", None)
+        if not callable(list_pending):
+            return []
+        try:
+            pending = list_pending()
+        except Exception:  # noqa: BLE001  # REASON: navigation must fail closed if live bridge reads fail
+            return []
+        return pending if isinstance(pending, list) else []

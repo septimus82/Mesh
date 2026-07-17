@@ -8,11 +8,15 @@ from types import SimpleNamespace
 import pytest
 
 from engine.editor.creator_mode import (
+    PROPOSAL_OPEN_INBOX_ACTION_ID,
     CreatorModeController,
     build_creator_overlay_model,
     build_creator_proposal_handoff,
 )
-from engine.editor.creator_mode.creator_overlay_renderer import build_creator_overlay_draw_commands
+from engine.editor.creator_mode.creator_overlay_renderer import (
+    build_creator_overlay_draw_commands,
+    hit_test_creator_overlay_click,
+)
 from engine.editor.creator_mode.creator_proposal_status import (
     CreatorProposalListRow,
     CreatorProposalStatusModel,
@@ -32,6 +36,8 @@ def test_pending_proposals_with_proposal_inbox_is_available() -> None:
     assert handoff.label == "Review in AI Proposals"
     assert handoff.reason == ""
     assert handoff.pending_count == 2
+    assert handoff.enabled is True
+    assert handoff.action_id == PROPOSAL_OPEN_INBOX_ACTION_ID
 
 
 def test_pending_proposals_without_proposal_inbox_is_unavailable() -> None:
@@ -43,6 +49,8 @@ def test_pending_proposals_without_proposal_inbox_is_unavailable() -> None:
     assert handoff.label == "Review in AI Proposals"
     assert handoff.reason == "AI Proposals inbox unavailable"
     assert handoff.pending_count == 1
+    assert handoff.enabled is False
+    assert handoff.action_id == ""
 
 
 def test_zero_proposals_shows_no_proposals_to_review() -> None:
@@ -60,6 +68,8 @@ def test_zero_proposals_shows_no_proposals_to_review() -> None:
     assert handoff.label == "No proposals to review"
     assert handoff.reason == ""
     assert handoff.pending_count == 0
+    assert handoff.enabled is False
+    assert handoff.action_id == ""
 
 
 def test_unavailable_proposal_status_shows_review_unavailable() -> None:
@@ -71,6 +81,8 @@ def test_unavailable_proposal_status_shows_review_unavailable() -> None:
     assert handoff.label == "Proposal review unavailable"
     assert handoff.reason == "Proposal status unavailable"
     assert handoff.pending_count == 0
+    assert handoff.enabled is False
+    assert handoff.action_id == ""
 
 
 def test_snapshot_includes_proposal_handoff() -> None:
@@ -224,7 +236,8 @@ def test_render_shows_use_ai_proposals_when_handoff_available() -> None:
         )
     )
 
-    assert "Review: Use AI Proposals" in text
+    assert "Review in AI Proposals" in text
+    assert "Review: Use AI Proposals" not in text
     assert "Details: Affects" in text
 
 
@@ -241,7 +254,7 @@ def test_render_shows_unavailable_reason_when_inbox_missing() -> None:
         )
     )
 
-    assert "Review: AI Proposals unavailable - AI Proposals inbox unavailable" in text
+    assert "AI Proposals unavailable - AI Proposals inbox unavailable" in text
 
 
 def test_zero_pending_proposals_does_not_render_handoff_review_line() -> None:
@@ -256,11 +269,11 @@ def test_zero_pending_proposals_does_not_render_handoff_review_line() -> None:
         )
     )
 
-    assert "Review: Use AI Proposals" not in text
-    assert "Review: AI Proposals unavailable" not in text
+    assert "Review in AI Proposals" not in text
+    assert "AI Proposals unavailable" not in text
 
 
-def test_rendered_handoff_review_line_has_no_action_id_or_hitbox() -> None:
+def test_rendered_enabled_handoff_review_line_has_action_id_and_hitbox() -> None:
     controller = CreatorModeController(
         _editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}]), proposal_inbox=SimpleNamespace())
     )
@@ -270,12 +283,100 @@ def test_rendered_handoff_review_line_has_no_action_id_or_hitbox() -> None:
         1280,
         720,
     )
-    review_commands = [command for command in commands if command.text == "Review: Use AI Proposals"]
+    review_commands = [command for command in commands if command.text == "Review in AI Proposals"]
+
+    assert len(review_commands) == 1
+    assert review_commands[0].action_id == PROPOSAL_OPEN_INBOX_ACTION_ID
+    assert review_commands[0].hit_left < review_commands[0].hit_right
+    assert review_commands[0].hit_bottom < review_commands[0].hit_top
+
+
+def test_disabled_handoff_review_line_has_no_action_id_or_hitbox() -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}]), proposal_inbox=None)
+    )
+    controller.show()
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    review_commands = [command for command in commands if "AI Proposals unavailable" in command.text]
 
     assert len(review_commands) == 1
     assert review_commands[0].action_id == ""
     assert review_commands[0].hit_left == 0.0
     assert review_commands[0].hit_right == 0.0
+
+
+def test_enabled_handoff_hit_test_returns_stable_action_id() -> None:
+    controller = CreatorModeController(
+        _editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}]), proposal_inbox=SimpleNamespace())
+    )
+    controller.show()
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    target = next(command for command in commands if command.action_id == PROPOSAL_OPEN_INBOX_ACTION_ID)
+
+    assert hit_test_creator_overlay_click(
+        commands,
+        (target.hit_left + target.hit_right) / 2.0,
+        (target.hit_top + target.hit_bottom) / 2.0,
+    ) == PROPOSAL_OPEN_INBOX_ACTION_ID
+    assert hit_test_creator_overlay_click(commands, target.hit_right + 10.0, target.hit_top + 10.0) is None
+
+
+def test_click_inside_enabled_handoff_opens_ai_proposals_inbox() -> None:
+    bridge = FakeBridge([{"proposal_id": "proposal-1"}])
+    dock = FakeDock(right_tab="Inspector", right_collapsed=True)
+    editor = _editor_with_bridge(bridge, proposal_inbox=SimpleNamespace(), dock=dock, active=True)
+    controller = CreatorModeController(editor)
+    controller.show()
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    target = next(command for command in commands if command.action_id == PROPOSAL_OPEN_INBOX_ACTION_ID)
+
+    result = controller.handle_overlay_click(
+        (target.hit_left + target.hit_right) / 2.0,
+        (target.hit_top + target.hit_bottom) / 2.0,
+    )
+
+    assert result is not None
+    assert result.ok is True
+    assert controller.active is False
+    assert dock.right_collapsed is False
+    assert dock.right_tab == "AI Proposals"
+
+
+def test_disabled_handoff_click_area_does_not_open_inbox() -> None:
+    dock = FakeDock(right_tab="Inspector", right_collapsed=True)
+    editor = _editor_with_bridge(
+        FakeBridge([{"proposal_id": "proposal-1"}]),
+        proposal_inbox=None,
+        dock=dock,
+        active=True,
+    )
+    controller = CreatorModeController(editor)
+    controller.show()
+    commands = build_creator_overlay_draw_commands(
+        build_creator_overlay_model(controller.build_snapshot()),
+        1280,
+        720,
+    )
+    disabled = next(command for command in commands if "AI Proposals unavailable" in command.text)
+
+    result = controller.handle_overlay_click(disabled.x + 4.0, disabled.y - 4.0)
+
+    assert result is None
+    assert controller.active is True
+    assert dock.right_collapsed is True
+    assert dock.right_tab == "Inspector"
 
 
 def test_bottom_panel_height_unchanged_at_720p() -> None:
@@ -306,8 +407,122 @@ def test_more_than_three_pending_still_renders_and_more() -> None:
         )
     )
 
-    assert text.count("Review: Use AI Proposals") == 3
+    assert text.count("Review in AI Proposals") == 3
     assert "...and 2 more" in text
+
+
+def test_handoff_draw_commands_stay_inside_bottom_panel_at_required_sizes() -> None:
+    for width, height in ((1280, 720), (1024, 576), (320, 240)):
+        controller = CreatorModeController(
+            _editor_with_bridge(FakeBridge([{"proposal_id": "proposal-1"}]), proposal_inbox=SimpleNamespace())
+        )
+        controller.show()
+        commands = build_creator_overlay_draw_commands(
+            build_creator_overlay_model(controller.build_snapshot()),
+            width,
+            height,
+        )
+        bottom = next(command for command in commands if command.kind == "rect" and command.region == "bottom")
+        targets = [command for command in commands if command.action_id == PROPOSAL_OPEN_INBOX_ACTION_ID]
+
+        assert len(targets) == 1
+        target = targets[0]
+        assert bottom.x - bottom.width / 2 <= target.hit_left <= target.hit_right <= bottom.x + bottom.width / 2
+        assert bottom.y - bottom.height / 2 <= target.hit_bottom <= target.hit_top <= bottom.y + bottom.height / 2
+
+
+def test_open_ai_proposals_inbox_navigates_without_mutating_pending_proposal() -> None:
+    proposal = {
+        "proposal_id": "proposal-1",
+        "preview_summary": "Set SceneExit params on door_north",
+        "affected_ids": ["door_north"],
+        "dry_run": {"ok": True, "affected_ids": ["door_north"]},
+        "base_revision": 7,
+    }
+    bridge = HostileBridge([proposal])
+    dock = FakeDock(right_tab="Inspector", right_collapsed=True)
+    editor = _editor_with_bridge(
+        bridge,
+        proposal_inbox=HostileInbox(),
+        dock=dock,
+        active=True,
+        content_revision=42,
+        undo_stack=[{"type": "HumanEdit"}],
+    )
+    controller = CreatorModeController(editor)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is True
+    assert controller.active is False
+    assert editor.active is True
+    assert dock.right_collapsed is False
+    assert dock.right_tab == "AI Proposals"
+    assert bridge._rows == [proposal]
+    assert bridge.calls == ["list_pending_proposals"]
+    assert editor.proposal_inbox.calls == []
+    assert editor.content_revision == 42
+    assert len(editor.undo.undo_stack) == 1
+
+
+def test_open_ai_proposals_inbox_when_tab_already_selected_still_leaves_creator_mode() -> None:
+    bridge = FakeBridge([{"proposal_id": "proposal-1"}])
+    dock = FakeDock(right_tab="AI Proposals", right_collapsed=True)
+    editor = _editor_with_bridge(bridge, proposal_inbox=SimpleNamespace(), dock=dock, active=True)
+    controller = CreatorModeController(editor)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is True
+    assert controller.active is False
+    assert dock.right_collapsed is False
+    assert dock.right_tab == "AI Proposals"
+
+
+def test_open_ai_proposals_inbox_missing_dock_fails_closed() -> None:
+    bridge = FakeBridge([{"proposal_id": "proposal-1"}])
+    editor = _editor_with_bridge(bridge, proposal_inbox=SimpleNamespace(), active=True)
+    controller = CreatorModeController(editor)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is False
+    assert result.reason == "missing_dock_controller"
+    assert controller.active is True
+
+
+def test_open_ai_proposals_inbox_missing_inbox_fails_closed_without_dock_change() -> None:
+    bridge = FakeBridge([{"proposal_id": "proposal-1"}])
+    dock = FakeDock(right_tab="Inspector", right_collapsed=True)
+    editor = _editor_with_bridge(bridge, proposal_inbox=None, dock=dock, active=True)
+    controller = CreatorModeController(editor)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is False
+    assert result.reason == "missing_proposal_inbox"
+    assert controller.active is True
+    assert dock.right_collapsed is True
+    assert dock.right_tab == "Inspector"
+
+
+def test_open_ai_proposals_inbox_missing_pending_fails_closed_without_dock_change() -> None:
+    dock = FakeDock(right_tab="Inspector", right_collapsed=True)
+    editor = _editor_with_bridge(FakeBridge([]), proposal_inbox=SimpleNamespace(), dock=dock, active=True)
+    controller = CreatorModeController(editor)
+    controller.show()
+
+    result = controller.open_ai_proposals_inbox()
+
+    assert result.ok is False
+    assert result.reason == "no_pending_proposals"
+    assert controller.active is True
+    assert dock.right_collapsed is True
+    assert dock.right_tab == "Inspector"
 
 
 def _command_text(commands) -> str:
@@ -380,14 +595,43 @@ class HostileInbox:
         raise AssertionError("reject must not be called")
 
 
-def _editor_with_bridge(bridge: object, *, proposal_inbox: object | None = None) -> SimpleNamespace:
+def _editor_with_bridge(
+    bridge: object,
+    *,
+    proposal_inbox: object | None = None,
+    dock: object | None = None,
+    active: bool = False,
+    content_revision: int = 0,
+    undo_stack: list[dict[str, object]] | None = None,
+) -> SimpleNamespace:
     return SimpleNamespace(
+        active=active,
         selected_entity=None,
         live_bridge=bridge,
         proposal_inbox=proposal_inbox,
+        dock=dock,
+        content_revision=content_revision,
+        undo=SimpleNamespace(undo_stack=list(undo_stack or [])),
         window=SimpleNamespace(
             width=1280,
             height=720,
             scene_controller=SimpleNamespace(current_scene_path="forest"),
         ),
     )
+
+
+class FakeDock:
+    def __init__(self, *, right_tab: str, right_collapsed: bool) -> None:
+        self.right_tab = right_tab
+        self.right_collapsed = right_collapsed
+
+    def set_right_tab(self, tab: str) -> bool:
+        if tab != "AI Proposals":
+            return False
+        if self.right_tab == tab:
+            return False
+        self.right_tab = tab
+        return True
+
+    def set_right_collapsed(self, value: bool) -> None:
+        self.right_collapsed = bool(value)

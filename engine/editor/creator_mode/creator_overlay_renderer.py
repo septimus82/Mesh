@@ -15,6 +15,7 @@ from engine.ui_overlays.common import (
 )
 
 from .creator_overlay import CreatorOverlayModel, build_creator_overlay_model
+from .creator_proposal_handoff import PROPOSAL_OPEN_INBOX_ACTION_ID
 
 logger = get_logger(__name__)
 
@@ -372,19 +373,14 @@ def build_creator_overlay_draw_commands(
         )
         y -= 15.0
         if model.proposal_status.pending_count > 0 and y > 4.0:
-            review_text = _proposal_handoff_review_line(model.proposal_handoff)
-            if review_text:
-                commands.append(
-                    _text(
-                        review_text,
-                        "bottom",
-                        pad + 18.0,
-                        y,
-                        10,
-                        (160, 166, 176),
-                        _panel_char_limit(bottom_text_width - 10.0, 10, MAX_WARNING_CHARS),
-                    )
-                )
+            review_command = _proposal_handoff_review_command(
+                model.proposal_handoff,
+                pad + 18.0,
+                y,
+                bottom_text_width - 10.0,
+            )
+            if review_command is not None:
+                commands.append(review_command)
                 y -= 15.0
         detail_row = details_by_id.get(row.proposal_id)
         if detail_row is not None and y > 4.0:
@@ -435,16 +431,44 @@ def build_creator_overlay_draw_commands(
     return tuple(commands)
 
 
-def _proposal_handoff_review_line(handoff: Any) -> str:
+def _proposal_handoff_review_command(
+    handoff: Any,
+    x: float,
+    y: float,
+    text_width: float,
+) -> CreatorOverlayDrawCommand | None:
+    label = str(getattr(handoff, "label", "") or "").strip()
+    max_chars = _panel_char_limit(text_width, 10, MAX_WARNING_CHARS)
+    if bool(getattr(handoff, "enabled", False)):
+        action_id = str(getattr(handoff, "action_id", "") or "")
+        if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:
+            return _clickable_text(
+                label or "Review in AI Proposals",
+                "bottom",
+                x,
+                y,
+                10,
+                (170, 218, 154),
+                max_chars,
+                action_id=action_id,
+            )
     if bool(getattr(handoff, "available", False)):
-        return "Review: Use AI Proposals"
+        return _text(label or "Review in AI Proposals", "bottom", x, y, 10, (160, 166, 176), max_chars)
     reason = str(getattr(handoff, "reason", "") or "").strip()
     if reason:
-        return f"Review: AI Proposals unavailable - {reason}"
+        return _text(
+            f"AI Proposals unavailable - {reason}",
+            "bottom",
+            x,
+            y,
+            10,
+            (160, 166, 176),
+            max_chars,
+        )
     pending_count = int(getattr(handoff, "pending_count", 0) or 0)
     if pending_count <= 0:
-        return ""
-    return "Review: AI Proposals unavailable"
+        return None
+    return _text("AI Proposals unavailable", "bottom", x, y, 10, (160, 166, 176), max_chars)
 
 
 def _proposal_detail_line(detail: Any) -> str:

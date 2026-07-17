@@ -326,7 +326,8 @@ def test_snapshot_model_and_render_do_not_accept_reject_apply_or_stage() -> None
 
     text = _render_text(bridge)
 
-    assert "Review: Use AI Proposals" in text
+    assert "Review in AI Proposals" in text
+    assert "Review: Use AI Proposals" not in text
     assert "Details: Affects door_north - Dry-run OK - W0/E0" in text
     assert bridge.calls == ["list_pending_proposals"]
 
