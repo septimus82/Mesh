@@ -37,6 +37,12 @@ def handle_pre_routed_keys(controller: EditorController, key: int, modifiers: in
             return bool(handler(key, modifiers))
         return True
 
+    creator = getattr(controller, "creator_mode", None)
+    if creator is not None and bool(getattr(creator, "active", False)):
+        handler = getattr(creator, "handle_key_input", None)
+        if callable(handler) and bool(handler(key, modifiers)):
+            return True
+
     if _handle_ai_chat_key(controller, key, modifiers):
         return True
 
@@ -160,6 +166,9 @@ def _has_text_input_focus_or_edit_mode(controller: EditorController) -> bool:
     if bool(getattr(controller, "dialogue_panel_active", False)) and bool(getattr(controller, "dialogue_editing", False)):
         return True
     if bool(getattr(controller, "animation_active", False)) and bool(getattr(controller, "animation_editing", False)):
+        return True
+    creator = getattr(controller, "creator_mode", None)
+    if creator is not None and bool(getattr(creator, "rename_text_focused", False)):
         return True
     search = getattr(controller, "search", None)
     if search is not None and getattr(search, "is_search_focused", lambda: False)():

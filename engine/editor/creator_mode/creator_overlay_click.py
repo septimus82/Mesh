@@ -7,6 +7,10 @@ from typing import Any
 import engine.optional_arcade as optional_arcade
 
 from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
+from .creator_entity_rename_panel import (
+    ENTITY_RENAME_DRAFT_ACTION_ID,
+    ENTITY_RENAME_STAGE_ACTION_ID,
+)
 from .creator_overlay import build_creator_overlay_model
 from .creator_overlay_renderer import (
     DOOR_STAGE_PROPOSAL_ACTION_ID,
@@ -86,6 +90,18 @@ def proposal_open_inbox_action_enabled(model: Any) -> bool:
     )
 
 
+def entity_rename_action_enabled(model: Any) -> bool:
+    """True when the rename panel exposes an enabled Stage Rename action."""
+
+    panel = getattr(model, "rename_panel", None)
+    action = getattr(panel, "action", None) if panel is not None else None
+    return (
+        action is not None
+        and str(getattr(action, "action_id", "") or "") == ENTITY_RENAME_STAGE_ACTION_ID
+        and bool(getattr(action, "enabled", False))
+    )
+
+
 def resolve_creator_overlay_click_action(
     creator: Any,
     x: float,
@@ -113,6 +129,12 @@ def resolve_creator_overlay_click_action(
         return action_id
     if action_id in ENTITY_MOVE_ACTION_ID_SET:
         if not entity_move_action_enabled(model, action_id):
+            return None
+        return action_id
+    if action_id == ENTITY_RENAME_DRAFT_ACTION_ID:
+        return action_id
+    if action_id == ENTITY_RENAME_STAGE_ACTION_ID:
+        if not entity_rename_action_enabled(model):
             return None
         return action_id
     if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:

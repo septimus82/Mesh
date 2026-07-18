@@ -15,6 +15,10 @@ from engine.ui_overlays.common import (
 )
 
 from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
+from .creator_entity_rename_panel import (
+    ENTITY_RENAME_DRAFT_ACTION_ID,
+    ENTITY_RENAME_STAGE_ACTION_ID,
+)
 from .creator_overlay import CreatorOverlayModel, build_creator_overlay_model
 from .creator_proposal_handoff import PROPOSAL_OPEN_INBOX_ACTION_ID
 
@@ -36,6 +40,7 @@ MAX_RENDERED_FIELDS = 6
 MAX_RENDERED_WARNINGS = 2
 MAX_RENDERED_PANEL_LINES = 20
 MAX_RENDERED_MOVE_LINES = 7
+MAX_RENDERED_RENAME_LINES = 7
 MAX_RENDERED_PROPOSAL_ROWS = 3
 
 
@@ -348,6 +353,17 @@ def build_creator_overlay_draw_commands(
             last = door_commands[-1]
             y = float(last.y) - _ACTION_LINE_HEIGHT
 
+    if model.rename_panel is not None and y > bottom_h + 24.0:
+        y -= 4.0
+        rename_commands, y = _rename_panel_text_commands(
+            model,
+            right_x,
+            y,
+            bottom_h,
+            right_text_width,
+        )
+        commands.extend(rename_commands)
+
     if model.movement_panel is not None and y > bottom_h + 24.0:
         y -= 4.0
         move_commands, y = _movement_panel_text_commands(
@@ -626,6 +642,75 @@ def _movement_panel_text_commands(
             (170, 218, 154) if action.enabled else (160, 166, 176),
             action_id=clickable_id,
         )
+    return tuple(commands), y
+
+
+def _rename_panel_text_commands(
+    model: CreatorOverlayModel,
+    x: float,
+    start_y: float,
+    bottom_h: float,
+    text_width: float,
+) -> tuple[tuple[CreatorOverlayDrawCommand, ...], float]:
+    panel = model.rename_panel
+    if panel is None:
+        return (), start_y
+
+    commands: list[CreatorOverlayDrawCommand] = []
+    y = start_y
+    rendered = 0
+
+    def add(
+        text: object,
+        font_size: int = 11,
+        color: tuple[int, ...] = (220, 225, 232),
+        *,
+        action_id: str = "",
+    ) -> None:
+        nonlocal y, rendered
+        if rendered >= MAX_RENDERED_RENAME_LINES or y <= bottom_h + 6.0:
+            return
+        line_text = str(text)
+        max_chars = _panel_char_limit(text_width, font_size, MAX_PANEL_CHARS)
+        if action_id:
+            commands.append(
+                _clickable_text(
+                    line_text,
+                    "right",
+                    x,
+                    y,
+                    font_size,
+                    color,
+                    max_chars,
+                    action_id=action_id,
+                )
+            )
+        else:
+            commands.append(_text(line_text, "right", x, y, font_size, color, max_chars))
+        y -= _ACTION_LINE_HEIGHT
+        rendered += 1
+
+    add(panel.title, 12, (255, 255, 255))
+    if not panel.entity_id:
+        if panel.reason:
+            add(panel.reason, 10, (238, 190, 120))
+        return tuple(commands), y
+    add(f"Display label only | Stable ID remains: {panel.entity_id}", 10, (190, 198, 208))
+    add(f"Current label: {panel.current_label}", 10, (220, 225, 232))
+    draft = panel.draft_label if panel.draft_label else panel.current_label
+    focus_marker = ">" if panel.focused else " "
+    add(f"Proposed label: [{focus_marker}{draft}]", 10, (220, 225, 232), action_id=ENTITY_RENAME_DRAFT_ACTION_ID)
+    action = panel.action
+    state = "Ready" if action.enabled else "Disabled"
+    detail = f"[{state}] {action.label}"
+    if action.reason:
+        detail = f"{detail} - {action.reason}"
+    add(
+        detail,
+        10,
+        (170, 218, 154) if action.enabled else (160, 166, 176),
+        action_id=ENTITY_RENAME_STAGE_ACTION_ID if action.enabled else "",
+    )
     return tuple(commands), y
 
 

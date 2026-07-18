@@ -25,6 +25,20 @@ from .creator_entity_move_staging import (
     CreatorEntityMoveStagingResult,
     stage_creator_entity_move_proposal,
 )
+from .creator_entity_rename_panel import (
+    ENTITY_RENAME_DRAFT_ACTION_ID,
+    ENTITY_RENAME_STAGE_ACTION_ID,
+    CreatorEntityRenamePanelModel,
+    build_creator_entity_rename_panel,
+    request_for_rename_panel,
+)
+from .creator_entity_rename_request import (
+    creator_entity_rename_request_key,
+)
+from .creator_entity_rename_staging import (
+    CreatorEntityRenameStagingResult,
+    stage_creator_entity_rename_proposal,
+)
 from .creator_inspector import build_creator_inspector
 from .creator_proposal_accept_readiness import build_creator_proposal_accept_readiness_from_status
 from .creator_proposal_handoff import PROPOSAL_OPEN_INBOX_ACTION_ID, build_creator_proposal_handoff
@@ -56,6 +70,10 @@ class CreatorModeController:
         self._last_staged_door_key = ""
         self._last_staged_proposal_id = ""
         self._staged_move_keys: dict[str, str] = {}
+        self._staged_rename_keys: dict[str, str] = {}
+        self._rename_draft = ""
+        self._rename_selection_key = ""
+        self._rename_text_focused = False
 
     @property
     def last_action_message(self) -> str:
@@ -69,10 +87,15 @@ class CreatorModeController:
     def active(self) -> bool:
         return self._active
 
+    @property
+    def rename_text_focused(self) -> bool:
+        return bool(self._rename_text_focused)
+
     def toggle(self) -> bool:
         self._active = not self._active
         if not self._active:
             self._clear_last_action_state()
+            self._rename_text_focused = False
         return self._active
 
     def show(self) -> None:
@@ -136,8 +159,17 @@ class CreatorModeController:
         from .creator_overlay_click import resolve_creator_overlay_click_action  # noqa: PLC0415
 
         action_id = resolve_creator_overlay_click_action(self, x, y)
+        if action_id != ENTITY_RENAME_DRAFT_ACTION_ID:
+            self._rename_text_focused = False
         if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:
             return self.open_ai_proposals_inbox()
+        if action_id == ENTITY_RENAME_DRAFT_ACTION_ID:
+            self._focus_rename_draft()
+            return CreatorEntityRenameStagingResult(ok=False, errors=())
+        if action_id == ENTITY_RENAME_STAGE_ACTION_ID:
+            result = self.stage_selected_entity_rename()
+            self._store_rename_staging_result(result)
+            return result
         if action_id in ENTITY_MOVE_ACTION_ID_SET:
             result = self.stage_selected_entity_move(action_id)
             self._store_move_staging_result(result)
@@ -181,6 +213,64 @@ class CreatorModeController:
             if proposal_id:
                 self._staged_move_keys[request_key] = proposal_id
         return result
+
+    def stage_selected_entity_rename(self) -> CreatorEntityRenameStagingResult:
+        """Stage a display-label rename proposal for the current selection."""
+
+        selected = self._selected_entity_snapshot()
+        self._sync_rename_draft_for_selection(selected)
+        request = request_for_rename_panel(
+            selected,
+            source_scene=self._current_scene_path(),
+            draft_label=self._rename_draft,
+        )
+        if not request.ok:
+            return CreatorEntityRenameStagingResult(
+                ok=False,
+                errors=(request.reason or "Rename is unavailable.",),
+            )
+
+        request_key = creator_entity_rename_request_key(request)
+        staged_id = str(self._staged_rename_keys.get(request_key) or "").strip()
+        if staged_id and self._proposal_still_pending(staged_id):
+            return CreatorEntityRenameStagingResult(
+                ok=False,
+                errors=(f"Rename proposal already staged: {staged_id}",),
+            )
+        if staged_id:
+            self._staged_rename_keys.pop(request_key, None)
+
+        result = stage_creator_entity_rename_proposal(request, self._proposal_bridge())
+        if result.ok:
+            proposal_id = str(result.proposal_id or "").strip()
+            if proposal_id:
+                self._staged_rename_keys[request_key] = proposal_id
+        return result
+
+    def handle_key_input(self, key: int, modifiers: int = 0) -> bool:
+        """Handle typing while the Creator rename draft field is focused."""
+
+        if not self._active or not self._rename_text_focused:
+            return False
+        import engine.optional_arcade as optional_arcade  # noqa: PLC0415
+
+        arcade_key = optional_arcade.arcade.key
+        if key == arcade_key.ESCAPE:
+            self._rename_text_focused = False
+            return True
+        if key == arcade_key.BACKSPACE:
+            self._rename_draft = self._rename_draft[:-1]
+            return True
+        if key in (getattr(arcade_key, "DELETE", -1), arcade_key.ENTER, arcade_key.RETURN):
+            return True
+        if modifiers & (getattr(arcade_key, "MOD_CTRL", 0) | getattr(arcade_key, "MOD_ALT", 0)):
+            return True
+        if 32 <= int(key) <= 0x10FFFF:
+            text = chr(int(key))
+            if text.isprintable():
+                self._rename_draft += text
+                return True
+        return True
 
     def open_ai_proposals_inbox(self) -> CreatorProposalInboxNavigationResult:
         """Leave Creator Mode and show the official AI Proposals dock tab."""
@@ -310,9 +400,12 @@ class CreatorModeController:
 
     def build_snapshot(self) -> CreatorModeSnapshot:
         selected = self._selected_entity_snapshot()
+        self._sync_rename_draft_for_selection(selected)
         inspector = build_creator_inspector(selected)
         self._prune_stale_move_keys()
+        self._prune_stale_rename_keys()
         movement_panel = self._movement_panel(selected)
+        rename_panel = self._rename_panel(selected)
         door_panel = self._door_panel(selected)
         proposal_status = build_creator_proposal_status(self._proposal_bridge())
         return CreatorModeSnapshot(
@@ -322,6 +415,7 @@ class CreatorModeController:
             selected_summary=inspector.summary,
             inspector=inspector,
             movement_panel=movement_panel,
+            rename_panel=rename_panel,
             door_panel=door_panel,
             proposal_status=proposal_status,
             proposal_accept_readiness=build_creator_proposal_accept_readiness_from_status(
@@ -341,6 +435,10 @@ class CreatorModeController:
         self._last_staged_door_key = ""
         self._last_staged_proposal_id = ""
         self._staged_move_keys.clear()
+        self._staged_rename_keys.clear()
+        self._rename_draft = ""
+        self._rename_selection_key = ""
+        self._rename_text_focused = False
 
     def _store_staging_result(self, result: CreatorDoorStagingResult) -> None:
         if result.ok:
@@ -367,6 +465,21 @@ class CreatorModeController:
             return
 
         message = result.errors[0] if result.errors else "Failed to stage movement proposal."
+        self._last_action_message = str(message)
+        self._last_action_ok = False
+
+    def _store_rename_staging_result(self, result: CreatorEntityRenameStagingResult) -> None:
+        if result.ok:
+            proposal_id = str(result.proposal_id or "").strip()
+            if proposal_id:
+                self._last_action_message = f"Rename proposal staged: {proposal_id}"
+            else:
+                self._last_action_message = "Rename proposal staged."
+            self._last_action_ok = True
+            self._rename_text_focused = False
+            return
+
+        message = result.errors[0] if result.errors else "Failed to stage rename proposal."
         self._last_action_message = str(message)
         self._last_action_ok = False
 
@@ -401,6 +514,19 @@ class CreatorModeController:
             grid_step=self._editor_grid_step(),
             bridge=self._proposal_bridge(),
             duplicate_keys=dict(self._staged_move_keys),
+        )
+
+    def _rename_panel(
+        self,
+        selected: Mapping[str, Any] | None,
+    ) -> CreatorEntityRenamePanelModel:
+        return build_creator_entity_rename_panel(
+            selected,
+            source_scene=self._current_scene_path(),
+            draft_label=self._rename_draft,
+            bridge=self._proposal_bridge(),
+            focused=self._rename_text_focused,
+            duplicate_keys=dict(self._staged_rename_keys),
         )
 
     def _door_panel(self, selected: Mapping[str, Any] | None) -> Any:
@@ -458,6 +584,57 @@ class CreatorModeController:
         ]
         for key in stale:
             self._staged_move_keys.pop(key, None)
+
+    def _prune_stale_rename_keys(self) -> None:
+        if not self._staged_rename_keys:
+            return
+        pending_ids = self._pending_proposal_ids()
+        stale = [
+            key
+            for key, proposal_id in self._staged_rename_keys.items()
+            if proposal_id not in pending_ids
+        ]
+        for key in stale:
+            self._staged_rename_keys.pop(key, None)
+
+    def _pending_proposal_ids(self) -> set[str]:
+        pending_ids: set[str] = set()
+        for item in self._pending_proposals():
+            if isinstance(item, Mapping):
+                item_id = str(item.get("proposal_id") or item.get("id") or "").strip()
+            else:
+                item_id = str(
+                    getattr(item, "proposal_id", None) or getattr(item, "id", None) or ""
+                ).strip()
+            if item_id:
+                pending_ids.add(item_id)
+        return pending_ids
+
+    def _focus_rename_draft(self) -> None:
+        selected = self._selected_entity_snapshot()
+        self._sync_rename_draft_for_selection(selected)
+        self._rename_text_focused = bool(self._rename_selection_key)
+
+    def _sync_rename_draft_for_selection(self, selected: Mapping[str, Any] | None) -> None:
+        key = self._rename_key_for_selection(selected)
+        if key == self._rename_selection_key:
+            return
+        self._rename_selection_key = key
+        self._rename_text_focused = False
+        if isinstance(selected, Mapping):
+            label = selected.get("name")
+            self._rename_draft = label if isinstance(label, str) else ""
+        else:
+            self._rename_draft = ""
+
+    def _rename_key_for_selection(self, selected: Mapping[str, Any] | None) -> str:
+        if not isinstance(selected, Mapping):
+            return ""
+        for key in ("id", "entity_id"):
+            value = selected.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return ""
 
     def _door_request_key(self, request: CreatorDoorWorkflowRequest) -> str:
         """Stable key for duplicate-stage detection."""
