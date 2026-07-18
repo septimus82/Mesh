@@ -14,6 +14,7 @@ from engine.ui_overlays.common import (
     truncate_text_to_char_limit,
 )
 
+from .creator_entity_duplicate_panel import ENTITY_DUPLICATE_STAGE_ACTION_ID
 from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
 from .creator_entity_opacity_panel import (
     ENTITY_OPACITY_DRAFT_ACTION_ID,
@@ -46,6 +47,7 @@ MAX_RENDERED_PANEL_LINES = 20
 MAX_RENDERED_MOVE_LINES = 7
 MAX_RENDERED_RENAME_LINES = 7
 MAX_RENDERED_OPACITY_LINES = 7
+MAX_RENDERED_DUPLICATE_LINES = 7
 MAX_RENDERED_PROPOSAL_ROWS = 3
 
 
@@ -354,6 +356,17 @@ def build_creator_overlay_draw_commands(
         )
         commands.extend(opacity_commands)
 
+    if _should_render_duplicate_panel(model) and win_h <= 600.0 and y > bottom_h + 24.0:
+        y -= 4.0
+        duplicate_commands, y = _duplicate_panel_text_commands(
+            model,
+            right_x,
+            y,
+            bottom_h,
+            right_text_width,
+        )
+        commands.extend(duplicate_commands)
+
     if model.door_panel is not None and y > bottom_h + 24.0:
         y -= 6.0
         door_commands = _door_panel_text_commands(
@@ -390,6 +403,17 @@ def build_creator_overlay_draw_commands(
             right_text_width,
         )
         commands.extend(opacity_commands)
+
+    if _should_render_duplicate_panel(model) and win_h > 600.0 and y > bottom_h + 24.0:
+        y -= 4.0
+        duplicate_commands, y = _duplicate_panel_text_commands(
+            model,
+            right_x,
+            y,
+            bottom_h,
+            right_text_width,
+        )
+        commands.extend(duplicate_commands)
 
     if model.movement_panel is not None and y > bottom_h + 24.0:
         y -= 4.0
@@ -848,6 +872,89 @@ def _opacity_panel_text_commands(
         action_id=ENTITY_OPACITY_STAGE_ACTION_ID if action.enabled else "",
     )
     return tuple(commands), y
+
+
+def _duplicate_panel_text_commands(
+    model: CreatorOverlayModel,
+    x: float,
+    start_y: float,
+    bottom_h: float,
+    text_width: float,
+) -> tuple[tuple[CreatorOverlayDrawCommand, ...], float]:
+    panel = model.duplicate_panel
+    if panel is None:
+        return (), start_y
+
+    commands: list[CreatorOverlayDrawCommand] = []
+    y = start_y
+    rendered = 0
+
+    def add(
+        text: object,
+        font_size: int = 11,
+        color: tuple[int, ...] = (220, 225, 232),
+        *,
+        action_id: str = "",
+    ) -> None:
+        nonlocal y, rendered
+        if rendered >= MAX_RENDERED_DUPLICATE_LINES or y <= bottom_h + 6.0:
+            return
+        max_chars = _panel_char_limit(text_width, font_size, MAX_PANEL_CHARS)
+        if action_id:
+            commands.append(
+                _clickable_text(
+                    str(text),
+                    "right",
+                    x,
+                    y,
+                    font_size,
+                    color,
+                    max_chars,
+                    action_id=action_id,
+                )
+            )
+        else:
+            commands.append(_text(str(text), "right", x, y, font_size, color, max_chars))
+        y -= _ACTION_LINE_HEIGHT
+        rendered += 1
+
+    add(panel.title, 12, (255, 255, 255))
+    if not panel.source_entity_id:
+        if panel.reason:
+            add(panel.reason, 10, (238, 190, 120))
+        return tuple(commands), y
+    add(f"Source: {panel.source_entity_id}", 10, (190, 198, 208))
+    add(f"New stable ID: {panel.duplicate_entity_id}", 10, (220, 225, 232))
+    add(
+        f"Position: {panel.source_position_text} -> {panel.duplicate_position_text}",
+        10,
+        (220, 225, 232),
+    )
+    add("Copies authored data only.", 10, (190, 198, 208))
+    action = panel.action
+    state = "Ready" if action.enabled else "Disabled"
+    detail = f"[{state}] {action.label}"
+    if action.reason:
+        detail = f"{detail} - {action.reason}"
+    add(
+        detail,
+        10,
+        (170, 218, 154) if action.enabled else (160, 166, 176),
+        action_id=ENTITY_DUPLICATE_STAGE_ACTION_ID if action.enabled else "",
+    )
+    return tuple(commands), y
+
+
+def _should_render_duplicate_panel(model: CreatorOverlayModel) -> bool:
+    panel = model.duplicate_panel
+    if panel is None:
+        return False
+    if bool(getattr(panel, "available", False)):
+        return True
+    return bool(
+        str(getattr(panel, "source_entity_id", "") or "").strip()
+        and str(getattr(panel, "duplicate_entity_id", "") or "").strip()
+    )
 
 
 def _door_panel_text_commands(

@@ -53,6 +53,9 @@ class EditorCommandDispatchController:
         elif ctype == "SetEntityAlpha":
             self._apply_entity_alpha_command(cmd, use_before=True)
 
+        elif ctype == "DuplicateEntity":
+            self._revert_duplicate_entity_command(cmd)
+
         elif ctype == "AddEntity":
             entity = self.editor._find_entity_by_name(entity_name)
             if entity:
@@ -286,6 +289,9 @@ class EditorCommandDispatchController:
 
         elif ctype == "SetEntityAlpha":
             self._apply_entity_alpha_command(cmd, use_before=False)
+
+        elif ctype == "DuplicateEntity":
+            self._apply_duplicate_entity_command(cmd)
 
         elif ctype == "AddEntity":
             self._append_scene_entity(cmd.get("data"))
@@ -640,6 +646,85 @@ class EditorCommandDispatchController:
         refresh_hierarchy = getattr(self.editor, "_refresh_hierarchy_list", None)
         if callable(refresh_hierarchy):
             refresh_hierarchy()
+
+    def _apply_duplicate_entity_command(self, cmd: Dict[str, Any]) -> None:
+        payload = cmd.get("data")
+        if not isinstance(payload, dict):
+            return
+        duplicate_id = self._entity_identity(payload)
+        if not duplicate_id:
+            return
+        entities = self._scene_entities()
+        if entities is not None:
+            if any(self._entity_identity(entity) == duplicate_id for entity in entities):
+                return
+            entities.append(copy.deepcopy(payload))
+        sprite = self.editor._create_entity_internal(copy.deepcopy(payload))
+        self._select_single_entity(duplicate_id, sprite)
+        self._refresh_after_duplicate_command()
+
+    def _revert_duplicate_entity_command(self, cmd: Dict[str, Any]) -> None:
+        payload = cmd.get("data")
+        duplicate_id = self._entity_identity(payload)
+        if not duplicate_id:
+            duplicate_raw = cmd.get("duplicate_entity_id")
+            duplicate_id = duplicate_raw if isinstance(duplicate_raw, str) else ""
+        if not duplicate_id:
+            return
+        finder = getattr(self.editor, "_find_entity_by_id", None)
+        sprite = finder(duplicate_id) if callable(finder) else None
+        if sprite is None:
+            sprite = self._find_sprite_by_stable_id(duplicate_id)
+        if sprite is not None:
+            self.editor._delete_entity_internal(sprite)
+        entities = self._scene_entities()
+        if entities is not None:
+            entities[:] = [entity for entity in entities if self._entity_identity(entity) != duplicate_id]
+        self._restore_entity_selection(cmd.get("previous_selection"))
+        self._refresh_after_duplicate_command()
+
+    def _find_sprite_by_stable_id(self, entity_id: str) -> Any:
+        sc = getattr(getattr(self.editor, "window", None), "scene_controller", None)
+        for sprite in getattr(sc, "all_sprites", ()) or ():
+            data = getattr(sprite, "mesh_entity_data", None)
+            if isinstance(data, dict) and self._entity_identity(data) == entity_id:
+                return sprite
+        return None
+
+    def _select_single_entity(self, entity_id: str, sprite: Any | None) -> None:
+        if entity_id:
+            setattr(self.editor, "_selected_entity_ids", {entity_id})
+            setattr(self.editor, "_primary_entity_id", entity_id)
+        if sprite is None and entity_id:
+            finder = getattr(self.editor, "_find_entity_by_id", None)
+            if callable(finder):
+                sprite = finder(entity_id)
+        if sprite is not None:
+            setattr(self.editor, "selected_entity", sprite)
+
+    def _restore_entity_selection(self, selection: Any) -> None:
+        if not isinstance(selection, dict):
+            return
+        selected_ids = {
+            str(item)
+            for item in selection.get("selected_ids", ()) or ()
+            if isinstance(item, str) and item
+        }
+        primary_id = str(selection.get("primary_id") or selection.get("selected_id") or "")
+        setattr(self.editor, "_selected_entity_ids", selected_ids)
+        setattr(self.editor, "_primary_entity_id", primary_id)
+        selected_sprite = self._find_sprite_by_stable_id(primary_id) if primary_id else None
+        if selected_sprite is not None:
+            setattr(self.editor, "selected_entity", selected_sprite)
+
+    def _refresh_after_duplicate_command(self) -> None:
+        for name in ("_refresh_hierarchy_list", "_refresh_inspector_items"):
+            refresher = getattr(self.editor, name, None)
+            if callable(refresher):
+                refresher()
+        panels_refresher = getattr(self.editor, "_refresh_entity_panels_list", None)
+        if callable(panels_refresher):
+            panels_refresher(sync_selected=True)
 
 
 def _command_children(cmd: Dict[str, Any]) -> list[Dict[str, Any]]:

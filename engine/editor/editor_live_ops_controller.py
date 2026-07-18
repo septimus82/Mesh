@@ -5,6 +5,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from engine.ai_ops import _deep_merge, build_prefab_entity_definition, find_prefab_palette_entry
+from engine.editor.creator_mode.creator_entity_duplicate_request import (
+    build_duplicate_entity_payload,
+    fingerprint_entity_payload,
+    next_duplicate_entity_id,
+)
 
 
 @dataclass(frozen=True)
@@ -38,6 +43,8 @@ class EditorLiveOpsController:
             return self._set_entity_display_label(op, push_undo=push_undo)
         if op_type == "set_entity_alpha":
             return self._set_entity_alpha(op, push_undo=push_undo)
+        if op_type == "duplicate_entity":
+            return self._duplicate_entity(op, push_undo=push_undo)
         return _result(False, f"Unsupported live operation type '{op_type}'")
 
     def stage_proposal(self, ops: list[dict[str, Any]]) -> LiveOpProposal:
@@ -298,6 +305,25 @@ class EditorLiveOpsController:
                 preview_lines.append(
                     f"Change '{entity_id}' opacity from {_format_alpha_percent(before)} "
                     f"to {_format_alpha_percent(alpha)}"
+                )
+                continue
+
+            if op_type == "duplicate_entity":
+                duplicate, warning = self._dry_run_duplicate_entity(op, staged_scene)
+                if warning:
+                    warnings.append(f"Op {index}: {warning}")
+                    continue
+                if duplicate is None:
+                    warnings.append(f"Op {index}: failed to validate duplicate_entity")
+                    continue
+
+                entities.append(duplicate)
+                source_id = str(op.get("source_entity_id") or "")
+                duplicate_id = _stable_entity_identity(duplicate)
+                affected_ids.append(duplicate_id)
+                preview_lines.append(
+                    f"Duplicate '{source_id}' as '{duplicate_id}' "
+                    f"at ({float(duplicate.get('x', 0.0)):g}, {float(duplicate.get('y', 0.0)):g})"
                 )
                 continue
 
@@ -577,6 +603,52 @@ class EditorLiveOpsController:
             data["command"] = command
         return _result(True, f"Changed entity '{entity_ref}' opacity", data)
 
+    def _duplicate_entity(self, op: dict[str, Any], *, push_undo: bool = True) -> dict[str, Any]:
+        scene_mismatch = self._scene_mismatch_message(op)
+        if scene_mismatch:
+            return _result(False, scene_mismatch)
+
+        scene_controller = getattr(self._editor.window, "scene_controller", None)
+        scene = getattr(scene_controller, "_loaded_scene_data", None)
+        if not isinstance(scene, dict):
+            return _result(False, "No live scene is loaded")
+        entities = scene.setdefault("entities", [])
+        if not isinstance(entities, list):
+            return _result(False, "Live scene entities is not a list")
+
+        source, duplicate, warning = _validated_duplicate_entity(op, scene)
+        if warning:
+            return _result(False, warning)
+        if source is None or duplicate is None:
+            return _result(False, "failed to validate duplicate_entity")
+
+        previous_selection = _capture_entity_selection(self._editor)
+        entities.append(duplicate)
+        sprite = self._editor._create_entity_internal(duplicate)
+        duplicate_id = _stable_entity_identity(duplicate)
+        if sprite is not None:
+            _select_single_entity(self._editor, duplicate_id, sprite)
+        else:
+            _select_single_entity(self._editor, duplicate_id, None)
+
+        command = {
+            "type": "DuplicateEntity",
+            "source_entity_id": str(op.get("source_entity_id") or ""),
+            "duplicate_entity_id": duplicate_id,
+            "data": copy.deepcopy(duplicate),
+            "previous_selection": previous_selection,
+        }
+        if push_undo:
+            self._editor._push_command(command)
+        self._refresh_editor_surfaces()
+        data: dict[str, Any] = {
+            "source_entity_id": str(op.get("source_entity_id") or ""),
+            "duplicate_entity_id": duplicate_id,
+        }
+        if not push_undo:
+            data["command"] = command
+        return _result(True, f"Duplicated entity '{duplicate_id}'", data)
+
     def _dry_run_set_behaviour_params(
         self, op: dict[str, Any], staged_scene: dict[str, Any]
     ) -> tuple[dict[str, Any] | None, str | None, dict[str, Any] | None, str | None]:
@@ -692,6 +764,18 @@ class EditorLiveOpsController:
         if current_state["effective"] == alpha:
             return None, None, "set_entity_alpha alpha is unchanged"
         return entity, alpha, None
+
+    def _dry_run_duplicate_entity(
+        self,
+        op: dict[str, Any],
+        staged_scene: dict[str, Any],
+    ) -> tuple[dict[str, Any] | None, str | None]:
+        source, duplicate, warning = _validated_duplicate_entity(op, staged_scene)
+        if warning:
+            return None, warning
+        if source is None or duplicate is None:
+            return None, "failed to validate duplicate_entity"
+        return duplicate, None
 
     def _scene_mismatch_message(self, op: dict[str, Any]) -> str:
         scene_controller = getattr(self._editor.window, "scene_controller", None)
@@ -894,6 +978,125 @@ def _alpha_state_matches_expected(state: dict[str, Any] | None, expected: Any) -
         except (TypeError, ValueError):
             return False
     return "value" not in expected
+
+
+def _validated_duplicate_entity(
+    op: dict[str, Any],
+    scene: dict[str, Any],
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, str | None]:
+    source_id = str(op.get("source_entity_id") or "").strip()
+    duplicate_id = str(op.get("duplicate_entity_id") or "").strip()
+    if not source_id:
+        return None, None, "duplicate_entity requires source_entity_id"
+    if not duplicate_id:
+        return None, None, "duplicate_entity requires duplicate_entity_id"
+
+    entities = scene.get("entities")
+    if not isinstance(entities, list):
+        return None, None, "Live scene entities is not a list"
+    source = _find_scene_entity_by_stable_id(scene, source_id)
+    if source is None:
+        return None, None, f"Entity '{source_id}' not found"
+    if _stable_entity_identity(source) != source_id:
+        return None, None, f"Entity '{source_id}' stable identity cannot be resolved"
+    if _contains_self_reference(source, source_id):
+        return None, None, f"Entity '{source_id}' contains unsupported self-references"
+
+    try:
+        source_x = float(source.get("x"))
+        source_y = float(source.get("y"))
+        expected_x = float(op.get("expected_source_x"))
+        expected_y = float(op.get("expected_source_y"))
+        target_x = float(op.get("x"))
+        target_y = float(op.get("y"))
+        dx = float(op.get("dx"))
+        dy = float(op.get("dy"))
+    except (TypeError, ValueError):
+        return None, None, "duplicate_entity requires numeric source, target and offset values"
+    if round(source_x, 6) != round(expected_x, 6) or round(source_y, 6) != round(expected_y, 6):
+        return None, None, f"Entity '{source_id}' moved; regenerate proposal"
+    if round(source_x + dx, 6) != round(target_x, 6) or round(source_y + dy, 6) != round(target_y, 6):
+        return None, None, "duplicate_entity target does not match the canonical offset"
+
+    expected_fingerprint = str(op.get("expected_source_fingerprint") or "").strip()
+    if not expected_fingerprint:
+        return None, None, "duplicate_entity requires expected_source_fingerprint"
+    if fingerprint_entity_payload(source) != expected_fingerprint:
+        return None, None, f"Entity '{source_id}' changed; regenerate proposal"
+
+    used_ids = _stable_entity_ids(entities)
+    if duplicate_id in used_ids:
+        return None, None, f"Duplicate entity ID '{duplicate_id}' is already in use"
+    if next_duplicate_entity_id(source_id, set(used_ids)) != duplicate_id:
+        return None, None, f"Duplicate entity ID '{duplicate_id}' is stale; regenerate proposal"
+
+    duplicate = build_duplicate_entity_payload(
+        source,
+        source_id=source_id,
+        duplicate_id=duplicate_id,
+        x=target_x,
+        y=target_y,
+    )
+    return source, duplicate, None
+
+
+def _stable_entity_ids(entities: list[Any]) -> set[str]:
+    ids: set[str] = set()
+    for entity in entities:
+        if isinstance(entity, dict):
+            entity_id = _stable_entity_identity(entity)
+            if entity_id:
+                ids.add(entity_id)
+    return ids
+
+
+def _contains_self_reference(payload: dict[str, Any], source_id: str) -> bool:
+    identity_keys = {"id", "entity_id"}
+
+    def walk(value: Any, path: tuple[str, ...]) -> bool:
+        if isinstance(value, str):
+            return value == source_id and (not path or path[-1] not in identity_keys)
+        if isinstance(value, dict):
+            return any(walk(child, (*path, str(key))) for key, child in value.items())
+        if isinstance(value, (list, tuple)):
+            return any(walk(child, path) for child in value)
+        return False
+
+    return walk(payload, ())
+
+
+def _capture_entity_selection(editor: Any) -> dict[str, Any]:
+    selected_ids = tuple(str(item) for item in getattr(editor, "_selected_entity_ids", ()) or ())
+    primary_id = str(getattr(editor, "_primary_entity_id", "") or "")
+    selected = getattr(editor, "selected_entity", None)
+    data = getattr(selected, "mesh_entity_data", None)
+    selected_id = _stable_entity_identity(data) if isinstance(data, dict) else ""
+    return {
+        "selected_ids": selected_ids,
+        "primary_id": primary_id,
+        "selected_id": selected_id,
+    }
+
+
+def _select_single_entity(editor: Any, entity_id: str, sprite: Any | None) -> None:
+    if entity_id:
+        setattr(editor, "_selected_entity_ids", {entity_id})
+        setattr(editor, "_primary_entity_id", entity_id)
+    if sprite is None and entity_id:
+        finder = getattr(editor, "_find_entity_by_id", None)
+        if callable(finder):
+            sprite = finder(entity_id)
+    if sprite is not None:
+        setattr(editor, "selected_entity", sprite)
+    window = getattr(editor, "window", None)
+    state = getattr(window, "entity_select_state", None)
+    if state is not None and entity_id:
+        try:
+            from engine.entity_select_mode import set_selection  # noqa: PLC0415
+
+            set_selection(window, state, [entity_id], primary_id=entity_id)
+        except (AttributeError, TypeError, ValueError):
+            pass
 
 
 def _format_alpha_percent(alpha: float) -> str:

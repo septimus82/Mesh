@@ -35,6 +35,26 @@ from .creator_door_workflow import (
     build_creator_door_workflow,
     build_creator_door_workflow_from_plan_request,
 )
+from .creator_entity_duplicate_live_ops import (
+    CreatorEntityDuplicateLiveOpsResult,
+    build_creator_entity_duplicate_live_ops,
+)
+from .creator_entity_duplicate_panel import (
+    ENTITY_DUPLICATE_STAGE_ACTION_ID,
+    CreatorEntityDuplicatePanelAction,
+    CreatorEntityDuplicatePanelModel,
+    build_creator_entity_duplicate_panel,
+)
+from .creator_entity_duplicate_request import (
+    CreatorEntityDuplicateRequest,
+    build_creator_entity_duplicate_request,
+    build_duplicate_entity_payload,
+    next_duplicate_entity_id,
+)
+from .creator_entity_duplicate_staging import (
+    CreatorEntityDuplicateStagingResult,
+    stage_creator_entity_duplicate_proposal,
+)
 from .creator_entity_move_actions import (
     ENTITY_MOVE_ACTION_IDS,
     ENTITY_MOVE_DOWN_ACTION_ID,
@@ -165,6 +185,11 @@ __all__ = [
     "CreatorEntityMovePanelModel",
     "CreatorEntityMoveRequest",
     "CreatorEntityMoveStagingResult",
+    "CreatorEntityDuplicateLiveOpsResult",
+    "CreatorEntityDuplicatePanelAction",
+    "CreatorEntityDuplicatePanelModel",
+    "CreatorEntityDuplicateRequest",
+    "CreatorEntityDuplicateStagingResult",
     "CreatorEntityAlphaState",
     "CreatorEntityOpacityLiveOpsResult",
     "CreatorEntityOpacityPanelAction",
@@ -199,6 +224,7 @@ __all__ = [
     "ENTITY_OPACITY_DRAFT_ACTION_ID",
     "ENTITY_OPACITY_PRESET_ACTION_PREFIX",
     "ENTITY_OPACITY_STAGE_ACTION_ID",
+    "ENTITY_DUPLICATE_STAGE_ACTION_ID",
     "ALPHA_FIELD",
     "ALPHA_MAX",
     "ALPHA_MIN",
@@ -214,6 +240,10 @@ __all__ = [
     "build_creator_entity_move_live_ops",
     "build_creator_entity_move_panel",
     "build_creator_entity_move_request",
+    "build_creator_entity_duplicate_live_ops",
+    "build_creator_entity_duplicate_panel",
+    "build_creator_entity_duplicate_request",
+    "build_duplicate_entity_payload",
     "build_creator_entity_opacity_live_ops",
     "build_creator_entity_opacity_panel",
     "build_creator_entity_opacity_request",
@@ -233,12 +263,14 @@ __all__ = [
     "resolve_entity_move_target",
     "normalize_display_label",
     "normalize_alpha",
+    "next_duplicate_entity_id",
     "alpha_to_draft_percent",
     "format_opacity_percent",
     "parse_opacity_percent_draft",
     "resolve_alpha_state",
     "stage_creator_door_proposal",
     "stage_creator_entity_move_proposal",
+    "stage_creator_entity_duplicate_proposal",
     "stage_creator_entity_opacity_proposal",
     "stage_creator_entity_rename_proposal",
     "unavailable_creator_proposal_status",
