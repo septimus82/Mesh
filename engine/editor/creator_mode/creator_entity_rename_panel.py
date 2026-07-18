@@ -72,7 +72,7 @@ def build_creator_entity_rename_panel(
         enabled=False,
         reason=request.reason or "Rename is unavailable.",
     )
-    if request.ok and not bridge_ok:
+    if not bridge_ok and entity_id:
         action = CreatorEntityRenamePanelAction(
             label="Stage Rename Proposal",
             action_id=ENTITY_RENAME_STAGE_ACTION_ID,

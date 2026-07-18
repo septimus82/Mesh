@@ -25,6 +25,24 @@ from .creator_entity_move_staging import (
     CreatorEntityMoveStagingResult,
     stage_creator_entity_move_proposal,
 )
+from .creator_entity_opacity_panel import (
+    ENTITY_OPACITY_DRAFT_ACTION_ID,
+    ENTITY_OPACITY_PRESET_ACTION_PREFIX,
+    ENTITY_OPACITY_STAGE_ACTION_ID,
+    CreatorEntityOpacityPanelModel,
+    build_creator_entity_opacity_panel,
+    preset_percent_for_action,
+    request_for_opacity_panel,
+)
+from .creator_entity_opacity_request import (
+    alpha_to_draft_percent,
+    creator_entity_opacity_request_key,
+    resolve_alpha_state,
+)
+from .creator_entity_opacity_staging import (
+    CreatorEntityOpacityStagingResult,
+    stage_creator_entity_opacity_proposal,
+)
 from .creator_entity_rename_panel import (
     ENTITY_RENAME_DRAFT_ACTION_ID,
     ENTITY_RENAME_STAGE_ACTION_ID,
@@ -71,9 +89,13 @@ class CreatorModeController:
         self._last_staged_proposal_id = ""
         self._staged_move_keys: dict[str, str] = {}
         self._staged_rename_keys: dict[str, str] = {}
+        self._staged_opacity_keys: dict[str, str] = {}
         self._rename_draft = ""
         self._rename_selection_key = ""
         self._rename_text_focused = False
+        self._opacity_draft = ""
+        self._opacity_selection_key = ""
+        self._opacity_text_focused = False
 
     @property
     def last_action_message(self) -> str:
@@ -91,11 +113,16 @@ class CreatorModeController:
     def rename_text_focused(self) -> bool:
         return bool(self._rename_text_focused)
 
+    @property
+    def opacity_text_focused(self) -> bool:
+        return bool(self._opacity_text_focused)
+
     def toggle(self) -> bool:
         self._active = not self._active
         if not self._active:
             self._clear_last_action_state()
             self._rename_text_focused = False
+            self._opacity_text_focused = False
         return self._active
 
     def show(self) -> None:
@@ -144,6 +171,7 @@ class CreatorModeController:
     ) -> (
         CreatorDoorStagingResult
         | CreatorEntityMoveStagingResult
+        | CreatorEntityOpacityStagingResult
         | CreatorProposalInboxNavigationResult
         | None
     ):
@@ -161,14 +189,30 @@ class CreatorModeController:
         action_id = resolve_creator_overlay_click_action(self, x, y)
         if action_id != ENTITY_RENAME_DRAFT_ACTION_ID:
             self._rename_text_focused = False
+        if action_id != ENTITY_OPACITY_DRAFT_ACTION_ID:
+            self._opacity_text_focused = False
         if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:
             return self.open_ai_proposals_inbox()
         if action_id == ENTITY_RENAME_DRAFT_ACTION_ID:
             self._focus_rename_draft()
             return CreatorEntityRenameStagingResult(ok=False, errors=())
+        if action_id == ENTITY_OPACITY_DRAFT_ACTION_ID:
+            self._focus_opacity_draft()
+            return CreatorEntityOpacityStagingResult(ok=False, errors=())
+        if str(action_id or "").startswith(ENTITY_OPACITY_PRESET_ACTION_PREFIX):
+            percent = preset_percent_for_action(str(action_id or ""))
+            if not percent:
+                return None
+            self._sync_opacity_draft_for_selection(self._selected_entity_snapshot())
+            self._opacity_draft = percent
+            return CreatorEntityOpacityStagingResult(ok=False, errors=())
         if action_id == ENTITY_RENAME_STAGE_ACTION_ID:
             result = self.stage_selected_entity_rename()
             self._store_rename_staging_result(result)
+            return result
+        if action_id == ENTITY_OPACITY_STAGE_ACTION_ID:
+            result = self.stage_selected_entity_opacity()
+            self._store_opacity_staging_result(result)
             return result
         if action_id in ENTITY_MOVE_ACTION_ID_SET:
             result = self.stage_selected_entity_move(action_id)
@@ -247,28 +291,73 @@ class CreatorModeController:
                 self._staged_rename_keys[request_key] = proposal_id
         return result
 
-    def handle_key_input(self, key: int, modifiers: int = 0) -> bool:
-        """Handle typing while the Creator rename draft field is focused."""
+    def stage_selected_entity_opacity(self) -> CreatorEntityOpacityStagingResult:
+        """Stage an authored alpha/opacity proposal for the current selection."""
 
-        if not self._active or not self._rename_text_focused:
+        selected = self._selected_entity_snapshot()
+        self._sync_opacity_draft_for_selection(selected)
+        request = request_for_opacity_panel(
+            selected,
+            source_scene=self._current_scene_path(),
+            draft_percent=self._opacity_draft,
+        )
+        if not request.ok:
+            return CreatorEntityOpacityStagingResult(
+                ok=False,
+                errors=(request.reason or "Opacity is unavailable.",),
+            )
+
+        request_key = creator_entity_opacity_request_key(request)
+        staged_id = str(self._staged_opacity_keys.get(request_key) or "").strip()
+        if staged_id and self._proposal_still_pending(staged_id):
+            return CreatorEntityOpacityStagingResult(
+                ok=False,
+                errors=(f"Opacity proposal already staged: {staged_id}",),
+            )
+        if staged_id:
+            self._staged_opacity_keys.pop(request_key, None)
+
+        result = stage_creator_entity_opacity_proposal(request, self._proposal_bridge())
+        if result.ok:
+            proposal_id = str(result.proposal_id or "").strip()
+            if proposal_id:
+                self._staged_opacity_keys[request_key] = proposal_id
+                self._opacity_text_focused = False
+        return result
+
+    def handle_key_input(self, key: int, modifiers: int = 0) -> bool:
+        """Handle typing while a Creator text field is focused."""
+
+        if not self._active or not (self._rename_text_focused or self._opacity_text_focused):
             return False
         import engine.optional_arcade as optional_arcade  # noqa: PLC0415
 
         arcade_key = optional_arcade.arcade.key
         if key == arcade_key.ESCAPE:
             self._rename_text_focused = False
+            self._opacity_text_focused = False
             return True
         if key == arcade_key.BACKSPACE:
-            self._rename_draft = self._rename_draft[:-1]
+            if self._opacity_text_focused:
+                self._opacity_draft = self._opacity_draft[:-1]
+            else:
+                self._rename_draft = self._rename_draft[:-1]
             return True
-        if key in (getattr(arcade_key, "DELETE", -1), arcade_key.ENTER, arcade_key.RETURN):
+        if key == getattr(arcade_key, "DELETE", -1):
+            if self._opacity_text_focused:
+                self._opacity_draft = ""
+            return True
+        if key in (arcade_key.ENTER, arcade_key.RETURN):
             return True
         if modifiers & (getattr(arcade_key, "MOD_CTRL", 0) | getattr(arcade_key, "MOD_ALT", 0)):
             return True
         if 32 <= int(key) <= 0x10FFFF:
             text = chr(int(key))
             if text.isprintable():
-                self._rename_draft += text
+                if self._opacity_text_focused:
+                    self._opacity_draft += text
+                else:
+                    self._rename_draft += text
                 return True
         return True
 
@@ -401,11 +490,14 @@ class CreatorModeController:
     def build_snapshot(self) -> CreatorModeSnapshot:
         selected = self._selected_entity_snapshot()
         self._sync_rename_draft_for_selection(selected)
+        self._sync_opacity_draft_for_selection(selected)
         inspector = build_creator_inspector(selected)
         self._prune_stale_move_keys()
         self._prune_stale_rename_keys()
+        self._prune_stale_opacity_keys()
         movement_panel = self._movement_panel(selected)
         rename_panel = self._rename_panel(selected)
+        opacity_panel = self._opacity_panel(selected)
         door_panel = self._door_panel(selected)
         proposal_status = build_creator_proposal_status(self._proposal_bridge())
         return CreatorModeSnapshot(
@@ -416,6 +508,7 @@ class CreatorModeController:
             inspector=inspector,
             movement_panel=movement_panel,
             rename_panel=rename_panel,
+            opacity_panel=opacity_panel,
             door_panel=door_panel,
             proposal_status=proposal_status,
             proposal_accept_readiness=build_creator_proposal_accept_readiness_from_status(
@@ -436,9 +529,13 @@ class CreatorModeController:
         self._last_staged_proposal_id = ""
         self._staged_move_keys.clear()
         self._staged_rename_keys.clear()
+        self._staged_opacity_keys.clear()
         self._rename_draft = ""
         self._rename_selection_key = ""
         self._rename_text_focused = False
+        self._opacity_draft = ""
+        self._opacity_selection_key = ""
+        self._opacity_text_focused = False
 
     def _store_staging_result(self, result: CreatorDoorStagingResult) -> None:
         if result.ok:
@@ -451,6 +548,21 @@ class CreatorModeController:
             return
 
         message = result.errors[0] if result.errors else "Failed to stage door proposal."
+        self._last_action_message = str(message)
+        self._last_action_ok = False
+
+    def _store_opacity_staging_result(self, result: CreatorEntityOpacityStagingResult) -> None:
+        if result.ok:
+            proposal_id = str(result.proposal_id or "").strip()
+            if proposal_id:
+                self._last_action_message = f"Opacity proposal staged: {proposal_id}"
+            else:
+                self._last_action_message = "Opacity proposal staged."
+            self._last_action_ok = True
+            self._opacity_text_focused = False
+            return
+
+        message = result.errors[0] if result.errors else "Failed to stage opacity proposal."
         self._last_action_message = str(message)
         self._last_action_ok = False
 
@@ -529,6 +641,19 @@ class CreatorModeController:
             duplicate_keys=dict(self._staged_rename_keys),
         )
 
+    def _opacity_panel(
+        self,
+        selected: Mapping[str, Any] | None,
+    ) -> CreatorEntityOpacityPanelModel:
+        return build_creator_entity_opacity_panel(
+            selected,
+            source_scene=self._current_scene_path(),
+            draft_percent=self._opacity_draft,
+            bridge=self._proposal_bridge(),
+            focused=self._opacity_text_focused,
+            duplicate_keys=dict(self._staged_opacity_keys),
+        )
+
     def _door_panel(self, selected: Mapping[str, Any] | None) -> Any:
         request = build_creator_door_request_from_selection(
             selected,
@@ -597,6 +722,18 @@ class CreatorModeController:
         for key in stale:
             self._staged_rename_keys.pop(key, None)
 
+    def _prune_stale_opacity_keys(self) -> None:
+        if not self._staged_opacity_keys:
+            return
+        pending_ids = self._pending_proposal_ids()
+        stale = [
+            key
+            for key, proposal_id in self._staged_opacity_keys.items()
+            if proposal_id not in pending_ids
+        ]
+        for key in stale:
+            self._staged_opacity_keys.pop(key, None)
+
     def _pending_proposal_ids(self) -> set[str]:
         pending_ids: set[str] = set()
         for item in self._pending_proposals():
@@ -615,6 +752,11 @@ class CreatorModeController:
         self._sync_rename_draft_for_selection(selected)
         self._rename_text_focused = bool(self._rename_selection_key)
 
+    def _focus_opacity_draft(self) -> None:
+        selected = self._selected_entity_snapshot()
+        self._sync_opacity_draft_for_selection(selected)
+        self._opacity_text_focused = bool(self._opacity_selection_key)
+
     def _sync_rename_draft_for_selection(self, selected: Mapping[str, Any] | None) -> None:
         key = self._rename_key_for_selection(selected)
         if key == self._rename_selection_key:
@@ -627,6 +769,22 @@ class CreatorModeController:
         else:
             self._rename_draft = ""
 
+    def _sync_opacity_draft_for_selection(self, selected: Mapping[str, Any] | None) -> None:
+        key = self._opacity_key_for_selection(selected)
+        if key == self._opacity_selection_key:
+            return
+        self._opacity_selection_key = key
+        self._opacity_text_focused = False
+        if isinstance(selected, Mapping):
+            alpha_state = resolve_alpha_state(selected)
+            self._opacity_draft = (
+                alpha_to_draft_percent(alpha_state.effective_value)
+                if alpha_state is not None
+                else ""
+            )
+        else:
+            self._opacity_draft = ""
+
     def _rename_key_for_selection(self, selected: Mapping[str, Any] | None) -> str:
         if not isinstance(selected, Mapping):
             return ""
@@ -635,6 +793,9 @@ class CreatorModeController:
             if isinstance(value, str) and value.strip():
                 return value.strip()
         return ""
+
+    def _opacity_key_for_selection(self, selected: Mapping[str, Any] | None) -> str:
+        return self._rename_key_for_selection(selected)
 
     def _door_request_key(self, request: CreatorDoorWorkflowRequest) -> str:
         """Stable key for duplicate-stage detection."""

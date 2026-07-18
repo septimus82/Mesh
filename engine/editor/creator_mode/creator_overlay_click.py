@@ -7,6 +7,11 @@ from typing import Any
 import engine.optional_arcade as optional_arcade
 
 from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
+from .creator_entity_opacity_panel import (
+    ENTITY_OPACITY_DRAFT_ACTION_ID,
+    ENTITY_OPACITY_PRESET_ACTION_PREFIX,
+    ENTITY_OPACITY_STAGE_ACTION_ID,
+)
 from .creator_entity_rename_panel import (
     ENTITY_RENAME_DRAFT_ACTION_ID,
     ENTITY_RENAME_STAGE_ACTION_ID,
@@ -102,6 +107,32 @@ def entity_rename_action_enabled(model: Any) -> bool:
     )
 
 
+def entity_opacity_action_enabled(model: Any, action_id: str) -> bool:
+    """True when the opacity panel exposes the given enabled action."""
+
+    panel = getattr(model, "opacity_panel", None)
+    if panel is None:
+        return False
+    target = str(action_id or "").strip()
+    if target == ENTITY_OPACITY_DRAFT_ACTION_ID:
+        return bool(getattr(panel, "entity_id", "")) and any(
+            bool(getattr(action, "enabled", False))
+            for action in getattr(panel, "preset_actions", ()) or ()
+        )
+    if target == ENTITY_OPACITY_STAGE_ACTION_ID:
+        action = getattr(panel, "action", None)
+        return (
+            action is not None
+            and str(getattr(action, "action_id", "") or "") == ENTITY_OPACITY_STAGE_ACTION_ID
+            and bool(getattr(action, "enabled", False))
+        )
+    if target.startswith(ENTITY_OPACITY_PRESET_ACTION_PREFIX):
+        for action in getattr(panel, "preset_actions", ()) or ():
+            if str(getattr(action, "action_id", "") or "") == target:
+                return bool(getattr(action, "enabled", False))
+    return False
+
+
 def resolve_creator_overlay_click_action(
     creator: Any,
     x: float,
@@ -132,9 +163,19 @@ def resolve_creator_overlay_click_action(
             return None
         return action_id
     if action_id == ENTITY_RENAME_DRAFT_ACTION_ID:
+        panel = getattr(model, "rename_panel", None)
+        action = getattr(panel, "action", None) if panel is not None else None
+        if action is not None and str(getattr(action, "reason", "") or "") == "Proposal bridge is unavailable.":
+            return None
         return action_id
     if action_id == ENTITY_RENAME_STAGE_ACTION_ID:
         if not entity_rename_action_enabled(model):
+            return None
+        return action_id
+    if action_id in {ENTITY_OPACITY_DRAFT_ACTION_ID, ENTITY_OPACITY_STAGE_ACTION_ID} or str(
+        action_id or ""
+    ).startswith(ENTITY_OPACITY_PRESET_ACTION_PREFIX):
+        if not entity_opacity_action_enabled(model, action_id):
             return None
         return action_id
     if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:

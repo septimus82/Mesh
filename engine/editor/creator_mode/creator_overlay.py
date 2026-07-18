@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from .creator_door_panel import CreatorDoorPanelModel
 from .creator_entity_move_panel import CreatorEntityMovePanelModel
+from .creator_entity_opacity_panel import CreatorEntityOpacityPanelModel
 from .creator_entity_rename_panel import CreatorEntityRenamePanelModel
 from .creator_proposal_accept_readiness import CreatorProposalAcceptReadinessModel
 from .creator_proposal_handoff import CreatorProposalHandoffModel
@@ -42,6 +43,7 @@ class CreatorOverlayModel:
     proposal_handoff: CreatorProposalHandoffModel
     movement_panel: CreatorEntityMovePanelModel | None = None
     rename_panel: CreatorEntityRenamePanelModel | None = None
+    opacity_panel: CreatorEntityOpacityPanelModel | None = None
     door_panel: CreatorDoorPanelModel | None = None
     last_action_message: str = ""
     last_action_ok: bool | None = None
@@ -71,6 +73,7 @@ def build_creator_overlay_model(snapshot: CreatorModeSnapshot) -> CreatorOverlay
         proposal_handoff=snapshot.proposal_handoff,
         movement_panel=snapshot.movement_panel,
         rename_panel=snapshot.rename_panel,
+        opacity_panel=snapshot.opacity_panel,
         door_panel=snapshot.door_panel,
         last_action_message=str(snapshot.last_action_message or ""),
         last_action_ok=snapshot.last_action_ok,
