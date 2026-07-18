@@ -14,6 +14,17 @@ from .creator_door_panel import (
 from .creator_door_selection import build_creator_door_request_from_selection
 from .creator_door_staging import CreatorDoorStagingResult, stage_creator_door_proposal
 from .creator_door_workflow import CreatorDoorWorkflowRequest, build_creator_door_workflow
+from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
+from .creator_entity_move_panel import (
+    CreatorEntityMovePanelModel,
+    build_creator_entity_move_panel,
+    request_for_panel_action,
+)
+from .creator_entity_move_request import creator_entity_move_request_key
+from .creator_entity_move_staging import (
+    CreatorEntityMoveStagingResult,
+    stage_creator_entity_move_proposal,
+)
 from .creator_inspector import build_creator_inspector
 from .creator_proposal_accept_readiness import build_creator_proposal_accept_readiness_from_status
 from .creator_proposal_handoff import PROPOSAL_OPEN_INBOX_ACTION_ID, build_creator_proposal_handoff
@@ -44,6 +55,7 @@ class CreatorModeController:
         self._last_action_ok: bool | None = None
         self._last_staged_door_key = ""
         self._last_staged_proposal_id = ""
+        self._staged_move_keys: dict[str, str] = {}
 
     @property
     def last_action_message(self) -> str:
@@ -106,7 +118,12 @@ class CreatorModeController:
         self,
         x: float,
         y: float,
-    ) -> CreatorDoorStagingResult | CreatorProposalInboxNavigationResult | None:
+    ) -> (
+        CreatorDoorStagingResult
+        | CreatorEntityMoveStagingResult
+        | CreatorProposalInboxNavigationResult
+        | None
+    ):
         """Handle a Creator Mode overlay click when it hits an enabled action."""
 
         if not self._active:
@@ -121,11 +138,48 @@ class CreatorModeController:
         action_id = resolve_creator_overlay_click_action(self, x, y)
         if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:
             return self.open_ai_proposals_inbox()
+        if action_id in ENTITY_MOVE_ACTION_ID_SET:
+            result = self.stage_selected_entity_move(action_id)
+            self._store_move_staging_result(result)
+            return result
         if action_id != _DOOR_STAGE_PROPOSAL_ACTION:
             return None
 
         result = self.stage_selected_door_proposal()
         self._store_staging_result(result)
+        return result
+
+    def stage_selected_entity_move(self, action_id: str) -> CreatorEntityMoveStagingResult:
+        """Stage a one-grid-step movement proposal for the current selection."""
+
+        selected = self._selected_entity_snapshot()
+        request = request_for_panel_action(
+            selected,
+            action_id=action_id,
+            source_scene=self._current_scene_path(),
+            grid_step=self._editor_grid_step(),
+        )
+        if not request.ok:
+            return CreatorEntityMoveStagingResult(
+                ok=False,
+                errors=(request.reason or "Movement is unavailable.",),
+            )
+
+        request_key = creator_entity_move_request_key(request)
+        staged_id = str(self._staged_move_keys.get(request_key) or "").strip()
+        if staged_id and self._proposal_still_pending(staged_id):
+            return CreatorEntityMoveStagingResult(
+                ok=False,
+                errors=(f"Movement proposal already staged: {staged_id}",),
+            )
+        if staged_id:
+            self._staged_move_keys.pop(request_key, None)
+
+        result = stage_creator_entity_move_proposal(request, self._proposal_bridge())
+        if result.ok:
+            proposal_id = str(result.proposal_id or "").strip()
+            if proposal_id:
+                self._staged_move_keys[request_key] = proposal_id
         return result
 
     def open_ai_proposals_inbox(self) -> CreatorProposalInboxNavigationResult:
@@ -257,6 +311,8 @@ class CreatorModeController:
     def build_snapshot(self) -> CreatorModeSnapshot:
         selected = self._selected_entity_snapshot()
         inspector = build_creator_inspector(selected)
+        self._prune_stale_move_keys()
+        movement_panel = self._movement_panel(selected)
         door_panel = self._door_panel(selected)
         proposal_status = build_creator_proposal_status(self._proposal_bridge())
         return CreatorModeSnapshot(
@@ -265,6 +321,7 @@ class CreatorModeController:
             selected_title=inspector.title,
             selected_summary=inspector.summary,
             inspector=inspector,
+            movement_panel=movement_panel,
             door_panel=door_panel,
             proposal_status=proposal_status,
             proposal_accept_readiness=build_creator_proposal_accept_readiness_from_status(
@@ -283,6 +340,7 @@ class CreatorModeController:
         self._last_action_ok = None
         self._last_staged_door_key = ""
         self._last_staged_proposal_id = ""
+        self._staged_move_keys.clear()
 
     def _store_staging_result(self, result: CreatorDoorStagingResult) -> None:
         if result.ok:
@@ -295,6 +353,20 @@ class CreatorModeController:
             return
 
         message = result.errors[0] if result.errors else "Failed to stage door proposal."
+        self._last_action_message = str(message)
+        self._last_action_ok = False
+
+    def _store_move_staging_result(self, result: CreatorEntityMoveStagingResult) -> None:
+        if result.ok:
+            proposal_id = str(result.proposal_id or "").strip()
+            if proposal_id:
+                self._last_action_message = f"Movement proposal staged: {proposal_id}"
+            else:
+                self._last_action_message = "Movement proposal staged."
+            self._last_action_ok = True
+            return
+
+        message = result.errors[0] if result.errors else "Failed to stage movement proposal."
         self._last_action_message = str(message)
         self._last_action_ok = False
 
@@ -319,6 +391,18 @@ class CreatorModeController:
 
         return None
 
+    def _movement_panel(
+        self,
+        selected: Mapping[str, Any] | None,
+    ) -> CreatorEntityMovePanelModel:
+        return build_creator_entity_move_panel(
+            selected,
+            source_scene=self._current_scene_path(),
+            grid_step=self._editor_grid_step(),
+            bridge=self._proposal_bridge(),
+            duplicate_keys=dict(self._staged_move_keys),
+        )
+
     def _door_panel(self, selected: Mapping[str, Any] | None) -> Any:
         request = build_creator_door_request_from_selection(
             selected,
@@ -329,6 +413,51 @@ class CreatorModeController:
         workflow = build_creator_door_workflow(request)
         panel = build_creator_door_panel(workflow, self._proposal_bridge())
         return self._apply_duplicate_stage_guard_to_panel(panel, request)
+
+    def _editor_grid_step(self) -> float:
+        editor = self._editor
+        if editor is None:
+            return 0.0
+        try:
+            return float(getattr(editor, "grid_size", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _proposal_still_pending(self, proposal_id: str) -> bool:
+        target = str(proposal_id or "").strip()
+        if not target:
+            return False
+        for item in self._pending_proposals():
+            if isinstance(item, Mapping):
+                item_id = str(item.get("proposal_id") or item.get("id") or "").strip()
+            else:
+                item_id = str(
+                    getattr(item, "proposal_id", None) or getattr(item, "id", None) or ""
+                ).strip()
+            if item_id == target:
+                return True
+        return False
+
+    def _prune_stale_move_keys(self) -> None:
+        if not self._staged_move_keys:
+            return
+        pending_ids: set[str] = set()
+        for item in self._pending_proposals():
+            if isinstance(item, Mapping):
+                item_id = str(item.get("proposal_id") or item.get("id") or "").strip()
+            else:
+                item_id = str(
+                    getattr(item, "proposal_id", None) or getattr(item, "id", None) or ""
+                ).strip()
+            if item_id:
+                pending_ids.add(item_id)
+        stale = [
+            key
+            for key, proposal_id in self._staged_move_keys.items()
+            if proposal_id not in pending_ids
+        ]
+        for key in stale:
+            self._staged_move_keys.pop(key, None)
 
     def _door_request_key(self, request: CreatorDoorWorkflowRequest) -> str:
         """Stable key for duplicate-stage detection."""

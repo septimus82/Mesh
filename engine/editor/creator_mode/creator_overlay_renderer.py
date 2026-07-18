@@ -14,6 +14,7 @@ from engine.ui_overlays.common import (
     truncate_text_to_char_limit,
 )
 
+from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
 from .creator_overlay import CreatorOverlayModel, build_creator_overlay_model
 from .creator_proposal_handoff import PROPOSAL_OPEN_INBOX_ACTION_ID
 
@@ -31,9 +32,10 @@ MAX_SUMMARY_CHARS = 58
 MAX_FIELD_CHARS = 64
 MAX_WARNING_CHARS = 92
 MAX_PANEL_CHARS = 68
-MAX_RENDERED_FIELDS = 8
+MAX_RENDERED_FIELDS = 6
 MAX_RENDERED_WARNINGS = 2
-MAX_RENDERED_PANEL_LINES = 16
+MAX_RENDERED_PANEL_LINES = 20
+MAX_RENDERED_MOVE_LINES = 7
 MAX_RENDERED_PROPOSAL_ROWS = 3
 
 
@@ -294,7 +296,23 @@ def build_creator_overlay_draw_commands(
         )
     )
     y -= 26.0
-    for label, value, missing in model.inspector_fields[:MAX_RENDERED_FIELDS]:
+
+    # Match main's identity → inspector → door order so Destination Map /
+    # path truncation stay visible, then append movement when space remains.
+    # When movement is available alongside a door, compact door section bodies.
+    field_budget = MAX_RENDERED_FIELDS
+    move_available = bool(
+        model.movement_panel is not None
+        and getattr(model.movement_panel, "available", False)
+    )
+    if move_available and model.door_panel is not None:
+        field_budget = min(field_budget, 2)
+    elif model.door_panel is not None:
+        field_budget = MAX_RENDERED_FIELDS
+    elif model.movement_panel is not None:
+        field_budget = min(field_budget, 2)
+
+    for label, value, missing in model.inspector_fields[:field_budget]:
         if y <= bottom_h + 6.0:
             break
         color = (160, 166, 176) if missing else (220, 225, 232)
@@ -314,11 +332,51 @@ def build_creator_overlay_draw_commands(
         )
         y -= 18.0
 
+    compact_door = bool(model.door_panel is not None and move_available)
     if model.door_panel is not None and y > bottom_h + 24.0:
         y -= 6.0
-        commands.extend(
-            _door_panel_text_commands(model, right_x, y, bottom_h, right_text_width)
+        door_commands = _door_panel_text_commands(
+            model,
+            right_x,
+            y,
+            bottom_h,
+            right_text_width,
+            compact=compact_door,
         )
+        commands.extend(door_commands)
+        if door_commands:
+            last = door_commands[-1]
+            y = float(last.y) - _ACTION_LINE_HEIGHT
+
+    if model.movement_panel is not None and y > bottom_h + 24.0:
+        y -= 4.0
+        move_commands, y = _movement_panel_text_commands(
+            model,
+            right_x,
+            y,
+            bottom_h,
+            right_text_width,
+        )
+        commands.extend(move_commands)
+    elif (
+        model.door_panel is None
+        and model.movement_panel is None
+        and model.last_action_message
+        and y > bottom_h + 24.0
+    ):
+        color = (170, 218, 154) if model.last_action_ok else (245, 145, 145)
+        commands.append(
+            _text(
+                model.last_action_message,
+                "right",
+                right_x,
+                y,
+                10,
+                color,
+                _panel_char_limit(right_text_width, 10, MAX_PANEL_CHARS),
+            )
+        )
+        y -= _ACTION_LINE_HEIGHT
 
     bottom_lines = model.warnings or ("No problems shown in Creator Mode.",)
     commands.append(
@@ -497,12 +555,88 @@ def _dry_run_label(value: Any) -> str:
     return "Unknown"
 
 
+def _movement_panel_text_commands(
+    model: CreatorOverlayModel,
+    x: float,
+    start_y: float,
+    bottom_h: float,
+    text_width: float,
+) -> tuple[tuple[CreatorOverlayDrawCommand, ...], float]:
+    panel = model.movement_panel
+    if panel is None:
+        return (), start_y
+
+    commands: list[CreatorOverlayDrawCommand] = []
+    y = start_y
+    rendered = 0
+
+    def add(
+        text: object,
+        font_size: int = 11,
+        color: tuple[int, ...] = (220, 225, 232),
+        *,
+        action_id: str = "",
+    ) -> None:
+        nonlocal y, rendered
+        if rendered >= MAX_RENDERED_MOVE_LINES or y <= bottom_h + 6.0:
+            return
+        line_text = str(text)
+        max_chars = _panel_char_limit(text_width, font_size, MAX_PANEL_CHARS)
+        if action_id:
+            commands.append(
+                _clickable_text(
+                    line_text,
+                    "right",
+                    x,
+                    y,
+                    font_size,
+                    color,
+                    max_chars,
+                    action_id=action_id,
+                )
+            )
+        else:
+            commands.append(_text(line_text, "right", x, y, font_size, color, max_chars))
+        y -= _ACTION_LINE_HEIGHT
+        rendered += 1
+
+    add(panel.title, 12, (255, 255, 255))
+    if not panel.available:
+        # Keep unavailable movement to a short explanation so door/inspector
+        # content is not crowded out by four disabled action lines.
+        if panel.reason:
+            add(panel.reason, 10, (238, 190, 120))
+        return tuple(commands), y
+    add(
+        f"{panel.current_position_text} | {panel.grid_step_text}",
+        10,
+        (190, 198, 208),
+    )
+    for action in panel.actions:
+        state = "Ready" if action.enabled else "Disabled"
+        detail = f"[{state}] {action.label}"
+        if action.reason:
+            detail = f"{detail} - {action.reason}"
+        clickable_id = ""
+        if action.enabled and action.action_id in ENTITY_MOVE_ACTION_ID_SET:
+            clickable_id = action.action_id
+        add(
+            detail,
+            10,
+            (170, 218, 154) if action.enabled else (160, 166, 176),
+            action_id=clickable_id,
+        )
+    return tuple(commands), y
+
+
 def _door_panel_text_commands(
     model: CreatorOverlayModel,
     x: float,
     start_y: float,
     bottom_h: float,
     text_width: float,
+    *,
+    compact: bool = False,
 ) -> tuple[CreatorOverlayDrawCommand, ...]:
     panel = model.door_panel
     if panel is None:
@@ -544,10 +678,7 @@ def _door_panel_text_commands(
 
     add(panel.title, 12, (255, 255, 255))
     add(panel.summary, 10, (190, 198, 208))
-    for section in panel.sections:
-        add(section.title, 11, (230, 234, 240))
-        for line in section.lines:
-            add(f"- {line.text}", 10, _severity_color(line.severity))
+    # Keep Stage Proposal reachable even when section content is dense.
     for action in panel.actions:
         state = "Ready" if action.enabled else "Disabled"
         detail = f"[{state}] {action.label}"
@@ -562,9 +693,17 @@ def _door_panel_text_commands(
             (170, 218, 154) if action.enabled else (160, 166, 176),
             action_id=clickable_id,
         )
+    # Show staging feedback immediately after the action so it is not clipped
+    # by dense section bodies or a competing movement panel.
     if model.last_action_message:
         color = (170, 218, 154) if model.last_action_ok else (245, 145, 145)
         add(model.last_action_message, 10, color)
+    for section in panel.sections:
+        add(section.title, 11, (230, 234, 240))
+        if compact:
+            continue
+        for line in section.lines:
+            add(f"- {line.text}", 10, _severity_color(line.severity))
     return tuple(commands)
 
 

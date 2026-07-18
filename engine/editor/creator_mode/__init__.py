@@ -35,6 +35,31 @@ from .creator_door_workflow import (
     build_creator_door_workflow,
     build_creator_door_workflow_from_plan_request,
 )
+from .creator_entity_move_actions import (
+    ENTITY_MOVE_ACTION_IDS,
+    ENTITY_MOVE_DOWN_ACTION_ID,
+    ENTITY_MOVE_LEFT_ACTION_ID,
+    ENTITY_MOVE_RIGHT_ACTION_ID,
+    ENTITY_MOVE_UP_ACTION_ID,
+)
+from .creator_entity_move_live_ops import (
+    CreatorEntityMoveLiveOpsResult,
+    build_creator_entity_move_live_ops,
+)
+from .creator_entity_move_panel import (
+    CreatorEntityMovePanelAction,
+    CreatorEntityMovePanelModel,
+    build_creator_entity_move_panel,
+)
+from .creator_entity_move_request import (
+    CreatorEntityMoveRequest,
+    build_creator_entity_move_request,
+    resolve_entity_move_target,
+)
+from .creator_entity_move_staging import (
+    CreatorEntityMoveStagingResult,
+    stage_creator_entity_move_proposal,
+)
 from .creator_inspector import CreatorInspectorField, CreatorInspectorModel, build_creator_inspector
 from .creator_mode_controller import CreatorModeController, CreatorProposalInboxNavigationResult
 from .creator_overlay import CreatorOverlayLine, CreatorOverlayModel, build_creator_overlay_model
@@ -84,6 +109,11 @@ __all__ = [
     "CreatorDoorStagingResult",
     "CreatorDoorWorkflowModel",
     "CreatorDoorWorkflowRequest",
+    "CreatorEntityMoveLiveOpsResult",
+    "CreatorEntityMovePanelAction",
+    "CreatorEntityMovePanelModel",
+    "CreatorEntityMoveRequest",
+    "CreatorEntityMoveStagingResult",
     "CreatorModeController",
     "CreatorModeSnapshot",
     "CreatorOverlayLine",
@@ -97,6 +127,11 @@ __all__ = [
     "CreatorProposalReviewDetailsModel",
     "CreatorProposalReviewRow",
     "CreatorProposalStatusModel",
+    "ENTITY_MOVE_ACTION_IDS",
+    "ENTITY_MOVE_DOWN_ACTION_ID",
+    "ENTITY_MOVE_LEFT_ACTION_ID",
+    "ENTITY_MOVE_RIGHT_ACTION_ID",
+    "ENTITY_MOVE_UP_ACTION_ID",
     "PROPOSAL_OPEN_INBOX_ACTION_ID",
     "build_creator_door_plan",
     "build_creator_door_live_ops",
@@ -106,6 +141,9 @@ __all__ = [
     "build_creator_door_staging_readiness",
     "build_creator_door_workflow",
     "build_creator_door_workflow_from_plan_request",
+    "build_creator_entity_move_live_ops",
+    "build_creator_entity_move_panel",
+    "build_creator_entity_move_request",
     "build_creator_inspector",
     "build_creator_overlay_model",
     "build_creator_proposal_accept_readiness",
@@ -116,6 +154,8 @@ __all__ = [
     "build_creator_proposal_status",
     "classify_entity_snapshot",
     "friendly_engine_term",
+    "resolve_entity_move_target",
     "stage_creator_door_proposal",
+    "stage_creator_entity_move_proposal",
     "unavailable_creator_proposal_status",
 ]
