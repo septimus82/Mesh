@@ -14,6 +14,17 @@ from .creator_door_panel import (
 from .creator_door_selection import build_creator_door_request_from_selection
 from .creator_door_staging import CreatorDoorStagingResult, stage_creator_door_proposal
 from .creator_door_workflow import CreatorDoorWorkflowRequest, build_creator_door_workflow
+from .creator_entity_duplicate_panel import (
+    ENTITY_DUPLICATE_STAGE_ACTION_ID,
+    CreatorEntityDuplicatePanelModel,
+    build_creator_entity_duplicate_panel,
+    request_for_duplicate_panel,
+)
+from .creator_entity_duplicate_request import creator_entity_duplicate_request_key
+from .creator_entity_duplicate_staging import (
+    CreatorEntityDuplicateStagingResult,
+    stage_creator_entity_duplicate_proposal,
+)
 from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
 from .creator_entity_move_panel import (
     CreatorEntityMovePanelModel,
@@ -90,6 +101,7 @@ class CreatorModeController:
         self._staged_move_keys: dict[str, str] = {}
         self._staged_rename_keys: dict[str, str] = {}
         self._staged_opacity_keys: dict[str, str] = {}
+        self._staged_duplicate_keys: dict[str, str] = {}
         self._rename_draft = ""
         self._rename_selection_key = ""
         self._rename_text_focused = False
@@ -171,7 +183,9 @@ class CreatorModeController:
     ) -> (
         CreatorDoorStagingResult
         | CreatorEntityMoveStagingResult
+        | CreatorEntityDuplicateStagingResult
         | CreatorEntityOpacityStagingResult
+        | CreatorEntityRenameStagingResult
         | CreatorProposalInboxNavigationResult
         | None
     ):
@@ -214,6 +228,10 @@ class CreatorModeController:
             result = self.stage_selected_entity_opacity()
             self._store_opacity_staging_result(result)
             return result
+        if action_id == ENTITY_DUPLICATE_STAGE_ACTION_ID:
+            result = self.stage_selected_entity_duplicate()
+            self._store_duplicate_staging_result(result)
+            return result
         if action_id in ENTITY_MOVE_ACTION_ID_SET:
             result = self.stage_selected_entity_move(action_id)
             self._store_move_staging_result(result)
@@ -223,6 +241,39 @@ class CreatorModeController:
 
         result = self.stage_selected_door_proposal()
         self._store_staging_result(result)
+        return result
+
+    def stage_selected_entity_duplicate(self) -> CreatorEntityDuplicateStagingResult:
+        """Stage an authored-entity duplicate proposal for the current selection."""
+
+        selected = self._selected_entity_snapshot()
+        request = request_for_duplicate_panel(
+            selected,
+            source_scene=self._current_scene_path(),
+            authored_scene=self._authored_scene_payload(),
+            duplicate_offset=self._duplicate_offset(),
+        )
+        if not request.ok:
+            return CreatorEntityDuplicateStagingResult(
+                ok=False,
+                errors=(request.reason or "Duplicate is unavailable.",),
+            )
+
+        request_key = creator_entity_duplicate_request_key(request)
+        staged_id = str(self._staged_duplicate_keys.get(request_key) or "").strip()
+        if staged_id and self._proposal_still_pending(staged_id):
+            return CreatorEntityDuplicateStagingResult(
+                ok=False,
+                errors=(f"Duplicate proposal already staged: {staged_id}",),
+            )
+        if staged_id:
+            self._staged_duplicate_keys.pop(request_key, None)
+
+        result = stage_creator_entity_duplicate_proposal(request, self._proposal_bridge())
+        if result.ok:
+            proposal_id = str(result.proposal_id or "").strip()
+            if proposal_id:
+                self._staged_duplicate_keys[request_key] = proposal_id
         return result
 
     def stage_selected_entity_move(self, action_id: str) -> CreatorEntityMoveStagingResult:
@@ -495,9 +546,11 @@ class CreatorModeController:
         self._prune_stale_move_keys()
         self._prune_stale_rename_keys()
         self._prune_stale_opacity_keys()
+        self._prune_stale_duplicate_keys()
         movement_panel = self._movement_panel(selected)
         rename_panel = self._rename_panel(selected)
         opacity_panel = self._opacity_panel(selected)
+        duplicate_panel = self._duplicate_panel(selected)
         door_panel = self._door_panel(selected)
         proposal_status = build_creator_proposal_status(self._proposal_bridge())
         return CreatorModeSnapshot(
@@ -509,6 +562,7 @@ class CreatorModeController:
             movement_panel=movement_panel,
             rename_panel=rename_panel,
             opacity_panel=opacity_panel,
+            duplicate_panel=duplicate_panel,
             door_panel=door_panel,
             proposal_status=proposal_status,
             proposal_accept_readiness=build_creator_proposal_accept_readiness_from_status(
@@ -530,6 +584,7 @@ class CreatorModeController:
         self._staged_move_keys.clear()
         self._staged_rename_keys.clear()
         self._staged_opacity_keys.clear()
+        self._staged_duplicate_keys.clear()
         self._rename_draft = ""
         self._rename_selection_key = ""
         self._rename_text_focused = False
@@ -548,6 +603,23 @@ class CreatorModeController:
             return
 
         message = result.errors[0] if result.errors else "Failed to stage door proposal."
+        self._last_action_message = str(message)
+        self._last_action_ok = False
+
+    def _store_duplicate_staging_result(
+        self,
+        result: CreatorEntityDuplicateStagingResult,
+    ) -> None:
+        if result.ok:
+            proposal_id = str(result.proposal_id or "").strip()
+            if proposal_id:
+                self._last_action_message = f"Duplicate proposal staged: {proposal_id}"
+            else:
+                self._last_action_message = "Duplicate proposal staged."
+            self._last_action_ok = True
+            return
+
+        message = result.errors[0] if result.errors else "Failed to stage duplicate proposal."
         self._last_action_message = str(message)
         self._last_action_ok = False
 
@@ -654,6 +726,19 @@ class CreatorModeController:
             duplicate_keys=dict(self._staged_opacity_keys),
         )
 
+    def _duplicate_panel(
+        self,
+        selected: Mapping[str, Any] | None,
+    ) -> CreatorEntityDuplicatePanelModel:
+        return build_creator_entity_duplicate_panel(
+            selected,
+            source_scene=self._current_scene_path(),
+            authored_scene=self._authored_scene_payload(),
+            duplicate_offset=self._duplicate_offset(),
+            bridge=self._proposal_bridge(),
+            duplicate_keys=dict(self._staged_duplicate_keys),
+        )
+
     def _door_panel(self, selected: Mapping[str, Any] | None) -> Any:
         request = build_creator_door_request_from_selection(
             selected,
@@ -733,6 +818,18 @@ class CreatorModeController:
         ]
         for key in stale:
             self._staged_opacity_keys.pop(key, None)
+
+    def _prune_stale_duplicate_keys(self) -> None:
+        if not self._staged_duplicate_keys:
+            return
+        pending_ids = self._pending_proposal_ids()
+        stale = [
+            key
+            for key, proposal_id in self._staged_duplicate_keys.items()
+            if proposal_id not in pending_ids
+        ]
+        for key in stale:
+            self._staged_duplicate_keys.pop(key, None)
 
     def _pending_proposal_ids(self) -> set[str]:
         pending_ids: set[str] = set()
@@ -848,6 +945,28 @@ class CreatorModeController:
     def _current_scene_path(self) -> str:
         scene_controller = getattr(getattr(self._editor, "window", None), "scene_controller", None)
         return str(getattr(scene_controller, "current_scene_path", "") or "")
+
+    def _authored_scene_payload(self) -> Mapping[str, Any] | None:
+        scene_controller = getattr(getattr(self._editor, "window", None), "scene_controller", None)
+        getter = getattr(scene_controller, "get_authored_scene_payload", None)
+        if callable(getter):
+            payload = getter()
+            if isinstance(payload, Mapping):
+                return payload
+        for attr in ("_loaded_scene_source_data", "_loaded_scene_data"):
+            payload = getattr(scene_controller, attr, None)
+            if isinstance(payload, Mapping):
+                return payload
+        return None
+
+    def _duplicate_offset(self) -> tuple[float, float]:
+        try:
+            from engine.entity_select_mode import get_duplicate_offset  # noqa: PLC0415
+
+            dx, dy = get_duplicate_offset(getattr(self._editor, "window", None))
+            return float(dx), float(dy)
+        except (TypeError, ValueError, AttributeError):
+            return 16.0, 16.0
 
     def _proposal_bridge(self) -> object:
         return getattr(self._editor, "live_bridge", None)

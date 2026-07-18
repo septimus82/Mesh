@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .creator_door_panel import CreatorDoorPanelModel
+from .creator_entity_duplicate_panel import CreatorEntityDuplicatePanelModel
 from .creator_entity_move_panel import CreatorEntityMovePanelModel
 from .creator_entity_opacity_panel import CreatorEntityOpacityPanelModel
 from .creator_entity_rename_panel import CreatorEntityRenamePanelModel
@@ -49,6 +50,7 @@ class CreatorModeSnapshot:
     movement_panel: CreatorEntityMovePanelModel | None = None
     rename_panel: CreatorEntityRenamePanelModel | None = None
     opacity_panel: CreatorEntityOpacityPanelModel | None = None
+    duplicate_panel: CreatorEntityDuplicatePanelModel | None = None
     door_panel: CreatorDoorPanelModel | None = None
     proposal_status: CreatorProposalStatusModel = field(
         default_factory=unavailable_creator_proposal_status

@@ -6,6 +6,7 @@ from typing import Any
 
 import engine.optional_arcade as optional_arcade
 
+from .creator_entity_duplicate_panel import ENTITY_DUPLICATE_STAGE_ACTION_ID
 from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
 from .creator_entity_opacity_panel import (
     ENTITY_OPACITY_DRAFT_ACTION_ID,
@@ -133,6 +134,18 @@ def entity_opacity_action_enabled(model: Any, action_id: str) -> bool:
     return False
 
 
+def entity_duplicate_action_enabled(model: Any) -> bool:
+    """True when the duplicate panel exposes an enabled Stage action."""
+
+    panel = getattr(model, "duplicate_panel", None)
+    action = getattr(panel, "action", None) if panel is not None else None
+    return (
+        action is not None
+        and str(getattr(action, "action_id", "") or "") == ENTITY_DUPLICATE_STAGE_ACTION_ID
+        and bool(getattr(action, "enabled", False))
+    )
+
+
 def resolve_creator_overlay_click_action(
     creator: Any,
     x: float,
@@ -176,6 +189,10 @@ def resolve_creator_overlay_click_action(
         action_id or ""
     ).startswith(ENTITY_OPACITY_PRESET_ACTION_PREFIX):
         if not entity_opacity_action_enabled(model, action_id):
+            return None
+        return action_id
+    if action_id == ENTITY_DUPLICATE_STAGE_ACTION_ID:
+        if not entity_duplicate_action_enabled(model):
             return None
         return action_id
     if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:
