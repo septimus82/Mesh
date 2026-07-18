@@ -50,6 +50,9 @@ class EditorCommandDispatchController:
         elif ctype == "SetEntityDisplayLabel":
             self._apply_entity_display_label_command(cmd, use_before=True)
 
+        elif ctype == "SetEntityAlpha":
+            self._apply_entity_alpha_command(cmd, use_before=True)
+
         elif ctype == "AddEntity":
             entity = self.editor._find_entity_by_name(entity_name)
             if entity:
@@ -280,6 +283,9 @@ class EditorCommandDispatchController:
 
         elif ctype == "SetEntityDisplayLabel":
             self._apply_entity_display_label_command(cmd, use_before=False)
+
+        elif ctype == "SetEntityAlpha":
+            self._apply_entity_alpha_command(cmd, use_before=False)
 
         elif ctype == "AddEntity":
             self._append_scene_entity(cmd.get("data"))
@@ -585,6 +591,48 @@ class EditorCommandDispatchController:
             data["name"] = value
         if hasattr(entity, "mesh_name"):
             setattr(entity, "mesh_name", value)
+        if self.editor.selected_entity is entity:
+            refresh_inspector = getattr(self.editor, "_refresh_inspector_items", None)
+            if callable(refresh_inspector):
+                refresh_inspector()
+        refresh_hierarchy = getattr(self.editor, "_refresh_hierarchy_list", None)
+        if callable(refresh_hierarchy):
+            refresh_hierarchy()
+
+    def _apply_entity_alpha_command(self, cmd: Dict[str, Any], *, use_before: bool) -> None:
+        entity_id = cmd.get("entity_id")
+        if not isinstance(entity_id, str) or not entity_id:
+            return
+        entity = self.editor._find_entity_by_id(entity_id)
+        if entity is None:
+            sc = getattr(getattr(self.editor, "window", None), "scene_controller", None)
+            for sprite in getattr(sc, "all_sprites", ()) or ():
+                data = getattr(sprite, "mesh_entity_data", None)
+                if isinstance(data, dict) and any(
+                    data.get(key) == entity_id for key in ("id", "entity_id")
+                ):
+                    entity = sprite
+                    break
+        if entity is None:
+            return
+        state = cmd.get("before" if use_before else "after")
+        if not isinstance(state, dict):
+            return
+        data = getattr(entity, "mesh_entity_data", None)
+        if not isinstance(data, dict):
+            return
+        if bool(state.get("present")):
+            try:
+                alpha = float(state.get("value"))
+            except (TypeError, ValueError):
+                return
+            data["alpha"] = alpha
+            if hasattr(entity, "alpha"):
+                setattr(entity, "alpha", int(round(alpha * 255.0)))
+        else:
+            data.pop("alpha", None)
+            if hasattr(entity, "alpha"):
+                setattr(entity, "alpha", 255)
         if self.editor.selected_entity is entity:
             refresh_inspector = getattr(self.editor, "_refresh_inspector_items", None)
             if callable(refresh_inspector):

@@ -36,6 +36,8 @@ class EditorLiveOpsController:
             return self._move_entity(op, push_undo=push_undo)
         if op_type == "set_entity_display_label":
             return self._set_entity_display_label(op, push_undo=push_undo)
+        if op_type == "set_entity_alpha":
+            return self._set_entity_alpha(op, push_undo=push_undo)
         return _result(False, f"Unsupported live operation type '{op_type}'")
 
     def stage_proposal(self, ops: list[dict[str, Any]]) -> LiveOpProposal:
@@ -280,6 +282,25 @@ class EditorLiveOpsController:
                 )
                 continue
 
+            if op_type == "set_entity_alpha":
+                entity, alpha, warning = self._dry_run_set_entity_alpha(op, staged_scene)
+                if warning:
+                    warnings.append(f"Op {index}: {warning}")
+                    continue
+                if entity is None or alpha is None:
+                    warnings.append(f"Op {index}: failed to validate set_entity_alpha")
+                    continue
+
+                entity_id = _stable_entity_identity(entity)
+                before = _effective_entity_alpha(entity)
+                entity["alpha"] = alpha
+                affected_ids.append(entity_id)
+                preview_lines.append(
+                    f"Change '{entity_id}' opacity from {_format_alpha_percent(before)} "
+                    f"to {_format_alpha_percent(alpha)}"
+                )
+                continue
+
             if op_type:
                 warnings.append(f"Op {index}: unsupported live operation type '{op_type}'")
                 continue
@@ -504,6 +525,58 @@ class EditorLiveOpsController:
             data["command"] = command
         return _result(True, f"Renamed entity '{entity_ref}' display label", data)
 
+    def _set_entity_alpha(self, op: dict[str, Any], *, push_undo: bool = True) -> dict[str, Any]:
+        scene_mismatch = self._scene_mismatch_message(op)
+        if scene_mismatch:
+            return _result(False, scene_mismatch)
+
+        entity_ref = _op_entity_ref(op)
+        if not entity_ref:
+            return _result(False, "set_entity_alpha requires entity_id")
+        field = str(op.get("field") or "alpha").strip()
+        if field != "alpha":
+            return _result(False, "set_entity_alpha may only update alpha")
+        alpha = _coerce_valid_alpha(op.get("alpha"))
+        if alpha is None:
+            return _result(False, "set_entity_alpha requires alpha from 0.0 to 1.0")
+
+        entity = self._find_live_entity_by_stable_id(entity_ref)
+        if entity is None:
+            return _result(False, f"Entity '{entity_ref}' not found")
+        entity_data = self._editor.window.scene_controller._ensure_entity_data_dict(entity)
+        if _stable_entity_identity(entity_data) != entity_ref:
+            return _result(False, f"Entity '{entity_ref}' stable identity cannot be resolved")
+
+        current_state = _entity_alpha_state(entity_data)
+        if current_state is None:
+            return _result(False, f"Entity '{entity_ref}' opacity value is malformed")
+        expected = op.get("expected_current_alpha")
+        if not _alpha_state_matches_expected(current_state, expected):
+            return _result(False, f"Entity '{entity_ref}' opacity changed; regenerate proposal")
+        if current_state["effective"] == alpha:
+            return _result(False, "set_entity_alpha alpha is unchanged")
+
+        command = {
+            "type": "SetEntityAlpha",
+            "entity_id": entity_ref,
+            "field": "alpha",
+            "before": copy.deepcopy(current_state),
+            "after": {"present": True, "value": alpha, "effective": alpha},
+        }
+        self._apply_entity_alpha(entity, alpha)
+        if push_undo:
+            self._editor._push_command(command)
+        self._refresh_editor_surfaces()
+        data: dict[str, Any] = {
+            "entity_id": entity_ref,
+            "field": "alpha",
+            "before": copy.deepcopy(current_state),
+            "after": {"present": True, "value": alpha, "effective": alpha},
+        }
+        if not push_undo:
+            data["command"] = command
+        return _result(True, f"Changed entity '{entity_ref}' opacity", data)
+
     def _dry_run_set_behaviour_params(
         self, op: dict[str, Any], staged_scene: dict[str, Any]
     ) -> tuple[dict[str, Any] | None, str | None, dict[str, Any] | None, str | None]:
@@ -590,6 +663,36 @@ class EditorLiveOpsController:
             return None, None, "set_entity_display_label label contains unsupported characters"
         return entity, proposed, None
 
+    def _dry_run_set_entity_alpha(
+        self, op: dict[str, Any], staged_scene: dict[str, Any]
+    ) -> tuple[dict[str, Any] | None, float | None, str | None]:
+        scene_mismatch = self._scene_mismatch_message(op)
+        if scene_mismatch:
+            return None, None, scene_mismatch
+        entity_ref = _op_entity_ref(op)
+        if not entity_ref:
+            return None, None, "set_entity_alpha requires entity_id"
+        field = str(op.get("field") or "alpha").strip()
+        if field != "alpha":
+            return None, None, "set_entity_alpha may only update alpha"
+        entity = _find_scene_entity_by_stable_id(staged_scene, entity_ref)
+        if entity is None:
+            return None, None, f"Entity '{entity_ref}' not found"
+        if _stable_entity_identity(entity) != entity_ref:
+            return None, None, f"Entity '{entity_ref}' stable identity cannot be resolved"
+        current_state = _entity_alpha_state(entity)
+        if current_state is None:
+            return None, None, f"Entity '{entity_ref}' opacity value is malformed"
+        expected = op.get("expected_current_alpha")
+        if not _alpha_state_matches_expected(current_state, expected):
+            return None, None, f"Entity '{entity_ref}' opacity changed; regenerate proposal"
+        alpha = _coerce_valid_alpha(op.get("alpha"))
+        if alpha is None:
+            return None, None, "set_entity_alpha requires alpha from 0.0 to 1.0"
+        if current_state["effective"] == alpha:
+            return None, None, "set_entity_alpha alpha is unchanged"
+        return entity, alpha, None
+
     def _scene_mismatch_message(self, op: dict[str, Any]) -> str:
         scene_controller = getattr(self._editor.window, "scene_controller", None)
         current_scene = str(getattr(scene_controller, "current_scene_path", "") or "")
@@ -627,6 +730,12 @@ class EditorLiveOpsController:
         data["name"] = label
         if hasattr(entity, "mesh_name"):
             setattr(entity, "mesh_name", label)
+
+    def _apply_entity_alpha(self, entity: Any, alpha: float) -> None:
+        data = self._editor.window.scene_controller._ensure_entity_data_dict(entity)
+        data["alpha"] = float(alpha)
+        if hasattr(entity, "alpha"):
+            setattr(entity, "alpha", int(round(float(alpha) * 255.0)))
 
     def _revert_applied_children(self, child_commands: list[dict[str, Any]]) -> None:
         dispatcher = getattr(self._editor, "command_dispatch", None)
@@ -738,6 +847,57 @@ def _unsupported_label_control_character(ch: str) -> bool:
     if ch in ("\t", "\n", "\r"):
         return True
     return ord(ch) < 32 or ord(ch) == 127
+
+
+def _coerce_valid_alpha(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        alpha = float(value)
+    except (TypeError, ValueError):
+        return None
+    if alpha != alpha or alpha in (float("inf"), float("-inf")):
+        return None
+    if alpha < 0.0 or alpha > 1.0:
+        return None
+    return round(alpha, 6)
+
+
+def _entity_alpha_state(entity: dict[str, Any]) -> dict[str, Any] | None:
+    if "alpha" not in entity:
+        return {"present": False, "effective": 1.0}
+    alpha = _coerce_valid_alpha(entity.get("alpha"))
+    if alpha is None:
+        return None
+    return {"present": True, "value": alpha, "effective": alpha}
+
+
+def _effective_entity_alpha(entity: dict[str, Any]) -> float:
+    state = _entity_alpha_state(entity)
+    if state is None:
+        return 1.0
+    return float(state["effective"])
+
+
+def _alpha_state_matches_expected(state: dict[str, Any] | None, expected: Any) -> bool:
+    if state is None or not isinstance(expected, dict):
+        return False
+    if bool(state.get("present")) != bool(expected.get("present")):
+        return False
+    if round(float(state.get("effective", 1.0)), 6) != round(float(expected.get("effective", 1.0)), 6):
+        return False
+    if bool(state.get("present")):
+        if "value" not in expected:
+            return False
+        try:
+            return round(float(state.get("value")), 6) == round(float(expected.get("value")), 6)
+        except (TypeError, ValueError):
+            return False
+    return "value" not in expected
+
+
+def _format_alpha_percent(alpha: float) -> str:
+    return f"{int(round(float(alpha) * 100.0))}%"
 
 
 def _single_or_batch_command(commands: list[dict[str, Any]], label: str) -> dict[str, Any] | None:

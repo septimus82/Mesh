@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 from .creator_door_panel import CreatorDoorPanelModel
 from .creator_entity_move_panel import CreatorEntityMovePanelModel
+from .creator_entity_opacity_panel import CreatorEntityOpacityPanelModel
 from .creator_entity_rename_panel import CreatorEntityRenamePanelModel
 from .creator_inspector import CreatorInspectorModel, empty_creator_inspector
 from .creator_proposal_accept_readiness import (
@@ -47,6 +48,7 @@ class CreatorModeSnapshot:
     inspector: CreatorInspectorModel = field(default_factory=empty_creator_inspector)
     movement_panel: CreatorEntityMovePanelModel | None = None
     rename_panel: CreatorEntityRenamePanelModel | None = None
+    opacity_panel: CreatorEntityOpacityPanelModel | None = None
     door_panel: CreatorDoorPanelModel | None = None
     proposal_status: CreatorProposalStatusModel = field(
         default_factory=unavailable_creator_proposal_status

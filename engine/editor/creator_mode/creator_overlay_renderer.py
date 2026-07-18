@@ -15,6 +15,10 @@ from engine.ui_overlays.common import (
 )
 
 from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
+from .creator_entity_opacity_panel import (
+    ENTITY_OPACITY_DRAFT_ACTION_ID,
+    ENTITY_OPACITY_STAGE_ACTION_ID,
+)
 from .creator_entity_rename_panel import (
     ENTITY_RENAME_DRAFT_ACTION_ID,
     ENTITY_RENAME_STAGE_ACTION_ID,
@@ -41,6 +45,7 @@ MAX_RENDERED_WARNINGS = 2
 MAX_RENDERED_PANEL_LINES = 20
 MAX_RENDERED_MOVE_LINES = 7
 MAX_RENDERED_RENAME_LINES = 7
+MAX_RENDERED_OPACITY_LINES = 7
 MAX_RENDERED_PROPOSAL_ROWS = 3
 
 
@@ -338,6 +343,17 @@ def build_creator_overlay_draw_commands(
         y -= 18.0
 
     compact_door = bool(model.door_panel is not None and move_available)
+    if model.opacity_panel is not None and win_h <= 600.0 and y > bottom_h + 24.0:
+        y -= 4.0
+        opacity_commands, y = _opacity_panel_text_commands(
+            model,
+            right_x,
+            y,
+            bottom_h,
+            right_text_width,
+        )
+        commands.extend(opacity_commands)
+
     if model.door_panel is not None and y > bottom_h + 24.0:
         y -= 6.0
         door_commands = _door_panel_text_commands(
@@ -346,7 +362,7 @@ def build_creator_overlay_draw_commands(
             y,
             bottom_h,
             right_text_width,
-            compact=compact_door,
+            compact=compact_door or (model.opacity_panel is not None and win_h <= 600.0),
         )
         commands.extend(door_commands)
         if door_commands:
@@ -363,6 +379,17 @@ def build_creator_overlay_draw_commands(
             right_text_width,
         )
         commands.extend(rename_commands)
+
+    if model.opacity_panel is not None and win_h > 600.0 and y > bottom_h + 24.0:
+        y -= 4.0
+        opacity_commands, y = _opacity_panel_text_commands(
+            model,
+            right_x,
+            y,
+            bottom_h,
+            right_text_width,
+        )
+        commands.extend(opacity_commands)
 
     if model.movement_panel is not None and y > bottom_h + 24.0:
         y -= 4.0
@@ -699,7 +726,12 @@ def _rename_panel_text_commands(
     add(f"Current label: {panel.current_label}", 10, (220, 225, 232))
     draft = panel.draft_label if panel.draft_label else panel.current_label
     focus_marker = ">" if panel.focused else " "
-    add(f"Proposed label: [{focus_marker}{draft}]", 10, (220, 225, 232), action_id=ENTITY_RENAME_DRAFT_ACTION_ID)
+    draft_action_id = (
+        ""
+        if panel.action.reason == "Proposal bridge is unavailable."
+        else ENTITY_RENAME_DRAFT_ACTION_ID
+    )
+    add(f"Proposed label: [{focus_marker}{draft}]", 10, (220, 225, 232), action_id=draft_action_id)
     action = panel.action
     state = "Ready" if action.enabled else "Disabled"
     detail = f"[{state}] {action.label}"
@@ -710,6 +742,110 @@ def _rename_panel_text_commands(
         10,
         (170, 218, 154) if action.enabled else (160, 166, 176),
         action_id=ENTITY_RENAME_STAGE_ACTION_ID if action.enabled else "",
+    )
+    return tuple(commands), y
+
+
+def _opacity_panel_text_commands(
+    model: CreatorOverlayModel,
+    x: float,
+    start_y: float,
+    bottom_h: float,
+    text_width: float,
+) -> tuple[tuple[CreatorOverlayDrawCommand, ...], float]:
+    panel = model.opacity_panel
+    if panel is None:
+        return (), start_y
+
+    commands: list[CreatorOverlayDrawCommand] = []
+    y = start_y
+    rendered = 0
+
+    def add(
+        text: object,
+        font_size: int = 11,
+        color: tuple[int, ...] = (220, 225, 232),
+        *,
+        action_id: str = "",
+    ) -> None:
+        nonlocal y, rendered
+        if rendered >= MAX_RENDERED_OPACITY_LINES or y <= bottom_h + 6.0:
+            return
+        line_text = str(text)
+        max_chars = _panel_char_limit(text_width, font_size, MAX_PANEL_CHARS)
+        if action_id:
+            commands.append(
+                _clickable_text(
+                    line_text,
+                    "right",
+                    x,
+                    y,
+                    font_size,
+                    color,
+                    max_chars,
+                    action_id=action_id,
+                )
+            )
+        else:
+            commands.append(_text(line_text, "right", x, y, font_size, color, max_chars))
+        y -= _ACTION_LINE_HEIGHT
+        rendered += 1
+
+    add(panel.title, 12, (255, 255, 255))
+    if not panel.entity_id:
+        if panel.reason:
+            add(panel.reason, 10, (238, 190, 120))
+        return tuple(commands), y
+    add(f"{panel.current_percent} | Stable ID: {panel.entity_id}", 10, (190, 198, 208))
+    focus_marker = ">" if panel.focused else " "
+    add(
+        f"Proposed: [{focus_marker}{panel.draft_percent}%]",
+        10,
+        (220, 225, 232),
+        action_id=ENTITY_OPACITY_DRAFT_ACTION_ID
+        if any(bool(action.enabled) for action in panel.preset_actions)
+        else "",
+    )
+    if panel.preset_actions and rendered < MAX_RENDERED_OPACITY_LINES and y > bottom_h + 6.0:
+        preset_x = x
+        for action in panel.preset_actions:
+            label = f"[{action.label}]"
+            color = (170, 218, 154) if action.enabled else (160, 166, 176)
+            if action.enabled:
+                command = _clickable_text(
+                    label,
+                    "right",
+                    preset_x,
+                    y,
+                    10,
+                    color,
+                    _panel_char_limit(text_width, 10, MAX_PANEL_CHARS),
+                    action_id=action.action_id,
+                )
+            else:
+                command = _text(
+                    label,
+                    "right",
+                    preset_x,
+                    y,
+                    10,
+                    color,
+                    _panel_char_limit(text_width, 10, MAX_PANEL_CHARS),
+                )
+            commands.append(command)
+            preset_x += max(34.0, len(label) * 10.0 * _GLYPH_WIDTH_RATIO + 8.0)
+        y -= _ACTION_LINE_HEIGHT
+        rendered += 1
+    action = panel.action
+    state = "Ready" if action.enabled else "Disabled"
+    detail = f"[{state}] {action.label}"
+    if action.reason:
+        detail = f"{detail} - {action.reason}"
+    add(
+        detail,
+        10,
+        (170, 218, 154) if action.enabled else (160, 166, 176),
+        action_id=ENTITY_OPACITY_STAGE_ACTION_ID if action.enabled else "",
     )
     return tuple(commands), y
 
@@ -784,9 +920,9 @@ def _door_panel_text_commands(
         color = (170, 218, 154) if model.last_action_ok else (245, 145, 145)
         add(model.last_action_message, 10, color)
     for section in panel.sections:
-        add(section.title, 11, (230, 234, 240))
         if compact:
-            continue
+            break
+        add(section.title, 11, (230, 234, 240))
         for line in section.lines:
             add(f"- {line.text}", 10, _severity_color(line.severity))
     return tuple(commands)
