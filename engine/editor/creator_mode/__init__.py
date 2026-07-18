@@ -60,6 +60,27 @@ from .creator_entity_move_staging import (
     CreatorEntityMoveStagingResult,
     stage_creator_entity_move_proposal,
 )
+from .creator_entity_rename_live_ops import (
+    CreatorEntityRenameLiveOpsResult,
+    build_creator_entity_rename_live_ops,
+)
+from .creator_entity_rename_panel import (
+    ENTITY_RENAME_DRAFT_ACTION_ID,
+    ENTITY_RENAME_STAGE_ACTION_ID,
+    CreatorEntityRenamePanelAction,
+    CreatorEntityRenamePanelModel,
+    build_creator_entity_rename_panel,
+)
+from .creator_entity_rename_request import (
+    CreatorEntityRenameRequest,
+    build_creator_entity_rename_request,
+    normalize_display_label,
+    validate_display_label,
+)
+from .creator_entity_rename_staging import (
+    CreatorEntityRenameStagingResult,
+    stage_creator_entity_rename_proposal,
+)
 from .creator_inspector import CreatorInspectorField, CreatorInspectorModel, build_creator_inspector
 from .creator_mode_controller import CreatorModeController, CreatorProposalInboxNavigationResult
 from .creator_overlay import CreatorOverlayLine, CreatorOverlayModel, build_creator_overlay_model
@@ -114,6 +135,11 @@ __all__ = [
     "CreatorEntityMovePanelModel",
     "CreatorEntityMoveRequest",
     "CreatorEntityMoveStagingResult",
+    "CreatorEntityRenameLiveOpsResult",
+    "CreatorEntityRenamePanelAction",
+    "CreatorEntityRenamePanelModel",
+    "CreatorEntityRenameRequest",
+    "CreatorEntityRenameStagingResult",
     "CreatorModeController",
     "CreatorModeSnapshot",
     "CreatorOverlayLine",
@@ -132,6 +158,8 @@ __all__ = [
     "ENTITY_MOVE_LEFT_ACTION_ID",
     "ENTITY_MOVE_RIGHT_ACTION_ID",
     "ENTITY_MOVE_UP_ACTION_ID",
+    "ENTITY_RENAME_DRAFT_ACTION_ID",
+    "ENTITY_RENAME_STAGE_ACTION_ID",
     "PROPOSAL_OPEN_INBOX_ACTION_ID",
     "build_creator_door_plan",
     "build_creator_door_live_ops",
@@ -144,6 +172,9 @@ __all__ = [
     "build_creator_entity_move_live_ops",
     "build_creator_entity_move_panel",
     "build_creator_entity_move_request",
+    "build_creator_entity_rename_live_ops",
+    "build_creator_entity_rename_panel",
+    "build_creator_entity_rename_request",
     "build_creator_inspector",
     "build_creator_overlay_model",
     "build_creator_proposal_accept_readiness",
@@ -155,7 +186,10 @@ __all__ = [
     "classify_entity_snapshot",
     "friendly_engine_term",
     "resolve_entity_move_target",
+    "normalize_display_label",
     "stage_creator_door_proposal",
     "stage_creator_entity_move_proposal",
+    "stage_creator_entity_rename_proposal",
     "unavailable_creator_proposal_status",
+    "validate_display_label",
 ]

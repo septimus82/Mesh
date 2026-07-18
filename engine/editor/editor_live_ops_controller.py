@@ -34,6 +34,8 @@ class EditorLiveOpsController:
             return self._delete_entity(op, push_undo=push_undo)
         if op_type == "move_entity":
             return self._move_entity(op, push_undo=push_undo)
+        if op_type == "set_entity_display_label":
+            return self._set_entity_display_label(op, push_undo=push_undo)
         return _result(False, f"Unsupported live operation type '{op_type}'")
 
     def stage_proposal(self, ops: list[dict[str, Any]]) -> LiveOpProposal:
@@ -260,6 +262,24 @@ class EditorLiveOpsController:
                 )
                 continue
 
+            if op_type == "set_entity_display_label":
+                entity, label, warning = self._dry_run_set_entity_display_label(op, staged_scene)
+                if warning:
+                    warnings.append(f"Op {index}: {warning}")
+                    continue
+                if entity is None or label is None:
+                    warnings.append(f"Op {index}: failed to validate set_entity_display_label")
+                    continue
+
+                entity_id = _stable_entity_identity(entity)
+                before = str(entity.get("name") or "")
+                entity["name"] = label
+                affected_ids.append(entity_id)
+                preview_lines.append(
+                    f"Rename '{entity_id}' display label from '{before}' to '{label}'"
+                )
+                continue
+
             if op_type:
                 warnings.append(f"Op {index}: unsupported live operation type '{op_type}'")
                 continue
@@ -430,6 +450,60 @@ class EditorLiveOpsController:
             data["command"] = command
         return _result(True, f"Moved entity '{entity_name}'", data)
 
+    def _set_entity_display_label(self, op: dict[str, Any], *, push_undo: bool = True) -> dict[str, Any]:
+        scene_mismatch = self._scene_mismatch_message(op)
+        if scene_mismatch:
+            return _result(False, scene_mismatch)
+
+        entity_ref = _op_entity_ref(op)
+        if not entity_ref:
+            return _result(False, "set_entity_display_label requires entity_id")
+        field = str(op.get("field") or "name").strip()
+        if field != "name":
+            return _result(False, "set_entity_display_label may only update the name display label")
+        label = op.get("label")
+        if not isinstance(label, str) or not label.strip():
+            return _result(False, "set_entity_display_label requires a non-empty label")
+        proposed = label.strip()
+        if any(_unsupported_label_control_character(ch) for ch in proposed):
+            return _result(False, "set_entity_display_label label contains unsupported characters")
+
+        entity = self._find_live_entity_by_stable_id(entity_ref)
+        if entity is None:
+            return _result(False, f"Entity '{entity_ref}' not found")
+        entity_data = self._editor.window.scene_controller._ensure_entity_data_dict(entity)
+        if _stable_entity_identity(entity_data) != entity_ref:
+            return _result(False, f"Entity '{entity_ref}' stable identity cannot be resolved")
+        current = entity_data.get("name")
+        if not isinstance(current, str):
+            return _result(False, f"Entity '{entity_ref}' has no editable display label")
+        expected = op.get("expected_current_label")
+        if isinstance(expected, str) and current != expected:
+            return _result(False, f"Entity '{entity_ref}' display label changed; regenerate proposal")
+        if current == proposed:
+            return _result(False, "set_entity_display_label label is unchanged")
+
+        command = {
+            "type": "SetEntityDisplayLabel",
+            "entity_id": entity_ref,
+            "field": "name",
+            "before": current,
+            "after": proposed,
+        }
+        self._apply_entity_display_label(entity, proposed)
+        if push_undo:
+            self._editor._push_command(command)
+        self._refresh_editor_surfaces()
+        data: dict[str, Any] = {
+            "entity_id": entity_ref,
+            "field": "name",
+            "before": current,
+            "after": proposed,
+        }
+        if not push_undo:
+            data["command"] = command
+        return _result(True, f"Renamed entity '{entity_ref}' display label", data)
+
     def _dry_run_set_behaviour_params(
         self, op: dict[str, Any], staged_scene: dict[str, Any]
     ) -> tuple[dict[str, Any] | None, str | None, dict[str, Any] | None, str | None]:
@@ -485,6 +559,37 @@ class EditorLiveOpsController:
             return None, None, None, "move_entity requires numeric x and y"
         return entity, target_x, target_y, None
 
+    def _dry_run_set_entity_display_label(
+        self, op: dict[str, Any], staged_scene: dict[str, Any]
+    ) -> tuple[dict[str, Any] | None, str | None, str | None]:
+        scene_mismatch = self._scene_mismatch_message(op)
+        if scene_mismatch:
+            return None, None, scene_mismatch
+        entity_ref = _op_entity_ref(op)
+        if not entity_ref:
+            return None, None, "set_entity_display_label requires entity_id"
+        field = str(op.get("field") or "name").strip()
+        if field != "name":
+            return None, None, "set_entity_display_label may only update the name display label"
+        entity = _find_scene_entity_by_stable_id(staged_scene, entity_ref)
+        if entity is None:
+            return None, None, f"Entity '{entity_ref}' not found"
+        current = entity.get("name")
+        if not isinstance(current, str):
+            return None, None, f"Entity '{entity_ref}' has no editable display label"
+        expected = op.get("expected_current_label")
+        if isinstance(expected, str) and current != expected:
+            return None, None, f"Entity '{entity_ref}' display label changed; regenerate proposal"
+        label = op.get("label")
+        if not isinstance(label, str) or not label.strip():
+            return None, None, "set_entity_display_label requires a non-empty label"
+        proposed = label.strip()
+        if current == proposed:
+            return None, None, "set_entity_display_label label is unchanged"
+        if any(_unsupported_label_control_character(ch) for ch in proposed):
+            return None, None, "set_entity_display_label label contains unsupported characters"
+        return entity, proposed, None
+
     def _scene_mismatch_message(self, op: dict[str, Any]) -> str:
         scene_controller = getattr(self._editor.window, "scene_controller", None)
         current_scene = str(getattr(scene_controller, "current_scene_path", "") or "")
@@ -503,6 +608,25 @@ class EditorLiveOpsController:
         if callable(finder_by_name):
             return finder_by_name(entity_ref)
         return None
+
+    def _find_live_entity_by_stable_id(self, entity_ref: str) -> Any:
+        finder_by_id = getattr(self._editor, "_find_entity_by_id", None)
+        if callable(finder_by_id):
+            entity = finder_by_id(entity_ref)
+            if entity is not None:
+                return entity
+        scene_controller = getattr(self._editor.window, "scene_controller", None)
+        for sprite in getattr(scene_controller, "all_sprites", ()) or ():
+            data = getattr(sprite, "mesh_entity_data", None)
+            if isinstance(data, dict) and _stable_entity_identity(data) == entity_ref:
+                return sprite
+        return None
+
+    def _apply_entity_display_label(self, entity: Any, label: str) -> None:
+        data = self._editor.window.scene_controller._ensure_entity_data_dict(entity)
+        data["name"] = label
+        if hasattr(entity, "mesh_name"):
+            setattr(entity, "mesh_name", label)
 
     def _revert_applied_children(self, child_commands: list[dict[str, Any]]) -> None:
         dispatcher = getattr(self._editor, "command_dispatch", None)
@@ -561,6 +685,24 @@ def _entity_matches(entity: dict[str, Any], entity_ref: str) -> bool:
     return any(entity.get(key) == entity_ref for key in ("id", "entity_id", "name", "mesh_name"))
 
 
+def _find_scene_entity_by_stable_id(scene: dict[str, Any], entity_ref: str) -> dict[str, Any] | None:
+    entities = scene.get("entities")
+    if not isinstance(entities, list):
+        return None
+    for entity in entities:
+        if isinstance(entity, dict) and _stable_entity_identity(entity) == entity_ref:
+            return entity
+    return None
+
+
+def _stable_entity_identity(entity: dict[str, Any]) -> str:
+    for key in ("id", "entity_id"):
+        value = entity.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
 def _entity_identity(entity: dict[str, Any]) -> str:
     for key in ("id", "entity_id", "name", "mesh_name"):
         value = entity.get(key)
@@ -590,6 +732,12 @@ def _entity_has_behaviour(entity: dict[str, Any], behaviour_name: str) -> bool:
                 return True
     config = entity.get("behaviour_config")
     return isinstance(config, dict) and behaviour_name in config
+
+
+def _unsupported_label_control_character(ch: str) -> bool:
+    if ch in ("\t", "\n", "\r"):
+        return True
+    return ord(ch) < 32 or ord(ch) == 127
 
 
 def _single_or_batch_command(commands: list[dict[str, Any]], label: str) -> dict[str, Any] | None:

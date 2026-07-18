@@ -47,6 +47,9 @@ class EditorCommandDispatchController:
         elif ctype == "ChangeProperty":
             self.editor._update_param_internal(cmd["behaviour"], cmd["param"], cmd["before"], entity_name)
 
+        elif ctype == "SetEntityDisplayLabel":
+            self._apply_entity_display_label_command(cmd, use_before=True)
+
         elif ctype == "AddEntity":
             entity = self.editor._find_entity_by_name(entity_name)
             if entity:
@@ -274,6 +277,9 @@ class EditorCommandDispatchController:
 
         elif ctype == "ChangeProperty":
             self.editor._update_param_internal(cmd["behaviour"], cmd["param"], cmd["after"], entity_name)
+
+        elif ctype == "SetEntityDisplayLabel":
+            self._apply_entity_display_label_command(cmd, use_before=False)
 
         elif ctype == "AddEntity":
             self._append_scene_entity(cmd.get("data"))
@@ -554,6 +560,38 @@ class EditorCommandDispatchController:
         if not identity:
             return
         entities[:] = [entity for entity in entities if self._entity_identity(entity) != identity]
+
+    def _apply_entity_display_label_command(self, cmd: Dict[str, Any], *, use_before: bool) -> None:
+        entity_id = cmd.get("entity_id")
+        if not isinstance(entity_id, str) or not entity_id:
+            return
+        entity = self.editor._find_entity_by_id(entity_id)
+        if entity is None:
+            sc = getattr(getattr(self.editor, "window", None), "scene_controller", None)
+            for sprite in getattr(sc, "all_sprites", ()) or ():
+                data = getattr(sprite, "mesh_entity_data", None)
+                if isinstance(data, dict) and any(
+                    data.get(key) == entity_id for key in ("id", "entity_id")
+                ):
+                    entity = sprite
+                    break
+        if entity is None:
+            return
+        value = cmd.get("before" if use_before else "after")
+        if not isinstance(value, str):
+            return
+        data = getattr(entity, "mesh_entity_data", None)
+        if isinstance(data, dict):
+            data["name"] = value
+        if hasattr(entity, "mesh_name"):
+            setattr(entity, "mesh_name", value)
+        if self.editor.selected_entity is entity:
+            refresh_inspector = getattr(self.editor, "_refresh_inspector_items", None)
+            if callable(refresh_inspector):
+                refresh_inspector()
+        refresh_hierarchy = getattr(self.editor, "_refresh_hierarchy_list", None)
+        if callable(refresh_hierarchy):
+            refresh_hierarchy()
 
 
 def _command_children(cmd: Dict[str, Any]) -> list[Dict[str, Any]]:
