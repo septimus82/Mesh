@@ -1,5 +1,7 @@
 # Phase 38 Architecture Hardening
 
+> **Note:** This document is a historical record and reflects the project state at the time it was written.
+
 This phase hardens orchestration boundaries without changing gameplay behavior.
 
 ## What moved out of `GameWindow`
