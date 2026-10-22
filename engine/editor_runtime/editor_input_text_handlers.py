@@ -17,6 +17,12 @@ def handle_text_input(controller: EditorController, text: str) -> None:
     if panels_is_open(controller, "unsaved_confirm"):
         return
 
+    # Creator Mode draws over the editor; its focused field owns typed text.
+    creator = getattr(controller, "creator_mode", None)
+    creator_text = getattr(creator, "handle_text_input", None) if creator is not None else None
+    if callable(creator_text) and creator_text(text):
+        return
+
     if _handle_ai_chat_text(controller, text):
         return
 

@@ -168,9 +168,7 @@ def _has_text_input_focus_or_edit_mode(controller: EditorController) -> bool:
     if bool(getattr(controller, "animation_active", False)) and bool(getattr(controller, "animation_editing", False)):
         return True
     creator = getattr(controller, "creator_mode", None)
-    if creator is not None and (
-        bool(getattr(creator, "rename_text_focused", False)) or bool(getattr(creator, "person_line_focused", False))
-    ):
+    if creator is not None and bool(getattr(creator, "text_field_focused", False)):
         return True
     search = getattr(controller, "search", None)
     if search is not None and getattr(search, "is_search_focused", lambda: False)():

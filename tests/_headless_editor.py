@@ -30,7 +30,6 @@ def _default_camera(*_args, **_kwargs) -> MagicMock:
 
 @contextmanager
 def headless_editor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, template_id: str = "starter") -> Iterator:
-    import engine.editor_controller as editor_module
     import engine.game
     import engine.optional_arcade as optional_arcade
     from engine import arcade_fallback
@@ -38,9 +37,6 @@ def headless_editor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, template
     root = tmp_path / "project"
     create_project(root, "project", template_id=template_id)
     monkeypatch.setattr(optional_arcade, "arcade", arcade_fallback)
-    # The editor falls back to a process-global palette cached from the first project
-    # loaded; reset it so each test sees its own project like a fresh `mesh edit`.
-    monkeypatch.setattr(editor_module, "PREFAB_PALETTE", [])
     original_bases = engine.game.GameWindow.__bases__
     engine.game.GameWindow.__bases__ = (_DummyWindow,)
     windows: list = []

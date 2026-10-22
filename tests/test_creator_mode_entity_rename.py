@@ -226,7 +226,7 @@ def test_valid_typed_draft_enables_stage_and_click_stages_proposal() -> None:
     )
     assert controller.rename_text_focused is True
     for ch in " Box":
-        assert controller.handle_key_input(ord(ch), 0) is True
+        assert controller.handle_text_input(ch) is True
 
     commands = _commands(controller)
     stage = next(c for c in commands if c.action_id == ENTITY_RENAME_STAGE_ACTION_ID)

@@ -403,12 +403,28 @@ class CreatorModeController:
         self._staged_person_proposal_id = ""
         return ""
 
-    def handle_key_input(self, key: int, modifiers: int = 0) -> bool:
-        """Handle typing while a Creator text field is focused."""
+    @property
+    def text_field_focused(self) -> bool:
+        return self._active and (self._rename_text_focused or self._opacity_text_focused or self._person_line_focused)
 
-        if not self._active or not (
-            self._rename_text_focused or self._opacity_text_focused or self._person_line_focused
-        ):
+    def handle_text_input(self, text: str) -> bool:
+        """Insert typed characters into the focused field (window ``on_text``: Shift and OS layout applied)."""
+
+        if not self.text_field_focused:
+            return False
+        typed = "".join(ch for ch in str(text or "") if ch not in "\r\n" and ch.isprintable())
+        if self._person_line_focused:
+            self._person_line_draft += typed
+        elif self._opacity_text_focused:
+            self._opacity_draft += typed
+        else:
+            self._rename_draft += typed
+        return True
+
+    def handle_key_input(self, key: int, modifiers: int = 0) -> bool:
+        """Editing keys for the focused Creator field; characters arrive via ``handle_text_input``."""
+
+        if not self.text_field_focused:
             return False
         import engine.optional_arcade as optional_arcade  # noqa: PLC0415
 
@@ -430,20 +446,8 @@ class CreatorModeController:
             if self._opacity_text_focused:
                 self._opacity_draft = ""
             return True
-        if key in (arcade_key.ENTER, arcade_key.RETURN):
-            return True
-        if modifiers & (getattr(arcade_key, "MOD_CTRL", 0) | getattr(arcade_key, "MOD_ALT", 0)):
-            return True
-        if 32 <= int(key) <= 0x10FFFF:
-            text = chr(int(key))
-            if text.isprintable():
-                if self._person_line_focused:
-                    self._person_line_draft += text
-                elif self._opacity_text_focused:
-                    self._opacity_draft += text
-                else:
-                    self._rename_draft += text
-                return True
+        # Everything else (letters included) is swallowed so it can't fire editor shortcuts; the
+        # character itself is inserted once, from the matching text event.
         return True
 
     def open_ai_proposals_inbox(self) -> CreatorProposalInboxNavigationResult:

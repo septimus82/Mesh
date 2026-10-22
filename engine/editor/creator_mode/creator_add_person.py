@@ -183,7 +183,12 @@ def stage_add_person_proposal(ops: list[dict[str, Any]], bridge: object | None) 
         return CreatorAddPersonStagingResult(ok=False, errors=(message,))
     dry_run = result.get("dry_run")
     if isinstance(dry_run, dict) and dry_run.get("ok") is not True:
-        # The bridge stages even a failing dry-run; don't hand the user a proposal that can't apply.
+        # The bridge stages even a failing dry-run; withdraw it so AI Proposals isn't left
+        # holding a proposal that can't apply, then report why.
+        staged_id = str(result.get("proposal_id") or "").strip()
+        reject = getattr(bridge, "reject_pending_proposal", None)
+        if staged_id and callable(reject):
+            reject(staged_id)
         warnings = [str(w) for w in dry_run.get("warnings") or [] if str(w).strip()]
         return CreatorAddPersonStagingResult(ok=False, errors=(warnings[0] if warnings else "The person can't be added here.",))
     return CreatorAddPersonStagingResult(

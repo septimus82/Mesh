@@ -345,11 +345,12 @@ class EditorModeController:
         strict_prefabs = getattr(window, "strict_mode", False)
         current = _canonical_editor_controller_module()
         palette_loader = getattr(current, "load_prefab_palette", load_prefab_palette) if current is not None else load_prefab_palette
-        palette_getter = getattr(current, "get_prefab_palette", get_prefab_palette) if current is not None else get_prefab_palette
 
-        loaded_palette = palette_loader(path=self.prefab_palette_path, strict=strict_prefabs)
-        base_palette = palette_getter()
-        self.prefab_palette: List[Dict[str, Any]] = loaded_palette if loaded_palette else list(base_palette)
+        # Exactly this project's prefabs. The old fallback to get_prefab_palette() read the
+        # same file, so it only ever added a palette cached from an earlier project.
+        self.prefab_palette: List[Dict[str, Any]] = list(
+            palette_loader(path=self.prefab_palette_path, strict=strict_prefabs)
+        )
         self.palette_filter: str = ""
         self.palette_filter_active: bool = False
         self._cached_palette_list: List[Dict[str, Any]] = list(self.prefab_palette)
