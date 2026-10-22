@@ -92,34 +92,39 @@ def _apply_blank(root: Path) -> None:
     _write_json(root / "packs/core_regions/scenes/start.json", _blank_scene())
 
 
+def _person_entity(name: str, line: str) -> dict[str, Any]:
+    """A talkable NPC: the starter Guide and the shipped ``person`` prefab share this shape."""
+    return {
+        "name": name,
+        "tag": "npc",
+        "sprite": "assets/sprites/animated_player.png",
+        "sprite_sheet": {"columns": 4, "rows": 2, "frame_width": 64, "frame_height": 64},
+        "animations": {"idle": {"fps": 2, "frames": [0, 1], "loop": True}},
+        "behaviours": ["Dialogue"],
+        "behaviour_config": {
+            "Dialogue": {"dialogue": {"speaker": name, "start": "root", "nodes": {"root": {"text": line}}}},
+        },
+    }
+
+
 def _apply_starter(root: Path) -> None:
     scene = _blank_scene()
     scene["name"] = "Starter Room"
-    scene["entities"].append(
-        {
-            "id": "start_guide_320_128_0_0",
-            "name": "Guide",
-            "tag": "npc",
-            "x": 320.0,
-            "y": 128.0,
-            "sprite": "assets/sprites/animated_player.png",
-            "sprite_sheet": {"columns": 4, "rows": 2, "frame_width": 64, "frame_height": 64},
-            "animations": {"idle": {"fps": 2, "frames": [0, 1], "loop": True}},
-            "behaviours": ["Dialogue"],
-            "behaviour_config": {
-                "Dialogue": {
-                    "dialogue": {
-                        "speaker": "Guide",
-                        "start": "root",
-                        "nodes": {
-                            "root": {"text": "Hi! Welcome to your new Mesh game.\nWalk with WASD, talk with E."},
-                        },
-                    },
-                },
-            },
-        }
-    )
+    guide = _person_entity("Guide", "Hi! Welcome to your new Mesh game.\nWalk with WASD, talk with E.")
+    scene["entities"].append({"id": "start_guide_320_128_0_0", **guide, "x": 320.0, "y": 128.0})
     _write_json(root / "packs/core_regions/scenes/start.json", scene)
+    # Creator Mode's "Add Person" stages this prefab (projects without it fail closed).
+    json_io.write_json_atomic(
+        root / "assets/prefabs.json",
+        [
+            {
+                "id": "person",
+                "display_name": "Person",
+                "tags": ["npc", "person"],
+                "entity": _person_entity("Person", "Hello!"),
+            }
+        ],
+    )
 
 
 def _apply_lighting_playground(root: Path) -> None:

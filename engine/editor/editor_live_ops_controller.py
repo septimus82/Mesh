@@ -137,6 +137,9 @@ class EditorLiveOpsController:
         match = find_prefab_palette_entry(palette, prefab_id, include_id=True)
         if match is None:
             return _result(False, f"Prefab '{prefab_id}' not found")
+        requested_id = _requested_new_entity_id(op)
+        if requested_id and _scene_has_entity_id(scene, requested_id):
+            return _result(False, f"Entity id '{requested_id}' already exists")
 
         entity_def = build_prefab_entity_definition(
             match,
@@ -145,6 +148,7 @@ class EditorLiveOpsController:
             float(op.get("y", 0.0)),
             scene,
             name=str(op["name"]) if isinstance(op.get("name"), str) and op.get("name") else None,
+            entity_id=requested_id,
         )
 
         sprite = self._editor._create_entity_internal(entity_def)
@@ -334,6 +338,9 @@ class EditorLiveOpsController:
             y = float(op.get("y", 0.0))
         except (TypeError, ValueError):
             return None, "x and y must be numeric"
+        requested_id = _requested_new_entity_id(op)
+        if requested_id and _scene_has_entity_id(staged_scene, requested_id):
+            return None, f"entity id '{requested_id}' already exists"
 
         return (
             build_prefab_entity_definition(
@@ -343,6 +350,7 @@ class EditorLiveOpsController:
                 y,
                 staged_scene,
                 name=str(op["name"]) if isinstance(op.get("name"), str) and op.get("name") else None,
+                entity_id=requested_id,
             ),
             None,
         )
@@ -758,6 +766,16 @@ class EditorLiveOpsController:
 
 def _result(ok: bool, message: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
     return {"ok": ok, "message": message, "data": data}
+
+
+def _requested_new_entity_id(op: dict[str, Any]) -> str | None:
+    """Optional stable id for an added entity (Creator edits need one to find it later)."""
+    value = op.get("id")
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _scene_has_entity_id(scene: dict[str, Any], entity_id: str) -> bool:
+    return any(isinstance(e, dict) and e.get("id") == entity_id for e in scene.get("entities") or [])
 
 
 def _op_entity_ref(op: dict[str, Any]) -> str:

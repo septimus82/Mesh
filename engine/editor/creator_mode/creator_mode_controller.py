@@ -6,6 +6,17 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from .creator_add_person import (
+    ADD_PERSON_LINE_ACTION_ID,
+    ADD_PERSON_STAGE_ACTION_ID,
+    DEFAULT_PERSON_LINE,
+    CreatorAddPersonStagingResult,
+    add_person_unavailable_reason,
+    build_add_person_ops,
+    build_add_person_panel,
+    snap_to_grid,
+    stage_add_person_proposal,
+)
 from .creator_door_panel import (
     CreatorDoorPanelAction,
     CreatorDoorPanelModel,
@@ -96,6 +107,9 @@ class CreatorModeController:
         self._opacity_draft = ""
         self._opacity_selection_key = ""
         self._opacity_text_focused = False
+        self._person_line_draft = DEFAULT_PERSON_LINE
+        self._person_line_focused = False
+        self._staged_person_proposal_id = ""
 
     @property
     def last_action_message(self) -> str:
@@ -117,12 +131,17 @@ class CreatorModeController:
     def opacity_text_focused(self) -> bool:
         return bool(self._opacity_text_focused)
 
+    @property
+    def person_line_focused(self) -> bool:
+        return bool(self._person_line_focused)
+
     def toggle(self) -> bool:
         self._active = not self._active
         if not self._active:
             self._clear_last_action_state()
             self._rename_text_focused = False
             self._opacity_text_focused = False
+            self._person_line_focused = False
         else:
             self._frame_scene_on_canvas()
         return self._active
@@ -199,6 +218,15 @@ class CreatorModeController:
             self._rename_text_focused = False
         if action_id != ENTITY_OPACITY_DRAFT_ACTION_ID:
             self._opacity_text_focused = False
+        if action_id != ADD_PERSON_LINE_ACTION_ID:
+            self._person_line_focused = False
+        if action_id == ADD_PERSON_LINE_ACTION_ID:
+            self._person_line_focused = True
+            return CreatorAddPersonStagingResult(ok=False, errors=())
+        if action_id == ADD_PERSON_STAGE_ACTION_ID:
+            result = self.stage_add_person()
+            self._store_add_person_staging_result(result)
+            return result
         if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:
             return self.open_ai_proposals_inbox()
         if action_id == ENTITY_RENAME_DRAFT_ACTION_ID:
@@ -333,10 +361,54 @@ class CreatorModeController:
                 self._opacity_text_focused = False
         return result
 
+    def stage_add_person(self) -> CreatorAddPersonStagingResult:
+        """Stage one proposal adding a person at the canvas centre, snapped to the grid."""
+
+        editor = self._editor
+        scene_controller = getattr(getattr(editor, "window", None), "scene_controller", None)
+        scene = getattr(scene_controller, "_loaded_scene_data", None)
+        reason = add_person_unavailable_reason(
+            palette=getattr(editor, "prefab_palette", None),
+            scene_path=self._current_scene_path(),
+            bridge=self._proposal_bridge(),
+            line=self._person_line_draft,
+            pending_proposal_id=self._pending_person_proposal_id(),
+        )
+        if reason or not isinstance(scene, dict):
+            return CreatorAddPersonStagingResult(ok=False, errors=(reason or "No map is loaded.",))
+
+        from engine.editor.creator_mode.creator_overlay_renderer import creator_canvas_rect  # noqa: PLC0415
+        from engine.editor.editor_camera_framing import canvas_center_world  # noqa: PLC0415
+
+        window = editor.window
+        center_x, center_y = canvas_center_world(window, creator_canvas_rect(window.width, window.height))
+        step = self._editor_grid_step()
+        ops = build_add_person_ops(
+            scene_path=self._current_scene_path(),
+            entities=scene.get("entities") or [],
+            x=snap_to_grid(center_x, step),
+            y=snap_to_grid(center_y, step),
+            line=self._person_line_draft,
+        )
+        result = stage_add_person_proposal(ops, self._proposal_bridge())
+        if result.ok:
+            self._staged_person_proposal_id = result.proposal_id
+            self._person_line_focused = False
+        return result
+
+    def _pending_person_proposal_id(self) -> str:
+        staged = self._staged_person_proposal_id
+        if staged and self._proposal_still_pending(staged):
+            return staged
+        self._staged_person_proposal_id = ""
+        return ""
+
     def handle_key_input(self, key: int, modifiers: int = 0) -> bool:
         """Handle typing while a Creator text field is focused."""
 
-        if not self._active or not (self._rename_text_focused or self._opacity_text_focused):
+        if not self._active or not (
+            self._rename_text_focused or self._opacity_text_focused or self._person_line_focused
+        ):
             return False
         import engine.optional_arcade as optional_arcade  # noqa: PLC0415
 
@@ -344,9 +416,12 @@ class CreatorModeController:
         if key == arcade_key.ESCAPE:
             self._rename_text_focused = False
             self._opacity_text_focused = False
+            self._person_line_focused = False
             return True
         if key == arcade_key.BACKSPACE:
-            if self._opacity_text_focused:
+            if self._person_line_focused:
+                self._person_line_draft = self._person_line_draft[:-1]
+            elif self._opacity_text_focused:
                 self._opacity_draft = self._opacity_draft[:-1]
             else:
                 self._rename_draft = self._rename_draft[:-1]
@@ -362,7 +437,9 @@ class CreatorModeController:
         if 32 <= int(key) <= 0x10FFFF:
             text = chr(int(key))
             if text.isprintable():
-                if self._opacity_text_focused:
+                if self._person_line_focused:
+                    self._person_line_draft += text
+                elif self._opacity_text_focused:
                     self._opacity_draft += text
                 else:
                     self._rename_draft += text
@@ -507,6 +584,14 @@ class CreatorModeController:
         rename_panel = self._rename_panel(selected)
         opacity_panel = self._opacity_panel(selected)
         door_panel = self._door_panel(selected)
+        add_person_panel = build_add_person_panel(
+            palette=getattr(self._editor, "prefab_palette", None),
+            scene_path=self._current_scene_path(),
+            bridge=self._proposal_bridge(),
+            line=self._person_line_draft,
+            focused=self._person_line_focused,
+            pending_proposal_id=self._pending_person_proposal_id(),
+        )
         proposal_status = build_creator_proposal_status(self._proposal_bridge())
         return CreatorModeSnapshot(
             active=self._active,
@@ -518,6 +603,7 @@ class CreatorModeController:
             rename_panel=rename_panel,
             opacity_panel=opacity_panel,
             door_panel=door_panel,
+            add_person_panel=add_person_panel,
             proposal_status=proposal_status,
             proposal_accept_readiness=build_creator_proposal_accept_readiness_from_status(
                 proposal_status,
@@ -544,6 +630,18 @@ class CreatorModeController:
         self._opacity_draft = ""
         self._opacity_selection_key = ""
         self._opacity_text_focused = False
+        self._person_line_draft = DEFAULT_PERSON_LINE
+        self._person_line_focused = False
+        self._staged_person_proposal_id = ""
+
+    def _store_add_person_staging_result(self, result: CreatorAddPersonStagingResult) -> None:
+        if result.ok:
+            suffix = f": {result.proposal_id}" if result.proposal_id else "."
+            self._last_action_message = f"Person proposal staged{suffix} Review it in AI Proposals."
+            self._last_action_ok = True
+            return
+        self._last_action_message = str(result.errors[0] if result.errors else "Failed to stage the person proposal.")
+        self._last_action_ok = False
 
     def _store_staging_result(self, result: CreatorDoorStagingResult) -> None:
         if result.ok:

@@ -61,11 +61,14 @@ def build_prefab_entity_definition(
     scene: dict[str, Any],
     *,
     name: str | None = None,
+    entity_id: str | None = None,
 ) -> dict[str, Any]:
     """Build a uniquely named entity definition from a prefab palette entry."""
     entity_def = deepcopy(match.get("entity") or {})
     entity_def["x"] = float(x)
     entity_def["y"] = float(y)
+    if entity_id:
+        entity_def["id"] = str(entity_id)
     if name:
         entity_def["name"] = str(name)
     if "name" not in entity_def or not entity_def.get("name"):
