@@ -57,7 +57,12 @@ def test_external_json_tileset_image_resolves_next_to_the_tileset(tmp_path) -> N
     assert tilesets[0].image_path == str((tmp_path / "tilesets" / "one.png").resolve())
 
 
-def test_inline_layer_missing_from_the_map_file_still_loads(tmp_path) -> None:
+def test_inline_layer_missing_from_the_map_file_still_loads(tmp_path, monkeypatch) -> None:
+    def no_window():
+        raise RuntimeError("no window")
+
+    # Sprite lists defer their GL setup without a window; earlier tests may leave a half-made one behind.
+    monkeypatch.setattr("arcade.sprite_list.sprite_list.get_window", no_window)
     (tmp_path / "tilesets").mkdir()
     Image.new("RGBA", (32, 32), RED).save(tmp_path / "tilesets" / "one.png")
     (tmp_path / "tilesets" / "one.json").write_text(json.dumps({
