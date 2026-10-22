@@ -963,6 +963,12 @@ class EditorModeController:
 
         refresh_live_bridge_scene(self)
 
+    def frame_scene_on_canvas(self) -> bool:
+        """Move the camera onto the scene if none of it is on the visible canvas."""
+        from engine.editor.editor_camera_framing import frame_editor_camera_if_offscreen  # noqa: PLC0415
+
+        return frame_editor_camera_if_offscreen(self)
+
     def stop_live_bridge(self) -> None:
         """Stop the live-session bridge if it is running."""
         from engine.editor.live_bridge_lifecycle import stop_live_bridge  # noqa: PLC0415

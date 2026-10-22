@@ -296,5 +296,9 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
         _log_swallow("SCEN-006", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
         pass
+    # CameraFollow is paused in the editor; keep a newly opened scene on the canvas.
+    frame_scene = getattr(editor, "frame_scene_on_canvas", None) if editor is not None else None
+    if callable(frame_scene) and getattr(editor, "active", False):
+        frame_scene()
     controller.window.clear_input_locks()
     return cast(dict[str, Any], scene)
