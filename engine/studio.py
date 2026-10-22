@@ -15,7 +15,6 @@ from __future__ import annotations
 import copy
 import json
 import os
-import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -23,9 +22,27 @@ import engine.optional_arcade as optional_arcade
 from engine import project_ops as ops
 from engine.scene_loader import document_key
 from engine.studio_project import Project
+from engine.studio_ui import (
+    C_BG,
+    C_ERROR,
+    C_MUTED,
+    C_OK,
+    C_PANEL,
+    C_SELECT,
+    C_SPAWN,
+    C_TEXT,
+    S_ACTIVE,
+    S_BUTTON,
+    S_DANGER,
+    S_MENU,
+    S_PLAY,
+    FirstClicks,
+    TextField,
+    ask_path,
+    field_clipboard,
+    gui,
+)
 from engine.world_controller import WorldController
-
-gui = optional_arcade.gui()
 
 TOP_H, STATUS_H, LEFT_W, RIGHT_W = 44, 26, 230, 330
 GRID = 16
@@ -38,32 +55,6 @@ LAYER_NAME = {ops.GROUND: "the ground", ops.WALLS: "walls (they block movement)"
               ops.OVERHEAD: "the layer above characters (roofs, treetops; never blocks)"}
 SHAPE_HELP = {"brush": "Click or drag on the map.", "rect": "Drag a rectangle on the map.",
               "fill": "Click an area to fill it."}
-
-C_BG = (30, 32, 38)
-C_PANEL = (38, 41, 49)
-C_TEXT = (220, 224, 232)
-C_MUTED = (140, 146, 160)
-C_ERROR = (255, 120, 110)
-C_OK = (130, 210, 150)
-C_SELECT = (90, 200, 255)
-C_SPAWN = (120, 230, 140)
-
-
-def _style(bg: tuple[int, int, int], fg: tuple[int, int, int] = C_TEXT) -> dict[str, Any]:
-    base = gui.UIFlatButton.UIStyle(font_size=11, font_color=fg, bg=bg, border=None, border_width=0)
-    return {
-        "normal": base,
-        "hover": gui.UIFlatButton.UIStyle(font_size=11, font_color=fg, bg=tuple(min(255, c + 22) for c in bg), border=None, border_width=0),
-        "press": gui.UIFlatButton.UIStyle(font_size=11, font_color=fg, bg=tuple(max(0, c - 18) for c in bg), border=None, border_width=0),
-        "disabled": gui.UIFlatButton.UIStyle(font_size=11, font_color=C_MUTED, bg=(48, 50, 58), border=None, border_width=0),
-    }
-
-
-S_BUTTON = _style((58, 63, 76))
-S_ACTIVE = _style((48, 110, 170))
-S_DANGER = _style((120, 52, 52))
-S_PLAY = _style((44, 120, 70))
-S_MENU = _style((52, 56, 68))
 
 
 def _snap(value: float) -> float:
@@ -87,53 +78,8 @@ def _line_cells(a: tuple[int, int], b: tuple[int, int]) -> list[tuple[int, int]]
             err, y0 = err + dx, y0 + sy
 
 
-def _ask_image_path() -> str:
-    """The OS file dialog, for picking an image to import ("" if cancelled)."""
-    import tkinter  # noqa: PLC0415
-    from tkinter import filedialog  # noqa: PLC0415
-
-    root = tkinter.Tk()
-    root.withdraw()
-    root.attributes("-topmost", True)
-    try:
-        return filedialog.askopenfilename(parent=root, title="Import a tileset image", filetypes=[
-            ("Images", "*.png *.gif *.bmp *.jpg *.jpeg *.webp"), ("All files", "*.*")]) or ""
-    finally:
-        root.destroy()
-
-
 def _guess_tile_size(width: int, height: int) -> int:
     return next((t for t in (32, 16, 48, 24, 64) if width % t == 0 and height % t == 0), 32)
-
-
-class _FirstClicks:
-    """Logs the first mouse presses the window receives (to diagnose clicks lost at start-up)."""
-
-    def __init__(self) -> None:
-        self.started, self.count = time.perf_counter(), 0
-
-    def on_mouse_press(self, x: float, y: float, button: int, modifiers: int) -> None:
-        if self.count < 3:
-            self.count += 1
-            print(f"[Mesh][Studio] mouse press {self.count} at {time.perf_counter() - self.started:.1f}s "
-                  f"({x:.0f}, {y:.0f})", flush=True)
-
-
-class _Field(gui.UIInputText):
-    """Single-line text field whose caret lands at the end when you click into it.
-
-    arcade.gui's own click handling leaves the caret at position 0, so clicking a
-    field and typing would put the new text in front of the old.
-    """
-
-    def on_event(self, event: Any) -> bool | None:
-        if isinstance(event, gui.UITextInputEvent) and any(ord(ch) < 32 for ch in event.text):
-            return True  # Enter, Tab and Ctrl+letter arrive as control characters; never type them
-        was_active = self.active
-        handled = super().on_event(event)
-        if self.active and not was_active:
-            self.caret.position = len(self.text)
-        return handled
 
 
 class Studio:
@@ -171,6 +117,7 @@ class Studio:
         self.sheet_drag: list[tuple[int, int]] | None = None  # [start, end] palette cells while dragging
         self.clipboard: dict[str, Any] | None = None  # a copied object
         self.import_form = {"path": "", "name": "", "tile": "32"}
+        self._close_warned = False  # closing with unsaved changes warns once
         self._tile_textures: dict[tuple[str, int], Any] = {}
         self._images: dict[str, Any] = {}
         self._sheet_space: Any = None
@@ -180,7 +127,7 @@ class Studio:
         self.play_ui = gui.UIManager(window)
         window.push_handlers(self)
         self.ui.enable()
-        self._first_clicks = _FirstClicks()  # pyglet keeps only a weak reference to handlers
+        self._first_clicks = FirstClicks("Studio")  # pyglet keeps only a weak reference to handlers
         window.push_handlers(self._first_clicks)
         self._reload(recenter=True)
         self._rebuild()
@@ -515,7 +462,8 @@ class Studio:
         self._say("Choose an image with Browse..., or paste its path and press Enter.")
 
     def browse_tileset(self) -> None:
-        path = _ask_image_path()
+        path = ask_path(folder=False, title="Import a tileset image", filetypes=[
+            ("Images", "*.png *.gif *.bmp *.jpg *.jpeg *.webp"), ("All files", "*.*")])
         if path:
             self._set_import_path(path)
 
@@ -699,7 +647,7 @@ class Studio:
 
     # ==================================================================== text fields
     def _field(self, text: str, commit: Callable[[str], None], *, width: int, key: str | None = None) -> gui.UIInputText:
-        field = _Field(text=text, width=width, height=26, font_size=11, text_color=C_TEXT,
+        field = TextField(text=text, width=width, height=26, font_size=11, text_color=C_TEXT,
                                 caret_color=C_TEXT, border_color=(90, 96, 112), border_width=1)
         field.with_background(color=(24, 26, 31))
         self._fields.append((field, text, commit))
@@ -1351,7 +1299,7 @@ class Studio:
         if self._typing():
             field = next(f for f, _, _ in self._fields if f.active)
             if ctrl and symbol in (k.A, k.C, k.X, k.V):
-                self._field_clipboard(field, symbol)
+                field_clipboard(self.window, field, symbol)
             elif symbol in (k.ENTER, k.NUM_ENTER, k.TAB):
                 self._flush_fields()
             elif symbol == k.ESCAPE:
@@ -1387,29 +1335,20 @@ class Studio:
             self._rebuild()
         return True
 
-    def _field_clipboard(self, field: Any, symbol: int) -> None:
-        """Ctrl+A / C / X / V in a text field (arcade.gui fields have no clipboard of their own)."""
-        k = optional_arcade.arcade.key
-        layout = field.layout
-        start, end = sorted((layout.selection_start, layout.selection_end))
-        selected = field.text[start:end] if end > start else ""
-        if symbol == k.A:
-            field.caret.select_all()
-        elif symbol in (k.C, k.X):
-            self.window.set_clipboard_text(selected or field.text)
-            if symbol == k.X:
-                if selected:
-                    field.caret.on_text("")  # replaces the selection with nothing
-                else:
-                    field.text = ""
-        else:
-            pasted = (self.window.get_clipboard_text() or "").replace("\r", "")
-            field.caret.on_text(" ".join(pasted.split("\n")))  # fields are one line
-        field.trigger_full_render()
-
     def on_key_release(self, symbol: int, modifiers: int) -> bool:
         self.keys.discard(symbol)
         return self.mode == "edit"
+
+    def on_close(self) -> bool:
+        """Closing the window with unsaved changes only warns the first time; closing again leaves."""
+        if self.project.is_dirty and not self._close_warned:
+            self._close_warned = True
+            if self.mode == "play":
+                self.stop()
+            self._say("You have unsaved changes. Press Ctrl+S to save them, or close again to leave without saving.",
+                      ok=False)
+            return True
+        return False
 
     def on_text(self, text: str) -> bool:
         return self.mode == "edit"
