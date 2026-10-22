@@ -39,10 +39,10 @@ class TestComputeRenderSortKey:
         assert key[0] == 5
 
     def test_y_sort_mode_uses_y_directly(self) -> None:
-        """y_sort mode should use y directly (lower y = back, higher y = front)."""
+        """y_sort depth is -y: world y points up, so lower y = nearer = drawn later."""
         entity: dict = {"id": "e1", "y": 100.0}
         key = compute_render_sort_key(entity, sort_mode="y_sort")
-        assert key[1] == 100.0
+        assert key[1] == -100.0
 
     def test_explicit_z_mode_uses_depth_z(self) -> None:
         """explicit_z mode should use depth_z directly."""
@@ -78,15 +78,15 @@ class TestSortEntitiesForRender:
         assert [e["id"] for e in sorted_ents] == ["e2", "e3", "e1"]
 
     def test_y_sort_within_same_layer(self) -> None:
-        """Within same render_layer, higher y should draw later (be at end)."""
+        """Within same render_layer, lower y (lower on screen, nearer) draws later."""
         entities = [
-            {"id": "e1", "render_layer": 0, "y": 100.0},  # higher y = closer
-            {"id": "e2", "render_layer": 0, "y": 50.0},   # lower y = further
+            {"id": "e1", "render_layer": 0, "y": 100.0},  # higher up the screen = further
+            {"id": "e2", "render_layer": 0, "y": 50.0},   # lower on screen = closer
             {"id": "e3", "render_layer": 0, "y": 75.0},
         ]
         sorted_ents = sort_entities_for_render(entities, sort_mode="y_sort")
-        # Lower y (further back) should come first
-        assert [e["id"] for e in sorted_ents] == ["e2", "e3", "e1"]
+        # Further back (higher y) comes first
+        assert [e["id"] for e in sorted_ents] == ["e1", "e3", "e2"]
 
     def test_explicit_z_sort_within_same_layer(self) -> None:
         """explicit_z mode should sort by depth_z (lower = further back)."""
@@ -147,10 +147,20 @@ class TestSpriteRenderSorting:
     """Tests for sprite sorting functions."""
 
     def test_compute_sprite_key_uses_center_y(self) -> None:
-        """Sprite center_y should be used for y_sort mode."""
+        """Without a bottom edge, a sprite's center_y gives its depth (-y)."""
         sprite = MockSprite("e1", center_y=75.0)
         key = compute_sprite_render_sort_key(sprite, sort_mode="y_sort")
-        assert key[1] == 75.0
+        assert key[1] == -75.0
+
+    def test_sprites_compare_where_they_stand_not_their_centres(self) -> None:
+        """A grave whose base is above a person's feet is behind them, even with its centre
+        lower than theirs (the cemetery grave that was drawn over Ezekiel's head)."""
+        person = MockSprite("person", center_y=440.0)
+        person.bottom = 408.0  # 64 px tall: feet at 408
+        grave = MockSprite("grave", center_y=430.0)
+        grave.bottom = 412.0  # short and wide, its base just above his feet
+        ids = [s.mesh_entity_data["id"] for s in sort_sprites_for_render([person, grave])]
+        assert ids == ["grave", "person"]
 
     def test_sort_sprites_deterministic(self) -> None:
         """Sprites should sort deterministically."""
@@ -172,8 +182,8 @@ class TestSpriteRenderSorting:
         ]
         sorted_sprites = sort_sprites_for_render(sprites, sort_mode="y_sort")
         ids = [s.mesh_entity_data["id"] for s in sorted_sprites]
-        # Layer 0 first (e2 at y=50, e3 at y=75), then layer 1 (e1)
-        assert ids == ["e2", "e3", "e1"]
+        # Layer 0 first (e3 at y=75 is further back than e2 at y=50), then layer 1 (e1)
+        assert ids == ["e3", "e2", "e1"]
 
 
 # -----------------------------------------------------------------------------
@@ -219,14 +229,14 @@ class TestExplicitZVsYSort:
         entity: dict = {"id": "e1", "render_layer": 1, "depth_z": 10.0, "y": 50.0}
         key = compute_render_sort_key(entity, sort_mode="explicit_z")
         assert len(key) == 4
-        assert key == (1, 10.0, 50.0, "e1")
+        assert key == (1, 10.0, -50.0, "e1")
 
     def test_y_sort_key_has_three_elements(self) -> None:
         """y_sort key should be (render_layer, y_pos, entity_id)."""
         entity: dict = {"id": "e1", "render_layer": 1, "y": 50.0}
         key = compute_render_sort_key(entity, sort_mode="y_sort")
         assert len(key) == 3
-        assert key == (1, 50.0, "e1")
+        assert key == (1, -50.0, "e1")
 
     def test_entities_swap_only_in_explicit_z(self) -> None:
         """Entities with different depth_z vs y should swap only in explicit_z mode."""
@@ -243,8 +253,8 @@ class TestExplicitZVsYSort:
         y_ids = [e["id"] for e in y_sorted]
         z_ids = [e["id"] for e in z_sorted]
 
-        # y_sort: lower y first -> e1 (y=10) before e2 (y=100)
-        assert y_ids == ["e1", "e2"]
+        # y_sort: further back (higher y) first -> e2 (y=100) before e1 (y=10)
+        assert y_ids == ["e2", "e1"]
 
         # explicit_z: lower depth_z first -> e2 (z=10) before e1 (z=100)
         assert z_ids == ["e2", "e1"]
@@ -259,15 +269,15 @@ class TestExplicitZVsYSort:
         z_sorted = sort_entities_for_render(entities, sort_mode="explicit_z")
         z_ids = [e["id"] for e in z_sorted]
 
-        # Same depth_z, so sort by y: e2 (y=50) before e1 (y=100)
-        assert z_ids == ["e2", "e1"]
+        # Same depth_z, so sort by y depth: e1 (y=100, further back) before e2 (y=50)
+        assert z_ids == ["e1", "e2"]
 
     def test_sprite_explicit_z_has_y_fallback(self) -> None:
         """Sprite explicit_z key should include y as fallback."""
         sprite = MockSprite("e1", center_y=75.0, render_layer=0, depth_z=50.0)
         key = compute_sprite_render_sort_key(sprite, sort_mode="explicit_z")
         assert len(key) == 4
-        assert key == (0, 50.0, 75.0, "e1")
+        assert key == (0, 50.0, -75.0, "e1")
 
     def test_sprites_swap_only_in_explicit_z(self) -> None:
         """Sprites with different depth_z vs y should swap only in explicit_z mode."""
@@ -282,8 +292,8 @@ class TestExplicitZVsYSort:
         y_ids = [s.mesh_entity_data["id"] for s in y_sorted]
         z_ids = [s.mesh_entity_data["id"] for s in z_sorted]
 
-        # y_sort: lower y first -> e1 (y=10) before e2 (y=100)
-        assert y_ids == ["e1", "e2"]
+        # y_sort: further back (higher y) first -> e2 (y=100) before e1 (y=10)
+        assert y_ids == ["e2", "e1"]
 
         # explicit_z: lower depth_z first -> e2 (z=10) before e1 (z=100)
         assert z_ids == ["e2", "e1"]
