@@ -63,6 +63,9 @@ def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
 
         sprite = scene_controller_module.optional_arcade.arcade.Sprite()
         sprite.texture = texture
+        # Logic-only entities (arrival spots, triggers) keep the placeholder for their
+        # hitbox but are never drawn: players shouldn't see grey squares.
+        sprite.visible = bool(entity.get("sprite"))
         sprite.center_x = float(entity.get("x", 0))
         sprite.center_y = float(entity.get("y", 0))
         sprite.scale = float(entity.get("scale", 1.0))
