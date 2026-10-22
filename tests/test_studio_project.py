@@ -94,6 +94,10 @@ def test_new_room_gets_floor_border_and_map_file_immediately(tmp_path) -> None:
 def test_room_without_a_map_can_get_one_and_undo_removes_it(tmp_path) -> None:
     root = tmp_path / "game"
     create_project(root, "Game", template_id="blank")
+    start = root / "packs/core_regions/scenes/start.json"
+    scene = json.loads(start.read_text(encoding="utf-8"))
+    del scene["tilemap"]  # a room from before maps existed
+    start.write_text(json.dumps(scene), encoding="utf-8")
     config = json.loads((root / "config.json").read_text(encoding="utf-8"))
     project = Project.open(root, config.get("world_file"))
     assert ops.map_info(project.scene()) is None

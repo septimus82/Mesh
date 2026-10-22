@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -29,13 +30,16 @@ def _default_camera(*_args, **_kwargs) -> MagicMock:
 
 
 @contextmanager
-def headless_editor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, template_id: str = "starter") -> Iterator:
+def headless_editor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, template_id: str = "starter",
+                    prefabs: list | None = None) -> Iterator:
     import engine.game
     import engine.optional_arcade as optional_arcade
     from engine import arcade_fallback
 
     root = tmp_path / "project"
     create_project(root, "project", template_id=template_id)
+    if prefabs is not None:  # e.g. [] for a project with no object types at all
+        (root / "assets" / "prefabs.json").write_text(json.dumps(prefabs), encoding="utf-8")
     # These tests exercise the legacy editor and Creator Mode, not Mesh Studio
     # (which needs a real window for arcade.gui).
     monkeypatch.setenv("MESH_LEGACY_EDITOR", "1")
