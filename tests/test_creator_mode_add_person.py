@@ -144,6 +144,17 @@ def test_second_add_is_blocked_while_the_first_is_pending(starter, tmp_path: Pat
     assert not any(c.action_id == ADD_PERSON_STAGE_ACTION_ID for c in _commands(starter, creator))
 
 
+def test_second_project_in_same_process_does_not_inherit_prefabs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # A starter project (has a person prefab) opened first must not leak into an empty-prefab project.
+    with headless_editor(tmp_path / "first", monkeypatch, template_id="starter") as first:
+        assert [entry["id"] for entry in first.editor_controller.prefab_palette] == ["person"]
+    with headless_editor(tmp_path / "second", monkeypatch, template_id="blank") as second:
+        editor, creator = _creator(second, tmp_path / "second")
+        assert editor.prefab_palette == []
+        panel = creator.build_snapshot().add_person_panel
+        assert panel.enabled is False and panel.reason == "This project has no person prefab."
+
+
 def test_project_without_person_prefab_disables_add_with_reason(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     with headless_editor(tmp_path, monkeypatch, template_id="blank") as window:
         editor, creator = _creator(window, tmp_path)
