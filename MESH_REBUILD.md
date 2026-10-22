@@ -33,6 +33,8 @@ Branch: `redesign/visual-editor` (from `52d43a4`; original preserved as tag `arc
 
 **Headless:** `tests/test_project_ops.py` (9), `tests/test_studio_project.py` (4).
 
+**Full suite on the branch head:** 9 failed, 9,263 passed. These are the same 9 failures as the baseline (headless widget rendering ×5, battle-sprite headless probe, RMMZ fixtures ×2, editor drag-start). None are new. The ruff gate and the mypy island are clean.
+
 **Not validated:**
 - **No human has used the Studio yet.** Every check above is automated.
 - Only tested at 1280×720 on one Windows machine, with a 125% main monitor.
@@ -61,13 +63,19 @@ Each was found by driving the real window, not by the existing unit tests.
 - **AI and CLI still use the old operation layers.** `project_ops` is canonical for the Studio only, so far.
 - **Monster code and demo content are still in the core** (see `MESH_SALVAGE.md`).
 
+## Trimming done so far
+
+All recorded with restore instructions in `MESH_SALVAGE.md`:
+- Root session leftovers and 224 committed test artefacts removed (`154691d`).
+- Monster data moved behind an opt-in `monster` template (`f871855`).
+- Two dead modules removed (`c14f722`).
+
 ## Next slices, in order
 
-1. **Trim, part 1:** decouple the monster starter pack from new projects; remove root leftovers and committed pytest artefacts; remove dead modules.
-2. **AI on the same operations:** MCP `apply_ops` / live ops call `engine/project_ops`, proposals become a thin preview wrapper, and `OP_CATALOG` is generated.
-3. **Tiles in the Studio:** paint the floor and walls of a room. Rooms are visually empty today.
-4. **Monster code as a plugin** via `PluginManager`; project-scoped `behaviours/` folder for custom scripts.
-5. **Archive the legacy editor and Creator Mode** once the Studio covers tiles and lights; archive demo content and its ~62 tests.
+1. **AI on the same operations:** MCP `apply_ops` / live ops call `engine/project_ops`, proposals become a thin preview wrapper, and `OP_CATALOG` is generated.
+2. **Tiles in the Studio:** paint the floor and walls of a room. Rooms are visually empty today.
+3. **Monster code as a plugin** via `PluginManager`; project-scoped `behaviours/` folder for custom scripts.
+4. **Archive the legacy editor and Creator Mode** once the Studio covers tiles and lights; archive demo content and its ~62 tests.
 
 ## Decisions needing the owner
 

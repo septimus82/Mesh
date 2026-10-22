@@ -55,5 +55,10 @@ Switching to another toolkit (Qt, Dear ImGui) was not justified: it brings a new
 |---|---|---|---|
 | (this branch) | Esc no longer opens Settings directly in play; it opens the pause menu (Settings is inside). Plain F9 no longer toggles a silent debug pause or sprite batching; it is quick load. Sprite batching moved behind debug mode. | The old bindings made save/load unreachable (stranger test B4). | `git show archive/pre-redesign-2026-10:engine/game_runtime/input_dispatch.py` |
 | (this branch) | Tests asserting the old Esc→Settings and F9→pause behaviour rewritten to the new contract (`test_game_loop.py`, `test_game_input_capture_regression.py`, `test_authoring_copy_coords_hotkey.py`). Two load-failure tests narrowed from "no toast" to "never a *Loaded* toast". | Behaviour changed deliberately; assertions kept to the same strength. | Archive tag. |
+| `154691d` | Root leftovers: `last_implementation.md`, `task_summary*.md` (3), `rathena_packet_table_20190605.txt`, `Act1/Act2_ContentPlan.md`. Untracked and ignored `.pytest-gate-deps/` (224 test-run files). | No references anywhere (git grep). | `git checkout archive/pre-redesign-2026-10 -- <path>` |
+| `f871855` | New `blank`/`starter` projects no longer receive the monster game's data, sprites and sounds. New opt-in `monster` template keeps the test game reproducible; the monster boot tests use it. | The monster game is a test project, not the product. | Use `--template monster`; or the archive tag. |
+| `c14f722` | `engine/entity_view.py` (never wired in) and `engine/sprite_animator.py` (duplicate of `animation.py`), with their dedicated tests and baseline entries. | No production importers (git grep, string references included). | Archive tag. |
+
+**Checked and kept, contrary to the audit's first pass:** `scene_controller_impl.py` is imported by `scene_controller.py`. `tweens.py` and `tilemap_resize.py` are unused but generic and tested, and likely wanted by tile painting. `editor_controller_core.py` goes with the legacy editor, not piecemeal.
 
 Further removals are listed under "Next" in `MESH_REBUILD.md`.
