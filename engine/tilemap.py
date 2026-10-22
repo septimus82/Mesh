@@ -104,11 +104,11 @@ class Tileset:
         return self.first_gid <= gid < self.first_gid + self.tile_count
 
     def slice_coordinates(self, local_id: int) -> tuple[int, int]:
+        """Top-left pixel of a tile in the tileset image (PIL crop coordinates, y down)."""
         col = local_id % max(1, self.columns)
         row = local_id // max(1, self.columns)
         source_x = self.margin + col * (self.tile_width + self.spacing)
-        source_y_top = self.margin + row * (self.tile_height + self.spacing)
-        source_y = self.image_height - source_y_top - self.tile_height
+        source_y = self.margin + row * (self.tile_height + self.spacing)
         return int(source_x), int(source_y)
 
 
@@ -284,12 +284,13 @@ class TilemapManager:
             if isinstance(source, str) and source.strip():
                 tileset_path = (map_dir / source).resolve()
                 tileset_data = self._load_external_tileset(tileset_path)
+                image_base = tileset_path.parent  # an external tileset's image is relative to the tileset file
             else:
                 tileset_data = dict(entry)
-                tileset_path = map_dir
+                image_base = map_dir
             if not tileset_data:
                 continue
-            tileset = self._build_tileset(first_gid, tileset_data, tileset_path)
+            tileset = self._build_tileset(first_gid, tileset_data, image_base)
             if tileset is not None:
                 resolved.append(tileset)
         resolved.sort(key=lambda ts: ts.first_gid)
