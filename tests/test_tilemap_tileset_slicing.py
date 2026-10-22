@@ -11,7 +11,7 @@ import json
 import pytest
 from PIL import Image
 
-from engine.tilemap import Tileset, TilemapManager
+from engine.tilemap import TilemapManager, Tileset
 
 pytestmark = pytest.mark.fast
 

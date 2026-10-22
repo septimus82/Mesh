@@ -68,3 +68,45 @@ def test_undo_of_add_room_unregisters_it(tmp_path) -> None:
     project.undo()
     assert "cellar" not in project.world["scenes"]
     assert "cellar" not in project.scenes
+
+
+def test_starter_room_ships_with_a_paintable_map(tmp_path) -> None:
+    root, project = _starter(tmp_path)
+    info = ops.map_info(project.scene())
+    assert (info["width"], info["height"]) == (24, 16)
+    assert set(info["layers"][ops.GROUND]) == {ops.STARTER_GRASS}
+    assert (root / "packs/core_regions/maps/start.json").is_file()
+    assert (root / ops.TILESET_SOURCE).is_file()
+
+
+def test_new_room_gets_floor_border_and_map_file_immediately(tmp_path) -> None:
+    root, project = _starter(tmp_path)
+    key = project.add_room("Cellar")
+    info = ops.map_info(project.scene(key))
+    assert set(info["layers"][ops.GROUND]) == {ops.STARTER_FLOOR}
+    assert info["layers"][ops.WALLS][0] == ops.STARTER_WALL
+    assert (root / "packs/core_regions/maps/cellar.json").is_file()  # loadable before the room is saved
+    player = next(e for e in ops.entities(project.scene(key)) if e.get("tag") == "player")
+    col, row = ops.cell_at(info, player["x"], player["y"])
+    assert info["layers"][ops.WALLS][row * info["width"] + col] == 0  # the player doesn't start inside a wall
+
+
+def test_room_without_a_map_can_get_one_and_undo_removes_it(tmp_path) -> None:
+    root = tmp_path / "game"
+    create_project(root, "Game", template_id="blank")
+    config = json.loads((root / "config.json").read_text(encoding="utf-8"))
+    project = Project.open(root, config.get("world_file"))
+    assert ops.map_info(project.scene()) is None
+    project.add_map()
+    assert ops.map_info(project.scene()) is not None
+    project.undo()
+    assert ops.map_info(project.scene()) is None
+
+
+def test_tileset_groups_tiles_by_layer(tmp_path) -> None:
+    _, project = _starter(tmp_path)
+    tileset = project.tileset()
+    layers = {t["layer"] for t in tileset["tiles"]}
+    assert layers == {ops.GROUND, ops.WALLS}
+    assert any(t["gid"] == ops.STARTER_WALL and t["layer"] == ops.WALLS for t in tileset["tiles"])
+    assert tileset["count"] == len(tileset["tiles"]) == 16

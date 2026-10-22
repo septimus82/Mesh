@@ -73,7 +73,16 @@ if __name__ == "__main__":
 _STARTER_FILES = (
     "assets/sprites/animated_player.png",
     "assets/sprites/door.png",
+    "assets/tilesets/starter.png",  # project_ops.TILESET_SOURCE and its image
+    "assets/tilesets/starter.json",
 )
+
+
+def ensure_starter_files(root: Path) -> None:
+    """Copy any missing starter file into an existing project (e.g. one made before maps)."""
+    for rel_path in _STARTER_FILES:
+        if not (Path(root) / rel_path).is_file():
+            _copy_engine_asset(rel_path, Path(root))
 
 _MONSTER_STARTER_FILES = (
     "assets/data/monster_species.json",

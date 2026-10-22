@@ -10,18 +10,30 @@ instead, with a message fit to show a user.
 from __future__ import annotations
 
 import copy
+import posixpath
 import re
-from typing import Any
+from typing import Any, Iterable
 
 from engine.ai_ops import build_prefab_entity_definition
 from engine.behaviours import load_builtin_behaviours
 from engine.behaviours.registry import get_behaviour_info, list_behaviours
 from engine.entity_paint_mode import make_entity_id
 from engine.scene_loader import SceneLoader
+from engine.tilemap_edit import TilemapDims, ensure_tiles_array, get_layer_by_id, set_tile
 
 Doc = dict[str, Any]
 
 DOOR_SPRITE = "assets/sprites/door.png"
+
+# Maps use the engine's existing tilemap format: the scene's inline ``tile_layers`` hold
+# the painted tiles (they override the map file's layers), and a small Tiled-format map
+# file next to the room supplies the size and the tileset. Tile ids are Tiled gids
+# (first gid 1); 0 is an empty cell.
+TILESET_SOURCE = "assets/tilesets/starter.json"
+TILE_SIZE = 32
+GROUND, WALLS = "ground", "walls"  # WALLS is the collision layer: anything painted there blocks
+MAP_LAYERS = ((GROUND, -20, False), (WALLS, -10, True))
+STARTER_GRASS, STARTER_FLOOR, STARTER_WALL = 1, 5, 9  # gids in the starter tileset
 # Arrival spot relative to its door: far enough that a 64px player doesn't touch a
 # walk-in door (which would send them straight back).
 ARRIVAL_OFFSET = (0.0, -96.0)
@@ -325,3 +337,123 @@ def _add_door(scene: Doc, key: str, at: tuple[float, float], *, to_key: str, to_
         "x": ax,
         "y": ay,
     })
+
+
+# --- maps -----------------------------------------------------------------------------------
+
+
+def map_info(scene: Doc) -> Doc | None:
+    """``{width, height, tilewidth, tileheight, layers: {id: tiles}}`` for a room with a map."""
+    tilemap = scene.get("tilemap")
+    if not isinstance(tilemap, dict) or not isinstance(tilemap.get("tile_layers"), list):
+        return None
+    layers = {str(layer.get("id")): list(layer.get("tiles") or []) for layer in tilemap["tile_layers"] if isinstance(layer, dict)}
+    return {
+        "width": int(tilemap["width"]), "height": int(tilemap["height"]),
+        "tilewidth": int(tilemap["tilewidth"]), "tileheight": int(tilemap["tileheight"]), "layers": layers,
+    }
+
+
+def map_file_paths(scene_path: str) -> tuple[str, str]:
+    """``(project-relative, scene-relative)`` path of a room's map file: ``<pack>/maps/<room>.json``."""
+    scene_path = scene_path.replace("\\", "/")
+    scene_dir = posixpath.dirname(scene_path)
+    name = posixpath.splitext(posixpath.basename(scene_path))[0]
+    project_rel = posixpath.join(posixpath.dirname(scene_dir), "maps", f"{name}.json")
+    return project_rel, posixpath.relpath(project_rel, scene_dir)
+
+
+def map_skeleton(map_project_path: str, width: int, height: int, tile: int = TILE_SIZE) -> Doc:
+    """The Tiled-format map file for a room: size, tileset and empty layers (tiles live in the scene)."""
+    tileset = posixpath.relpath(TILESET_SOURCE, posixpath.dirname(map_project_path))
+    return {
+        "type": "map", "orientation": "orthogonal", "renderorder": "right-down", "infinite": False,
+        "width": width, "height": height, "tilewidth": tile, "tileheight": tile,
+        "tilesets": [{"firstgid": 1, "source": tileset}],
+        "layers": [
+            {"name": name, "type": "tilelayer", "width": width, "height": height, "x": 0, "y": 0,
+             "opacity": 1, "visible": True, "data": [0] * (width * height)}
+            for name, _z, _collision in MAP_LAYERS
+        ],
+    }
+
+
+def add_map(scene: Doc, scene_path: str, *, width: int, height: int, ground: int = 0, border: int = 0) -> tuple[Doc, str, Doc]:
+    """Give a room a map. Returns ``(scene, map file path, map file document)``."""
+    if map_info(scene) is not None:
+        raise OpError("This room already has a map.")
+    if width < 4 or height < 4 or width > 256 or height > 256:
+        raise OpError("A map must be between 4 and 256 tiles on each side.")
+    project_rel, scene_rel = map_file_paths(scene_path)
+    walls = [0] * (width * height)
+    if border:
+        for col in range(width):
+            walls[col] = walls[(height - 1) * width + col] = border
+        for row in range(height):
+            walls[row * width] = walls[row * width + width - 1] = border
+    tiles = {GROUND: [ground] * (width * height), WALLS: walls}
+    out = copy.deepcopy(scene)
+    out["tilemap"] = {
+        "path": scene_rel, "width": width, "height": height, "tilewidth": TILE_SIZE, "tileheight": TILE_SIZE,
+        "collision_layer_id": WALLS,
+        "tile_layers": [
+            {"id": name, "z": z, "draw": True, "collision": collision, "tiles": tiles[name]}
+            for name, z, collision in MAP_LAYERS
+        ],
+    }
+    return _checked(scene, out), project_rel, map_skeleton(project_rel, width, height)
+
+
+def map_size_for(scene: Doc, minimum: tuple[int, int] = (24, 16)) -> tuple[int, int]:
+    """A map size (in tiles) that covers every object in the room, with a margin."""
+    xs = [float(e.get("x", 0)) for e in entities(scene)] or [0.0]
+    ys = [float(e.get("y", 0)) for e in entities(scene)] or [0.0]
+    width = max(minimum[0], int(max(xs) // TILE_SIZE) + 4)
+    height = max(minimum[1], int(max(ys) // TILE_SIZE) + 4)
+    return width, height
+
+
+def cell_at(info: Doc, x: float, y: float) -> tuple[int, int] | None:
+    """The ``(col, row)`` under a world point, or None outside the map. Row 0 is the top row."""
+    col = int(x // info["tilewidth"])
+    row = int((info["height"] * info["tileheight"] - y) // info["tileheight"])
+    if 0 <= col < info["width"] and 0 <= row < info["height"]:
+        return col, row
+    return None
+
+
+def cell_center(info: Doc, col: int, row: int) -> tuple[float, float]:
+    return ((col + 0.5) * info["tilewidth"], info["height"] * info["tileheight"] - (row + 0.5) * info["tileheight"])
+
+
+def _map_layer(out: Doc, layer: str) -> tuple[list[int], TilemapDims]:
+    tilemap = out.get("tilemap")
+    if not isinstance(tilemap, dict) or not isinstance(tilemap.get("tile_layers"), list):
+        raise OpError("This room has no map yet.")
+    dims = TilemapDims(int(tilemap["width"]), int(tilemap["height"]))
+    try:
+        return ensure_tiles_array(get_layer_by_id(tilemap["tile_layers"], layer), dims=dims), dims
+    except KeyError as exc:
+        raise OpError(f"This map has no '{layer}' layer.") from exc
+
+
+def paint_tiles(scene: Doc, layer: str, cells: Iterable[tuple[int, int]], tile: int) -> Doc:
+    """Set ``cells`` on ``layer`` to ``tile`` (0 clears them). Cells outside the map are ignored."""
+    out = copy.deepcopy(scene)
+    tiles, dims = _map_layer(out, layer)
+    for col, row in cells:
+        if 0 <= col < dims.width and 0 <= row < dims.height:
+            set_tile(tiles, dims=dims, x=col, y=row, tile=int(tile))
+    return _checked(scene, out)
+
+
+def erase_tiles(scene: Doc, cells: Iterable[tuple[int, int]]) -> Doc:
+    """Clear the top-most tile in each cell: a wall or obstacle first, otherwise the ground."""
+    out = copy.deepcopy(scene)
+    walls, dims = _map_layer(out, WALLS)
+    ground, _ = _map_layer(out, GROUND)
+    for col, row in cells:
+        if 0 <= col < dims.width and 0 <= row < dims.height:
+            index = row * dims.width + col
+            (walls if walls[index] else ground)[index] = 0
+    return _checked(scene, out)

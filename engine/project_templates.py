@@ -115,6 +115,11 @@ def _apply_starter(root: Path) -> None:
     scene["name"] = "Starter Room"
     guide = _person_entity("Guide", "Hi! Welcome to your new Mesh game.\nWalk with WASD, talk with E.")
     scene["entities"].append({"id": "start_guide_320_128_0_0", **guide, "x": 320.0, "y": 128.0})
+    # A grass field to paint on in Mesh Studio (the tileset is copied by create_project).
+    from .project_ops import STARTER_GRASS, add_map  # noqa: PLC0415  # keep scaffolding import-light
+
+    scene, map_path, skeleton = add_map(scene, "packs/core_regions/scenes/start.json", width=24, height=16, ground=STARTER_GRASS)
+    _write_json(root / map_path, skeleton)
     _write_json(root / "packs/core_regions/scenes/start.json", scene)
     # Creator Mode's "Add Person" stages this prefab (projects without it fail closed).
     json_io.write_json_atomic(

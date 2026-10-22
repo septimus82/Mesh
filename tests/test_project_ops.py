@@ -148,3 +148,56 @@ def test_scene_loader_prefers_open_documents_over_disk(tmp_path, monkeypatch) ->
     unsaved = tmp_path / "not_saved_yet.json"
     loader.documents[document_key(unsaved)] = {"name": "Only in editor", "entities": []}
     assert loader.load_scene(str(unsaved))["name"] == "Only in editor"
+
+
+# --- maps ----------------------------------------------------------------------------------
+
+
+def test_map_file_paths_sit_next_to_the_room_in_either_separator_style() -> None:
+    expected = ("packs/core_regions/maps/house.json", "../maps/house.json")
+    assert ops.map_file_paths("packs/core_regions/scenes/house.json") == expected
+    assert ops.map_file_paths("packs/core_regions/scenes/house.json".replace("/", chr(92))) == expected
+    skeleton = ops.map_skeleton("packs/core_regions/maps/house.json", 6, 4)
+    assert skeleton["tilesets"] == [{"firstgid": 1, "source": "../../../assets/tilesets/starter.json"}]
+    assert [layer["name"] for layer in skeleton["layers"]] == [ops.GROUND, ops.WALLS]
+    assert all(len(layer["data"]) == 24 for layer in skeleton["layers"])
+
+
+def test_add_map_fills_ground_draws_border_and_validates() -> None:
+    scene, map_path, skeleton = ops.add_map(_scene(), "packs/core_regions/scenes/start.json",
+                                            width=6, height=4, ground=ops.STARTER_FLOOR, border=ops.STARTER_WALL)
+    info = ops.map_info(scene)
+    assert (info["width"], info["height"], info["tilewidth"]) == (6, 4, ops.TILE_SIZE)
+    assert set(info["layers"][ops.GROUND]) == {ops.STARTER_FLOOR}
+    walls = info["layers"][ops.WALLS]
+    assert walls[0] == walls[5] == walls[18] == walls[23] == ops.STARTER_WALL  # corners
+    assert walls[7] == 0  # interior is open
+    assert scene["tilemap"]["collision_layer_id"] == ops.WALLS
+    assert map_path == "packs/core_regions/maps/start.json" and skeleton["width"] == 6
+    assert ops.scene_errors(scene) == []
+    with pytest.raises(ops.OpError, match="already has a map"):
+        ops.add_map(scene, "packs/core_regions/scenes/start.json", width=6, height=4)
+    with pytest.raises(ops.OpError, match="between"):
+        ops.add_map(_scene(), "packs/core_regions/scenes/start.json", width=2, height=4)
+
+
+def test_paint_and_erase_cells() -> None:
+    scene, _, _ = ops.add_map(_scene(), "s/scenes/a.json", width=4, height=4, ground=ops.STARTER_GRASS)
+    scene = ops.paint_tiles(scene, ops.WALLS, [(0, 0), (1, 0), (9, 9)], ops.STARTER_WALL)  # (9, 9) is off the map
+    walls = ops.map_info(scene)["layers"][ops.WALLS]
+    assert walls[:2] == [ops.STARTER_WALL, ops.STARTER_WALL] and walls.count(ops.STARTER_WALL) == 2
+    scene = ops.erase_tiles(scene, [(0, 0), (2, 0)])  # a wall is erased first; bare ground next
+    info = ops.map_info(scene)
+    assert info["layers"][ops.WALLS][0] == 0 and info["layers"][ops.GROUND][0] == ops.STARTER_GRASS
+    assert info["layers"][ops.GROUND][2] == 0
+    with pytest.raises(ops.OpError, match="no map"):
+        ops.paint_tiles(_scene(), ops.GROUND, [(0, 0)], 1)
+
+
+def test_cell_and_world_coordinates_round_trip() -> None:
+    scene, _, _ = ops.add_map(_scene(), "s/scenes/a.json", width=10, height=5)
+    info = ops.map_info(scene)
+    for col, row in ((0, 0), (9, 4), (3, 2)):
+        assert ops.cell_at(info, *ops.cell_center(info, col, row)) == (col, row)
+    assert ops.cell_center(info, 0, 0) == (16.0, 5 * 32 - 16.0)  # row 0 is the top row
+    assert ops.cell_at(info, -1, 10) is None and ops.cell_at(info, 10, 5 * 32 + 1) is None

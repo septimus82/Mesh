@@ -16,6 +16,7 @@ from typing import Any, Callable
 
 from engine import project_ops as ops
 from engine.json_io import write_json_atomic
+from engine.project_scaffold import ensure_starter_files
 
 Doc = dict[str, Any]
 UNDO_LIMIT = 100
@@ -124,13 +125,50 @@ class Project:
         self.dirty.add(key)
 
     def add_room(self, label: str) -> str:
+        """A new room with its own player and a ready-to-paint map: wood floor, stone-wall border."""
         before = self._snapshot()
-        world, scene, key, _ = ops.new_room(self.world, label, self.scenes_dir(), self.player_template())
+        world, scene, key, path = ops.new_room(self.world, label, self.scenes_dir(), self.player_template())
+        scene, map_path, skeleton = ops.add_map(scene, path, width=20, height=15,
+                                                ground=ops.STARTER_FLOOR, border=ops.STARTER_WALL)
+        self._write_map_file(map_path, skeleton)
         self._record(before)
         self.world, self.world_dirty = world, True
         self.scenes[key] = scene
         self.dirty.add(key)
         return key
+
+    def add_map(self, key: str | None = None) -> None:
+        """Give a room without a map an empty one that covers its objects."""
+        key = key or self.current
+        width, height = ops.map_size_for(self.scene(key))
+        before = self._snapshot()
+        scene, map_path, skeleton = ops.add_map(self.scene(key), self.path(key), width=width, height=height)
+        self._write_map_file(map_path, skeleton)
+        self._record(before)
+        self.scenes[key] = scene
+        self.dirty.add(key)
+
+    def _write_map_file(self, map_path: str, skeleton: Doc) -> None:
+        # The map file holds only the size, tileset and empty layers (the painted tiles live
+        # in the room document), so it is written straight away: the Studio and play-tests
+        # load it from disk even before the room is saved.
+        ensure_starter_files(self.root)
+        target = self.root / map_path
+        if not target.is_file():
+            write_json_atomic(target, skeleton)
+
+    def tileset(self) -> Doc:
+        """The project's tileset: ``{image, tilewidth, tileheight, count, tiles: [{gid, label, layer}]}``."""
+        ensure_starter_files(self.root)
+        path = self.root / ops.TILESET_SOURCE
+        data = json.loads(path.read_text(encoding="utf-8"))
+        tiles = []
+        for entry in data.get("tiles") or []:
+            props = {p.get("name"): p.get("value") for p in entry.get("properties") or [] if isinstance(p, dict)}
+            tiles.append({"gid": int(entry["id"]) + 1, "label": str(props.get("label") or f"Tile {entry['id']}"),
+                          "layer": ops.WALLS if props.get("layer") == ops.WALLS else ops.GROUND})
+        return {"image": str(path.parent / data["image"]), "tilewidth": int(data["tilewidth"]),
+                "tileheight": int(data["tileheight"]), "count": int(data["tilecount"]), "tiles": tiles}
 
     def link_rooms(self, key_a: str, at_a: tuple[float, float], key_b: str, at_b: tuple[float, float]) -> None:
         before = self._snapshot()
