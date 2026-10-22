@@ -79,7 +79,9 @@ class InteractPromptOverlay(UIElement):
         if not text:
             return
 
-        width = 220.0
+        # The box grows to fit the label (the font is monospaced, ~10.5 px a character at 14 pt):
+        # a fixed width let long names spill off the screen's left edge.
+        width = max(220.0, len(text) * 10.5 + 24.0)
         height = 40.0
         left = 20.0
         bottom = 150.0
