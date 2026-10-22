@@ -36,6 +36,48 @@
         "$ref": "#/$defs/behaviourEntry"
       }
     },
+    "components": {
+      "type": "object",
+      "description": "Runtime components. 'collider' replaces the sprite-sized box in movement collision.",
+      "properties": {
+        "collider": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "circle"
+              ]
+            },
+            "r": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "radius": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "offset_x": {
+              "type": "number"
+            },
+            "offset_y": {
+              "type": "number"
+            },
+            "ox": {
+              "type": "number"
+            },
+            "oy": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    },
     "collision_poly": {
       "type": "array",
       "items": {

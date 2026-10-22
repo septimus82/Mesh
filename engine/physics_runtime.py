@@ -616,8 +616,9 @@ def move_entity_with_physics(
     # 3. Execute Pure Model
     result = sweep_axis_separate(req, query_tiles)
 
-    # 4. Apply Side Effects
-    entity.center_x = result.final_pos[0]
-    entity.center_y = result.final_pos[1]
+    # 4. Apply Side Effects: move the entity by what the shape moved. (Setting its centre to the
+    # shape's would drift an offset collider, e.g. one at the feet, by its offset every frame.)
+    entity.center_x += result.final_pos[0] - start_aabb.x
+    entity.center_y += result.final_pos[1] - start_aabb.y
 
     return result

@@ -173,6 +173,7 @@ _AUTHORED_ENTITY_FIELDS = {
     "behaviour_config",
     "behaviours",
     "collision_poly",
+    "components",  # e.g. a feet collider: without it a loaded player collides with its whole sprite
     "depth_z",
     "dialogue",
     "dialogue_lines",

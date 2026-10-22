@@ -106,3 +106,12 @@ def test_aabb_only_collision_behavior_unchanged_smoke(monkeypatch: pytest.Monkey
     assert calls["n"] >= 1
     assert result.hit_x is True
     assert result.final_pos == pytest.approx((10.0, 0.0))
+
+
+def test_an_offset_circle_collider_moves_its_entity_by_the_delta_only() -> None:
+    # A feet collider sits below the sprite's centre; moving must not snap the centre onto it.
+    entity = type("Feet", (), {"center_x": 100.0, "center_y": 100.0, "width": 64.0, "height": 64.0,
+                               "mesh_entity_data": {"components": {"collider": {"kind": "circle", "r": 13, "offset_y": -20}}}})()
+    for _ in range(3):
+        physics_runtime.move_entity_with_physics(entity, (2.0, 0.0), [])
+    assert (entity.center_x, entity.center_y) == pytest.approx((106.0, 100.0))
