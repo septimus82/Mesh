@@ -144,6 +144,9 @@ class TilemapManager:
 
         width = int(payload.get("width", 0))
         height = int(payload.get("height", 0))
+        size = overrides.get("size") if overrides else None
+        if isinstance(size, (list, tuple)) and len(size) == 2 and all(isinstance(v, int) and v > 0 for v in size):
+            width, height = size  # the scene's size: its inline tiles are the map, resized in the editor
         tile_width = int(payload.get("tilewidth", 0))
         tile_height = int(payload.get("tileheight", 0))
         if width <= 0 or height <= 0 or tile_width <= 0 or tile_height <= 0:
@@ -172,6 +175,8 @@ class TilemapManager:
                     # A layer painted in the scene but absent from the map file (e.g. added later).
                     raw = layer_lookup[lname] = {"name": lname, "type": "tilelayer", "width": width, "height": height}
                 raw["data"] = override_data
+                if len(override_data) == width * height:
+                    raw["width"], raw["height"] = width, height
 
         instance = TilemapInstance(
             map_size=(width, height),

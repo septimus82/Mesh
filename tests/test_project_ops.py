@@ -264,3 +264,46 @@ def test_cell_and_world_coordinates_round_trip() -> None:
         assert ops.cell_at(info, *ops.cell_center(info, col, row)) == (col, row)
     assert ops.cell_center(info, 0, 0) == (16.0, 5 * 32 - 16.0)  # row 0 is the top row
     assert ops.cell_at(info, -1, 10) is None and ops.cell_at(info, 10, 5 * 32 + 1) is None
+
+
+def test_resize_map_grows_and_shrinks_at_the_top_right_keeping_painted_cells() -> None:
+    scene, _, _ = ops.add_map(_scene(), "s/scenes/a.json", width=4, height=4)
+    scene = ops.paint_tiles(scene, ops.WALLS, [(0, 3)], ops.STARTER_WALL)  # bottom-left cell (row 3 of 4)
+    bigger = ops.resize_map(scene, 6, 5)
+    info = ops.map_info(bigger)
+    assert (info["width"], info["height"]) == (6, 5)
+    assert info["layers"][ops.WALLS][4 * 6] == ops.STARTER_WALL  # still bottom-left: the new row went on top
+    assert ops.resize_map(bigger, 4, 4)["tilemap"] == scene["tilemap"]
+    with pytest.raises(ops.OpError, match="between"):
+        ops.resize_map(scene, 2, 4)
+
+
+def test_set_entity_fields_sets_and_removes_but_refuses_what_the_runtime_would_not_load() -> None:
+    scene = _scene()
+    collider = {"kind": "circle", "r": 12, "offset_y": -20}
+    scene = ops.set_entity_fields(scene, "start_player", solid=False, components={"collider": collider})
+    player = ops.find_entity(scene, "start_player")
+    assert player["solid"] is False and player["components"]["collider"] == collider
+    assert "solid" not in ops.find_entity(ops.set_entity_fields(scene, "start_player", solid=None), "start_player")
+    with pytest.raises(ops.OpError, match="unloadable"):
+        ops.set_entity_fields(scene, "start_player", wobble=1)  # unknown to the strict schema
+    with pytest.raises(ops.OpError, match="own operations"):
+        ops.set_entity_fields(scene, "start_player", behaviours=[])
+
+
+def test_array_fields_take_comma_separated_text() -> None:
+    assert ops.coerce_field({"type": "array"}, "a, b,,c ") == ["a", "b", "c"]
+    assert ops.coerce_field({"type": "array"}, ["x"]) == ["x"]
+
+
+def test_a_save_slot_finds_its_map_next_to_the_room_it_was_saved_in(tmp_path, monkeypatch) -> None:
+    room_path = tmp_path / "packs" / "r" / "scenes" / "a.json"
+    room_path.parent.mkdir(parents=True)
+    scene, _, _ = ops.add_map(_scene(), "packs/r/scenes/a.json", width=4, height=4)
+    slot = {**scene, "save_format_version": 1, "meta": {"scene_path": str(room_path)}}
+    (tmp_path / "saves").mkdir()
+    (tmp_path / "saves" / "quicksave.json").write_text(json.dumps(slot), encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    loaded = SceneLoader().load_scene(str(tmp_path / "saves" / "quicksave.json"))
+    expected = (room_path.parent / scene["tilemap"]["path"]).resolve()
+    assert loaded["tilemap"]["resolved_path"] == str(expected)  # not saves/../maps/a.json

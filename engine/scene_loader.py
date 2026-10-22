@@ -166,9 +166,12 @@ class SceneLoader:
             raise FileNotFoundError(f"Scene file not found: {scene_path}")
         else:
             raw_scene = json.loads(full_path.read_text(encoding="utf-8"))
+        saved_from: str | None = None  # the room a save slot was made in
         if isinstance(raw_scene, dict) and "save_format_version" in raw_scene:
             # A save slot is a scene snapshot plus save metadata (restored separately by
             # SaveManager before it loads the slot as a scene); keep only the scene part.
+            meta = raw_scene.get("meta")
+            saved_from = meta.get("scene_path") if isinstance(meta, dict) else None
             raw_scene = {k: v for k, v in raw_scene.items() if k in SCENE_TOP_LEVEL_KEYS}
         migrated_scene = migrate_payload("scene", raw_scene)
         validate(migrated_scene, "scene.schema.json", full_path)
@@ -204,7 +207,11 @@ class SceneLoader:
 
         scene["entities"] = normalized_entities
 
-        normalized_tilemap = self._normalize_tilemap_section(scene.get("tilemap"), base_path=full_path.parent)
+        # A save slot lives in saves/, but its map path is relative to the room it was saved
+        # from; resolving it from saves/ lost the map on every load.
+        has_origin = isinstance(saved_from, str) and saved_from.strip()
+        tilemap_base = resolve_path(saved_from).parent if has_origin else full_path.parent
+        normalized_tilemap = self._normalize_tilemap_section(scene.get("tilemap"), base_path=tilemap_base)
         if normalized_tilemap is not None:
             scene["tilemap"] = normalized_tilemap
         else:

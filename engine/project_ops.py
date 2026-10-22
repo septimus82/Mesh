@@ -84,11 +84,29 @@ def scene_errors(scene: Doc) -> list[str]:
     return list(report.errors)
 
 
+def _schema_problem(scene: Doc) -> str | None:
+    """Why the runtime's strict scene schema would refuse ``scene`` (None if it accepts it)."""
+    from engine.schema_validation import SchemaValidationError, validate  # noqa: PLC0415
+
+    try:
+        validate(scene, "scene.schema.json", "scene")
+    except SchemaValidationError as exc:
+        return str(exc)
+    return None
+
+
 def _checked(before: Doc, after: Doc) -> Doc:
-    """Reject an edit that introduces validation errors the scene didn't already have."""
+    """Reject an edit that introduces validation errors the scene didn't already have.
+
+    Two checks: the scene loader's (lenient, content-aware) and the strict scene schema the
+    runtime loads with. Without the second, an edit could save a room that then fails to load.
+    """
     new = [e for e in scene_errors(after) if e not in set(scene_errors(before))]
     if new:
         raise OpError(new[0])
+    problem = _schema_problem(after)
+    if problem and _schema_problem(before) is None:
+        raise OpError(f"That would make the room unloadable: {problem}")
     return after
 
 
@@ -130,6 +148,23 @@ def paste_entity(scene: Doc, scene_key: str, entity: Doc, x: float, y: float) ->
     pasted["id"] = unique_entity_id(out, make_entity_id(scene_key, slug(base), x, y))
     out.setdefault("entities", []).append(pasted)
     return _checked(scene, out), pasted["id"]
+
+
+def set_entity_fields(scene: Doc, entity_id: str, **fields: Any) -> Doc:
+    """Set top-level fields of an object (sprite, sprite_sheet, solid, scale...); None removes one.
+
+    The scene schema checks the result, so an unknown field or a wrong type is refused.
+    """
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    for name, value in fields.items():
+        if name in ("id", "behaviours", "behaviour_config"):
+            raise OpError(f"'{name}' has its own operations.")
+        if value is None:
+            entity.pop(name, None)
+        else:
+            entity[name] = copy.deepcopy(value)
+    return _checked(scene, out)
 
 
 def remove_entity(scene: Doc, entity_id: str) -> Doc:
@@ -226,6 +261,8 @@ def coerce_field(spec: Doc, value: Any) -> Any:
             return float(value)
         if kind == "string":
             return str(value)
+        if kind == "array" and isinstance(value, str):
+            return [part.strip() for part in value.split(",") if part.strip()]  # "a, b" -> ["a", "b"]
     except (TypeError, ValueError) as exc:
         raise OpError(f"'{spec.get('name')}' needs a {kind}, not '{value}'.") from exc
     return value
@@ -429,6 +466,32 @@ def add_map(scene: Doc, scene_path: str, *, width: int, height: int, ground: int
         ],
     }
     return _checked(scene, out), project_rel, map_skeleton(project_rel, width, height, tilesets=tilesets)
+
+
+def resize_map(scene: Doc, width: int, height: int) -> Doc:
+    """The room with its map resized; rows and columns are added or cut at the top and right.
+
+    Everything already painted, and every object, keeps its place in the world (the
+    world's origin is the map's bottom-left corner).
+    """
+    if not (4 <= int(width) <= 256 and 4 <= int(height) <= 256):
+        raise OpError("A map must be between 4 and 256 tiles on each side.")
+    out = copy.deepcopy(scene)
+    tilemap = out.get("tilemap")
+    if not isinstance(tilemap, dict) or not isinstance(tilemap.get("tile_layers"), list):
+        raise OpError("This room has no map yet.")
+    old_w, old_h, new_w, new_h = int(tilemap["width"]), int(tilemap["height"]), int(width), int(height)
+    shift = new_h - old_h  # rows gained (or lost) at the top
+    for layer in tilemap["tile_layers"]:
+        old = list(layer.get("tiles") or [0] * (old_w * old_h))
+        new = [0] * (new_w * new_h)
+        for row in range(old_h):
+            if 0 <= row + shift < new_h:
+                for col in range(min(old_w, new_w)):
+                    new[(row + shift) * new_w + col] = old[row * old_w + col] if row * old_w + col < len(old) else 0
+        layer["tiles"] = new
+    tilemap["width"], tilemap["height"] = new_w, new_h
+    return _checked(scene, out)
 
 
 def map_size_for(scene: Doc, minimum: tuple[int, int] = (24, 16)) -> tuple[int, int]:

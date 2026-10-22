@@ -113,6 +113,9 @@ def load_tilemap_layers(
         if overrides is None:
             overrides = {}
         overrides["layers"] = tile_override_layers
+        size = (tilemap_data.get("width"), tilemap_data.get("height"))
+        if isinstance(raw_tile_layers, list) and all(isinstance(v, int) and v > 0 for v in size):
+            overrides["size"] = list(size)
     try:
         instance = load_tilemap_func(tilemap_path, layer_configs, overrides=overrides)
     except Exception:
