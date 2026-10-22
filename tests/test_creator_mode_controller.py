@@ -365,7 +365,7 @@ def test_active_overlay_draw_commands_include_shell_content() -> None:
     text = _command_text(commands)
 
     assert "Creator Mode" in text
-    assert "Read-only preview" in text
+    assert "Changes become proposals" in text
     assert "Save | Test Play | Fix Problems | Advanced Mode" in text
     assert "Map" in text
     assert "Light" in text
@@ -486,7 +486,7 @@ def test_very_small_window_produces_sane_overlay_commands() -> None:
     assert all(command.height > 0 for command in rects)
     assert all(command.x >= 0 for command in commands)
     assert all(command.y >= 0 for command in commands)
-    assert "Read-only preview" in _command_text(commands)
+    assert "Changes become proposals" in _command_text(commands)
 
 
 def test_missing_inspector_fields_are_distinct_in_draw_command_data() -> None:

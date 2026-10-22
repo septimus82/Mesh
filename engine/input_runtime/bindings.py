@@ -32,12 +32,18 @@ DEFAULT_ACTIONS: tuple[str, ...] = (
 
 _KEY_NAME_TO_CODE: Dict[str, int] | None = None
 _CODE_TO_NAME: Dict[int, str] | None = None
+_KEY_MAPS_SOURCE: object | None = None
 
 
 def _ensure_key_maps(arcade_module=optional_arcade.arcade) -> tuple[Dict[str, int], Dict[int, str]]:
-    """Build and cache key name <-> code lookups from optional_arcade.arcade.key."""
-    global _KEY_NAME_TO_CODE, _CODE_TO_NAME
-    if _KEY_NAME_TO_CODE is not None and _CODE_TO_NAME is not None:
+    """Build and cache key name <-> code lookups from ``arcade_module.key``.
+
+    The cache is keyed to the key module it was built from: arcade_fallback has a
+    much smaller key table, and a map cached from it must not answer for real arcade.
+    """
+    global _KEY_NAME_TO_CODE, _CODE_TO_NAME, _KEY_MAPS_SOURCE
+    source = arcade_module.key
+    if _KEY_NAME_TO_CODE is not None and _CODE_TO_NAME is not None and _KEY_MAPS_SOURCE is source:
         return _KEY_NAME_TO_CODE, _CODE_TO_NAME
 
     name_to_code: Dict[str, int] = {}
@@ -55,6 +61,7 @@ def _ensure_key_maps(arcade_module=optional_arcade.arcade) -> tuple[Dict[str, in
 
     _KEY_NAME_TO_CODE = name_to_code
     _CODE_TO_NAME = code_to_name
+    _KEY_MAPS_SOURCE = source
     return name_to_code, code_to_name
 
 

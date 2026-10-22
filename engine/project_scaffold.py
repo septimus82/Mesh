@@ -170,9 +170,8 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
         # lighting_playground turns it back on alongside its lights.
         "lighting_enabled": False,
     }
-    # The runtime only applies default bindings when input_bindings is None, and
-    # EngineConfig defaults it to {} — so without this, new projects get arrows
-    # only (no WASD, no F4 editor toggle) and fail `mesh check`.
+    # Explicit bindings: the runtime would fall back to defaults for {}, but
+    # `mesh check`'s wiring gate reads config.json and needs every required action.
     engine_bindings = _engine_input_bindings()
     if engine_bindings:
         config["input_bindings"] = engine_bindings

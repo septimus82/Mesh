@@ -218,7 +218,7 @@ def build_creator_overlay_draw_commands(
     )
     commands.append(
         _text(
-            "Read-only preview",
+            "Changes become proposals",
             "top",
             pad,
             win_h - 32.0,
