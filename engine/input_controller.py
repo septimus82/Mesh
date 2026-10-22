@@ -431,7 +431,7 @@ class InputController:
             self.manager.bind(ACTION_SHOW_CHARACTER, optional_arcade.arcade.key.C)
         if "interact" not in self.manager.get_bindings():
             self.manager.bind("interact", optional_arcade.arcade.key.E)
-        if bindings is None and not applied:
+        if not bindings and not applied:  # {} (the EngineConfig default) means "unconfigured" too
             self.manager.bind_default_actions(optional_arcade.arcade)
         # Keep baseline movement/pause bindings reachable even with partial config.
         if not self.manager.is_key_bound_to_action("move_up", optional_arcade.arcade.key.UP):
