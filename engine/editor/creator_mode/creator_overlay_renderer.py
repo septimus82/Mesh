@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import textwrap
 from dataclasses import dataclass
 from typing import Any
 
@@ -15,6 +16,11 @@ from engine.ui_overlays.common import (
     truncate_text_to_char_limit,
 )
 
+from .creator_add_person import (
+    ADD_PERSON_LINE_ACTION_ID,
+    ADD_PERSON_STAGE_ACTION_ID,
+    CreatorAddPersonPanelModel,
+)
 from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
 from .creator_entity_opacity_panel import (
     ENTITY_OPACITY_DRAFT_ACTION_ID,
@@ -280,6 +286,16 @@ def build_creator_overlay_draw_commands(
                 _panel_char_limit(left_text_width, 12, MAX_TOOL_CHARS),
             )
         )
+
+    if model.add_person_panel is not None:
+        person_commands, _ = _add_person_panel_text_commands(
+            model.add_person_panel,
+            pad,
+            y - 30.0,
+            bottom_h,
+            left_text_width + 8.0,
+        )
+        commands.extend(person_commands)
 
     right_x = win_w - right_w + pad
     y = win_h - top_h - 22.0
@@ -683,6 +699,46 @@ def _movement_panel_text_commands(
             (170, 218, 154) if action.enabled else (160, 166, 176),
             action_id=clickable_id,
         )
+    return tuple(commands), y
+
+
+def _add_person_panel_text_commands(
+    panel: CreatorAddPersonPanelModel,
+    x: float,
+    start_y: float,
+    bottom_h: float,
+    text_width: float,
+) -> tuple[tuple[CreatorOverlayDrawCommand, ...], float]:
+    """Left-column Add Person section: what they say (rename-style field) + stage button."""
+    commands: list[CreatorOverlayDrawCommand] = []
+    y = start_y
+
+    def add(text: str, font_size: int, color: tuple[int, ...], *, action_id: str = "") -> None:
+        nonlocal y
+        if y <= bottom_h + 6.0:
+            return
+        limit = _panel_char_limit(text_width, font_size, MAX_PANEL_CHARS)
+        if action_id:
+            commands.append(_clickable_text(text, "left", x, y, font_size, color, limit, action_id=action_id))
+        else:
+            commands.append(_text(text, "left", x, y, font_size, color, limit))
+        y -= _ACTION_LINE_HEIGHT
+
+    add(panel.title, 12, (255, 255, 255))
+    marker = ">" if panel.focused else " "
+    add(
+        f"Says: [{marker}{panel.line}]",
+        10,
+        (220, 225, 232),
+        action_id=ADD_PERSON_LINE_ACTION_ID if panel.editable else "",
+    )
+    if panel.enabled:
+        add("[Ready] Add to map", 10, (170, 218, 154), action_id=ADD_PERSON_STAGE_ACTION_ID)
+        return tuple(commands), y
+    add("[Disabled] Add to map", 10, (160, 166, 176))
+    wrap_width = max(8, _panel_char_limit(text_width, 10, MAX_PANEL_CHARS))
+    for chunk in textwrap.wrap(panel.reason, width=wrap_width)[:3]:
+        add(chunk, 10, (238, 190, 120))
     return tuple(commands), y
 
 

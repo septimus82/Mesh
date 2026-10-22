@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .creator_add_person import CreatorAddPersonPanelModel
 from .creator_door_panel import CreatorDoorPanelModel
 from .creator_entity_move_panel import CreatorEntityMovePanelModel
 from .creator_entity_opacity_panel import CreatorEntityOpacityPanelModel
@@ -45,6 +46,7 @@ class CreatorOverlayModel:
     rename_panel: CreatorEntityRenamePanelModel | None = None
     opacity_panel: CreatorEntityOpacityPanelModel | None = None
     door_panel: CreatorDoorPanelModel | None = None
+    add_person_panel: CreatorAddPersonPanelModel | None = None
     last_action_message: str = ""
     last_action_ok: bool | None = None
 
@@ -75,6 +77,7 @@ def build_creator_overlay_model(snapshot: CreatorModeSnapshot) -> CreatorOverlay
         rename_panel=snapshot.rename_panel,
         opacity_panel=snapshot.opacity_panel,
         door_panel=snapshot.door_panel,
+        add_person_panel=snapshot.add_person_panel,
         last_action_message=str(snapshot.last_action_message or ""),
         last_action_ok=snapshot.last_action_ok,
     )

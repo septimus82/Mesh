@@ -40,6 +40,17 @@ def editor_viewport_rect(editor: Any) -> Rect:
     return compute_editor_shell_layout(width, height, left_w, right_w).viewport
 
 
+def canvas_center_world(window: Any, viewport: Rect) -> tuple[float, float]:
+    """World point shown at the centre of ``viewport`` (inverse of the mapping below)."""
+    camera = getattr(window, "camera", None)
+    position = getattr(camera, "position", None) or (window.width / 2.0, window.height / 2.0)
+    zoom = float(getattr(camera, "zoom", 1.0) or 1.0)
+    return (
+        float(position[0]) + (viewport.center_x - window.width / 2.0) / zoom,
+        float(position[1]) + (viewport.center_y - window.height / 2.0) / zoom,
+    )
+
+
 def frame_content_if_offscreen(window: Any, viewport: Rect) -> bool:
     """Centre the camera on the scene's sprites if none is inside ``viewport`` (screen rect).
 

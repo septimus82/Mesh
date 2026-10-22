@@ -6,6 +6,7 @@ from typing import Any
 
 import engine.optional_arcade as optional_arcade
 
+from .creator_add_person import ADD_PERSON_LINE_ACTION_ID, ADD_PERSON_STAGE_ACTION_ID
 from .creator_entity_move_actions import ENTITY_MOVE_ACTION_ID_SET
 from .creator_entity_opacity_panel import (
     ENTITY_OPACITY_DRAFT_ACTION_ID,
@@ -182,4 +183,9 @@ def resolve_creator_overlay_click_action(
         if not proposal_open_inbox_action_enabled(model):
             return None
         return action_id
+    person_panel = getattr(model, "add_person_panel", None)
+    if action_id == ADD_PERSON_LINE_ACTION_ID:
+        return action_id if person_panel is not None and person_panel.editable else None
+    if action_id == ADD_PERSON_STAGE_ACTION_ID:
+        return action_id if person_panel is not None and person_panel.enabled else None
     return None

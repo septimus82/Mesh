@@ -116,6 +116,17 @@ class Dialogue(Behaviour):
         if not self._script and not self._graph_nodes:
             print(f"[Mesh][Dialogue] WARNING: No dialogue lines configured for '{self.entity_name}'")
 
+    def on_config_updated(self, param_name: str, value: Any) -> None:
+        """Editor hook (inspector edits, live-op proposals): re-parse lines so the next talk uses them."""
+        del value  # already written into self.config by the editor
+        if param_name not in {"dialogue", "dialogue_lines", "dialogue_speaker"}:
+            return
+        merged = self._merge_entity_data(self.entity, self.config)
+        self._script = self._build_script(merged)
+        self._graph_nodes, self._graph_start = self._build_graph(merged)
+        if not self._active:
+            self._has_played = False  # an edited "once" line should be hearable again
+
     @staticmethod
     def _merge_entity_data(entity: Sprite, config: Dict[str, Any] | None) -> Dict[str, Any]:
         data = dict(getattr(entity, "mesh_entity_data", {}) or {})
