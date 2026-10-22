@@ -142,3 +142,36 @@ def test_mesh_new_inside_the_engine_goes_to_the_projects_folder(tmp_path, monkey
     assert default_dest(str(tmp_path)) == tmp_path.resolve()
     assert create_blank_project("nope", ENGINE_ROOT) == 1
     assert not (ENGINE_ROOT / "nope").exists()
+
+
+def test_a_new_log_keeps_the_last_runs_log(tmp_path) -> None:
+    from engine.launcher import fresh_log  # noqa: PLC0415
+
+    log = tmp_path / "logs" / "studio.log"
+    assert fresh_log(log) == log and log.parent.is_dir()
+    log.write_text("Traceback: the crash", encoding="utf-8")
+    fresh_log(log)
+    assert not log.exists()
+    assert (tmp_path / "logs" / "studio.previous.log").read_text(encoding="utf-8") == "Traceback: the crash"
+
+
+def test_a_studio_crash_names_its_log_when_started_from_the_launcher(monkeypatch, tmp_path) -> None:
+    import engine.launcher  # noqa: PLC0415
+    import engine.optional_arcade  # noqa: PLC0415
+    from engine.game import GameWindow  # noqa: PLC0415
+
+    def boom() -> None:
+        raise RuntimeError("draw failed")
+
+    shown: list[tuple[str, str]] = []
+    monkeypatch.setattr(engine.optional_arcade.arcade, "run", boom)
+    monkeypatch.setattr(engine.launcher, "show_crash", lambda what, log: shown.append((what, str(log))))
+    monkeypatch.setenv("MESH_CRASH_LOG", str(tmp_path / "studio.log"))
+    with pytest.raises(SystemExit):
+        GameWindow.run(None)  # type: ignore[arg-type]
+    assert shown == [("Mesh Studio", str(tmp_path / "studio.log"))]
+
+    monkeypatch.delenv("MESH_CRASH_LOG")  # from a console: an ordinary traceback, no message box
+    with pytest.raises(RuntimeError):
+        GameWindow.run(None)  # type: ignore[arg-type]
+    assert len(shown) == 1

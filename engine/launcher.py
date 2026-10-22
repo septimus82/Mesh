@@ -214,8 +214,8 @@ class Launcher:
             return
         projects.add_recent_project(str(root))
         command, env = studio_command(root)
-        log_path = projects.user_data_dir() / "logs" / "studio.log"
-        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path = fresh_log(projects.user_data_dir() / "logs" / "studio.log")
+        env["MESH_CRASH_LOG"] = str(log_path)  # the Studio names it if it crashes
         log = open(log_path, "w", encoding="utf-8")
         try:
             proc = subprocess.Popen(command, cwd=str(root), env=env, stdout=log, stderr=subprocess.STDOUT)
@@ -440,11 +440,39 @@ class Launcher:
             pass  # a test is reading it; the next dump will land
 
 
+def fresh_log(path: Path) -> Path:
+    """Make way for a new log at ``path``, keeping the last run's as ``<name>.previous.log``.
+
+    A crash's log must survive the next launch, which is usually the first thing people try.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        path.replace(path.with_suffix(".previous.log"))
+    except OSError:
+        pass  # no earlier log (or it's still open somewhere): start fresh
+    return path
+
+
+def show_crash(what: str, log_path: Path | str) -> None:
+    """Tell the person, in a message box, that ``what`` stopped and where the details are.
+
+    Without a console (pythonw) a crash otherwise just makes the window vanish.
+    """
+    if sys.platform == "win32":
+        text = f"{what} stopped because of an error.\n\nThe details are in:\n{log_path}"
+        ctypes.windll.user32.MessageBoxW(None, text, "Mesh Engine", 0x10)  # MB_ICONERROR
+
+
 def main() -> int:
     if sys.stdout is None:  # started without a console (pythonw): keep a log instead
-        log_dir = projects.user_data_dir() / "logs"
-        log_dir.mkdir(parents=True, exist_ok=True)
-        sys.stdout = sys.stderr = open(log_dir / "launcher.log", "w", encoding="utf-8", buffering=1)
+        log_path = fresh_log(projects.user_data_dir() / "logs" / "launcher.log")
+        sys.stdout = sys.stderr = open(log_path, "w", encoding="utf-8", buffering=1)
+
+        def crashed(kind, value, tb) -> None:
+            sys.__excepthook__(kind, value, tb)  # the traceback goes to the log
+            show_crash("The Mesh launcher", log_path)
+
+        sys.excepthook = crashed
     window = optional_arcade.arcade.Window(WIDTH, HEIGHT, "Mesh Engine")
     window.center_window()  # Windows' default placement can push the bottom (and its buttons) off-screen
     Launcher(window)

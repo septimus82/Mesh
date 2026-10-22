@@ -71,6 +71,8 @@ See Also:
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Iterator, Sequence
 
@@ -707,7 +709,20 @@ class GameWindow(engine.optional_arcade.arcade.Window):
     def run(self) -> None:
         """Start Arcade's main loop."""
         logger.info("[Mesh][GameWindow] Starting Arcade loop...")
-        engine.optional_arcade.arcade.run()
+        try:
+            engine.optional_arcade.arcade.run()
+        except Exception:
+            crash_log = os.environ.get("MESH_CRASH_LOG")  # started from the launcher, without a console
+            if crash_log:
+                import traceback  # noqa: PLC0415
+
+                from engine.launcher import show_crash  # noqa: PLC0415
+
+                traceback.print_exc()  # into the log now, so it's there while the message is up
+                sys.stderr.flush()
+                show_crash("Mesh Studio", crash_log)
+                raise SystemExit(1) from None
+            raise
 
     def start_monster_battle(self, **kwargs: Any) -> Any:
         """Start the runtime monster battle mode."""
