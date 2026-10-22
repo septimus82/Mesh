@@ -289,6 +289,9 @@ class SceneLoader:
         if not isinstance(entities, list):
             report.add_error("Scene 'entities' must be an array of entity objects")
         elif validate_entities:
+            # Behaviour names are checked against the registry; an unloaded registry
+            # would reject every valid scene (it did for every mesh_cli validator).
+            load_builtin_behaviours()
             for index, entity in enumerate(entities):
                 entity_report = self.validate_entity(entity, index=index, strict=strict)
                 report.extend(entity_report)
