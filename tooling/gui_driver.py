@@ -30,7 +30,7 @@ _LDOWN, _LUP, _RDOWN, _RUP = 0x0002, 0x0004, 0x0008, 0x0010
 
 VK = {
     "ENTER": 0x0D, "ESC": 0x1B, "BACKSPACE": 0x08, "TAB": 0x09, "SPACE": 0x20, "DELETE": 0x2E,
-    "LEFT": 0x25, "UP": 0x26, "RIGHT": 0x27, "DOWN": 0x28, "SHIFT": 0x10, "CTRL": 0x11, "ALT": 0x12,
+    "LEFT": 0x25, "UP": 0x26, "RIGHT": 0x27, "DOWN": 0x28, "HOME": 0x24, "END": 0x23, "SHIFT": 0x10, "CTRL": 0x11, "ALT": 0x12,
     **{f"F{i}": 0x6F + i for i in range(1, 13)},
     **{chr(c): c for c in range(ord("A"), ord("Z") + 1)},
     **{str(d): 0x30 + d for d in range(10)},
