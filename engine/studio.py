@@ -15,6 +15,8 @@ from __future__ import annotations
 import copy
 import json
 import os
+import time
+from pathlib import Path
 from typing import Any, Callable
 
 import engine.optional_arcade as optional_arcade
@@ -29,6 +31,13 @@ TOP_H, STATUS_H, LEFT_W, RIGHT_W = 44, 26, 230, 330
 GRID = 16
 PAN_SPEED = 600.0
 MAX_PICKER_ROWS = 10
+SHEET_W = LEFT_W - 20  # the tile palette's width
+
+LAYER_BUTTONS = ((ops.GROUND, "Ground"), (ops.WALLS, "Walls"), (ops.OVERHEAD, "Above"))
+LAYER_NAME = {ops.GROUND: "the ground", ops.WALLS: "walls (they block movement)",
+              ops.OVERHEAD: "the layer above characters (roofs, treetops; never blocks)"}
+SHAPE_HELP = {"brush": "Click or drag on the map.", "rect": "Drag a rectangle on the map.",
+              "fill": "Click an area to fill it."}
 
 C_BG = (30, 32, 38)
 C_PANEL = (38, 41, 49)
@@ -78,6 +87,38 @@ def _line_cells(a: tuple[int, int], b: tuple[int, int]) -> list[tuple[int, int]]
             err, y0 = err + dx, y0 + sy
 
 
+def _ask_image_path() -> str:
+    """The OS file dialog, for picking an image to import ("" if cancelled)."""
+    import tkinter  # noqa: PLC0415
+    from tkinter import filedialog  # noqa: PLC0415
+
+    root = tkinter.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    try:
+        return filedialog.askopenfilename(parent=root, title="Import a tileset image", filetypes=[
+            ("Images", "*.png *.gif *.bmp *.jpg *.jpeg *.webp"), ("All files", "*.*")]) or ""
+    finally:
+        root.destroy()
+
+
+def _guess_tile_size(width: int, height: int) -> int:
+    return next((t for t in (32, 16, 48, 24, 64) if width % t == 0 and height % t == 0), 32)
+
+
+class _FirstClicks:
+    """Logs the first mouse presses the window receives (to diagnose clicks lost at start-up)."""
+
+    def __init__(self) -> None:
+        self.started, self.count = time.perf_counter(), 0
+
+    def on_mouse_press(self, x: float, y: float, button: int, modifiers: int) -> None:
+        if self.count < 3:
+            self.count += 1
+            print(f"[Mesh][Studio] mouse press {self.count} at {time.perf_counter() - self.started:.1f}s "
+                  f"({x:.0f}, {y:.0f})", flush=True)
+
+
 class _Field(gui.UIInputText):
     """Single-line text field whose caret lands at the end when you click into it.
 
@@ -86,6 +127,8 @@ class _Field(gui.UIInputText):
     """
 
     def on_event(self, event: Any) -> bool | None:
+        if isinstance(event, gui.UITextInputEvent) and any(ord(ch) < 32 for ch in event.text):
+            return True  # Enter, Tab and Ctrl+letter arrive as control characters; never type them
         was_active = self.active
         handled = super().on_event(event)
         if self.active and not was_active:
@@ -118,16 +161,27 @@ class Studio:
         self._labels: dict[str, optional_arcade.arcade.Text] = {}
         self.prefabs = self._load_prefabs()
         self.tool = "select"  # select | paint | erase
-        self.brush: dict[str, Any] | None = None  # the tileset entry being painted: {gid, label, layer}
-        self.stroke: dict[str, Any] | None = None  # a brush stroke in progress: {"cells": [...], "last": cell}
-        self.tileset = project.tileset()
-        self.tile_textures = self._load_tile_textures()
-        self._palette_buttons: dict[int, Any] = {}
+        self.shape = "brush"  # brush | rect | fill: how painting and erasing apply
+        self.layer = ops.GROUND  # the map layer painting and erasing work on
+        self.brush: dict[str, Any] | None = None  # {"stamp": rows of gids, "label", "source", "region"}
+        self.stroke: dict[str, Any] | None = None  # a brush stroke or rectangle in progress
+        self.tilesets: list[dict[str, Any]] = []  # the current room's, in palette order
+        self.sheet = 0  # the tileset the palette shows
+        self.sheet_scroll = [0, 0]  # first visible (column, row) of the palette
+        self.sheet_drag: list[tuple[int, int]] | None = None  # [start, end] palette cells while dragging
+        self.clipboard: dict[str, Any] | None = None  # a copied object
+        self.import_form = {"path": "", "name": "", "tile": "32"}
+        self._tile_textures: dict[tuple[str, int], Any] = {}
+        self._images: dict[str, Any] = {}
+        self._sheet_space: Any = None
+        self._import_space: Any = None
 
         self.ui = gui.UIManager(window)
         self.play_ui = gui.UIManager(window)
         window.push_handlers(self)
         self.ui.enable()
+        self._first_clicks = _FirstClicks()  # pyglet keeps only a weak reference to handlers
+        window.push_handlers(self._first_clicks)
         self._reload(recenter=True)
         self._rebuild()
         self._say("Click an object to edit it. Right-click for actions. F4 plays your game.")
@@ -141,20 +195,38 @@ class Studio:
             return []
         return [p for p in data if isinstance(p, dict) and isinstance(p.get("entity"), dict) and p.get("id")]
 
-    def _load_tile_textures(self) -> dict[int, Any]:
-        """Palette and preview textures, cut from the same tileset image the game loads."""
-        from PIL import Image  # noqa: PLC0415
+    def _image(self, path: str) -> Any:
+        """A PIL image, loaded once (None if it can't be read)."""
+        if path not in self._images:
+            from PIL import Image  # noqa: PLC0415
 
-        ts = self.tileset
-        image = Image.open(ts["image"]).convert("RGBA")
-        columns = max(1, image.width // ts["tilewidth"])
-        textures = {}
-        for tile in ts["tiles"]:
-            local = tile["gid"] - 1
-            x, y = (local % columns) * ts["tilewidth"], (local // columns) * ts["tileheight"]
-            crop = image.crop((x, y, x + ts["tilewidth"], y + ts["tileheight"]))
-            textures[tile["gid"]] = optional_arcade.arcade.Texture(crop, hash=f"mesh-studio-tile-{ts['image']}-{local}")
-        return textures
+            try:
+                with Image.open(path) as img:
+                    self._images[path] = img.convert("RGBA")
+            except (OSError, ValueError):
+                self._images[path] = None
+        return self._images[path]
+
+    def _tile_texture(self, tileset: dict[str, Any], local: int) -> Any:
+        """A tile's texture, cut from the same image the game loads."""
+        key = (tileset["image"], local)
+        if key not in self._tile_textures:
+            image, size = self._image(tileset["image"]), tileset["tile"]
+            x, y = (local % tileset["columns"]) * size, (local // tileset["columns"]) * size
+            self._tile_textures[key] = None if image is None else optional_arcade.arcade.Texture(
+                image.crop((x, y, x + size, y + size)), hash=f"mesh-studio-tile-{tileset['image']}-{local}")
+        return self._tile_textures[key]
+
+    def _tileset_of(self, gid: int) -> dict[str, Any] | None:
+        return next((t for t in self.tilesets if t["firstgid"] <= gid < t["firstgid"] + t["count"]), None)
+
+    def _gid_texture(self, gid: int) -> Any:
+        tileset = self._tileset_of(gid)
+        return self._tile_texture(tileset, gid - tileset["firstgid"]) if tileset else None
+
+    def _tile_label(self, tileset: dict[str, Any], local: int) -> str:
+        hint = tileset["hints"].get(local) or {}
+        return hint.get("label") or f"{tileset['name']} {local + 1}"
 
     def _install_documents(self) -> None:
         docs = self.window.scene_loader.documents
@@ -168,6 +240,9 @@ class Studio:
         self._install_documents()
         self.window.load_scene(self.project.path(self.project.current))
         self.window.paused = True
+        self.tilesets = self.project.room_tilesets()
+        self.sheet = min(self.sheet, max(0, len(self.tilesets) - 1))
+        self._fade_overhead()
         if recenter:
             self._center_on_room()
         self.window.set_caption(f"Mesh Studio - {self.project.label(self.project.current)}")
@@ -318,24 +393,58 @@ class Studio:
 
     # -------------------------------------------------------------------- map tools
     def use_select(self) -> None:
-        self.tool, self.brush, self.stroke = "select", None, None
+        self.tool, self.stroke = "select", None
         self._rebuild()
         self._say("Select: click an object to edit it, drag to move it.")
 
-    def pick_brush(self, tile: dict[str, Any]) -> None:
+    def _fade_overhead(self) -> None:
+        """Show the above-characters layer see-through unless you're working on it, so it hides nothing."""
+        instance = getattr(self.window.scene_controller, "tilemap_instance", None)
+        sprites = instance.layer_lookup.get(ops.OVERHEAD) if instance is not None else None
+        for sprite in sprites or []:
+            sprite.alpha = 255 if self.layer == ops.OVERHEAD or self.mode == "play" else 110
+
+    def set_layer(self, layer: str) -> None:
+        self.layer = layer
+        self._fade_overhead()
+        self._rebuild()
+        self._say(f"Painting on {LAYER_NAME[layer]}.")
+
+    def set_shape(self, shape: str) -> None:
+        self._flush_fields()
+        self.shape, self.stroke, self.place_prefab = shape, None, None
+        if self.tool == "select":
+            self.tool = "paint" if self.brush else "select"
+        self._rebuild()
+        if self.tool == "select":
+            self._say("Pick a tile (or the Eraser) first.")
+        else:
+            self._say(f"{shape.capitalize() if shape != 'rect' else 'Rectangle'}: {SHAPE_HELP[shape]}")
+
+    def cycle_tileset(self) -> None:
+        if self.tilesets:
+            self.sheet, self.sheet_scroll = (self.sheet + 1) % len(self.tilesets), [0, 0]
+            self._rebuild()
+            self._say(f"Tiles from {self.tilesets[self.sheet]['name']}.")
+
+    def pick_brush(self, stamp: list[list[int]], label: str, layer: str | None = None,
+                   source: str | None = None, region: tuple[int, int, int, int] | None = None) -> None:
         self._flush_fields()
         self.place_prefab, self.stroke = None, None
-        self.tool, self.brush = "paint", tile
+        self.tool, self.brush = "paint", {"stamp": stamp, "label": label, "source": source, "region": region}
+        if layer:
+            self.layer = layer
+            self._fade_overhead()
         self._rebuild()
-        kind = "blocks movement" if tile["layer"] == ops.WALLS else "walkable"
-        self._say(f"Painting {tile['label']} ({kind}). Click or drag on the map. Esc goes back to Select.")
+        size = f" ({len(stamp[0])}x{len(stamp)} tiles)" if len(stamp) > 1 or len(stamp[0]) > 1 else ""
+        self._say(f"Painting {label}{size} on {LAYER_NAME[self.layer]}. {SHAPE_HELP[self.shape]} Esc goes back to Select.")
 
     def use_eraser(self) -> None:
         self._flush_fields()
         self.place_prefab, self.stroke = None, None
-        self.tool, self.brush = "erase", None
+        self.tool = "erase"
         self._rebuild()
-        self._say("Eraser: click or drag to remove tiles (walls and obstacles first, then the ground).")
+        self._say(f"Eraser on {LAYER_NAME[self.layer]}. {SHAPE_HELP[self.shape]}")
 
     def add_map_here(self) -> None:
         try:
@@ -352,16 +461,154 @@ class Studio:
         return ops.cell_at(info, *self._to_world(x, y)) if info is not None else None
 
     def _commit_stroke(self) -> None:
-        """Apply the finished stroke as one edit, so one Undo takes back the whole stroke."""
+        """Apply the finished stroke, rectangle or fill as one edit, so one Undo takes all of it back."""
         stroke, self.stroke = self.stroke, None
-        if not stroke or not stroke["cells"]:
+        info = ops.map_info(self.project.scene())
+        stamp = [[0]] if self.tool == "erase" else (self.brush or {}).get("stamp")
+        if not stroke or not stroke["cells"] or not stamp or info is None:
             return
-        cells = list(dict.fromkeys(stroke["cells"]))
-        if self.tool == "erase":
-            self._edit(lambda s: ops.erase_tiles(s, cells), f"Erased {len(cells)} tile(s).")
-        elif self.brush is not None:
-            layer, gid = self.brush["layer"], self.brush["gid"]
-            self._edit(lambda s: ops.paint_tiles(s, layer, cells, gid), f"Painted {len(cells)} tile(s).")
+        cells, anchor, layer = self._stroke_cells(stroke), stroke["anchor"], self.layer
+        cells = [(c, r) for c, r in dict.fromkeys(cells) if 0 <= c < info["width"] and 0 <= r < info["height"]]
+        verb = "Erased" if self.tool == "erase" else "Painted"
+        self._edit(lambda s: ops.paint_tiles(s, layer, cells, stamp, anchor), f"{verb} {len(cells)} tile(s).")
+
+    def _stroke_cells(self, stroke: dict[str, Any]) -> list[tuple[int, int]]:
+        """The cells a stroke covers: a brush stamp covers its whole size at each cell."""
+        if self.shape != "brush" or self.tool == "erase" or not self.brush:
+            return list(stroke["cells"])
+        stamp = self.brush["stamp"]
+        return [(c + dc, r + dr) for c, r in stroke["cells"] for dr in range(len(stamp)) for dc in range(len(stamp[0]))]
+
+    def _cell_clamped(self, x: float, y: float) -> tuple[int, int] | None:
+        """The map cell under a screen point, pulled onto the map if the point is outside it."""
+        info = ops.map_info(self.project.scene())
+        if info is None:
+            return None
+        wx, wy = self._to_world(x, y)
+        col = int(wx // info["tilewidth"])
+        row = int((info["height"] * info["tileheight"] - wy) // info["tileheight"])
+        return min(max(col, 0), info["width"] - 1), min(max(row, 0), info["height"] - 1)
+
+    def pick_from_map(self, cell: tuple[int, int]) -> None:
+        """Eyedropper: paint with the top tile in a cell, on its layer."""
+        info = ops.map_info(self.project.scene())
+        if info is None:
+            return
+        index = cell[1] * info["width"] + cell[0]
+        for layer in (ops.OVERHEAD, ops.WALLS, ops.GROUND):
+            tiles = info["layers"].get(layer) or []
+            gid = tiles[index] if index < len(tiles) else 0
+            tileset = self._tileset_of(gid) if gid else None
+            if tileset is not None:
+                self.sheet = self.tilesets.index(tileset)
+                local = gid - tileset["firstgid"]
+                col, row = local % tileset["columns"], local // tileset["columns"]
+                self.pick_brush([[gid]], self._tile_label(tileset, local), layer, tileset["source"], (col, row, col, row))
+                return
+        self._say("There's no tile there.", ok=False)
+
+    # -------------------------------------------------------------------- tileset import
+    def open_import(self) -> None:
+        self._flush_fields()
+        self.panel, self.menu = "import_tileset", None
+        self._rebuild()
+        self._say("Choose an image with Browse..., or paste its path and press Enter.")
+
+    def browse_tileset(self) -> None:
+        path = _ask_image_path()
+        if path:
+            self._set_import_path(path)
+
+    def _set_import_path(self, path: str) -> None:
+        form = self.import_form
+        form["path"] = path.strip().strip('"')
+        if not form["name"]:
+            form["name"] = Path(form["path"]).stem.replace("_", " ").replace("-", " ").strip().title()
+        image = self._image(form["path"]) if Path(form["path"]).is_file() else None
+        if image is not None:
+            form["tile"] = str(_guess_tile_size(*image.size))
+        self._rebuild()
+
+    def _set_import_tile(self, value: str) -> None:
+        self.import_form["tile"] = value.strip()
+        self._rebuild()
+
+    def _import_check(self) -> tuple[str, bool, Any]:
+        """``(what will happen, can import, image)`` for the import form as filled in."""
+        form = self.import_form
+        if not form["path"]:
+            return "Choose a PNG of equal-sized tiles laid out in a grid.", False, None
+        if not Path(form["path"]).is_file():
+            return f"There is no file at {form['path']}.", False, None
+        image = self._image(form["path"])
+        if image is None:
+            return "That file isn't an image Mesh can read.", False, None
+        try:
+            tile = int(form["tile"])
+        except ValueError:
+            return "The tile size must be a whole number of pixels.", False, image
+        if not 8 <= tile <= 256:
+            return "The tile size must be between 8 and 256 pixels.", False, image
+        cols, rows = image.width // tile, image.height // tile
+        if cols < 1 or rows < 1:
+            return f"The image ({image.width}x{image.height}) is smaller than one {tile} px tile.", False, image
+        # One short sentence per line: arcade's label wrapping can split words.
+        text = f"{image.width}x{image.height} px: {cols} x {rows} = {cols * rows} tiles of {tile} px."
+        if tile != ops.TILE_SIZE:
+            text += f"\nScaled to {ops.TILE_SIZE} px to fit the map grid."
+        if image.width % tile or image.height % tile:
+            text += "\nThe red edge isn't a whole tile; it's left out."
+        return text, True, image
+
+    def import_tileset(self) -> None:
+        self._flush_fields()
+        form = self.import_form
+        try:
+            result = self.project.import_tileset(form["path"], int(form["tile"] or 0), form["name"])
+        except ValueError as err:  # OpError, or a tile size that isn't a number
+            self._say(str(err) if isinstance(err, ops.OpError) else "The tile size must be a whole number.", ok=False)
+            return
+        self.panel = "inspect"
+        self.import_form = {"path": "", "name": "", "tile": "32"}
+        self._reload()
+        self.sheet = next((i for i, t in enumerate(self.tilesets) if t["source"] == result["source"]), self.sheet)
+        self.sheet_scroll = [0, 0]
+        self._rebuild()
+        scaled = f", scaled to {ops.TILE_SIZE} px" if result["scaled"] else ""
+        self._say(f"Imported {result['name']}: {result['count']} tiles{scaled}. Pick one and paint.")
+
+    # -------------------------------------------------------------------- object clipboard
+    def copy_selected(self) -> None:
+        entity = self._entity(self.selected)
+        if entity is None:
+            self._say("Select an object to copy.", ok=False)
+            return
+        if entity.get("tag") == "player":
+            self._say("A room has one player; the player can't be copied.", ok=False)
+            return
+        self.clipboard = copy.deepcopy(entity)
+        self._say(f"Copied {entity.get('name', 'object')}. Ctrl+V pastes it at the mouse, in any room.")
+
+    def paste_at(self, at: tuple[float, float]) -> None:
+        clip, created = self.clipboard, []
+        if clip is None:
+            self._say("Nothing copied yet: select an object and press Ctrl+C.", ok=False)
+            return
+
+        def change(scene: dict[str, Any]) -> dict[str, Any]:
+            out, new_id = ops.paste_entity(scene, self.project.current, clip, *at)
+            created.append(new_id)
+            return out
+
+        if self._edit(change, f"Pasted {clip.get('name', 'object')}."):
+            self.select(created[0])
+
+    def paste_here(self) -> None:
+        if self._in_map(*self.mouse):
+            wx, wy = self._to_world(*self.mouse)
+            self.paste_at((_snap(wx), _snap(wy)))
+        elif self.clipboard is not None:
+            self.paste_at((float(self.clipboard.get("x", 0)) + 32, float(self.clipboard.get("y", 0)) - 32))
 
     def place_at(self, wx: float, wy: float) -> None:
         prefab, self.place_prefab = self.place_prefab, None
@@ -428,6 +675,7 @@ class Studio:
         self.window.camera.zoom = 1.0
         self.window.load_scene(self.project.path(self.project.current))
         self.window.paused = False
+        self._fade_overhead()
         self._build_play_ui()
         self.play_ui.enable()
         self.window.set_caption(f"Mesh Studio - playing {self.project.label(self.project.current)} (F4 to stop)")
@@ -553,34 +801,77 @@ class Studio:
     def _map_section(self, width: int) -> gui.UIBoxLayout:
         box = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
         box.add(self._label("Map", bold=True, size=12))
-        self._palette_buttons = {}
+        self._sheet_space = None
         if ops.map_info(self.project.scene()) is None:
             box.add(self._label("This room has no map yet.", color=C_MUTED, width=width))
             box.add(self._button("Add a map", self.add_map_here, width=width, style=S_ACTIVE))
             return box
-        tools = gui.UIBoxLayout(vertical=False, space_between=6)
-        half = (width - 6) // 2
-        tools.add(self._button("Select", self.use_select, width=half, style=S_ACTIVE if self.tool == "select" else S_BUTTON))
-        tools.add(self._button("Eraser", self.use_eraser, width=half, style=S_ACTIVE if self.tool == "erase" else S_BUTTON))
-        box.add(tools)
-        for layer, title in ((ops.GROUND, "Ground"), (ops.WALLS, "Walls & obstacles (block)")):
-            box.add(self._label(title, color=C_MUTED, size=10))
-            tiles = [t for t in self.tileset["tiles"] if t["layer"] == layer]
-            for start in range(0, len(tiles), 6):
-                row = gui.UIBoxLayout(vertical=False, space_between=3)
-                for tile in tiles[start:start + 6]:
-                    texture = self.tile_textures[tile["gid"]]
-                    button = gui.UITextureButton(texture=texture, texture_hovered=texture, texture_pressed=texture,
-                                                 width=32, height=32)
-                    button.on_click = lambda _e, t=tile: self._palette_click(t)
-                    self._palette_buttons[tile["gid"]] = button
-                    row.add(button)
-                box.add(row)
+        third, half = (width - 8) // 3, (width - 6) // 2
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for layer, title in LAYER_BUTTONS:
+            row.add(self._button(title, lambda la=layer: self.set_layer(la), width=third,
+                                 style=S_ACTIVE if self.layer == layer else S_BUTTON))
+        box.add(row)
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._button("Select", self.use_select, width=half, style=S_ACTIVE if self.tool == "select" else S_BUTTON))
+        row.add(self._button("Eraser", self.use_eraser, width=half, style=S_ACTIVE if self.tool == "erase" else S_BUTTON))
+        box.add(row)
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for shape, title in (("brush", "Brush"), ("rect", "Rect"), ("fill", "Fill")):
+            active = self.shape == shape and self.tool != "select"
+            row.add(self._button(title, lambda sh=shape: self.set_shape(sh), width=third, style=S_ACTIVE if active else S_BUTTON))
+        box.add(row)
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        name = self.tilesets[self.sheet]["name"] if self.tilesets else "No tiles"
+        row.add(self._button(name + ("  >" if len(self.tilesets) > 1 else ""), self.cycle_tileset,
+                             width=width - 92, disabled=len(self.tilesets) < 2))
+        row.add(self._button("Import...", self.open_import, width=86))
+        box.add(row)
+        geometry = self._sheet_geometry()
+        if geometry is not None:
+            tileset, px, cols, rows = geometry
+            self._sheet_space = gui.UISpace(width=cols * px, height=rows * px)
+            box.add(self._sheet_space)
+            if cols < tileset["columns"] or rows < tileset["rows"]:
+                box.add(self._label("Scroll over the tiles for more (Shift: sideways).", color=C_MUTED, size=9))
         return box
 
-    def _palette_click(self, tile: dict[str, Any]) -> None:
+    def _sheet_geometry(self) -> tuple[dict[str, Any], int, int, int] | None:
+        """``(tileset, tile size on screen, visible columns, visible rows)`` for the palette."""
+        if not self.tilesets:
+            return None
+        tileset = self.tilesets[self.sheet]
+        px = max(12, min(32, SHEET_W // max(1, tileset["columns"])))
+        others = 18 + 32 * (len(self.project.rooms()) + 1) + 10 + 18 + 4 * 32 + 10 + 18 + 32 * len(self.prefabs) + 14
+        room = self.window.height - TOP_H - STATUS_H - 30 - others - 14 * 4
+        rows = max(2, min(tileset["rows"], int(min(200, room) // px)))
+        return tileset, px, min(tileset["columns"], SHEET_W // px), rows
+
+    def _sheet_cell(self, x: float, y: float, *, clamp: bool = False) -> tuple[int, int] | None:
+        """The tileset (column, row) under a screen point on the palette."""
+        space, geometry = self._sheet_space, self._sheet_geometry()
+        if space is None or geometry is None:
+            return None
+        tileset, px, cols, rows = geometry
+        col, row = int((x - space.left) // px), int((space.top - y) // px)
+        if not (0 <= col < cols and 0 <= row < rows):
+            if not clamp:
+                return None
+            col, row = min(max(col, 0), cols - 1), min(max(row, 0), rows - 1)
+        return col + self.sheet_scroll[0], row + self.sheet_scroll[1]
+
+    def _pick_from_sheet(self, a: tuple[int, int], b: tuple[int, int]) -> None:
+        tileset = self.tilesets[self.sheet]
+        (c0, c1), (r0, r1) = sorted((a[0], b[0])), sorted((a[1], b[1]))
+        stamp = [[tileset["firstgid"] + r * tileset["columns"] + c if r * tileset["columns"] + c < tileset["count"] else 0
+                  for c in range(c0, c1 + 1)] for r in range(r0, r1 + 1)]
+        top_left = r0 * tileset["columns"] + c0
+        if top_left >= tileset["count"]:
+            return
+        hint = tileset["hints"].get(top_left) or {}
+        label = self._tile_label(tileset, top_left) if (c0, r0) == (c1, r1) else f"a {tileset['name']} stamp"
         self.menu = None
-        self.pick_brush(tile)
+        self.pick_brush(stamp, label, hint.get("layer"), tileset["source"], (c0, r0, c1, r1))
 
     def _open_new_room(self, door_at: tuple[float, float] | None = None) -> None:
         self.pending_door_at = door_at
@@ -603,6 +894,9 @@ class Studio:
             row.add(self._button("Cancel", self._cancel_panel, width=80))
             box.add(row)
             return box
+
+        if self.panel == "import_tileset":
+            return self._import_panel(box, width)
 
         entity = self._entity(self.selected)
         if entity is None:
@@ -648,6 +942,32 @@ class Studio:
     def _toggle_expand(self, name: str) -> None:
         self.expanded = None if self.expanded == name else name
         self._rebuild()
+
+    def _import_panel(self, box: gui.UIBoxLayout, width: int) -> gui.UIBoxLayout:
+        form = self.import_form
+        box.add(self._label("Import a tileset", bold=True, size=12))
+        box.add(self._label("Image file (Enter to apply)", color=C_MUTED))
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._field(form["path"], self._set_import_path, width=width - 92, key="tileset_path"))
+        row.add(self._button("Browse...", self.browse_tileset, width=86))
+        box.add(row)
+        box.add(self._label("Name", color=C_MUTED))
+        box.add(self._field(form["name"], lambda v: form.__setitem__("name", v.strip()), width=width, key="tileset_name"))
+        box.add(self._label("Tile size in the image (px)", color=C_MUTED))
+        box.add(self._field(form["tile"], self._set_import_tile, width=80, key="tile_size"))
+        text, ok, image = self._import_check()
+        for line in text.splitlines():
+            box.add(self._label(line, color=C_MUTED if ok or not form["path"] else C_ERROR, size=10))
+        self._import_space = None
+        if image is not None:
+            scale = min(width / image.width, 220 / image.height, 4.0)
+            self._import_space = gui.UISpace(width=image.width * scale, height=image.height * scale)
+            box.add(self._import_space)
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._button("Import", self.import_tileset, width=96, style=S_ACTIVE, disabled=not ok))
+        row.add(self._button("Cancel", self._cancel_panel, width=80))
+        box.add(row)
+        return box
 
     def _behaviour_fields(self, box: gui.UIBoxLayout, entity: dict[str, Any], behaviour: str, width: int) -> None:
         target = entity["id"]
@@ -722,10 +1042,17 @@ class Studio:
             if "Dialogue" in ops.entity_behaviours(entity) or entity.get("tag") == "npc":
                 items.append(("Edit what they say", lambda: self._focus("says")))
             items.append(("Add behaviour...", self._open_picker))
+            if entity.get("tag") != "player":
+                items.append(("Copy", self.copy_selected))
             items.append(("Delete", self.delete_selected))
         else:
             self.select(None)
             at = (_snap(wx), _snap(wy))
+            if self.clipboard is not None:
+                items.append((f"Paste {self.clipboard.get('name', 'object')} here", lambda: self.paste_at(at)))
+            cell = self._cell_under(x, y)
+            if cell is not None:
+                items.append(("Paint with this tile", lambda: self.pick_from_map(cell)))
             for key, label, _ in self.project.rooms():
                 if key != self.project.current:
                     items.append((f"Add door to {label}", lambda k=key: self.add_door_to(k, at)))
@@ -770,11 +1097,8 @@ class Studio:
         w.camera_controller.use_gui_camera()
         self._draw_panels()
         self.ui.draw()
-        if self.tool == "paint" and self.brush is not None:
-            button = self._palette_buttons.get(self.brush["gid"])
-            if button is not None:
-                optional_arcade.arcade.draw_lrbt_rectangle_outline(
-                    button.left - 2, button.right + 2, button.bottom - 2, button.top + 2, (255, 230, 120), 2)
+        self._draw_sheet()
+        self._draw_import_preview()
         self._dump_layout()
         return True
 
@@ -787,21 +1111,30 @@ class Studio:
         if self._dump_tick % 10:
             return
         keys = {id(field): key for key, field in self._focusable.items()}
-        by_gid = {t["gid"]: t for t in self.tileset["tiles"]}
-        palette = {id(button): by_gid[gid] for gid, button in self._palette_buttons.items()}
         widgets = []
         for manager in (self.ui, self.play_ui):
             for widget in manager.walk_widgets():
                 rect = [widget.left, widget.bottom, widget.width, widget.height]
                 if isinstance(widget, gui.UIFlatButton):
                     widgets.append({"type": "button", "text": widget.text, "rect": rect, "disabled": widget.disabled})
-                elif isinstance(widget, gui.UITextureButton) and id(widget) in palette:
-                    tile = palette[id(widget)]
-                    widgets.append({"type": "tile", "gid": tile["gid"], "text": tile["label"], "layer": tile["layer"],
-                                    "rect": rect})
                 elif isinstance(widget, gui.UIInputText):
                     widgets.append({"type": "field", "key": keys.get(id(widget)), "text": widget.text, "rect": rect,
                                     "active": widget.active})
+        geometry = self._sheet_geometry() if self.mode == "edit" and self._sheet_space is not None else None
+        if geometry is not None:
+            tileset, px, cols, rows = geometry
+            c0, r0 = self.sheet_scroll
+            for r in range(rows):
+                for c in range(cols):
+                    local = (r0 + r) * tileset["columns"] + c0 + c
+                    if c0 + c < tileset["columns"] and local < tileset["count"]:
+                        hint = tileset["hints"].get(local) or {}
+                        widgets.append({"type": "tile", "gid": tileset["firstgid"] + local, "text": self._tile_label(tileset, local),
+                                        "layer": hint.get("layer"), "tileset": tileset["name"], "cell": [c0 + c, r0 + r],
+                                        "rect": [self._sheet_space.left + c * px, self._sheet_space.top - (r + 1) * px, px, px]})
+        if self._import_space is not None and self.panel == "import_tileset":
+            sp = self._import_space
+            widgets.append({"type": "preview", "rect": [sp.left, sp.bottom, sp.width, sp.height]})
         objects = []
         sprites = self._sprites_by_id() if self.mode == "edit" else {}
         if self.mode == "edit":
@@ -822,6 +1155,8 @@ class Studio:
             entry = box.get_current_entry() if box is not None and active else None
             play = {"scene": self.window.scene_controller.current_scene_path,
                     "player": [player.center_x, player.center_y] if player is not None else None,
+                    "player_screen": list(self.window.camera.project((player.center_x, player.center_y))[:2])
+                    if player is not None else None,
                     "dialogue": {"speaker": entry.get("speaker"), "text": entry.get("text")} if entry else None}
         map_state = None
         info = ops.map_info(self.project.scene())
@@ -831,8 +1166,12 @@ class Studio:
             map_state = {"width": info["width"], "height": info["height"], "tilewidth": info["tilewidth"],
                          "tileheight": info["tileheight"], "screen": [corner[0], corner[1], far[0], far[1]],
                          "layers": info["layers"]}
-        state = {"tool": self.tool, "brush": self.brush["gid"] if self.brush else None, "map": map_state,
-                 "zoom": self.zoom,
+        stamp = (self.brush or {}).get("stamp")
+        state = {"tool": self.tool, "shape": self.shape, "layer": self.layer, "map": map_state, "zoom": self.zoom,
+                 "brush": stamp[0][0] if stamp else None, "stamp": stamp,
+                 "tilesets": [t["name"] for t in self.tilesets],
+                 "sheet": self.tilesets[self.sheet]["name"] if self.tilesets else None,
+                 "clipboard": (self.clipboard or {}).get("name"),
                  "mode": self.mode, "room": self.project.current, "selected": self.selected, "panel": self.panel,
                  "message": self.message, "ok": self.message_ok, "dirty": self.project.is_dirty,
                  "window": [self.window.width, self.window.height], "widgets": widgets, "objects": objects,
@@ -853,7 +1192,7 @@ class Studio:
         label.draw()
 
     def _draw_map_overlay(self) -> None:
-        """Map border and grid, the stroke in progress, and the brush or eraser under the cursor."""
+        """Map border and grid, the stroke or rectangle in progress, and the brush or eraser under the cursor."""
         info = ops.map_info(self.project.scene())
         if info is None:
             return
@@ -868,25 +1207,102 @@ class Studio:
             points += [(0, row * th), (map_w, row * th)]
         a.draw_lines(points, (255, 255, 255, 70 if painting else 26), 1)
         a.draw_lrbt_rectangle_outline(0, map_w, 0, map_h, (255, 255, 255, 120), 2)
-        for col, row in dict.fromkeys(self.stroke["cells"] if self.stroke else []):
-            self._draw_cell(info, col, row, hover=False)
-        if painting and self.stroke is None and self._in_map(*self.mouse):
+        if self.stroke is not None and "start" in self.stroke:
+            start, end = self.stroke["start"], self.stroke["end"]
+            self._draw_cells(info, ops.rect_cells(start, end), (min(start[0], end[0]), min(start[1], end[1])), hover=False)
+        elif self.stroke is not None:
+            self._draw_cells(info, self._stroke_cells(self.stroke), self.stroke["anchor"], hover=False)
+        elif painting and self._in_map(*self.mouse):
             cell = self._cell_under(*self.mouse)
             if cell is not None:
-                self._draw_cell(info, *cell, hover=True)
+                hover = {"cells": [cell], "anchor": cell}
+                cells = self._stroke_cells(hover) if self.shape == "brush" else [cell]
+                self._draw_cells(info, cells, cell, hover=True)
 
-    def _draw_cell(self, info: dict[str, Any], col: int, row: int, *, hover: bool) -> None:
+    def _draw_cells(self, info: dict[str, Any], cells: list[tuple[int, int]], anchor: tuple[int, int], *, hover: bool) -> None:
+        """Preview what painting or erasing ``cells`` will do, and outline the area."""
+        if not cells:
+            return
         a = optional_arcade.arcade
-        cx, cy = ops.cell_center(info, col, row)
         tw, th = info["tilewidth"], info["tileheight"]
-        left, right, bottom, top = cx - tw / 2, cx + tw / 2, cy - th / 2, cy + th / 2
-        if self.tool == "paint" and self.brush is not None:
-            a.draw_texture_rect(self.tile_textures[self.brush["gid"]], a.XYWH(cx, cy, tw, th), alpha=170 if hover else 255)
-            if hover:
-                a.draw_lrbt_rectangle_outline(left, right, bottom, top, C_SELECT, 2)
-        elif self.tool == "erase":
-            a.draw_lrbt_rectangle_filled(left, right, bottom, top, (220, 60, 60, 90 if hover else 150))
-            a.draw_lrbt_rectangle_outline(left, right, bottom, top, (255, 110, 110), 2)
+        stamp = (self.brush or {}).get("stamp") if self.tool == "paint" else None
+        if len(cells) <= 4000:
+            for col, row in dict.fromkeys(cells):
+                cx, cy = ops.cell_center(info, col, row)
+                if stamp:
+                    line = stamp[(row - anchor[1]) % len(stamp)]
+                    texture = self._gid_texture(line[(col - anchor[0]) % len(line)])
+                    if texture is not None:
+                        a.draw_texture_rect(texture, a.XYWH(cx, cy, tw, th), alpha=170 if hover else 230)
+                elif self.tool == "erase":
+                    a.draw_lrbt_rectangle_filled(cx - tw / 2, cx + tw / 2, cy - th / 2, cy + th / 2,
+                                                 (220, 60, 60, 90 if hover else 150))
+        cols = [c for c, _ in cells]
+        rows = [r for _, r in cells]
+        left, top = min(cols) * tw, (info["height"] - min(rows)) * th
+        right, bottom = (max(cols) + 1) * tw, (info["height"] - max(rows) - 1) * th
+        color = (255, 110, 110) if self.tool == "erase" else C_SELECT
+        a.draw_lrbt_rectangle_outline(left, right, bottom, top, color, 2)
+
+    def _draw_sheet(self) -> None:
+        """The palette: the current tileset's tiles, with the brush (or the drag in progress) outlined."""
+        space, geometry = self._sheet_space, self._sheet_geometry()
+        if space is None or geometry is None:
+            return
+        a = optional_arcade.arcade
+        tileset, px, cols, rows = geometry
+        left, top = space.left, space.top
+        a.draw_lrbt_rectangle_filled(left, left + cols * px, top - rows * px, top, (22, 24, 29))
+        c0, r0 = self.sheet_scroll
+        for r in range(rows):
+            for c in range(cols):
+                local = (r0 + r) * tileset["columns"] + c0 + c
+                if c0 + c < tileset["columns"] and local < tileset["count"]:
+                    texture = self._tile_texture(tileset, local)
+                    if texture is not None:
+                        a.draw_texture_rect(texture, a.XYWH(left + (c + 0.5) * px, top - (r + 0.5) * px, px, px))
+        region = None
+        if self.sheet_drag is not None:
+            (x0, y0), (x1, y1) = self.sheet_drag
+            region = (min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1))
+        elif self.brush and self.brush.get("source") == tileset["source"] and self.tool == "paint":
+            region = self.brush["region"]
+        if region is not None:
+            x0, y0 = left + (region[0] - c0) * px, top - (region[1] - r0) * px
+            x1, y1 = left + (region[2] - c0 + 1) * px, top - (region[3] - r0 + 1) * px
+            a.draw_lrbt_rectangle_outline(max(left, x0) - 1, min(left + cols * px, x1) + 1,
+                                          max(top - rows * px, y1) - 1, min(top, y0) + 1, (255, 230, 120), 2)
+
+    def _draw_import_preview(self) -> None:
+        """The image being imported, with its tile grid, so you can check the tile size before importing."""
+        space = self._import_space
+        if space is None or self.panel != "import_tileset":
+            return
+        text, ok, image = self._import_check()
+        if image is None:
+            return
+        a = optional_arcade.arcade
+        path = self.import_form["path"]
+        key = ("import", path)
+        if key not in self._tile_textures:
+            self._tile_textures[key] = a.Texture(image, hash=f"mesh-studio-import-{path}-{os.path.getmtime(path)}")
+        a.draw_texture_rect(self._tile_textures[key], a.LBWH(space.left, space.bottom, space.width, space.height))
+        if not ok:
+            return
+        scale, tile = space.width / image.width, int(self.import_form["tile"])
+        cols, rows = image.width // tile, image.height // tile
+        points: list[tuple[float, float]] = []
+        for col in range(cols + 1):
+            x = space.left + col * tile * scale
+            points += [(x, space.top), (x, space.top - rows * tile * scale)]
+        for row in range(rows + 1):
+            y = space.top - row * tile * scale
+            points += [(space.left, y), (space.left + cols * tile * scale, y)]
+        a.draw_lines(points, (255, 230, 120, 160), 1)
+        if image.width % tile:
+            a.draw_lrbt_rectangle_filled(space.left + cols * tile * scale, space.right, space.bottom, space.top, (220, 60, 60, 110))
+        if image.height % tile:
+            a.draw_lrbt_rectangle_filled(space.left, space.right, space.bottom, space.top - rows * tile * scale, (220, 60, 60, 110))
 
     def _draw_world_overlay(self) -> None:
         self._draw_map_overlay()
@@ -925,37 +1341,44 @@ class Studio:
         return True  # no gameplay runs while editing
 
     def on_key_press(self, symbol: int, modifiers: int) -> bool:
+        k = optional_arcade.arcade.key
         if self.mode == "play":
-            if symbol == optional_arcade.arcade.key.F4:
+            if symbol == k.F4:
                 self.stop()
                 return True
             return False
-        ctrl = bool(modifiers & optional_arcade.arcade.key.MOD_CTRL)
+        ctrl = bool(modifiers & k.MOD_CTRL)
         if self._typing():
-            if symbol in (optional_arcade.arcade.key.ENTER, optional_arcade.arcade.key.NUM_ENTER, optional_arcade.arcade.key.TAB):
+            field = next(f for f, _, _ in self._fields if f.active)
+            if ctrl and symbol in (k.A, k.C, k.X, k.V):
+                self._field_clipboard(field, symbol)
+            elif symbol in (k.ENTER, k.NUM_ENTER, k.TAB):
                 self._flush_fields()
-            elif symbol == optional_arcade.arcade.key.ESCAPE:
-                for field, _, _ in self._fields:
-                    field.deactivate()
+            elif symbol == k.ESCAPE:
+                for other, _, _ in self._fields:
+                    other.deactivate()
             return True
         self.keys.add(symbol)
-        if symbol == optional_arcade.arcade.key.F4:
+        if symbol == k.F4:
             self.play()
-        elif ctrl and symbol == optional_arcade.arcade.key.S:
+        elif ctrl and symbol in (k.S, k.Z, k.Y, k.C, k.V):
             self.keys.discard(symbol)
-            self.save()
-        elif ctrl and symbol == optional_arcade.arcade.key.Z:
-            self.keys.discard(symbol)
-            self.redo() if modifiers & optional_arcade.arcade.key.MOD_SHIFT else self.undo()
-        elif ctrl and symbol == optional_arcade.arcade.key.Y:
-            self.keys.discard(symbol)
-            self.redo()
-        elif symbol == optional_arcade.arcade.key.DELETE:
+            if symbol == k.S:
+                self.save()
+            elif symbol == k.Z:
+                self.redo() if modifiers & k.MOD_SHIFT else self.undo()
+            elif symbol == k.Y:
+                self.redo()
+            elif symbol == k.C:
+                self.copy_selected()
+            else:
+                self.paste_here()
+        elif symbol == k.DELETE:
             self.delete_selected()
-        elif symbol == optional_arcade.arcade.key.ESCAPE:
-            self.menu, self.place_prefab, self.stroke = None, None, None
+        elif symbol == k.ESCAPE:
+            self.menu, self.place_prefab, self.stroke, self.sheet_drag = None, None, None, None
             if self.tool != "select":
-                self.tool, self.brush = "select", None
+                self.tool = "select"
                 self._say("Select: click an object to edit it, drag to move it.")
             elif self.panel != "inspect":
                 self.panel, self.pending_door_at = "inspect", None
@@ -963,6 +1386,26 @@ class Studio:
                 self.selected = None
             self._rebuild()
         return True
+
+    def _field_clipboard(self, field: Any, symbol: int) -> None:
+        """Ctrl+A / C / X / V in a text field (arcade.gui fields have no clipboard of their own)."""
+        k = optional_arcade.arcade.key
+        layout = field.layout
+        start, end = sorted((layout.selection_start, layout.selection_end))
+        selected = field.text[start:end] if end > start else ""
+        if symbol == k.A:
+            field.caret.select_all()
+        elif symbol in (k.C, k.X):
+            self.window.set_clipboard_text(selected or field.text)
+            if symbol == k.X:
+                if selected:
+                    field.caret.on_text("")  # replaces the selection with nothing
+                else:
+                    field.text = ""
+        else:
+            pasted = (self.window.get_clipboard_text() or "").replace("\r", "")
+            field.caret.on_text(" ".join(pasted.split("\n")))  # fields are one line
+        field.trigger_full_render()
 
     def on_key_release(self, symbol: int, modifiers: int) -> bool:
         self.keys.discard(symbol)
@@ -981,6 +1424,15 @@ class Studio:
     def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool:
         if self.mode == "play":
             return False
+        geometry = self._sheet_geometry()
+        if self._sheet_cell(x, y) is not None and geometry is not None:
+            tileset, _px, cols, rows = geometry
+            k = optional_arcade.arcade.key
+            sideways = bool(self.keys & {k.LSHIFT, k.RSHIFT}) or scroll_x
+            axis, limit = (0, tileset["columns"] - cols) if sideways else (1, tileset["rows"] - rows)
+            step = -(scroll_x or scroll_y) if sideways else -scroll_y
+            self.sheet_scroll[axis] = int(min(max(self.sheet_scroll[axis] + step, 0), max(0, limit)))
+            return True
         if self._in_map(x, y):
             self.zoom = max(0.25, min(2.5, self.zoom * (1.1 ** scroll_y)))  # 0.25: fitted big maps
         return True
@@ -992,6 +1444,11 @@ class Studio:
             self.menu = None
             self._rebuild()
             return True
+        if button == optional_arcade.arcade.MOUSE_BUTTON_LEFT:
+            cell = self._sheet_cell(x, y)
+            if cell is not None:
+                self.sheet_drag = [cell, cell]
+                return True
         if not self._in_map(x, y):
             return True
         self._flush_fields()
@@ -1006,8 +1463,15 @@ class Studio:
             if self.tool in ("paint", "erase"):
                 # Map tools never select or move objects, so painting can't drag an NPC away.
                 cell = self._cell_under(x, y)
-                if cell is not None:
-                    self.stroke = {"cells": [cell], "last": cell}
+                if cell is None:
+                    return True
+                if self.shape == "fill":
+                    self.stroke = {"cells": ops.fill_cells(self.project.scene(), self.layer, cell), "anchor": cell}
+                    self._commit_stroke()
+                elif self.shape == "rect":
+                    self.stroke = {"start": cell, "end": cell, "anchor": cell, "cells": []}
+                else:
+                    self.stroke = {"cells": [cell], "last": cell, "anchor": cell}
                 return True
             if self.place_prefab is not None:
                 self.place_at(wx, wy)
@@ -1027,6 +1491,10 @@ class Studio:
         if self.panning:
             self.cam[0] -= dx / self.zoom
             self.cam[1] -= dy / self.zoom
+        elif self.sheet_drag is not None:
+            self.sheet_drag[1] = self._sheet_cell(x, y, clamp=True) or self.sheet_drag[1]
+        elif self.stroke is not None and "start" in self.stroke:
+            self.stroke["end"] = self._cell_clamped(x, y) or self.stroke["end"]
         elif self.stroke is not None:
             cell = self._cell_under(x, y)
             if cell is not None:
@@ -1046,7 +1514,15 @@ class Studio:
         if self.mode == "play":
             return False
         self.panning = False
+        if self.sheet_drag is not None:
+            drag, self.sheet_drag = self.sheet_drag, None
+            self._pick_from_sheet(*drag)
+            return True
         if self.stroke is not None:
+            if "start" in self.stroke:
+                start, end = self.stroke["start"], self.stroke["end"]
+                self.stroke["cells"] = ops.rect_cells(start, end)
+                self.stroke["anchor"] = (min(start[0], end[0]), min(start[1], end[1]))
             self._commit_stroke()
             return True
         drag, self.drag = self.drag, None

@@ -159,7 +159,7 @@ def test_map_file_paths_sit_next_to_the_room_in_either_separator_style() -> None
     assert ops.map_file_paths("packs/core_regions/scenes/house.json".replace("/", chr(92))) == expected
     skeleton = ops.map_skeleton("packs/core_regions/maps/house.json", 6, 4)
     assert skeleton["tilesets"] == [{"firstgid": 1, "source": "../../../assets/tilesets/starter.json"}]
-    assert [layer["name"] for layer in skeleton["layers"]] == [ops.GROUND, ops.WALLS]
+    assert [layer["name"] for layer in skeleton["layers"]] == [ops.GROUND, ops.WALLS, ops.OVERHEAD]
     assert all(len(layer["data"]) == 24 for layer in skeleton["layers"])
 
 
@@ -181,17 +181,80 @@ def test_add_map_fills_ground_draws_border_and_validates() -> None:
         ops.add_map(_scene(), "packs/core_regions/scenes/start.json", width=2, height=4)
 
 
-def test_paint_and_erase_cells() -> None:
+def test_paint_and_clear_cells() -> None:
     scene, _, _ = ops.add_map(_scene(), "s/scenes/a.json", width=4, height=4, ground=ops.STARTER_GRASS)
     scene = ops.paint_tiles(scene, ops.WALLS, [(0, 0), (1, 0), (9, 9)], ops.STARTER_WALL)  # (9, 9) is off the map
     walls = ops.map_info(scene)["layers"][ops.WALLS]
     assert walls[:2] == [ops.STARTER_WALL, ops.STARTER_WALL] and walls.count(ops.STARTER_WALL) == 2
-    scene = ops.erase_tiles(scene, [(0, 0), (2, 0)])  # a wall is erased first; bare ground next
+    scene = ops.paint_tiles(scene, ops.WALLS, [(0, 0)], 0)  # the eraser paints 0 on the active layer
     info = ops.map_info(scene)
-    assert info["layers"][ops.WALLS][0] == 0 and info["layers"][ops.GROUND][0] == ops.STARTER_GRASS
-    assert info["layers"][ops.GROUND][2] == 0
+    assert info["layers"][ops.WALLS][:2] == [0, ops.STARTER_WALL] and info["layers"][ops.GROUND][0] == ops.STARTER_GRASS
     with pytest.raises(ops.OpError, match="no map"):
         ops.paint_tiles(_scene(), ops.GROUND, [(0, 0)], 1)
+
+
+def test_new_maps_have_an_overhead_layer_drawn_above_and_never_blocking() -> None:
+    scene, _, skeleton = ops.add_map(_scene(), "s/scenes/a.json", width=4, height=4)
+    overhead = next(layer for layer in scene["tilemap"]["tile_layers"] if layer["id"] == ops.OVERHEAD)
+    assert overhead["z"] >= 0 and overhead["collision"] is False and overhead["draw"] is True
+    assert [layer["name"] for layer in skeleton["layers"]] == [ops.GROUND, ops.WALLS, ops.OVERHEAD]
+
+
+def test_painting_overhead_on_an_older_map_adds_the_layer() -> None:
+    scene, _, _ = ops.add_map(_scene(), "s/scenes/a.json", width=4, height=4)
+    scene["tilemap"]["tile_layers"] = [la for la in scene["tilemap"]["tile_layers"] if la["id"] != ops.OVERHEAD]
+    scene = ops.paint_tiles(scene, ops.OVERHEAD, [(1, 1)], 7)
+    assert ops.map_info(scene)["layers"][ops.OVERHEAD][5] == 7
+    assert ops.scene_errors(scene) == []
+
+
+def test_stamps_tile_from_their_anchor() -> None:
+    scene, _, _ = ops.add_map(_scene(), "s/scenes/a.json", width=6, height=4)
+    stamp = [[1, 2], [3, 4]]
+    scene = ops.paint_tiles(scene, ops.GROUND, ops.rect_cells((1, 1), (4, 2)), stamp, anchor=(1, 1))
+    ground = ops.map_info(scene)["layers"][ops.GROUND]
+    assert ground[6:12] == [0, 1, 2, 1, 2, 0]
+    assert ground[12:18] == [0, 3, 4, 3, 4, 0]
+
+
+def test_rect_cells_any_corner_order() -> None:
+    assert ops.rect_cells((2, 1), (0, 0)) == [(0, 0), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1)]
+
+
+def test_fill_on_ground_stays_inside_walls_and_on_other_layers_follows_tiles() -> None:
+    scene, _, _ = ops.add_map(_scene(), "s/scenes/a.json", width=6, height=5, ground=ops.STARTER_GRASS,
+                              border=ops.STARTER_WALL)
+    inside = ops.fill_cells(scene, ops.GROUND, (2, 2))
+    assert inside == ops.rect_cells((1, 1), (4, 3))  # the walled interior only
+    assert len(ops.fill_cells(scene, ops.GROUND, (0, 0))) == 6 * 2 + 3 * 2  # the wall ring itself
+    assert len(ops.fill_cells(scene, ops.WALLS, (2, 2))) == 12  # empty walls cells, connected
+    assert ops.fill_cells(scene, ops.GROUND, (9, 9)) == []
+
+
+def test_tileset_references_append_without_changing_existing_ids() -> None:
+    map_path = "packs/p/maps/a.json"
+    doc = ops.map_skeleton(map_path, 4, 4)
+    assert ops.map_tilesets(doc, map_path) == [(ops.TILESET_SOURCE, 1)]
+    counts = {ops.TILESET_SOURCE: 16}
+    doc2 = ops.with_tileset(doc, map_path, "assets/tilesets/forest.json", counts)
+    assert ops.map_tilesets(doc2, map_path) == [(ops.TILESET_SOURCE, 1), ("assets/tilesets/forest.json", 17)]
+    assert doc2["tilesets"][1]["source"] == "../../../assets/tilesets/forest.json"
+    assert ops.with_tileset(doc2, map_path, "assets/tilesets/forest.json", counts) == doc2  # once only
+    tileset = ops.tileset_document("Forest", "forest.png", 96, 64)
+    assert (tileset["columns"], tileset["tilecount"], tileset["tilewidth"]) == (3, 6, 32)
+    with pytest.raises(ops.OpError, match="smaller"):
+        ops.tileset_document("Tiny", "tiny.png", 16, 16)
+
+
+def test_paste_entity_copies_with_fresh_id_and_name_but_not_players() -> None:
+    scene, pid = ops.place_prefab(_scene(), "start", PERSON_PREFAB, 300, 200)
+    person = ops.find_entity(scene, pid)
+    scene, copy_id = ops.paste_entity(scene, "start", person, 400, 200)
+    pasted = ops.find_entity(scene, copy_id)
+    assert copy_id != pid and pasted["name"] != person["name"] and pasted["x"] == 400.0
+    assert pasted["behaviour_config"] == person["behaviour_config"]
+    with pytest.raises(ops.OpError, match="player"):
+        ops.paste_entity(scene, "start", ops.find_entity(scene, "start_player"), 0, 0)
 
 
 def test_cell_and_world_coordinates_round_trip() -> None:

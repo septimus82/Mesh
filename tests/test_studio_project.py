@@ -103,10 +103,50 @@ def test_room_without_a_map_can_get_one_and_undo_removes_it(tmp_path) -> None:
     assert ops.map_info(project.scene()) is None
 
 
-def test_tileset_groups_tiles_by_layer(tmp_path) -> None:
+def test_room_tilesets_list_the_starter_with_its_hints(tmp_path) -> None:
     _, project = _starter(tmp_path)
-    tileset = project.tileset()
-    layers = {t["layer"] for t in tileset["tiles"]}
-    assert layers == {ops.GROUND, ops.WALLS}
-    assert any(t["gid"] == ops.STARTER_WALL and t["layer"] == ops.WALLS for t in tileset["tiles"])
-    assert tileset["count"] == len(tileset["tiles"]) == 16
+    (starter,) = project.room_tilesets()
+    assert (starter["firstgid"], starter["count"], starter["columns"], starter["tile"]) == (1, 16, 8, 32)
+    assert starter["hints"][ops.STARTER_WALL - 1]["layer"] == ops.WALLS
+
+
+def _sixteen_px_sheet(path):
+    from PIL import Image
+
+    image = Image.new("RGBA", (48, 40), (0, 0, 0, 0))  # 3 x 2 tiles of 16 px, 8 px left over at the bottom
+    image.paste((200, 30, 30, 255), (0, 0, 16, 16))
+    image.paste((30, 30, 200, 128), (16, 16, 32, 32))  # half-transparent
+    image.save(path)
+    return path
+
+
+def test_import_scales_to_map_tiles_keeps_alpha_and_reaches_every_map(tmp_path) -> None:
+    from PIL import Image
+
+    root, project = _starter(tmp_path)
+    cellar = project.add_room("Cellar")
+    result = project.import_tileset(_sixteen_px_sheet(tmp_path / "forest sheet.png"), 16, "Forest")
+    assert result == {"name": "Forest", "source": "assets/tilesets/forest.json", "count": 6, "scaled": True}
+    with Image.open(root / "assets/tilesets/forest.png") as img:
+        assert img.size == (96, 64)  # 3 x 2 tiles of 32 px; the leftover strip is cut off
+        assert img.getpixel((16, 16)) == (200, 30, 30, 255)
+        assert img.getpixel((48, 48)) == (30, 30, 200, 128)
+        assert img.getpixel((80, 16))[3] == 0
+    for key in (project.current, cellar):
+        names = [(t["name"], t["firstgid"]) for t in project.room_tilesets(key)]
+        assert names == [("Starter", 1), ("Forest", 17)]
+    again = project.import_tileset(tmp_path / "forest sheet.png", 16, "Forest")
+    assert again["source"] == "assets/tilesets/forest_2.json"  # never overwrites
+    later = project.add_room("Attic")
+    assert [t["firstgid"] for t in project.room_tilesets(later)] == [1, 17, 23]
+
+
+def test_import_rejects_what_it_cannot_use(tmp_path) -> None:
+    _, project = _starter(tmp_path)
+    with pytest.raises(ops.OpError, match="no file"):
+        project.import_tileset(tmp_path / "missing.png", 32, "X")
+    (tmp_path / "notes.png").write_text("not an image", encoding="utf-8")
+    with pytest.raises(ops.OpError, match="isn't an image"):
+        project.import_tileset(tmp_path / "notes.png", 32, "X")
+    with pytest.raises(ops.OpError, match="smaller than one"):
+        project.import_tileset(_sixteen_px_sheet(tmp_path / "small.png"), 64, "X")

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import json
+import posixpath
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -128,8 +129,8 @@ class Project:
         """A new room with its own player and a ready-to-paint map: wood floor, stone-wall border."""
         before = self._snapshot()
         world, scene, key, path = ops.new_room(self.world, label, self.scenes_dir(), self.player_template())
-        scene, map_path, skeleton = ops.add_map(scene, path, width=20, height=15,
-                                                ground=ops.STARTER_FLOOR, border=ops.STARTER_WALL)
+        scene, map_path, skeleton = ops.add_map(scene, path, width=20, height=15, ground=ops.STARTER_FLOOR,
+                                                border=ops.STARTER_WALL, tilesets=self.project_tilesets())
         self._write_map_file(map_path, skeleton)
         self._record(before)
         self.world, self.world_dirty = world, True
@@ -142,7 +143,8 @@ class Project:
         key = key or self.current
         width, height = ops.map_size_for(self.scene(key))
         before = self._snapshot()
-        scene, map_path, skeleton = ops.add_map(self.scene(key), self.path(key), width=width, height=height)
+        scene, map_path, skeleton = ops.add_map(self.scene(key), self.path(key), width=width, height=height,
+                                                tilesets=self.project_tilesets())
         self._write_map_file(map_path, skeleton)
         self._record(before)
         self.scenes[key] = scene
@@ -157,18 +159,115 @@ class Project:
         if not target.is_file():
             write_json_atomic(target, skeleton)
 
-    def tileset(self) -> Doc:
-        """The project's tileset: ``{image, tilewidth, tileheight, count, tiles: [{gid, label, layer}]}``."""
+    # --- tilesets -------------------------------------------------------------------------
+    def map_path(self, key: str | None = None) -> str | None:
+        """Project-relative path of a room's map file, or None if the room has no map."""
+        tilemap = self.scene(key).get("tilemap")
+        if not isinstance(tilemap, dict) or not tilemap.get("path"):
+            return None
+        scene_dir = posixpath.dirname(self.path(key or self.current).replace("\\", "/"))
+        return posixpath.normpath(posixpath.join(scene_dir, str(tilemap["path"]).replace("\\", "/")))
+
+    def _read_json(self, rel: str) -> Doc | None:
+        try:
+            data = json.loads((self.root / rel).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+        return data if isinstance(data, dict) else None
+
+    def project_tilesets(self) -> list[tuple[str, int]]:
+        """The tilesets new maps reference, with their first tile ids: the start room's, else the starter's."""
+        start_map = self.map_path(self.start_key())
+        doc = self._read_json(start_map) if start_map else None
+        found = ops.map_tilesets(doc, start_map) if doc and start_map else []
+        return found or [(ops.TILESET_SOURCE, 1)]
+
+    def room_tilesets(self, key: str | None = None) -> list[Doc]:
+        """The tilesets a room's map can paint with, in palette order.
+
+        Each: ``{name, source, firstgid, image, columns, rows, count, tile, hints}``; ``hints``
+        maps a local tile id to the ``{label, layer}`` its tileset suggests (the starter's do).
+        """
         ensure_starter_files(self.root)
-        path = self.root / ops.TILESET_SOURCE
-        data = json.loads(path.read_text(encoding="utf-8"))
-        tiles = []
-        for entry in data.get("tiles") or []:
-            props = {p.get("name"): p.get("value") for p in entry.get("properties") or [] if isinstance(p, dict)}
-            tiles.append({"gid": int(entry["id"]) + 1, "label": str(props.get("label") or f"Tile {entry['id']}"),
-                          "layer": ops.WALLS if props.get("layer") == ops.WALLS else ops.GROUND})
-        return {"image": str(path.parent / data["image"]), "tilewidth": int(data["tilewidth"]),
-                "tileheight": int(data["tileheight"]), "count": int(data["tilecount"]), "tiles": tiles}
+        map_rel = self.map_path(key)
+        map_doc = self._read_json(map_rel) if map_rel else None
+        out = []
+        for source, firstgid in ops.map_tilesets(map_doc, map_rel) if map_doc and map_rel else []:
+            data = self._read_json(source)
+            if not data or not data.get("image"):
+                continue
+            tile = int(data.get("tilewidth") or ops.TILE_SIZE)
+            columns = int(data.get("columns") or max(1, int(data.get("imagewidth", tile)) // tile))
+            count = int(data.get("tilecount") or 0)
+            hints = {}
+            for entry in data.get("tiles") or []:
+                props = {p.get("name"): p.get("value") for p in entry.get("properties") or [] if isinstance(p, dict)}
+                layer = props.get("layer")
+                hints[int(entry["id"])] = {"label": str(props.get("label") or ""),
+                                           "layer": layer if layer in (ops.GROUND, ops.WALLS, ops.OVERHEAD) else None}
+            image = (self.root / posixpath.dirname(source) / str(data["image"])).resolve()
+            out.append({"name": str(data.get("name") or posixpath.splitext(posixpath.basename(source))[0]),
+                        "source": source, "firstgid": firstgid, "image": str(image), "columns": columns,
+                        "rows": -(-count // columns), "count": count, "tile": tile, "hints": hints})
+        return out
+
+    def import_tileset(self, image_path: Path | str, tile_size: int, name: str) -> Doc:
+        """Copy an image into the project as a tileset every room can paint with.
+
+        The image is cut to whole tiles and, if its tiles aren't the map's size, scaled so
+        they are: tiles always line up with the grid. Transparency is kept. Writes
+        ``assets/tilesets/<name>.png`` and ``.json`` and adds the tileset to every room's
+        map file straight away (map files hold no painted tiles and an unused tileset is
+        harmless, so importing isn't part of undo). Returns ``{name, source, count, scaled}``.
+        """
+        from PIL import Image  # noqa: PLC0415
+
+        source = Path(str(image_path).strip().strip('"'))
+        if not source.is_file():
+            raise ops.OpError(f"There is no file at {source}.")
+        if not 8 <= int(tile_size) <= 256:
+            raise ops.OpError("The tile size must be between 8 and 256 pixels.")
+        try:
+            with Image.open(source) as img:
+                image = img.convert("RGBA")
+        except (OSError, ValueError) as exc:
+            raise ops.OpError(f"{source.name} isn't an image Mesh can read.") from exc
+        columns, rows = image.width // tile_size, image.height // tile_size
+        if columns < 1 or rows < 1:
+            raise ops.OpError(f"The image ({image.width}x{image.height}) is smaller than one {tile_size} px tile.")
+        if columns * rows > 4096:
+            raise ops.OpError("That's more than 4096 tiles; split the image into smaller tilesets.")
+        image = image.crop((0, 0, columns * tile_size, rows * tile_size))
+        size = (columns * ops.TILE_SIZE, rows * ops.TILE_SIZE)
+        if tile_size != ops.TILE_SIZE:
+            image = image.resize(size, Image.Resampling.NEAREST if tile_size < ops.TILE_SIZE else Image.Resampling.LANCZOS)
+        label = (name or source.stem).strip() or "Tileset"
+        slug = ops.slug(label)
+        folder = posixpath.dirname(ops.TILESET_SOURCE)
+        candidate, n = slug, 2
+        while (self.root / folder / f"{candidate}.json").exists() or (self.root / folder / f"{candidate}.png").exists():
+            candidate, n = f"{slug}_{n}", n + 1
+        document = ops.tileset_document(label, f"{candidate}.png", *size)
+        (self.root / folder).mkdir(parents=True, exist_ok=True)
+        image.save(self.root / folder / f"{candidate}.png")
+        rel = f"{folder}/{candidate}.json"
+        write_json_atomic(self.root / rel, document)
+        self._add_tileset_to_maps(rel)
+        return {"name": label, "source": rel, "count": document["tilecount"], "scaled": tile_size != ops.TILE_SIZE}
+
+    def _add_tileset_to_maps(self, tileset_rel: str) -> None:
+        counts: dict[str, int] = {}
+        for key, _label, _path in self.rooms():
+            map_rel = self.map_path(key)
+            map_doc = self._read_json(map_rel) if map_rel else None
+            if map_rel is None or map_doc is None:
+                continue
+            for src, _gid in ops.map_tilesets(map_doc, map_rel):
+                if src not in counts:
+                    counts[src] = int((self._read_json(src) or {}).get("tilecount") or 0)
+            updated = ops.with_tileset(map_doc, map_rel, tileset_rel, counts)
+            if updated != map_doc:
+                write_json_atomic(self.root / map_rel, updated)
 
     def link_rooms(self, key_a: str, at_a: tuple[float, float], key_b: str, at_b: tuple[float, float]) -> None:
         before = self._snapshot()

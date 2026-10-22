@@ -20,6 +20,7 @@ from engine.behaviours.registry import get_behaviour_info, list_behaviours
 from engine.entity_paint_mode import make_entity_id
 from engine.scene_loader import SceneLoader
 from engine.tilemap_edit import TilemapDims, ensure_tiles_array, get_layer_by_id, set_tile
+from engine.tilemap_flood_fill import flood_fill_indices
 
 Doc = dict[str, Any]
 
@@ -31,8 +32,10 @@ DOOR_SPRITE = "assets/sprites/door.png"
 # (first gid 1); 0 is an empty cell.
 TILESET_SOURCE = "assets/tilesets/starter.json"
 TILE_SIZE = 32
-GROUND, WALLS = "ground", "walls"  # WALLS is the collision layer: anything painted there blocks
-MAP_LAYERS = ((GROUND, -20, False), (WALLS, -10, True))
+GROUND, WALLS, OVERHEAD = "ground", "walls", "overhead"
+# (id, z, collision). WALLS is the collision layer: anything painted there blocks. OVERHEAD
+# has z >= 0, so the runtime draws it after characters (roofs, treetops); it never blocks.
+MAP_LAYERS = ((GROUND, -20, False), (WALLS, -10, True), (OVERHEAD, 10, False))
 STARTER_GRASS, STARTER_FLOOR, STARTER_WALL = 1, 5, 9  # gids in the starter tileset
 # Arrival spot relative to its door: far enough that a 64px player doesn't touch a
 # walk-in door (which would send them straight back).
@@ -109,6 +112,24 @@ def place_prefab(scene: Doc, scene_key: str, prefab: Doc, x: float, y: float) ->
     entity = build_prefab_entity_definition(prefab, prefab_id, x, y, out, entity_id=entity_id)
     out.setdefault("entities", []).append(entity)
     return _checked(scene, out), entity_id
+
+
+def paste_entity(scene: Doc, scene_key: str, entity: Doc, x: float, y: float) -> tuple[Doc, str]:
+    """A copy of ``entity`` (from this or another room) at ``(x, y)``, with a fresh id and name."""
+    if entity.get("tag") == "player":
+        raise OpError("A room has one player; the player can't be copied.")
+    if entity.get("spawn_id") or entity.get("tag") == "spawn_point":
+        raise OpError("Arrival spots belong to their door; copy the door instead.")
+    out = copy.deepcopy(scene)
+    pasted = copy.deepcopy(entity)
+    base = str(entity.get("name") or "Object")
+    names, n, name = {e.get("name") for e in entities(out)}, 2, base
+    while name in names:
+        name, n = f"{base} {n}", n + 1
+    pasted.update(name=name, x=round(float(x), 2), y=round(float(y), 2))
+    pasted["id"] = unique_entity_id(out, make_entity_id(scene_key, slug(base), x, y))
+    out.setdefault("entities", []).append(pasted)
+    return _checked(scene, out), pasted["id"]
 
 
 def remove_entity(scene: Doc, entity_id: str) -> Doc:
@@ -363,13 +384,18 @@ def map_file_paths(scene_path: str) -> tuple[str, str]:
     return project_rel, posixpath.relpath(project_rel, scene_dir)
 
 
-def map_skeleton(map_project_path: str, width: int, height: int, tile: int = TILE_SIZE) -> Doc:
-    """The Tiled-format map file for a room: size, tileset and empty layers (tiles live in the scene)."""
-    tileset = posixpath.relpath(TILESET_SOURCE, posixpath.dirname(map_project_path))
+def map_skeleton(map_project_path: str, width: int, height: int, tile: int = TILE_SIZE,
+                 tilesets: list[tuple[str, int]] | None = None) -> Doc:
+    """The Tiled-format map file for a room: size, tilesets and empty layers (tiles live in the scene).
+
+    ``tilesets`` is ``[(project-relative tileset file, firstgid)]``; the starter tileset by default.
+    """
+    here = posixpath.dirname(map_project_path)
     return {
         "type": "map", "orientation": "orthogonal", "renderorder": "right-down", "infinite": False,
         "width": width, "height": height, "tilewidth": tile, "tileheight": tile,
-        "tilesets": [{"firstgid": 1, "source": tileset}],
+        "tilesets": [{"firstgid": gid, "source": posixpath.relpath(src, here)}
+                     for src, gid in (tilesets or [(TILESET_SOURCE, 1)])],
         "layers": [
             {"name": name, "type": "tilelayer", "width": width, "height": height, "x": 0, "y": 0,
              "opacity": 1, "visible": True, "data": [0] * (width * height)}
@@ -378,7 +404,8 @@ def map_skeleton(map_project_path: str, width: int, height: int, tile: int = TIL
     }
 
 
-def add_map(scene: Doc, scene_path: str, *, width: int, height: int, ground: int = 0, border: int = 0) -> tuple[Doc, str, Doc]:
+def add_map(scene: Doc, scene_path: str, *, width: int, height: int, ground: int = 0, border: int = 0,
+            tilesets: list[tuple[str, int]] | None = None) -> tuple[Doc, str, Doc]:
     """Give a room a map. Returns ``(scene, map file path, map file document)``."""
     if map_info(scene) is not None:
         raise OpError("This room already has a map.")
@@ -391,7 +418,7 @@ def add_map(scene: Doc, scene_path: str, *, width: int, height: int, ground: int
             walls[col] = walls[(height - 1) * width + col] = border
         for row in range(height):
             walls[row * width] = walls[row * width + width - 1] = border
-    tiles = {GROUND: [ground] * (width * height), WALLS: walls}
+    tiles = {GROUND: [ground] * (width * height), WALLS: walls, OVERHEAD: [0] * (width * height)}
     out = copy.deepcopy(scene)
     out["tilemap"] = {
         "path": scene_rel, "width": width, "height": height, "tilewidth": TILE_SIZE, "tileheight": TILE_SIZE,
@@ -401,7 +428,7 @@ def add_map(scene: Doc, scene_path: str, *, width: int, height: int, ground: int
             for name, z, collision in MAP_LAYERS
         ],
     }
-    return _checked(scene, out), project_rel, map_skeleton(project_rel, width, height)
+    return _checked(scene, out), project_rel, map_skeleton(project_rel, width, height, tilesets=tilesets)
 
 
 def map_size_for(scene: Doc, minimum: tuple[int, int] = (24, 16)) -> tuple[int, int]:
@@ -431,29 +458,92 @@ def _map_layer(out: Doc, layer: str) -> tuple[list[int], TilemapDims]:
     if not isinstance(tilemap, dict) or not isinstance(tilemap.get("tile_layers"), list):
         raise OpError("This room has no map yet.")
     dims = TilemapDims(int(tilemap["width"]), int(tilemap["height"]))
+    known = {name: (z, collision) for name, z, collision in MAP_LAYERS}
+    if layer in known and not any(isinstance(e, dict) and e.get("id") == layer for e in tilemap["tile_layers"]):
+        z, collision = known[layer]  # e.g. OVERHEAD on a map made before that layer existed
+        tilemap["tile_layers"].append({"id": layer, "z": z, "draw": True, "collision": collision,
+                                       "tiles": [0] * (dims.width * dims.height)})
     try:
         return ensure_tiles_array(get_layer_by_id(tilemap["tile_layers"], layer), dims=dims), dims
     except KeyError as exc:
         raise OpError(f"This map has no '{layer}' layer.") from exc
 
 
-def paint_tiles(scene: Doc, layer: str, cells: Iterable[tuple[int, int]], tile: int) -> Doc:
-    """Set ``cells`` on ``layer`` to ``tile`` (0 clears them). Cells outside the map are ignored."""
+def paint_tiles(scene: Doc, layer: str, cells: Iterable[tuple[int, int]], tile: int | list[list[int]],
+                anchor: tuple[int, int] = (0, 0)) -> Doc:
+    """Set ``cells`` on ``layer`` to ``tile`` (0 clears them). Cells outside the map are ignored.
+
+    ``tile`` may be a stamp, rows of gids: each cell then gets the stamp tile at its offset
+    from ``anchor``, repeating, so any shape painted with a stamp tiles it seamlessly.
+    """
+    stamp = tile if isinstance(tile, list) else [[int(tile)]]
     out = copy.deepcopy(scene)
     tiles, dims = _map_layer(out, layer)
     for col, row in cells:
         if 0 <= col < dims.width and 0 <= row < dims.height:
-            set_tile(tiles, dims=dims, x=col, y=row, tile=int(tile))
+            line = stamp[(row - anchor[1]) % len(stamp)]
+            set_tile(tiles, dims=dims, x=col, y=row, tile=int(line[(col - anchor[0]) % len(line)]))
     return _checked(scene, out)
 
 
-def erase_tiles(scene: Doc, cells: Iterable[tuple[int, int]]) -> Doc:
-    """Clear the top-most tile in each cell: a wall or obstacle first, otherwise the ground."""
-    out = copy.deepcopy(scene)
-    walls, dims = _map_layer(out, WALLS)
-    ground, _ = _map_layer(out, GROUND)
-    for col, row in cells:
-        if 0 <= col < dims.width and 0 <= row < dims.height:
-            index = row * dims.width + col
-            (walls if walls[index] else ground)[index] = 0
-    return _checked(scene, out)
+def rect_cells(a: tuple[int, int], b: tuple[int, int]) -> list[tuple[int, int]]:
+    """Every cell of the rectangle with corners ``a`` and ``b`` (inclusive), row by row."""
+    (c0, c1), (r0, r1) = sorted((a[0], b[0])), sorted((a[1], b[1]))
+    return [(c, r) for r in range(r0, r1 + 1) for c in range(c0, c1 + 1)]
+
+
+def fill_cells(scene: Doc, layer: str, start: tuple[int, int]) -> list[tuple[int, int]]:
+    """The area a fill at ``start`` covers: connected cells holding the same tile on ``layer``.
+
+    On the ground layer the fill also stops at walls, so filling a walled room's floor
+    stays inside the room, as it looks on screen.
+    """
+    info = map_info(scene)
+    if info is None:
+        raise OpError("This room has no map yet.")
+    width, height = info["width"], info["height"]
+    if not (0 <= start[0] < width and 0 <= start[1] < height):
+        return []
+    empty = [0] * (width * height)
+    tiles = info["layers"].get(layer) or empty
+    walls = info["layers"].get(WALLS) or empty
+    # On the ground layer a cell's key also says whether a wall stands on it.
+    keys = [tile * 2 + (bool(wall) if layer == GROUND else 0) for tile, wall in zip(tiles, walls)]
+    col, row = start
+    found = flood_fill_indices(keys, width, height, col, row, keys[row * width + col], max_tiles=width * height)
+    return [(i % width, i // width) for i in sorted(found)]
+
+
+# --- tilesets (Tiled tileset files that the map files reference) ---------------------------
+
+
+def tileset_document(name: str, image_file: str, image_width: int, image_height: int, tile: int = TILE_SIZE) -> Doc:
+    """A Tiled tileset file for an image of ``tile``-sized tiles next to it."""
+    columns, rows = image_width // tile, image_height // tile
+    if columns < 1 or rows < 1:
+        raise OpError(f"The image is smaller than one {tile} px tile.")
+    return {"type": "tileset", "name": name, "image": image_file, "imagewidth": image_width,
+            "imageheight": image_height, "tilewidth": tile, "tileheight": tile, "columns": columns,
+            "tilecount": columns * rows, "margin": 0, "spacing": 0}
+
+
+def map_tilesets(map_doc: Doc, map_project_path: str) -> list[tuple[str, int]]:
+    """``[(project-relative tileset file, firstgid)]`` a map file references, in order."""
+    here = posixpath.dirname(map_project_path)
+    return [(posixpath.normpath(posixpath.join(here, str(e["source"]))), int(e.get("firstgid", 1)))
+            for e in map_doc.get("tilesets") or [] if isinstance(e, dict) and e.get("source")]
+
+
+def with_tileset(map_doc: Doc, map_project_path: str, tileset_project_path: str, tile_counts: dict[str, int]) -> Doc:
+    """``map_doc`` also referencing a tileset, after the ones it has, so existing tile ids keep their meaning.
+
+    ``tile_counts`` maps a project-relative tileset file to its tile count.
+    """
+    current = map_tilesets(map_doc, map_project_path)
+    out = copy.deepcopy(map_doc)
+    if any(src == posixpath.normpath(tileset_project_path) for src, _ in current):
+        return out
+    next_gid = max([gid + int(tile_counts.get(src, 0)) for src, gid in current] or [1])
+    out["tilesets"] = list(out.get("tilesets") or []) + [
+        {"firstgid": next_gid, "source": posixpath.relpath(tileset_project_path, posixpath.dirname(map_project_path))}]
+    return out
