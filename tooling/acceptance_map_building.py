@@ -178,7 +178,9 @@ def run(out: Path) -> int:
         p().wait(lambda s: any(o["name"] == "Elder" for o in s["objects"]), "the NPC named Elder")
 
     def s08_dialogue_behaviour() -> None:
-        # Take the Person's Dialogue off, then add it back through the right-click menu.
+        # Take the Person's Dialogue off (Behaviours tab), then add it back through the right-click menu.
+        p().button("Behaviours")
+        p().wait(lambda s: s["tab"] == "behaviours", "the Behaviours tab")
         p().button("Remove", nth=0)
         p().wait(lambda s: s["message"] == "Removed Dialogue.", "Dialogue removed")
         p().click_obj("Elder", right=True)
@@ -189,6 +191,8 @@ def run(out: Path) -> int:
         p().wait(lambda s: any(w["type"] == "button" and w["text"] == "Dialogue" for w in s["widgets"]), "Dialogue listed")
         p().button("Dialogue")
         p().wait(lambda s: s["message"] == "Added Dialogue.", "Dialogue added")
+        p().button("Dialogue")  # what they say is on the Dialogue tab
+        p().wait(lambda s: s["tab"] == "dialogue", "the Dialogue tab")
         p().set_field("says", "Welcome to my room!")
         p().wait(lambda s: s["message"] == "Dialogue updated.", "the line saved")
 

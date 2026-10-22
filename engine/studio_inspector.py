@@ -66,6 +66,11 @@ def _guess_frame(size: tuple[int, int] | None) -> tuple[int, int]:
     return frame_w, frame_w if height % frame_w == 0 else (height // 4 if height % 4 == 0 else height)
 
 
+def _on_screen(widget: Any) -> bool:
+    """Whether a preview slot is in the shown panel (rows scrolled out of view never get laid out)."""
+    return getattr(widget, "parent", None) is not None
+
+
 def _short(text: str, limit: int) -> str:
     text = " ".join(str(text).split())
     return text if len(text) <= limit else text[: limit - 1] + "…"
@@ -827,7 +832,7 @@ class InspectorMixin:
     def _draw_previews(self) -> None:
         a = optional_arcade.arcade
         for space, path in self._thumbs:
-            if self.panel not in ("inspect", "pick_image") or space.width <= 1:
+            if self.panel not in ("inspect", "pick_image") or space.width <= 1 or not _on_screen(space):
                 continue
             image = self._image(path)
             if image is None:
@@ -841,7 +846,7 @@ class InspectorMixin:
             a.draw_lrbt_rectangle_filled(space.left, space.right, space.bottom, space.top, (24, 26, 31))
             a.draw_texture_rect(self._textures[key], a.XYWH(space.center_x, space.center_y, w, h), pixelated=True)
         space = self._anim_space
-        if space is not None and self.panel == "inspect" and self.tab == "animation":
+        if space is not None and self.panel == "inspect" and self.tab == "animation" and _on_screen(space):
             frames = self._clip_frames(getattr(space, "mesh_clip", {}) or {})
             a.draw_lrbt_rectangle_filled(space.left, space.right, space.bottom, space.top, (24, 26, 31))
             if frames:

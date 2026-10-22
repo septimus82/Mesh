@@ -231,6 +231,8 @@ def run(out: Path, old_projects: list[Path]) -> int:
         s = S().state()
         assert s["map"]["layers"] == memo["layers"], "tiles changed across close and reopen"
         S().click_obj("Guide")
+        S().wait(lambda s: s["selected"] == S().obj("Guide")["id"]
+                 and any(w["type"] == "field" and w["key"] == "says" for w in s["widgets"]), "the Guide's inspector")
         S().wait(lambda s: S().field("says")["text"] == " ".join(NEW_LINE.split()), "the Guide's new line")
 
     def s15_create_blank_project() -> None:

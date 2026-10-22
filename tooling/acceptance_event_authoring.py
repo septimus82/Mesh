@@ -18,7 +18,7 @@ generated here (small coloured fixtures), so the test runs anywhere.
  9 digging is counted
 
 Run from the repo root:  py -3.13 tooling/acceptance_event_authoring.py [--out DIR]
-Set MESH_GUI_AT="x,y" to put the Studio window there (e.g. on a second monitor) and
+Set MESH_GUI_AT="x,y" to put the Studio window there (the GUI driver does this) (e.g. on a second monitor) and
 MESH_GUI_POLITE=3 to wait for the mouse to be still for 3 s whenever someone uses it.
 Exit code 0 only if every step passed. Writes DIR/report.json and a screenshot per step.
 """
@@ -333,10 +333,6 @@ def run(out: Path) -> int:
         page.memo_positions = memo.setdefault("positions", {})
         holder["driver"], holder["page"] = driver, page
         page.wait(lambda s: s["mode"] == "edit" and s["objects"], "the Studio", timeout=60)
-        at = os.environ.get("MESH_GUI_AT")
-        if at:
-            driver.move_window(*(int(v) for v in at.split(",")))
-            time.sleep(0.8)
         return page
 
     def step(name: str, action: Callable[[], Any]) -> bool:

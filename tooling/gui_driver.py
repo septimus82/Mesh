@@ -186,7 +186,15 @@ class Driver:
         self._cursor = None
         time.sleep(2.0)  # first frames
         self.focus()
+        self._place_from_env()
         return self
+
+    def _place_from_env(self) -> None:
+        """MESH_GUI_AT="x,y" puts every driven window there (e.g. on a monitor nobody is using)."""
+        at = os.environ.get("MESH_GUI_AT")
+        if at:
+            x, y = (int(v) for v in at.split(","))
+            self.move_window(x, y)
 
     def move_window(self, x: int, y: int) -> None:
         """Move the window's top-left corner to screen point (x, y) (physical pixels), e.g. onto another monitor."""
@@ -234,6 +242,7 @@ class Driver:
         if not self.hwnd:
             raise RuntimeError("no window appeared within 60s")
         time.sleep(2.0)  # first frames
+        self._place_from_env()
         self.focus()
 
     # --- window ---------------------------------------------------------------------------
