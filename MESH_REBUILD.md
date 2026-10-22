@@ -2,7 +2,13 @@
 
 Branch: `redesign/visual-editor` (from `52d43a4`; original preserved as tag `archive/pre-redesign-2026-10`). Not merged to `main`; it awaits review.
 
-Try it: `mesh new mygame`, then `cd mygame` and `mesh edit` (or `py -3.13 -m mesh_cli new|edit` with `PYTHONPATH` set to this checkout). Pick a tile under **Map** and drag on the map; **Eraser** removes; Esc returns to Select; F4 plays.
+Try it: `mesh new mygame`, then `cd mygame` and `mesh edit` (or `py -3.13 -m mesh_cli new|edit` with `PYTHONPATH` set to this checkout). Then:
+- **Paint:** under **Map**, choose a layer (Ground / Walls / Above) and a tool (Brush / Rect / Fill), click a tile, and paint on the map. Drag across several tiles for a stamp.
+- **Import your own tileset:** **Import...**
+- **Erase:** **Eraser**.
+- **Back to Select:** Esc.
+- **Copy and paste an object:** Ctrl+C / Ctrl+V.
+- **Play:** F4.
 
 ## Milestone 1 — the first creation workflow
 
@@ -99,13 +105,81 @@ Each was found by driving the real window, not by the existing unit tests.
 5. The legacy editor and Creator Mode saved invalid scenes for painted rooms: the runtime snapshot added `overrides` and an empty `layers` list to inline tile layers (`005fad4`). Found by the full suite.
 6. Obstacle tiles had grass baked into their background, so a rock on a wood floor showed a green square (`7e71982`).
 
+## Milestone 3 — map tools
+
+**Goal:**
+- Bring your own tileset.
+- Fill and rectangle tools.
+- A layer drawn above the player.
+- Basic clipboard support.
+- All on the existing tilemap format and `project_ops`.
+
+Detailed results: [`docs/reviews/milestone3_map_tools.md`](docs/reviews/milestone3_map_tools.md).
+
+### Acceptance criteria and status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Import a custom tileset in the Studio | **Done** | **Map → Import...** opens a form: Browse... (the OS file dialog) or a pasted path, a name and the tile size in the image. A preview draws the tile grid and shades any edge that isn't a whole tile. |
+| Correct dimensions and alignment | **Done** | The image is cut to whole tiles and scaled to the map's 32 px tiles (nearest-neighbour up, Lanczos down), so every tile lines up with the grid. Checked: 16 px tiles in play line up and collide cell-exactly. |
+| Transparency | **Done** | Alpha is kept through import, the palette and the game. Checked: transparent treetop corners show the grass beneath. |
+| Project-relative asset paths | **Done** | The image is copied into `assets/tilesets/` with a Tiled tileset file beside it. Map files reference it relatively; existing tile ids never change. |
+| Not limited to the starter tileset | **Done** | A tileset row cycles through the room's tilesets; every room gets each imported one. |
+| Rectangle tool | **Done** | Drag a rectangle; it previews, then paints as one edit. It also works with the eraser and with multi-tile stamps. |
+| Fill tool | **Done** | Fills connected cells of the same tile on the active layer. On the ground it also stops at walls, so filling a walled room stays inside it. It is one edit. |
+| Undo/redo for both, consistent collision | **Done** | One Ctrl+Z per rectangle or fill. Only the Walls layer collides, whichever tool painted it. Checked in play with imported wall tiles. |
+| A layer drawn above the player | **Done** | "Above" layer: z 10, never collides; the runtime draws it over characters. Checked by pixel: the treetop covers the player, who walks on through. While editing other layers it is drawn see-through. |
+| Rendering separate from collision | **Done** | Layer buttons Ground / Walls / Above. Collision is a property of the Walls layer only; drawing order is the layer's z. |
+| Clipboard in text fields | **Done** | Ctrl+A, C, X and V in every Studio text field. Checked in the real window. |
+| Clipboard for objects (extra) | **Done** | Ctrl+C / Ctrl+V and the right-click menu: copy an object, paste it at the mouse, in any room. |
+| Start-up click investigation | **Ongoing** | No lost click reproduced. A related intermittent failure was traced to physical mouse movement during a run, and the GUI driver now stops on that. The app now logs its first mouse presses. |
+
+### How it was validated
+
+**Whole workflow, real window:** `tooling/acceptance_map_tools.py`, on a fresh project with OS-level input only, including the OS file dialog. **15/15 pass:**
+- import a 16 px tileset from outside the project;
+- rectangle, undo/redo;
+- walls rectangle and eraser doorway;
+- fill, undo/redo;
+- a 2-tile stamp above the player;
+- copy/paste of an object;
+- text clipboard;
+- save, close and reopen with everything compared;
+- play under the treetops (pixel check) and against imported walls;
+- stop with nothing changed.
+
+The Milestone 1 and 2 acceptance tests pass on the same code (15/15 and 23/23).
+
+**Headless:**
+- `tests/test_project_ops.py` (20)
+- `tests/test_studio_project.py` (10)
+- `tests/test_tilemap_tileset_slicing.py` (4)
+
+**Full suite on the branch head:** 10 failed, 9,283 passed.
+- **The 9 baseline failures,** unchanged.
+- **`test_ruff_gate_day_one_green`:** it fails only because of an untracked `mygame/` folder in the checkout. That is a hand-test project made with `mesh new`; its `main.py` has E402 findings. The gate finds nothing on the branch's own files. Delete the folder and the test passes again.
+- **mypy island:** clean.
+
+**Not validated:**
+- **Nobody has used these tools by hand yet.**
+- Very large tilesets (the limit is 4096 tiles) and tilesets with spacing or margins between tiles; the importer assumes a plain grid.
+
+### Bugs found and fixed while building it
+
+1. **Inline layers missing from a room's map file were dropped** at load. A room can now gain a layer without rewriting its map file (`3f20796`).
+2. **The click-logger was garbage-collected at once.** Pyglet keeps only weak references to event handlers. Found because the log stayed empty.
+3. **Labels split words.** Long multi-line labels broke words in the middle; the import form now uses one short line per sentence.
+
 ## Known limitations (honest list)
 
 - **Placeholder character art.** Still the coloured-square sheet; the owner's decision.
 - **One-line dialogue.** "Says" edits the first line only; multi-page dialogue and choices need a better editor.
-- **No clipboard in text fields.** Inherited from `arcade.gui`.
-- **One tileset per project, two layers.** No tileset import, no autotiles, no fill or rectangle tool, no decoration layer above the player.
-- **Clipboard:** no copy/paste for objects or tiles; text fields have none either (`arcade.gui`).
+- **Map tools are still basic.**
+  - Three layers.
+  - No autotiles, tile flipping, map resizing, or copying a region of the map.
+  - Imported tilesets must be a plain grid (no spacing or margins).
+  - Importing can't be undone (it writes files; an unused tileset is harmless).
+- **Text fields are single-line.** Pasted line breaks become spaces.
 - **Middle-drag is the only way to pan with the mouse.** Laptop users can pan with WASD or arrows while no text field has focus.
 - **Two editors coexist.** Mesh Studio for projects with a world; the legacy editor for the engine repo's own showcase and via `MESH_LEGACY_EDITOR=1`.
 - **The legacy editor no longer shows arrival markers.** They are invisible sprites now; the Studio draws its own markers.
@@ -122,9 +196,15 @@ All recorded with restore instructions in `MESH_SALVAGE.md`:
 ## Next slices, in order
 
 1. **AI on the same operations:** MCP `apply_ops` / live ops call `engine/project_ops`, proposals become a thin preview wrapper, and `OP_CATALOG` is generated.
-2. **Map tools:** fill and rectangle, a decoration layer above the player, bring-your-own tileset.
+2. **Visual project launcher and template selection.**
 3. **Monster code as a plugin** via `PluginManager`; project-scoped `behaviours/` folder for custom scripts.
-4. **Archive the legacy editor and Creator Mode** once the Studio covers tiles and lights; archive demo content and its ~62 tests.
+4. **Archive the legacy editor and Creator Mode** only once the Studio covers what it still lacks. The inventory is in `docs/reviews/milestone3_map_tools.md`:
+   - quest, item and prefab editors;
+   - full dialogue;
+   - list/object settings;
+   - triggers drawn on the map.
+
+   Then archive the demo content and its ~62 tests.
 
 ## Decisions needing the owner
 
