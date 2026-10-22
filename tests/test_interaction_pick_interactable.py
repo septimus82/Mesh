@@ -111,3 +111,25 @@ def test_pick_interactable_player_pos_legacy_does_not_require_actor_eligibility(
     npc.mesh_entity_data = {"id": "npc", "facing": "right"}
     npc.mesh_behaviours_runtime = []
     assert select_interaction_candidate([target_b], actor=npc) is None
+
+
+def test_hidden_entities_cannot_be_interacted_with() -> None:
+    from engine.interaction import pick_interactable
+
+    class _Behaviour:
+        def on_interact(self, _window, _actor) -> None:
+            return
+
+    def _sprite(entity_id: str, x: float):
+        sprite = type("S", (), {})()
+        sprite.center_x, sprite.center_y, sprite.width, sprite.height = x, 0.0, 16.0, 16.0
+        sprite.mesh_entity_data = {"id": entity_id}
+        sprite.mesh_behaviours_runtime = [_Behaviour()]
+        return sprite
+
+    player = _sprite("player", 0.0)
+    player.mesh_behaviours_runtime = []
+    taken_shovel = _sprite("shovel", 2.0)
+    taken_shovel.visible = False  # what ConditionalActivator does once it's picked up
+    grave = _sprite("grave", 10.0)
+    assert pick_interactable([taken_shovel, grave], player_pos=(0.0, 0.0), max_dist=20.0, actor=player) is grave
