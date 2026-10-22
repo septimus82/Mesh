@@ -144,6 +144,25 @@ def test_second_add_is_blocked_while_the_first_is_pending(starter, tmp_path: Pat
     assert not any(c.action_id == ADD_PERSON_STAGE_ACTION_ID for c in _commands(starter, creator))
 
 
+def test_failing_dry_run_is_refused_and_leaves_no_pending_proposal(starter, tmp_path: Path) -> None:
+    from engine.editor.creator_mode.creator_add_person import build_add_person_ops, stage_add_person_proposal
+
+    editor, _ = _creator(starter, tmp_path)
+    ops = build_add_person_ops(
+        scene_path=starter.scene_controller.current_scene_path,
+        entities=starter.scene_controller._loaded_scene_data["entities"],
+        x=96.0,
+        y=224.0,
+        line="hi",
+    )
+    ops[0]["prefab_id"] = "no_such_prefab"  # the bridge stages it anyway; its dry-run fails
+
+    result = stage_add_person_proposal(ops, editor.live_bridge)
+
+    assert result.ok is False and "not found" in result.errors[0]
+    assert editor.live_bridge.list_pending_proposals() == []
+
+
 def test_second_project_in_same_process_does_not_inherit_prefabs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # A starter project (has a person prefab) opened first must not leak into an empty-prefab project.
     with headless_editor(tmp_path / "first", monkeypatch, template_id="starter") as first:
