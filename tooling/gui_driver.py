@@ -11,6 +11,7 @@ origin at the TOP-LEFT (as in a screenshot), so a 1280x720 window always takes 0
 from __future__ import annotations
 
 import ctypes
+import os
 import subprocess
 import time
 from ctypes import wintypes
@@ -197,14 +198,17 @@ class Driver:
     def title(self) -> str:
         return _window_title(self.hwnd)
 
-    def click_close_button(self, timeout: float = 20.0) -> None:
-        """Click the window's own close (X) button, as a person would, and wait for the window to go."""
+    def click_close_button(self, timeout: float = 20.0, *, wait: bool = True) -> None:
+        """Click the window's own close (X) button, as a person would, and wait for the window to go
+        (``wait=False``: just click, e.g. when the app is expected to ask something first)."""
         self._require_foreground()
         target = self._frame_point("close")
         if target is None:
             raise RuntimeError("couldn't find the window's close button")
         self._require_untouched_mouse()
         self._screen_click(*target)
+        if not wait:
+            return
         deadline = time.time() + timeout
         while user32.IsWindow(self.hwnd) and user32.IsWindowVisible(self.hwnd):
             if time.time() > deadline:
@@ -320,8 +324,27 @@ class Driver:
         pos = wintypes.POINT()
         user32.GetCursorPos(ctypes.byref(pos))
         if abs(pos.x - self._cursor[0]) > 16 or abs(pos.y - self._cursor[1]) > 16:  # beyond hand jitter
+            polite = float(os.environ.get("MESH_GUI_POLITE", "0") or 0)
+            if polite > 0:
+                # Someone is using the computer: wait until the mouse has been still for `polite`
+                # seconds, then carry on (re-focusing our window) rather than fail the run.
+                self._wait_for_idle_mouse(polite)
+                self._cursor = None
+                return
             raise RuntimeError(f"the mouse was moved by something other than this test (expected {self._cursor}, "
                                f"found {(pos.x, pos.y)}); keep hands off the mouse while a GUI test runs")
+
+    @staticmethod
+    def _wait_for_idle_mouse(seconds: float) -> None:
+        pos, last, still_since = wintypes.POINT(), None, time.time()
+        while True:
+            user32.GetCursorPos(ctypes.byref(pos))
+            now = (pos.x, pos.y)
+            if now != last:
+                last, still_since = now, time.time()
+            elif time.time() - still_since >= seconds:
+                return
+            time.sleep(0.25)
 
     def _mouse_to(self, x: float, y: float) -> None:
         self._require_untouched_mouse()

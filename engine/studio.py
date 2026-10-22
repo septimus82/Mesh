@@ -21,6 +21,7 @@ from typing import Any, Callable
 import engine.optional_arcade as optional_arcade
 from engine import project_ops as ops
 from engine.scene_loader import document_key
+from engine.studio_inspector import InspectorMixin, Rows, row_height
 from engine.studio_project import Project
 from engine.studio_ui import (
     C_BG,
@@ -53,6 +54,9 @@ SHEET_W = LEFT_W - 20  # the tile palette's width
 LAYER_BUTTONS = ((ops.GROUND, "Ground"), (ops.WALLS, "Walls"), (ops.OVERHEAD, "Above"))
 LAYER_NAME = {ops.GROUND: "the ground", ops.WALLS: "walls (they block movement)",
               ops.OVERHEAD: "the layer above characters (roofs, treetops; never blocks)"}
+# Always in the Objects list: an object to dress up yourself, and a zone to walk into.
+BUILT_IN_OBJECTS: list[dict[str, Any]] = [{"id": "object", "display_name": "Empty object", "built_in": "blank"},
+                                          {"id": "zone", "display_name": "Trigger zone", "built_in": "zone"}]
 SHAPE_HELP = {"brush": "Click or drag on the map.", "rect": "Drag a rectangle on the map.",
               "fill": "Click an area to fill it."}
 
@@ -82,7 +86,7 @@ def _guess_tile_size(width: int, height: int) -> int:
     return next((t for t in (32, 16, 48, 24, 64) if width % t == 0 and height % t == 0), 32)
 
 
-class Studio:
+class Studio(InspectorMixin):
     def __init__(self, window: Any, project: Project) -> None:
         self.window = window
         self.project = project
@@ -117,7 +121,12 @@ class Studio:
         self.sheet_drag: list[tuple[int, int]] | None = None  # [start, end] palette cells while dragging
         self.clipboard: dict[str, Any] | None = None  # a copied object
         self.import_form = {"path": "", "name": "", "tile": "32"}
-        self._close_warned = False  # closing with unsaved changes warns once
+        self.modal: str | None = None  # "close": the Save / Discard / Cancel question
+        self._closing = False  # set once the person chose to leave
+        self.handle_drag: dict[str, Any] | None = None  # a collider or zone handle being dragged
+        self.play_flags_open = False
+        self._play_flags_seen: Any = None
+        self._init_inspector()
         self._tile_textures: dict[tuple[str, int], Any] = {}
         self._images: dict[str, Any] = {}
         self._sheet_space: Any = None
@@ -190,6 +199,11 @@ class Studio:
         self.tilesets = self.project.room_tilesets()
         self.sheet = min(self.sheet, max(0, len(self.tilesets) - 1))
         self._fade_overhead()
+        # Objects hidden by their "Show when" flags are still there to edit: show them see-through.
+        for sprite in self.window.scene_controller.all_sprites:
+            data = getattr(sprite, "mesh_entity_data", None) or {}
+            if data.get("sprite") and not sprite.visible:
+                sprite.visible, sprite.alpha = True, 110
         if recenter:
             self._center_on_room()
         self.window.set_caption(f"Mesh Studio - {self.project.label(self.project.current)}")
@@ -212,6 +226,8 @@ class Studio:
         self.zoom = 1.0
 
     def _edit(self, change: Callable[[dict[str, Any]], dict[str, Any]], ok: str = "") -> bool:
+        if os.environ.get("MESH_STUDIO_TRACE"):
+            print(f"[Mesh][Studio] edit: {ok or '(no message)'}", flush=True)
         try:
             self.project.edit_scene(change)
         except ops.OpError as err:
@@ -287,7 +303,13 @@ class Studio:
     def select(self, entity_id: str | None) -> None:
         self._flush_fields()
         if entity_id != self.selected:
-            self.expanded = None
+            self.expanded, self.dlg_line, self.dlg_choice, self.clip_sel, self.panel_scroll = None, None, None, None, 0
+            entity = self._entity(entity_id)
+            # Open on what the object is about: people talk; other tabs stay as they were.
+            if entity is not None and ("Dialogue" in ops.entity_behaviours(entity) or entity.get("tag") == "npc"):
+                self.tab = "dialogue"
+            elif self.tab == "dialogue":
+                self.tab = "look"
         self.selected = entity_id
         self.panel = "inspect"
         self._rebuild()
@@ -600,17 +622,26 @@ class Studio:
         created: list[str] = []
 
         def change(scene: dict[str, Any]) -> dict[str, Any]:
-            out, new_id = ops.place_prefab(scene, self.project.current, prefab, _snap(wx), _snap(wy))
+            kind, at = prefab.get("built_in"), (_snap(wx), _snap(wy))
+            if kind:
+                out, new_id = ops.place_blank(scene, self.project.current, "Zone" if kind == "zone" else "Object", *at)
+                if kind == "zone":
+                    out = ops.set_trigger_zone(out, new_id, width=96, height=96)
+            else:
+                out, new_id = ops.place_prefab(scene, self.project.current, prefab, *at)
             created.append(new_id)
             return out
 
-        if self._edit(change, f"Placed {prefab.get('display_name', prefab['id'])}."):
+        hint = {"blank": " Give it a picture in Look.", "zone": " Drag its orange corner to size it."}.get(prefab.get("built_in"), "")
+        if self._edit(change, f"Placed {prefab.get('display_name', prefab['id'])}.{hint}"):
+            if prefab.get("built_in"):
+                self.tab = "collision" if prefab["built_in"] == "zone" else "look"
             self.select(created[0])
 
     def add_behaviour(self, name: str) -> None:
         target = self.selected
         if target and self._edit(lambda s: ops.add_behaviour(s, target, name), f"Added {name}."):
-            self.panel, self.expanded = "inspect", name
+            self.panel, self.expanded, self.tab = "inspect", name, "behaviours"
             self._rebuild()
 
     def remove_behaviour(self, name: str) -> None:
@@ -681,9 +712,51 @@ class Studio:
     def _build_play_ui(self) -> None:
         self.play_ui.clear()
         root = self.play_ui.add(gui.UIAnchorLayout())
+        bar = gui.UIBoxLayout(vertical=False, space_between=8)
         stop = gui.UIFlatButton(text="Stop (F4)", width=120, height=30, style=S_DANGER)
         stop.on_click = lambda _e: self.stop()
-        root.add(stop, anchor_x="center", anchor_y="top", align_y=-6)
+        bar.add(stop)
+        flags = gui.UIFlatButton(text="Flags", width=80, height=30, style=S_ACTIVE if self.play_flags_open else S_BUTTON)
+        flags.on_click = lambda _e: self._toggle_play_flags()
+        bar.add(flags)
+        root.add(bar, anchor_x="center", anchor_y="top", align_y=-6)
+        if not self.play_flags_open:
+            return
+        state = getattr(self.window, "game_state", None)
+        current = dict(getattr(state, "flags", None) or {})
+        counters = dict(getattr(state, "counters", None) or {})
+        box = gui.UIBoxLayout(vertical=True, space_between=3, align="left")
+        box.add(self._label("Flags now (click to change)", bold=True, size=11))
+        names = sorted(set(self._flag_uses()) | set(current))
+        if not names:
+            box.add(self._label("No flags in this game yet.", color=C_MUTED, size=10))
+        for name in names[:18]:
+            on = bool(current.get(name))
+            button = gui.UIFlatButton(text=f"{name}: {'On' if on else 'Off'}", width=220, height=26, style=S_ACTIVE if on else S_BUTTON)
+            button.on_click = lambda _e, n=name, v=on: self._set_play_flag(n, not v)
+            box.add(button)
+        for name, value in sorted(counters.items())[:8]:
+            box.add(self._label(f"{name} = {float(value):g}", color=C_TEXT, size=10))
+        box.with_padding(all=8).with_background(color=(30, 32, 38, 235))
+        root.add(box, anchor_x="right", anchor_y="top", align_x=-8, align_y=-44)
+
+    def _toggle_play_flags(self) -> None:
+        self.play_flags_open = not self.play_flags_open
+        self._build_play_ui()
+
+    def _set_play_flag(self, name: str, value: bool) -> None:
+        """Set or clear a flag while play-testing (to try a later part of the story)."""
+        setter = getattr(self.window, "set_flag", None)
+        if callable(setter):
+            setter(name, value)
+        self._build_play_ui()
+
+    def _play_flags_changed(self) -> bool:
+        state = getattr(self.window, "game_state", None)
+        seen = (tuple(sorted((getattr(state, "flags", None) or {}).items())),
+                tuple(sorted((getattr(state, "counters", None) or {}).items())))
+        changed, self._play_flags_seen = seen != self._play_flags_seen, seen
+        return changed
 
     # ==================================================================== text fields
     def _field(self, text: str, commit: Callable[[str], None], *, width: int, key: str | None = None) -> gui.UIInputText:
@@ -735,6 +808,7 @@ class Studio:
             return
         self.ui.clear()
         self._fields, self._focusable = [], {}
+        self._thumbs, self._anim_space = [], None
         root = self.ui.add(gui.UIAnchorLayout())
         root.add(self._top_bar(), anchor_x="left", anchor_y="top", align_x=8, align_y=-8)
         root.add(self._left_panel(), anchor_x="left", anchor_y="top", align_x=10, align_y=-(TOP_H + 10))
@@ -743,6 +817,8 @@ class Studio:
         root.add(self._status_label, anchor_x="left", anchor_y="bottom", align_x=LEFT_W + 8, align_y=6)
         if self.menu is not None:
             self._add_menu(root)
+        if self.modal == "close":
+            self._add_close_question(root)
         self._rebuild_status()
         if self._focus_after_build and self._focus_after_build in self._focusable:
             self._focusable[self._focus_after_build].activate()
@@ -761,6 +837,7 @@ class Studio:
         bar.add(self._button("Save", self.save, width=70, disabled=not self.project.is_dirty))
         bar.add(self._button("Undo", self.undo, width=64, disabled=not self.project.can_undo()))
         bar.add(self._button("Redo", self.redo, width=64, disabled=not self.project.can_redo()))
+        bar.add(self._button("Flags", self.open_flags, width=64, style=S_ACTIVE if self.panel == "flags" else S_BUTTON))
         title = f"   {self.project.label(self.project.current)}" + ("   - unsaved changes" if self.project.is_dirty else "   - saved")
         bar.add(self._label(title, size=12, color=C_MUTED))
         return bar
@@ -779,12 +856,17 @@ class Studio:
         box.add(self._label("Objects", bold=True, size=12))
         if not self.prefabs:
             box.add(self._label("This project has no objects in assets/prefabs.json.", color=C_MUTED, width=width))
-        for prefab in self.prefabs:
+        for prefab in self.prefabs + BUILT_IN_OBJECTS:
             style = S_ACTIVE if prefab is self.place_prefab else S_BUTTON
             text = str(prefab.get("display_name") or prefab["id"])
             box.add(self._button(text, lambda p=prefab: self.arm_place(p), width=width, style=style))
         box.add(self._label("Click one, then click the map.", color=C_MUTED, size=10))
         return box
+
+    def open_flags(self) -> None:
+        self._flush_fields()
+        self.panel, self.panel_scroll = ("inspect" if self.panel == "flags" else "flags"), 0
+        self._rebuild()
 
     def _map_section(self, width: int) -> gui.UIBoxLayout:
         box = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
@@ -835,7 +917,7 @@ class Studio:
             return None
         tileset = self.tilesets[self.sheet]
         px = max(12, min(32, SHEET_W // max(1, tileset["columns"])))
-        others = 18 + 32 * (len(self.project.rooms()) + 1) + 10 + 18 + 5 * 32 + 10 + 18 + 32 * len(self.prefabs) + 14
+        others = 18 + 32 * (len(self.project.rooms()) + 1) + 10 + 18 + 5 * 32 + 10 + 18 + 32 * (len(self.prefabs) + len(BUILT_IN_OBJECTS)) + 14
         room = self.window.height - TOP_H - STATUS_H - 30 - others - 14 * 4
         rows = max(2, min(tileset["rows"], int(min(200, room) // px)))
         return tileset, px, min(tileset["columns"], SHEET_W // px), rows
@@ -874,64 +956,76 @@ class Studio:
 
     def _right_panel(self) -> gui.UIBoxLayout:
         width = RIGHT_W - 20
-        box = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
+        rows = Rows()
         if self.panel == "new_room":
-            box.add(self._label("New room", bold=True, size=12))
+            rows.add(self._label("New room", bold=True, size=12))
             if self.pending_door_at is not None:
-                box.add(self._label("A door to it will be placed where you right-clicked.", color=C_MUTED, width=width))
+                rows.add(self._label("A door to it will be placed where you right-clicked.", color=C_MUTED, width=width))
             name = self._field("", lambda v: None, width=width, key="room_name")
-            box.add(self._label("Name", color=C_MUTED))
-            box.add(name)
+            rows.add(self._label("Name", color=C_MUTED))
+            rows.add(name)
             row = gui.UIBoxLayout(vertical=False, space_between=6)
             row.add(self._button("Create", lambda: self.create_room(name.text), width=96, style=S_ACTIVE))
             row.add(self._button("Cancel", self._cancel_panel, width=80))
-            box.add(row)
+            rows.add(row)
+        elif self.panel == "map_size":
+            self._resize_panel(rows, width)
+        elif self.panel == "import_tileset":
+            self._import_panel(rows, width)
+        elif self.panel == "pick_image":
+            self._picture_picker(rows, width)
+        elif self.panel == "flags":
+            self._flags_panel(rows, width)
+        elif self.panel == "preview":
+            self._preview_panel(rows, width)
+        else:
+            entity = self._entity(self.selected)
+            if entity is None:
+                rows.add(self._label("Nothing selected", bold=True, size=12))
+                rows.add(self._label("Click an object on the map to edit it, or drag it to move it. "
+                                     "Right-click an object or an empty spot for more actions.", color=C_MUTED, width=width))
+            elif self.panel == "add_behaviour":
+                self._behaviour_picker(rows, width)
+            else:
+                self._inspector(rows, entity, width)
+        return self._scrolled(rows)
+
+    def _scrolled(self, rows: Rows) -> gui.UIBoxLayout:
+        """The rows that fit the panel, from ``panel_scroll`` on; the mouse wheel scrolls the rest in."""
+        box = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
+        items = rows.items
+        heights = [row_height(widget) + 4 for widget in items]
+        room = self.window.height - TOP_H - STATUS_H - 24
+        if self._scroll_to in rows.anchors:
+            self.panel_scroll = max(0, rows.anchors[self._scroll_to] - 1)
+        self._scroll_to = None
+        if sum(heights) <= room:
+            self.panel_scroll, self._panel_more = 0, (0, 0)
+            for widget in items:
+                box.add(widget)
             return box
-
-        if self.panel == "map_size":
-            return self._resize_panel(box, width)
-        if self.panel == "import_tileset":
-            return self._import_panel(box, width)
-
-        entity = self._entity(self.selected)
-        if entity is None:
-            box.add(self._label("Nothing selected", bold=True, size=12))
-            box.add(self._label("Click an object on the map to edit it, or drag it to move it. "
-                                "Right-click an object or an empty spot for more actions.", color=C_MUTED, width=width))
-            return box
-
-        target = entity["id"]
-        if self.panel == "add_behaviour":
-            return self._behaviour_picker(box, width)
-
-        box.add(self._label("Name", color=C_MUTED))
-        box.add(self._field(str(entity.get("name") or ""), lambda v: self._edit(lambda s: ops.rename_entity(s, target, v), "Renamed."),
-                            width=width, key="name"))
-        if "Dialogue" in ops.entity_behaviours(entity) or entity.get("tag") == "npc":
-            box.add(self._label("Says (Enter to apply)", color=C_MUTED))
-            box.add(self._field(ops.dialogue_text(entity),
-                                lambda v: self._edit(lambda s: ops.set_dialogue_text(s, target, v), "Dialogue updated."),
-                                width=width, key="says"))
-        box.add(self._label(f"Position  {entity.get('x', 0):.0f}, {entity.get('y', 0):.0f}", color=C_MUTED, size=10))
-        box.add(gui.UISpace(height=6))
-        box.add(self._label("Behaviours", bold=True, size=12))
-        names = ops.entity_behaviours(entity)
-        if not names:
-            box.add(self._label("None yet.", color=C_MUTED))
-        for name in names:
-            row = gui.UIBoxLayout(vertical=False, space_between=4)
-            arrow = "v " if self.expanded == name else "> "
-            row.add(self._button(arrow + name, lambda n=name: self._toggle_expand(n), width=width - 80,
-                                 style=S_ACTIVE if self.expanded == name else S_BUTTON))
-            row.add(self._button("Remove", lambda n=name: self.remove_behaviour(n), width=76, style=S_DANGER))
-            box.add(row)
-            if self.expanded == name:
-                self._behaviour_fields(box, entity, name, width)
-        box.add(gui.UISpace(height=6))
-        row = gui.UIBoxLayout(vertical=False, space_between=6)
-        row.add(self._button("+ Add behaviour", self._open_picker, width=150, style=S_ACTIVE))
-        row.add(self._button("Delete object", self.delete_selected, width=120, style=S_DANGER))
-        box.add(row)
+        room -= 2 * 22  # the "more above / below" lines
+        last_page = len(items)
+        used = 0
+        while last_page > 0 and used + heights[last_page - 1] <= room:
+            last_page -= 1
+            used += heights[last_page]
+        start = min(max(0, self.panel_scroll), last_page)
+        self.panel_scroll = start
+        shown, used = [], 0
+        for index in range(start, len(items)):
+            if shown and used + heights[index] > room:
+                break
+            shown.append(index)
+            used += heights[index]
+        below = len(items) - (shown[-1] + 1 if shown else start)
+        self._panel_more = (start, below)
+        if start:
+            box.add(self._label(f"^ {start} more above (scroll up)", color=C_MUTED, size=9))
+        for index in shown:
+            box.add(items[index])
+        if below:
+            box.add(self._label(f"v {below} more below (scroll down)", color=C_MUTED, size=9))
         return box
 
     def _toggle_expand(self, name: str) -> None:
@@ -990,9 +1084,20 @@ class Studio:
                                     lambda v, n=name: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, n, v)),
                                     width=width - 128))
             else:
-                count = len(value) if isinstance(value, (list, dict)) else 0
-                row.add(self._label(f"{kind}: {count} item(s)", color=C_MUTED, size=10))
+                # Lists of objects and other structured settings: edited as checked text (JSON).
+                row.add(self._field(json.dumps(value) if value is not None else "",
+                                    lambda v, n=name: self._set_structured(target, behaviour, n, v),
+                                    width=width - 128, key=f"param_{behaviour}_{name}"))
             box.add(row)
+
+    def _set_structured(self, target: str, behaviour: str, name: str, text: str) -> None:
+        try:
+            value = json.loads(text) if text.strip() else None
+        except ValueError as err:
+            self._say(f"{name} isn't valid: {err.msg} (at character {err.pos + 1}). Nothing was changed.", ok=False)
+            self._rebuild()
+            return
+        self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, name, value), f"{name} changed.")
 
     def _open_picker(self) -> None:
         self.panel, self.picker_query = "add_behaviour", ""
@@ -1040,7 +1145,7 @@ class Studio:
             entity = self._entity(entity_id) or {}
             items.append(("Rename", lambda: self._focus("name")))
             if "Dialogue" in ops.entity_behaviours(entity) or entity.get("tag") == "npc":
-                items.append(("Edit what they say", lambda: self._focus("says")))
+                items.append(("Edit what they say", lambda: (setattr(self, "tab", "dialogue"), self._focus("says"))))
             items.append(("Add behaviour...", self._open_picker))
             if entity.get("tag") != "player":
                 items.append(("Copy", self.copy_selected))
@@ -1057,7 +1162,7 @@ class Studio:
                 if key != self.project.current:
                     items.append((f"Add door to {label}", lambda k=key: self.add_door_to(k, at)))
             items.append(("Add door to a new room...", lambda: self._open_new_room(door_at=at)))
-            for prefab in self.prefabs:
+            for prefab in self.prefabs + BUILT_IN_OBJECTS:
                 items.append((f"Place {prefab.get('display_name', prefab['id'])} here",
                               lambda p=prefab: (setattr(self, "place_prefab", p), self.place_at(*at))))
         self.menu = (x, y, items)
@@ -1099,6 +1204,7 @@ class Studio:
         self.ui.draw()
         self._draw_sheet()
         self._draw_import_preview()
+        self._draw_previews()
         self._dump_layout()
         return True
 
@@ -1112,7 +1218,7 @@ class Studio:
             return
         keys = {id(field): key for key, field in self._focusable.items()}
         widgets = []
-        for manager in (self.ui, self.play_ui):
+        for manager in (self.play_ui,) if self.mode == "play" else (self.ui,):  # only what's on screen
             for widget in manager.walk_widgets():
                 rect = [widget.left, widget.bottom, widget.width, widget.height]
                 if isinstance(widget, gui.UIFlatButton):
@@ -1144,7 +1250,13 @@ class Studio:
             x0, y0 = self.window.camera.project((cx - ew / 2, cy - eh / 2))[:2]
             x1, y1 = self.window.camera.project((cx + ew / 2, cy + eh / 2))[:2]
             objects.append({"id": entity.get("id"), "name": entity.get("name"), "tag": entity.get("tag"),
-                            "x": entity.get("x"), "y": entity.get("y"), "rect": [x0, y0, x1 - x0, y1 - y0]})
+                            "x": entity.get("x"), "y": entity.get("y"), "rect": [x0, y0, x1 - x0, y1 - y0],
+                            "sprite": entity.get("sprite"), "solid": bool(entity.get("solid")),
+                            "behaviours": ops.entity_behaviours(entity)})
+        handles = []
+        for handle in self._handles() if self.mode == "edit" else []:
+            hx, hy = self.window.camera.project((handle["x"], handle["y"]))[:2]
+            handles.append({"name": handle["name"], "screen": [hx, hy], "world": [handle["x"], handle["y"]]})
         play = None
         if self.mode == "play":
             player = next((s for s in self.window.scene_controller.all_sprites
@@ -1154,7 +1266,11 @@ class Studio:
             active = active() if callable(active) else active
             entry = box.get_current_entry() if box is not None and active else None
             flags = getattr(getattr(self.window, "game_state", None), "flags", None) or {}
-            play = {"scene": self.window.scene_controller.current_scene_path,
+            sprites_now = [{"name": (getattr(sp, "mesh_entity_data", None) or {}).get("name"), "visible": bool(sp.visible),
+                            "alpha": int(getattr(sp, "alpha", 255)), "at": [sp.center_x, sp.center_y],
+                            "solid": sp in (getattr(self.window, "solid_sprites", None) or [])}
+                           for sp in self.window.scene_controller.all_sprites]
+            play = {"scene": self.window.scene_controller.current_scene_path, "sprites": sprites_now,
                     "flags": {name: bool(value) for name, value in dict(flags).items()},
                     "player": [player.center_x, player.center_y] if player is not None else None,
                     "player_screen": list(self.window.camera.project((player.center_x, player.center_y))[:2])
@@ -1181,7 +1297,12 @@ class Studio:
                  "mode": self.mode, "room": self.project.current, "selected": self.selected, "panel": self.panel,
                  "message": self.message, "ok": self.message_ok, "dirty": self.project.is_dirty,
                  "window": [self.window.width, self.window.height], "widgets": widgets, "objects": objects,
-                 "play": play}
+                 "play": play, "tab": self.tab, "panel_more": list(self._panel_more), "modal": self.modal,
+                 "dlg_line": self.dlg_line, "dlg_choice": self.dlg_choice, "clip_sel": self.clip_sel, "handles": handles,
+                 "preview": {"node": self.preview["node"], "flags": sorted(self.preview["flags"])} if self.preview else None,
+                 "play_flags_open": self.play_flags_open, "tick": self._dump_tick,
+                 "dlg_order": list(ops.conversation(self._entity(self.selected) or {})["nodes"]) if self.selected else [],
+                 "room_doc": self.project.scene() if self.mode == "edit" else None}
         tmp = f"{path}.tmp"
         try:
             with open(tmp, "w", encoding="utf-8") as handle:
@@ -1313,21 +1434,125 @@ class Studio:
             a.draw_lrbt_rectangle_filled(space.left, space.right, space.bottom, space.top - rows * tile * scale, (220, 60, 60, 110))
 
     def _draw_world_overlay(self) -> None:
+        a = optional_arcade.arcade
         self._draw_map_overlay()
         sprites = self._sprites_by_id()
+        showing_collision = self.tab == "collision" and self.panel == "inspect"
         for entity in ops.entities(self.project.scene()):
             eid = entity.get("id")
             cx, cy, w, h = self._bounds(entity, sprites.get(eid))
+            zone = self._live_zone(entity)
+            if zone is not None:
+                x0, x1 = cx - zone["width"] / 2, cx + zone["width"] / 2
+                y0, y1 = cy - zone["height"] / 2, cy + zone["height"] / 2
+                a.draw_lrbt_rectangle_filled(x0, x1, y0, y1, (255, 150, 40, 45))
+                a.draw_lrbt_rectangle_outline(x0, x1, y0, y1, (255, 160, 60), 2)
+                self._text(f"zone:{eid}", f"Zone: {entity.get('name') or ''}", cx, y1 + 4, (255, 180, 90))
+            elif not entity.get("sprite") and entity.get("tag") not in ("spawn_point", "door", "player"):
+                # No picture: invisible in the game, but it must be findable here.
+                a.draw_lrbt_rectangle_outline(cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2, (200, 200, 210, 140), 1)
+                self._text(f"blank:{eid}", str(entity.get("name") or "Object"), cx, cy + h / 2 + 4, (200, 200, 210))
             if entity.get("tag") == "spawn_point":
-                optional_arcade.arcade.draw_circle_filled(cx, cy, 9, C_SPAWN)
+                a.draw_circle_filled(cx, cy, 9, C_SPAWN)
                 self._text(f"spawn:{eid}", str(entity.get("name") or "Arrival"), cx, cy - 24, C_SPAWN)
             elif entity.get("tag") == "door":
                 self._text(f"door:{eid}", str(entity.get("name") or "Door"), cx, cy + h / 2 + 4, (240, 210, 140))
+            if showing_collision or eid == self.selected:
+                self._draw_collider(entity, float(entity.get("x", 0)), float(entity.get("y", 0)), w, h,
+                                    bright=eid == self.selected)
             if eid == self.selected:
-                optional_arcade.arcade.draw_lrbt_rectangle_outline(cx - w / 2 - 3, cx + w / 2 + 3, cy - h / 2 - 3, cy + h / 2 + 3, C_SELECT, 2)
+                a.draw_lrbt_rectangle_outline(cx - w / 2 - 3, cx + w / 2 + 3, cy - h / 2 - 3, cy + h / 2 + 3, C_SELECT, 2)
+        for handle in self._handles():
+            color = (255, 160, 60) if handle["name"].startswith("zone") else (90, 200, 255)
+            size = 6 / self.zoom
+            a.draw_lrbt_rectangle_filled(handle["x"] - size, handle["x"] + size, handle["y"] - size, handle["y"] + size, color)
+            a.draw_lrbt_rectangle_outline(handle["x"] - size, handle["x"] + size, handle["y"] - size, handle["y"] + size, (20, 20, 20), 1)
         if self.place_prefab is not None and self._in_map(*self.mouse):
             wx, wy = self._to_world(*self.mouse)
-            optional_arcade.arcade.draw_lrbt_rectangle_outline(_snap(wx) - 32, _snap(wx) + 32, _snap(wy) - 32, _snap(wy) + 32, C_SELECT, 1)
+            a.draw_lrbt_rectangle_outline(_snap(wx) - 32, _snap(wx) + 32, _snap(wy) - 32, _snap(wy) + 32, C_SELECT, 1)
+
+    def _draw_collider(self, entity: dict[str, Any], x: float, y: float, w: float, h: float, *, bright: bool) -> None:
+        a = optional_arcade.arcade
+        collider = self._live_collider(entity)
+        color = (90, 200, 255, 230) if bright else (90, 200, 255, 110)
+        if collider["kind"] == "box":
+            cx, cy = x + collider["offset_x"], y + collider["offset_y"]
+            a.draw_lrbt_rectangle_outline(cx - collider["w"] / 2, cx + collider["w"] / 2, cy - collider["h"] / 2,
+                                          cy + collider["h"] / 2, color, 2)
+        elif collider["kind"] == "circle":
+            a.draw_circle_outline(x + collider["offset_x"], y + collider["offset_y"], collider["r"], color, 2)
+        elif entity.get("solid") and bright:
+            a.draw_lrbt_rectangle_outline(x - w / 2, x + w / 2, y - h / 2, y + h / 2, color, 1)
+
+    def _live_collider(self, entity: dict[str, Any]) -> dict[str, Any]:
+        drag = self.handle_drag
+        if drag is not None and drag["entity"] == entity.get("id") and drag["name"].startswith("collider"):
+            return drag["collider"]
+        return ops.collider_of(entity)
+
+    def _live_zone(self, entity: dict[str, Any]) -> dict[str, Any] | None:
+        drag = self.handle_drag
+        if drag is not None and drag["entity"] == entity.get("id") and drag["name"].startswith("zone"):
+            return drag["zone"]
+        return ops.trigger_zone(entity)
+
+    def _handles(self) -> list[dict[str, Any]]:
+        """Drag handles for the selected object's collider (Collision tab) and trigger zone, in world units."""
+        entity = self._entity(self.selected)
+        if entity is None or self.mode != "edit" or self.tool != "select" or self.panel != "inspect":
+            return []
+        x, y = float(entity.get("x", 0)), float(entity.get("y", 0))
+        out: list[dict[str, Any]] = []
+        collider = self._live_collider(entity)
+        if self.tab == "collision" and collider["kind"] != "picture":
+            cx, cy = x + collider["offset_x"], y + collider["offset_y"]
+            corner = (cx + collider["w"] / 2, cy - collider["h"] / 2) if collider["kind"] == "box" else (cx + collider["r"], cy)
+            out += [{"name": "collider_size", "x": corner[0], "y": corner[1]}, {"name": "collider_move", "x": cx, "y": cy}]
+        zone = self._live_zone(entity)
+        if zone is not None:
+            out.append({"name": "zone_size", "x": x + zone["width"] / 2, "y": y - zone["height"] / 2})
+        return out
+
+    def _handle_at(self, x: float, y: float) -> dict[str, Any] | None:
+        self._apply_camera()
+        for handle in self._handles():
+            sx, sy = self.window.camera.project((handle["x"], handle["y"]))[:2]
+            if abs(sx - x) <= 9 and abs(sy - y) <= 9:
+                return handle
+        return None
+
+    def _drag_handle(self, wx: float, wy: float) -> None:
+        drag = self.handle_drag
+        entity = self._entity(drag["entity"]) if drag else None
+        if drag is None or entity is None:
+            return
+        x, y = float(entity.get("x", 0)), float(entity.get("y", 0))
+        if drag["name"] == "zone_size":
+            drag["zone"].update(width=max(8.0, round(2 * abs(wx - x))), height=max(8.0, round(2 * abs(wy - y))))
+            return
+        collider = drag["collider"]
+        cx, cy = x + collider["offset_x"], y + collider["offset_y"]
+        if drag["name"] == "collider_move":
+            collider.update(offset_x=float(round(wx - x)), offset_y=float(round(wy - y)))
+        elif collider["kind"] == "box":
+            collider.update(w=max(4.0, round(2 * abs(wx - cx))), h=max(4.0, round(2 * abs(wy - cy))))
+        else:
+            collider["r"] = max(3.0, round(((wx - cx) ** 2 + (wy - cy) ** 2) ** 0.5))
+
+    def _commit_handle(self) -> None:
+        drag, self.handle_drag = self.handle_drag, None
+        if drag is None or not drag.get("moved"):
+            return
+        target = drag["entity"]
+        if drag["name"] == "zone_size":
+            zone = drag["zone"]
+            self._edit(lambda s: ops.set_trigger_zone(s, target, width=zone["width"], height=zone["height"], once=zone["once"],
+                                                      start_conversation=zone["start_conversation"], set_flags=zone["set_flags"]),
+                       f"Zone is {zone['width']:g} x {zone['height']:g}.")
+            return
+        c = drag["collider"]
+        self._edit(lambda s: ops.set_collider(s, target, c["kind"], w=c.get("w", 32), h=c.get("h", 16), r=c.get("r", 12),
+                                              offset_x=c["offset_x"], offset_y=c["offset_y"]), "Collider changed.")
 
     def _draw_panels(self) -> None:
         w, h = self.window.width, self.window.height
@@ -1339,6 +1564,8 @@ class Studio:
     # ==================================================================== input (edit mode)
     def on_update(self, delta_time: float) -> bool:
         if self.mode == "play":
+            if self.play_flags_open and self._play_flags_changed():
+                self._build_play_ui()  # the game changed a flag: show it
             return False
         if not self._typing():
             k = optional_arcade.arcade.key
@@ -1383,8 +1610,12 @@ class Studio:
                 self.paste_here()
         elif symbol == k.DELETE:
             self.delete_selected()
+        elif symbol == k.ESCAPE and self.modal is not None:
+            self._close_choice("cancel")
         elif symbol == k.ESCAPE:
             self.menu, self.place_prefab, self.stroke, self.sheet_drag = None, None, None, None
+            if self.panel == "preview":
+                self.preview = None
             if self.tool != "select":
                 self.tool = "select"
                 self._say("Select: click an object to edit it, drag to move it.")
@@ -1400,15 +1631,41 @@ class Studio:
         return self.mode == "edit"
 
     def on_close(self) -> bool:
-        """Closing the window with unsaved changes only warns the first time; closing again leaves."""
-        if self.project.is_dirty and not self._close_warned:
-            self._close_warned = True
-            if self.mode == "play":
-                self.stop()
-            self._say("You have unsaved changes. Press Ctrl+S to save them, or close again to leave without saving.",
-                      ok=False)
-            return True
-        return False
+        """Closing with unsaved changes asks: Save, Discard or Cancel."""
+        if self._closing or not self.project.is_dirty:
+            return False
+        if self.mode == "play":
+            self.stop()
+        self._flush_fields()
+        self.menu, self.modal = None, "close"
+        self._rebuild()
+        self._say("You have unsaved changes.", ok=False)
+        return True
+
+    def _add_close_question(self, root: gui.UIAnchorLayout) -> None:
+        box = gui.UIBoxLayout(vertical=True, space_between=10)
+        box.add(self._label("Save your changes before closing?", bold=True, size=13))
+        box.add(self._label("Discard closes without saving; Cancel goes back to editing.", color=C_MUTED, size=10))
+        row = gui.UIBoxLayout(vertical=False, space_between=8)
+        row.add(self._button("Save", lambda: self._close_choice("save"), width=110, style=S_ACTIVE))
+        row.add(self._button("Discard", lambda: self._close_choice("discard"), width=110, style=S_DANGER))
+        row.add(self._button("Cancel", lambda: self._close_choice("cancel"), width=110))
+        box.add(row)
+        box.with_padding(all=18).with_background(color=(46, 50, 60, 250))
+        root.add(box, anchor_x="center", anchor_y="center")
+
+    def _close_choice(self, choice: str) -> None:
+        self.modal = None
+        if choice == "cancel":
+            self._rebuild()
+            self._say("Carry on editing.")
+            return
+        if choice == "save":
+            self.save()
+            if self.project.is_dirty:
+                return  # saving failed; the message says why, and nothing is lost
+        self._closing = True
+        self.window.close()
 
     def on_text(self, text: str) -> bool:
         return self.mode == "edit"
@@ -1423,6 +1680,13 @@ class Studio:
     def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool:
         if self.mode == "play":
             return False
+        if x >= self.window.width - RIGHT_W and self.modal is None:
+            more_above, more_below = self._panel_more
+            if (scroll_y > 0 and more_above) or (scroll_y < 0 and more_below):
+                self._flush_fields()
+                self.panel_scroll = max(0, self.panel_scroll - int(scroll_y) * 2)
+                self._rebuild()
+            return True
         geometry = self._sheet_geometry()
         if self._sheet_cell(x, y) is not None and geometry is not None:
             tileset, _px, cols, rows = geometry
@@ -1439,6 +1703,8 @@ class Studio:
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int) -> bool:
         if self.mode == "play":
             return False
+        if self.modal is not None:
+            return True  # answer the question first
         if self.menu is not None:
             self.menu = None
             self._rebuild()
@@ -1475,6 +1741,12 @@ class Studio:
             if self.place_prefab is not None:
                 self.place_at(wx, wy)
                 return True
+            handle = self._handle_at(x, y)
+            if handle is not None:
+                entity = self._entity(self.selected) or {}
+                self.handle_drag = {"name": handle["name"], "entity": self.selected, "moved": False,
+                                    "collider": dict(ops.collider_of(entity)), "zone": dict(ops.trigger_zone(entity) or {})}
+                return True
             hit = self._entity_at(wx, wy)
             self.select(hit)
             if hit:
@@ -1499,6 +1771,9 @@ class Studio:
             if cell is not None:
                 self.stroke["cells"].extend(_line_cells(self.stroke["last"], cell)[1:])
                 self.stroke["last"] = cell
+        elif self.handle_drag is not None:
+            self.handle_drag["moved"] = True
+            self._drag_handle(*self._to_world(x, y))
         elif self.drag is not None:
             wx, wy = self._to_world(x, y)
             to = (_snap(wx + self.drag["dx"]), _snap(wy + self.drag["dy"]))
@@ -1523,6 +1798,9 @@ class Studio:
                 self.stroke["cells"] = ops.rect_cells(start, end)
                 self.stroke["anchor"] = (min(start[0], end[0]), min(start[1], end[1]))
             self._commit_stroke()
+            return True
+        if self.handle_drag is not None:
+            self._commit_handle()
             return True
         drag, self.drag = self.drag, None
         if drag is not None and drag["moved"]:
