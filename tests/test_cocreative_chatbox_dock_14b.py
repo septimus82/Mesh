@@ -21,6 +21,8 @@ from engine.ui_overlays.ai_chat_overlay import AIChatOverlay, build_transcript_l
 from tests.test_cocreative_chatbox_14a import _FakeClient, _FakeFactory, _run_chat_to_completion, _text, _tool_use
 from tests.test_cocreative_live_ops import _entity_names, _make_controller
 
+pytestmark = pytest.mark.fast
+
 
 def test_ai_chat_dock_is_registered_and_toggleable() -> None:
     assert "AI Chat" in RIGHT_DOCK_TABS

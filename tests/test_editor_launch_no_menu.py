@@ -13,6 +13,8 @@ from engine.game_launch import launch_editor
 from engine.paths import reset_path_caches
 from engine.ui_overlays.main_menu_overlay import MainMenuOverlay
 
+pytestmark = pytest.mark.fast
+
 
 class _DummyWindow:
     def __init__(self, *args, **kwargs) -> None:

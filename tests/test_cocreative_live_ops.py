@@ -4,9 +4,13 @@ from copy import deepcopy
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 import engine.optional_arcade as optional_arcade
 from engine.editor_controller import EditorModeController
 from engine.scene_runtime.persistence import build_scene_snapshot
+
+pytestmark = pytest.mark.fast
 
 
 class _FakeSprite:
