@@ -69,6 +69,34 @@ def _reset_engine_path_caches_after_test():
         pass
 
 
+@pytest.fixture(autouse=True)
+def _undo_launched_project_root_pin():
+    # game_launch / GameWindow / main menu pin the launch root and write
+    # os.environ["MESH_REPO_ROOT"] directly; without this, later tests resolve
+    # config.json from a dead tmp project.
+    before = os.environ.get("MESH_REPO_ROOT")
+    yield
+    from engine.repo_root import clear_launched_project_root
+
+    clear_launched_project_root()
+    if before is not None:
+        os.environ["MESH_REPO_ROOT"] = before
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _repo_projects_json_untouched():
+    # Tests have leaked last_root into the tracked projects.json three times;
+    # fail loudly instead of shipping it.
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parent.parent / "projects.json"
+    before = path.read_bytes() if path.exists() else None
+    yield
+    after = path.read_bytes() if path.exists() else None
+    if after != before:
+        pytest.fail(f"test session modified {path}; write to tmp_path instead", pytrace=False)
+
+
 @pytest.fixture(scope="session")
 def unmarked_test_nodeids(pytestconfig):
     return list(getattr(pytestconfig, "_mesh_unmarked_nodeids", []))

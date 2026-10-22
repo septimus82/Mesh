@@ -44,8 +44,7 @@ def test_standalone_pin_uses_launched_root_not_last_root(
     create_project(project_p, "Project P", template_id="blank")
     create_project(project_q, "Project Q", template_id="blank")
 
-    mesh_repo = _mesh_repo_root()
-    projects_path = mesh_repo / "projects.json"
+    projects_path = tmp_path / "projects.json"
     projects_path.write_text(
         json.dumps(
             {
