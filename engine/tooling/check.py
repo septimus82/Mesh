@@ -179,9 +179,10 @@ def run_check(
 
     # 3. Smoke Tests
     print("[Mesh][Check] Running smoke tests...")
-    test_files = ["tests/test_vertical_slice_smoke.py"]
-    if Path("tests/test_world_vertical_slice.py").exists():
-        test_files.append("tests/test_world_vertical_slice.py")
+    # These are engine-repo tests; a game project (mesh new) has none to run.
+    test_files = [
+        f for f in ("tests/test_vertical_slice_smoke.py", "tests/test_world_vertical_slice.py") if Path(f).exists()
+    ]
 
     if full:
         # Verify docs
@@ -205,14 +206,17 @@ def run_check(
     else:
         cmd = [sys.executable, "-m", "pytest"] + test_files
 
-    try:
-        result = subprocess.run(cmd, capture_output=False)
-        if result.returncode != 0:
-            print("[Mesh][Check] Smoke tests FAILED")
+    if not full and not test_files:
+        print("[Mesh][Check] No smoke tests in this project; skipping.")
+    else:
+        try:
+            result = subprocess.run(cmd, capture_output=False)
+            if result.returncode != 0:
+                print("[Mesh][Check] Smoke tests FAILED")
+                return _fail()
+        except Exception as e:
+            print(f"[Mesh][Check] ERROR running tests: {e}")
             return _fail()
-    except Exception as e:
-        print(f"[Mesh][Check] ERROR running tests: {e}")
-        return _fail()
 
     print("[Mesh][Check] PASSED")
 

@@ -2,6 +2,31 @@
 
 Mesh is a 2D Arcade game engine with an embedded editor, data-driven content, and AI-first authoring tools. It is built around JSON scenes, content packs, prefabs, worlds, behaviours, and a verification pipeline that keeps runtime, editor, and tooling changes shippable.
 
+## Quickstart
+
+1. **Requirements:** Python 3.11 or newer.
+2. **Install** (this gives you the `mesh` command):
+
+   ```
+   git clone https://github.com/septimus82/Mesh.git
+   cd Mesh
+   pip install -e .
+   ```
+
+3. **Make a game and play it:**
+
+   ```
+   mesh new my_game
+   cd my_game
+   mesh play
+   ```
+
+   Walk with WASD and press E next to the Guide to talk.
+4. **Edit it:** run `mesh edit` in the same folder, then press **Shift+F5** for Creator Mode, a friendly, task-based view over the editor; it's an early preview that explains what's in your scene and offers a few guided changes, such as adding a door.
+5. **Optional, connect an AI assistant:** `mesh mcp install` sets Mesh up in Claude Desktop (`mesh mcp config` prints a snippet for other MCP clients). Your assistant can then inspect, edit and validate your project's scenes for you.
+
+`mesh --help` lists the getting-started commands; `mesh --help-all` lists everything.
+
 ## Layout
 
 ```

@@ -4,8 +4,8 @@ Creates a schema-valid blank Mesh project (``engine.project_scaffold`` + blank t
 
 Example::
 
-    python -m mesh_cli new_project my_game C:/Games
-    cd C:/Games/my_game && python main.py
+    mesh new_project my_game C:/Games
+    cd C:/Games/my_game && mesh play
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ def create_blank_project(name: str, dest: Path, *, template_id: str = "blank", f
         if any(project_dir.iterdir()):
             if not force:
                 print(
-                    f"[mesh new_project] Error: '{project_dir}' already exists and is not empty. "
+                    f"[mesh] Error: '{project_dir}' already exists and is not empty. "
                     "Pass --force to overwrite.",
                     file=sys.stderr,
                 )
@@ -35,12 +35,19 @@ def create_blank_project(name: str, dest: Path, *, template_id: str = "blank", f
 
     valid, message = validate_new_project_target(project_dir)
     if not valid:
-        print(f"[mesh new_project] Error: {message}", file=sys.stderr)
+        print(f"[mesh] Error: {message}", file=sys.stderr)
         return 1
 
     create_project(project_dir, name, template_id=template_id)
-    print(f"Created {project_dir}/")
-    print(f"Run with:  cd {project_dir} && python main.py")
+    try:
+        shown = project_dir.relative_to(Path.cwd().resolve())
+    except ValueError:
+        shown = project_dir
+    print(f"Created {project_dir}")
+    print("Next:")
+    print(f"  cd {shown}")
+    print("  mesh play     walk around (WASD, E to talk)")
+    print("  mesh edit     open it in the editor (Shift+F5 for Creator Mode)")
     return 0
 
 

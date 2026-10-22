@@ -31,6 +31,8 @@ SKIP_DIRS = {
     "build",
     "dist",
     "artifacts",
+    "generated",  # docs/generated mirrors CLI help text; real markers are counted at their source
+    ".mesh",  # gitignored local editor/package state; made the count machine-dependent
     "__pycache__",
     ".mypy_cache",
     ".pytest_cache",
