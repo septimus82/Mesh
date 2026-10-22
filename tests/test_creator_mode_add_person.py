@@ -52,7 +52,7 @@ def _type_line(window, creator, text: str) -> None:
     for _ in range(len("Hello!")):  # clear the prefilled default
         creator.handle_key_input(arcade_fallback.key.BACKSPACE)
     for ch in text:
-        creator.handle_key_input(ord(ch))
+        creator.handle_text_input(ch)
 
 
 def _people(scene_controller) -> list[dict]:

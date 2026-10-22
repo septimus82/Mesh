@@ -270,7 +270,7 @@ def test_typing_and_preset_update_only_draft_and_click_stages_proposal() -> None
     assert controller.opacity_text_focused is True
     assert controller.handle_key_input(optional_arcade.arcade.key.DELETE, 0) is True
     for ch in "50":
-        assert controller.handle_key_input(ord(ch), 0) is True
+        assert controller.handle_text_input(ch) is True
 
     commands = _commands(controller)
     stage = next(c for c in commands if c.action_id == ENTITY_OPACITY_STAGE_ACTION_ID)
