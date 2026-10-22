@@ -38,6 +38,14 @@ def has_arcade_gl() -> bool:
     return arcade_gl is not None
 
 
+def gui() -> Any:
+    """``arcade.gui``, imported on first use: only the Studio editor needs it, and it
+    requires real arcade (it is absent in the headless fallback)."""
+    import arcade.gui as _gui
+
+    return _gui
+
+
 def draw_texture_rect_compat(
     center_x: float,
     center_y: float,

@@ -28,7 +28,10 @@ def launch_editor(
     scene_path: str | None = None,
     open_tile_paint: bool = True,
 ) -> int:
-    """Launch the game window with the in-game editor active for a project."""
+    """Open a project for editing: Mesh Studio for projects with a world, else the legacy editor.
+
+    ``MESH_LEGACY_EDITOR=1`` forces the legacy editor.
+    """
     root = resolve_project_root(project_root)
     config_path = root / "config.json"
     if not config_path.is_file():
@@ -37,6 +40,13 @@ def launch_editor(
 
     previous_cwd = Path.cwd()
     os.chdir(root)
+    try:
+        return _run_editor(root, config_path, scene_path=scene_path, open_tile_paint=open_tile_paint)
+    finally:
+        os.chdir(previous_cwd)
+
+
+def _run_editor(root: Path, config_path: Path, *, scene_path: str | None, open_tile_paint: bool) -> int:
     reset_path_caches()
 
     config = load_config(str(config_path))
@@ -72,13 +82,24 @@ def launch_editor(
         window.scene_controller._pending_scene_change = None
     except Exception as exc:  # noqa: BLE001  # REASON: editor launch should report scene load failures before opening the window loop
         print(f"[Mesh][CLI] Failed to load scene '{initial_scene}': {exc}")
-        os.chdir(previous_cwd)
         return 1
 
-    editor = window.editor_controller
-    editor._enable_editor_mode()
+    studio = None
+    if os.environ.get("MESH_LEGACY_EDITOR") != "1":
+        from engine.studio import open_studio
 
-    if open_tile_paint:
+        try:
+            studio = open_studio(window, root, getattr(config, "world_file", None), scene_path)
+        except Exception as exc:  # noqa: BLE001  # REASON: a Studio start-up failure must be reported plainly, not crash the CLI with a traceback
+            print(f"[Mesh][CLI] Mesh Studio failed to start: {type(exc).__name__}: {exc}")
+            print("[Mesh][CLI] Set MESH_LEGACY_EDITOR=1 to use the legacy editor meanwhile.")
+            return 1
+
+    editor = window.editor_controller
+    if studio is None:
+        editor._enable_editor_mode()
+
+    if studio is None and open_tile_paint:
         tile_ctrl = editor.tile
         if tile_ctrl.tilemap_available():
             tilemap = scene_data.get("tilemap") if isinstance(scene_data, dict) else None
@@ -96,6 +117,4 @@ def launch_editor(
         window.run()
     except KeyboardInterrupt:
         print("[Mesh] Shutdown requested — exiting cleanly.")
-    finally:
-        os.chdir(previous_cwd)
     return 0

@@ -68,6 +68,13 @@ if __name__ == "__main__":
     main()
 '''
 
+# Every new project gets these: the starter characters' sheet and the door the
+# editor uses when it links two rooms (engine.project_ops.DOOR_SPRITE).
+_STARTER_FILES = (
+    "assets/sprites/animated_player.png",
+    "assets/sprites/door.png",
+)
+
 _MONSTER_STARTER_FILES = (
     "assets/data/monster_species.json",
     "assets/data/monster_moves.json",
@@ -197,6 +204,8 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
     json_io.write_json_atomic(root / "assets/data/events.json", {"events": []})
 
     apply_template(root, template_id)
+    for rel_path in _STARTER_FILES:
+        _copy_engine_asset(rel_path, root)
     _copy_monster_starter_pack(root)
 
     _LOG.info("Project created successfully.")

@@ -36,6 +36,9 @@ def headless_editor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, template
 
     root = tmp_path / "project"
     create_project(root, "project", template_id=template_id)
+    # These tests exercise the legacy editor and Creator Mode, not Mesh Studio
+    # (which needs a real window for arcade.gui).
+    monkeypatch.setenv("MESH_LEGACY_EDITOR", "1")
     monkeypatch.setattr(optional_arcade, "arcade", arcade_fallback)
     original_bases = engine.game.GameWindow.__bases__
     engine.game.GameWindow.__bases__ = (_DummyWindow,)
