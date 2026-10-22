@@ -11,6 +11,7 @@ import json
 import pytest
 from PIL import Image
 
+import engine.optional_arcade as optional_arcade
 from engine.tilemap import TilemapManager, Tileset
 
 pytestmark = pytest.mark.fast
@@ -62,7 +63,8 @@ def test_inline_layer_missing_from_the_map_file_still_loads(tmp_path, monkeypatc
         raise RuntimeError("no window")
 
     # Sprite lists defer their GL setup without a window; earlier tests may leave a half-made one behind.
-    monkeypatch.setattr("arcade.sprite_list.sprite_list.get_window", no_window)
+    # Patched where SpriteList looks it up: other tests may have reshuffled the arcade modules.
+    monkeypatch.setitem(optional_arcade.arcade.SpriteList.__init__.__globals__, "get_window", no_window)
     (tmp_path / "tilesets").mkdir()
     Image.new("RGBA", (32, 32), RED).save(tmp_path / "tilesets" / "one.png")
     (tmp_path / "tilesets" / "one.json").write_text(json.dumps({
