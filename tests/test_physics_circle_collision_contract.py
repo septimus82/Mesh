@@ -115,3 +115,25 @@ def test_an_offset_circle_collider_moves_its_entity_by_the_delta_only() -> None:
     for _ in range(3):
         physics_runtime.move_entity_with_physics(entity, (2.0, 0.0), [])
     assert (entity.center_x, entity.center_y) == pytest.approx((106.0, 100.0))
+
+
+def test_a_box_footprint_blocks_where_an_object_stands_not_its_whole_picture() -> None:
+    def tree(collider):
+        data = {"components": {"collider": collider}} if collider else {}
+        return type("Tree", (), {"center_x": 100.0, "center_y": 100.0, "width": 64.0, "height": 96.0,
+                                 "mesh_entity_data": data})()
+
+    def walker(y):
+        return type("Walker", (), {"center_x": 40.0, "center_y": y, "width": 20.0, "height": 20.0,
+                                   "mesh_entity_data": {"components": {"collider": {"kind": "circle", "r": 8}}}})()
+
+    footprint = {"kind": "box", "w": 24, "h": 16, "offset_y": -40}  # the trunk's base: y 52..68
+    # Through the canopy (y=120): the whole picture blocks, the footprint doesn't.
+    blocked, free = walker(120.0), walker(120.0)
+    physics_runtime.move_entity_with_physics(blocked, (60.0, 0.0), [tree(None)])
+    physics_runtime.move_entity_with_physics(free, (60.0, 0.0), [tree(footprint)])
+    assert blocked.center_x < 70.0 and free.center_x == pytest.approx(100.0)
+    # At the base (y=60) the footprint blocks.
+    base = walker(60.0)
+    physics_runtime.move_entity_with_physics(base, (60.0, 0.0), [tree(footprint)])
+    assert base.center_x == pytest.approx(80.0)  # stopped at the trunk: footprint x 88, radius 8

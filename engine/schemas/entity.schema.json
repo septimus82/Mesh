@@ -38,7 +38,7 @@
     },
     "components": {
       "type": "object",
-      "description": "Runtime components. 'collider' replaces the sprite-sized box in movement collision.",
+      "description": "Runtime components. 'collider' replaces the sprite-sized box in movement collision: a circle (r) or a box footprint (w, h), each with an optional offset from the sprite's centre.",
       "properties": {
         "collider": {
           "type": "object",
@@ -46,7 +46,8 @@
             "kind": {
               "type": "string",
               "enum": [
-                "circle"
+                "circle",
+                "box"
               ]
             },
             "r": {
@@ -68,6 +69,22 @@
             },
             "oy": {
               "type": "number"
+            },
+            "w": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "h": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "width": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "height": {
+              "type": "number",
+              "exclusiveMinimum": 0
             }
           },
           "required": [
