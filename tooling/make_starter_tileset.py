@@ -71,20 +71,16 @@ def make() -> None:
     d.rectangle([x0, T, x0 + T - 1, 2 * T - 1], fill=(112, 74, 42))  # wood wall
     for xx in (7, 15, 23):
         d.line([x0 + xx, T, x0 + xx, 2 * T - 1], fill=(78, 50, 28), width=2)
-    x0 = w(3)[0]                                                     # fence (on grass)
-    _speckle(d, x0, T, rnd, (86, 160, 72), 18)
+    x0 = w(3)[0]                                                     # fence
     for xx in (4, 14, 24):
         d.rectangle([x0 + xx, T + 6, x0 + xx + 4, 2 * T - 3], fill=(150, 106, 60))
     d.rectangle([x0, T + 11, x0 + T - 1, T + 14], fill=(170, 124, 72))
     d.rectangle([x0, T + 21, x0 + T - 1, T + 24], fill=(170, 124, 72))
-    x0 = w(4)[0]                                                     # rock (on grass)
-    _speckle(d, x0, T, rnd, (86, 160, 72), 18)
+    x0 = w(4)[0]                                                     # rock
     d.ellipse([x0 + 3, T + 7, x0 + T - 4, 2 * T - 3], fill=(128, 126, 122), outline=(84, 82, 80), width=2)
     x0 = w(5)[0]                                                     # bush
-    _speckle(d, x0, T, rnd, (86, 160, 72), 18)
     d.ellipse([x0 + 2, T + 4, x0 + T - 3, 2 * T - 3], fill=(46, 112, 46), outline=(28, 76, 28), width=2)
     x0 = w(6)[0]                                                     # tree
-    _speckle(d, x0, T, rnd, (86, 160, 72), 18)
     d.rectangle([x0 + 13, T + 20, x0 + 18, 2 * T - 2], fill=(110, 72, 40))
     d.ellipse([x0 + 3, T + 1, x0 + T - 4, T + 23], fill=(38, 120, 52), outline=(24, 80, 34), width=2)
     _speckle(d, *w(7), rnd, (58, 110, 196), 10)                      # water
