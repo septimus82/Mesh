@@ -1,5 +1,7 @@
 # Safe Refactor Ops v2.4
 
+> **Note:** This document is a historical record and reflects the project state at the time it was written.
+
 I have implemented the "Safe Refactor Ops" architecture (V2.4) which provides atomic, rollback-capable file operations (Move/Rename) with reference updating across JSON assets.
 
 ## Features

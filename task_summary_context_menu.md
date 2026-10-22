@@ -1,5 +1,7 @@
 # Task Summary: Project Explorer Context Menu v1
 
+> **Note:** This document is a historical record and reflects the project state at the time it was written.
+
 ## Objective
 Implement a modal context menu for the Project Explorer that provides access to file operations and clipboard utilities.
 
