@@ -117,8 +117,21 @@ class ValidationReport:
         return not self.errors
 
 
+def document_key(path: Path | str) -> str:
+    """Normalised key for an open scene document (case- and separator-insensitive on Windows)."""
+    return str(Path(path).resolve()).replace("\\", "/").lower()
+
+
 class SceneLoader:
-    """Loads JSON scene files and validates minimal entity data."""
+    """Loads JSON scene files and validates minimal entity data.
+
+    ``documents`` maps :func:`document_key` paths to scene dicts the editor has open.
+    They take precedence over the file on disk, so play-testing and scene transitions
+    see unsaved edits (including rooms that exist only in the editor so far).
+    """
+
+    def __init__(self) -> None:
+        self.documents: Dict[str, Dict[str, Any]] = {}
 
     def apply_scene_defaults(self, raw_scene: Dict[str, Any]) -> Dict[str, Any]:
         """Public wrapper so tooling can reuse the defaulting logic."""
@@ -131,9 +144,12 @@ class SceneLoader:
         return self._apply_entity_defaults(raw_entity)
 
     def load_scene(self, scene_path: str) -> Dict[str, Any]:
-        """Return the full scene dictionary from a JSON file."""
+        """Return the full scene dictionary from an open document or a JSON file."""
         full_path = resolve_path(scene_path)
-        if not full_path.exists():
+        document = self.documents.get(document_key(full_path))
+        if document is not None:
+            raw_scene: Dict[str, Any] = copy.deepcopy(document)
+        elif not full_path.exists():
             diag_warn(
                 "scene_loader.scene_missing",
                 f"Missing scene file '{scene_path}'",
@@ -141,8 +157,8 @@ class SceneLoader:
                 location=str(scene_path),
             )
             raise FileNotFoundError(f"Scene file not found: {scene_path}")
-
-        raw_scene: Dict[str, Any] = json.loads(full_path.read_text(encoding="utf-8"))
+        else:
+            raw_scene = json.loads(full_path.read_text(encoding="utf-8"))
         migrated_scene = migrate_payload("scene", raw_scene)
         validate(migrated_scene, "scene.schema.json", full_path)
         scene = self._apply_scene_defaults(migrated_scene, migrated=True)
