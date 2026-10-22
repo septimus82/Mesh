@@ -27,6 +27,8 @@ _INPUT_MOUSE, _INPUT_KEYBOARD = 0, 1
 _KEYUP, _UNICODE = 0x0002, 0x0004
 _MOVE, _ABSOLUTE, _VIRTUALDESK = 0x0001, 0x8000, 0x4000
 _LDOWN, _LUP, _RDOWN, _RUP = 0x0002, 0x0004, 0x0008, 0x0010
+_MDOWN, _MUP, _WHEEL = 0x0020, 0x0040, 0x0800
+_BUTTONS = {"left": (_LDOWN, _LUP), "right": (_RDOWN, _RUP), "middle": (_MDOWN, _MUP)}
 
 VK = {
     "ENTER": 0x0D, "ESC": 0x1B, "BACKSPACE": 0x08, "TAB": 0x09, "SPACE": 0x20, "DELETE": 0x2E,
@@ -169,13 +171,20 @@ class Driver:
         self._button(up)
         time.sleep(settle)
 
-    def drag(self, x0: float, y0: float, x1: float, y1: float, steps: int = 12) -> None:
+    def drag(self, x0: float, y0: float, x1: float, y1: float, steps: int = 12, button: str = "left") -> None:
+        down, up = _BUTTONS[button]
         self._mouse_to(x0, y0)
-        self._button(_LDOWN)
+        self._button(down)
         for i in range(1, steps + 1):
             self._mouse_to(x0 + (x1 - x0) * i / steps, y0 + (y1 - y0) * i / steps)
-        self._button(_LUP)
+        self._button(up)
         time.sleep(0.4)
+
+    def scroll(self, x: float, y: float, notches: int) -> None:
+        """Turn the mouse wheel at (x, y); positive is away from the user."""
+        self._mouse_to(x, y)
+        _send(_INPUT(type=_INPUT_MOUSE, u=_INPUTUNION(mi=_MOUSEINPUT(0, 0, (120 * notches) & 0xFFFFFFFF, _WHEEL, 0, 0))))
+        time.sleep(0.3)
 
     # --- keyboard -------------------------------------------------------------------------
     def key(self, combo: str, *, hold: float = 0.06, settle: float = 0.3) -> None:
