@@ -45,8 +45,27 @@ def normalize_findings(findings: list[dict[str, object]], repo_root: Path) -> li
     return [normalize_finding(finding, repo_root) for finding in findings]
 
 
+def untracked_game_projects(repo_root: Path) -> list[str]:
+    """Untracked Mesh game projects inside the checkout (folders with their own config.json).
+
+    Someone's game made with ``mesh new`` inside the engine folder is not engine source;
+    linting it made the gate fail for code the engine doesn't own. Tracked files, and
+    new engine files not yet added to git, are still checked.
+    """
+    try:
+        listed = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "--directory", "-z"],
+                                cwd=repo_root, capture_output=True, text=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return []
+    folders = [entry.rstrip("/") for entry in listed.split("\0") if entry.endswith("/")]
+    return sorted(folder for folder in folders if (repo_root / folder / "config.json").is_file())
+
+
 def _run_ruff(repo_root: Path) -> tuple[int, list[str]]:
-    result = subprocess.run([sys.executable, "-m", "ruff", "check", "--output-format=json", "."], cwd=repo_root, capture_output=True, text=True)
+    command = [sys.executable, "-m", "ruff", "check", "--output-format=json", "."]
+    for folder in untracked_game_projects(repo_root):
+        command += ["--extend-exclude", folder]
+    result = subprocess.run(command, cwd=repo_root, capture_output=True, text=True)
     output = result.stdout or "[]"
     try:
         findings = json.loads(output)

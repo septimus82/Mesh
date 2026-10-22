@@ -84,6 +84,22 @@ def _undo_launched_project_root_pin():
 
 
 @pytest.fixture(scope="session", autouse=True)
+def _private_recent_projects(tmp_path_factory):
+    # The recent-projects list lives in the user's profile; tests must never touch the real one.
+    import os
+
+    user = tmp_path_factory.mktemp("mesh_user")
+    added = {key: value for key, value in (("MESH_PROJECTS_PATH", str(user / "projects.json")),
+                                           ("MESH_USER_DIR", str(user)),
+                                           ("MESH_PROJECTS_DIR", str(user / "Mesh Projects")))
+             if not os.environ.get(key)}
+    os.environ.update(added)
+    yield
+    for key in added:
+        os.environ.pop(key, None)
+
+
+@pytest.fixture(scope="session", autouse=True)
 def _repo_projects_json_untouched():
     # Tests have leaked last_root into the tracked projects.json three times;
     # fail loudly instead of shipping it.
