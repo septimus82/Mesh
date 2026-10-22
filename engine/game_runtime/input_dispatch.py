@@ -142,6 +142,12 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
         return
 
     if key == optional_arcade.arcade.key.ESCAPE:
+        # Esc pauses: Resume / Settings / Save Game / Load Game / Quit. (While the menu
+        # is open the UI handles Esc above, which backs out and resumes.)
+        menu = getattr(window, "pause_menu", None)
+        if menu is not None and not window.game_over:
+            window.paused = bool(menu.toggle())
+            return
         overlay = getattr(window, "settings_overlay", None)
         toggle = getattr(overlay, "toggle", None) if overlay is not None else None
         if callable(toggle):
@@ -181,17 +187,7 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
     if window.game_over:
         return
 
-    if key == optional_arcade.arcade.key.ESCAPE:
-        window.paused = not window.paused
-        window.pause_menu.toggle()
-        window.pause_menu.visible = window.paused
-        if window.paused:
-            window.console_log("Game Paused")
-        else:
-            window.console_log("Game Resumed")
-        return
-
-    if key == optional_arcade.arcade.key.F9:
+    if key == optional_arcade.arcade.key.F9 and bool(getattr(window.engine_config, "debug_mode", False)):
         enabled = bool(getattr(window, "render_batching_enabled", False))
         next_enabled = not enabled
         setattr(window, "render_batching_enabled", next_enabled)

@@ -377,6 +377,14 @@ class SaveManager:
         return "The save data appears corrupted. Restore from a backup or create a new save."
 
     def _fallback_to_start_scene(self, *, slot_name: str, failed_path: Path, reason_code: str) -> None:
+        # Only a "Continue" with no game running should fall back to the start scene.
+        # Mid-game, a failed load must not throw the player back to the beginning.
+        scene = getattr(self.window, "scene_controller", None)
+        if getattr(scene, "current_scene_path", None):
+            hud = getattr(self.window, "player_hud", None)
+            if hud is not None and hasattr(hud, "enqueue_toast"):
+                hud.enqueue_toast("No saved game yet" if reason_code == LOAD_NOT_FOUND else "Couldn't load that save")
+            return
         cfg = getattr(self.window, "engine_config", None)
         target_scene = str(getattr(cfg, "start_scene", "") or "").strip()
         requester = getattr(self.window, "request_scene_change", None)

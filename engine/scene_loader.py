@@ -117,6 +117,13 @@ class ValidationReport:
         return not self.errors
 
 
+SCENE_TOP_LEVEL_KEYS = frozenset({
+    "name", "version", "schema_version", "description", "settings", "state", "layers",
+    "collision_rules", "entities", "tilemap", "background_layers", "foreground_layers",
+    "lights", "occluders",
+})
+
+
 def document_key(path: Path | str) -> str:
     """Normalised key for an open scene document (case- and separator-insensitive on Windows)."""
     return str(Path(path).resolve()).replace("\\", "/").lower()
@@ -159,6 +166,10 @@ class SceneLoader:
             raise FileNotFoundError(f"Scene file not found: {scene_path}")
         else:
             raw_scene = json.loads(full_path.read_text(encoding="utf-8"))
+        if isinstance(raw_scene, dict) and "save_format_version" in raw_scene:
+            # A save slot is a scene snapshot plus save metadata (restored separately by
+            # SaveManager before it loads the slot as a scene); keep only the scene part.
+            raw_scene = {k: v for k, v in raw_scene.items() if k in SCENE_TOP_LEVEL_KEYS}
         migrated_scene = migrate_payload("scene", raw_scene)
         validate(migrated_scene, "scene.schema.json", full_path)
         scene = self._apply_scene_defaults(migrated_scene, migrated=True)
@@ -242,24 +253,8 @@ class SceneLoader:
             report.add_error("Scene root must be a JSON object (dictionary)")
             return report
 
-        allowed_keys = {
-            "name",
-            "version",
-            "schema_version",
-            "description",
-            "settings",
-            "state",
-            "layers",
-            "collision_rules",
-            "entities",
-            "tilemap",
-            "background_layers",
-            "foreground_layers",
-            "lights",
-            "occluders",
-        }
         for key in scene.keys():
-            if key not in allowed_keys:
+            if key not in SCENE_TOP_LEVEL_KEYS:
                 report.add_warning(f"Unknown top-level key '{key}' will be ignored")
 
         settings = scene.get("settings")

@@ -91,7 +91,9 @@ class TestLoadedToastIdempotent(unittest.TestCase):
 
         # 3. Try to load non-existent slot (fails)
         self.save_manager.load_game("non_existent")
-        self.mock_window.player_hud.enqueue_toast.assert_not_called()
+        toasts = [c.args[0] for c in self.mock_window.player_hud.enqueue_toast.call_args_list]
+        self.assertNotIn("Loaded", toasts)  # the failure may explain itself, never claim success
+        self.mock_window.player_hud.enqueue_toast.reset_mock()
 
         # 4. Load original slot again (same file) -> Should NOT toast because signature matches last SUCCESSFUL load
         self.save_manager.load_game(slot)
