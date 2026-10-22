@@ -58,10 +58,15 @@ class ConditionalActivator(Behaviour):
         self.config["require_flags"] = list(self.require_flags)
         self.config["forbid_flags"] = list(self.forbid_flags)
         self._time_until_check = 0.0
-        self._was_solid = bool(getattr(entity, "mesh_is_solid", False))
+        # Behaviours are built before the loader marks the sprite solid, so read the entity's data.
+        data = getattr(entity, "mesh_entity_data", None) or {}
+        self._was_solid = bool(data.get("solid", getattr(entity, "mesh_is_solid", False)))
         self._visible_when_active = bool(getattr(entity, "visible", True))
         self._active: bool | None = None
         self._apply_state(self._requirements_met())
+        # Apply again on the first update: the sprite only joins the solid list after this
+        # constructor, so a hidden solid object would otherwise go on blocking the way.
+        self._active = None
 
     @staticmethod
     def _merge_entity_data(entity: "Sprite", config: Dict[str, Any] | None) -> Dict[str, Any]:
