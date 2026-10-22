@@ -9,7 +9,8 @@ Try it: double-click **`Mesh Engine.bat`** in the engine folder. In the launcher
 In the Studio:
 - **Paint:** under **Map**, choose a layer (Ground / Walls / Above) and a tool (Brush / Rect / Fill), click a tile, and paint. Drag across several tiles for a stamp.
 - **Import your own tileset:** **Import...**
-- **Play:** F4.
+- **Make things happen:** click an object; its tabs set how it **Looks** (import a PNG), is **Animated** (4-direction walking from a sheet), **Collides** (footprint and trigger zones, with handles on the map), what it **Says** (lines, choices, flags), and **When** it shows or changes. **Empty object** and **Trigger zone** are in the Objects list; **Flags** lists every flag.
+- **Play:** F4. **Flags** (while playing) shows and flips flags.
 - **Save:** Ctrl+S.
 
 Next time, your game is under **Recent projects**. From a terminal: `mesh new <name>` and `mesh edit <folder>` still work.
@@ -225,13 +226,54 @@ The Milestone 1 and 2 acceptance tests pass on the same code (15/15 and 23/23).
 3. **Enter created a project.** In an early launcher, pressing Enter in the name field created a game in the default folder. It was caught in a probe; the stray folder, created at 19:53 that day, was removed. Enter now only confirms the field.
 4. **The test-session guard was incomplete.** It protected only the repo's `projects.json`; the user's recent list, user folder and default games folder are now isolated for every test.
 
+## Milestone 5 — visual event authoring
+
+**Goal:** a person builds a small conditional, animated, dialogue-driven scene entirely in Mesh Studio, without code, JSON or an AI. Details: [`docs/reviews/milestone5_event_authoring.md`](docs/reviews/milestone5_event_authoring.md).
+
+### Acceptance criteria and status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Import and assign sprites, preview, size, mirror | **Done** | Look tab: Import PNG... (copied into `assets/sprites`) and a project picture browser. No origin setting exists in the runtime. |
+| Configure the Animator visually, preview without playing | **Done** | Animation tab: 4-direction walking from a sheet (Left can mirror Right); clips with row, frames, speed and mirror; live preview. Tested with generated art and with Ezekiel's own 6×8 sheet. |
+| Dialogue editor | **Done** | Dialogue tab: lines, speakers, flow, choices that need, set or clear flags and count up, openings chosen by flags, a conversation tester. Saves the runtime's own graph. |
+| Flags and conditions without JSON | **Done** | Conditions tab: Show when, Can be talked to when, Looks different when, each with a Pick list of the project's flags. A Flags panel; flags while playing. |
+| Colliders and trigger zones, visually | **Done** | Collision tab: whole picture / footprint / circle with drag handles; trigger zones drawn in orange, sized by dragging, which can start a conversation and set flags. |
+| A coherent inspector | **Done** | One tabbed, scrolling inspector (`engine/studio_inspector.py`), shared field and flag helpers. |
+| Save / Discard / Cancel on close | **Done** | Replaces the close-twice behaviour. |
+| One mutation system | **Done** | Every control goes through new `project_ops` operations: validated, undoable, schema-checked. |
+| The defining acceptance test | **Done** | `tooling/acceptance_event_authoring.py`: **17/17**, real window, no scripts or API calls. |
+
+### How it was validated
+
+- **Real window:** `tooling/acceptance_event_authoring.py` 17/17. Authoring, save, close, reopen, play-through, quick-save/load and stop, all by mouse and keyboard.
+- **Regression:**
+  - Milestone 1 15/15, Milestone 2 23/23, Milestone 3 15/15, Milestone 4 20/20. Two of these tests needed small updates for the tabbed inspector and a redraw race.
+  - The Ezekiel cemetery playtest 13/13, on a copy.
+- **Headless:** `tests/test_project_ops_authoring.py`, and tests for every runtime fix (see the review doc).
+- **Full suite:** the 9 baseline failures, nothing new. The ruff gate and mypy island are clean.
+
+### Bugs found and fixed while building it
+
+1. **Draw order was inverted.** It sorted by y ascending in arcade's y-up world, so whatever stood further back was drawn in front: the dug grave over Ezekiel's head. It now sorts by where each sprite stands.
+2. **The interact prompt spilled off-screen** for long names.
+3. **Hidden objects kept blocking.** ConditionalActivator read solidity too early.
+4. **Trigger zones could never fire.** Sprites never got `mesh_tags` and `mesh_id`.
+5. **Tall objects blocked with their whole picture.** Fixed with a box footprint collider.
+6. **Editor (found by the GUI test):**
+   - the play-mode layout dump listed hidden editor buttons;
+   - previews were drawn for rows scrolled out of view;
+   - "Show when" objects were invisible while editing.
+
 ## Known limitations (honest list)
 
 - **Placeholder character art.** Still the coloured-square sheet; the owner's decision.
-- **One-line dialogue.** "Says" edits the first line only; multi-page dialogue and choices need a better editor.
+- **No counter conditions.** Choices count up, but nothing can require "graves_dug ≥ 3"; flags gate everything.
+- **Event sequences beyond conversations** (wait, move, sound) are `ActionListRunner` JSON in the Behaviours tab.
+- **Long inspector sections scroll** with the mouse wheel; there's no scrollbar to drag.
 - **Map tools are still basic.**
   - Three layers.
-  - No autotiles, tile flipping, map resizing, or copying a region of the map.
+  - No autotiles, tile flipping, or copying a region of the map.
   - Imported tilesets must be a plain grid (no spacing or margins).
   - Importing can't be undone (it writes files; an unused tileset is harmless).
 - **Text fields are single-line.** Pasted line breaks become spaces.
@@ -253,11 +295,10 @@ All recorded with restore instructions in `MESH_SALVAGE.md`:
 1. **AI on the same operations:** MCP `apply_ops` / live ops call `engine/project_ops`, proposals become a thin preview wrapper, and `OP_CATALOG` is generated.
 2. **Launcher follow-ups:** return to the launcher when the Studio closes; rename, move or delete projects; a packaged build.
 3. **Monster code as a plugin** via `PluginManager`; project-scoped `behaviours/` folder for custom scripts.
-4. **Archive the legacy editor and Creator Mode** only once the Studio covers what it still lacks. The inventory is in `docs/reviews/milestone3_map_tools.md`:
+4. **Archive the legacy editor and Creator Mode** only once the Studio covers what it still lacks. The inventory is in `docs/reviews/milestone3_map_tools.md`; dialogue, list/object settings and triggers on the map are now done (Milestone 5). Still missing:
    - quest, item and prefab editors;
-   - full dialogue;
-   - list/object settings;
-   - triggers drawn on the map.
+   - counter conditions;
+   - event sequences.
 
    Then archive the demo content and its ~62 tests.
 
