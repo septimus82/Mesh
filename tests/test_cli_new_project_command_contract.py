@@ -1,204 +1,116 @@
-"""Contract tests for ``mesh new <name>`` command.
+"""Contract tests for ``mesh new <name>``, the beginner front door.
 
-Tests cover:
-- Creates expected directory structure and files
-- Refuses to overwrite without --force; succeeds with --force
-- Generated main.py is syntactically valid Python
-- Generated config.json has required EngineConfig fields and correct start_scene
-- Generated starter_room.json has a player entity with sprite_sheet and animations
-- Generated starter_room.json has an NPC entity with Dialogue behaviour
-- CLI dispatch integration (via mesh_cli.main)
-- Name substitution in config and README
+``mesh new`` scaffolds through ``engine.project_scaffold`` with the ``starter``
+template. The project it makes must validate, boot headlessly, and contain a
+walkable player plus something to talk to. ``mesh --help`` shows only the
+getting-started commands; ``--help-all`` shows everything.
 """
 from __future__ import annotations
 
 import ast
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 import mesh_cli
+from engine.action_runtime.registry import validate_bound_actions
+from engine.paths import reset_path_caches
 
 pytestmark = [pytest.mark.fast]
 
+_START_SCENE = "packs/core_regions/scenes/start.json"
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _run_new(name: str, dest: Path, extra_args: list[str] | None = None) -> int:
-    """Run ``mesh new <name>`` via the CLI dispatcher."""
-    args = ["new", name, "--dest", str(dest)]
-    if extra_args:
-        args.extend(extra_args)
-    return mesh_cli.main(args)
+    return mesh_cli.main(["new", name, "--dest", str(dest), *(extra_args or [])])
 
 
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
-
-class TestDirectoryStructure:
-    def test_creates_project_directory(self, tmp_path: Path) -> None:
-        rc = _run_new("alpha", tmp_path)
-        assert rc == 0
-        assert (tmp_path / "alpha").is_dir()
-
-    def test_creates_main_py(self, tmp_path: Path) -> None:
-        _run_new("alpha", tmp_path)
-        assert (tmp_path / "alpha" / "main.py").is_file()
-
-    def test_creates_config_json(self, tmp_path: Path) -> None:
-        _run_new("alpha", tmp_path)
-        assert (tmp_path / "alpha" / "config.json").is_file()
-
-    def test_creates_starter_room_scene(self, tmp_path: Path) -> None:
-        _run_new("alpha", tmp_path)
-        assert (tmp_path / "alpha" / "scenes" / "starter_room.json").is_file()
-
-    def test_creates_readme(self, tmp_path: Path) -> None:
-        _run_new("alpha", tmp_path)
-        assert (tmp_path / "alpha" / "README.md").is_file()
-
-    def test_creates_assets_dir(self, tmp_path: Path) -> None:
-        _run_new("alpha", tmp_path)
-        assert (tmp_path / "alpha" / "assets" / "sprites").is_dir()
-
-    def test_creates_sprite_file(self, tmp_path: Path) -> None:
-        _run_new("alpha", tmp_path)
-        # Either the real sprite was copied or a placeholder was written — either way, file exists
-        assert (tmp_path / "alpha" / "assets" / "sprites" / "animated_player.png").is_file()
+@pytest.fixture
+def project(tmp_path: Path) -> Path:
+    assert _run_new("my_game", tmp_path) == 0
+    return tmp_path / "my_game"
 
 
-class TestOverwriteGuard:
-    def test_refuses_to_overwrite_existing_directory(self, tmp_path: Path) -> None:
-        _run_new("beta", tmp_path)
-        rc = _run_new("beta", tmp_path)
-        assert rc != 0
-
-    def test_force_flag_allows_overwrite(self, tmp_path: Path) -> None:
-        _run_new("beta", tmp_path)
-        rc = _run_new("beta", tmp_path, ["--force"])
-        assert rc == 0
-        assert (tmp_path / "beta" / "main.py").is_file()
+def _scene(project: Path) -> dict:
+    return json.loads((project / _START_SCENE).read_text(encoding="utf-8"))
 
 
-class TestMainPy:
-    def test_main_py_is_valid_python(self, tmp_path: Path) -> None:
-        _run_new("gamma", tmp_path)
-        source = (tmp_path / "gamma" / "main.py").read_text(encoding="utf-8")
-        # Must parse without SyntaxError
-        ast.parse(source)
-
-    def test_main_py_imports_engine(self, tmp_path: Path) -> None:
-        _run_new("gamma", tmp_path)
-        source = (tmp_path / "gamma" / "main.py").read_text(encoding="utf-8")
-        assert "from engine.config import load_config" in source
-        assert "from engine.game import GameWindow" in source
+def test_creates_scaffolded_project(project: Path) -> None:
+    ast.parse((project / "main.py").read_text(encoding="utf-8"))
+    cfg = json.loads((project / "config.json").read_text(encoding="utf-8"))
+    assert cfg["start_scene"] == _START_SCENE
+    assert cfg["title"] == "my_game"
+    # The starter scene has no lights; lighting on renders a near-black screen.
+    assert cfg["lighting_enabled"] is False
+    assert (project / "packs/core_regions/worlds/main.json").is_file()
+    assert (project / "assets/sprites/animated_player.png").is_file()
 
 
-class TestConfigJson:
-    def test_config_json_is_valid_json(self, tmp_path: Path) -> None:
-        _run_new("delta", tmp_path)
-        text = (tmp_path / "delta" / "config.json").read_text(encoding="utf-8")
-        cfg = json.loads(text)
-        assert isinstance(cfg, dict)
-
-    def test_config_start_scene_points_to_starter_room(self, tmp_path: Path) -> None:
-        _run_new("delta", tmp_path)
-        cfg = json.loads((tmp_path / "delta" / "config.json").read_text(encoding="utf-8"))
-        assert cfg["start_scene"] == "scenes/starter_room.json"
-
-    def test_config_has_required_engine_fields(self, tmp_path: Path) -> None:
-        _run_new("delta", tmp_path)
-        cfg = json.loads((tmp_path / "delta" / "config.json").read_text(encoding="utf-8"))
-        for field in ("start_scene", "width", "height", "title"):
-            assert field in cfg, f"config.json missing field '{field}'"
-
-    def test_config_title_contains_project_name(self, tmp_path: Path) -> None:
-        _run_new("MyProject", tmp_path)
-        cfg = json.loads((tmp_path / "MyProject" / "config.json").read_text(encoding="utf-8"))
-        assert "MyProject" in cfg["title"]
+def test_refuses_to_overwrite_without_force(tmp_path: Path) -> None:
+    assert _run_new("beta", tmp_path) == 0
+    assert _run_new("beta", tmp_path) != 0
+    assert _run_new("beta", tmp_path, ["--force"]) == 0
 
 
-class TestStarterRoom:
-    def _load_scene(self, tmp_path: Path, name: str = "epsilon") -> dict:
-        _run_new(name, tmp_path)
-        return json.loads(
-            (tmp_path / name / "scenes" / "starter_room.json").read_text(encoding="utf-8")
-        )
-
-    def test_scene_is_valid_json(self, tmp_path: Path) -> None:
-        scene = self._load_scene(tmp_path)
-        assert isinstance(scene, dict)
-
-    def test_scene_has_name(self, tmp_path: Path) -> None:
-        scene = self._load_scene(tmp_path)
-        assert "name" in scene
-
-    def test_scene_has_player_entity(self, tmp_path: Path) -> None:
-        scene = self._load_scene(tmp_path)
-        players = [e for e in scene["entities"] if e.get("tag") == "player"]
-        assert len(players) == 1
-
-    def test_player_has_sprite_sheet(self, tmp_path: Path) -> None:
-        scene = self._load_scene(tmp_path)
-        player = next(e for e in scene["entities"] if e.get("tag") == "player")
-        assert "sprite_sheet" in player
-        ss = player["sprite_sheet"]
-        assert "columns" in ss and "rows" in ss
-        assert "frame_width" in ss and "frame_height" in ss
-
-    def test_player_has_animations(self, tmp_path: Path) -> None:
-        scene = self._load_scene(tmp_path)
-        player = next(e for e in scene["entities"] if e.get("tag") == "player")
-        assert "animations" in player
-        assert "idle" in player["animations"]
-
-    def test_npc_entity_present(self, tmp_path: Path) -> None:
-        scene = self._load_scene(tmp_path)
-        npcs = [e for e in scene["entities"] if "Dialogue" in e.get("behaviours", [])]
-        assert len(npcs) >= 1
-
-    def test_npc_has_dialogue_config(self, tmp_path: Path) -> None:
-        scene = self._load_scene(tmp_path)
-        npc = next(e for e in scene["entities"] if "Dialogue" in e.get("behaviours", []))
-        dialogue = npc["behaviour_config"]["Dialogue"]["dialogue"]
-        assert "speaker" in dialogue
-        assert "start" in dialogue
-        assert "nodes" in dialogue
-
-    def test_scene_has_layers(self, tmp_path: Path) -> None:
-        scene = self._load_scene(tmp_path)
-        assert "layers" in scene
-        layer_names = [layer["name"] for layer in scene["layers"]]
-        assert "entities" in layer_names
+def test_default_template_has_player_and_interactable(project: Path) -> None:
+    entities = _scene(project)["entities"]
+    players = [e for e in entities if e.get("tag") == "player"]
+    assert len(players) == 1
+    assert "PlayerController" in players[0]["behaviours"]
+    npc = next(e for e in entities if "Dialogue" in e.get("behaviours", []))
+    nodes = npc["behaviour_config"]["Dialogue"]["dialogue"]["nodes"]
+    assert nodes["root"]["text"]
 
 
-class TestNameSubstitution:
-    def test_readme_contains_project_name(self, tmp_path: Path) -> None:
-        _run_new("CoolGame", tmp_path)
-        readme = (tmp_path / "CoolGame" / "README.md").read_text(encoding="utf-8")
-        assert "CoolGame" in readme
-
-    def test_main_py_does_not_contain_literal_placeholder(self, tmp_path: Path) -> None:
-        _run_new("TestGame", tmp_path)
-        source = (tmp_path / "TestGame" / "main.py").read_text(encoding="utf-8")
-        assert "{name}" not in source
+def test_project_binds_every_required_action(project: Path) -> None:
+    # Without explicit bindings the runtime only binds arrows/E/Esc (no WASD, no F4).
+    cfg = json.loads((project / "config.json").read_text(encoding="utf-8"))
+    unknown, missing = validate_bound_actions(cfg.get("input_bindings"))
+    assert (unknown, missing) == ([], [])
+    assert "W" in cfg["input_bindings"]["move_up"]
 
 
-class TestCLIDispatch:
-    def test_new_command_registered_in_parser(self) -> None:
-        parser = mesh_cli.create_parser()
-        subparsers_action = next(
-            a for a in parser._actions if a.__class__.__name__ == "_SubParsersAction"
-        )
-        assert "new" in subparsers_action.choices
+def test_project_passes_validate_all(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(project)
+    reset_path_caches()
+    # No --path: the bare command a beginner types must find the project's world.
+    assert mesh_cli.main(["validate-all", "--strict", "--check-refs", "--check-reachability"]) == 0
 
-    def test_new_command_end_to_end_via_main(self, tmp_path: Path) -> None:
-        rc = mesh_cli.main(["new", "e2e_test", "--dest", str(tmp_path)])
-        assert rc == 0
-        assert (tmp_path / "e2e_test" / "main.py").is_file()
-        assert (tmp_path / "e2e_test" / "config.json").is_file()
-        assert (tmp_path / "e2e_test" / "scenes" / "starter_room.json").is_file()
+
+def test_project_boots_headless_and_loads_start_scene(project: Path, tmp_path: Path) -> None:
+    # Subprocess: the runtime-only smoke rejects editor modules this test process already imported.
+    artifact = tmp_path / "smoke.json"
+    env = {k: v for k, v in os.environ.items() if k != "MESH_REPO_ROOT"}
+    cmd = [sys.executable, "-m", "mesh_cli", "play-runtime", "--headless-smoke", "--smoke-scene", _START_SCENE]
+    cmd += ["--smoke-ticks", "3", "--smoke-artifact", str(artifact)]
+    result = subprocess.run(cmd, cwd=project, env=env, capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stdout + result.stderr
+    payload = json.loads(artifact.read_text(encoding="utf-8"))
+    assert payload["ok"] is True
+    assert payload["scene_loaded"] == "Starter Room"
+
+
+def _help_text(capsys: pytest.CaptureFixture[str], flag: str) -> str:
+    with pytest.raises(SystemExit) as exc:
+        mesh_cli.main([flag])
+    assert exc.value.code == 0
+    return capsys.readouterr().out
+
+
+def test_help_lists_only_getting_started(capsys: pytest.CaptureFixture[str]) -> None:
+    out = _help_text(capsys, "--help")
+    for command in ("new", "play", "edit", "mcp", "validate", "doctor"):
+        assert f"\n  {command} " in out
+    assert "--help-all" in out
+    for hidden in ("new_project", "new-game", "validate-all", "replay-suite"):
+        assert hidden not in out
+
+
+def test_help_all_lists_every_command(capsys: pytest.CaptureFixture[str]) -> None:
+    out = _help_text(capsys, "--help-all")
+    for command in ("new", "new_project", "new-game", "validate-all", "replay-suite", "doctor"):
+        assert command in out

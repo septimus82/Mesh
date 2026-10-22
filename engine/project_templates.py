@@ -28,6 +28,7 @@ def list_templates() -> list[Template]:
         Template("blank", "Blank Project", "Minimal project with empty starting scene."),
         Template("lighting_playground", "Lighting Playground", "Scene with lights, occluders, and fog preset."),
         Template("demo_slice", "Demo Slice", "Interactive scene with NPC, quest, and gameplay mechanics."),
+        Template("starter", "Starter Room", "Walkable player and a Guide NPC who says hello."),
     ]
 
 
@@ -44,6 +45,8 @@ def apply_template(root: Path, template_id: str) -> None:
         _apply_lighting_playground(root)
     elif template_id == "demo_slice":
         _apply_demo_slice(root)
+    elif template_id == "starter":
+        _apply_starter(root)
     else:
         _LOG.warning("Unknown template '%s', defaulting to blank", template_id)
         _apply_blank(root)
@@ -53,19 +56,11 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
     json_io.write_json_atomic(path, data)
 
 
-def _apply_blank(root: Path) -> None:
-    scene = {
+def _blank_scene() -> dict[str, Any]:
+    return {
         "name": "Start Scene",
-        "settings": {
-            "background_color": "dark_blue_gray",
-            "music": None,
-            "music_volume": 1.0,
-        },
-        "layers": [
-            {"name": "background"},
-            {"name": "entities"},
-            {"name": "foreground"},
-        ],
+        "schema_version": 1,
+        "version": 1,
         "entities": [
             {
                 "id": "start_player_128_128_0_0",
@@ -91,6 +86,39 @@ def _apply_blank(root: Path) -> None:
             },
         ],
     }
+
+
+def _apply_blank(root: Path) -> None:
+    _write_json(root / "packs/core_regions/scenes/start.json", _blank_scene())
+
+
+def _apply_starter(root: Path) -> None:
+    scene = _blank_scene()
+    scene["name"] = "Starter Room"
+    scene["entities"].append(
+        {
+            "id": "start_guide_320_128_0_0",
+            "name": "Guide",
+            "tag": "npc",
+            "x": 320.0,
+            "y": 128.0,
+            "sprite": "assets/sprites/animated_player.png",
+            "sprite_sheet": {"columns": 4, "rows": 2, "frame_width": 64, "frame_height": 64},
+            "animations": {"idle": {"fps": 2, "frames": [0, 1], "loop": True}},
+            "behaviours": ["Dialogue"],
+            "behaviour_config": {
+                "Dialogue": {
+                    "dialogue": {
+                        "speaker": "Guide",
+                        "start": "root",
+                        "nodes": {
+                            "root": {"text": "Hi! Welcome to your new Mesh game.\nWalk with WASD, talk with E."},
+                        },
+                    },
+                },
+            },
+        }
+    )
     _write_json(root / "packs/core_regions/scenes/start.json", scene)
 
 

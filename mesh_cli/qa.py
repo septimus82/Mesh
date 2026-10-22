@@ -89,7 +89,7 @@ def _handle_validate_all(args: argparse.Namespace) -> int:
         tool_argv.append("--check-refs")
     if getattr(args, "schema_strict", False):
         tool_argv.append("--schema-strict")
-    return validate_all.main(tool_argv if tool_argv else None)
+    return validate_all.main(tool_argv)
 
 
 def _handle_validate_events(args: argparse.Namespace) -> int:

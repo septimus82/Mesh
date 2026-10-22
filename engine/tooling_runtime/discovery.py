@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 
@@ -47,6 +48,15 @@ def discover_scene_files_under(directory: Path) -> list[Path]:
     return _sorted_paths([p for p in base.rglob("*.json") if p.is_file()])
 
 
+def _config_world_file(root: Path) -> Path | None:
+    try:
+        raw = json.loads((root / "config.json").read_text(encoding="utf-8")).get("world_file")
+    except (OSError, ValueError, AttributeError):
+        return None
+    candidate = root / str(raw) if raw else None
+    return candidate if candidate is not None and candidate.is_file() else None
+
+
 def resolve_validation_targets(path: str | Path | None, repo_root: Path) -> list[Path]:
     """Resolve a path argument to a list of validation targets.
 
@@ -57,6 +67,7 @@ def resolve_validation_targets(path: str | Path | None, repo_root: Path) -> list
     - If path is empty/None/"." then:
       * If repo_root/worlds/main_world.json exists -> return [that]
       * else if repo_root/worlds exists -> return sorted list of all *.json under worlds
+      * else if config.json names an existing world_file -> return [that]
       * else return []
     - If path exists and is a directory:
       * Scan for *.json files recursively, sorted lexicographically
@@ -78,7 +89,9 @@ def resolve_validation_targets(path: str | Path | None, repo_root: Path) -> list
         worlds_dir = root / "worlds"
         if worlds_dir.exists() and worlds_dir.is_dir():
             return _sorted_paths([p for p in worlds_dir.rglob("*.json") if p.is_file()])
-        return []
+        # Scaffolded projects keep their world under packs/; config.json names it.
+        world_file = _config_world_file(root)
+        return [world_file] if world_file is not None else []
 
     # Resolve relative to repo_root if not absolute
     target = Path(path)

@@ -7,6 +7,16 @@ from typing import Any, Dict
 from engine import json_io
 
 
+def _type_label(type_: object) -> str | None:
+    # str() of a plain function embeds its memory address, so the snapshot
+    # never verified against itself; name functions by qualname instead.
+    if not type_:
+        return None
+    if isinstance(type_, type) or not hasattr(type_, "__qualname__"):
+        return str(type_)
+    return f"<function {getattr(type_, '__qualname__')}>"
+
+
 def extract_parser_info(parser: argparse.ArgumentParser) -> Dict[str, Any]:
     """Extract structure from an ArgumentParser."""
     usage = parser.format_usage().strip()
@@ -37,7 +47,7 @@ def extract_parser_info(parser: argparse.ArgumentParser) -> Dict[str, Any]:
             "help": action.help,
             "required": action.required,
             "default": str(action.default) if action.default is not argparse.SUPPRESS else None,
-            "type": str(action.type) if action.type else None,
+            "type": _type_label(action.type),
             "choices": list(action.choices) if action.choices else None,
             "nargs": str(action.nargs) if action.nargs else None
         }

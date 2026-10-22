@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 from typing import Any
@@ -111,6 +112,16 @@ def _copy_engine_asset(rel_path: str, dest_root: Path) -> None:
     shutil.copy2(src, dest)
 
 
+def _engine_input_bindings() -> dict[str, Any]:
+    try:
+        data = json.loads((_engine_root() / "config.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        _LOG.warning("Engine config.json unreadable; new project gets no input_bindings")
+        return {}
+    bindings = data.get("input_bindings") if isinstance(data, dict) else None
+    return dict(bindings) if isinstance(bindings, dict) else {}
+
+
 def _copy_monster_starter_pack(root: Path) -> None:
     from .monster.battle_audio import default_battle_audio_asset_paths
 
@@ -155,8 +166,16 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
         "start_scene": "packs/core_regions/scenes/start.json",
         "main_menu_scene": None,
         "world_file": "packs/core_regions/worlds/main.json",
-        "lighting_enabled": True,
+        # Off by default: with no lights in the scene the screen renders near-black.
+        # lighting_playground turns it back on alongside its lights.
+        "lighting_enabled": False,
     }
+    # The runtime only applies default bindings when input_bindings is None, and
+    # EngineConfig defaults it to {} — so without this, new projects get arrows
+    # only (no WASD, no F4 editor toggle) and fail `mesh check`.
+    engine_bindings = _engine_input_bindings()
+    if engine_bindings:
+        config["input_bindings"] = engine_bindings
 
     json_io.write_json_atomic(root / "config.json", config)
     (root / "main.py").write_text(_MAIN_PY.replace("{name}", str(name)), encoding="utf-8")
@@ -174,6 +193,9 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
         },
     }
     json_io.write_json_atomic(root / "packs/core_regions/worlds/main.json", world)
+    # Empty catalogs validate-all requires; without them every new project fails it.
+    json_io.write_json_atomic(root / "assets/prefabs.json", [])
+    json_io.write_json_atomic(root / "assets/data/events.json", {"events": []})
 
     apply_template(root, template_id)
     _copy_monster_starter_pack(root)

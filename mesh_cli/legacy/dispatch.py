@@ -8,9 +8,42 @@ from typing import Any, cast
 from ..version_info import get_tool_version
 from .registry import register_commands
 
+GETTING_STARTED = (
+    ("new", "Create a new playable project:  mesh new my_game"),
+    ("play", "Play the project in the current folder"),
+    ("edit", "Open the project in the current folder in the editor"),
+    ("mcp", "Connect an AI assistant to this project:  mesh mcp install"),
+    ("validate", "Check a scene file for errors"),
+    ("doctor", "Diagnose your install and project"),
+)
+
+
+class _GettingStartedHelp(argparse.Action):
+    """Default ``-h``: a short beginner list instead of all ~130 commands."""
+
+    def __init__(self, option_strings: list[str], dest: str = argparse.SUPPRESS, **kwargs: Any) -> None:
+        super().__init__(option_strings, dest=dest, default=argparse.SUPPRESS, nargs=0, **kwargs)
+
+    def __call__(self, parser: argparse.ArgumentParser, *_args: Any, **_kwargs: Any) -> None:
+        print_getting_started(parser)
+        parser.exit()
+
+
+def print_getting_started(parser: argparse.ArgumentParser) -> None:
+    lines = [f"usage: {parser.prog} <command> [options]", "", "Getting started:"]
+    lines += [f"  {name:<10}{text}" for name, text in GETTING_STARTED]
+    lines += [
+        "",
+        f"Run '{parser.prog} <command> -h' for a command's options.",
+        f"Run '{parser.prog} --help-all' to list every command.",
+    ]
+    print("\n".join(lines))
+
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Mesh Engine CLI")
+    parser = argparse.ArgumentParser(description="Mesh Engine CLI", add_help=False)
+    parser.add_argument("-h", "--help", action=_GettingStartedHelp, help="Show the getting-started commands")
+    parser.add_argument("--help-all", action="help", help="List every command")
     parser.add_argument("--version", action="store_true", help="Show engine version")
     subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
     register_commands(subparsers)
@@ -39,7 +72,7 @@ def dispatch(
     if not getattr(args, "command", None):
         if parser is None:
             parser = build_parser()
-        parser.print_help()
+        print_getting_started(parser)
         return 1
 
     if args.command == "play":
