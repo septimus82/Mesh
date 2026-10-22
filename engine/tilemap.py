@@ -165,9 +165,13 @@ class TilemapManager:
         }
         if overrides and isinstance(overrides.get("layers"), dict):
             for lname, override_data in overrides["layers"].items():
+                if not isinstance(override_data, list):
+                    continue
                 raw = layer_lookup.get(lname)
-                if raw is not None and isinstance(override_data, list):
-                    raw["data"] = override_data
+                if raw is None:
+                    # A layer painted in the scene but absent from the map file (e.g. added later).
+                    raw = layer_lookup[lname] = {"name": lname, "type": "tilelayer", "width": width, "height": height}
+                raw["data"] = override_data
 
         instance = TilemapInstance(
             map_size=(width, height),

@@ -55,3 +55,21 @@ def test_external_json_tileset_image_resolves_next_to_the_tileset(tmp_path) -> N
     tilesets = manager._load_tilesets(tmp_path / "maps", [{"firstgid": 1, "source": "../tilesets/one.json"}])
     assert len(tilesets) == 1
     assert tilesets[0].image_path == str((tmp_path / "tilesets" / "one.png").resolve())
+
+
+def test_inline_layer_missing_from_the_map_file_still_loads(tmp_path) -> None:
+    (tmp_path / "tilesets").mkdir()
+    Image.new("RGBA", (32, 32), RED).save(tmp_path / "tilesets" / "one.png")
+    (tmp_path / "tilesets" / "one.json").write_text(json.dumps({
+        "name": "one", "tilewidth": 32, "tileheight": 32, "columns": 1, "tilecount": 1,
+        "image": "one.png", "imagewidth": 32, "imageheight": 32}), encoding="utf-8")
+    (tmp_path / "map.json").write_text(json.dumps({
+        "orientation": "orthogonal", "width": 2, "height": 1, "tilewidth": 32, "tileheight": 32,
+        "tilesets": [{"firstgid": 1, "source": "tilesets/one.json"}],
+        "layers": [{"name": "ground", "type": "tilelayer", "width": 2, "height": 1, "data": [1, 1]}]}), encoding="utf-8")
+    manager = TilemapManager(assets=None)
+    configs = [{"id": "ground", "z": -20}, {"id": "overhead", "z": 10}]
+    instance = manager.load_map(str(tmp_path / "map.json"), configs, overrides={"layers": {"overhead": [0, 1]}})
+    assert instance is not None
+    assert len(instance.layer_lookup["overhead"]) == 1  # drawn from the scene's tiles alone
+    assert instance.layer_data["overhead"] == [0, 1]
