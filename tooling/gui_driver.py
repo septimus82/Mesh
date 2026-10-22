@@ -98,6 +98,7 @@ class Driver:
         self.proc = subprocess.Popen(cmd, cwd=str(cwd), stdout=self._log, stderr=subprocess.STDOUT,
                                      env={**__import__("os").environ, "PYTHONUNBUFFERED": "1"})
         self.hwnd = 0
+        self._cursor: tuple[int, int] | None = None  # where this driver last put the mouse
         deadline = time.time() + 60
         while not self.hwnd and time.time() < deadline:
             if self.proc.poll() is not None:
@@ -150,7 +151,18 @@ class Driver:
         return int(ox + x * w / self.logical_w), int(oy + y * h / self.logical_h)
 
     # --- mouse ----------------------------------------------------------------------------
+    def _require_untouched_mouse(self) -> None:
+        """Stop if someone moved the real mouse: their input would mix with ours and the result mean nothing."""
+        if self._cursor is None:
+            return
+        pos = wintypes.POINT()
+        user32.GetCursorPos(ctypes.byref(pos))
+        if abs(pos.x - self._cursor[0]) > 3 or abs(pos.y - self._cursor[1]) > 3:
+            raise RuntimeError(f"the mouse was moved by something other than this test (expected {self._cursor}, "
+                               f"found {(pos.x, pos.y)}); keep hands off the mouse while a GUI test runs")
+
     def _mouse_to(self, x: float, y: float) -> None:
+        self._require_untouched_mouse()
         self._require_foreground()
         sx, sy = self._to_screen(x, y)
         self._require_hit(sx, sy)
@@ -159,8 +171,12 @@ class Driver:
         nx, ny = int((sx - vx) * 65535 / max(1, vw - 1)), int((sy - vy) * 65535 / max(1, vh - 1))
         _send(_INPUT(type=_INPUT_MOUSE, u=_INPUTUNION(mi=_MOUSEINPUT(nx, ny, 0, _MOVE | _ABSOLUTE | _VIRTUALDESK, 0, 0))))
         time.sleep(0.05)
+        pos = wintypes.POINT()
+        user32.GetCursorPos(ctypes.byref(pos))
+        self._cursor = (pos.x, pos.y)  # where the move actually landed (normalised coordinates round)
 
     def _button(self, flags: int) -> None:
+        self._require_untouched_mouse()
         _send(_INPUT(type=_INPUT_MOUSE, u=_INPUTUNION(mi=_MOUSEINPUT(0, 0, 0, flags, 0, 0))))
 
     def click(self, x: float, y: float, *, right: bool = False, settle: float = 0.4) -> None:
@@ -214,6 +230,47 @@ class Driver:
             _send(_key_input(scan=ord(ch), flags=_UNICODE), _key_input(scan=ord(ch), flags=_UNICODE | _KEYUP))
             time.sleep(0.03)
         time.sleep(settle)
+
+    def file_dialog(self, path: str, timeout: float = 15.0) -> None:
+        """Answer the app's own open-file dialog: type ``path`` into it and press Enter.
+
+        Input only goes to a dialog window owned by the app's process.
+        """
+        deadline, dialog = time.time() + timeout, 0
+        while not dialog:
+            hwnd = user32.GetForegroundWindow()
+            name = ctypes.create_unicode_buffer(64)
+            user32.GetClassNameW(hwnd, name, 64)
+            if self._owns(hwnd) and hwnd != self.hwnd and name.value == "#32770":
+                dialog = hwnd
+            elif time.time() > deadline:
+                raise RuntimeError("the app's file dialog didn't appear")
+            else:
+                time.sleep(0.2)
+        time.sleep(0.8)  # the file-name box has the keyboard focus once the dialog has settled
+        for ch in path:
+            if not self._owns(user32.GetForegroundWindow()):  # the dialog, or its autocomplete list
+                raise RuntimeError("the file dialog lost the focus while typing into it")
+            _send(_key_input(scan=ord(ch), flags=_UNICODE), _key_input(scan=ord(ch), flags=_UNICODE | _KEYUP))
+            time.sleep(0.02)
+        _send(_key_input(vk=VK["ENTER"]), _key_input(vk=VK["ENTER"], flags=_KEYUP))
+        while user32.IsWindow(dialog):
+            if time.time() > deadline:
+                raise RuntimeError("the file dialog didn't close")
+            time.sleep(0.2)
+        time.sleep(0.5)
+        self.focus()
+        self._cursor = None  # dialogs may move the pointer (Windows' "snap to default button")
+
+    def _owns(self, hwnd: int) -> bool:
+        owner = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        return owner.value == self.proc.pid
+
+    def pixel(self, x: float, y: float) -> tuple[int, int, int]:
+        """The colour at a point of the window (logical coordinates, top-left origin), from a fresh capture."""
+        with Image.open(self.shot("_pixel")) as image:
+            return image.convert("RGB").getpixel((int(x), int(y)))
 
     # --- evidence -------------------------------------------------------------------------
     def shot(self, name: str) -> Path:
