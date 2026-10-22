@@ -610,3 +610,675 @@ def with_tileset(map_doc: Doc, map_project_path: str, tileset_project_path: str,
     out["tilesets"] = list(out.get("tilesets") or []) + [
         {"firstgid": next_gid, "source": posixpath.relpath(tileset_project_path, posixpath.dirname(map_project_path))}]
     return out
+
+
+# =============================================================================================
+# Visual event authoring (Milestone 5): pictures, animation, collision, conversations,
+# conditions and trigger zones. Each maps a plain idea ("Show when", "Requires flag") onto
+# the runtime's existing data: Animator clips, the Dialogue graph, ConditionalActivator,
+# PictureByFlags, components.collider and TriggerVolume.
+# =============================================================================================
+
+_UNSET: Any = object()
+_FLAG_NAME = re.compile(r"^[A-Za-z0-9_.:-]+$")
+DIRECTIONS = ("down", "left", "right", "up")
+
+
+def _unique_name(scene: Doc, base: str) -> str:
+    names, n, name = {e.get("name") for e in entities(scene)}, 2, base
+    while name in names:
+        name, n = f"{base} {n}", n + 1
+    return name
+
+
+def flag_names(value: Any) -> list[str]:
+    """Flag names from a list or comma-separated text, checked: ``"has_shovel, dug"``."""
+    items = value.split(",") if isinstance(value, str) else list(value or [])
+    names = [str(item).strip() for item in items if str(item).strip()]
+    for name in names:
+        if not _FLAG_NAME.match(name):
+            raise OpError(f"'{name}' can't be a flag name: use letters, digits and _ (like has_shovel).")
+    return list(dict.fromkeys(names))
+
+
+def counter_steps(value: Any) -> dict[str, float]:
+    """Counter changes from ``{"name": n}`` or text like ``"graves_opened, gold+5"`` (+1 if no number)."""
+    if isinstance(value, dict):
+        items = [(str(k), v) for k, v in value.items()]
+    else:
+        items = []
+        for part in (value.split(",") if isinstance(value, str) else value or []):
+            match = re.match(r"^\s*([A-Za-z0-9_.:-]+?)\s*(?:([+-])\s*(\d+(?:\.\d+)?))?\s*$", str(part))
+            if not match:
+                raise OpError(f"'{str(part).strip()}' isn't a counter change: write a name, or name+2.")
+            amount = float(match.group(3) or 1) * (-1 if match.group(2) == "-" else 1)
+            items.append((match.group(1), amount))
+    out: dict[str, float] = {}
+    for name, amount in items:
+        flag_names([name])
+        try:
+            out[name] = float(amount)
+        except (TypeError, ValueError) as exc:
+            raise OpError(f"The change to '{name}' must be a number.") from exc
+    return out
+
+
+def _number(value: Any, what: str, low: float, high: float) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise OpError(f"{what} must be a number.") from exc
+    if not low <= number <= high:
+        raise OpError(f"{what} must be between {low:g} and {high:g}.")
+    return number
+
+
+def _behaviour_config(entity: Doc, behaviour: str, *, create: bool) -> Doc | None:
+    """The config of one behaviour on ``entity`` (adding the behaviour if ``create``)."""
+    if behaviour not in entity_behaviours(entity):
+        if not create:
+            return None
+        entity.setdefault("behaviours", []).append(behaviour)
+    root = entity.setdefault("behaviour_config", {})
+    config = root.get(behaviour)
+    if not isinstance(config, dict):
+        config = root[behaviour] = {}
+    return config
+
+
+def _drop_behaviour(entity: Doc, behaviour: str) -> None:
+    entity["behaviours"] = [b for b in entity.get("behaviours") or []
+                            if (b if isinstance(b, str) else (b or {}).get("type")) != behaviour]
+    (entity.get("behaviour_config") or {}).pop(behaviour, None)
+
+
+# --- objects and pictures ---------------------------------------------------------------------
+
+
+def place_blank(scene: Doc, scene_key: str, name: str, x: float, y: float) -> tuple[Doc, str]:
+    """A new object with no picture or behaviours yet: a shovel, a grave, a trigger zone..."""
+    out = copy.deepcopy(scene)
+    label = _unique_name(out, str(name).strip() or "Object")
+    entity = {"id": unique_entity_id(out, make_entity_id(scene_key, slug(label), x, y)), "name": label,
+              "x": round(float(x), 2), "y": round(float(y), 2)}
+    out.setdefault("entities", []).append(entity)
+    return _checked(scene, out), entity["id"]
+
+
+def set_picture(scene: Doc, entity_id: str, sprite: str | None) -> Doc:
+    """Give an object a picture (a project-relative image path), or take it away (None).
+
+    A new picture also drops the old frame-list animation (``animations``/``sprite_sheet``):
+    its frames were cut from the old image. Animator clips name their own sheet and stay.
+    """
+    entity = find_entity(scene, entity_id)
+    fields: dict[str, Any] = {"sprite": str(sprite).strip() if sprite else None}
+    if fields["sprite"] != entity.get("sprite"):
+        fields.update(animations=None, sprite_sheet=None)
+    return set_entity_fields(scene, entity_id, **fields)
+
+
+def set_look(scene: Doc, entity_id: str, *, scale: Any = _UNSET, flip_x: Any = _UNSET) -> Doc:
+    fields: dict[str, Any] = {}
+    if scale is not _UNSET:
+        fields["scale"] = round(_number(scale, "The size", 0.1, 10), 3)
+    if flip_x is not _UNSET:
+        fields["flip_x"] = True if flip_x else None
+    return set_entity_fields(scene, entity_id, **fields)
+
+
+# --- collision --------------------------------------------------------------------------------
+
+COLLIDER_SHAPES = ("picture", "box", "circle")
+
+
+def collider_of(entity: Doc) -> Doc:
+    """``{"kind": "picture"}``, or a box ``{w, h, offset_x, offset_y}`` or circle ``{r, ...}``."""
+    raw = (entity.get("components") or {}).get("collider") if isinstance(entity.get("components"), dict) else None
+    if not isinstance(raw, dict) or raw.get("kind") not in ("box", "circle"):
+        return {"kind": "picture"}
+    out: Doc = {"kind": raw["kind"], "offset_x": float(raw.get("offset_x", raw.get("ox", 0)) or 0),
+                "offset_y": float(raw.get("offset_y", raw.get("oy", 0)) or 0)}
+    if raw["kind"] == "box":
+        out.update(w=float(raw.get("w", raw.get("width", 32)) or 32), h=float(raw.get("h", raw.get("height", 32)) or 32))
+    else:
+        out["r"] = float(raw.get("r", raw.get("radius", 16)) or 16)
+    return out
+
+
+def set_collider(scene: Doc, entity_id: str, kind: str, *, w: Any = 32, h: Any = 16, r: Any = 12,
+                 offset_x: Any = 0, offset_y: Any = 0) -> Doc:
+    """How the object collides: its whole ``picture``, a ``box`` footprint or a ``circle``.
+
+    Footprints let a tall object block where it stands (a tree's trunk, not its canopy).
+    """
+    if kind not in COLLIDER_SHAPES:
+        raise OpError(f"A collider is one of: {', '.join(COLLIDER_SHAPES)}.")
+    entity = find_entity(scene, entity_id)
+    components = dict(entity.get("components") or {}) if isinstance(entity.get("components"), dict) else {}
+    if kind == "picture":
+        components.pop("collider", None)
+    else:
+        collider: Doc = {"kind": kind, "offset_x": round(_number(offset_x, "The offset", -4096, 4096), 2),
+                         "offset_y": round(_number(offset_y, "The offset", -4096, 4096), 2)}
+        if kind == "box":
+            collider.update(w=round(_number(w, "The width", 1, 4096), 2), h=round(_number(h, "The height", 1, 4096), 2))
+        else:
+            collider["r"] = round(_number(r, "The radius", 1, 2048), 2)
+        components["collider"] = collider
+    return set_entity_fields(scene, entity_id, components=components or None)
+
+
+def set_solid(scene: Doc, entity_id: str, solid: bool) -> Doc:
+    """Whether the object blocks movement (it can still be talked to either way)."""
+    return set_entity_fields(scene, entity_id, solid=True if solid else None)
+
+
+# --- animation (the Animator behaviour) -------------------------------------------------------
+
+
+def animation_clips(entity: Doc) -> Doc:
+    config = (entity.get("behaviour_config") or {}).get("Animator")
+    clips = config.get("animations") if isinstance(config, dict) else None
+    return copy.deepcopy(clips) if isinstance(clips, dict) else {}
+
+
+def clip_spec(sheet: str, frame_width: Any, frame_height: Any, columns: int, row: Any, first: Any, count: Any,
+              fps: Any, *, flip_x: bool = False, sheet_rows: int | None = None) -> Doc:
+    """An Animator clip: ``count`` frames from ``row`` (0 = top), starting at column ``first``."""
+    if not str(sheet or "").strip():
+        raise OpError("Choose the image the frames come from.")
+    fw, fh = int(_number(frame_width, "The frame width", 1, 4096)), int(_number(frame_height, "The frame height", 1, 4096))
+    row_n, first_n = int(_number(row, "The row", 0, 4096)), int(_number(first, "The first frame", 0, 4096))
+    count_n = int(_number(count, "The number of frames", 1, 4096))
+    if sheet_rows is not None and row_n >= sheet_rows:
+        raise OpError(f"The image has {sheet_rows} row(s) of frames: rows 0 to {sheet_rows - 1}.")
+    if columns >= 1 and first_n + count_n > columns:
+        raise OpError(f"That row has {columns} frames: frames {first_n + 1}-{first_n + count_n} don't fit.")
+    spec: Doc = {"sheet": str(sheet), "frame_width": fw, "frame_height": fh,
+                 "start": row_n * max(1, columns) + first_n, "frames": count_n, "fps": _number(fps, "The speed", 0.1, 120)}
+    if flip_x:
+        spec["flip_x"] = True
+    return spec
+
+
+def clip_position(clip: Doc, columns: int) -> tuple[int, int]:
+    """``(row, first column)`` of a clip's first frame."""
+    return divmod(int(clip.get("start", 0) or 0), max(1, int(columns)))
+
+
+def character_clips(sheet: str, frame_width: Any, frame_height: Any, columns: int, rows: dict[str, Any], *,
+                    walk_first: Any = 0, walk_count: Any = 3, idle_first: Any = 0, idle_count: Any = 1,
+                    walk_fps: Any = 8, idle_fps: Any = 2, sheet_rows: int | None = None) -> Doc:
+    """Idle and walk clips for each of the four directions, from one row per direction.
+
+    A direction without a row (usually ``left``) mirrors ``right``.
+    """
+    clips: Doc = {}
+    for direction in DIRECTIONS:
+        row, flip = rows.get(direction), False
+        if row in (None, "") and direction == "left":
+            row, flip = rows.get("right"), True
+        if row in (None, ""):
+            raise OpError(f"Which row of frames walks {direction}?")
+        clips[f"walk_{direction}"] = clip_spec(sheet, frame_width, frame_height, columns, row, walk_first, walk_count,
+                                               walk_fps, flip_x=flip, sheet_rows=sheet_rows)
+        clips[f"idle_{direction}"] = clip_spec(sheet, frame_width, frame_height, columns, row, idle_first, idle_count,
+                                               idle_fps, flip_x=flip, sheet_rows=sheet_rows)
+    return clips
+
+
+def set_animation(scene: Doc, entity_id: str, clips: Doc) -> Doc:
+    """Replace the object's Animator clips (adding the Animator; no clips removes it).
+
+    With idle_ and walk_ clips for all four directions the Animator turns to face the way the
+    object moves. The older frame-list animation (entity ``animations``) is dropped: two
+    animation systems on one object fight over its picture.
+    """
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    entity.pop("animations", None)
+    if not clips:
+        _drop_behaviour(entity, "Animator")
+        return _checked(scene, out)
+    config = _behaviour_config(entity, "Animator", create=True)
+    assert config is not None
+    config["animations"] = copy.deepcopy(clips)
+    if all(f"{kind}_{d}" in clips for kind in ("idle", "walk") for d in DIRECTIONS):
+        facing = config.get("facing_default") if config.get("facing_default") in DIRECTIONS else "down"
+        config.update(directional_mode="4-way", enable_auto_state=True, idle_clip="idle_down", walk_clip="walk_down",
+                      facing_default=facing, animation_state=f"idle_{facing}", speed_threshold=5.0)
+    else:
+        config["directional_mode"] = "none"
+        if config.get("animation_state") not in clips:
+            config["animation_state"] = next(iter(clips))
+    return _checked(scene, out)
+
+
+def set_clip(scene: Doc, entity_id: str, name: str, spec: Doc | None) -> Doc:
+    """Add or replace one clip (None removes it)."""
+    name = str(name).strip()
+    if not name:
+        raise OpError("A clip needs a name, like walk_left.")
+    clips = animation_clips(find_entity(scene, entity_id))
+    if spec is None:
+        clips.pop(name, None)
+    else:
+        clips[name] = copy.deepcopy(spec)
+    return set_animation(scene, entity_id, clips)
+
+
+# --- conversations (the Dialogue behaviour's graph) -------------------------------------------
+
+
+def conversation(entity: Doc) -> Doc:
+    """An object's conversation, ready to show: lines (in order), start rules and options."""
+    config = (entity.get("behaviour_config") or {}).get("Dialogue")
+    config = config if isinstance(config, dict) else {}
+    graph = config.get("dialogue") if isinstance(config.get("dialogue"), dict) else {}
+    nodes = graph.get("nodes") if isinstance(graph.get("nodes"), dict) else {}
+    return {"speaker": str(graph.get("speaker") or entity.get("name") or ""),
+            "start": graph.get("start") if graph.get("start") in nodes else next(iter(nodes), None),
+            "nodes": copy.deepcopy(nodes), "starts": copy.deepcopy(graph.get("starts") or []),
+            "require_flags": list(config.get("require_flags") or []), "forbid_flags": list(config.get("forbid_flags") or []),
+            "auto_start": bool(config.get("auto_start")), "once": bool(config.get("once", True)),
+            "legacy_lines": [str(x) for x in config.get("dialogue_lines") or [] if isinstance(x, str)] if not nodes else []}
+
+
+def _graph(entity: Doc) -> tuple[Doc, Doc, Doc]:
+    """``(Dialogue config, graph, nodes)`` for editing, creating the Dialogue if needed.
+
+    Old one-list ``dialogue_lines`` become a chain of lines, so nothing typed before is lost.
+    """
+    fresh = "Dialogue" not in entity_behaviours(entity)
+    config = _behaviour_config(entity, "Dialogue", create=True)
+    assert config is not None
+    if fresh:
+        config["once"] = False  # a conversation you can have again; "Only once" turns this on
+    graph = config.get("dialogue")
+    if not isinstance(graph, dict):
+        graph = config["dialogue"] = {"speaker": entity.get("name") or "", "nodes": {}}
+    nodes = graph.get("nodes")
+    if not isinstance(nodes, dict):
+        nodes = graph["nodes"] = {}
+    lines = config.pop("dialogue_lines", None)
+    if not nodes and isinstance(lines, list):
+        previous = None
+        for text in [str(x) for x in lines if isinstance(x, (str, int, float)) and str(x).strip()]:
+            node_id = _new_line_id(nodes)
+            nodes[node_id] = {"text": text}
+            if previous:
+                nodes[previous]["next"] = node_id
+            previous = node_id
+    if nodes and graph.get("start") not in nodes:
+        graph["start"] = next(iter(nodes))
+    return config, graph, nodes
+
+
+def _new_line_id(nodes: Doc) -> str:
+    n = len(nodes) + 1
+    while f"line_{n}" in nodes:
+        n += 1
+    return f"line_{n}"
+
+
+def _node(nodes: Doc, node_id: str) -> Doc:
+    node = nodes.get(node_id)
+    if not isinstance(node, dict):
+        raise OpError(f"This conversation has no line '{node_id}'.")
+    return node
+
+
+def _target(nodes: Doc, value: Any) -> str | None:
+    target = str(value or "").strip()
+    if target and target not in nodes:
+        raise OpError(f"This conversation has no line '{target}' to go to.")
+    return target or None
+
+
+def add_line(scene: Doc, entity_id: str, *, after: str | None = None, text: str = "...",
+             speaker: str | None = None) -> tuple[Doc, str]:
+    """A new line, after ``after`` (spliced into its flow) or at the end of the conversation."""
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    _config, graph, nodes = _graph(entity)
+    node_id = _new_line_id(nodes)
+    node: Doc = {"text": str(text).strip() or "..."}
+    if speaker:
+        node["speaker"] = str(speaker)
+    if after:
+        before = _node(nodes, after)
+        if before.get("next"):
+            node["next"] = before["next"]
+        before["next"] = node_id
+    elif nodes:
+        last = next(reversed(nodes))
+        if not nodes[last].get("next") and not nodes[last].get("choices"):
+            nodes[last]["next"] = node_id
+    nodes[node_id] = node
+    graph.setdefault("start", node_id)
+    return _checked(scene, out), node_id
+
+
+def set_line(scene: Doc, entity_id: str, node_id: str, *, text: Any = _UNSET, speaker: Any = _UNSET,
+             next_line: Any = _UNSET) -> Doc:
+    out = copy.deepcopy(scene)
+    _config, _graph_doc, nodes = _graph(find_entity(out, entity_id))
+    node = _node(nodes, node_id)
+    if text is not _UNSET:
+        if not str(text).strip():
+            raise OpError("A line needs some words.")
+        node["text"] = str(text).strip()
+    if speaker is not _UNSET:
+        if str(speaker or "").strip():
+            node["speaker"] = str(speaker).strip()
+        else:
+            node.pop("speaker", None)
+    if next_line is not _UNSET:
+        target = _target(nodes, next_line)
+        if target == node_id:
+            raise OpError("A line can't lead to itself.")
+        if target:
+            node["next"] = target
+        else:
+            node.pop("next", None)
+    return _checked(scene, out)
+
+
+def remove_line(scene: Doc, entity_id: str, node_id: str) -> Doc:
+    """Delete a line; whatever led to it now leads where it led (or ends)."""
+    out = copy.deepcopy(scene)
+    _config, graph, nodes = _graph(find_entity(out, entity_id))
+    removed = _node(nodes, node_id)
+    if len(nodes) == 1:
+        raise OpError("A conversation needs at least one line. Remove the Dialogue behaviour to remove it.")
+    follow = removed.get("next") if removed.get("next") != node_id else None
+    del nodes[node_id]
+    for node in nodes.values():
+        if node.get("next") == node_id:
+            if follow:
+                node["next"] = follow
+            else:
+                node.pop("next", None)
+        for choice in node.get("choices") or []:
+            if isinstance(choice, dict) and choice.get("next") == node_id:
+                choice.pop("next", None)
+    graph["starts"] = [rule for rule in graph.get("starts") or [] if isinstance(rule, dict) and rule.get("node") != node_id]
+    if not graph["starts"]:
+        graph.pop("starts")
+    if graph.get("start") == node_id:
+        graph["start"] = follow if follow in nodes else next(iter(nodes))
+    return _checked(scene, out)
+
+
+def add_choice(scene: Doc, entity_id: str, node_id: str, text: str = "Choice") -> Doc:
+    out = copy.deepcopy(scene)
+    _config, _graph_doc, nodes = _graph(find_entity(out, entity_id))
+    node = _node(nodes, node_id)
+    node.pop("next", None)  # with choices, each choice says where the conversation goes
+    node.setdefault("choices", []).append({"text": str(text).strip() or "Choice"})
+    return _checked(scene, out)
+
+
+def set_choice(scene: Doc, entity_id: str, node_id: str, index: int, *, text: Any = _UNSET, next_line: Any = _UNSET,
+               require_flags: Any = _UNSET, forbid_flags: Any = _UNSET, set_flags: Any = _UNSET,
+               clear_flags: Any = _UNSET, add_counters: Any = _UNSET, once: Any = _UNSET) -> Doc:
+    """Edit a choice: its words, where it leads, what it needs and what it changes."""
+    out = copy.deepcopy(scene)
+    _config, _graph_doc, nodes = _graph(find_entity(out, entity_id))
+    choices = _node(nodes, node_id).get("choices") or []
+    if not 0 <= index < len(choices):
+        raise OpError("That choice isn't there any more.")
+    choice = choices[index] if isinstance(choices[index], dict) else {"text": str(choices[index])}
+    choices[index] = choice
+    if text is not _UNSET:
+        if not str(text).strip():
+            raise OpError("A choice needs some words.")
+        choice["text"] = str(text).strip()
+    if next_line is not _UNSET:
+        target = _target(nodes, next_line)
+        if target:
+            choice["next"] = target
+        else:
+            choice.pop("next", None)
+    for key, value in (("require_flags", require_flags), ("forbid_flags", forbid_flags), ("clear_flags", clear_flags)):
+        if value is not _UNSET:
+            names = flag_names(value)
+            if names:
+                choice[key] = names
+            else:
+                choice.pop(key, None)
+    if set_flags is not _UNSET:
+        names = flag_names(set_flags)
+        if names:
+            choice["set_flags"] = {name: True for name in names}
+        else:
+            choice.pop("set_flags", None)
+    if add_counters is not _UNSET:
+        steps = counter_steps(add_counters)
+        if steps:
+            choice["inc_counters"] = steps
+        else:
+            choice.pop("inc_counters", None)
+    if once is not _UNSET:
+        if once:
+            choice["once"] = True
+        else:
+            choice.pop("once", None)
+    return _checked(scene, out)
+
+
+def remove_choice(scene: Doc, entity_id: str, node_id: str, index: int) -> Doc:
+    out = copy.deepcopy(scene)
+    _config, _graph_doc, nodes = _graph(find_entity(out, entity_id))
+    node = _node(nodes, node_id)
+    choices = node.get("choices") or []
+    if not 0 <= index < len(choices):
+        raise OpError("That choice isn't there any more.")
+    del choices[index]
+    if not choices:
+        node.pop("choices", None)
+    return _checked(scene, out)
+
+
+def set_conversation(scene: Doc, entity_id: str, *, speaker: Any = _UNSET, start: Any = _UNSET, once: Any = _UNSET,
+                     auto_start: Any = _UNSET, require_flags: Any = _UNSET, forbid_flags: Any = _UNSET) -> Doc:
+    """Conversation-wide options: who speaks, the first line, and when it can happen at all."""
+    out = copy.deepcopy(scene)
+    config, graph, nodes = _graph(find_entity(out, entity_id))
+    if speaker is not _UNSET:
+        graph["speaker"] = str(speaker or "").strip()
+    if start is not _UNSET:
+        target = _target(nodes, start)
+        if not target:
+            raise OpError("Choose the line the conversation starts with.")
+        graph["start"] = target
+    if once is not _UNSET:
+        config["once"] = bool(once)
+    if auto_start is not _UNSET:
+        config["auto_start"] = bool(auto_start)
+    for key, value in (("require_flags", require_flags), ("forbid_flags", forbid_flags)):
+        if value is not _UNSET:
+            config[key] = flag_names(value)
+    return _checked(scene, out)
+
+
+def set_start_rules(scene: Doc, entity_id: str, rules: list[Doc]) -> Doc:
+    """Opening lines by flags, first match wins: ``[{node, require_flags, forbid_flags}]``."""
+    out = copy.deepcopy(scene)
+    _config, graph, nodes = _graph(find_entity(out, entity_id))
+    clean = []
+    for rule in rules:
+        target = _target(nodes, rule.get("node"))
+        if not target:
+            raise OpError("Each opening needs the line it starts with.")
+        clean.append({"node": target, "require_flags": flag_names(rule.get("require_flags")),
+                      "forbid_flags": flag_names(rule.get("forbid_flags"))})
+    if clean:
+        graph["starts"] = clean
+    else:
+        graph.pop("starts", None)
+    return _checked(scene, out)
+
+
+# --- conditions and changing state ------------------------------------------------------------
+
+
+def show_when(entity: Doc) -> tuple[list[str], list[str]]:
+    """``(flags that must be set, flags that must be clear)`` for the object to be there."""
+    config = (entity.get("behaviour_config") or {}).get("ConditionalActivator")
+    if "ConditionalActivator" not in entity_behaviours(entity) or not isinstance(config, dict):
+        return [], []
+    return list(config.get("require_flags") or config.get("flags") or []), list(config.get("forbid_flags") or [])
+
+
+def set_show_when(scene: Doc, entity_id: str, require: Any, forbid: Any) -> Doc:
+    """Show the object only while flags allow (hidden objects don't block and can't be used)."""
+    need, never = flag_names(require), flag_names(forbid)
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    if not need and not never:
+        _drop_behaviour(entity, "ConditionalActivator")
+    else:
+        config = _behaviour_config(entity, "ConditionalActivator", create=True)
+        assert config is not None
+        config.update(require_flags=need, forbid_flags=never)
+        config.pop("flags", None)
+    return _checked(scene, out)
+
+
+def picture_rules(entity: Doc) -> list[Doc]:
+    config = (entity.get("behaviour_config") or {}).get("PictureByFlags")
+    rules = config.get("pictures") if isinstance(config, dict) else None
+    return copy.deepcopy(rules) if isinstance(rules, list) else []
+
+
+def set_picture_rules(scene: Doc, entity_id: str, rules: list[Doc]) -> Doc:
+    """Pictures the object switches to while flags allow: ``[{sprite, require_flags, forbid_flags}]``."""
+    clean = []
+    for rule in rules:
+        sprite = str(rule.get("sprite") or "").strip()
+        if not sprite:
+            raise OpError("Each picture change needs a picture.")
+        clean.append({"sprite": sprite, "require_flags": flag_names(rule.get("require_flags")),
+                      "forbid_flags": flag_names(rule.get("forbid_flags"))})
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    if not clean:
+        _drop_behaviour(entity, "PictureByFlags")
+    else:
+        config = _behaviour_config(entity, "PictureByFlags", create=True)
+        assert config is not None
+        config["pictures"] = clean
+    return _checked(scene, out)
+
+
+# --- trigger zones ----------------------------------------------------------------------------
+
+
+def zone_event(entity_id: str) -> str:
+    return f"zone_entered:{entity_id}"
+
+
+def trigger_zone(entity: Doc) -> Doc | None:
+    """The object's enter-zone trigger: size, once, and what entering does; None if it has none."""
+    if "TriggerVolume" not in entity_behaviours(entity):
+        return None
+    configs = entity.get("behaviour_config") or {}
+    volume = configs.get("TriggerVolume") or {}
+    event = zone_event(str(entity.get("id")))
+    dialogue = configs.get("Dialogue") or {}
+    state = configs.get("SetGameStateOnEvent") or {}
+    sets = list((state.get("set_flags") or {}).keys()) if state.get("event_type") == event else []
+    return {"width": float(volume.get("width", 64) or 64), "height": float(volume.get("height", 64) or 64),
+            "once": bool(volume.get("one_shot", False)), "set_flags": sets,
+            "start_conversation": "Dialogue" in entity_behaviours(entity) and dialogue.get("start_event") == event}
+
+
+def set_trigger_zone(scene: Doc, entity_id: str, *, width: Any, height: Any, once: bool = True,
+                     start_conversation: bool = False, set_flags: Any = ()) -> Doc:
+    """Make the object a zone the player walks into: it can start the object's conversation
+    and set flags. Uses TriggerVolume (it announces the entry), Dialogue's start_event and
+    SetGameStateOnEvent; nothing new runs."""
+    w, h = _number(width, "The zone's width", 4, 8192), _number(height, "The zone's height", 4, 8192)
+    flags = flag_names(set_flags)
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    event = zone_event(entity_id)
+    state = (entity.get("behaviour_config") or {}).get("SetGameStateOnEvent")
+    if "SetGameStateOnEvent" in entity_behaviours(entity) and isinstance(state, dict) and state.get("event_type") not in (None, "", event):
+        raise OpError("This object already changes flags on another event; use a separate object for the zone.")
+    volume = _behaviour_config(entity, "TriggerVolume", create=True)
+    assert volume is not None
+    volume.update(volume_type="rect", width=round(w, 2), height=round(h, 2), target_tags=["player"],
+                  on_enter_event=event, on_exit_event=f"zone_left:{entity_id}", one_shot=bool(once), enabled=True)
+    dialogue = _behaviour_config(entity, "Dialogue", create=False)
+    if start_conversation:
+        if dialogue is None:
+            raise OpError("Write the conversation first (Dialogue tab), then let the zone start it.")
+        dialogue["start_event"] = event
+    elif dialogue is not None and dialogue.get("start_event") == event:
+        dialogue.pop("start_event", None)
+    if flags:
+        config = _behaviour_config(entity, "SetGameStateOnEvent", create=True)
+        assert config is not None
+        config.update(event_type=event, set_flags={name: True for name in flags}, once=bool(once))
+    elif "SetGameStateOnEvent" in entity_behaviours(entity):
+        _drop_behaviour(entity, "SetGameStateOnEvent")
+    return _checked(scene, out)
+
+
+def remove_trigger_zone(scene: Doc, entity_id: str) -> Doc:
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    event = zone_event(entity_id)
+    _drop_behaviour(entity, "TriggerVolume")
+    state = (entity.get("behaviour_config") or {}).get("SetGameStateOnEvent") or {}
+    if state.get("event_type") == event:
+        _drop_behaviour(entity, "SetGameStateOnEvent")
+    dialogue = (entity.get("behaviour_config") or {}).get("Dialogue")
+    if isinstance(dialogue, dict) and dialogue.get("start_event") == event:
+        dialogue.pop("start_event", None)
+    return _checked(scene, out)
+
+
+# --- flags ------------------------------------------------------------------------------------
+
+
+def flag_uses(rooms: dict[str, tuple[str, Doc]]) -> dict[str, list[str]]:
+    """Every flag the project mentions, with where: ``{flag: ["Cemetery: Shovel sets it", ...]}``.
+
+    ``rooms`` maps a room key to ``(label, scene)``. Flags have no separate list: a flag
+    exists because something sets or checks it.
+    """
+    found: dict[str, list[str]] = {}
+
+    def note(flag: Any, where: str) -> None:
+        name = str(flag).strip()
+        if name and where not in found.setdefault(name, []):
+            found[name].append(where)
+
+    def walk(value: Any, where: str) -> None:
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key in ("require_flags", "forbid_flags", "flags", "forbidden_flags"):
+                    for flag in flag_list(item):
+                        note(flag, f"{where} checks it")
+                elif key in ("set_flags", "clear_flags"):
+                    for flag in (item.keys() if isinstance(item, dict) else flag_list(item)):
+                        note(flag, f"{where} {'sets' if key == 'set_flags' else 'clears'} it")
+                else:
+                    walk(item, where)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item, where)
+
+    def flag_list(item: Any) -> list[str]:
+        if isinstance(item, str):
+            return [part.strip() for part in item.split(",") if part.strip()]
+        return [str(x) for x in item] if isinstance(item, list) else []
+
+    for _key, (label, scene) in rooms.items():
+        for entity in entities(scene):
+            walk({k: v for k, v in entity.items() if k not in ("x", "y")}, f"{label}: {entity.get('name') or 'object'}")
+    return dict(sorted(found.items()))

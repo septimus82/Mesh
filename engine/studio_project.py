@@ -255,6 +255,44 @@ class Project:
         self._add_tileset_to_maps(rel)
         return {"name": label, "source": rel, "count": document["tilecount"], "scaled": tile_size != ops.TILE_SIZE}
 
+    IMAGE_TYPES = (".png", ".gif", ".bmp", ".jpg", ".jpeg", ".webp")
+
+    def import_sprite(self, image_path: Path | str) -> str:
+        """Copy a picture into ``assets/sprites/`` (as PNG, transparency kept) and return its
+        project-relative path. An image already inside the project is used where it is."""
+        from PIL import Image  # noqa: PLC0415
+
+        source = Path(str(image_path).strip().strip('"'))
+        if not source.is_file():
+            raise ops.OpError(f"There is no file at {source}.")
+        try:
+            inside = source.resolve().relative_to(self.root.resolve())
+        except ValueError:
+            inside = None
+        if inside is not None:
+            return inside.as_posix()
+        try:
+            with Image.open(source) as img:
+                image = img.convert("RGBA")
+        except (OSError, ValueError) as exc:
+            raise ops.OpError(f"{source.name} isn't an image Mesh can read.") from exc
+        folder = self.root / "assets" / "sprites"
+        folder.mkdir(parents=True, exist_ok=True)
+        stem, n = ops.slug(source.stem) or "sprite", 2
+        candidate = stem
+        while (folder / f"{candidate}.png").exists():
+            candidate, n = f"{stem}_{n}", n + 1
+        image.save(folder / f"{candidate}.png")
+        return f"assets/sprites/{candidate}.png"
+
+    def images(self) -> list[str]:
+        """Every picture under ``assets/`` (tilesets aside), project-relative, sprites first."""
+        assets = self.root / "assets"
+        found = [p for p in assets.rglob("*") if p.suffix.lower() in self.IMAGE_TYPES and "tilesets" not in p.parts
+                 and "templates" not in p.parts] if assets.is_dir() else []
+        rel = [p.relative_to(self.root).as_posix() for p in found]
+        return sorted(rel, key=lambda r: (not r.startswith("assets/sprites/"), r.lower()))
+
     def _add_tileset_to_maps(self, tileset_rel: str) -> None:
         counts: dict[str, int] = {}
         for key, _label, _path in self.rooms():
