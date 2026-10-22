@@ -57,8 +57,21 @@ Switching to another toolkit (Qt, Dear ImGui) was not justified: it brings a new
 | (this branch) | Tests asserting the old Esc→Settings and F9→pause behaviour rewritten to the new contract (`test_game_loop.py`, `test_game_input_capture_regression.py`, `test_authoring_copy_coords_hotkey.py`). Two load-failure tests narrowed from "no toast" to "never a *Loaded* toast". | Behaviour changed deliberately; assertions kept to the same strength. | Archive tag. |
 | `154691d` | Root leftovers: `last_implementation.md`, `task_summary*.md` (3), `rathena_packet_table_20190605.txt`, `Act1/Act2_ContentPlan.md`. Untracked and ignored `.pytest-gate-deps/` (224 test-run files). | No references anywhere (git grep). | `git checkout archive/pre-redesign-2026-10 -- <path>` |
 | `f871855` | New `blank`/`starter` projects no longer receive the monster game's data, sprites and sounds. New opt-in `monster` template keeps the test game reproducible; the monster boot tests use it. | The monster game is a test project, not the product. | Use `--template monster`; or the archive tag. |
+| (Milestone 4) | The pyglet 1.5 `_event_queue` patch in generated `main.py`; the generated file now sets the DPI mode and loads the engine inside `main()` (lint-clean, no suppressions). | The engine runs on pyglet 2.1, so the patch did nothing. Its imports-after-code tripped E402 in every new game. | `git show archive/pre-redesign-2026-10:engine/project_scaffold.py` |
+| (Milestone 4) | The recent-projects list moved from `<engine>/projects.json` to the user's profile (`%APPDATA%/Mesh/projects.json`). The tracked `projects.json` is kept but no longer read or written. | Opening a project changed the engine folder; the list belongs to a person, not a checkout. | `MESH_PROJECTS_PATH=<engine>/projects.json` restores the old location. |
+| (Milestone 4) | `lighting_playground` and `demo_slice` are no longer offered to beginners (the launcher shows `blank` and `adventure`). Both still exist for `mesh new --template` and their tests. | Older scene layout (`layers.entities`, `type: npc`); Mesh Studio can't edit it. | Unchanged; set `launcher=True` in `engine/project_templates.py`. |
 | `c14f722` | `engine/entity_view.py` (never wired in) and `engine/sprite_animator.py` (duplicate of `animation.py`), with their dedicated tests and baseline entries. | No production importers (git grep, string references included). | Archive tag. |
 
 **Checked and kept, contrary to the audit's first pass:** `scene_controller_impl.py` is imported by `scene_controller.py`. `tweens.py` and `tilemap_resize.py` are unused but generic and tested, and likely wanted by tile painting. `editor_controller_core.py` goes with the legacy editor, not piecemeal.
 
 Further removals are listed under "Next" in `MESH_REBUILD.md`.
+
+## Duplicates found in Milestone 4, and what was done
+
+| System | Status | Depends on it |
+|---|---|---|
+| **Project browser in the game's main menu** (`engine/ui_overlays/main_menu_overlay.py`): recent list, create from template. | **Kept** for the legacy flow. Not duplicated: the new launcher and this browser share one registry (`engine/projects.py`), one scaffold (`create_project`) and one template list (`list_templates`). Retire it with the legacy editor. | Legacy editor workspace (`engine/editor/editor_workspace_controller.py`), `tests/test_project_browser_*`. |
+| **`WorkspacePaths.projects_path`** (`engine/editor/editor_workspace_model.py`) | Still reports `<repo>/projects.json`, which is informational only (nothing reads the list through it). | `tests/test_editor_workspace_model_contract.py`, `tests/test_editor_workspace_policy_contract.py`. |
+| **Studio look and widgets** (colours, button styles, the text field and its clipboard keys, OS file pickers) | **Consolidated** into `engine/studio_ui.py`, used by both Mesh Studio and the launcher. | — |
+| **`mesh.bat`** (CLI shim) vs **`Mesh Engine.bat`** (double-click launcher) | Both kept: different jobs. `mesh.bat` runs `mesh_cli` commands; `Mesh Engine.bat` opens the launcher. | — |
+

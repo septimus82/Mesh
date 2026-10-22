@@ -2,13 +2,17 @@
 
 Branch: `redesign/visual-editor` (from `52d43a4`; original preserved as tag `archive/pre-redesign-2026-10`). Not merged to `main`; it awaits review.
 
-Try it: `mesh new mygame`, then `cd mygame` and `mesh edit` (or `py -3.13 -m mesh_cli new|edit` with `PYTHONPATH` set to this checkout). Then:
-- **Paint:** under **Map**, choose a layer (Ground / Walls / Above) and a tool (Brush / Rect / Fill), click a tile, and paint on the map. Drag across several tiles for a stamp.
+Try it: double-click **`Mesh Engine.bat`** in the engine folder. In the launcher:
+1. Click **New Project**, pick **Top-down Adventure** (or **Blank Project**), name it, then **Create & Open**.
+2. Mesh Studio opens on your game.
+
+In the Studio:
+- **Paint:** under **Map**, choose a layer (Ground / Walls / Above) and a tool (Brush / Rect / Fill), click a tile, and paint. Drag across several tiles for a stamp.
 - **Import your own tileset:** **Import...**
-- **Erase:** **Eraser**.
-- **Back to Select:** Esc.
-- **Copy and paste an object:** Ctrl+C / Ctrl+V.
 - **Play:** F4.
+- **Save:** Ctrl+S.
+
+Next time, your game is under **Recent projects**. From a terminal: `mesh new <name>` and `mesh edit <folder>` still work.
 
 ## Milestone 1 — the first creation workflow
 
@@ -170,6 +174,57 @@ The Milestone 1 and 2 acceptance tests pass on the same code (15/15 and 23/23).
 2. **The click-logger was garbage-collected at once.** Pyglet keeps only weak references to event handlers. Found because the log stayed empty.
 3. **Labels split words.** Long multi-line labels broke words in the middle; the import form now uses one short line per sentence.
 
+## Milestone 4 — project launcher and templates
+
+**Goal:** open Mesh, choose what to make, start creating, without a terminal or environment variables. Details: [`docs/reviews/milestone4_launcher.md`](docs/reviews/milestone4_launcher.md).
+
+### Acceptance criteria and status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| The tenth failure fixed at its cause | **Done** | The ruff gate skips untracked game projects inside the checkout and still lints engine code. Games are kept out of the engine folder by default. Generated code is lint-clean with no suppressions. `mygame/` is untouched. |
+| Double-clickable entry point | **Done** | `Mesh Engine.bat`: sets the engine path itself and runs the launcher without a console. |
+| Welcome screen, New and Open Project | **Done** | The "Mesh Engine" launcher. **Open Project...** uses the Windows folder picker. |
+| Recent projects that persist | **Done** | Kept in `%APPDATA%\Mesh\projects.json` (the existing registry, moved out of the engine folder). A missing project is shown red, with Remove. |
+| Name, destination, template picker with descriptions | **Done** | Picture cards drawn from what each template builds; a live "will be created in..." line. |
+| Clear, non-destructive validation | **Done** | Every check runs before anything touches the disk: empty or invalid names, relative paths, the engine folder, existing folders or projects, missing `config.json`, moved projects. Nothing is overwritten. |
+| Create & Open; open Mesh Studio directly | **Done** | The Studio starts as its own process on the game; the launcher steps aside once it shows. |
+| Blank Project | **Done** | A grass map, the player and the Person object type. No monster, battle, quest or demo files (checked). |
+| Top-down Adventure | **Done** | A village and a house linked by doors, collision, a Guide with dialogue, a Grandma indoors, the starter tileset, save and load in the Esc menu. Built with `project_ops`. |
+| Extensible template definitions | **Done** | One `Template` entry and one builder per genre; the launcher lists those marked `launcher=True`. |
+| Old templates hidden, recoverable | **Done** | `lighting_playground` and `demo_slice` (older scene layout) are kept for the CLI and hidden from the launcher. |
+| Studio protects unsaved work on close | **Done** | The first close warns; a second close leaves. |
+
+### How it was validated
+
+**Real window:** `tooling/acceptance_launcher.py`, **20/20**:
+- launch via the `.bat`;
+- create a Top-down Adventure in a folder with spaces and non-ASCII letters, picked in the Windows folder picker;
+- edit the map and the dialogue, play and talk, save;
+- close with the X button, relaunch, reopen from Recent projects, check everything persisted;
+- create a Blank project, check it is clean, add a room and an object, play;
+- open a Milestone 3 project and a copy of `mygame`, both unchanged;
+- five bad-path cases;
+- `git status` identical before and after.
+
+**Regression:** Milestone 1 15/15, Milestone 2 23/23, Milestone 3 15/15.
+
+**Headless:** `tests/test_launcher_and_templates.py` (12).
+
+**Full suite:** 9 failed, 9,296 passed. These are exactly the 9 baseline failures. The ruff-gate failure from Milestone 3 is gone, with `mygame/` still in place. The ruff gate and mypy island are clean.
+
+**Not validated:**
+- A literal double-click in Explorer. The test runs the same `.bat` through `cmd`.
+- Another Windows account, or a machine without Python 3.13. The `.bat` explains what to install, but this was not tried.
+- **Nobody has used the launcher by hand yet.**
+
+### Bugs found and fixed while building it
+
+1. **The ignored start-up clicks were the test driver.** It attached to a stale same-titled window, and its minimise-and-restore foreground trick left windows deactivated. It now refuses ambiguous titles and focuses with a title-bar click (see the review doc).
+2. **Studio closed without asking.** Closing the window lost unsaved changes silently; now it warns.
+3. **Enter created a project.** In an early launcher, pressing Enter in the name field created a game in the default folder. It was caught in a probe; the stray folder, created at 19:53 that day, was removed. Enter now only confirms the field.
+4. **The test-session guard was incomplete.** It protected only the repo's `projects.json`; the user's recent list, user folder and default games folder are now isolated for every test.
+
 ## Known limitations (honest list)
 
 - **Placeholder character art.** Still the coloured-square sheet; the owner's decision.
@@ -196,7 +251,7 @@ All recorded with restore instructions in `MESH_SALVAGE.md`:
 ## Next slices, in order
 
 1. **AI on the same operations:** MCP `apply_ops` / live ops call `engine/project_ops`, proposals become a thin preview wrapper, and `OP_CATALOG` is generated.
-2. **Visual project launcher and template selection.**
+2. **Launcher follow-ups:** return to the launcher when the Studio closes; rename, move or delete projects; a packaged build.
 3. **Monster code as a plugin** via `PluginManager`; project-scoped `behaviours/` folder for custom scripts.
 4. **Archive the legacy editor and Creator Mode** only once the Studio covers what it still lacks. The inventory is in `docs/reviews/milestone3_map_tools.md`:
    - quest, item and prefab editors;
