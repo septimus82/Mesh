@@ -206,6 +206,8 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
     apply_template(root, template_id)
     for rel_path in _STARTER_FILES:
         _copy_engine_asset(rel_path, root)
-    _copy_monster_starter_pack(root)
+    # The monster game was a test project; only its own template ships its data.
+    if template_id == "monster":
+        _copy_monster_starter_pack(root)
 
     _LOG.info("Project created successfully.")

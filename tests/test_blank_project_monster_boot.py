@@ -21,7 +21,7 @@ from tests._typing import as_any
 @pytest.mark.fast
 def test_blank_project_scaffold_is_schema_valid(tmp_path: Path) -> None:
     root = tmp_path / "monster_game"
-    create_project(root, "Monster Game", template_id="blank")
+    create_project(root, "Monster Game", template_id="monster")
 
     config = __import__("json").loads((root / "config.json").read_text(encoding="utf-8"))
     validate(config, "config.schema.json", root / "config.json")
@@ -39,7 +39,7 @@ def test_blank_project_scaffold_is_schema_valid(tmp_path: Path) -> None:
 @pytest.mark.fast
 def test_blank_project_loads_scene_and_monster_catalog(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = tmp_path / "monster_game"
-    create_project(root, "Monster Game", template_id="blank")
+    create_project(root, "Monster Game", template_id="monster")
 
     monkeypatch.chdir(root)
     reset_path_caches()
@@ -59,7 +59,7 @@ def test_blank_project_loads_scene_and_monster_catalog(tmp_path: Path, monkeypat
 @pytest.mark.fast
 def test_blank_project_f8_companion_battle_starts(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = tmp_path / "monster_game"
-    create_project(root, "Monster Game", template_id="blank")
+    create_project(root, "Monster Game", template_id="monster")
 
     monkeypatch.chdir(root)
     reset_path_caches()

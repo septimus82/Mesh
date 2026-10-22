@@ -29,6 +29,7 @@ def list_templates() -> list[Template]:
         Template("lighting_playground", "Lighting Playground", "Scene with lights, occluders, and fog preset."),
         Template("demo_slice", "Demo Slice", "Interactive scene with NPC, quest, and gameplay mechanics."),
         Template("starter", "Starter Room", "Walkable player and a Guide NPC who says hello."),
+        Template("monster", "Monster Test Game", "Blank room plus the companion-monster test data (species, moves, battle sprites, sounds)."),
     ]
 
 
@@ -47,6 +48,8 @@ def apply_template(root: Path, template_id: str) -> None:
         _apply_demo_slice(root)
     elif template_id == "starter":
         _apply_starter(root)
+    elif template_id == "monster":
+        _apply_blank(root)  # the monster data itself is copied by create_project
     else:
         _LOG.warning("Unknown template '%s', defaulting to blank", template_id)
         _apply_blank(root)
