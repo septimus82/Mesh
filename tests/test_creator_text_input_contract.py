@@ -71,6 +71,36 @@ def test_window_typing_uses_layout_and_shift_without_doubling(window) -> None:
     assert creator.build_snapshot().add_person_panel.line == "Hej! Åsa?"
 
 
+def test_escape_unfocuses_field_even_over_an_active_tour(window) -> None:
+    from engine import arcade_fallback
+
+    editor = window.editor_controller
+    creator = editor.creator_mode
+    tour = editor.tour
+    assert tour.is_active  # a fresh project: Shift+F5 opens Creator over the first-launch tour
+    _focus_person_line(window)
+
+    window.on_key_press(arcade_fallback.key.ESCAPE, 0)
+    assert not creator.text_field_focused  # Esc unfocused the field...
+    assert tour.is_active and creator.active  # ...and did nothing else
+
+    window.on_key_press(arcade_fallback.key.ESCAPE, 0)  # unfocused Esc: normal effect (skip the tour)
+    assert not tour.is_active and creator.active
+
+    window.on_key_press(arcade_fallback.key.L, 0)  # shortcuts work again after unfocus
+    assert editor.lights_tool_active is True
+
+
+def test_enter_while_typing_does_not_advance_the_tour(window) -> None:
+    from engine import arcade_fallback
+
+    tour = window.editor_controller.tour
+    step = tour.current_step
+    _focus_person_line(window)
+    window.on_key_press(arcade_fallback.key.ENTER, 0)
+    assert tour.is_active and tour.current_step == step
+
+
 def test_focused_typing_does_not_fire_editor_shortcuts(window) -> None:
     from engine import arcade_fallback
 

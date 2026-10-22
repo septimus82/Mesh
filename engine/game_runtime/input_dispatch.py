@@ -79,7 +79,11 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
     # First-launch tour: intercept Enter (advance) and Esc (skip) when the tour is active.
     # Guard with editor.active so keys are not swallowed during main-menu / project-browser.
     tour = getattr(editor, "tour", None) if editor_active else None
-    if tour is not None and getattr(tour, "is_active", False):
+    # A focused Creator field owns Enter/Esc (Esc unfocuses it). Creator Mode can open over a
+    # still-active tour, which would otherwise swallow these keys while the user types.
+    creator = getattr(editor, "creator_mode", None) if editor_active else None
+    typing_in_creator = bool(getattr(creator, "text_field_focused", False))
+    if tour is not None and getattr(tour, "is_active", False) and not typing_in_creator:
         if key in (optional_arcade.arcade.key.RETURN, optional_arcade.arcade.key.ENTER,
                    optional_arcade.arcade.key.NUM_ENTER):
             advance = getattr(tour, "advance", None)
