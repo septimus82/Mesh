@@ -146,6 +146,10 @@ class SpriteAnimatorBehaviour(Behaviour):
                             if t:
                                 textures.append(t)
 
+                if definition.get("flip_x") and textures:
+                    # Mirrored frames: one sheet of right-facing frames also gives walk_left.
+                    textures = [texture.flip_left_right() for texture in textures]
+
                 # Store config
                 self.animation_configs[name] = {
                     "fps": float(definition.get("fps", self.config.get("animation_frame_rate", 8.0))),

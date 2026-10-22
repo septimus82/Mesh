@@ -36,6 +36,10 @@
         "$ref": "#/$defs/behaviourEntry"
       }
     },
+    "flip_x": {
+      "type": "boolean",
+      "description": "Show the sprite mirrored left-to-right."
+    },
     "components": {
       "type": "object",
       "description": "Runtime components. 'collider' replaces the sprite-sized box in movement collision: a circle (r) or a box footprint (w, h), each with an optional offset from the sprite's centre.",

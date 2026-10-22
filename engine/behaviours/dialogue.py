@@ -118,6 +118,7 @@ class Dialogue(Behaviour):
         self._read_flag_conditions(merged)
         self._script = self._build_script(merged)
         self._graph_nodes, self._graph_start = self._build_graph(merged)
+        self._graph_starts = self._build_starts(merged)
         self._owner_id = f"dialogue::{self.entity_name}"
         self._pending_auto = self.auto_start
         self._active = False
@@ -142,6 +143,7 @@ class Dialogue(Behaviour):
         merged = self._merge_entity_data(self.entity, self.config)
         self._script = self._build_script(merged)
         self._graph_nodes, self._graph_start = self._build_graph(merged)
+        self._graph_starts = self._build_starts(merged)
         if not self._active:
             self._has_played = False  # an edited "once" line should be hearable again
 
@@ -157,10 +159,13 @@ class Dialogue(Behaviour):
         A pending auto_start keeps waiting until they do, so ``auto_start`` with
         ``require_flags`` means "start as soon as these flags are set".
         """
+        return self._flags_ok(self.require_flags, self.forbid_flags)
+
+    def _flags_ok(self, require: list[str], forbid: list[str]) -> bool:
         getter = getattr(self.window, "get_flag", None)
         if not callable(getter):
-            return not self.require_flags
-        return all(getter(flag) for flag in self.require_flags) and not any(getter(flag) for flag in self.forbid_flags)
+            return not require
+        return all(getter(flag) for flag in require) and not any(getter(flag) for flag in forbid)
 
     @staticmethod
     def _merge_entity_data(entity: Sprite, config: Dict[str, Any] | None) -> Dict[str, Any]:
@@ -243,6 +248,22 @@ class Dialogue(Behaviour):
         if not start_node:
             start_node = fallback_start
         return (normalized, start_node)
+
+    def _build_starts(self, data: Dict[str, Any]) -> list[dict[str, Any]]:
+        """Conditional first lines: ``dialogue.starts = [{node, require_flags, forbid_flags}]``.
+
+        Like an RPG Maker event's pages: the first rule whose flags allow it picks the line the
+        conversation opens with ("the grave is already open"); otherwise it opens at ``start``.
+        """
+        root = data.get("dialogue")
+        rules = root.get("starts") if isinstance(root, dict) else None
+        out: list[dict[str, Any]] = []
+        for rule in rules if isinstance(rules, list) else []:
+            node = str(rule.get("node", "")).strip() if isinstance(rule, dict) else ""
+            if node:
+                out.append({"node": node, "require_flags": self._normalize_flag_list(rule.get("require_flags")),
+                            "forbid_flags": self._normalize_flag_list(rule.get("forbid_flags"))})
+        return out
 
     def _iter_nodes(self, nodes_root: Any) -> Iterable[tuple[str, dict[str, Any]]]:
         if isinstance(nodes_root, dict):
@@ -526,6 +547,10 @@ class Dialogue(Behaviour):
         if not self._graph_nodes:
             return False
         start_id = self._graph_start or next(iter(self._graph_nodes))
+        for rule in self._graph_starts:
+            if rule["node"] in self._graph_nodes and self._flags_ok(rule["require_flags"], rule["forbid_flags"]):
+                start_id = rule["node"]
+                break
         self._graph_active = True
         self._current_node_id = start_id
         return self._show_node(start_id)

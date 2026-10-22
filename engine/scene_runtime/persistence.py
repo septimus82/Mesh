@@ -179,6 +179,7 @@ _AUTHORED_ENTITY_FIELDS = {
     "dialogue_lines",
     "encounter_cost",
     "encounter_group",
+    "flip_x",
     "follow_speed",
     "follow_target",
     "forbid_flags",

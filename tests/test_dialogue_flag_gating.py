@@ -63,3 +63,29 @@ def test_auto_start_does_not_cut_off_another_speaker_or_eat_their_closing_press(
     window.input.release(optional_arcade.arcade.key.E)
     _frame(window, grave, keeper)
     assert window.dialogue_box.get_current_entry()["text"] == "Who's there?"
+
+
+def test_start_rules_pick_the_opening_line_from_flags() -> None:
+    window = FlagWindow()
+    grave = DummyEntity("Grave", [])
+    grave.mesh_entity_data = {}
+    dialogue = {"start": "bare", "nodes": {
+        "bare": {"text": "I cannot dig with my bare hands."},
+        "dig": {"text": "Start digging?"},
+        "open": {"text": "The grave is already open."}},
+        "starts": [{"node": "open", "require_flags": ["dug"]}, {"node": "dig", "require_flags": ["has_shovel"]}]}
+    behaviour = Dialogue(grave, window, dialogue=dialogue, once=False)
+    player = DummyEntity("Player", [])
+
+    def opening() -> str:
+        behaviour.on_interact(window, player)
+        text = window.dialogue_box.get_current_entry()["text"]
+        window.dialogue_box.clear()
+        _frame(window, behaviour)
+        return text
+
+    assert opening() == "I cannot dig with my bare hands."
+    window.flags["has_shovel"] = True
+    assert opening() == "Start digging?"
+    window.flags["dug"] = True
+    assert opening() == "The grave is already open."  # first matching rule wins

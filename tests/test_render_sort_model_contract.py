@@ -10,6 +10,8 @@ Tests cover:
 
 from __future__ import annotations
 
+import pytest
+
 from engine.render_sort_model import (
     compute_render_sort_key,
     compute_sprite_render_sort_key,
@@ -152,6 +154,7 @@ class TestSpriteRenderSorting:
         key = compute_sprite_render_sort_key(sprite, sort_mode="y_sort")
         assert key[1] == -75.0
 
+    @pytest.mark.fast
     def test_sprites_compare_where_they_stand_not_their_centres(self) -> None:
         """A grave whose base is above a person's feet is behind them, even with its centre
         lower than theirs (the cemetery grave that was drawn over Ezekiel's head)."""

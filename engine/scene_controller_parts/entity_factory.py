@@ -61,6 +61,8 @@ def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
             )
             return None
 
+        if entity.get("flip_x") and hasattr(texture, "flip_left_right"):
+            texture = texture.flip_left_right()  # a mirrored picture (facing the other way)
         sprite = scene_controller_module.optional_arcade.arcade.Sprite()
         sprite.texture = texture
         # Logic-only entities (arrival spots, triggers) keep the placeholder for their
