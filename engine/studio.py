@@ -61,10 +61,27 @@ def _snap(value: float) -> float:
     return float(round(value / GRID) * GRID)
 
 
+def _line_cells(a: tuple[int, int], b: tuple[int, int]) -> list[tuple[int, int]]:
+    """Every cell on the straight line from ``a`` to ``b`` (inclusive): a fast drag leaves no gaps."""
+    (x0, y0), (x1, y1) = a, b
+    dx, dy = abs(x1 - x0), -abs(y1 - y0)
+    sx, sy = (1 if x1 > x0 else -1), (1 if y1 > y0 else -1)
+    err, cells = dx + dy, []
+    while True:
+        cells.append((x0, y0))
+        if (x0, y0) == (x1, y1):
+            return cells
+        e2 = 2 * err
+        if e2 >= dy:
+            err, x0 = err + dy, x0 + sx
+        if e2 <= dx:
+            err, y0 = err + dx, y0 + sy
+
+
 class _Field(gui.UIInputText):
     """Single-line text field whose caret lands at the end when you click into it.
 
-    optional_arcade.arcade.gui's own click handling leaves the caret at position 0, so clicking a
+    arcade.gui's own click handling leaves the caret at position 0, so clicking a
     field and typing would put the new text in front of the old.
     """
 
@@ -100,6 +117,12 @@ class Studio:
         self._focusable: dict[str, gui.UIInputText] = {}
         self._labels: dict[str, optional_arcade.arcade.Text] = {}
         self.prefabs = self._load_prefabs()
+        self.tool = "select"  # select | paint | erase
+        self.brush: dict[str, Any] | None = None  # the tileset entry being painted: {gid, label, layer}
+        self.stroke: dict[str, Any] | None = None  # a brush stroke in progress: {"cells": [...], "last": cell}
+        self.tileset = project.tileset()
+        self.tile_textures = self._load_tile_textures()
+        self._palette_buttons: dict[int, Any] = {}
 
         self.ui = gui.UIManager(window)
         self.play_ui = gui.UIManager(window)
@@ -118,6 +141,21 @@ class Studio:
             return []
         return [p for p in data if isinstance(p, dict) and isinstance(p.get("entity"), dict) and p.get("id")]
 
+    def _load_tile_textures(self) -> dict[int, Any]:
+        """Palette and preview textures, cut from the same tileset image the game loads."""
+        from PIL import Image  # noqa: PLC0415
+
+        ts = self.tileset
+        image = Image.open(ts["image"]).convert("RGBA")
+        columns = max(1, image.width // ts["tilewidth"])
+        textures = {}
+        for tile in ts["tiles"]:
+            local = tile["gid"] - 1
+            x, y = (local % columns) * ts["tilewidth"], (local // columns) * ts["tileheight"]
+            crop = image.crop((x, y, x + ts["tilewidth"], y + ts["tileheight"]))
+            textures[tile["gid"]] = optional_arcade.arcade.Texture(crop, hash=f"mesh-studio-tile-{ts['image']}-{local}")
+        return textures
+
     def _install_documents(self) -> None:
         docs = self.window.scene_loader.documents
         docs.clear()
@@ -135,6 +173,14 @@ class Studio:
         self.window.set_caption(f"Mesh Studio - {self.project.label(self.project.current)}")
 
     def _center_on_room(self) -> None:
+        """Frame the room: its whole map if it has one, otherwise its objects."""
+        info = ops.map_info(self.project.scene())
+        if info is not None:
+            map_w, map_h = info["width"] * info["tilewidth"], info["height"] * info["tileheight"]
+            self.cam = [map_w / 2, map_h / 2]
+            left, right, bottom, top = self._map_rect()
+            self.zoom = max(0.25, min(1.5, 0.95 * min((right - left) / map_w, (top - bottom) / map_h)))
+            return
         points = [(float(e.get("x", 0)), float(e.get("y", 0))) for e in ops.entities(self.project.scene())]
         if points:
             xs, ys = zip(*points)
@@ -227,7 +273,7 @@ class Studio:
     def switch_room(self, key: str) -> None:
         self._flush_fields()
         self.project.current = key
-        self.selected, self.place_prefab, self.panel = None, None, "inspect"
+        self.selected, self.place_prefab, self.panel, self.stroke = None, None, "inspect", None
         self._reload(recenter=True)
         self._rebuild()
         self._say(f"Editing {self.project.label(key)}.")
@@ -270,6 +316,53 @@ class Studio:
         if self.place_prefab:
             self._say(f"Click on the map to place {prefab.get('display_name', prefab['id'])}. Esc cancels.")
 
+    # -------------------------------------------------------------------- map tools
+    def use_select(self) -> None:
+        self.tool, self.brush, self.stroke = "select", None, None
+        self._rebuild()
+        self._say("Select: click an object to edit it, drag to move it.")
+
+    def pick_brush(self, tile: dict[str, Any]) -> None:
+        self._flush_fields()
+        self.place_prefab, self.stroke = None, None
+        self.tool, self.brush = "paint", tile
+        self._rebuild()
+        kind = "blocks movement" if tile["layer"] == ops.WALLS else "walkable"
+        self._say(f"Painting {tile['label']} ({kind}). Click or drag on the map. Esc goes back to Select.")
+
+    def use_eraser(self) -> None:
+        self._flush_fields()
+        self.place_prefab, self.stroke = None, None
+        self.tool, self.brush = "erase", None
+        self._rebuild()
+        self._say("Eraser: click or drag to remove tiles (walls and obstacles first, then the ground).")
+
+    def add_map_here(self) -> None:
+        try:
+            self.project.add_map()
+        except ops.OpError as err:
+            self._say(str(err), ok=False)
+            return
+        self._reload(recenter=True)
+        self._rebuild()
+        self._say("Added a map to this room. Pick a tile on the left and paint.")
+
+    def _cell_under(self, x: float, y: float) -> tuple[int, int] | None:
+        info = ops.map_info(self.project.scene())
+        return ops.cell_at(info, *self._to_world(x, y)) if info is not None else None
+
+    def _commit_stroke(self) -> None:
+        """Apply the finished stroke as one edit, so one Undo takes back the whole stroke."""
+        stroke, self.stroke = self.stroke, None
+        if not stroke or not stroke["cells"]:
+            return
+        cells = list(dict.fromkeys(stroke["cells"]))
+        if self.tool == "erase":
+            self._edit(lambda s: ops.erase_tiles(s, cells), f"Erased {len(cells)} tile(s).")
+        elif self.brush is not None:
+            layer, gid = self.brush["layer"], self.brush["gid"]
+            self._edit(lambda s: ops.paint_tiles(s, layer, cells, gid), f"Painted {len(cells)} tile(s).")
+
     def place_at(self, wx: float, wy: float) -> None:
         prefab, self.place_prefab = self.place_prefab, None
         created: list[str] = []
@@ -299,7 +392,8 @@ class Studio:
         try:
             key = self.project.add_room(label)
             if door_at is not None:
-                self.project.link_rooms(origin, door_at, key, (256.0, 128.0))
+                # Inside the new room's wall border, with its arrival spot beside the player.
+                self.project.link_rooms(origin, door_at, key, (256.0, 224.0))
         except ops.OpError as err:
             self.pending_door_at = door_at
             self._say(str(err), ok=False)
@@ -314,7 +408,9 @@ class Studio:
     def add_door_to(self, key: str, at: tuple[float, float]) -> None:
         target_scene = self.project.scene(key)
         player = next((e for e in ops.entities(target_scene) if e.get("tag") == "player"), None)
-        far = (float(player["x"]) + 128.0, float(player["y"])) if player else (256.0, 128.0)
+        # The far door goes above-right of that room's player, so its arrival spot (below the
+        # door) lands at the player's height rather than off the map or in a wall.
+        far = (float(player["x"]) + 128.0, float(player["y"]) + 96.0) if player else (256.0, 224.0)
         try:
             self.project.link_rooms(self.project.current, at, key, far)
         except ops.OpError as err:
@@ -434,22 +530,57 @@ class Studio:
         return bar
 
     def _left_panel(self) -> gui.UIBoxLayout:
+        width = LEFT_W - 20
         box = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
         box.add(self._label("Rooms", bold=True, size=12))
         for key, label, _path in self.project.rooms():
             style = S_ACTIVE if key == self.project.current else S_BUTTON
-            box.add(self._button(label, lambda k=key: self.switch_room(k), width=LEFT_W - 20, style=style))
-        box.add(self._button("+ New room", self._open_new_room, width=LEFT_W - 20))
-        box.add(gui.UISpace(height=14))
+            box.add(self._button(label, lambda k=key: self.switch_room(k), width=width, style=style))
+        box.add(self._button("+ New room", self._open_new_room, width=width))
+        box.add(gui.UISpace(height=10))
+        box.add(self._map_section(width))
+        box.add(gui.UISpace(height=10))
         box.add(self._label("Objects", bold=True, size=12))
         if not self.prefabs:
-            box.add(self._label("This project has no objects in assets/prefabs.json.", color=C_MUTED, width=LEFT_W - 20))
+            box.add(self._label("This project has no objects in assets/prefabs.json.", color=C_MUTED, width=width))
         for prefab in self.prefabs:
             style = S_ACTIVE if prefab is self.place_prefab else S_BUTTON
             text = str(prefab.get("display_name") or prefab["id"])
-            box.add(self._button(text, lambda p=prefab: self.arm_place(p), width=LEFT_W - 20, style=style))
+            box.add(self._button(text, lambda p=prefab: self.arm_place(p), width=width, style=style))
         box.add(self._label("Click one, then click the map.", color=C_MUTED, size=10))
         return box
+
+    def _map_section(self, width: int) -> gui.UIBoxLayout:
+        box = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
+        box.add(self._label("Map", bold=True, size=12))
+        self._palette_buttons = {}
+        if ops.map_info(self.project.scene()) is None:
+            box.add(self._label("This room has no map yet.", color=C_MUTED, width=width))
+            box.add(self._button("Add a map", self.add_map_here, width=width, style=S_ACTIVE))
+            return box
+        tools = gui.UIBoxLayout(vertical=False, space_between=6)
+        half = (width - 6) // 2
+        tools.add(self._button("Select", self.use_select, width=half, style=S_ACTIVE if self.tool == "select" else S_BUTTON))
+        tools.add(self._button("Eraser", self.use_eraser, width=half, style=S_ACTIVE if self.tool == "erase" else S_BUTTON))
+        box.add(tools)
+        for layer, title in ((ops.GROUND, "Ground"), (ops.WALLS, "Walls & obstacles (block)")):
+            box.add(self._label(title, color=C_MUTED, size=10))
+            tiles = [t for t in self.tileset["tiles"] if t["layer"] == layer]
+            for start in range(0, len(tiles), 6):
+                row = gui.UIBoxLayout(vertical=False, space_between=3)
+                for tile in tiles[start:start + 6]:
+                    texture = self.tile_textures[tile["gid"]]
+                    button = gui.UITextureButton(texture=texture, texture_hovered=texture, texture_pressed=texture,
+                                                 width=32, height=32)
+                    button.on_click = lambda _e, t=tile: self._palette_click(t)
+                    self._palette_buttons[tile["gid"]] = button
+                    row.add(button)
+                box.add(row)
+        return box
+
+    def _palette_click(self, tile: dict[str, Any]) -> None:
+        self.menu = None
+        self.pick_brush(tile)
 
     def _open_new_room(self, door_at: tuple[float, float] | None = None) -> None:
         self.pending_door_at = door_at
@@ -639,6 +770,11 @@ class Studio:
         w.camera_controller.use_gui_camera()
         self._draw_panels()
         self.ui.draw()
+        if self.tool == "paint" and self.brush is not None:
+            button = self._palette_buttons.get(self.brush["gid"])
+            if button is not None:
+                optional_arcade.arcade.draw_lrbt_rectangle_outline(
+                    button.left - 2, button.right + 2, button.bottom - 2, button.top + 2, (255, 230, 120), 2)
         self._dump_layout()
         return True
 
@@ -651,12 +787,18 @@ class Studio:
         if self._dump_tick % 10:
             return
         keys = {id(field): key for key, field in self._focusable.items()}
+        by_gid = {t["gid"]: t for t in self.tileset["tiles"]}
+        palette = {id(button): by_gid[gid] for gid, button in self._palette_buttons.items()}
         widgets = []
         for manager in (self.ui, self.play_ui):
             for widget in manager.walk_widgets():
                 rect = [widget.left, widget.bottom, widget.width, widget.height]
                 if isinstance(widget, gui.UIFlatButton):
                     widgets.append({"type": "button", "text": widget.text, "rect": rect, "disabled": widget.disabled})
+                elif isinstance(widget, gui.UITextureButton) and id(widget) in palette:
+                    tile = palette[id(widget)]
+                    widgets.append({"type": "tile", "gid": tile["gid"], "text": tile["label"], "layer": tile["layer"],
+                                    "rect": rect})
                 elif isinstance(widget, gui.UIInputText):
                     widgets.append({"type": "field", "key": keys.get(id(widget)), "text": widget.text, "rect": rect,
                                     "active": widget.active})
@@ -669,7 +811,7 @@ class Studio:
             x0, y0 = self.window.camera.project((cx - ew / 2, cy - eh / 2))[:2]
             x1, y1 = self.window.camera.project((cx + ew / 2, cy + eh / 2))[:2]
             objects.append({"id": entity.get("id"), "name": entity.get("name"), "tag": entity.get("tag"),
-                            "rect": [x0, y0, x1 - x0, y1 - y0]})
+                            "x": entity.get("x"), "y": entity.get("y"), "rect": [x0, y0, x1 - x0, y1 - y0]})
         play = None
         if self.mode == "play":
             player = next((s for s in self.window.scene_controller.all_sprites
@@ -681,7 +823,17 @@ class Studio:
             play = {"scene": self.window.scene_controller.current_scene_path,
                     "player": [player.center_x, player.center_y] if player is not None else None,
                     "dialogue": {"speaker": entry.get("speaker"), "text": entry.get("text")} if entry else None}
-        state = {"mode": self.mode, "room": self.project.current, "selected": self.selected, "panel": self.panel,
+        map_state = None
+        info = ops.map_info(self.project.scene())
+        if info is not None and self.mode == "edit":
+            corner = self.window.camera.project((0, 0))[:2]
+            far = self.window.camera.project((info["width"] * info["tilewidth"], info["height"] * info["tileheight"]))[:2]
+            map_state = {"width": info["width"], "height": info["height"], "tilewidth": info["tilewidth"],
+                         "tileheight": info["tileheight"], "screen": [corner[0], corner[1], far[0], far[1]],
+                         "layers": info["layers"]}
+        state = {"tool": self.tool, "brush": self.brush["gid"] if self.brush else None, "map": map_state,
+                 "zoom": self.zoom,
+                 "mode": self.mode, "room": self.project.current, "selected": self.selected, "panel": self.panel,
                  "message": self.message, "ok": self.message_ok, "dirty": self.project.is_dirty,
                  "window": [self.window.width, self.window.height], "widgets": widgets, "objects": objects,
                  "play": play}
@@ -700,7 +852,44 @@ class Studio:
         label.x, label.y, label.color = x, y, color
         label.draw()
 
+    def _draw_map_overlay(self) -> None:
+        """Map border and grid, the stroke in progress, and the brush or eraser under the cursor."""
+        info = ops.map_info(self.project.scene())
+        if info is None:
+            return
+        a = optional_arcade.arcade
+        tw, th, cols, rows = info["tilewidth"], info["tileheight"], info["width"], info["height"]
+        map_w, map_h = cols * tw, rows * th
+        painting = self.tool in ("paint", "erase")
+        points: list[tuple[float, float]] = []
+        for col in range(cols + 1):
+            points += [(col * tw, 0), (col * tw, map_h)]
+        for row in range(rows + 1):
+            points += [(0, row * th), (map_w, row * th)]
+        a.draw_lines(points, (255, 255, 255, 70 if painting else 26), 1)
+        a.draw_lrbt_rectangle_outline(0, map_w, 0, map_h, (255, 255, 255, 120), 2)
+        for col, row in dict.fromkeys(self.stroke["cells"] if self.stroke else []):
+            self._draw_cell(info, col, row, hover=False)
+        if painting and self.stroke is None and self._in_map(*self.mouse):
+            cell = self._cell_under(*self.mouse)
+            if cell is not None:
+                self._draw_cell(info, *cell, hover=True)
+
+    def _draw_cell(self, info: dict[str, Any], col: int, row: int, *, hover: bool) -> None:
+        a = optional_arcade.arcade
+        cx, cy = ops.cell_center(info, col, row)
+        tw, th = info["tilewidth"], info["tileheight"]
+        left, right, bottom, top = cx - tw / 2, cx + tw / 2, cy - th / 2, cy + th / 2
+        if self.tool == "paint" and self.brush is not None:
+            a.draw_texture_rect(self.tile_textures[self.brush["gid"]], a.XYWH(cx, cy, tw, th), alpha=170 if hover else 255)
+            if hover:
+                a.draw_lrbt_rectangle_outline(left, right, bottom, top, C_SELECT, 2)
+        elif self.tool == "erase":
+            a.draw_lrbt_rectangle_filled(left, right, bottom, top, (220, 60, 60, 90 if hover else 150))
+            a.draw_lrbt_rectangle_outline(left, right, bottom, top, (255, 110, 110), 2)
+
     def _draw_world_overlay(self) -> None:
+        self._draw_map_overlay()
         sprites = self._sprites_by_id()
         for entity in ops.entities(self.project.scene()):
             eid = entity.get("id")
@@ -764,8 +953,11 @@ class Studio:
         elif symbol == optional_arcade.arcade.key.DELETE:
             self.delete_selected()
         elif symbol == optional_arcade.arcade.key.ESCAPE:
-            self.menu, self.place_prefab = None, None
-            if self.panel != "inspect":
+            self.menu, self.place_prefab, self.stroke = None, None, None
+            if self.tool != "select":
+                self.tool, self.brush = "select", None
+                self._say("Select: click an object to edit it, drag to move it.")
+            elif self.panel != "inspect":
                 self.panel, self.pending_door_at = "inspect", None
             else:
                 self.selected = None
@@ -790,7 +982,7 @@ class Studio:
         if self.mode == "play":
             return False
         if self._in_map(x, y):
-            self.zoom = max(0.5, min(2.5, self.zoom * (1.1 ** scroll_y)))
+            self.zoom = max(0.25, min(2.5, self.zoom * (1.1 ** scroll_y)))  # 0.25: fitted big maps
         return True
 
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int) -> bool:
@@ -811,6 +1003,12 @@ class Studio:
         elif button == optional_arcade.arcade.MOUSE_BUTTON_RIGHT:
             self._open_menu(x, y, wx, wy)
         elif button == optional_arcade.arcade.MOUSE_BUTTON_LEFT:
+            if self.tool in ("paint", "erase"):
+                # Map tools never select or move objects, so painting can't drag an NPC away.
+                cell = self._cell_under(x, y)
+                if cell is not None:
+                    self.stroke = {"cells": [cell], "last": cell}
+                return True
             if self.place_prefab is not None:
                 self.place_at(wx, wy)
                 return True
@@ -829,6 +1027,11 @@ class Studio:
         if self.panning:
             self.cam[0] -= dx / self.zoom
             self.cam[1] -= dy / self.zoom
+        elif self.stroke is not None:
+            cell = self._cell_under(x, y)
+            if cell is not None:
+                self.stroke["cells"].extend(_line_cells(self.stroke["last"], cell)[1:])
+                self.stroke["last"] = cell
         elif self.drag is not None:
             wx, wy = self._to_world(x, y)
             to = (_snap(wx + self.drag["dx"]), _snap(wy + self.drag["dy"]))
@@ -843,6 +1046,9 @@ class Studio:
         if self.mode == "play":
             return False
         self.panning = False
+        if self.stroke is not None:
+            self._commit_stroke()
+            return True
         drag, self.drag = self.drag, None
         if drag is not None and drag["moved"]:
             target, (nx, ny) = drag["id"], drag["to"]
