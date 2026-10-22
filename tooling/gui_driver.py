@@ -22,6 +22,11 @@ user32 = ctypes.windll.user32
 gdi32 = ctypes.windll.gdi32
 # Physical coordinates everywhere: the game is DPI-unaware, this driver is per-monitor aware.
 user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))
+# Pointer-sized handles: without these, HWND_TOPMOST (-1) went out as a 32-bit int and
+# SetWindowPos failed with "invalid window handle", silently.
+user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+user32.SetWindowPos.restype = wintypes.BOOL
+HWND_TOPMOST = wintypes.HWND(-1)
 
 _INPUT_MOUSE, _INPUT_KEYBOARD = 0, 1
 _KEYUP, _UNICODE = 0x0002, 0x0004
@@ -182,6 +187,13 @@ class Driver:
         self.focus()
         return self
 
+    def move_window(self, x: int, y: int) -> None:
+        """Move the window's top-left corner to screen point (x, y) (physical pixels), e.g. onto another monitor."""
+        user32.SetWindowPos(self.hwnd, HWND_TOPMOST, int(x), int(y), 0, 0, 0x0001)  # TOPMOST, NOSIZE
+        time.sleep(0.8)  # a DPI-unaware window is rescaled when it changes monitor
+        self._cursor = None
+        self.focus()
+
     def title(self) -> str:
         return _window_title(self.hwnd)
 
@@ -235,7 +247,7 @@ class Driver:
         deaf to the next click: the "first clicks ignored at start-up" seen in GUI runs.
         A click on the title bar is ordinary input to the window's own frame.
         """
-        user32.SetWindowPos(self.hwnd, -1, 0, 0, 0, 0, 0x0001 | 0x0002)  # TOPMOST (kept visible), NOSIZE|NOMOVE
+        user32.SetWindowPos(self.hwnd, HWND_TOPMOST, 0, 0, 0, 0, 0x0001 | 0x0002)  # TOPMOST (kept visible), NOSIZE|NOMOVE
         for _ in range(5):
             if user32.GetForegroundWindow() == self.hwnd:
                 return
@@ -307,7 +319,7 @@ class Driver:
             return
         pos = wintypes.POINT()
         user32.GetCursorPos(ctypes.byref(pos))
-        if abs(pos.x - self._cursor[0]) > 3 or abs(pos.y - self._cursor[1]) > 3:
+        if abs(pos.x - self._cursor[0]) > 16 or abs(pos.y - self._cursor[1]) > 16:  # beyond hand jitter
             raise RuntimeError(f"the mouse was moved by something other than this test (expected {self._cursor}, "
                                f"found {(pos.x, pos.y)}); keep hands off the mouse while a GUI test runs")
 

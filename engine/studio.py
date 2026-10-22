@@ -455,6 +455,43 @@ class Studio:
         self._say("There's no tile there.", ok=False)
 
     # -------------------------------------------------------------------- tileset import
+    def open_resize(self) -> None:
+        self._flush_fields()
+        self.panel, self.menu = "map_size", None
+        self._focus_after_build = "map_width"
+        self._rebuild()
+
+    def resize_map(self, width: str, height: str) -> None:
+        try:
+            new_w, new_h = int(width), int(height)
+        except ValueError:
+            self._say("The size must be whole numbers of tiles.", ok=False)
+            return
+        if self._edit(lambda s: ops.resize_map(s, new_w, new_h),
+                      f"The map is now {new_w} x {new_h} tiles. Undo puts it back."):
+            self.panel = "inspect"
+            self._reload(recenter=True)
+            self._rebuild()
+
+    def _resize_panel(self, box: gui.UIBoxLayout, width: int) -> gui.UIBoxLayout:
+        info = ops.map_info(self.project.scene()) or {}
+        box.add(self._label("Map size", bold=True, size=12))
+        box.add(self._label("Tiles are added or removed at the top and right;", color=C_MUTED, size=10))
+        box.add(self._label("everything else stays where it is.", color=C_MUTED, size=10))
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._label("Width", color=C_MUTED))
+        map_w = self._field(str(info.get("width", "")), lambda v: None, width=70, key="map_width")
+        row.add(map_w)
+        row.add(self._label("Height", color=C_MUTED))
+        map_h = self._field(str(info.get("height", "")), lambda v: None, width=70, key="map_height")
+        row.add(map_h)
+        box.add(row)
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._button("Apply", lambda: self.resize_map(map_w.text, map_h.text), width=96, style=S_ACTIVE))
+        row.add(self._button("Cancel", self._cancel_panel, width=80))
+        box.add(row)
+        return box
+
     def open_import(self) -> None:
         self._flush_fields()
         self.panel, self.menu = "import_tileset", None
@@ -621,6 +658,9 @@ class Studio:
         self.mode = "play"
         self.ui.disable()
         self.window.camera.zoom = 1.0
+        state = getattr(self.window, "game_state_controller", None)
+        if state is not None:
+            state.replace_state({})  # every play-test is a new game: no flags left from the last one or a loaded save
         self.window.load_scene(self.project.path(self.project.current))
         self.window.paused = False
         self._fade_overhead()
@@ -775,6 +815,11 @@ class Studio:
                              width=width - 92, disabled=len(self.tilesets) < 2))
         row.add(self._button("Import...", self.open_import, width=86))
         box.add(row)
+        info = ops.map_info(self.project.scene()) or {}
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._label(f"{info.get('width')} x {info.get('height')} tiles", color=C_MUTED, size=10, width=width - 92))
+        row.add(self._button("Resize...", self.open_resize, width=86))
+        box.add(row)
         geometry = self._sheet_geometry()
         if geometry is not None:
             tileset, px, cols, rows = geometry
@@ -790,7 +835,7 @@ class Studio:
             return None
         tileset = self.tilesets[self.sheet]
         px = max(12, min(32, SHEET_W // max(1, tileset["columns"])))
-        others = 18 + 32 * (len(self.project.rooms()) + 1) + 10 + 18 + 4 * 32 + 10 + 18 + 32 * len(self.prefabs) + 14
+        others = 18 + 32 * (len(self.project.rooms()) + 1) + 10 + 18 + 5 * 32 + 10 + 18 + 32 * len(self.prefabs) + 14
         room = self.window.height - TOP_H - STATUS_H - 30 - others - 14 * 4
         rows = max(2, min(tileset["rows"], int(min(200, room) // px)))
         return tileset, px, min(tileset["columns"], SHEET_W // px), rows
@@ -843,6 +888,8 @@ class Studio:
             box.add(row)
             return box
 
+        if self.panel == "map_size":
+            return self._resize_panel(box, width)
         if self.panel == "import_tileset":
             return self._import_panel(box, width)
 
@@ -936,6 +983,11 @@ class Studio:
             elif kind in ("int", "float", "string"):
                 text = "" if value is None else str(value)
                 row.add(self._field(text, lambda v, n=name: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, n, v)),
+                                    width=width - 128))
+            elif kind == "array" and all(isinstance(item, (str, int, float)) for item in value or []):
+                # A list of names (flags, tags...) edits as comma-separated text.
+                row.add(self._field(", ".join(str(item) for item in value or []),
+                                    lambda v, n=name: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, n, v)),
                                     width=width - 128))
             else:
                 count = len(value) if isinstance(value, (list, dict)) else 0
@@ -1101,11 +1153,17 @@ class Studio:
             active = getattr(box, "is_active", False)
             active = active() if callable(active) else active
             entry = box.get_current_entry() if box is not None and active else None
+            flags = getattr(getattr(self.window, "game_state", None), "flags", None) or {}
             play = {"scene": self.window.scene_controller.current_scene_path,
+                    "flags": {name: bool(value) for name, value in dict(flags).items()},
                     "player": [player.center_x, player.center_y] if player is not None else None,
                     "player_screen": list(self.window.camera.project((player.center_x, player.center_y))[:2])
                     if player is not None else None,
-                    "dialogue": {"speaker": entry.get("speaker"), "text": entry.get("text")} if entry else None}
+                    "dialogue": {"speaker": entry.get("speaker"), "text": entry.get("text"),
+                                 "choices": [{"text": str(c.get("text")), "disabled": bool(c.get("disabled"))} if isinstance(c, dict)
+                                             else {"text": str(c), "disabled": False} for c in entry.get("choices") or []],
+                                 "cursor": getattr(box, "_choice_index", None)}
+                    if entry else None}
         map_state = None
         info = ops.map_info(self.project.scene())
         if info is not None and self.mode == "edit":
@@ -1218,8 +1276,10 @@ class Studio:
         if region is not None:
             x0, y0 = left + (region[0] - c0) * px, top - (region[1] - r0) * px
             x1, y1 = left + (region[2] - c0 + 1) * px, top - (region[3] - r0 + 1) * px
-            a.draw_lrbt_rectangle_outline(max(left, x0) - 1, min(left + cols * px, x1) + 1,
-                                          max(top - rows * px, y1) - 1, min(top, y0) + 1, (255, 230, 120), 2)
+            l_, r_ = max(left, x0), min(left + cols * px, x1)
+            b_, t_ = max(top - rows * px, y1), min(top, y0)
+            if l_ < r_ and b_ < t_:  # only while the selection is (partly) scrolled into view
+                a.draw_lrbt_rectangle_outline(l_ - 1, r_ + 1, b_ - 1, t_ + 1, (255, 230, 120), 2)
 
     def _draw_import_preview(self) -> None:
         """The image being imported, with its tile grid, so you can check the tile size before importing."""

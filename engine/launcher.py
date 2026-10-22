@@ -446,6 +446,7 @@ def main() -> int:
         log_dir.mkdir(parents=True, exist_ok=True)
         sys.stdout = sys.stderr = open(log_dir / "launcher.log", "w", encoding="utf-8", buffering=1)
     window = optional_arcade.arcade.Window(WIDTH, HEIGHT, "Mesh Engine")
+    window.center_window()  # Windows' default placement can push the bottom (and its buttons) off-screen
     Launcher(window)
     optional_arcade.arcade.run()
     return 0
