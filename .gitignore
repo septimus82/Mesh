@@ -29,3 +29,4 @@ saves/
 /final.files.txt
 /context.json
 .pytest-debug-temp/
+.pytest-gate-deps/
