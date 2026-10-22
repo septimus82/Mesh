@@ -85,6 +85,9 @@ def _enable_editor_mode(self: Any) -> None:
     self.active = True
     _EDITOR_LOGGER.info("[Editor] Mode ENABLED")
     self.window.paused = True
+    frame_scene = getattr(self, "frame_scene_on_canvas", None)
+    if callable(frame_scene):
+        frame_scene()
     self.inspector.set_inspector_active(False)
     self.palette_active = False
     self.palette_filter_active = False

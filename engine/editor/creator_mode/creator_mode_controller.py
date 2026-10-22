@@ -123,10 +123,18 @@ class CreatorModeController:
             self._clear_last_action_state()
             self._rename_text_focused = False
             self._opacity_text_focused = False
+        else:
+            self._frame_scene_on_canvas()
         return self._active
 
     def show(self) -> None:
         self._active = True
+        self._frame_scene_on_canvas()
+
+    def _frame_scene_on_canvas(self) -> None:
+        frame_scene = getattr(self._editor, "frame_scene_on_canvas", None)
+        if callable(frame_scene):
+            frame_scene()
 
     def hide(self) -> None:
         self._active = False

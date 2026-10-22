@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
+from engine.editor.editor_shell_layout import Rect
 from engine.logging_tools import get_logger
 from engine.ui_overlays.common import (
     TEXT_ELLIPSIS,
@@ -152,6 +153,24 @@ def truncate_creator_overlay_field_text(label: str, value: object, max_chars: in
     return truncate_creator_overlay_text(f"{label}: {raw_value}", max_chars)
 
 
+def _panel_sizes(win_w: float, win_h: float) -> tuple[float, float, float, float]:
+    """(top_h, bottom_h, left_w, right_w) of the Creator panels around the scene canvas."""
+    top_h = min(42.0, max(34.0, win_h * 0.18))
+    bottom_h = min(220.0, max(132.0, win_h * 0.30))
+    left_w = min(180.0, max(96.0, win_w * 0.28))
+    max_right_w = max(112.0, win_w - left_w - 8.0)
+    right_w = min(480.0, max(112.0, win_w * 0.34), max_right_w)
+    return top_h, bottom_h, left_w, right_w
+
+
+def creator_canvas_rect(width: int | float, height: int | float) -> Rect:
+    """Screen rect of the scene canvas left uncovered by the Creator panels."""
+    win_w = max(320.0, float(width or 1280))
+    win_h = max(240.0, float(height or 720))
+    top_h, bottom_h, left_w, right_w = _panel_sizes(win_w, win_h)
+    return Rect(left=left_w, right=win_w - right_w, bottom=bottom_h, top=win_h - top_h)
+
+
 def build_creator_overlay_draw_commands(
     model: CreatorOverlayModel,
     width: int | float,
@@ -166,13 +185,8 @@ def build_creator_overlay_draw_commands(
     win_h = max(240.0, float(height or 720))
     commands: list[CreatorOverlayDrawCommand] = []
 
-    top_h = min(42.0, max(34.0, win_h * 0.18))
-    bottom_h = min(220.0, max(132.0, win_h * 0.30))
+    top_h, bottom_h, left_w, right_w = _panel_sizes(win_w, win_h)
     pad = min(14.0, max(8.0, win_w * 0.03))
-    side_gap = 8.0
-    left_w = min(180.0, max(96.0, win_w * 0.28))
-    max_right_w = max(112.0, win_w - left_w - side_gap)
-    right_w = min(480.0, max(112.0, win_w * 0.34), max_right_w)
     center_h = max(1.0, win_h - top_h - bottom_h)
 
     left_text_width = max(1.0, left_w - (pad + 8.0) - pad)
