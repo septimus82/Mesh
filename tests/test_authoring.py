@@ -92,4 +92,4 @@ def test_separate_edits_dont_conflict_and_the_same_property_does() -> None:
     ours = authoring.changes_between(base, renamed)
     assert authoring.conflicts(ours, authoring.changes_between(base, renamed_same)) == []  # both agree
     clash = authoring.conflicts(ours, authoring.changes_between(base, renamed_other))
-    assert clash == [{"path": "rooms/r/entities/#a/name", "studio": "Captain", "ai": "Warden"}]
+    assert clash == [{"path": "rooms/r/entities/#a/name", "what": "r: object a name", "studio": "Captain", "ai": "Warden"}]

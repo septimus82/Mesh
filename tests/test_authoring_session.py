@@ -148,3 +148,10 @@ def test_a_persons_edit_and_an_ai_proposal_both_survive_unless_they_touch_the_sa
     assert clash["reason"] == "conflict" and clash["conflicts"][0]["studio"] == "Warden"
     assert clash["conflicts"][0]["ai"] == "Gravedigger"
     assert any(e.get("name") == "Warden" for e in project.scene()["entities"])
+
+
+def test_the_old_one_call_add_tool_never_reports_a_success_that_didnt_happen(root: Path, live) -> None:
+    _studio, host = live
+    result = tools.live_add_entity_from_prefab("person", 100, 100, root=str(root))
+    assert result["ok"] is False and "no operation 'add_entity_from_prefab'" in result["message"]
+    assert host.pending() == []

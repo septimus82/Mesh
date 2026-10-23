@@ -887,7 +887,7 @@ class InspectorMixin:
             if proposal.status == "conflict":
                 rows.add(self._label(proposal.message, color=(240, 200, 120), size=9, width=width))
                 for clash in proposal.conflicts[:8]:
-                    rows.add(self._label(f"  {clash['path']}: here {clash['studio']!r}, proposed {clash['ai']!r}",
+                    rows.add(self._label(f"  {clash.get('what') or clash['path']}: here {clash['studio']!r}, proposed {clash['ai']!r}",
                                          color=(240, 200, 120), size=9, width=width))
             row = gui.UIBoxLayout(vertical=False, space_between=6)
             row.add(self._button("Accept", lambda p=proposal: self.accept_ai(p), width=half, style=S_ACTIVE,

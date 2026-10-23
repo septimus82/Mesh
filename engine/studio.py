@@ -892,11 +892,16 @@ class Studio(InspectorMixin):
         made = list(proposal.created.values())
         if made:
             self.selected = made[0]
+        if not self.ai.pending():
+            self.panel = "inspect"  # nothing else waiting: show what was made
         self._after_change(proposal.message)
 
     def reject_ai(self, proposal: Proposal) -> None:
         self._flush_fields()
         self.ai.reject_proposal(proposal)
+        if not self.ai.pending():
+            self.panel = "inspect"
+        self._rebuild()
         self._say(proposal.message)
 
     def open_flags(self) -> None:

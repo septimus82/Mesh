@@ -111,11 +111,11 @@ def apply(project: Project, changes: list[Doc]) -> Doc:
 
 
 def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str]) -> str | None:
-    name = str(change.get("op") or "")
+    name = str(change.get("op") or change.get("type") or "")  # "type": how older Mesh tools spell it
     func = operations().get(name)
     if func is None:
         raise ChangeError(index, name or "?", f"there is no operation '{name}'. describe() lists them.")
-    args = {k: _deref(v, created, index, name) for k, v in change.items() if k not in ("op", "room")}
+    args = {k: _deref(v, created, index, name) for k, v in change.items() if k not in ("op", "type", "room")}
     try:
         if name in _PROJECT_OPS:
             return _call_project_op(project, func, args, index, name)
@@ -275,10 +275,17 @@ def conflicts(ours: dict[tuple[Any, ...], tuple[Any, Any]], theirs: dict[tuple[A
         for q, (_old2, other) in theirs.items():
             if p == q:
                 if mine != other:
-                    found.append({"path": _path_text(p), "studio": mine, "ai": other})
+                    found.append({"path": _path_text(p), "what": _conflict_words(p), "studio": mine, "ai": other})
             elif p[: len(q)] == q or q[: len(p)] == p:
-                found.append({"path": _path_text(p if len(p) > len(q) else q), "studio": mine, "ai": other})
+                deeper = p if len(p) > len(q) else q
+                found.append({"path": _path_text(deeper), "what": _conflict_words(deeper), "studio": mine, "ai": other})
     return found
+
+
+def _conflict_words(path: tuple[Any, ...]) -> str:
+    if len(path) >= 4 and path[0] == "rooms" and path[2] == "entities":
+        return f"{path[1]}: object {str(path[3]).lstrip('#')} {_friendly(path[4:]) if len(path) > 4 else '(the whole object)'}"
+    return _path_text(path)
 
 
 def _path_text(path: tuple[Any, ...]) -> str:
@@ -307,7 +314,7 @@ def summarize(before: Doc, after: Doc) -> list[str]:
                 lines.append(f"{label}: adds '{name}' ({what}) at {entity.get('x', 0):g}, {entity.get('y', 0):g}")
                 continue
             for path, (was, now) in changes_between(olds[eid], entity).items():
-                lines.append(f"{label}: '{name}' {_path_text(path)}: {_short(was)} -> {_short(now)}")
+                lines.append(f"{label}: '{name}' {_friendly(path)}: {_short(was)} -> {_short(now)}")
         for eid, entity in olds.items():
             if eid not in news:
                 lines.append(f"{label}: removes '{entity.get('name') or eid}'")
@@ -317,6 +324,42 @@ def summarize(before: Doc, after: Doc) -> list[str]:
     if world_b.get("start_scene") != world_a.get("start_scene") and world_b:
         lines.append(f"Start room: {world_b.get('start_scene')} -> {world_a.get('start_scene')}")
     return lines
+
+
+_BEHAVIOUR_WORDS = {
+    ("ConditionalActivator", "require_flags"): "shows only when these flags are set",
+    ("ConditionalActivator", "forbid_flags"): "is hidden once these flags are set",
+    ("ConditionalActivator",): "shows only when (flags)",
+    ("Dialogue", "require_flags"): "can be talked to when these flags are set",
+    ("Dialogue", "forbid_flags"): "can't be talked to once these flags are set",
+    ("Dialogue", "once"): "conversation only once",
+    ("Dialogue", "auto_start"): "conversation starts by itself",
+    ("Dialogue", "start_event"): "conversation starts when",
+    ("PictureByFlags",): "picture changes (by flags)",
+    ("TriggerVolume",): "trigger zone",
+    ("SetGameStateOnEvent",): "sets flags when the zone is entered",
+}
+
+
+def _friendly(path: tuple[Any, ...]) -> str:
+    """A property path in words where it's a common one: what a person reviewing changes reads."""
+    if len(path) >= 2 and path[0] == "behaviour_config":
+        behaviour, rest = str(path[1]), tuple(str(p) for p in path[2:])
+        if behaviour == "Dialogue" and rest[:2] == ("dialogue", "nodes") and len(rest) >= 3:
+            field = {"text": " says", "next": " then goes to", "speaker": " speaker", "choices": " choices"}.get(
+                rest[3] if len(rest) > 3 else "", "")
+            return f"conversation line '{rest[2]}'{field}"
+        if behaviour == "Dialogue" and rest[:2] == ("dialogue", "starts"):
+            return "conversation openings"
+        if behaviour == "Dialogue" and rest[:2] == ("dialogue", "speaker"):
+            return "conversation speaker"
+        for key in ((behaviour, rest[0]) if rest else (), (behaviour,)):
+            if key in _BEHAVIOUR_WORDS:
+                return _BEHAVIOUR_WORDS[key]
+        return f"{behaviour} setting {'/'.join(rest)}".strip()
+    words = {("behaviours",): "behaviours", ("sprite",): "picture", ("components", "collider"): "collider",
+             ("solid",): "blocks movement", ("scale",): "size", ("x",): "x", ("y",): "y", ("name",): "name"}
+    return words.get(tuple(path[:2]) if path[:1] == ("components",) else tuple(path[:1]), _path_text(path))
 
 
 def _short(value: Any, limit: int = 48) -> str:
