@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from engine.swallowed_exceptions import _log_swallow
+
 from .creator_add_person import (
     ADD_PERSON_LINE_ACTION_ID,
     ADD_PERSON_STAGE_ACTION_ID,
@@ -993,7 +995,7 @@ class CreatorModeController:
                 try:
                     apply_tab_change(editor, "right", original_tab)
                 except Exception:  # noqa: BLE001  # REASON: best-effort rollback must not mask original failure
-                    pass
+                    _log_swallow("CRMC-001", "creator_mode_controller rollback restore_tab", once=True)
         if collapsed_changed:
             get_collapsed = getattr(dock, "get_right_collapsed", None)
             toggle_right_dock = getattr(dock, "toggle_right_dock", None)
@@ -1002,7 +1004,7 @@ class CreatorModeController:
                     if bool(get_collapsed()) != original_collapsed:
                         toggle_right_dock(editor)
                 except Exception:  # noqa: BLE001  # REASON: best-effort rollback must not mask original failure
-                    pass
+                    _log_swallow("CRMC-002", "creator_mode_controller rollback restore_dock_collapsed", once=True)
         if viewport_restored and original_maximized:
             get_maximized = getattr(dock, "get_viewport_maximized", None)
             toggle_maximized = getattr(dock, "toggle_viewport_maximized", None)
@@ -1011,4 +1013,4 @@ class CreatorModeController:
                     if not bool(get_maximized()):
                         toggle_maximized(editor)
                 except Exception:  # noqa: BLE001  # REASON: best-effort rollback must not mask original failure
-                    pass
+                    _log_swallow("CRMC-003", "creator_mode_controller rollback restore_viewport_maximized", once=True)

@@ -30,7 +30,7 @@ class _Window:
     def clear_ui_elements(self) -> None:
         return None
 
-    def register_ui_element(self, _element) -> None:  # noqa: ANN001
+    def register_ui_element(self, _element, *, editor_chrome=None) -> None:  # noqa: ANN001  # real signature
         return None
 
     def get_next_spawn_point(self):  # noqa: ANN001

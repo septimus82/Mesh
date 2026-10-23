@@ -32,7 +32,8 @@ def test_release_contract_repo_root_artifacts_absolute(tmp_path: Path, monkeypat
     data_dir = pack_root / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
     (data_dir / "prefabs.json").write_text(
-        json.dumps([{"id": "torch_wisp", "entity": {}}]),
+        # valid under prefab.schema.json, which requires display_name and tags
+        json.dumps([{"id": "torch_wisp", "display_name": "Torch wisp", "tags": ["light"], "entity": {}}]),
         encoding="utf-8",
     )
 
