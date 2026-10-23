@@ -61,7 +61,7 @@ class TestLoadClearsTransientUI(unittest.TestCase):
 
         # Verify Toasts were cleared and "Loaded" enqueued
         self.mock_player_hud.clear_toasts.assert_called_once()
-        self.mock_player_hud.enqueue_toast.assert_called_with("Loaded")
+        self.mock_player_hud.enqueue_toast.assert_called_with("Game loaded")
 
         # Verify scene change requested
         self.mock_window.request_scene_change.assert_called_with(str(save_path))

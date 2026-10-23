@@ -150,11 +150,9 @@ class SaveManager:
             # Keep the same JSON formatting (indent=2, sort_keys=True) with standardized trailing newline.
             save_io.write_json_pretty_atomic(path, snapshot)
 
-            # Toast if content changed or first save
-            if content_hash != self._last_saved_signature:
-                if hasattr(self.window, "player_hud"):
-                    self.window.player_hud.enqueue_toast("Game Saved")
-                self._last_saved_signature = content_hash
+            # Said only once the file is written: a player who saves twice should hear it twice.
+            self._toast("Game saved")
+            self._last_saved_signature = content_hash
 
             sys.stderr.write(f"[Mesh][Save] Game saved to '{path}'\n")
             return True
@@ -174,7 +172,14 @@ class SaveManager:
                 hint=hint,
             )
             sys.stderr.write(f"[Mesh][Save] ERROR: Failed to save game: {exc}\n")
+            self._toast(f"Couldn't save the game: {hint or exc}")
             return False
+
+    def _toast(self, message: str) -> None:
+        hud = getattr(self.window, "player_hud", None)
+        enqueue = getattr(hud, "enqueue_toast", None)
+        if callable(enqueue):
+            enqueue(message)
 
     def load_game(self, slot_name: str) -> bool:
         """Load a game state from a slot."""
@@ -315,15 +320,11 @@ class SaveManager:
             # But wait, load_scene reads the file again.
             # That's fine.
 
-            # Check signature to avoid spamming "Loaded"
-            current_signature = (str(path), path.stat().st_mtime_ns)
-            should_toast = current_signature != self._last_loaded_signature
-            self._last_loaded_signature = current_signature
-
+            # Every load the player asks for is confirmed (a repeated load used to say nothing).
+            self._last_loaded_signature = (str(path), path.stat().st_mtime_ns)
             if hasattr(self.window, "player_hud"):
                 self.window.player_hud.clear_toasts()
-                if should_toast:
-                    self.window.player_hud.enqueue_toast("Loaded")
+                self.window.player_hud.enqueue_toast("Game loaded")
 
             sys.stderr.write(f"[Mesh][Save] Loading save from '{path}'\n")
             self.window.request_scene_change(str(path))
@@ -391,7 +392,8 @@ class SaveManager:
         if getattr(scene, "current_scene_path", None):
             hud = getattr(self.window, "player_hud", None)
             if hud is not None and hasattr(hud, "enqueue_toast"):
-                hud.enqueue_toast("No saved game yet" if reason_code == LOAD_NOT_FOUND else "Couldn't load that save")
+                hud.enqueue_toast("No saved game yet: save first (Esc, then Save Game; or F5)" if reason_code == LOAD_NOT_FOUND
+                                  else "Couldn't load that save: it may be damaged or from another version")
             return
         cfg = getattr(self.window, "engine_config", None)
         target_scene = str(getattr(cfg, "start_scene", "") or "").strip()

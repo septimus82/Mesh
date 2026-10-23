@@ -682,6 +682,8 @@ class PlayerHUD(UIElement):
 
         Persists the shown state via the game state's flags when available.
         """
+        if getattr(window, "studio", None) is not None:
+            return None  # a Studio play-test: these keys (F2 editor, I inspector...) are not that game's
         flag_name = "hint_shown_controls"
         getter = getattr(window, "get_flag", None)
         if callable(getter) and getter(flag_name, False):
@@ -732,6 +734,55 @@ class PlayerHUD(UIElement):
     def draw(self) -> None:
         if getattr(getattr(self.window, "editor_controller", None), "active", False):
             return
+        self._draw_stats()
+        # Toasts ("Game saved", ...) show even for a player without health stats, as in most Studio games.
+        self._draw_toasts()
+
+    def _draw_toasts(self) -> None:
+        toasts = self._toast_manager.get_active_entries()
+        if toasts:
+            from ..text_draw import draw_text_cached  # noqa: PLC0415
+
+            start_x = 20.0
+            start_y = self.window.height - 110.0
+            line_height = 22.0
+            padding_x = 12.0
+            padding_y = 6.0
+            cache = getattr(self.window, "text_cache", None)
+            for idx, (toast_text, alpha) in enumerate(toasts):
+                if not toast_text:
+                    continue
+                fade = max(0.0, min(1.0, float(alpha)))
+                if fade <= 0.0:
+                    continue
+                width = min(360.0, max(180.0, 24.0 + (len(toast_text) * 7.5)))
+                height = line_height + padding_y * 2
+                left = start_x
+                top = start_y - (idx * (height + 6.0))
+                right = left + width
+                bottom = top - height
+                bg_alpha = int(round(170 * fade))
+                text_alpha = int(round(255 * fade))
+                _draw_rectangle_filled(
+                    center_x=(left + right) / 2.0,
+                    center_y=(top + bottom) / 2.0,
+                    width=width,
+                    height=height,
+                    color=(0, 0, 0, bg_alpha),
+                )
+                _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
+                draw_text_cached(
+                    toast_text,
+                    left + padding_x,
+                    top - padding_y,
+                    color=(255, 255, 255, text_alpha),
+                    font_size=12,
+                    anchor_y="top",
+                    font_name="Consolas",
+                    cache=cache,
+                )
+
+    def _draw_stats(self) -> None:
         player = getattr(self.window, "player", None)
         if not player:
             return
@@ -795,49 +846,6 @@ class PlayerHUD(UIElement):
                     self._quest_text.x = self.window.width - 20
                     self._quest_text.y = self.window.height - 20
                     self._quest_text.draw()
-
-        toasts = self._toast_manager.get_active_entries()
-        if toasts:
-            from ..text_draw import draw_text_cached  # noqa: PLC0415
-
-            start_x = 20.0
-            start_y = self.window.height - 110.0
-            line_height = 22.0
-            padding_x = 12.0
-            padding_y = 6.0
-            cache = getattr(self.window, "text_cache", None)
-            for idx, (toast_text, alpha) in enumerate(toasts):
-                if not toast_text:
-                    continue
-                fade = max(0.0, min(1.0, float(alpha)))
-                if fade <= 0.0:
-                    continue
-                width = min(360.0, max(180.0, 24.0 + (len(toast_text) * 7.5)))
-                height = line_height + padding_y * 2
-                left = start_x
-                top = start_y - (idx * (height + 6.0))
-                right = left + width
-                bottom = top - height
-                bg_alpha = int(round(170 * fade))
-                text_alpha = int(round(255 * fade))
-                _draw_rectangle_filled(
-                    center_x=(left + right) / 2.0,
-                    center_y=(top + bottom) / 2.0,
-                    width=width,
-                    height=height,
-                    color=(0, 0, 0, bg_alpha),
-                )
-                _draw_tb_rectangle_outline(left, right, top, bottom, optional_arcade.arcade.color.SKY_BLUE, 2)
-                draw_text_cached(
-                    toast_text,
-                    left + padding_x,
-                    top - padding_y,
-                    color=(255, 255, 255, text_alpha),
-                    font_size=12,
-                    anchor_y="top",
-                    font_name="Consolas",
-                    cache=cache,
-                )
 
         if cfg is not None and not getattr(cfg, "hud_show_xp_bar", True):
             return

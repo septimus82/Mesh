@@ -22,6 +22,7 @@ from typing import Any, Callable
 import engine.optional_arcade as optional_arcade
 from engine import behaviour_guide
 from engine import project_ops as ops
+from engine.action_runtime.registry import dispatch_action
 from engine.prefabs import get_prefab_manager
 from engine.route_check import route_problems
 from engine.scene_loader import document_key
@@ -786,6 +787,9 @@ class Studio(InspectorMixin):
         flags = gui.UIFlatButton(text="Flags", width=80, height=30, style=S_ACTIVE if self.play_flags_open else S_BUTTON)
         flags.on_click = lambda _e: self._toggle_play_flags()
         bar.add(flags)
+        menu = gui.UIFlatButton(text="Menu (Esc)", width=110, height=30, style=S_BUTTON)  # save, load, exit
+        menu.on_click = lambda _e: dispatch_action(self.window, "pause_menu")
+        bar.add(menu)
         root.add(bar, anchor_x="center", anchor_y="top", align_y=-6)
         if not self.play_flags_open:
             return
