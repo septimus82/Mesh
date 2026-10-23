@@ -39,10 +39,30 @@ def test_blank_objects_get_unique_names_and_a_picture_later() -> None:
         ops.set_look(scene, first, scale=0)
 
 
-def test_a_new_picture_drops_the_frame_list_animation_cut_from_the_old_one() -> None:
-    scene = ops.set_picture(_scene(), "start_player", "assets/sprites/hero.png")
+def test_changing_or_removing_the_picture_never_loses_the_animation() -> None:
+    # The My Game1 case: picture taken away, then chosen again: the animation is back.
+    scene = ops.set_picture(_scene(), "start_player", None)
+    scene = ops.set_picture(scene, "start_player", "assets/sprites/animated_player.png")
     player = ops.find_entity(scene, "start_player")
+    assert player["animations"] == PLAYER["animations"] and player["sprite_sheet"] == PLAYER["sprite_sheet"]
+    assert ops.animation_fit(player, (256, 128)) is None
+    # A picture with a different layout: kept, but reported, and resettable.
+    scene = ops.set_picture(scene, "start_player", "assets/sprites/small.png")
+    player = ops.find_entity(scene, "start_player")
+    assert "256x128" in ops.animation_fit(player, (32, 32))
+    player = ops.find_entity(ops.reset_animation(scene, "start_player"), "start_player")
     assert "animations" not in player and "sprite_sheet" not in player
+
+
+def test_animator_clips_follow_a_new_picture_only_when_asked() -> None:
+    clips = ops.character_clips("assets/sprites/hero.png", 32, 48, 3, {"down": 0, "right": 2, "up": 3})
+    scene = ops.set_picture(_scene(), "start_player", "assets/sprites/hero.png")
+    scene = ops.set_animation(scene, "start_player", clips)
+    kept = ops.set_picture(scene, "start_player", "assets/sprites/hero_red.png")
+    assert "hero.png" in ops.animation_fit(ops.find_entity(kept, "start_player"), (96, 192))
+    followed = ops.set_picture(scene, "start_player", "assets/sprites/hero_red.png", follow=True)
+    assert ops.animation_fit(ops.find_entity(followed, "start_player"), (96, 192)) is None
+    assert ops.animation_fit(ops.find_entity(ops.animation_use_picture(kept, "start_player"), "start_player"), (96, 192)) is None
 
 
 def test_colliders_box_circle_or_the_whole_picture() -> None:

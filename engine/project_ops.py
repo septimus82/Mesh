@@ -705,17 +705,70 @@ def place_blank(scene: Doc, scene_key: str, name: str, x: float, y: float) -> tu
     return _checked(scene, out), entity["id"]
 
 
-def set_picture(scene: Doc, entity_id: str, sprite: str | None) -> Doc:
+def set_picture(scene: Doc, entity_id: str, sprite: str | None, *, follow: bool = False) -> Doc:
     """Give an object a picture (a project-relative image path), or take it away (None).
 
-    A new picture also drops the old frame-list animation (``animations``/``sprite_sheet``):
-    its frames were cut from the old image. Animator clips name their own sheet and stay.
+    Animation settings are never dropped here: taking the picture away and choosing it again
+    gets the animation back. The frame-list animation (``animations``/``sprite_sheet``) always
+    cuts its frames from the current picture. ``follow=True`` also moves Animator clips that
+    used the old picture onto the new one: right when the new sheet has the same frame layout.
+    When it doesn't, see ``animation_fit`` and ``reset_animation``.
     """
-    entity = find_entity(scene, entity_id)
-    fields: dict[str, Any] = {"sprite": str(sprite).strip() if sprite else None}
-    if fields["sprite"] != entity.get("sprite"):
-        fields.update(animations=None, sprite_sheet=None)
-    return set_entity_fields(scene, entity_id, **fields)
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    old, new = entity.get("sprite"), str(sprite).strip() if sprite else None
+    if new:
+        entity["sprite"] = new
+    else:
+        entity.pop("sprite", None)
+    if follow and new and old and new != old:
+        for clip in ((entity.get("behaviour_config") or {}).get("Animator") or {}).get("animations", {}).values():
+            if isinstance(clip, dict) and clip.get("sheet") == old:
+                clip["sheet"] = new
+    return _checked(scene, out)
+
+
+def animation_fit(entity: Doc, image_size: Any) -> str | None:
+    """Why the object's animation doesn't fit its picture (``image_size`` is (w, h) or None), else None.
+
+    Pure: the caller measures the image. Checks the frame-list animation's grid against the
+    picture, and Animator clips that cut frames from a different picture.
+    """
+    sprite = entity.get("sprite")
+    sheet = entity.get("sprite_sheet") if isinstance(entity.get("sprite_sheet"), dict) else None
+    if sheet and entity.get("animations") and image_size and sprite:
+        need_w = int(sheet.get("frame_width") or 0) * int(sheet.get("columns") or 1)
+        need_h = int(sheet.get("frame_height") or 0) * int(sheet.get("rows") or 1)
+        if need_w > image_size[0] or need_h > image_size[1]:
+            return (f"Its animation expects a {need_w}x{need_h} sheet of {sheet.get('frame_width')}x"
+                    f"{sheet.get('frame_height')} frames; this picture is {image_size[0]}x{image_size[1]}.")
+    others = sorted({str(c.get("sheet")) for c in animation_clips(entity).values()
+                     if isinstance(c, dict) and c.get("sheet") and c.get("sheet") != sprite})
+    if others:
+        return f"Its animation still shows frames from {', '.join(others)}."
+    return None
+
+
+def animation_use_picture(scene: Doc, entity_id: str) -> Doc:
+    """Point every Animator clip at the object's current picture (same frames, new art)."""
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    if not entity.get("sprite"):
+        raise OpError("Give the object a picture first.")
+    for clip in ((entity.get("behaviour_config") or {}).get("Animator") or {}).get("animations", {}).values():
+        if isinstance(clip, dict):
+            clip["sheet"] = entity["sprite"]
+    return _checked(scene, out)
+
+
+def reset_animation(scene: Doc, entity_id: str) -> Doc:
+    """Remove all animation from an object (both kinds), so its picture shows as it is."""
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    entity.pop("animations", None)
+    entity.pop("sprite_sheet", None)
+    _drop_behaviour(entity, "Animator")
+    return _checked(scene, out)
 
 
 def set_look(scene: Doc, entity_id: str, *, scale: Any = _UNSET, flip_x: Any = _UNSET) -> Doc:

@@ -191,13 +191,15 @@ class InspectorMixin:
         half = (width - 6) // 2
         row = gui.UIBoxLayout(vertical=False, space_between=6)
         row.add(self._button("Choose picture...", lambda: self._open_picker_images(
-            "Choose a picture", lambda rel: self._edit(lambda s: ops.set_picture(s, target, rel), "Picture changed.")), width=half))
+            "Choose a picture", lambda rel: self._choose_picture(entity, rel, "Picture changed.")), width=half))
         row.add(self._button("Import PNG...", lambda: self._import_picture(
-            lambda rel: self._edit(lambda s: ops.set_picture(s, target, rel), "Imported and assigned.")), width=half))
+            lambda rel: self._choose_picture(entity, rel, "Imported and assigned.")), width=half))
         rows.add(row)
         if sprite:
-            rows.add(self._button("No picture", lambda: self._edit(lambda s: ops.set_picture(s, target, None), "Picture removed."),
-                                  width=half))
+            animated = bool(ops.animation_clips(entity) or entity.get("animations"))
+            rows.add(self._button("No picture", lambda: self._edit(lambda s: ops.set_picture(s, target, None), "Picture removed." + (
+                " Its animation is kept for when you choose a picture again." if animated else "")), width=half))
+        self._animation_warning(rows, entity, width)
         rows.add(gui.UISpace(height=4))
         self._labeled(rows, "Size (1 = as drawn)", self._field(f"{float(entity.get('scale', 1.0)):g}",
                       lambda v: self._edit(lambda s: ops.set_look(s, target, scale=v), "Size changed."), width=width - 122,
@@ -206,6 +208,34 @@ class InspectorMixin:
                               lambda on: self._edit(lambda s: ops.set_look(s, target, flip_x=on), "Mirrored." if on else "Not mirrored."),
                               width))
         rows.add(self._label("To change the picture with the story (a dug grave), use Conditions.", color=C_MUTED, size=9, width=width))
+
+    def _choose_picture(self, entity: dict[str, Any], rel: str, message: str) -> None:
+        """Change the picture; an animation follows a same-layout sheet, otherwise it's kept and flagged."""
+        target, old = entity["id"], str(entity.get("sprite") or "")
+        animated = bool(ops.animation_clips(entity) or entity.get("animations"))
+        same_layout = bool(old) and self._image_size(old) is not None and self._image_size(old) == self._image_size(rel)
+        if animated and old and rel != old:
+            message += (" Its animation now uses it (same frame layout)." if same_layout
+                        else " Its animation was made for the old picture: check it below.")
+        self._edit(lambda s: ops.set_picture(s, target, rel, follow=animated and same_layout), message)
+
+    def _animation_warning(self, rows: Rows, entity: dict[str, Any], width: int) -> None:
+        """Say when the animation doesn't fit the picture, and offer the two ways out."""
+        sprite = str(entity.get("sprite") or "")
+        problem = ops.animation_fit(entity, self._image_size(sprite)) if sprite else None
+        if not problem:
+            return
+        target = entity["id"]
+        rows.add(self._label(problem, color=(240, 200, 120), size=9, width=width))
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        half = (width - 6) // 2
+        if any(c.get("sheet") != sprite for c in ops.animation_clips(entity).values() if isinstance(c, dict)):
+            row.add(self._button("Use this picture", lambda: self._edit(
+                lambda s: ops.animation_use_picture(s, target), "The animation now cuts its frames from this picture."), width=half))
+        row.add(self._button("Reset animation", lambda: self._edit(
+            lambda s: ops.reset_animation(s, target), "Animation removed: the picture shows as it is. Undo brings it back."),
+            width=half, style=S_DANGER))
+        rows.add(row)
 
     # ---------------------------------------------------------------- picture browser
     def _open_picker_images(self, title: str, choose: Callable[[str], None]) -> None:
@@ -260,6 +290,7 @@ class InspectorMixin:
             rows.add(self._label("This object uses the simple built-in animation. Setting one up here replaces it.",
                                  color=C_MUTED, size=10, width=width))
         rows.add(self._label("Animation", bold=True, size=12))
+        self._animation_warning(rows, entity, width)
         if clips:
             shown = self.clip_sel if self.clip_sel in clips else next(iter(clips))
             self._anim_space = gui.UISpace(width=THUMB, height=THUMB)
