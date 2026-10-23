@@ -80,7 +80,14 @@ def test_blank_is_an_empty_editable_map_with_no_monster_or_demo_content(tmp_path
     assert set(info["layers"][ops.GROUND]) == {ops.STARTER_GRASS} and not any(info["layers"][ops.WALLS])
     files = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
     assert not [f for f in files if "monster" in f or "sproutling" in f or "shelltide" in f or "quest" in f], files
-    assert [p["id"] for p in json.loads((root / "assets/prefabs.json").read_text(encoding="utf-8"))] == ["player", "person"]
+    prefabs = {p["id"]: p for p in json.loads((root / "assets/prefabs.json").read_text(encoding="utf-8"))}
+    assert list(prefabs) == ["player", "person", "sign"]
+    # Mesh's own starter art, not the coloured "no picture" placeholder: a player and a person you can tell apart.
+    assert prefabs["player"]["entity"]["sprite"] == "assets/sprites/starter_hero.png"
+    assert prefabs["person"]["entity"]["sprite"] == "assets/sprites/starter_villager.png"
+    assert {"assets/sprites/starter_hero.png", "assets/sprites/starter_villager.png", "assets/sprites/starter_sign.png"} <= files
+    assert ops.animation_clips(prefabs["player"]["entity"]).keys() >= {"walk_up", "walk_down", "walk_left", "walk_right"}
+    assert prefabs["person"]["entity"]["behaviour_config"]["Dialogue"]["once"] is False  # they answer every time
 
 
 def test_adventure_has_two_linked_rooms_a_talking_npc_and_walls(tmp_path) -> None:

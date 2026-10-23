@@ -48,9 +48,13 @@ if __name__ == "__main__":
     main()
 '''
 
-# Every new project gets these: the starter characters' sheet and the door the
-# editor uses when it links two rooms (engine.project_ops.DOOR_SPRITE).
+# Every new project gets these: the starter art (tooling/make_starter_art.py), the older
+# placeholder sheet earlier projects use, and the door the editor uses when it links two
+# rooms (engine.project_ops.DOOR_SPRITE).
 _STARTER_FILES = (
+    "assets/sprites/starter_hero.png",
+    "assets/sprites/starter_villager.png",
+    "assets/sprites/starter_sign.png",
     "assets/sprites/animated_player.png",
     "assets/sprites/door.png",
     "assets/tilesets/starter.png",  # project_ops.TILESET_SOURCE and its image

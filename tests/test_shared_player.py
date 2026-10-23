@@ -84,7 +84,7 @@ def test_saving_writes_the_player_and_keeps_the_other_prefabs(game: Project) -> 
     written = game.save()
     assert "assets/prefabs.json" in written
     prefabs = json.loads((game.root / "assets/prefabs.json").read_text(encoding="utf-8"))
-    assert [p["id"] for p in prefabs] == ["player", "person"]
+    assert [p["id"] for p in prefabs] == ["player", "person", "sign"]
     assert prefabs[0]["entity"]["sprite"] == "assets/sprites/hero.png"
     reopened = _open(game.root)
     assert all(_player(reopened, key)["sprite"] == "assets/sprites/hero.png" for key, _l, _p in reopened.rooms())

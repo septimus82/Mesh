@@ -72,3 +72,40 @@ def test_a_flipped_clip_mirrors_its_frames_so_right_facing_art_also_walks_left()
         "walk_right": walk_right, "walk_left": {**walk_right, "flip_x": True}})
     assert [f.name for f in anim.animations["walk_right"]] == ["hero.png#6", "hero.png#7", "hero.png#8"]
     assert [f.name for f in anim.animations["walk_left"]] == ["mirrored hero.png#6", "mirrored hero.png#7", "mirrored hero.png#8"]
+
+
+@pytest.mark.fast
+def test_an_npc_moved_by_its_position_walks_and_faces_the_way_it_goes():
+    """Milestone 11: Patrol moves an NPC by setting its position (no velocity), so it slid along standing
+    still, facing down. The Animator now measures the movement itself."""
+    entity = StubEntity()
+    entity.center_x, entity.center_y = 100.0, 100.0
+    anim = SpriteAnimatorBehaviour(
+        entity, StubWindow(),
+        animations={f"{k}_{d}": ["x"] for k in ("idle", "walk") for d in ("up", "down", "left", "right")},
+        enable_auto_state=True, directional_mode="4-way", facing_default="down",
+        idle_clip="idle_down", walk_clip="walk_down", speed_threshold=5.0,
+    )
+    anim.update(0.1)
+    entity.center_x += 6.0  # 60 px a second, to the right
+    anim.update(0.1)
+    assert anim.current_state == "walk_right"
+    entity.center_y -= 6.0  # now down the screen
+    anim.update(0.1)
+    assert anim.current_state == "walk_down"
+    anim.update(0.1)  # stopped
+    assert anim.current_state == "idle_down"
+
+
+@pytest.mark.fast
+def test_showing_a_frame_fits_the_hit_box_to_it():
+    """Arcade keeps a sprite's hit box when its texture changes: a character made from a whole walking sheet
+    kept the sheet's box, so its shadow and depth sorting sat far below the frame shown (Milestone 11)."""
+    from unittest.mock import MagicMock
+
+    entity = StubEntity()
+    entity.sync_hit_box_to_texture = MagicMock()
+    anim = SpriteAnimatorBehaviour(entity, StubWindow(), animations={"idle": ["a", "b"]}, animation_frame_rate=8.0)
+    assert entity.sync_hit_box_to_texture.call_count == 1  # the first frame replaced the sheet
+    anim._apply_frame()  # the same frame again: nothing to do
+    assert entity.sync_hit_box_to_texture.call_count == 1
