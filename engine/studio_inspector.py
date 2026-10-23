@@ -27,6 +27,17 @@ if TYPE_CHECKING:
 
 TABS = (("look", "Look"), ("animation", "Animation"), ("collision", "Collision"),
         ("dialogue", "Dialogue"), ("conditions", "Conditions"), ("behaviours", "Behaviours"))
+_DOOR_TABS = ("look", "conditions", "behaviours")  # a door doesn't talk, animate or block
+
+
+def _tabs_for(entity: dict[str, Any]) -> tuple[tuple[str, str], ...]:
+    """The inspector tabs that mean something for this object: none for an arrival spot, three for a door."""
+    tag = entity.get("tag")
+    if tag == "spawn_point":
+        return ()
+    if tag == "door":
+        return tuple(t for t in TABS if t[0] in _DOOR_TABS)
+    return TABS
 THUMB = 96  # picture and animation previews, in pixels
 IMAGE_FILES = [("Images", "*.png *.gif *.bmp *.jpg *.jpeg *.webp"), ("All files", "*.*")]
 
@@ -195,8 +206,20 @@ class InspectorMixin:
             rows.add(self._label("This room has its own player: changes here don't reach other rooms.",
                                  color=(240, 200, 120), size=9, width=width))
             rows.add(self._button("Use one player in every room...", self._open_players, width=width))
+        tabs = _tabs_for(entity)
+        if entity.get("tag") == "spawn_point":
+            rows.add(self._label("An arrival spot: where the player appears on coming into this room through a door. "
+                                 "Drag it to move it. Keep it clear of the door here, or the player walks straight back "
+                                 "out.", color=C_MUTED, size=10, width=width))
+            rows.add(gui.UISpace(height=6))
+            rows.add(self._button("Delete object", self.delete_selected, width=120, style=S_DANGER))
+            return
+        if entity.get("tag") == "door":
+            rows.add(self._label(self._door_note(entity), color=C_MUTED, size=10, width=width))
+        if self.tab not in {key for key, _title in tabs}:
+            self.tab = tabs[0][0]
         third = (width - 8) // 3
-        for line in (TABS[:3], TABS[3:]):
+        for line in (tabs[:3], tabs[3:]):
             row = gui.UIBoxLayout(vertical=False, space_between=4)
             for key, title in line:
                 row.add(self._button(title, partial(self._open_tab, key), width=third,
@@ -208,6 +231,13 @@ class InspectorMixin:
          "behaviours": self._behaviours_tab}[self.tab](rows, entity, width)
         rows.add(gui.UISpace(height=6))
         rows.add(self._button("Delete object", self.delete_selected, width=120, style=S_DANGER))
+
+    def _door_note(self, entity: dict[str, Any]) -> str:
+        config = (entity.get("behaviour_config") or {}).get("SceneTransition") or {}
+        rooms = {key: label for key, label, _path in self.project.rooms()}
+        where = rooms.get(str(config.get("target_scene") or ""), "another room")
+        return (f"A door to {where}: the player goes through by walking into it (its outlined area on the map). "
+                "The arrival spot shows where they come back in.")
 
     def _open_tab(self, key: str) -> None:
         self.tab, self.panel_scroll = key, 0
@@ -272,15 +302,18 @@ class InspectorMixin:
         if not problem:
             return
         target = entity["id"]
-        rows.add(self._label(problem, color=(240, 200, 120), size=9, width=width))
+        rows.add(self._label(problem + " So the game would show the wrong part of the picture.", color=(240, 200, 120),
+                             size=9, width=width))
+        rows.add(self._label("A single picture: show it as it is. A sheet of frames: set up its frames in the "
+                             "Animation tab.", color=C_MUTED, size=9, width=width))
         row = gui.UIBoxLayout(vertical=False, space_between=6)
         half = (width - 6) // 2
         if any(c.get("sheet") != sprite for c in ops.animation_clips(entity).values() if isinstance(c, dict)):
             row.add(self._button("Use this picture", lambda: self._edit(
                 lambda s: ops.animation_use_picture(s, target), "The animation now cuts its frames from this picture."), width=half))
-        row.add(self._button("Reset animation", lambda: self._edit(
-            lambda s: ops.reset_animation(s, target), "Animation removed: the picture shows as it is. Undo brings it back."),
-            width=half, style=S_DANGER))
+        row.add(self._button("Show it as it is", lambda: self._edit(
+            lambda s: ops.reset_animation(s, target), "The picture shows as it is (its animation is off). Undo brings it back."),
+            width=half))
         rows.add(row)
 
     # ---------------------------------------------------------------- picture browser
@@ -651,7 +684,15 @@ class InspectorMixin:
             if node_id == self.dlg_line:
                 rows.anchor("line_editor")
                 self._line_editor(rows, entity, node_id, node, number, order, width)
-        rows.add(self._button("+ Line", lambda: self._add_line(target, None), width=90))
+        last = nodes[order[-1]]
+        half = (width - 6) // 2
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        if not last.get("next") and not last.get("choices"):
+            row.add(self._button(f"+ Next line (after {len(order)})", lambda: self._add_line(target, None), width=half))
+        row.add(self._button("+ Separate line", lambda: self._add_line(target, None, link=False), width=half))
+        rows.add(row)
+        rows.add(self._label("A separate line follows nothing: lead to it from an opening or a choice.",
+                             color=C_MUTED, size=9, width=width))
 
         rows.add(gui.UISpace(height=6))
         rows.anchor("openings")
@@ -703,15 +744,17 @@ class InspectorMixin:
         self._scroll_to = "line_editor" if self.dlg_line else None
         self._rebuild()
 
-    def _add_line(self, target: str, after: str | None) -> None:
+    def _add_line(self, target: str, after: str | None, *, link: bool = True) -> None:
         made: list[str] = []
 
         def change(scene: dict[str, Any]) -> dict[str, Any]:
-            out, node_id = ops.add_line(scene, target, after=after, text="...")
+            out, node_id = ops.add_line(scene, target, after=after, text="...", link=link)
             made.append(node_id)
             return out
 
-        if self._edit(change, "Added a line: write it in the box."):
+        said = ("Added a line: write it in the box." if link else
+                "Added a separate line: nothing leads to it yet. Use it from an opening or a choice.")
+        if self._edit(change, said):
             self.dlg_line, self.dlg_choice = made[0], None
             self._scroll_to, self._focus_after_build = "line_editor", "line_text"
             self._rebuild()

@@ -7,7 +7,11 @@ again unsure it had worked; the file name is kept from that earlier policy.)
 import unittest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from engine.save_manager import SaveManager
+
+pytestmark = pytest.mark.fast
 
 
 class TestSavedToast(unittest.TestCase):

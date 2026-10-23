@@ -7,7 +7,11 @@ import json
 import unittest
 from unittest.mock import MagicMock
 
+import pytest
+
 from engine.save_manager import SaveManager
+
+pytestmark = pytest.mark.fast
 
 
 class TestLoadedToast(unittest.TestCase):

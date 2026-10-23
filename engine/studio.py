@@ -728,7 +728,8 @@ class Studio(InspectorMixin):
             return
         self.panel = "inspect"
         if door_at is not None:
-            self._after_change(f"Created {label} with a door to it. Its door is next to its player.")
+            self._after_change(f"Created {label}: walk into the new door here to go there. {label} has a door back "
+                               "beside where the player starts in it.")
         else:
             self.switch_room(key)
             self._say(f"Created {label}. Add a door from another room to connect it.")
@@ -1316,6 +1317,24 @@ class Studio(InspectorMixin):
                 self._inspector(rows, entity, width)
         return self._scrolled(rows)
 
+    def _menu_dump(self) -> dict[str, Any] | None:
+        """The game menu (Esc) as it is on screen, for automated GUI tests: which page and where its items are."""
+        menu = getattr(self.window, "pause_menu", None)
+        if menu is None or not menu.visible:
+            return None
+        items = []
+        for target in menu.layout_current_state().hit_targets:
+            text = getattr(target.widget, "text", None)
+            if text is None and isinstance(getattr(target.widget, "items", None), list):
+                text = target.widget.items[target.index]
+            r = target.rect
+            items.append({"id": target.action_id, "text": text, "rect": [r.x, r.y, r.width, r.height]})
+        return {"screen": menu.state, "items": items}
+
+    def _toasts_now(self) -> list[str]:
+        toasts = getattr(getattr(self.window, "player_hud", None), "_toast_manager", None)
+        return list(toasts.get_active_toasts()) if toasts is not None else []
+
     def _scrolled(self, rows: Rows) -> gui.UIBoxLayout:
         """The rows that fit the panel, from ``panel_scroll`` on; the mouse wheel scrolls the rest in."""
         box = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
@@ -1802,7 +1821,9 @@ class Studio(InspectorMixin):
                                  "choices": [{"text": str(c.get("text")), "disabled": bool(c.get("disabled"))} if isinstance(c, dict)
                                              else {"text": str(c), "disabled": False} for c in entry.get("choices") or []],
                                  "cursor": getattr(box, "_choice_index", None)}
-                    if entry else None}
+                    if entry else None,
+                    "menu": self._menu_dump(),
+                    "toasts": self._toasts_now()}
         map_state = None
         info = ops.map_info(self.project.scene())
         if info is not None and self.mode == "edit":
@@ -1988,6 +2009,9 @@ class Studio(InspectorMixin):
                 a.draw_circle_filled(cx, cy, 9, C_SPAWN)
                 self._text(f"spawn:{eid}", str(entity.get("name") or "Arrival"), cx, cy - 24, C_SPAWN)
             elif entity.get("tag") == "door":
+                # Walking into the picture takes the player through: show that area.
+                a.draw_lrbt_rectangle_filled(cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2, (240, 210, 140, 40))
+                a.draw_lrbt_rectangle_outline(cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2, (240, 210, 140), 1)
                 self._text(f"door:{eid}", str(entity.get("name") or "Door"), cx, cy + h / 2 + 4, (240, 210, 140))
             if showing_collision or eid == self.selected:
                 self._draw_collider(entity, float(entity.get("x", 0)), float(entity.get("y", 0)), w, h,
@@ -2166,6 +2190,9 @@ class Studio(InspectorMixin):
                 self.copy_selected()
             else:
                 self.paste_here()
+        elif k.A <= symbol <= k.Z and symbol not in (k.W, k.A, k.S, k.D) and self._fields:
+            # Typing with no box chosen went nowhere (and W A S D moved the view): say how to type.
+            self._say("To type, click a box first. (W A S D and the arrow keys move the view.)", ok=False)
         elif symbol == k.DELETE and self.panel == "route":
             self.remove_route_point()
         elif symbol == k.DELETE:

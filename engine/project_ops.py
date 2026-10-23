@@ -1048,8 +1048,12 @@ def _target(nodes: Doc, value: Any) -> str | None:
 
 
 def add_line(scene: Doc, entity_id: str, *, after: str | None = None, text: str = "...",
-             speaker: str | None = None) -> tuple[Doc, str]:
-    """A new line, after ``after`` (spliced into its flow) or at the end of the conversation."""
+             speaker: str | None = None, link: bool = True) -> tuple[Doc, str]:
+    """A new line, after ``after`` (spliced into its flow) or at the end of the conversation.
+
+    At the end, the last line runs on into it when it can (no next line, no choices); ``link=False`` adds
+    it on its own instead, for an opening or a choice to lead to later.
+    """
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
     _config, graph, nodes = _graph(entity)
@@ -1062,7 +1066,7 @@ def add_line(scene: Doc, entity_id: str, *, after: str | None = None, text: str 
         if before.get("next"):
             node["next"] = before["next"]
         before["next"] = node_id
-    elif nodes:
+    elif nodes and link:
         last = next(reversed(nodes))
         if not nodes[last].get("next") and not nodes[last].get("choices"):
             nodes[last]["next"] = node_id

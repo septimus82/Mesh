@@ -122,6 +122,17 @@ def test_a_conversation_built_line_by_line_with_choices_runs_in_the_dialogue_beh
     assert [rule["node"] for rule in behaviour._graph_starts] == [done, dig]
 
 
+def test_a_separate_line_follows_nothing() -> None:
+    """Hollowmere: + Line silently ran the last line on into a new one meant for later (Milestone 11)."""
+    scene, grave = _with_grave()
+    scene, a = ops.add_line(scene, grave, text="The gate is open.")
+    scene, later = ops.add_line(scene, grave, text="Thank you!", link=False)
+    talk = ops.conversation(ops.find_entity(scene, grave))
+    assert "next" not in talk["nodes"][a] and later in talk["nodes"]
+    scene, b = ops.add_line(scene, grave, text="And another thing.")  # a next line still follows on
+    assert ops.conversation(ops.find_entity(scene, grave))["nodes"][later]["next"] == b
+
+
 def test_removing_a_line_splices_its_flow_and_forgets_rules_that_used_it() -> None:
     scene, grave = _with_grave()
     scene, a = ops.add_line(scene, grave, text="A")
@@ -198,3 +209,12 @@ def test_a_new_clip_guesses_frames_from_the_sheet_never_the_whole_picture() -> N
     assert _guess_frame((96, 192)) == (32, 32)  # 3 across: a 3x4 character sheet with square frames
     assert _guess_frame((384, 512)) == (128, 128)
     assert _guess_frame(None) == (32, 32)
+
+
+def test_arrival_spots_and_doors_only_get_the_tabs_that_mean_something() -> None:
+    """Hollowmere: an "Arrival from ..." marker opened Picture, Animation and Dialogue tabs (Milestone 11)."""
+    from engine.studio_inspector import TABS, _tabs_for  # noqa: PLC0415
+
+    assert _tabs_for({"tag": "spawn_point"}) == ()
+    assert [key for key, _title in _tabs_for({"tag": "door"})] == ["look", "conditions", "behaviours"]
+    assert _tabs_for({"tag": "npc"}) == TABS
