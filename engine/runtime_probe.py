@@ -51,6 +51,10 @@ def runtime_snapshot(window: Any) -> dict[str, Any]:
                          "trauma": float(getattr(camera, "trauma", 0.0) or 0.0),
                          "center": _xy(window.get_camera_center()) if hasattr(window, "get_camera_center") else None,
                          "area": getattr(area, "name", None) if area is not None else None}
+    day_night = getattr(window, "day_night", None)
+    if day_night is not None:
+        out["day_night"] = {"enabled": bool(getattr(day_night, "enabled", False)),
+                            "hour": round(float(getattr(day_night, "hour", 0.0) or 0.0), 2)}
     audio = getattr(window, "audio", None)
     if audio is not None:
         out["audio"] = {"recent": list(getattr(audio, "recent_plays", []) or [])[-12:]}

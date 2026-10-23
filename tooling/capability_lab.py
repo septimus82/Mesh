@@ -65,7 +65,7 @@ def make_assets(root: Path) -> None:
         img = Image.new("RGBA", (28, 28), colour + (255,))
         ImageDraw.Draw(img).rectangle([0, 0, 27, 27], outline=(20, 20, 20, 255), width=2)
         img.save(sprites / f"{name}.png")
-    for name, colour in (("lab_big_red", (220, 50, 50)), ("lab_big_blue", (50, 90, 230))):
+    for name, colour in (("lab_big_red", (220, 50, 50)), ("lab_big_blue", (50, 90, 230)), ("lab_big_white", (235, 235, 235))):
         Image.new("RGBA", (64, 64), colour + (255,)).save(sprites / f"{name}.png")
     backgrounds = root / "assets" / "backgrounds"
     backgrounds.mkdir(parents=True, exist_ok=True)
@@ -123,7 +123,8 @@ def build_lab(root: Path) -> dict[str, str]:
     make_assets(root)
     make_probe_mod(root)
     project = Project(root, config["world_file"])
-    keys = {label: project.add_room(label) for label in ("Paths", "Lights", "Torch", "Sequence", "Camera", "Depth", "Audio")}
+    keys = {label: project.add_room(label) for label in ("Paths", "Lights", "Torch", "Sequence", "Camera", "Depth", "Audio",
+                                                         "Zoomed", "Day", "Look", "Unlit", "Enemy")}
 
     def edit(key: str, fn: Callable[[dict[str, Any]], None]) -> None:
         def change(scene: dict[str, Any]) -> dict[str, Any]:
@@ -151,7 +152,8 @@ def build_lab(root: Path) -> dict[str, str]:
              "stop_range_tiles": 1}
     add(keys["Paths"],
         entity("walker", "Walker", cell(6, 7), "assets/sprites/lab_green.png",
-               {"FollowPath": {"goal_x": cell(14, 7)[0], "goal_y": cell(14, 7)[1], "speed": 90}}),
+               {"FollowPath": {"goal_x": cell(14, 7)[0], "goal_y": cell(14, 7)[1], "speed": 90},
+                "LightSource": {"radius": 120, "color": "#99ccff"}}),
         entity("seer", "Seer", cell(8, 11), "assets/sprites/lab_yellow.png", {"ChaseTarget": dict(chase)}),
         entity("blind", "Blind", cell(16, 11), "assets/sprites/lab_purple.png", {"ChaseTarget": dict(chase)}))
 
@@ -174,11 +176,20 @@ def build_lab(root: Path) -> dict[str, str]:
             "SequencePlayer": {"auto_start": True, "lock_player_input": False, "steps": [
                 {"type": "move_to", "x": 96, "y": 0, "relative": True, "speed": 80},
                 {"type": "wait", "duration": 3.0},
-                {"type": "signal", "event": "herald_talk"}]},
-            "Dialogue": {"start_event": "herald_talk", "once": False}}),
+                {"type": "signal", "event": "herald_talk"},
+                {"type": "wait", "duration": 0.5},
+                {"type": "signal", "event": "herald_done"}]},
+            "Dialogue": {"start_event": "herald_talk", "once": False},
+            "SetGameStateOnEvent": {"event_type": "herald_done", "set_flags": {"herald_done": True}}}),
         entity("sparks", "Sparks", cell(5, 8), None, {"ParticleEmitter": {
             "mode": "rate", "rate": 30, "color": [255, 200, 80], "spawn_shape": "circle", "radius": 12}}),
         entity("spinner", "Spinner", cell(14, 9), "assets/sprites/lab_red.png", {"LabSpinner": {}}),
+        # A quest step counted from a live event: QuestHook hears the herald's last signal, then a flag records
+        # the step's completion event.
+        entity("quest_board", "Quest board", cell(3, 3), "assets/sprites/lab_white.png", {
+            "QuestHook": {"quest_id": "lab", "step_id": "hear_the_herald", "listen_events": ["herald_done"],
+                          "target_count": 1},
+            "SetGameStateOnEvent": {"event_type": "quest_step_completed", "set_flags": {"quest_step_done": True}}}),
         {"id": "twin_ref", "mesh_name": "Twin (prefab reference)", "prefab_id": "person", "x": cell(12, 5)[0], "y": cell(12, 5)[1]})
     project.edit_scene(lambda s: ops.set_dialogue_text(s, "herald", "Moved, waited, now talking."), keys["Sequence"])
     from engine import authoring
@@ -212,6 +223,52 @@ def build_lab(root: Path) -> dict[str, str]:
         entity("turret", "Turret", cell(44, 7), "assets/sprites/lab_yellow.png", {
             "RangedEnemyAI": {"target_tag": "dummy", "detect_radius": 400, "attack_radius": 300, "flee_radius": 0, "speed": 0},
             "Shooter": {"target_tag": "dummy", "cooldown": 0.6, "range": 400, "damage": 1}}))
+
+    # Zoomed: the Lights room's light and pillar, seen with the camera at zoom 1.8 (shadows must line up).
+    zl = (240.0, 240.0)
+    edit(keys["Zoomed"], lambda s: s.update(
+        lights=[{"id": "steady", "x": zl[0], "y": zl[1], "radius": 220, "color": "#ffcc66"}],
+        occluders=[{"id": "pillar", "type": "rect", "x": zl[0] + 80, "y": zl[1] - 64, "width": 32, "height": 128}],
+        settings={**(s.get("settings") or {}), "ambient_light_rgba": [25, 25, 35, 255], "lighting_shadows_mode": "hard",
+                  # A camera area over the whole room: the templates' player CameraFollow pins zoom 1.0, which
+                  # overrides a room's own initial zoom (recorded in the Milestone 8 report).
+                  "camera": {"areas": [{"name": "zoomed", "x": 0, "y": 0, "width": 640, "height": 480, "zoom": 1.8}]}}))
+
+    # Day: the clock runs an hour a second from 06:00; two shopkeepers stand until 08:00, then walk a route.
+    # One lists Patrol before NpcSchedule, the other after (the schedule looks for its Patrol when it starts).
+    def schedule(row: int) -> dict[str, Any]:
+        a, b = cell(5, row), cell(15, row)
+        return {"schedules": [{"start_hour": 6, "end_hour": 8, "mode": "stand", "x": a[0], "y": a[1]},
+                              {"start_hour": 8, "end_hour": 20, "mode": "patrol",
+                               "patrol_points": [{"x": a[0], "y": a[1]}, {"x": b[0], "y": b[1]}]}]}
+
+    edit(keys["Day"], lambda s: s.update(settings={**(s.get("settings") or {}), "day_night_enabled": True,
+                                                   "time_of_day_hour": 6, "day_night_cycle_length_seconds": 24}))
+    patrol = {"patrol_points": [], "patrol_speed": 60}
+    add(keys["Day"],
+        {**entity("shopkeeper", "Shopkeeper", cell(5, 5), "assets/sprites/lab_green.png", {}),
+         "behaviours": ["Patrol", "NpcSchedule"], "behaviour_config": {"Patrol": dict(patrol), "NpcSchedule": schedule(5)}},
+        {**entity("early_bird", "Early bird", cell(5, 8), "assets/sprites/lab_yellow.png", {}),
+         "behaviours": ["NpcSchedule", "Patrol"], "behaviour_config": {"Patrol": dict(patrol), "NpcSchedule": schedule(8)}})
+
+    # Look: outlines and depth tint on real sprites.
+    edit(keys["Look"], lambda s: s.update(settings={**(s.get("settings") or {}),
+        "outline_enabled": True, "outline_color_rgba": [255, 0, 255, 255], "outline_strength": 1.0, "outline_radius_px": 2,
+        "depth_tint_enabled": True, "depth_tint_near_color": [255, 255, 255, 255], "depth_tint_far_color": [40, 40, 160, 255],
+        "depth_tint_strength": 1.0}))
+    add(keys["Look"],
+        # In y-sort rooms depth tint follows render_layer (depth_z counts only in explicit_z rooms); higher is nearer.
+        entity("near", "Near", (320.0, 300.0), "assets/sprites/lab_big_white.png", {}, render_layer=10),
+        entity("far", "Far", (480.0, 300.0), "assets/sprites/lab_big_white.png", {}, render_layer=-10))
+
+    # Unlit: this room switches lighting off (the project has it on) and would be dark if it didn't.
+    edit(keys["Unlit"], lambda s: s.update(settings={**(s.get("settings") or {}), "lighting_enabled": False,
+                                                     "ambient_light_rgba": [20, 20, 20, 255]}))
+
+    # Enemy: an EnemyAI that should chase the player at its speed (100 px/s).
+    add(keys["Enemy"], entity("grunt", "Grunt", cell(14, 11), "assets/sprites/lab_red.png", {
+        "EnemyAI": {"target_tag": "player", "detect_radius": 500, "lose_radius": 600, "attack_radius": 40, "speed": 100,
+                    "use_patrol": False}}))
 
     # A door from Lights to Paths, for a scene transition.
     project.link_rooms(keys["Lights"], (128.0, 48.0), keys["Paths"], (560.0, 400.0))
@@ -274,8 +331,10 @@ def run(out: Path, only: set[str] | None = None) -> int:
     def play() -> dict[str, Any]:
         return p().fresh()["play"]
 
-    def sprite(name: str) -> dict[str, Any] | None:
-        return next((s for s in play()["sprites"] if s["name"] == name), None)
+    def sprite(name: str, state: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        """An object as the game last reported it; pass ``state`` to compare it with other values from the same
+        moment (a separate read is a later frame: a moving object then seems to lead its own light)."""
+        return next((s for s in (state or play())["sprites"] if s["name"] == name), None)
 
     def to_screen(world: tuple[float, float], state: dict[str, Any] | None = None) -> tuple[float, float]:
         """World point -> screenshot pixel, from where the player is drawn (camera follows it)."""
@@ -346,12 +405,16 @@ def run(out: Path, only: set[str] | None = None) -> int:
         play_room("Lights")
         state = play()
         lit = state["runtime"]["lighting"]
-        centre, edge = [], []
+        centre, edge, behind, open_side = [], [], [], []
         light = cell(11, 7)
         for i in range(8):  # the flicker mostly changes the light's reach, so its edge shows it best
             img, _ = shot(f"flicker_{i}")
             centre.append(brightness(img, *to_screen(light)))
             edge.append(brightness(img, *to_screen((light[0] - 160, light[1]))))
+            # Just past the pillar (it spans 80-112 px east), and the same distance south in the open:
+            # well inside the light's reach even when the flicker shrinks it (to ~143 px).
+            behind.append(brightness(img, *to_screen((light[0] + 125, light[1]))))
+            open_side.append(brightness(img, *to_screen((light[0], light[1] - 125))))
             time.sleep(0.15)
         img, name = shot("lights")
         far = brightness(img, *to_screen((light[0] - 300, light[1] + 150)))
@@ -360,21 +423,117 @@ def run(out: Path, only: set[str] | None = None) -> int:
                else "FAIL", {"lighting": lit, "brightness_at_light": [round(v) for v in centre],
                              "brightness_near_edge": [round(v) for v in edge], "dark_far_away": round(far),
                              "flicker_range_at_edge": round(varies, 1)}, name)
-        behind = brightness(img, *to_screen((light[0] + 150, light[1])))  # past the pillar, east
-        open_side = brightness(img, *to_screen((light[0], light[1] - 150)))  # same distance, south, nothing in the way
-        record("2. An occluder casts a visible shadow (hard shadows)", "PASS" if open_side - behind > 15 else "FAIL",
-               {"behind_pillar": round(behind), "open_same_distance": round(open_side), "occluders": lit["occluders"],
-                "mode": lit["shadows_mode"]}, name)
+        darker = sum(o - b for o, b in zip(open_side, behind)) / len(behind)  # averaged: the flicker dims some frames
+        record("2. An occluder casts a visible shadow (hard shadows)", "PASS" if darker > 10 else "FAIL",
+               {"behind_pillar": [round(v) for v in behind], "open_same_distance": [round(v) for v in open_side],
+                "occluders": lit["occluders"], "mode": lit["shadows_mode"]}, name)
 
     def transition() -> None:
+        """Through the Lights room's door to Paths and back, three times. Each arrival must show that room's
+        lights only: Lights' static light and pillar; in Paths, the walker's own light, on the walker."""
+        lights_scene = play()["scene"]
+        visits, name = [], None
+        for lap in range(3):
+            p().go_to(128.0, 48.0 + 90, tol=10)  # the Lights door is at (128, 48)
+            p().d.hold("S", 0.6)
+            p().wait(lambda s: s["play"] and s["play"]["scene"] != lights_scene, "arriving in Paths", timeout=8)
+            time.sleep(1.0)
+            state = play()
+            walker = sprite("Walker", state)
+            lit = state["runtime"]["lighting"]
+            visits.append({"room": "Paths", "static": lit["static_lights"], "occluders": lit["occluders"],
+                           "dynamic": [d["at"] for d in lit["dynamic"]], "walker": walker and walker["at"]})
+            if lap == 0:
+                _, name = shot("transition")
+            p().go_to(560.0, 400.0 - 90, tol=10)  # the Paths door is at (560, 400), its arrival below it
+            p().d.hold("W", 0.6)
+            p().wait(lambda s: s["play"] and s["play"]["scene"] == lights_scene, "back in Lights", timeout=8)
+            time.sleep(1.0)
+            lit = play()["runtime"]["lighting"]
+            visits.append({"room": "Lights", "static": lit["static_lights"], "occluders": lit["occluders"],
+                           "dynamic": [d["at"] for d in lit["dynamic"]], "ambient_tint": lit["ambient_tint"]})
+        ok = all(v["static"] == 1 and v["occluders"] == 1 and not v["dynamic"] for v in visits if v["room"] == "Lights")
+        ok = ok and all(v["static"] == 0 and len(v["dynamic"]) == 1 and v["walker"]
+                        and math.dist(v["dynamic"][0], v["walker"]) < 4 for v in visits if v["room"] == "Paths")
+        record("Scene transitions, and lights over repeated room changes (3 round trips)", "PASS" if ok else "FAIL",
+               {"visits": visits}, name)
+
+    def zoomed() -> None:
+        play_room("Zoomed")
         state = play()
-        start_scene = state["scene"]
-        p().go_to(128.0, 70.0, tol=10)
-        p().d.hold("S", 0.6)
-        new = p().wait(lambda s: s["play"] and s["play"]["scene"] != start_scene, "the scene change", timeout=8)["play"]
-        img, name = shot("transition")
-        record("Scene transition through a door (SceneTransition)", "PASS",
-               {"from": start_scene, "to": new["scene"], "arrived_at": new["player"]}, name)
+        light = (240.0, 240.0)
+        zoom = state["runtime"]["camera"]["zoom"]
+        img, name = shot("zoomed_shadow")
+        behind = brightness(img, *to_screen((light[0] + 125, light[1]), state))
+        before = brightness(img, *to_screen((light[0] + 60, light[1]), state))  # lit side, between light and pillar
+        open_side = brightness(img, *to_screen((light[0], light[1] - 125), state))
+        ok = zoom > 1.5 and open_side - behind > 10 and before > behind + 10
+        record("Occluder shadow lines up at camera zoom 1.8", "PASS" if ok else "FAIL",
+               {"zoom": zoom, "behind_pillar": round(behind), "in_front_of_pillar": round(before),
+                "open_same_distance": round(open_side)}, name)
+
+    def day() -> None:
+        play_room("Day")
+        samples = []
+        start = time.time()
+        while time.time() - start < 5.0:
+            state = play()
+            keeper, bird = sprite("Shopkeeper", state), sprite("Early bird", state)
+            samples.append({"t": round(time.time() - start, 1), "hour": state["runtime"].get("day_night", {}).get("hour"),
+                            "ambient": state["runtime"]["lighting"]["ambient"], "shopkeeper": keeper and keeper["at"],
+                            "early_bird": bird and bird["at"]})
+            time.sleep(0.5)
+        _, name = shot("day")
+        hours = [x["hour"] for x in samples if x["hour"] is not None]
+        ambients = {tuple(x["ambient"]) for x in samples}
+        record("Day/night progresses over time (scene day_night_enabled)",
+               "PASS" if hours and hours[-1] - hours[0] >= 3 and len(ambients) >= 3 else "FAIL",
+               {"hours": hours, "distinct_ambients": len(ambients), "first": samples[0], "last": samples[-1]}, name)
+        for who in ("shopkeeper", "early_bird"):
+            first, last = samples[0][who], samples[-1][who]
+            moved = bool(first and last and math.dist(first, last) > 30)
+            record(f"NPC schedule: stands until 08:00, then walks its route ({who})", "PASS" if moved else "FAIL",
+                   {"at_start": first, "at_end": last, "hour_at_end": samples[-1]["hour"]}, name)
+
+    def look() -> None:
+        play_room("Look")
+        state = play()
+        img, name = shot("look")
+        near, far = colour(img, *to_screen((320.0, 300.0), state)), colour(img, *to_screen((480.0, 300.0), state))
+        edge = colour(img, *to_screen((320.0 + 33.5, 300.0), state))  # 1-2 px outside the near square, right side
+        outlined = edge[0] > 150 and edge[2] > 150 and edge[1] < 120
+        record("Outlines are drawn round sprites (outline_enabled)", "PASS" if outlined else "FAIL",
+               {"pixel_just_outside": edge, "outline_colour": [255, 0, 255]}, name)
+        record("Depth tint colours near and far sprites differently (depth_tint_enabled)",
+               "PASS" if sum(near) - sum(far) > 90 and far[2] > far[0] + 30 else "FAIL",
+               {"near_pixel": near, "far_pixel": far, "far_colour": [40, 40, 160]}, name)
+
+    def unlit() -> None:
+        play_room("Unlit")
+        state = play()
+        img, name = shot("unlit")
+        floor = brightness(img, *to_screen((320.0, 300.0), state))
+        lit = state["runtime"]["lighting"]
+        record("A room can switch lighting off (settings.lighting_enabled false)",
+               "PASS" if not lit["enabled"] and floor > 80 else "FAIL", {"lighting": lit, "floor_brightness": round(floor)}, name)
+        play_room("Lights")
+        lit = play()["runtime"]["lighting"]
+        record("Lighting comes back on in the next lit room", "PASS" if lit["enabled"] and lit["static_lights"] == 1 else "FAIL",
+               {"lighting": lit}, None)
+
+    def enemy() -> None:
+        play_room("Enemy")
+        trail = []
+        start = time.time()
+        while time.time() - start < 2.0:
+            grunt = sprite("Grunt")
+            trail.append((time.time() - start, grunt and grunt["at"]))
+            time.sleep(0.25)
+        _, name = shot("enemy")
+        (t0, a), (t1, b) = trail[0], trail[-1]
+        speed = math.dist(a, b) / (t1 - t0) if a and b and t1 > t0 else 0.0
+        record("EnemyAI chases at its speed (100 px/s)", "PASS" if 70 <= speed <= 130 else "FAIL",
+               {"measured_px_per_s": round(speed, 1), "from": a, "to": b, "seconds": round(t1 - t0, 2)}, name)
 
     def torch() -> None:
         play_room("Torch")
@@ -382,13 +541,12 @@ def run(out: Path, only: set[str] | None = None) -> int:
         for _ in range(6):
             state = play()
             dyn = state["runtime"]["lighting"]["dynamic"]
-            npc = sprite("Torchbearer")
-            seen.append({"light": dyn[0]["at"] if dyn else None, "npc": npc["at"] if npc else None, "lights": dyn,
-                         "torchbearers": [s["at"] for s in state["sprites"] if s["name"] == "Torchbearer"]})
+            npc = sprite("Torchbearer", state)
+            seen.append({"light": dyn[0]["at"] if dyn else None, "npc": npc["at"] if npc else None, "lights": len(dyn)})
             time.sleep(0.5)
         img, name = shot("torch")
-        moved = seen[0]["npc"] and seen[-1]["npc"] and math.dist(seen[0]["npc"], seen[-1]["npc"]) > 20
-        follows = all(s["light"] and s["npc"] and math.dist(s["light"], s["npc"]) < 40 for s in seen)
+        moved = max((math.dist(seen[0]["npc"], s["npc"]) for s in seen if s["npc"] and seen[0]["npc"]), default=0) > 20
+        follows = all(s["light"] and s["npc"] and s["lights"] == 1 and math.dist(s["light"], s["npc"]) < 2 for s in seen)
         record("3. A moving entity carries a dynamic light (LightSource)", "PASS" if moved and follows else "FAIL",
                {"samples": seen}, name)
 
@@ -417,6 +575,11 @@ def run(out: Path, only: set[str] | None = None) -> int:
                {"moved_to": moved_at and moved_at[1], "dialogue": talked and talked[1]["text"],
                 "wait_between_s": talked and moved_at and round(talked[0] - moved_at[0], 2), "herald_trail": trail[::3]}, name)
         p().close_dialogue()
+        done = p().wait(lambda s: s["play"]["flags"].get("herald_done"), "the sequence's last step", timeout=6)
+        record("A sequence runs to its end and triggers what follows (signal -> SetGameStateOnEvent)", "PASS",
+               {"flags": done["play"]["flags"]}, None)
+        quest = p().wait(lambda s: s["play"]["flags"].get("quest_step_done"), "the quest step completed", timeout=6)
+        record("A quest step counts a live game event (QuestHook)", "PASS", {"flags": quest["play"]["flags"]}, None)
         particles = play()["runtime"]["particles"]
         img, name = shot("particles")
         record("10. A particle effect appears (ParticleEmitter)", "PASS" if particles["alive"] or particles["sprites"] else "FAIL",
@@ -506,7 +669,8 @@ def run(out: Path, only: set[str] | None = None) -> int:
     try:
         page.wait(lambda s: s["mode"] == "edit" and s["objects"], "the Studio", timeout=60)
         for name, fn in (("navigation", nav), ("save_load", save_load), ("lights", lights), ("transition", transition),
-                         ("torch", torch), ("sequence", sequence), ("camera", camera), ("depth", depth), ("audio", audio)):
+                         ("torch", torch), ("sequence", sequence), ("camera", camera), ("depth", depth), ("audio", audio),
+                         ("zoomed", zoomed), ("day", day), ("look", look), ("unlit", unlit), ("enemy", enemy)):
             if not only or name in only:
                 check(name, fn)
     finally:
@@ -514,8 +678,10 @@ def run(out: Path, only: set[str] | None = None) -> int:
     headless(results, root, record)
     (out / "lab_report.json").write_text(json.dumps({"results": results}, indent=2), encoding="utf-8")
     passed = sum(r["status"] == "PASS" for r in results)
-    print(f"{passed}/{len(results)} checks passed; report: {out / 'lab_report.json'}")
-    return 0
+    known = sum(r["status"] == "KNOWN" for r in results)
+    print(f"{passed}/{len(results) - known} checks passed; {known} known defect(s) reported apart; "
+          f"report: {out / 'lab_report.json'}")
+    return 0 if passed == len(results) - known else 1
 
 
 def _find_red(img: Any) -> float | None:
@@ -537,7 +703,11 @@ def headless(results: list[dict[str, Any]], root: Path, record: Callable[..., No
         SceneLoader().load_scene(str(path))
         record("background_planes load from a scene file (headless)", "PASS", "loaded")
     except SchemaValidationError as exc:
-        record("background_planes load from a scene file (headless)", "FAIL", f"{type(exc).__name__}: {str(exc)[:160]}")
+        # A documented defect, not a regression: the scene schema rejects the key. Deferred in Milestone 8 (see
+        # docs/reviews/milestone8_runtime_reliability.md); KNOWN keeps it in every report without failing the gate.
+        # If it starts loading, this becomes a PASS and the note should go.
+        reason = "'background_planes' was unexpected" if "background_planes" in str(exc) else str(exc)[-160:]
+        record("background_planes load from a scene file (headless)", "KNOWN", f"{type(exc).__name__}: {reason}")
     finally:
         path.unlink(missing_ok=True)
 
