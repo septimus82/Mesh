@@ -141,10 +141,11 @@ def cull_polygons_for_light(
 def _shadow_behind(lx: float, ly: float, radius: float, near_a: Point, near_b: Point) -> Polygon:
     """The shadow an occluder's silhouette edge ``near_a``-``near_b`` throws away from the light at (lx, ly).
 
-    Both corners go out along their rays past the light's reach *and* past themselves: projecting a corner that
-    is already beyond the radius onto the radius put it between the light and the wall, and the shadow folded
-    back over the lit floor (a room's own border walls shaded its middle). A point on the middle ray keeps a
-    wide silhouette's far edge outside the light's circle too.
+    It covers what the light would have lit behind the edge and nothing more: out to the light's reach, along an
+    arc so a wide edge's shadow follows the light's circle. Past the reach only the room's own ambient light falls,
+    and a shadow drawn there showed as black beams across the map. A corner already beyond the reach keeps its
+    place (the arc goes out to it): pulling it back onto the radius put the shadow between the light and the
+    wall, over the lit floor.
     """
 
     def unit(p: Point) -> tuple[float, float, float]:
@@ -156,12 +157,13 @@ def _shadow_behind(lx: float, ly: float, radius: float, near_a: Point, near_b: P
     bx, by, db = unit(near_b)
     if da == 0.0 or db == 0.0:  # the light sits on a corner: nothing sensible to cast
         return [near_a, near_b, (lx, ly)]
-    reach = 2.0 * (radius + max(da, db))
-    mx, my = ax + bx, ay + by
-    mid = math.hypot(mx, my)
-    mx, my = (mx / mid, my / mid) if mid > 1e-9 else (-ay, ax)
-    far_a, far_b = (lx + ax * reach, ly + ay * reach), (lx + bx * reach, ly + by * reach)
-    return [near_a, near_b, far_b, (lx + mx * reach, ly + my * reach), far_a]
+    reach = max(radius, da, db)
+    start, turn = math.atan2(by, bx), math.atan2(ay, ax) - math.atan2(by, bx)
+    turn = (turn + math.pi) % (2 * math.pi) - math.pi  # from b round to a, the short way (through the shadow)
+    steps = max(1, math.ceil(abs(turn) / math.radians(15)))
+    arc = [(lx + math.cos(start + turn * i / steps) * reach, ly + math.sin(start + turn * i / steps) * reach)
+           for i in range(steps + 1)]
+    return [near_a, near_b, *arc]
 
 
 def build_shadow_polygons(
@@ -172,7 +174,7 @@ def build_shadow_polygons(
     """
     Build deterministic shadow polygons by extruding an occluder's silhouette corners away from the light.
 
-    Returns one polygon per occluder: [near_a, near_b, far_b, far_middle, far_a].
+    Returns one polygon per occluder: its near edge, then an arc at the light's reach behind it.
     """
     lx, ly = float(light_pos[0]), float(light_pos[1])
     radius = float(light_radius)
