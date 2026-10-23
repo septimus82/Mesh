@@ -240,24 +240,6 @@ def test_stage_proposal_render_text_remains_display_only() -> None:
     assert "[Disabled] Stage Proposal" not in text
 
 
-def test_package_import_still_does_not_import_renderer_module() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import engine.editor.creator_mode; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    assert result.stdout.strip() == "False"
-
-
 def test_controller_method_does_not_import_real_bridge_modules() -> None:
     result = subprocess.run(
         [

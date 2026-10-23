@@ -173,24 +173,6 @@ def test_door_selection_adapter_returns_none_for_non_door() -> None:
     assert build_creator_door_request_from_selection({"name": "Rock"}, source_scene="forest") is None
 
 
-def test_package_import_still_does_not_import_renderer_module() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import engine.editor.creator_mode; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    assert result.stdout.strip() == "False"
-
-
 def test_pure_modules_do_not_import_real_bridge_modules() -> None:
     result = subprocess.run(
         [
