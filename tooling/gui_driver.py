@@ -184,6 +184,7 @@ class Driver:
         self.proc = _Process(pid.value)  # type: ignore[assignment]
         self.hwnd = hwnd
         self._cursor = None
+        self._target = None
         time.sleep(2.0)  # first frames
         self.focus()
         self._place_from_env()
@@ -233,6 +234,7 @@ class Driver:
                                      env={**__import__("os").environ, "PYTHONUNBUFFERED": "1"})
         self.hwnd = 0
         self._cursor: tuple[int, int] | None = None  # where this driver last put the mouse
+        self._target: tuple[int, int] | None = None  # where the last move was meant to put it
         deadline = time.time() + 60
         while not self.hwnd and time.time() < deadline:
             if self.proc.poll() is not None:
@@ -365,12 +367,45 @@ class Driver:
         nx, ny = int((sx - vx) * 65535 / max(1, vw - 1)), int((sy - vy) * 65535 / max(1, vh - 1))
         _send(_INPUT(type=_INPUT_MOUSE, u=_INPUTUNION(mi=_MOUSEINPUT(nx, ny, 0, _MOVE | _ABSOLUTE | _VIRTUALDESK, 0, 0))))
         time.sleep(0.05)
+        self._cursor = self._settle_cursor(sx, sy)
+        self._target = (sx, sy)
+
+    @staticmethod
+    def _cursor_pos() -> tuple[int, int]:
         pos = wintypes.POINT()
         user32.GetCursorPos(ctypes.byref(pos))
-        self._cursor = (pos.x, pos.y)  # where the move actually landed (normalised coordinates round)
+        return pos.x, pos.y
+
+    def _settle_cursor(self, sx: int, sy: int, attempts: int = 3) -> tuple[int, int]:
+        """Make sure the cursor really is at (sx, sy) before anything is pressed.
+
+        A virtual-desktop move occasionally lands elsewhere: across two monitors, shortly after a window
+        opened, it once put the cursor at the primary monitor's centre, and the click then went to whatever
+        was there (the gate's recurring Milestone 1 FLAKY). Correct it directly a few times; if the cursor
+        still won't go there, say so rather than click somewhere else.
+        """
+        at = self._cursor_pos()
+        for attempt in range(attempts):
+            if abs(at[0] - sx) <= 3 and abs(at[1] - sy) <= 3:  # normalised coordinates round by a pixel or two
+                return at
+            self.note(f"cursor landed at {at}, not ({sx}, {sy}); placing it directly (attempt {attempt + 1})")
+            user32.SetCursorPos(int(sx), int(sy))
+            time.sleep(0.05)
+            at = self._cursor_pos()
+        if abs(at[0] - sx) <= 3 and abs(at[1] - sy) <= 3:
+            return at
+        raise RuntimeError(f"could not place the cursor at ({sx}, {sy}): it stays at {at}; not clicking elsewhere")
 
     def _button(self, flags: int) -> None:
         self._require_untouched_mouse()
+        # Right before pressing: our window must still have focus, the cursor must still be where the last move
+        # put it (something recentres it on the primary monitor now and then; polite mode waits that out but the
+        # cursor stays moved), and that point must still be over our window.
+        self._require_foreground()
+        if self._target is not None:
+            self._cursor = self._settle_cursor(*self._target)
+        at = self._cursor_pos()
+        self._require_hit(at[0], at[1])
         _send(_INPUT(type=_INPUT_MOUSE, u=_INPUTUNION(mi=_MOUSEINPUT(0, 0, 0, flags, 0, 0))))
 
     def click(self, x: float, y: float, *, right: bool = False, settle: float = 0.4) -> None:
