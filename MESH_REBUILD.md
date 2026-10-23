@@ -426,9 +426,46 @@ Each was confirmed in the real window except 4, which was read in the code and f
 4. The Studio edit view ignored lighting.
 5. Dragging a light crashed Studio.
 
+## Milestone 11 — first-time creator experience and Studio usability
+
+**Goal:** someone new to Mesh builds a small game in Studio (a character, connected rooms, behaviours, saving) without
+JSON or hidden knowledge. It fixes what the Hollowmere trial found. Report:
+[`docs/reviews/milestone11_creator_experience.md`](docs/reviews/milestone11_creator_experience.md).
+
+### Acceptance criteria and status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| One player for the whole game; rooms keep only where it starts; changes reach every room; new rooms inherit | **Done** | The player is the project's `player` prefab; rooms hold `prefab_id`; acceptance steps 3, 5, 6, 20 |
+| Old projects migrated deliberately, differences reported, saves kept | **Done** | Hollowmere copies: identical players shared on open; differing ones listed in a Players panel; the old quick save loads |
+| Feet colliders by default (whole picture and circle still available) | **Done** | `{"kind": "box", "auto": true}`; a one-tile gap walked through (step 13) |
+| Behaviours in plain language, grouped, internal ones under Advanced, readable settings, problems explained | **Done** | `engine/behaviour_guide.py`; registry and stored data unchanged |
+| Patrol routes edited on the map, checked against walls and A*, undoable, saved | **Done** | `engine/route_check.py`; steps 9-11 (a point in a wall warned, dragged clear, the NPC patrols) |
+| Game menu in play-tests: save, load, exit; honest feedback | **Done** | Esc or **Menu (Esc)**; "Game saved"/"Game loaded" only after success; steps 14-18, 21 |
+| Original starter art with provenance | **Done** | `tooling/make_starter_art.py`, `docs/starter_art.md` |
+| Targeted fixes from the trial (dialogue lines, arrival/door tabs, door bounds, focus, warnings, Only once) | **Done** | See the report's P6 table |
+| Real-window acceptance from `Mesh Engine.bat` | **Done** | `tooling/acceptance_creator.py` 21/21; in the runtime gate as `creator` |
+
+### How it was validated
+
+- **Runtime gate (`tooling/runtime_gate.py`):** all 10 suites pass: creator 21/21, first workflow 15/15, map building 23/23, map tools 15/15, launcher 20/20, event authoring 17/17, AI co-authoring 14/14, persistence 12/12, lighting 15/15, capability lab 36/36. The full run (engine at `698aa64`) passed 5 of 10. The other five failed on expectations this milestone changed on purpose: the picker's plain names ("Has health", "Talk"), "+ Line" becoming "+ Next line"/"+ Separate line", the feet collider letting the player stand closer to walls, the player living in `prefabs.json`, and an older project now asking to save after its players are shared on open. Only those scripts changed (`7a58796`); each suite was then rerun alone and passes. No engine code changed after the full run.
+- **Full suite:** 9,403 passed and 1 failed: the exception-policy ratchet, which the acceptance script pushed over;
+  narrowed, and its file passes.
+- **Slow/e2e:** 31 failed, 132 passed: the Milestone 9 known list.
+- **Gates:** ruff gate and mypy island clean. Type gate 258 beyond the baseline (264 before this milestone).
+
+### Engine defects found on the way
+
+1. Toasts never showed in Studio games: the HUD drew them after the health bar and gave up when the player had no
+   health stats.
+2. Arcade keeps a sprite's hit box when its texture changes. A character made from a whole sheet kept the sheet's
+   box, so shadows and depth sorting sat far below its feet (the Animator never resynced it).
+3. NPCs moved by Patrol never walked or turned: the Animator only read velocity.
+4. A content-isolation test still read the pre-shared-player room (missed in Stage A, caught by the full suite).
+
 ## Known limitations (honest list)
 
-- **Placeholder character art.** Still the coloured-square sheet; the owner's decision.
+- **Starter art is simple:** a hero, a villager and a sign of Mesh's own (Milestone 11). The tileset still has no roof or door tiles.
 - **No counter conditions.** Choices count up, but nothing can require "graves_dug ≥ 3"; flags gate everything.
 - **Event sequences beyond conversations** (wait, move, signal) run in `SequencePlayer`, which works since Milestone 7. Studio can't edit its steps yet (JSON only). `ActionListRunner` does nothing in the live game (see the Milestone 7 inventory).
 - **Lighting** has a Studio panel since Milestone 10 (room light, point lights, flicker, shadows from walls). Still JSON or the legacy editor: cookies, shafts, rectangle/polygon occluders, day/night. **Parallax, camera zoom and the HD-2D look** work in the engine (Milestone 7 lab) but have no Studio controls yet.
@@ -468,6 +505,6 @@ All recorded with restore instructions in `MESH_SALVAGE.md`:
 
 ## Decisions needing the owner
 
-- **Starter art:** pick or generate a character and NPC sprite. Everything a newcomer sees is coloured squares.
+- **Starter art:** Milestone 11 generated a hero, a villager and a sign (`docs/starter_art.md`). Replace them with commissioned art if wanted: same sheet layout, rerun the template previews.
 - **Door style:** doors are walk-in (touch to enter), the RPG Maker convention. Press-E doors exist as a behaviour setting (`allow_interact`). Is walk-in the right default?
 - **Engine-repo showcase:** keep it, and with it the legacy editor, or archive it with the demo content?

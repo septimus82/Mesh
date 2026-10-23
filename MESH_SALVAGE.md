@@ -172,3 +172,22 @@ Report: [`docs/reviews/milestone10_lighting_animation.md`](docs/reviews/mileston
 | `InspectorMixin` declares its host interface (TYPE_CHECKING); callback params typed `-> object`; 12 lambdas → `functools.partial` | ~250 type errors from one pattern | No runtime change |
 | GUI driver verifies the cursor after each move and before each press | The recurring Milestone 1 FLAKY | Fails clearly instead of clicking elsewhere |
 
+
+## Milestone 11: first-time creator experience
+
+Report: [`docs/reviews/milestone11_creator_experience.md`](docs/reviews/milestone11_creator_experience.md).
+
+| Change | Why | Note |
+|---|---|---|
+| **Project layout:** the player is the prefab `player` in `assets/prefabs.json` (`metadata.shared_player`); rooms keep `{"id", "x", "y", "prefab_id": "player"}` | One player for the whole game | Old projects: Studio shares identical players on open (one undo step) and asks about differing ones. Nothing changes on disk until the creator saves |
+| `components.collider: {"kind": "box", "auto": true}`, a feet box sized to the picture; the default for the player and Person | Characters stopped at gaps they visibly fit through | `"auto"` added to the entity schema; explicit boxes, whole picture and circle unchanged |
+| `engine/behaviour_guide.py` (labels, categories, settings, problems) over the behaviour registry | Plain-language behaviours | No registry name, stored setting or alias changed; aliases are only hidden |
+| `engine/route_check.py` (reuses the nav grid, line of sight and A*) | Route warnings | Read-only checks; Patrol itself unchanged |
+| **Toast policy:** every successful save/load says "Game saved"/"Game loaded"; a failed save says why | A repeated save used to say nothing | `test_saved_toast_idempotent.py` and `test_loaded_toast_idempotent.py` now pin the new policy (file names kept) |
+| `PlayerHUD.draw` draws toasts on their own | Toasts never showed for a player without health stats (every Studio game) | The controls banner ("F2: Editor...") is skipped in Studio play-tests |
+| Pause menu: Quit is "Exit Play-Test" in Studio and stops the play-test; slots have readable labels | Esc menu in play-tests | Outside Studio, Quit still closes the game |
+| Starter art `starter_hero.png`, `starter_villager.png`, `starter_sign.png` (generated: `tooling/make_starter_art.py`; `docs/starter_art.md`) | Distinguishable characters, no placeholder squares | `animated_player.png` kept: older projects use it |
+| New Person and Sign: `Dialogue.once = false` | "Only once" people went silent after one talk | The `Dialogue` default (true) is unchanged; only the templates' prefabs |
+| Animator fits the hit box to each new frame; measures movement when there's no velocity | Shadows and depth sorting used the whole sheet; patrolling NPCs never walked or turned | Same as the frame-list animator already did |
+| `project_ops.add_line(link=False)` | "+ Separate line" | Default unchanged |
+| Studio layout dump: labels, the game menu and active toasts | The Milestone 11 acceptance test | Test-only (`MESH_STUDIO_LAYOUT`) |
