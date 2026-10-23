@@ -867,6 +867,40 @@ class InspectorMixin:
                 self._behaviour_fields(rows, entity, name, width)
         rows.add(self._button("+ Add behaviour", self._open_picker, width=150, style=S_ACTIVE))
 
+    # ---------------------------------------------------------------- AI proposals
+    def _ai_panel(self, rows: Rows, width: int) -> None:
+        rows.add(self._label("Changes proposed from outside", bold=True, size=12))
+        rows.add(self._label("An AI (or a script) connected to this project can propose changes. Nothing changes "
+                             "until you accept; accepted changes are one Undo away.", color=C_MUTED, size=9, width=width))
+        pending, done = self.ai.pending(), [p for p in self.ai.proposals if p.status not in ("pending", "conflict")]
+        if not pending:
+            rows.add(self._label("Nothing waiting.", color=C_MUTED))
+        half = (width - 6) // 2
+        for proposal in reversed(pending):
+            rows.add(gui.UISpace(height=4))
+            rows.add(self._label(f"{proposal.title}", bold=True, size=11, width=width))
+            rows.add(self._label(f"from {proposal.source}", color=C_MUTED, size=9))
+            for line in proposal.summary[:24]:
+                rows.add(self._label("- " + line, size=10, width=width))
+            if len(proposal.summary) > 24:
+                rows.add(self._label(f"... and {len(proposal.summary) - 24} more", color=C_MUTED, size=9))
+            if proposal.status == "conflict":
+                rows.add(self._label(proposal.message, color=(240, 200, 120), size=9, width=width))
+                for clash in proposal.conflicts[:8]:
+                    rows.add(self._label(f"  {clash['path']}: here {clash['studio']!r}, proposed {clash['ai']!r}",
+                                         color=(240, 200, 120), size=9, width=width))
+            row = gui.UIBoxLayout(vertical=False, space_between=6)
+            row.add(self._button("Accept", lambda p=proposal: self.accept_ai(p), width=half, style=S_ACTIVE,
+                                 disabled=proposal.status == "conflict"))
+            row.add(self._button("Reject", lambda p=proposal: self.reject_ai(p), width=half, style=S_DANGER))
+            rows.add(row)
+        if done:
+            rows.add(gui.UISpace(height=8))
+            rows.add(self._label("Earlier", bold=True, size=11))
+            for proposal in list(reversed(done))[:6]:
+                rows.add(self._label(f"{proposal.title}: {proposal.status}", color=C_MUTED, size=10, width=width))
+        rows.add(self._button("Close", self._cancel_panel, width=80))
+
     # ---------------------------------------------------------------- flags
     def _flags_panel(self, rows: Rows, width: int) -> None:
         rows.add(self._label("Flags", bold=True, size=12))

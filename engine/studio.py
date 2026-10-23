@@ -21,6 +21,7 @@ from typing import Any, Callable
 import engine.optional_arcade as optional_arcade
 from engine import project_ops as ops
 from engine.scene_loader import document_key
+from engine.studio_ai import Proposal, StudioAIHost
 from engine.studio_inspector import InspectorMixin, Rows, row_height
 from engine.studio_project import Project
 from engine.studio_ui import (
@@ -127,6 +128,9 @@ class Studio(InspectorMixin):
         self.play_flags_open = False
         self._play_flags_seen: Any = None
         self._init_inspector()
+        self.ai = StudioAIHost(self)  # outside tools (AI over MCP, scripts) propose; the person decides
+        if not os.environ.get("MESH_STUDIO_NO_AI_BRIDGE"):
+            self.ai.start()
         self._tile_textures: dict[tuple[str, int], Any] = {}
         self._images: dict[str, Any] = {}
         self._sheet_space: Any = None
@@ -838,6 +842,9 @@ class Studio(InspectorMixin):
         bar.add(self._button("Undo", self.undo, width=64, disabled=not self.project.can_undo()))
         bar.add(self._button("Redo", self.redo, width=64, disabled=not self.project.can_redo()))
         bar.add(self._button("Flags", self.open_flags, width=64, style=S_ACTIVE if self.panel == "flags" else S_BUTTON))
+        waiting = len(self.ai.pending())
+        bar.add(self._button(f"AI ({waiting})" if waiting else "AI", self.open_ai, width=72,
+                             style=S_ACTIVE if waiting or self.panel == "ai" else S_BUTTON))
         title = f"   {self.project.label(self.project.current)}" + ("   - unsaved changes" if self.project.is_dirty else "   - saved")
         bar.add(self._label(title, size=12, color=C_MUTED))
         return bar
@@ -862,6 +869,35 @@ class Studio(InspectorMixin):
             box.add(self._button(text, lambda p=prefab: self.arm_place(p), width=width, style=style))
         box.add(self._label("Click one, then click the map.", color=C_MUTED, size=10))
         return box
+
+    def open_ai(self) -> None:
+        self._flush_fields()
+        self.panel, self.panel_scroll = ("inspect" if self.panel == "ai" else "ai"), 0
+        self._rebuild()
+
+    def on_ai_proposal(self, proposal: Proposal) -> None:
+        self._say(f"{proposal.source} proposes: {proposal.title}. Open AI (top bar) to review it.")
+        self._rebuild()
+
+    def on_ai_decided(self, proposal: Proposal) -> None:
+        self._rebuild()
+
+    def accept_ai(self, proposal: Proposal) -> None:
+        self._flush_fields()
+        result = self.ai.accept(proposal)
+        if not result.get("ok"):
+            self._rebuild()
+            self._say(proposal.message or f"Not applied: {result.get('reason')}", ok=False)
+            return
+        made = list(proposal.created.values())
+        if made:
+            self.selected = made[0]
+        self._after_change(proposal.message)
+
+    def reject_ai(self, proposal: Proposal) -> None:
+        self._flush_fields()
+        self.ai.reject_proposal(proposal)
+        self._say(proposal.message)
 
     def open_flags(self) -> None:
         self._flush_fields()
@@ -976,6 +1012,8 @@ class Studio(InspectorMixin):
             self._picture_picker(rows, width)
         elif self.panel == "flags":
             self._flags_panel(rows, width)
+        elif self.panel == "ai":
+            self._ai_panel(rows, width)
         elif self.panel == "preview":
             self._preview_panel(rows, width)
         else:
@@ -1301,6 +1339,7 @@ class Studio(InspectorMixin):
                  "dlg_line": self.dlg_line, "dlg_choice": self.dlg_choice, "clip_sel": self.clip_sel, "handles": handles,
                  "preview": {"node": self.preview["node"], "flags": sorted(self.preview["flags"])} if self.preview else None,
                  "play_flags_open": self.play_flags_open, "tick": self._dump_tick,
+                 "ai": [p.view() for p in self.ai.proposals], "revision": self.project.revision,
                  "dlg_order": list(ops.conversation(self._entity(self.selected) or {})["nodes"]) if self.selected else [],
                  "room_doc": self.project.scene() if self.mode == "edit" else None}
         tmp = f"{path}.tmp"
@@ -1563,6 +1602,7 @@ class Studio(InspectorMixin):
 
     # ==================================================================== input (edit mode)
     def on_update(self, delta_time: float) -> bool:
+        self.ai.drain()  # proposals arrive on the bridge's thread; they're handled here, on this one
         if self.mode == "play":
             if self.play_flags_open and self._play_flags_changed():
                 self._build_play_ui()  # the game changed a flag: show it
@@ -1633,6 +1673,7 @@ class Studio(InspectorMixin):
     def on_close(self) -> bool:
         """Closing with unsaved changes asks: Save, Discard or Cancel."""
         if self._closing or not self.project.is_dirty:
+            self.ai.stop()
             return False
         if self.mode == "play":
             self.stop()
@@ -1665,6 +1706,7 @@ class Studio(InspectorMixin):
             if self.project.is_dirty:
                 return  # saving failed; the message says why, and nothing is lost
         self._closing = True
+        self.ai.stop()
         self.window.close()
 
     def on_text(self, text: str) -> bool:
