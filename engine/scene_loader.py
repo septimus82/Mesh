@@ -76,6 +76,7 @@ KNOWN_EXTRA_FIELDS = {
     "forbid_flags",
     "collision_poly",
     "occluder_poly",
+    "components",  # the movement collider (schema-documented; Studio's Footprint and Circle write it)
 }
 KNOWN_ENTITY_FIELDS: Set[str] = set(DEFAULT_ENTITY.keys()) | KNOWN_EXTRA_FIELDS
 
