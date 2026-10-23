@@ -586,6 +586,13 @@ def apply_ops(
     changes = _studio_changes(list(operations), root)
     if changes is not None:  # a Studio project: the shared, validated authoring path
         return _apply_ops_through_authoring(list(operations), changes, root)
+    from engine import authoring_session
+
+    _info, host = authoring_session.studio_session(root)
+    if host == authoring_session.STUDIO_HOST:  # these would write files under the open, possibly unsaved, Studio
+        return {"ok": False, "reason": "studio_open", "results": [], "message": (
+            "Mesh Studio has this project open, so apply_ops won't write its files (the person's unsaved work would "
+            "be overwritten, or would overwrite yours). Use propose_changes with authoring_operations, or close Studio.")}
 
     from engine.ai_ops import AIOps
 

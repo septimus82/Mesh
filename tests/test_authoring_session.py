@@ -155,3 +155,26 @@ def test_the_old_one_call_add_tool_never_reports_a_success_that_didnt_happen(roo
     result = tools.live_add_entity_from_prefab("person", 100, 100, root=str(root))
     assert result["ok"] is False and "no operation 'add_entity_from_prefab'" in result["message"]
     assert host.pending() == []
+
+
+def test_a_studio_save_keeps_a_version_something_else_wrote_meanwhile(root: Path) -> None:
+    import os
+
+    config = json.loads((root / "config.json").read_text(encoding="utf-8"))
+    project = Project(root, config["world_file"])
+    authoring.apply(project, ADD_SEXTON)
+    scene_file = root / "packs/core_regions/scenes/start.json"
+    outside = scene_file.read_text(encoding="utf-8").replace('"Player"', '"Changed outside"')
+    scene_file.write_text(outside, encoding="utf-8")
+    os.utime(scene_file, (time.time() + 5, time.time() + 5))  # a later write, whatever the clock's resolution
+    project.save()
+    assert project.last_save_backups == ["packs/core_regions/scenes/start.json.outside-change.bak"]
+    assert (root / project.last_save_backups[0]).read_text(encoding="utf-8") == outside
+    assert any(e.get("name") == "Sexton" for e in _room(root)["entities"])
+
+
+def test_apply_ops_wont_write_files_under_an_open_studio(root: Path, live) -> None:
+    before = _room(root)
+    result = tools.apply_ops([{"type": "add_light", "scene_path": "packs/core_regions/scenes/start.json", "x": 1, "y": 1}],
+                             root=str(root))
+    assert result["ok"] is False and result["reason"] == "studio_open" and _room(root) == before

@@ -38,6 +38,8 @@ class Project:
         self.root = Path(root)
         self.world_file = world_file
         self.world: Doc = json.loads((self.root / world_file).read_text(encoding="utf-8"))
+        self._seen_on_disk: dict[str, float] = {world_file: (self.root / world_file).stat().st_mtime}
+        self.last_save_backups: list[str] = []
         self.scenes: dict[str, Doc] = {}
         self.dirty: set[str] = set()
         self.world_dirty = False
@@ -80,6 +82,8 @@ class Project:
         if key not in self.scenes:
             path = self.root / self.path(key)
             raw = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {"name": self.label(key), "entities": []}
+            if path.is_file():
+                self._seen_on_disk[self.path(key)] = path.stat().st_mtime
             self.scenes[key] = ops.ensure_entity_ids(raw, key)
         return self.scenes[key]
 
@@ -356,6 +360,15 @@ class Project:
         self.scenes[key_a], self.scenes[key_b] = a, b
         self.dirty.update((key_a, key_b))
 
+    def _keep_outside_change(self, rel: str) -> None:
+        """Before overwriting a file something else changed since it was opened, keep that version."""
+        target = self.root / rel
+        seen = self._seen_on_disk.get(rel)
+        if seen is not None and target.is_file() and target.stat().st_mtime != seen:
+            backup = target.with_name(target.name + ".outside-change.bak")
+            backup.write_bytes(target.read_bytes())
+            self.last_save_backups.append(backup.relative_to(self.root).as_posix())
+
     def undo(self) -> bool:
         if not self._undo:
             return False
@@ -375,12 +388,15 @@ class Project:
     def save(self) -> list[str]:
         """Write every changed room and the world file. Returns the paths written."""
         written: list[str] = []
-        for key in sorted(self.dirty):
-            write_json_atomic(self.root / self.path(key), self.scenes[key])
-            written.append(self.path(key))
+        self.last_save_backups = []
+        targets = [(self.path(key), self.scenes[key]) for key in sorted(self.dirty)]
         if self.world_dirty:
-            write_json_atomic(self.root / self.world_file, self.world)
-            written.append(self.world_file)
+            targets.append((self.world_file, self.world))
+        for rel, doc in targets:
+            self._keep_outside_change(rel)
+            write_json_atomic(self.root / rel, doc)
+            self._seen_on_disk[rel] = (self.root / rel).stat().st_mtime
+            written.append(rel)
         self.dirty.clear()
         self.world_dirty = False
         return written

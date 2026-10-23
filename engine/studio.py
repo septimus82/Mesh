@@ -337,6 +337,10 @@ class Studio(InspectorMixin):
             self._say(f"Couldn't save: {err}", ok=False)
             return
         self._rebuild()
+        if self.project.last_save_backups:
+            self._say(f"Saved {len(written)} file(s). Something else had changed {', '.join(self.project.last_save_backups)} "
+                      "since you opened it; that version is kept beside it (.outside-change.bak).", ok=False)
+            return
         self._say(f"Saved {len(written)} file(s).")
 
     def undo(self) -> None:
