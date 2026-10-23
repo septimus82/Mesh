@@ -265,6 +265,33 @@ The Milestone 1 and 2 acceptance tests pass on the same code (15/15 and 23/23).
    - previews were drawn for rows scrolled out of view;
    - "Show when" objects were invisible while editing.
 
+## Milestone 6 — unified human and AI editing
+
+**Goal:** edit a game in Mesh Studio while an external AI modifies the same project through Mesh's authoring interface, review its changes, undo them and keep working without losing anything. Details: [`docs/reviews/milestone6_unified_authoring.md`](docs/reviews/milestone6_unified_authoring.md).
+
+### Acceptance criteria and status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Animation survives picture changes | **Done** | Kept, carried over to a same-layout sheet, or flagged with Use this picture / Reset animation (undoable). Real window 6/6. |
+| One authoritative operation layer | **Done** for Studio, the new MCP tools, `mesh author` and the everyday `apply_ops` operations | `engine/authoring.py` over `project_ops`, with an operation list generated from it. Legacy CLI scene commands and the remaining `AIOps` operations are listed for the next slice. |
+| AI changes while Studio is open | **Done** | Proposals with a review panel, accept and reject, one undo step, rebasing onto the person's edits, conflicts reported. Files are never written behind Studio. |
+| Provider-independent | **Done** | Plain MCP tools and a JSON CLI; nothing names a model or vendor. |
+| Required integration test | **Done** | `tooling/acceptance_ai_coauthoring.py`: **14/14** with the real MCP server and the MCP client library. |
+
+### How it was validated
+
+- **Integration:** `tooling/acceptance_ai_coauthoring.py` 14/14.
+- **Earlier milestones' acceptance:** M1 15/15, M2 23/23, M3 15/15, M4 20/20, M5 17/17.
+- **Headless:** `tests/test_authoring.py`, `tests/test_authoring_session.py` (a real loopback bridge), plus every MCP, AIOps and live-bridge test, now run with the real `mcp` SDK.
+- **Full suite:** the 9 baseline failures, nothing new.
+
+### Bugs found and fixed while building it
+
+1. **The MCP server didn't start on `mcp` 2.x,** which is what a fresh `pip install -e .[mcp]` installs.
+2. **`live_add_entity_from_prefab` reported success** for changes that couldn't apply.
+3. **A replaced or removed picture silently dropped an object's animation** (the My Game1 report).
+
 ## Known limitations (honest list)
 
 - **Placeholder character art.** Still the coloured-square sheet; the owner's decision.
@@ -292,7 +319,7 @@ All recorded with restore instructions in `MESH_SALVAGE.md`:
 
 ## Next slices, in order
 
-1. **AI on the same operations:** MCP `apply_ops` / live ops call `engine/project_ops`, proposals become a thin preview wrapper, and `OP_CATALOG` is generated.
+1. **Finish the single operation path:** route the legacy CLI scene commands that target Studio projects through `engine/authoring`, then retire their duplicate code; move the remaining `AIOps` operations (lights, quests, world links) onto `project_ops` operations.
 2. **Launcher follow-ups:** return to the launcher when the Studio closes; rename, move or delete projects; a packaged build.
 3. **Monster code as a plugin** via `PluginManager`; project-scoped `behaviours/` folder for custom scripts.
 4. **Archive the legacy editor and Creator Mode** only once the Studio covers what it still lacks. The inventory is in `docs/reviews/milestone3_map_tools.md`; dialogue, list/object settings and triggers on the map are now done (Milestone 5). Still missing:
