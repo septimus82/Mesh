@@ -219,7 +219,7 @@ def run(out: Path) -> int:
             assert "Health" in elder["behaviours"]
             assert elder["behaviour_config"]["Dialogue"]["dialogue"]["nodes"]["root"]["text"] == "Welcome, traveller!"
             house = json.loads((project / world["scenes"]["house"]["path"]).read_text(encoding="utf-8"))
-            assert any(e.get("tag") == "player" for e in house["entities"])
+            assert any(e.get("prefab_id") == "player" for e in house["entities"])  # the game's one player
             assert any(e.get("tag") == "door" for e in house["entities"])
 
         def play_and_talk() -> None:

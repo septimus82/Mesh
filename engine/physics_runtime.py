@@ -90,6 +90,13 @@ def _sprite_circle_shape(sprite: Any) -> Circle | None:
     return Circle(cx + ox, cy + oy, radius)
 
 
+def footprint(width: float, height: float) -> dict[str, float]:
+    """A character's feet in a picture this size: the bottom quarter, 60% as wide. Tall pictures then
+    don't block narrow paths with their heads (an "auto" box collider is this, at the current size)."""
+    h = max(8.0, height * 0.25)
+    return {"w": max(4.0, round(width * 0.6)), "h": round(h), "offset_x": 0.0, "offset_y": round(-height / 2 + h / 2)}
+
+
 def _sprite_box_shape(sprite: Any) -> Aabb | None:
     """A ``{"kind": "box", "w", "h", "offset_x", "offset_y"}`` collider: a footprint, so a tall
     object (a tree, a headstone) blocks where it stands rather than with its whole picture."""
@@ -98,6 +105,10 @@ def _sprite_box_shape(sprite: Any) -> Aabb | None:
     collider = components.get("collider") if isinstance(components, dict) else None
     if not isinstance(collider, dict) or str(collider.get("kind", "") or "").strip().lower() != "box":
         return None
+    if collider.get("auto"):  # a character's feet, whatever its picture and size are now
+        box = footprint(_as_float(getattr(sprite, "width", 0.0), 0.0), _as_float(getattr(sprite, "height", 0.0), 0.0))
+        return Aabb(_as_float(getattr(sprite, "center_x", 0.0), 0.0) + box["offset_x"],
+                    _as_float(getattr(sprite, "center_y", 0.0), 0.0) + box["offset_y"], box["w"], box["h"])
     w = _as_float(collider.get("w", collider.get("width", 0.0)), 0.0)
     h = _as_float(collider.get("h", collider.get("height", 0.0)), 0.0)
     if w <= 0.0 or h <= 0.0:

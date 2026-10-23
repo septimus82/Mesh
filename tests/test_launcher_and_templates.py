@@ -80,7 +80,7 @@ def test_blank_is_an_empty_editable_map_with_no_monster_or_demo_content(tmp_path
     assert set(info["layers"][ops.GROUND]) == {ops.STARTER_GRASS} and not any(info["layers"][ops.WALLS])
     files = {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
     assert not [f for f in files if "monster" in f or "sproutling" in f or "shelltide" in f or "quest" in f], files
-    assert [p["id"] for p in json.loads((root / "assets/prefabs.json").read_text(encoding="utf-8"))] == ["person"]
+    assert [p["id"] for p in json.loads((root / "assets/prefabs.json").read_text(encoding="utf-8"))] == ["player", "person"]
 
 
 def test_adventure_has_two_linked_rooms_a_talking_npc_and_walls(tmp_path) -> None:

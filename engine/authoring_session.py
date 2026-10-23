@@ -79,9 +79,10 @@ def read_project(root: str | Path = ".") -> Doc:
     except authoring.ChangeError as err:
         return _fail("not_a_project", err.reason)
     docs = project.all_documents()
-    rooms = {key: {"label": label, "path": path, "room": docs["rooms"][key]} for key, label, path in project.rooms()}
+    # Rooms with the shared player filled in, as Studio shows them; ``player`` is its one definition.
+    rooms = {key: {"label": label, "path": path, "room": project.scene(key)} for key, label, path in project.rooms()}
     return {"ok": True, "source": "files", "revision": None, "current_room": project.current, "world": docs["world"],
-            "rooms": rooms}
+            "rooms": rooms, "player": docs["player"]}
 
 
 def propose(root: str | Path, changes: list[Doc], *, title: str = "", base_revision: int | None = None,

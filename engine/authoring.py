@@ -39,7 +39,7 @@ _PROJECT_OPS: dict[str, Callable[..., Any]] = {
 # Settings the API fills in itself, never the caller.
 _IMPLICIT = {"scene", "scene_key", "self"}
 # ``project_ops`` functions that look like edits but only read or prepare.
-_NOT_EDITS = {"ensure_entity_ids", "find_entity"}
+_NOT_EDITS = {"ensure_entity_ids", "find_entity", "expand_players"}
 
 
 class ChangeError(ValueError):

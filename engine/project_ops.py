@@ -19,6 +19,7 @@ from engine.ai_ops import build_prefab_entity_definition
 from engine.behaviours import load_builtin_behaviours
 from engine.behaviours.registry import get_behaviour_info, list_behaviours
 from engine.entity_paint_mode import make_entity_id
+from engine.physics_runtime import footprint
 from engine.scene_loader import SceneLoader
 from engine.tilemap_edit import TilemapDims, ensure_tiles_array, get_layer_by_id, set_tile
 from engine.tilemap_flood_fill import flood_fill_indices
@@ -833,11 +834,17 @@ def set_look(scene: Doc, entity_id: str, *, scale: Any = _UNSET, flip_x: Any = _
 COLLIDER_SHAPES = ("picture", "box", "circle")
 
 
-def collider_of(entity: Doc) -> Doc:
-    """``{"kind": "picture"}``, or a box ``{w, h, offset_x, offset_y}`` or circle ``{r, ...}``."""
+def collider_of(entity: Doc, size: tuple[float, float] | None = None) -> Doc:
+    """``{"kind": "picture"}``, or a box ``{w, h, offset_x, offset_y}`` or circle ``{r, ...}``.
+
+    An automatic footprint (``auto``) has its numbers for ``size``, the picture's size as shown (32x32 if
+    not given), and keeps ``auto: True``.
+    """
     raw = (entity.get("components") or {}).get("collider") if isinstance(entity.get("components"), dict) else None
     if not isinstance(raw, dict) or raw.get("kind") not in ("box", "circle"):
         return {"kind": "picture"}
+    if raw.get("kind") == "box" and raw.get("auto"):
+        return {"kind": "box", "auto": True, **footprint(*(size or (32.0, 32.0)))}
     out: Doc = {"kind": raw["kind"], "offset_x": float(raw.get("offset_x", raw.get("ox", 0)) or 0),
                 "offset_y": float(raw.get("offset_y", raw.get("oy", 0)) or 0)}
     if raw["kind"] == "box":
@@ -848,10 +855,11 @@ def collider_of(entity: Doc) -> Doc:
 
 
 def set_collider(scene: Doc, entity_id: str, kind: str, *, w: Any = 32, h: Any = 16, r: Any = 12,
-                 offset_x: Any = 0, offset_y: Any = 0) -> Doc:
+                 offset_x: Any = 0, offset_y: Any = 0, auto: bool = False) -> Doc:
     """How the object collides: its whole ``picture``, a ``box`` footprint or a ``circle``.
 
-    Footprints let a tall object block where it stands (a tree's trunk, not its canopy).
+    Footprints let a tall object block where it stands (a tree's trunk, not its canopy). ``auto`` makes a box
+    the feet of whatever picture the object has, at whatever size (characters start this way).
     """
     if kind not in COLLIDER_SHAPES:
         raise OpError(f"A collider is one of: {', '.join(COLLIDER_SHAPES)}.")
@@ -859,6 +867,8 @@ def set_collider(scene: Doc, entity_id: str, kind: str, *, w: Any = 32, h: Any =
     components = dict(entity.get("components") or {}) if isinstance(entity.get("components"), dict) else {}
     if kind == "picture":
         components.pop("collider", None)
+    elif kind == "box" and auto:
+        components["collider"] = {"kind": "box", "auto": True}
     else:
         collider: Doc = {"kind": kind, "offset_x": round(_number(offset_x, "The offset", -4096, 4096), 2),
                          "offset_y": round(_number(offset_y, "The offset", -4096, 4096), 2)}
@@ -1532,3 +1542,91 @@ def remove_light(scene: Doc, index: int) -> Doc:
     _light(out, index)
     del out["lights"][index]
     return _checked(scene, out)
+
+
+# --- the shared player ----------------------------------------------------------------------
+# A game has one player. Each room keeps only where its player starts (a thin ``{"id", "x", "y",
+# "prefab_id": "player"}`` entity) and the definition (picture, size, collision, behaviours, animation)
+# is the project's ``player`` prefab in ``assets/prefabs.json``, which the runtime already resolves.
+# Rooms are expanded for editing (the player looks like any object to the ops) and split again when stored.
+
+PLAYER_PREFAB = "player"
+ROOM_PLAYER_FIELDS = ("id", "x", "y")  # what a room decides about its player; everything else is shared
+
+
+def shared_player_ids(scene: Doc) -> list[str]:
+    """Ids of the room's entities that are the shared player."""
+    return [str(e["id"]) for e in entities(scene) if e.get("prefab_id") == PLAYER_PREFAB and e.get("id")]
+
+
+def thin_player(entity: Doc) -> Doc:
+    """A room's reference to the shared player: where it starts, nothing else."""
+    out: Doc = {key: copy.deepcopy(entity[key]) for key in ROOM_PLAYER_FIELDS if key in entity}
+    out["prefab_id"] = PLAYER_PREFAB
+    return out
+
+
+def player_definition(entity: Doc) -> Doc:
+    """What every room's player shares: the entity without its room-specific fields."""
+    return {k: copy.deepcopy(v) for k, v in entity.items() if k not in ROOM_PLAYER_FIELDS and k != "prefab_id"}
+
+
+def expand_players(scene: Doc, definition: Doc | None) -> Doc:
+    """The room as an editor sees it: each shared-player reference filled in from ``definition``."""
+    ids = shared_player_ids(scene)
+    if not ids or definition is None:
+        return scene
+    out = copy.deepcopy(scene)
+    out["entities"] = [{**copy.deepcopy(definition), **{k: e[k] for k in ROOM_PLAYER_FIELDS if k in e}}
+                       if e.get("id") in ids and e.get("prefab_id") == PLAYER_PREFAB else e for e in entities(out)]
+    return out
+
+
+def split_players(scene: Doc, ids: Iterable[str]) -> tuple[Doc, Doc | None]:
+    """Undo ``expand_players`` after an edit: ``(room with thin references, the player's definition or None)``.
+
+    The definition comes back as the edited player has it, so changing the player's picture in any room
+    changes the one definition every room uses.
+    """
+    wanted = set(ids)
+    definition: Doc | None = None
+    out = copy.deepcopy(scene)
+    rebuilt = []
+    for entity in entities(out):
+        if entity.get("id") in wanted and entity.get("prefab_id") != PLAYER_PREFAB:
+            definition = player_definition(entity)
+            entity = thin_player(entity)
+        rebuilt.append(entity)
+    out["entities"] = rebuilt
+    return out, definition
+
+
+def legacy_player(scene: Doc) -> Doc | None:
+    """A room's own full player entity (the pre-sharing layout), or None."""
+    return next((e for e in entities(scene) if e.get("tag") == "player" and not e.get("prefab_id")), None)
+
+
+_FIELD_LABELS = {"sprite": "picture", "scale": "size", "flip_x": "mirroring", "components": "collision",
+                 "solid": "collision", "sprite_sheet": "animation", "animations": "animation", "behaviours": "behaviours",
+                 "behaviour_config": "behaviour settings", "name": "name", "tag": "tag"}
+
+
+def player_differences(players: dict[str, Doc], reference: str) -> dict[str, list[str]]:
+    """For each room whose player differs from ``reference``'s: what differs, in words (picture, size...)."""
+    base = player_definition(players[reference])
+    out: dict[str, list[str]] = {}
+    for key, entity in players.items():
+        if key == reference:
+            continue
+        other = player_definition(entity)
+        labels = sorted({_FIELD_LABELS.get(k, k) for k in set(base) | set(other) if base.get(k) != other.get(k)})
+        if labels:
+            out[key] = labels
+    return out
+
+
+def player_prefab_entry(definition: Doc) -> Doc:
+    """The ``assets/prefabs.json`` entry that holds the shared player."""
+    return {"id": PLAYER_PREFAB, "display_name": str(definition.get("name") or "Player"), "tags": ["player"],
+            "metadata": {"shared_player": True, "note": "the game's player: every room uses it"},
+            "entity": copy.deepcopy(definition)}

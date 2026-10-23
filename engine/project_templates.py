@@ -59,6 +59,35 @@ def apply_template(root: Path, template_id: str) -> None:
         _LOG.warning("Unknown template '%s', defaulting to blank", template_id)
         builder = _apply_blank
     builder(root)
+    if builder in (_apply_blank, _apply_adventure, _apply_starter):
+        _share_player(root)
+
+
+def _share_player(root: Path) -> None:
+    """One player for the whole game: the start room's becomes the project's ``player`` prefab and every
+    room keeps only where its player starts (what Mesh Studio does to older projects when they open)."""
+    from . import project_ops as ops  # noqa: PLC0415  # keep scaffolding import-light
+
+    world = json.loads((root / "packs/core_regions/worlds/main.json").read_text(encoding="utf-8"))
+    definition = None
+    for key, _label, rel in ops.world_rooms(world):
+        path = root / rel
+        if not path.is_file():
+            continue
+        scene = json.loads(path.read_text(encoding="utf-8"))
+        player = ops.legacy_player(scene)
+        if player is None:
+            continue
+        if definition is None or key == world.get("start_scene"):
+            definition = ops.player_definition(player)
+        scene["entities"] = [ops.thin_player(e) if e is player else e for e in scene["entities"]]
+        _write_json(path, scene)
+    if definition is None:
+        return
+    prefabs_path = root / "assets/prefabs.json"
+    prefabs = json.loads(prefabs_path.read_text(encoding="utf-8")) if prefabs_path.is_file() else []
+    prefabs = [p for p in prefabs if not (isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB)]
+    json_io.write_json_atomic(prefabs_path, [ops.player_prefab_entry(definition), *prefabs])
 
 
 def _write_json(path: Path, data: dict[str, Any]) -> None:
@@ -92,6 +121,8 @@ def _blank_scene() -> dict[str, Any]:
                 "behaviour_config": {
                     "CameraFollow": {"padding": 12, "zoom": 1.0},
                 },
+                # Collide with the feet, not the whole picture: a tall character fits through a doorway.
+                "components": {"collider": {"kind": "box", "auto": True}},
             },
         ],
     }
@@ -129,6 +160,7 @@ def _person_entity(name: str, line: str) -> dict[str, Any]:
         "behaviour_config": {
             "Dialogue": {"dialogue": {"speaker": name, "start": "root", "nodes": {"root": {"text": line}}}},
         },
+        "components": {"collider": {"kind": "box", "auto": True}},  # the feet, like the player's
     }
 
 

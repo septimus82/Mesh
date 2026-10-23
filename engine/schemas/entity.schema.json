@@ -89,6 +89,10 @@
             "height": {
               "type": "number",
               "exclusiveMinimum": 0
+            },
+            "auto": {
+              "type": "boolean",
+              "description": "A box that follows the picture: the bottom quarter, 60% as wide (a character's feet)."
             }
           },
           "required": [

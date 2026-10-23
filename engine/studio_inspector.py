@@ -112,6 +112,8 @@ class InspectorMixin:
         def delete_selected(self) -> None: ...
         def accept_ai(self, proposal: Proposal) -> None: ...
         def reject_ai(self, proposal: Proposal) -> None: ...
+        def share_player(self, key: str) -> None: ...
+        def keep_separate_players(self) -> None: ...
 
     # ---------------------------------------------------------------- shared state
     def _init_inspector(self) -> None:
@@ -185,6 +187,13 @@ class InspectorMixin:
         rows.add(self._field(str(entity.get("name") or ""), lambda v: self._edit(lambda s: ops.rename_entity(s, target, v), "Renamed."),
                              width=width, key="name"))
         rows.add(self._label(f"Position  {entity.get('x', 0):.0f}, {entity.get('y', 0):.0f}", color=C_MUTED, size=10))
+        if self.project.is_shared_player(target):
+            rows.add(self._label("The game's player: picture, size, collision and behaviours are the same in every "
+                                 "room. Only where it starts belongs to this room.", color=C_OK, size=9, width=width))
+        elif entity.get("tag") == "player" and self.project.player is None:
+            rows.add(self._label("This room has its own player: changes here don't reach other rooms.",
+                                 color=(240, 200, 120), size=9, width=width))
+            rows.add(self._button("Use one player in every room...", self._open_players, width=width))
         third = (width - 8) // 3
         for line in (TABS[:3], TABS[3:]):
             row = gui.UIBoxLayout(vertical=False, space_between=4)
@@ -524,7 +533,7 @@ class InspectorMixin:
         rows.add(self._toggle("Blocks movement", bool(entity.get("solid")),
                               lambda on: self._edit(lambda s: ops.set_solid(s, target, on), "Blocks movement." if on else "Walk-through."),
                               width))
-        collider = ops.collider_of(entity)
+        collider = ops.collider_of(entity, self._picture_size(entity))
         third = (width - 8) // 3
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         for kind, title in (("picture", "Whole picture"), ("box", "Footprint"), ("circle", "Circle")):
@@ -553,8 +562,9 @@ class InspectorMixin:
             row.add(self._field(f"{collider['offset_x']:g}", lambda v: commit(offset_x=v), width=half, key="col_ox"))
             row.add(self._field(f"{collider['offset_y']:g}", lambda v: commit(offset_y=v), width=half, key="col_oy"))
             rows.add(row)
-            rows.add(self._label("Drag the blue handles on the map: the corner sizes it, the centre moves it.",
-                                 color=C_MUTED, size=9, width=width))
+            rows.add(self._label(("Sized to the picture: it follows a new picture or size. " if collider.get("auto") else "")
+                                 + "Drag the blue handles on the map to set it yourself: the corner sizes it, the centre "
+                                   "moves it.", color=C_MUTED, size=9, width=width))
         else:
             rows.add(self._label("The whole picture blocks. A footprint blocks only where it stands.", color=C_MUTED, size=9, width=width))
 
@@ -589,14 +599,19 @@ class InspectorMixin:
                              width=(width - 6) // 2, style=S_DANGER))
         rows.add(row)
 
+    def _picture_size(self, entity: dict[str, Any]) -> tuple[float, float]:
+        sprite = self._sprites_by_id().get(entity.get("id"))
+        if sprite is None or not entity.get("sprite"):
+            return 32.0, 32.0
+        return float(getattr(sprite, "width", 32) or 32), float(getattr(sprite, "height", 32) or 32)
+
     def _set_shape(self, entity: dict[str, Any], kind: str) -> None:
         target = entity["id"]
-        sprite = self._sprites_by_id().get(target)
-        w = float(getattr(sprite, "width", 32) or 32) if sprite is not None and entity.get("sprite") else 32.0
-        h = float(getattr(sprite, "height", 32) or 32) if sprite is not None and entity.get("sprite") else 32.0
-        # A sensible start: a footprint across the bottom quarter, or a circle at the feet.
-        sizes = {"box": {"w": round(w * 0.6), "h": round(max(8.0, h * 0.25)), "offset_y": round(-h * 0.375)},
-                 "circle": {"r": round(max(6.0, min(w, h) * 0.2)), "offset_y": round(-h * 0.3)}}.get(kind, {})
+        w, h = self._picture_size(entity)
+        if kind == "box":  # the feet, following the picture: a new picture or size keeps them right
+            self._edit(lambda s: ops.set_collider(s, target, "box", auto=True), "Footprint: the feet, sized to the picture.")
+            return
+        sizes = {"circle": {"r": round(max(6.0, min(w, h) * 0.2)), "offset_y": round(-h * 0.3)}}.get(kind, {})
         self._edit(lambda s: ops.set_collider(s, target, kind, **sizes), "Collider changed.")
 
     # ---------------------------------------------------------------- Dialogue
@@ -938,6 +953,26 @@ class InspectorMixin:
         rows.add(self._button("Close", self._cancel_panel, width=80))
 
     # ---------------------------------------------------------------- flags
+    def _open_players(self) -> None:
+        self.panel = "players"
+        self._rebuild()
+
+    def _players_panel(self, rows: Rows, width: int) -> None:
+        rows.add(self._label("One player for the whole game", bold=True, size=12))
+        rows.add(self._label("Each room of this project has its own copy of the player. With one player, its picture, "
+                             "size, collision and behaviours are set once for every room; each room keeps where its "
+                             "player starts.", color=C_MUTED, size=9, width=width))
+        differences = self.project.player_differences()
+        if differences:
+            rows.add(self._label(f"Compared with {self.project.label(self.project.start_key())}'s player:", size=10))
+            for key, what in differences.items():
+                rows.add(self._label(f"  {self.project.label(key)}: different {', '.join(what)}", color=(240, 200, 120),
+                                     size=10, width=width))
+        rows.add(self._label("Whose player should every room use?", size=10))
+        for key in self.project.own_players():
+            rows.add(self._button(f"Use {self.project.label(key)}'s player", partial(self.share_player, key), width=width))
+        rows.add(self._button("Keep them separate", self.keep_separate_players, width=width))
+
     def _flags_panel(self, rows: Rows, width: int) -> None:
         rows.add(self._label("Flags", bold=True, size=12))
         rows.add(self._label("A flag is a yes/no fact your game remembers (has_shovel). It exists once something "

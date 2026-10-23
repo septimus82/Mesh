@@ -4,6 +4,11 @@ Documents are plain dicts and every change goes through engine.project_ops, so t
 module never draws, never touches a running game, and can be tested headless. Undo
 stores whole-document snapshots: scenes are small, and snapshots cannot drift out of
 sync the way per-command inverse logic did in the old editor.
+
+The game has one player. Rooms hold only where it starts (``prefab_id: "player"``); its
+definition is the project's ``player`` prefab. ``scene()`` hands rooms out with the player
+filled in, so every operation edits it like any object, and storing a room splits it again:
+a change to the player in one room is a change to the player in every room.
 """
 
 from __future__ import annotations
@@ -31,6 +36,8 @@ class _State:
     current: str
     dirty: frozenset[str]
     world_dirty: bool
+    player: Doc | None
+    player_dirty: bool
 
 
 class Project:
@@ -52,6 +59,9 @@ class Project:
         self.revision = 0  # goes up with every change, undo and redo: what an AI's view is "as of"
         self.writes_files = True  # False for a dry run: nothing touches the disk
         self._tx_depth = 0
+        self._views: dict[str, tuple[Doc, Doc | None, Doc]] = {}  # room -> (stored, player, expanded) cache
+        self.player: Doc | None = self._read_player()  # the shared player's definition (None: rooms have their own)
+        self.player_dirty = False
         self.scene(self.current)
 
     @classmethod
@@ -78,7 +88,17 @@ class Project:
         return str(self.world.get("start_scene") or self.rooms()[0][0])
 
     def scene(self, key: str | None = None) -> Doc:
+        """A room as editors see it: the shared player filled in (don't change it in place)."""
         key = key or self.current
+        stored = self._room(key)
+        view = self._views.get(key)
+        if view is None or view[0] is not stored or view[1] is not self.player:
+            view = (stored, self.player, ops.expand_players(stored, self.player))
+            self._views[key] = view
+        return view[2]
+
+    def _room(self, key: str) -> Doc:
+        """A room as stored: the shared player is a reference."""
         if key not in self.scenes:
             path = self.root / self.path(key)
             raw = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {"name": self.label(key), "entities": []}
@@ -87,9 +107,17 @@ class Project:
             self.scenes[key] = ops.ensure_entity_ids(raw, key)
         return self.scenes[key]
 
+    def _store(self, key: str, doc: Doc, player_ids: list[str]) -> None:
+        """Keep an edited room, the shared player split back out of it (its definition may have changed)."""
+        stored, definition = ops.split_players(doc, player_ids)
+        self.scenes[key] = stored
+        self.dirty.add(key)
+        if definition is not None and definition != self.player:
+            self.player, self.player_dirty = definition, True
+
     @property
     def is_dirty(self) -> bool:
-        return bool(self.dirty) or self.world_dirty
+        return bool(self.dirty) or self.world_dirty or self.player_dirty
 
     def can_undo(self) -> bool:
         return bool(self._undo)
@@ -98,19 +126,82 @@ class Project:
         return bool(self._redo)
 
     def player_template(self) -> Doc | None:
-        """The start room's player, copied into new rooms so you can walk around in them."""
-        for entity in ops.entities(self.scene(self.start_key())):
+        """What a new room gets so you can walk around in it: a reference to the shared player (or, in a
+        project whose rooms still have their own, a copy of the start room's)."""
+        for entity in ops.entities(self._room(self.start_key())):
+            if entity.get("prefab_id") == ops.PLAYER_PREFAB:
+                return ops.thin_player(entity)
             if entity.get("tag") == "player":
                 return entity
         return None
 
     def documents(self) -> dict[Path, Doc]:
-        """Absolute path -> document for every room the Studio has open (for play-testing)."""
+        """Absolute path -> document for every room the Studio has open (for play-testing). Rooms refer to
+        the shared player; ``player_prefab()`` is its definition for the runtime's prefab manager."""
         return {self.root / self.path(key): doc for key, doc in self.scenes.items()}
+
+    def is_shared_player(self, entity_id: str | None, key: str | None = None) -> bool:
+        """Whether that object in the room is the game's one player."""
+        return bool(entity_id) and entity_id in ops.shared_player_ids(self._room(key or self.current))
+
+    def player_prefab(self) -> Doc | None:
+        """The shared player as an ``assets/prefabs.json`` entry (None if rooms still have their own)."""
+        return ops.player_prefab_entry(self.player) if self.player is not None else None
+
+    # --- the shared player --------------------------------------------------------------------
+    PREFABS = "assets/prefabs.json"
+
+    def _read_prefabs(self) -> list[Doc]:
+        try:
+            data = json.loads((self.root / self.PREFABS).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return []
+        return data if isinstance(data, list) else []
+
+    def _read_player(self) -> Doc | None:
+        entry = next((p for p in self._read_prefabs() if isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB), None)
+        if entry is not None and (self.root / self.PREFABS).is_file():
+            self._seen_on_disk[self.PREFABS] = (self.root / self.PREFABS).stat().st_mtime
+        return copy.deepcopy(entry["entity"]) if entry and isinstance(entry.get("entity"), dict) else None
+
+    def own_players(self) -> dict[str, Doc]:
+        """Rooms that still have their own full player (projects made before the player was shared)."""
+        found = {key: ops.legacy_player(self._room(key)) for key, _label, _path in self.rooms()}
+        return {key: entity for key, entity in found.items() if entity is not None}
+
+    def player_differences(self, source: str | None = None) -> dict[str, list[str]]:
+        """How each room's own player differs from ``source``'s (default: the start room's), in words."""
+        players = self.own_players()
+        source = self._player_source(players, source)
+        return ops.player_differences(players, source) if source else {}
+
+    def _player_source(self, players: dict[str, Doc], source: str | None) -> str | None:
+        if source in players:
+            return source
+        return self.start_key() if self.start_key() in players else next(iter(players), None)
+
+    def share_player(self, source: str | None = None) -> dict[str, list[str]]:
+        """Give every room one player: ``source``'s (default: the start room's) becomes the game's player
+        and each room keeps only where its player starts. One undo step. Returns what was different in
+        the other rooms' players (and is now replaced), so it can be reported."""
+        players = self.own_players()
+        source = self._player_source(players, source)
+        if source is None:
+            return {}
+        differences = ops.player_differences(players, source)
+        before = self._snapshot()
+        for key, entity in players.items():
+            room = self._room(key)
+            self.scenes[key] = {**room, "entities": [ops.thin_player(e) if e is entity else e for e in ops.entities(room)]}
+            self.dirty.add(key)
+        self.player, self.player_dirty = ops.player_definition(players[source]), True
+        self._record(before)
+        return differences
 
     # --- editing ----------------------------------------------------------------------------
     def _snapshot(self) -> _State:
-        return _State(copy.deepcopy(self.world), copy.deepcopy(self.scenes), self.current, frozenset(self.dirty), self.world_dirty)
+        return _State(copy.deepcopy(self.world), copy.deepcopy(self.scenes), self.current, frozenset(self.dirty),
+                      self.world_dirty, copy.deepcopy(self.player), self.player_dirty)
 
     def _restore(self, state: _State) -> None:
         self.world = copy.deepcopy(state.world)
@@ -118,6 +209,8 @@ class Project:
         self.current = state.current
         self.dirty = set(state.dirty)
         self.world_dirty = state.world_dirty
+        self.player = copy.deepcopy(state.player)
+        self.player_dirty = state.player_dirty
 
     def _record(self, before: _State) -> None:
         if self._tx_depth:
@@ -139,12 +232,15 @@ class Project:
             self._restore(before)
             raise
         self._tx_depth -= 1
-        if not self._tx_depth and (self.scenes != before.scenes or self.world != before.world):
+        if not self._tx_depth and (self.scenes != before.scenes or self.world != before.world
+                                   or self.player != before.player):
             self._record(before)
 
     def all_documents(self) -> Doc:
-        """``{"world": ..., "rooms": {key: room}}`` with every room loaded: a whole-project view."""
-        return {"world": self.world, "rooms": {key: self.scene(key) for key, _label, _path in self.rooms()}}
+        """``{"world": ..., "rooms": {key: room}, "player": ...}`` with every room loaded: a whole-project
+        view (rooms as stored; ``player`` is the shared player's definition, or None)."""
+        return {"world": self.world, "rooms": {key: self._room(key) for key, _label, _path in self.rooms()},
+                "player": self.player}
 
     def clone(self) -> "Project":
         """A copy to try changes on (a dry run): same documents, no undo history, writes nothing."""
@@ -152,21 +248,24 @@ class Project:
         copy_.root, copy_.world_file = self.root, self.world_file
         copy_.world, copy_.scenes = copy.deepcopy(self.world), copy.deepcopy(self.scenes)
         copy_.dirty, copy_.world_dirty, copy_.current = set(self.dirty), self.world_dirty, self.current
+        copy_.player, copy_.player_dirty, copy_._views = copy.deepcopy(self.player), self.player_dirty, {}
         copy_._undo, copy_._redo, copy_.revision, copy_.writes_files, copy_._tx_depth = [], [], self.revision, False, 0
         return copy_
 
     def load_documents(self, docs: Doc) -> None:
         """Replace the documents with ``docs`` (from ``all_documents``), for a clone made at another revision."""
         self.world, self.scenes = copy.deepcopy(docs["world"]), copy.deepcopy(docs["rooms"])
+        if "player" in docs:
+            self.player = copy.deepcopy(docs["player"])
 
     def edit_scene(self, change: Callable[[Doc], Doc], key: str | None = None) -> None:
         """Replace one room with ``change(room)``. An OpError leaves everything untouched."""
         key = key or self.current
         before = self._snapshot()
+        player_ids = ops.shared_player_ids(self._room(key))
         updated = change(self.scene(key))
         self._record(before)
-        self.scenes[key] = updated
-        self.dirty.add(key)
+        self._store(key, updated, player_ids)
 
     def add_room(self, label: str) -> str:
         """A new room with its own player and a ready-to-paint map: wood floor, stone-wall border."""
@@ -186,12 +285,12 @@ class Project:
         key = key or self.current
         width, height = ops.map_size_for(self.scene(key))
         before = self._snapshot()
+        player_ids = ops.shared_player_ids(self._room(key))
         scene, map_path, skeleton = ops.add_map(self.scene(key), self.path(key), width=width, height=height,
                                                 tilesets=self.project_tilesets())
         self._write_map_file(map_path, skeleton)
         self._record(before)
-        self.scenes[key] = scene
-        self.dirty.add(key)
+        self._store(key, scene, player_ids)
 
     def _write_map_file(self, map_path: str, skeleton: Doc) -> None:
         # The map file holds only the size, tileset and empty layers (the painted tiles live
@@ -355,10 +454,11 @@ class Project:
     def link_rooms(self, key_a: str, at_a: tuple[float, float], key_b: str, at_b: tuple[float, float]) -> None:
         """Connect two rooms with a door in each (at ``at_a`` in room ``key_a``, ``at_b`` in ``key_b``), each with its arrival spot."""
         before = self._snapshot()
+        ids_a, ids_b = ops.shared_player_ids(self._room(key_a)), ops.shared_player_ids(self._room(key_b))
         a, b = ops.link_rooms(self.scene(key_a), key_a, self.label(key_a), at_a, self.scene(key_b), key_b, self.label(key_b), at_b)
         self._record(before)
-        self.scenes[key_a], self.scenes[key_b] = a, b
-        self.dirty.update((key_a, key_b))
+        self._store(key_a, a, ids_a)
+        self._store(key_b, b, ids_b)
 
     def _keep_outside_change(self, rel: str) -> None:
         """Before overwriting a file something else changed since it was opened, keep that version."""
@@ -392,6 +492,10 @@ class Project:
         targets = [(self.path(key), self.scenes[key]) for key in sorted(self.dirty)]
         if self.world_dirty:
             targets.append((self.world_file, self.world))
+        if self.player_dirty and self.player is not None:
+            # The shared player is one entry of the project's prefab list: every other entry stays as it was.
+            prefabs = [p for p in self._read_prefabs() if not (isinstance(p, dict) and p.get("id") == ops.PLAYER_PREFAB)]
+            targets.append((self.PREFABS, [ops.player_prefab_entry(self.player), *prefabs]))
         for rel, doc in targets:
             self._keep_outside_change(rel)
             write_json_atomic(self.root / rel, doc)
@@ -399,4 +503,5 @@ class Project:
             written.append(rel)
         self.dirty.clear()
         self.world_dirty = False
+        self.player_dirty = False
         return written

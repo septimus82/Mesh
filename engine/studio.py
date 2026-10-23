@@ -21,6 +21,7 @@ from typing import Any, Callable
 
 import engine.optional_arcade as optional_arcade
 from engine import project_ops as ops
+from engine.prefabs import get_prefab_manager
 from engine.scene_loader import document_key
 from engine.studio_ai import Proposal, StudioAIHost
 from engine.studio_inspector import InspectorMixin, Rows, row_height
@@ -152,6 +153,33 @@ class Studio(InspectorMixin):
         self._reload(recenter=True)
         self._rebuild()
         self._say("Click an object to edit it. Right-click for actions. F4 plays your game.")
+        self._check_player()
+
+    def _check_player(self) -> None:
+        """A project made before the player was shared has a player in every room. Identical ones become
+        one player straight away (nothing is lost); different ones are the person's choice."""
+        if self.project.player is not None or not self.project.own_players():
+            return
+        if not self.project.player_differences():
+            self.project.share_player()
+            self._after_change("Your rooms now share one player: change it once and every room follows. "
+                               "(Undo puts it back.)")
+        else:
+            self.panel = "players"
+            self._rebuild()
+            self._say("This project's rooms each have their own player, and they differ: choose one on the right.")
+
+    def share_player(self, key: str) -> None:
+        replaced = self.project.share_player(key)
+        self.panel = "inspect"
+        lost = "; ".join(f"{self.project.label(k)}'s {', '.join(v)}" for k, v in replaced.items())
+        self._after_change(f"Every room now uses {self.project.label(key)}'s player."
+                           + (f" Replaced: {lost} (Undo puts them back)." if lost else ""))
+
+    def keep_separate_players(self) -> None:
+        self.panel = "inspect"
+        self._rebuild()
+        self._say("Each room keeps its own player. A player's inspector can still make them one.")
 
     # ==================================================================== document <-> map
     def _load_prefabs(self) -> list[dict[str, Any]]:
@@ -160,7 +188,9 @@ class Studio(InspectorMixin):
             data = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return []
-        return [p for p in data if isinstance(p, dict) and isinstance(p.get("entity"), dict) and p.get("id")]
+        # The game's player is a prefab too, but there is one of it, in every room: it isn't placed.
+        return [p for p in data if isinstance(p, dict) and isinstance(p.get("entity"), dict) and p.get("id")
+                and p.get("id") != ops.PLAYER_PREFAB]
 
     def _image(self, path: str) -> Any:
         """A PIL image, loaded once (None if it can't be read)."""
@@ -200,6 +230,9 @@ class Studio(InspectorMixin):
         docs.clear()
         for path, doc in self.project.documents().items():
             docs[document_key(path)] = doc
+        player = self.project.player_prefab()
+        if player is not None:  # rooms refer to the shared player: the runtime resolves it, unsaved changes included
+            get_prefab_manager().put(player)
         self.window.world_controller = WorldController(copy.deepcopy(self.project.world))
 
     def _reload(self, recenter: bool = False) -> None:
@@ -1250,6 +1283,8 @@ class Studio(InspectorMixin):
             self._picture_picker(rows, width)
         elif self.panel == "flags":
             self._flags_panel(rows, width)
+        elif self.panel == "players":
+            self._players_panel(rows, width)
         elif self.panel == "lighting":
             self._lighting_panel(rows, width)
         elif self.panel == "ai":
@@ -1795,7 +1830,7 @@ class Studio(InspectorMixin):
         drag = self.handle_drag
         if drag is not None and drag.get("entity") == entity.get("id") and drag["name"].startswith("collider"):
             return drag["collider"]
-        return ops.collider_of(entity)
+        return ops.collider_of(entity, self._picture_size(entity))
 
     def _live_zone(self, entity: dict[str, Any]) -> dict[str, Any] | None:
         drag = self.handle_drag
@@ -2090,7 +2125,7 @@ class Studio(InspectorMixin):
             if handle is not None:
                 entity = self._entity(self.selected) or {}
                 self.handle_drag = {"name": handle["name"], "entity": self.selected, "moved": False,
-                                    "collider": dict(ops.collider_of(entity)), "zone": dict(ops.trigger_zone(entity) or {})}
+                                    "collider": dict(ops.collider_of(entity, self._picture_size(entity))), "zone": dict(ops.trigger_zone(entity) or {})}
                 return True
             hit = self._entity_at(wx, wy)
             self.select(hit)
