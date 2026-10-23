@@ -216,7 +216,9 @@ class InspectorMixin:
                                  color=C_MUTED, size=9, width=width))
             frame = _guess_frame(size)
             animated = ops.animation_clips(entity) or entity.get("animations")
-            if size and not animated and (size[0] > frame[0] or size[1] > frame[1]):
+            # Not for a single small picture (a 32x32 sprite would "divide" into 8x8 frames).
+            single = size is not None and (size[0] == size[1] <= 64 or min(frame) < 16)
+            if size and not animated and not single and (size[0] > frame[0] or size[1] > frame[1]):
                 rows.add(self._label("This looks like a sheet of frames: the whole sheet shows until you set up "
                                      "its animation in the Animation tab.", color=(240, 200, 120), size=9, width=width))
         else:
