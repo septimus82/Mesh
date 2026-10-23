@@ -136,6 +136,19 @@ def build_occluders_from_tile_layer(
     return out
 
 
+def _inline_collision_layer(tilemap_cfg: Mapping[str, Any], layer_id: str) -> dict[str, Any] | None:
+    """The scene's own collision layer (``tile_layers``), in the Tiled shape the builder below reads."""
+    layers = tilemap_cfg.get("tile_layers")
+    if not layer_id or not isinstance(layers, list):
+        return None
+    layer = next((entry for entry in layers if isinstance(entry, Mapping) and entry.get("id") == layer_id), None)
+    tiles = layer.get("tiles") if layer is not None else None
+    if not isinstance(tiles, list):
+        return None
+    return {key: tilemap_cfg.get(key) for key in ("width", "height", "tilewidth", "tileheight")} | {
+        "layers": [{"type": "tilelayer", "name": layer_id, "data": tiles}]}
+
+
 def build_occluders_from_scene_payload(
     scene_payload: Mapping[str, Any],
     *,
@@ -158,13 +171,18 @@ def build_occluders_from_scene_payload(
         if isinstance(tilemap_cfg, Mapping):
             collision_layer_id = str(tilemap_cfg.get("collision_layer_id") or "").strip()
             tilemap_path = str(tilemap_cfg.get("path") or "").strip()
-            if collision_layer_id and tilemap_path:
+            inline = _inline_collision_layer(tilemap_cfg, collision_layer_id)
+            if inline is not None:  # Mesh Studio's maps: the layers are in the scene, the map file holds tilesets
+                tilemap_data: Any = inline
+            elif collision_layer_id and tilemap_path:
                 tilemap_file = resolve_path(tilemap_path)
                 try:
                     tilemap_data = json.loads(tilemap_file.read_text(encoding="utf-8"))
                 except Exception:
                     tilemap_data = None
-
+            else:
+                tilemap_data = None
+            if collision_layer_id:
                 if isinstance(tilemap_data, dict):
                     width = int(tilemap_data.get("width") or 0)
                     height = int(tilemap_data.get("height") or 0)

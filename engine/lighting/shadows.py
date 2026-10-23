@@ -138,6 +138,32 @@ def cull_polygons_for_light(
     return kept
 
 
+def _shadow_behind(lx: float, ly: float, radius: float, near_a: Point, near_b: Point) -> Polygon:
+    """The shadow an occluder's silhouette edge ``near_a``-``near_b`` throws away from the light at (lx, ly).
+
+    Both corners go out along their rays past the light's reach *and* past themselves: projecting a corner that
+    is already beyond the radius onto the radius put it between the light and the wall, and the shadow folded
+    back over the lit floor (a room's own border walls shaded its middle). A point on the middle ray keeps a
+    wide silhouette's far edge outside the light's circle too.
+    """
+
+    def unit(p: Point) -> tuple[float, float, float]:
+        dx, dy = p[0] - lx, p[1] - ly
+        d = math.hypot(dx, dy)
+        return (dx / d, dy / d, d) if d > 1e-9 else (0.0, 0.0, 0.0)
+
+    ax, ay, da = unit(near_a)
+    bx, by, db = unit(near_b)
+    if da == 0.0 or db == 0.0:  # the light sits on a corner: nothing sensible to cast
+        return [near_a, near_b, (lx, ly)]
+    reach = 2.0 * (radius + max(da, db))
+    mx, my = ax + bx, ay + by
+    mid = math.hypot(mx, my)
+    mx, my = (mx / mid, my / mid) if mid > 1e-9 else (-ay, ax)
+    far_a, far_b = (lx + ax * reach, ly + ay * reach), (lx + bx * reach, ly + by * reach)
+    return [near_a, near_b, far_b, (lx + mx * reach, ly + my * reach), far_a]
+
+
 def build_shadow_polygons(
     light_pos: Point,
     light_radius: float,
@@ -146,7 +172,7 @@ def build_shadow_polygons(
     """
     Build deterministic shadow polygons by extruding an occluder's silhouette corners away from the light.
 
-    Returns one quad per occluder: [near_a, near_b, far_b, far_a].
+    Returns one polygon per occluder: [near_a, near_b, far_b, far_middle, far_a].
     """
     lx, ly = float(light_pos[0]), float(light_pos[1])
     radius = float(light_radius)
@@ -186,19 +212,7 @@ def build_shadow_polygons(
         near_a = angles[start_idx][1]
         near_b = angles[end_idx][1]
 
-        def _far(p: Point) -> Point:
-            dx = p[0] - lx
-            dy = p[1] - ly
-            d = math.hypot(dx, dy)
-            if d <= 1e-9:
-                return (lx, ly)
-            scale = radius / d
-            return (lx + dx * scale, ly + dy * scale)
-
-        far_a = _far(near_a)
-        far_b = _far(near_b)
-
-        poly = [near_a, near_b, far_b, far_a]
+        poly = _shadow_behind(lx, ly, radius, near_a, near_b)
         polys.append([(round(x, 3), round(y, 3)) for x, y in poly])
 
     polys.sort(key=lambda p: (p[0][1], p[0][0], p[1][1], p[1][0]))
@@ -246,18 +260,7 @@ def build_shadow_polygons_for_polys(
         near_a = angles[start_idx][1]
         near_b = angles[end_idx][1]
 
-        def _far(p: Point) -> Point:
-            dx = p[0] - lx
-            dy = p[1] - ly
-            d = math.hypot(dx, dy)
-            if d <= 1e-9:
-                return (lx, ly)
-            scale = radius / d
-            return (lx + dx * scale, ly + dy * scale)
-
-        far_a = _far(near_a)
-        far_b = _far(near_b)
-        poly_out = [near_a, near_b, far_b, far_a]
+        poly_out = _shadow_behind(lx, ly, radius, near_a, near_b)
         polys_out.append([(round(x, 3), round(y, 3)) for x, y in poly_out])
 
     polys_out.sort(key=lambda p: (p[0][1], p[0][0], p[1][1], p[1][0]))
