@@ -15,6 +15,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+from functools import partial
 from pathlib import Path
 from typing import Any, Callable
 
@@ -87,6 +88,11 @@ def _guess_tile_size(width: int, height: int) -> int:
     return next((t for t in (32, 16, 48, 24, 64) if width % t == 0 and height % t == 0), 32)
 
 
+def _colour_name(value: Any) -> str:
+    rgb = ops.rgb(value)
+    return next((name for name, hex_ in ops.LIGHT_COLOURS.items() if ops.rgb(hex_) == rgb), "custom")
+
+
 class Studio(InspectorMixin):
     def __init__(self, window: Any, project: Project) -> None:
         self.window = window
@@ -100,13 +106,13 @@ class Studio(InspectorMixin):
         self.place_prefab: dict[str, Any] | None = None
         self.drag: dict[str, Any] | None = None
         self.panning = False
-        self.menu: tuple[float, float, list[tuple[str, Callable[[], None]]]] | None = None
+        self.menu: tuple[float, float, list[tuple[str, Callable[[], object]]]] | None = None
         self.message, self.message_ok = "", True
         self.keys: set[int] = set()
         self.cam = [0.0, 0.0]
         self.zoom = 1.0
         self.mouse = (0.0, 0.0)
-        self._fields: list[tuple[gui.UIInputText, str, Callable[[str], None]]] = []
+        self._fields: list[tuple[gui.UIInputText, str, Callable[[str], object]]] = []
         self._focus_after_build: str | None = None
         self._focusable: dict[str, gui.UIInputText] = {}
         self._labels: dict[str, optional_arcade.arcade.Text] = {}
@@ -124,7 +130,8 @@ class Studio(InspectorMixin):
         self.import_form = {"path": "", "name": "", "tile": "32"}
         self.modal: str | None = None  # "close": the Save / Discard / Cancel question
         self._closing = False  # set once the person chose to leave
-        self.handle_drag: dict[str, Any] | None = None  # a collider or zone handle being dragged
+        self.handle_drag: dict[str, Any] | None = None  # a collider, zone or light handle being dragged
+        self.light: int | None = None  # the selected light (Lighting panel); lights are not objects
         self.play_flags_open = False
         self._play_flags_seen: Any = None
         self._init_inspector()
@@ -243,6 +250,8 @@ class Studio(InspectorMixin):
     def _after_change(self, ok: str = "") -> None:
         if self.selected and not self._entity(self.selected):
             self.selected = None
+        if self.light is not None and self.light >= len(ops.lights(self.project.scene())):
+            self.light = None
         self._reload()
         self._rebuild()
         if ok:
@@ -321,7 +330,10 @@ class Studio(InspectorMixin):
     def switch_room(self, key: str) -> None:
         self._flush_fields()
         self.project.current = key
-        self.selected, self.place_prefab, self.panel, self.stroke = None, None, "inspect", None
+        self.selected, self.place_prefab, self.stroke, self.light = None, None, None, None
+        self.panel = "lighting" if self.panel == "lighting" else "inspect"
+        if self.tool == "light":
+            self.tool = "select"
         self._reload(recenter=True)
         self._rebuild()
         self._say(f"Editing {self.project.label(key)}.")
@@ -355,6 +367,10 @@ class Studio(InspectorMixin):
             self._after_change("Redone.")
 
     def delete_selected(self) -> None:
+        if self.panel == "lighting":
+            if self.light is not None:
+                self.delete_light()
+            return
         if self.selected:
             name = (self._entity(self.selected) or {}).get("name", "object")
             target = self.selected
@@ -770,7 +786,7 @@ class Studio(InspectorMixin):
         return changed
 
     # ==================================================================== text fields
-    def _field(self, text: str, commit: Callable[[str], None], *, width: int, key: str | None = None) -> gui.UIInputText:
+    def _field(self, text: str, commit: Callable[[str], object], *, width: int, key: str | None = None) -> gui.UIInputText:
         field = TextField(text=text, width=width, height=26, font_size=11, text_color=C_TEXT,
                                 caret_color=C_TEXT, border_color=(90, 96, 112), border_width=1)
         field.with_background(color=(24, 26, 31))
@@ -789,7 +805,7 @@ class Studio(InspectorMixin):
         return any(f.active for f, _, _ in self._fields)
 
     # ==================================================================== UI construction
-    def _button(self, text: str, action: Callable[[], None], *, width: int = 100, style: dict[str, Any] = S_BUTTON,
+    def _button(self, text: str, action: Callable[[], object], *, width: int = 100, style: dict[str, Any] = S_BUTTON,
                 disabled: bool = False) -> gui.UIFlatButton:
         button = gui.UIFlatButton(text=text, width=width, height=28, style=style)
         button.disabled = disabled
@@ -849,6 +865,7 @@ class Studio(InspectorMixin):
         bar.add(self._button("Undo", self.undo, width=64, disabled=not self.project.can_undo()))
         bar.add(self._button("Redo", self.redo, width=64, disabled=not self.project.can_redo()))
         bar.add(self._button("Flags", self.open_flags, width=64, style=S_ACTIVE if self.panel == "flags" else S_BUTTON))
+        bar.add(self._button("Lighting", self.open_lighting, width=80, style=S_ACTIVE if self.panel == "lighting" else S_BUTTON))
         waiting = len(self.ai.pending())
         bar.add(self._button(f"AI ({waiting})" if waiting else "AI", self.open_ai, width=72,
                              style=S_ACTIVE if waiting or self.panel == "ai" else S_BUTTON))
@@ -876,6 +893,215 @@ class Studio(InspectorMixin):
             box.add(self._button(text, lambda p=prefab: self.arm_place(p), width=width, style=style))
         box.add(self._label("Click one, then click the map.", color=C_MUTED, size=10))
         return box
+
+    # ==================================================================== lighting
+    def open_lighting(self) -> None:
+        self._flush_fields()
+        self.panel = "inspect" if self.panel == "lighting" else "lighting"
+        self.light, self.place_prefab, self.selected = None, None, None
+        if self.tool == "light" or self.panel == "lighting":
+            self.tool = "select"
+        self._rebuild()
+
+    def _room_settings(self) -> dict[str, Any]:
+        settings = self.project.scene().get("settings")
+        return settings if isinstance(settings, dict) else {}
+
+    def _lit(self) -> bool:
+        return bool(getattr(getattr(self.window, "lighting", None), "enabled", False))
+
+    def set_room_lighting(self, ok: str, **change: Any) -> None:
+        # Switching a room's lighting on from a dark project default would show a black room: give it night light.
+        if change.get("enabled") and "lighting_ambient_color" not in self._room_settings() and "ambient" not in change:
+            change["ambient"] = "Night"
+        self._edit(lambda s: ops.set_room_lighting(s, **change), ok)
+
+    def _shift_ambient(self, factor: float) -> None:
+        now = self._room_settings().get("lighting_ambient_color") or list(getattr(self.window.lighting, "ambient_color", (10, 10, 10)))
+        value = [max(0, min(255, round(max(c, 4) * factor))) for c in ops.rgb(now)]
+        self.set_room_lighting("Room light changed.", ambient=value)
+
+    def arm_light(self) -> None:
+        self._flush_fields()
+        self.tool, self.place_prefab, self.light = "light", None, None
+        self._rebuild()
+        self._say("Click the map to place a light. Esc cancels.")
+
+    def place_light(self, wx: float, wy: float) -> None:
+        self.tool = "select"
+        turn_on = not self._lit()
+
+        def change(scene: dict[str, Any]) -> dict[str, Any]:
+            out, self.light = ops.add_light(scene, wx, wy)
+            if turn_on:
+                extra = {} if "lighting_ambient_color" in (out.get("settings") or {}) else {"ambient": "Night"}
+                out = ops.set_room_lighting(out, enabled=True, **extra)
+            return out
+
+        self._edit(change, "Light placed" + (" and lighting turned on for this room" if turn_on else "")
+                   + ". Drag its middle to move it, its edge handle to resize it.")
+
+    def set_light(self, ok: str, **fields: Any) -> None:
+        index = self.light
+        if index is not None:
+            self._edit(lambda s: ops.set_light(s, index, **fields), ok)
+
+    def duplicate_light(self) -> None:
+        index = self.light
+        if index is None:
+            return
+
+        def change(scene: dict[str, Any]) -> dict[str, Any]:
+            out, self.light = ops.duplicate_light(scene, index)
+            return out
+
+        self._edit(change, "Light duplicated.")
+
+    def delete_light(self) -> None:
+        index, self.light = self.light, None
+        if index is not None:
+            self._edit(lambda s: ops.remove_light(s, index), "Light deleted.")
+
+    def _light_handles(self) -> list[dict[str, Any]]:
+        """The selected light's size handle first (it sits on the ring), then every light's middle."""
+        out: list[dict[str, Any]] = []
+        drag = self.handle_drag
+        items = [dict(drag["cfg"]) if drag and drag.get("light") == i else light
+                 for i, light in enumerate(ops.lights(self.project.scene()))]
+        order = sorted(range(len(items)), key=lambda i: i != self.light)
+        for i in order:
+            light = items[i]
+            if not isinstance(light, dict) or "x" not in light:
+                continue
+            x, y = float(light.get("x", 0)), float(light.get("y", 0))
+            if i == self.light:
+                out.append({"name": "light_size", "light": i, "x": x + float(light.get("radius", 100)), "y": y})
+            out.append({"name": "light_move", "light": i, "x": x, "y": y})
+        return out
+
+    def _preview_lights(self) -> None:
+        """Show a light being dragged straight away, without making an undo step per mouse move."""
+        drag = self.handle_drag
+        lighting = getattr(self.window, "lighting", None)
+        if drag is None or lighting is None:
+            return
+        items = [dict(drag["cfg"]) if i == drag["light"] else light for i, light in enumerate(ops.lights(self.project.scene()))]
+        lighting.configure_scene_lights(items)
+
+    def _draw_lights(self) -> None:
+        a = optional_arcade.arcade
+        drag = self.handle_drag
+        for i, light in enumerate(ops.lights(self.project.scene())):
+            if not isinstance(light, dict) or "x" not in light:
+                continue
+            if drag and drag.get("light") == i:
+                light = drag["cfg"]
+            r, g, b = ops.rgb(light.get("color"))
+            x, y, radius = float(light.get("x", 0)), float(light.get("y", 0)), float(light.get("radius", 100))
+            chosen = i == self.light
+            a.draw_circle_outline(x, y, radius, (r, g, b, 230 if chosen else 120), (3 if chosen else 1) / self.zoom)
+            a.draw_circle_filled(x, y, 9 / self.zoom, (r, g, b))
+            self._text(f"light:{i}", f"Light {i + 1}" + (" (flickers)" if light.get("flicker_enabled") else ""),
+                       x, y + 14 / self.zoom, (255, 230, 150))
+
+    def _lighting_panel(self, rows: Rows, width: int) -> None:
+        settings, scene = self._room_settings(), self.project.scene()
+        third, fifth = (width - 8) // 3, (width - 16) // 5
+        rows.add(self._label("Lighting", bold=True, size=12))
+        own = settings.get("lighting_enabled")
+        state = "On: dark away from lights." if self._lit() else "Off: everything is fully lit."
+        rows.add(self._label(state + ("" if own is not None else " (the project's setting)"), color=C_MUTED, size=9, width=width))
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for text, enabled, said in (("On", True, "Lighting on in this room."), ("Off", False, "Lighting off in this room."),
+                                    ("As project", None, "Lighting follows the project.")):
+            row.add(self._button(text, partial(self.set_room_lighting, said, enabled=enabled), width=third,
+                                 style=S_ACTIVE if own is enabled else S_BUTTON))
+        rows.add(row)
+        rows.add(self._label("Room light (away from lamps)", color=C_MUTED, size=10))
+        ambient = settings.get("lighting_ambient_color")
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for name, preset in ops.AMBIENT_PRESETS.items():
+            row.add(self._button(name, partial(self.set_room_lighting, f"Room light: {name}.", ambient=name), width=fifth,
+                                 style=S_ACTIVE if ambient == preset else S_BUTTON))
+        rows.add(row)
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        row.add(self._button("Darker", lambda: self._shift_ambient(0.7), width=third))
+        row.add(self._button("Brighter", lambda: self._shift_ambient(1.4), width=third))
+        row.add(self._button("Project's", lambda: self.set_room_lighting("Room light follows the project.", ambient=None),
+                             width=third, style=S_ACTIVE if ambient is None else S_BUTTON))
+        rows.add(row)
+        shadows = settings.get("lighting_shadows_mode")
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for text, mode, said in (("Shadows on", "hard", "Shadows on."), ("Shadows off", "none", "Shadows off."),
+                                 ("Project's", None, "Shadows follow the project.")):
+            row.add(self._button(text, partial(self.set_room_lighting, said, shadows=mode), width=third,
+                                 style=S_ACTIVE if shadows == mode else S_BUTTON))
+        rows.add(row)
+        if isinstance(scene.get("occluders"), list):
+            rows.add(self._label(f"Shadows come from {len(scene['occluders'])} hand-drawn shape(s) made in the classic editor, "
+                                 "not from the map's walls.", color=C_MUTED, size=9, width=width))
+        else:
+            rows.add(self._label("Walls on the map cast shadows from the first light.", color=C_MUTED, size=9, width=width))
+        rows.add(gui.UISpace(height=6))
+        items = ops.lights(scene)
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._label(f"Lights ({len(items)})", bold=True, size=11, width=width - 110))
+        row.add(self._button("+ Add light", self.arm_light, width=104, style=S_ACTIVE if self.tool == "light" else S_BUTTON))
+        rows.add(row)
+        for i, light in enumerate(items):
+            if isinstance(light, dict):
+                text = f"Light {i + 1}: {_colour_name(light.get('color'))}, size {float(light.get('radius', 0)):g}"
+                rows.add(self._button(text, partial(self._select_light, i), width=width,
+                                      style=S_ACTIVE if i == self.light else S_BUTTON))
+        if self.light is not None and self.light < len(items):
+            self._light_inspector(rows, items[self.light], width)
+        rows.add(self._label("While this panel is open, clicks on the map work on lights.", color=C_MUTED, size=9, width=width))
+        rows.add(self._button("Done", self.open_lighting, width=80))
+
+    def _set_light_field(self, key: str, text: str) -> None:
+        self.set_light("Changed.", **{key: text})
+
+    def _select_light(self, index: int) -> None:
+        self._flush_fields()
+        self.light = None if self.light == index else index
+        self._rebuild()
+
+    def _light_inspector(self, rows: Rows, light: dict[str, Any], width: int) -> None:
+        third = (width - 8) // 3
+        rows.add(gui.UISpace(height=4))
+        rows.add(self._label(f"Light {(self.light or 0) + 1}", bold=True, size=12))
+        current = ops.rgb(light.get("color"))
+        names = list(ops.LIGHT_COLOURS)
+        for start in (0, 3):
+            row = gui.UIBoxLayout(vertical=False, space_between=4)
+            for name in names[start:start + 3]:
+                row.add(self._button(name, partial(self.set_light, f"{name} light.", color=name), width=third,
+                                     style=S_ACTIVE if ops.rgb(ops.LIGHT_COLOURS[name]) == current else S_BUTTON))
+            rows.add(row)
+        radius = float(light.get("radius", 100))
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        row.add(self._button("Smaller", lambda: self.set_light("Smaller.", radius=max(8, round(radius * 0.8))), width=third))
+        row.add(self._label(f"size {radius:g}", color=C_MUTED, size=10, width=third))
+        row.add(self._button("Bigger", lambda: self.set_light("Bigger.", radius=min(4000, round(radius * 1.25))), width=third))
+        rows.add(row)
+        flicker = bool(light.get("flicker_enabled"))
+        rows.add(self._toggle("Flicker", flicker, lambda on: self.set_light("Flickers." if on else "Steady.", flicker_enabled=on), width))
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._button("Duplicate", self.duplicate_light, width=(width - 6) // 2))
+        row.add(self._button("Delete", self.delete_light, width=(width - 6) // 2))
+        rows.add(row)
+        more = self.expanded == "light_more"
+        rows.add(self._button(("v " if more else "> ") + "More settings", lambda: self._toggle_expand("light_more"), width=width))
+        if not more:
+            return
+        field_w = width - 122
+        for label, key in (("X", "x"), ("Y", "y"), ("Size", "radius"), ("Flicker amount (0-1)", "flicker_amount"),
+                           ("Flicker speed", "flicker_speed")):
+            self._labeled(rows, label, self._field(f"{float(light.get(key) or 0):g}", partial(self._set_light_field, key),
+                                                   width=field_w, key=f"light_{key}"), width)
+        self._labeled(rows, "Colour (R, G, B)", self._field(", ".join(str(c) for c in current),
+                      lambda v: self.set_light("Colour changed.", color=[p.strip() for p in v.split(",")]),
+                      width=field_w, key="light_rgb"), width)
 
     def open_ai(self) -> None:
         self._flush_fields()
@@ -1024,6 +1250,8 @@ class Studio(InspectorMixin):
             self._picture_picker(rows, width)
         elif self.panel == "flags":
             self._flags_panel(rows, width)
+        elif self.panel == "lighting":
+            self._lighting_panel(rows, width)
         elif self.panel == "ai":
             self._ai_panel(rows, width)
         elif self.panel == "preview":
@@ -1189,7 +1417,7 @@ class Studio(InspectorMixin):
     # ==================================================================== context menu
     def _open_menu(self, x: float, y: float, wx: float, wy: float) -> None:
         entity_id = self._entity_at(wx, wy)
-        items: list[tuple[str, Callable[[], None]]] = []
+        items: list[tuple[str, Callable[[], object]]] = []
         if entity_id:
             self.select(entity_id)
             entity = self._entity(entity_id) or {}
@@ -1247,7 +1475,15 @@ class Studio(InspectorMixin):
         w.clear(color=C_BG)
         self._apply_camera()
         w.camera.use()
-        w.scene_controller.draw()
+        lighting = getattr(w, "lighting", None)
+        if lighting is not None and lighting.enabled:  # the room as the game will light it, as the game draws it
+            with lighting.begin():
+                w.scene_controller.draw()
+            w.camera_controller.use_gui_camera()
+            lighting.end()
+            w.camera.use()
+        else:
+            w.scene_controller.draw()
         self._draw_world_overlay()
         w.camera_controller.use_gui_camera()
         self._draw_panels()
@@ -1263,6 +1499,7 @@ class Studio(InspectorMixin):
         path = os.environ.get("MESH_STUDIO_LAYOUT")
         if not path:
             return
+        from engine.runtime_probe import runtime_snapshot  # noqa: PLC0415
         self._dump_tick = getattr(self, "_dump_tick", 0) + 1
         if self._dump_tick % 10:
             return
@@ -1306,7 +1543,8 @@ class Studio(InspectorMixin):
         handles = []
         for handle in self._handles() if self.mode == "edit" else []:
             hx, hy = self.window.camera.project((handle["x"], handle["y"]))[:2]
-            handles.append({"name": handle["name"], "screen": [hx, hy], "world": [handle["x"], handle["y"]]})
+            handles.append({"name": handle["name"], "screen": [hx, hy], "world": [handle["x"], handle["y"]],
+                            "light": handle.get("light")})
         play = None
         if self.mode == "play":
             player = next((s for s in self.window.scene_controller.all_sprites
@@ -1323,8 +1561,6 @@ class Studio(InspectorMixin):
                                         if type(b).__name__ == "Health"), None),
                             "solid": sp in (getattr(self.window, "solid_sprites", None) or [])}
                            for sp in self.window.scene_controller.all_sprites]
-            from engine.runtime_probe import runtime_snapshot  # noqa: PLC0415
-
             play = {"scene": self.window.scene_controller.current_scene_path, "sprites": sprites_now,
                     "runtime": runtime_snapshot(self.window),
                     "flags": {name: bool(value) for name, value in dict(flags).items()},
@@ -1359,7 +1595,8 @@ class Studio(InspectorMixin):
                  "play_flags_open": self.play_flags_open, "tick": self._dump_tick,
                  "ai": [p.view() for p in self.ai.proposals], "revision": self.project.revision,
                  "dlg_order": list(ops.conversation(self._entity(self.selected) or {})["nodes"]) if self.selected else [],
-                 "room_doc": self.project.scene() if self.mode == "edit" else None}
+                 "room_doc": self.project.scene() if self.mode == "edit" else None, "light": self.light,
+                 "lighting": runtime_snapshot(self.window).get("lighting") if self.mode == "edit" else None}
         tmp = f"{path}.tmp"
         try:
             with open(tmp, "w", encoding="utf-8") as handle:
@@ -1519,8 +1756,10 @@ class Studio(InspectorMixin):
                                     bright=eid == self.selected)
             if eid == self.selected:
                 a.draw_lrbt_rectangle_outline(cx - w / 2 - 3, cx + w / 2 + 3, cy - h / 2 - 3, cy + h / 2 + 3, C_SELECT, 2)
+        if self.panel == "lighting" and self.mode == "edit":
+            self._draw_lights()
         for handle in self._handles():
-            color = (255, 160, 60) if handle["name"].startswith("zone") else (90, 200, 255)
+            color = {"zone": (255, 160, 60), "ligh": (255, 220, 90)}.get(handle["name"][:4], (90, 200, 255))
             size = 6 / self.zoom
             a.draw_lrbt_rectangle_filled(handle["x"] - size, handle["x"] + size, handle["y"] - size, handle["y"] + size, color)
             a.draw_lrbt_rectangle_outline(handle["x"] - size, handle["x"] + size, handle["y"] - size, handle["y"] + size, (20, 20, 20), 1)
@@ -1543,18 +1782,21 @@ class Studio(InspectorMixin):
 
     def _live_collider(self, entity: dict[str, Any]) -> dict[str, Any]:
         drag = self.handle_drag
-        if drag is not None and drag["entity"] == entity.get("id") and drag["name"].startswith("collider"):
+        if drag is not None and drag.get("entity") == entity.get("id") and drag["name"].startswith("collider"):
             return drag["collider"]
         return ops.collider_of(entity)
 
     def _live_zone(self, entity: dict[str, Any]) -> dict[str, Any] | None:
         drag = self.handle_drag
-        if drag is not None and drag["entity"] == entity.get("id") and drag["name"].startswith("zone"):
+        if drag is not None and drag.get("entity") == entity.get("id") and drag["name"].startswith("zone"):
             return drag["zone"]
         return ops.trigger_zone(entity)
 
     def _handles(self) -> list[dict[str, Any]]:
-        """Drag handles for the selected object's collider (Collision tab) and trigger zone, in world units."""
+        """Drag handles for the selected object's collider (Collision tab) and trigger zone, or for the room's
+        lights while the Lighting panel is open, in world units."""
+        if self.panel == "lighting":
+            return self._light_handles() if self.mode == "edit" and self.tool == "select" else []
         entity = self._entity(self.selected)
         if entity is None or self.mode != "edit" or self.tool != "select" or self.panel != "inspect":
             return []
@@ -1580,6 +1822,14 @@ class Studio(InspectorMixin):
 
     def _drag_handle(self, wx: float, wy: float) -> None:
         drag = self.handle_drag
+        if drag is not None and "light" in drag:
+            light = drag["cfg"]
+            if drag["name"] == "light_move":
+                light.update(x=float(round(wx)), y=float(round(wy)))
+            else:
+                light["radius"] = float(max(8, round(((wx - light["x"]) ** 2 + (wy - light["y"]) ** 2) ** 0.5)))
+            self._preview_lights()
+            return
         entity = self._entity(drag["entity"]) if drag else None
         if drag is None or entity is None:
             return
@@ -1599,6 +1849,13 @@ class Studio(InspectorMixin):
     def _commit_handle(self) -> None:
         drag, self.handle_drag = self.handle_drag, None
         if drag is None or not drag.get("moved"):
+            return
+        if "light" in drag:
+            index, light = drag["light"], drag["cfg"]
+            if drag["name"] == "light_move":
+                self._edit(lambda s: ops.set_light(s, index, x=light["x"], y=light["y"]), "Light moved.")
+            else:
+                self._edit(lambda s: ops.set_light(s, index, radius=light["radius"]), f"Light size {light['radius']:g}.")
             return
         target = drag["entity"]
         if drag["name"] == "zone_size":
@@ -1631,6 +1888,9 @@ class Studio(InspectorMixin):
             dy = bool(self.keys & {k.UP, k.W}) - bool(self.keys & {k.DOWN, k.S})
             self.cam[0] += dx * PAN_SPEED * delta_time / self.zoom
             self.cam[1] += dy * PAN_SPEED * delta_time / self.zoom
+        lighting = getattr(self.window, "lighting", None)
+        if lighting is not None:
+            lighting.update(delta_time)  # flicker shows while editing; nothing else of the game runs
         return True  # no gameplay runs while editing
 
     def on_key_press(self, symbol: int, modifiers: int) -> bool:
@@ -1801,7 +2061,21 @@ class Studio(InspectorMixin):
             if self.place_prefab is not None:
                 self.place_at(wx, wy)
                 return True
+            if self.tool == "light":
+                self.place_light(wx, wy)
+                return True
             handle = self._handle_at(x, y)
+            if handle is not None and "light" in handle:
+                self.light = handle["light"]
+                self.handle_drag = {"name": handle["name"], "light": self.light, "moved": False,
+                                    "cfg": dict(ops.lights(self.project.scene())[self.light])}
+                self._rebuild()
+                return True
+            if self.panel == "lighting":  # while lighting, the map's clicks are about lights only
+                if self.light is not None:
+                    self.light = None
+                    self._rebuild()
+                return True
             if handle is not None:
                 entity = self._entity(self.selected) or {}
                 self.handle_drag = {"name": handle["name"], "entity": self.selected, "moved": False,
