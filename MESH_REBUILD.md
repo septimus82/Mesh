@@ -364,6 +364,36 @@ Each was confirmed in the real window except 4, which was read in the code and f
 9. NPC schedules never moved anyone.
 10. QuestHook heard no events in play.
 
+## Milestone 9 — test trustworthiness and repository health
+
+**Goal:** know whether the test suite can be trusted and where the repository carries needless complexity. An audit, not features. Reports:
+- [`docs/reviews/milestone9_test_audit.md`](docs/reviews/milestone9_test_audit.md)
+- [`docs/reviews/milestone9_repo_health.md`](docs/reviews/milestone9_repo_health.md)
+
+### Acceptance criteria and status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| The nine baseline failures diagnosed and resolved | **Done** | Six were one test leaving modules swapped for later tests; two read the owner's own RPG Maker project; one asserted a design changed in June. All fixed at the defect; no assertion weakened. |
+| Skips and deselections explained | **Done** | 8 skips (opt-in GL, CI-only packaging, a missing sibling project, an empty table). 163 deselected `slow`/`e2e`: nobody ran them locally and CI's full job was red. **49 failed, identically on the pre-redesign tag**; 18 repaired; 31 remain, all explained (type debt, stale pipeline snapshots, wheel packaging). |
+| Test inventory, duplicates, coverage gaps | **Done** | By subsystem and purpose; duplicates judged by what they assert; 16 removed with coverage kept |
+| Repository health | **Done** | Size and composition; dead code (5 modules and 1 script removed, each with zero references); coupling; process defects in the gates |
+| Test gates recommended | **Done** | Fast (`-m fast`), full headless (default run **plus** the slow/e2e run against a named known-failure list), graphical (`tooling/runtime_gate.py`) |
+
+### How it was validated
+
+- **Full suite, final:** 9,360 passed, **0 failed**, 8 skipped (all explained), 163 deselected (`py -3.13 -m pytest -q -p no:cacheprovider`)
+- **Slow/e2e (deselected by default):** 31 failed, 132 passed (`-o addopts= -m "slow or e2e"`): 30 `verify-all` pipeline tests blocked by the type debt (7 of them also stale snapshots) and the wheel test. All named in the test audit; at the start it was 49 failed, the same 49 as on the pre-redesign tag.
+- **Runtime gate:** 8/8 suites: M1 15/15 (**FLAKY**: its first attempt lost a click when the OS put the cursor on the primary monitor about 3 s after the window opened; it passed on the retry), M2 23/23, M3 15/15, M4 20/20 (`./mygame` copied, original checked unchanged), M5 17/17, M6 14/14, persistence 12/12, lab 27/27 plus 1 KNOWN.
+- **Ruff gate and mypy island:** clean. **The project-wide type gate:** 516 errors beyond its baseline, real debt measured and *not* re-baselined. Its own growth guard refused that, rightly.
+
+### Problems found in the testing process itself
+
+1. **The type gate could never run** in a checkout holding a game project (the untracked `mygame/` has its own `main.py`), so 516 type errors accumulated unseen. Fixed: it excludes untracked folders.
+2. **CI's full-suite job ran with `--maxfail=1` and had been red for months**, so 49 slow/e2e failures were never seen.
+3. **Tests swapped `sys.modules` entries and never put them back**, which made results depend on order.
+4. **Three bare `except: pass` blocks** (Creator Mode, July) broke the project's own swallow policy.
+
 ## Known limitations (honest list)
 
 - **Placeholder character art.** Still the coloured-square sheet; the owner's decision.
@@ -392,6 +422,7 @@ All recorded with restore instructions in `MESH_SALVAGE.md`:
 
 ## Next slices, in order
 
+0. **Pay down the type debt** (Milestone 9's top recommendation): start with the Studio inspector mixin (263 of 516 errors), then `studio.py` and `monster/data_load.py`. That makes the type gate and the `verify-all` pipeline usable again. Then make the full headless gate (default run plus slow/e2e) routine.
 0. **Studio lighting controls** on the now-verified runtime (lights, occluders, room ambient and lighting on/off), then the HD-2D look and camera zoom areas. Keep running `tooling/runtime_gate.py` at the end of each milestone. Deferred from Milestone 8: `background_planes` → `background_layers` (needs a visual-equivalence test), quick snapshots into SaveManager slots (monster companion state), a respawn option for defeated enemies, and the templates' CameraFollow `zoom: 1.0` that overrides a room's own zoom.
 1. **Finish the single operation path:** route the legacy CLI scene commands that target Studio projects through `engine/authoring`, then retire their duplicate code; move the remaining `AIOps` operations (lights, quests, world links) onto `project_ops` operations.
 2. **Launcher follow-ups:** return to the launcher when the Studio closes; rename, move or delete projects; a packaged build.

@@ -133,3 +133,27 @@ Report: [`docs/reviews/milestone8_runtime_reliability.md`](docs/reviews/mileston
 | F6 in play loads the SaveManager quick save | It loaded `save_1.json`, which F5 writes only without a SaveManager | **Consolidation:** `SaveGameV1` remains only as the no-SaveManager fallback of F5 and F6 |
 | **Deferred:** `background_planes` → `background_layers` | Different coordinate models; layers have no alpha or offset; no content uses planes | The lab reports it as KNOWN |
 | **Deferred:** quick snapshot (`quick.json`, Ctrl+F6) into slots | The monster companion's persistence is built on it | Needs a migration of that state |
+
+## Milestone 9: test trustworthiness and repository health
+
+Reports:
+- [`docs/reviews/milestone9_test_audit.md`](docs/reviews/milestone9_test_audit.md)
+- [`docs/reviews/milestone9_repo_health.md`](docs/reviews/milestone9_repo_health.md)
+
+Restore anything with `git show 05a8d40:<path>`.
+
+| Change | Why | Note |
+|---|---|---|
+| **Removed** `engine/input_runtime/capture_key_router_model_v2.py`, `capture_key_router_v2.py`, `capture_runtime_v2.py` | Self-described deprecated v2 alias shims; zero references anywhere | The real modules are unchanged |
+| **Removed** `engine/tooling/precommit_check.py` | Unreferenced 14-line wrapper of `engine.tooling.check` | `engine.tooling.check` stays |
+| **Removed** `engine/editor/confirm_modal_preview_model.py` | Logic model never wired to anything; zero importers | Its two ruff-baseline lines removed too |
+| **Removed** `tooling/debug_parser.py` | Imported a non-existent `mesh_cli_v2`; could not run | — |
+| **Removed** 14 copies of Creator Mode's "package import doesn't import the renderer" subprocess test; `tests/test_ui_persistence_across_scene_rebuild.py`; `test_camera_follow_shake.py::test_gui_camera_unchanged_by_shake` | Byte-for-byte duplicates (a strict subset, for the file) | One copy of each contract remains |
+| `tests/test_assets_reload_is_import_safe.py` restores the modules it removes; `test_editor_keybinds_controller.py` swaps modules only during its own imports | Six "baseline failures" and order-dependent results | — |
+| RMMZ passability tests use a generated map | They depended on the owner's mutable project | The owner's map is an optional smoke check |
+| `test_editor_input_regression.py` asserts the click point as the drag start | The design changed in `2909190` | — |
+| 18 slow/e2e tests repaired (stub signatures, patch targets, fixture prefab fields, facade lookup points); `test_integration.py`'s arcade mock keeps real key constants | Stale harnesses | — |
+| `tooling/mypy_gate.py` excludes untracked folders | A project's `main.py` stopped mypy entirely | The baseline is unchanged: the type debt is not hidden |
+| Creator Mode rollback swallows use `_log_swallow` (CRMC-001..003) | Bare `except: pass` broke the swallow policy | Same best-effort behaviour |
+| **Not deleted, recommended:** `build/web/mesh.apk` (15.2 GB, a broken March web build that swept up `artifacts/`) | Owner's disk, outside git, irreversible | Rebuild with `py -3.13 tooling/build_web.py` |
+
