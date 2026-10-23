@@ -379,25 +379,32 @@ class Driver:
         user32.GetCursorPos(ctypes.byref(pos))
         return pos.x, pos.y
 
-    def _settle_cursor(self, sx: int, sy: int, attempts: int = 3) -> tuple[int, int]:
+    def _settle_cursor(self, sx: int, sy: int, patience: float = 3.0) -> tuple[int, int]:
         """Make sure the cursor really is at (sx, sy) before anything is pressed.
 
-        A virtual-desktop move occasionally lands elsewhere: across two monitors, shortly after a window
-        opened, it once put the cursor at the primary monitor's centre, and the click then went to whatever
-        was there (the gate's recurring Milestone 1 FLAKY). Correct it directly a few times; if the cursor
-        still won't go there, say so rather than click somewhere else.
+        Something outside the app now and then grabs the cursor about 3 s after a window opens: it recentres
+        it on the primary monitor and briefly confines it there, so a press would land on whatever is under
+        it (the gate's recurring Milestone 1 FLAKY). Place it directly, waiting out a confinement for up to
+        ``patience`` seconds; if the cursor still won't go there, say so rather than click somewhere else.
         """
-        at = self._cursor_pos()
-        for attempt in range(attempts):
-            if abs(at[0] - sx) <= 3 and abs(at[1] - sy) <= 3:  # normalised coordinates round by a pixel or two
-                return at
-            self.note(f"cursor landed at {at}, not ({sx}, {sy}); placing it directly (attempt {attempt + 1})")
+        at, attempt, deadline = self._cursor_pos(), 0, time.time() + patience
+        while abs(at[0] - sx) > 3 or abs(at[1] - sy) > 3:  # normalised coordinates round by a pixel or two
+            if time.time() > deadline:
+                raise RuntimeError(f"could not place the cursor at ({sx}, {sy}): it stays at {at} "
+                                   f"(confined to {self._cursor_clip()}); not clicking elsewhere")
+            attempt += 1
+            self.note(f"cursor landed at {at}, not ({sx}, {sy}); placing it directly (attempt {attempt}, "
+                      f"cursor confined to {self._cursor_clip()})")
             user32.SetCursorPos(int(sx), int(sy))
-            time.sleep(0.05)
+            time.sleep(0.05 if attempt <= 3 else 0.25)
             at = self._cursor_pos()
-        if abs(at[0] - sx) <= 3 and abs(at[1] - sy) <= 3:
-            return at
-        raise RuntimeError(f"could not place the cursor at ({sx}, {sy}): it stays at {at}; not clicking elsewhere")
+        return at
+
+    @staticmethod
+    def _cursor_clip() -> tuple[int, int, int, int]:
+        rect = wintypes.RECT()
+        user32.GetClipCursor(ctypes.byref(rect))
+        return rect.left, rect.top, rect.right, rect.bottom
 
     def _button(self, flags: int) -> None:
         self._require_untouched_mouse()
