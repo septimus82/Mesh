@@ -96,7 +96,7 @@ def compute_sprite_render_sort_key(
     # Extract entity_id
     entity_id = _get_entity_id(entity_data)
 
-    depth = -_sprite_feet_y(sprite, entity_data)
+    depth = -sprite_feet_y(sprite, entity_data)
     if sort_mode == "explicit_z":
         depth_z = _get_float(entity_data, "depth_z", default=0.0)
         return (render_layer, depth_z, depth, entity_id)
@@ -160,7 +160,7 @@ def _get_entity_id(data: dict[str, Any]) -> str:
     return ""
 
 
-def _sprite_feet_y(sprite: Any, entity_data: dict[str, Any]) -> float:
+def sprite_feet_y(sprite: Any, entity_data: dict[str, Any]) -> float:
     """The y where a sprite stands: its bottom edge, else its centre, else its entity's y."""
     for attribute in ("bottom", "center_y"):
         value = getattr(sprite, attribute, None)

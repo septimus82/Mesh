@@ -19,6 +19,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, Tuple
 
+from engine.render_sort_model import sprite_feet_y
+
 
 @dataclass(frozen=True, slots=True)
 class ShadowParams:
@@ -614,9 +616,10 @@ def compute_sprite_shadow(
         base_offset_y=base_offset_y,
     )
 
-    # Get sprite position
+    # A shadow lies where the sprite stands: its feet (bottom edge), as y-sort uses. Anchored to
+    # the centre, any sprite taller than the shadow's offset covered its own shadow.
     sprite_x = float(getattr(sprite, "center_x", 0.0))
-    sprite_y = float(getattr(sprite, "center_y", 0.0))
+    sprite_y = sprite_feet_y(sprite, entity_data)
 
     # Compute ellipse
     ellipse = compute_shadow_ellipse(
@@ -703,9 +706,10 @@ def compute_sprite_multi_shadow(
         base_offset_y=base_offset_y,
     )
 
-    # Get sprite position
+    # A shadow lies where the sprite stands: its feet (bottom edge), as y-sort uses. Anchored to
+    # the centre, any sprite taller than the shadow's offset covered its own shadow.
     sprite_x = float(getattr(sprite, "center_x", 0.0))
-    sprite_y = float(getattr(sprite, "center_y", 0.0))
+    sprite_y = sprite_feet_y(sprite, entity_data)
 
     # Compute base ellipse
     base_ellipse = compute_shadow_ellipse(

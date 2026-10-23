@@ -262,7 +262,6 @@ tests/test_shortcut_dispatch_contract.py
 tests/test_shortcut_resolver_model_contract.py
 tests/test_spatial_hash_model_contract.py
 tests/test_sprite_outline_model_contract.py
-tests/test_sprite_shadow_model_contract.py
 tests/test_state_codec_contract.py
 tests/test_title_menu_contract.py
 tests/test_todo_audit_ratchet_contract.py

@@ -363,23 +363,25 @@ class LightManager:
         if not callable(draw):
             return False
         rgb = self._ambient_rgb()
-        # Try to draw without position (screen space composition)
+        # Lights are placed in world coordinates, so they are drawn through the world camera (its scroll
+        # and zoom). The composite onto the screen is a full-screen quad the camera doesn't affect. end()
+        # runs under the GUI camera, so that is put back afterwards.
+        window = getattr(self, "window", None)
+        camera = getattr(window, "camera", None)
+        if callable(getattr(camera, "use", None)):
+            camera.use()
         try:
-            draw(ambient_color=rgb)
-            return True
-        except TypeError:
-            pass
-        try:
-            draw(rgb)
-            return True
-        except TypeError:
-            pass
-        try:
-            draw()
-            return True
-        except TypeError:
-            pass
-        return False
+            for args, kwargs in (((), {"ambient_color": rgb}), ((rgb,), {}), ((), {})):
+                try:
+                    draw(*args, **kwargs)
+                    return True
+                except TypeError:
+                    pass
+            return False
+        finally:
+            restore = getattr(getattr(window, "camera_controller", None), "use_gui_camera", None)
+            if callable(restore):
+                restore()
 
     def _log_counter_once(self, key: str, msg: str) -> None:
         """Log a message once per key, with a counter."""
@@ -1030,6 +1032,10 @@ class LightManager:
 
         _occluder_layer_builder.rebuild_occluder_layer(self)
         _static_light_builder.rebuild_static_and_dynamic_lights(self)
+
+    def clear_dynamic_lights(self) -> None:
+        """Forget the lights objects carry (on a scene change: the new scene's objects register their own)."""
+        self._dynamic_handles = []
 
     def _normalize_cookie_offset(self, value: Any) -> tuple[float, float]:
         return _cookies.normalize_cookie_offset(value)

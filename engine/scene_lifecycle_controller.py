@@ -7,10 +7,10 @@ from typing import Any, cast
 from engine import optional_arcade
 from engine.background_layers import parse_background_layers, parse_foreground_layers
 from engine.depth_tint_model import parse_depth_tint_settings
-from engine.editor.sprite_outline_model import parse_outline_settings
 from engine.parallax_model import parse_background_planes
 from engine.scene_lifecycle_model import SceneLoadInputs, build_scene_load_plan
 from engine.scene_runtime.index_build import build_scene_index_from_sprites
+from engine.sprite_outline_model import parse_outline_settings
 from engine.swallowed_exceptions import _log_swallow
 from engine.ui import (
     maybe_enqueue_controls_hint_toast,
@@ -29,6 +29,72 @@ def _restore_camera(window: Any, pos: tuple[float, float], zoom: float | None) -
             setattr(camera, "position", pos)
     if zoom is not None:
         window.set_camera_zoom_target(zoom, speed=999.0)
+
+
+
+def configure_scene_lighting(window: Any, scene: dict[str, Any], settings: Any, scene_path: str) -> None:
+    """Set the lighting up for a scene that is loading (before its objects spawn).
+
+    Lights carried by the previous scene's objects are dropped (this scene's objects register their own),
+    and a room that doesn't set its own ambient gets the project's, not whatever the last room had.
+    """
+    lighting = getattr(window, "lighting", None)
+    if lighting is None:
+        return
+    clear_dynamic = getattr(lighting, "clear_dynamic_lights", None)
+    if callable(clear_dynamic):
+        clear_dynamic()
+    lights_cfg = scene.get("lights")
+    if isinstance(lights_cfg, list):
+        lighting.configure_scene_lights(lights_cfg)
+    else:
+        lighting.configure_scene_lights(None)
+    ambient_tint = settings.get("ambient_light_rgba") if isinstance(settings, dict) else None
+    if ambient_tint is None:  # a room without its own ambient goes back to the project's, not the last room's
+        ambient_tint = getattr(getattr(window, "engine_config", None), "ambient_light_rgba", None) or (255, 255, 255, 255)
+    try:
+        lighting.set_ambient_tint(ambient_tint)
+    except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
+        _log_swallow("SCEN-003", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
+
+    occluders_cfg = scene.get("occluders")
+    try:
+        from engine.lighting.occluders import (  # noqa: PLC0415
+            build_entity_occluders_from_scene_payload,
+            build_occluders_from_scene_payload,
+        )
+
+        entity_occluders = build_entity_occluders_from_scene_payload(scene)
+    except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
+        entity_occluders = []
+
+    if "occluders" in scene and isinstance(occluders_cfg, list):
+        merged = list(occluders_cfg)
+        if entity_occluders:
+            merged.extend(entity_occluders)
+        lighting.configure_scene_occluders(merged)
+    else:
+        try:
+            revision = int(getattr(window, "scene_dirty_counter", 0) or 0)
+            auto_occluders = build_occluders_from_scene_payload(scene, scene_path=scene_path, revision=revision)
+            if entity_occluders:
+                auto_occluders.extend(entity_occluders)
+            lighting.configure_scene_occluders(auto_occluders)
+        except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
+            lighting.configure_scene_occluders(None)
+
+    try:
+        settings_block = scene.get("settings", {})
+        if isinstance(settings_block, dict) and "lighting_shadows_mode" in settings_block:
+            mode = settings_block.get("lighting_shadows_mode")
+            setter = getattr(lighting, "set_shadows_mode", None)
+            if callable(setter):
+                setter(str(mode))
+            else:
+                lighting.shadows_mode = str(mode or "none").strip().lower()
+    except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
+        _log_swallow("SCEN-004", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
+        pass
 
 
 def handle_pending_scene_load(controller: Any) -> bool:
@@ -145,61 +211,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
 
     controller.window.world_width = controller.scene_settings.get("world_width")
     controller.window.world_height = controller.scene_settings.get("world_height")
-    lighting = getattr(controller.window, "lighting", None)
-    if lighting is not None:
-        lights_cfg = scene.get("lights")
-        if isinstance(lights_cfg, list):
-            lighting.configure_scene_lights(lights_cfg)
-        else:
-            lighting.configure_scene_lights(None)
-        ambient_tint = None
-        if isinstance(controller.scene_settings, dict):
-            ambient_tint = controller.scene_settings.get("ambient_light_rgba")
-        if ambient_tint is not None:
-            try:
-                lighting.set_ambient_tint(ambient_tint)
-            except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
-                _log_swallow("SCEN-003", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
-                pass
-
-        occluders_cfg = scene.get("occluders")
-        try:
-            from engine.lighting.occluders import (  # noqa: PLC0415
-                build_entity_occluders_from_scene_payload,
-                build_occluders_from_scene_payload,
-            )
-
-            entity_occluders = build_entity_occluders_from_scene_payload(scene)
-        except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
-            entity_occluders = []
-
-        if "occluders" in scene and isinstance(occluders_cfg, list):
-            merged = list(occluders_cfg)
-            if entity_occluders:
-                merged.extend(entity_occluders)
-            lighting.configure_scene_occluders(merged)
-        else:
-            try:
-                revision = int(getattr(controller.window, "scene_dirty_counter", 0) or 0)
-                auto_occluders = build_occluders_from_scene_payload(scene, scene_path=scene_path, revision=revision)
-                if entity_occluders:
-                    auto_occluders.extend(entity_occluders)
-                lighting.configure_scene_occluders(auto_occluders)
-            except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
-                lighting.configure_scene_occluders(None)
-
-        try:
-            settings_block = scene.get("settings", {})
-            if isinstance(settings_block, dict) and "lighting_shadows_mode" in settings_block:
-                mode = settings_block.get("lighting_shadows_mode")
-                setter = getattr(lighting, "set_shadows_mode", None)
-                if callable(setter):
-                    setter(str(mode))
-                else:
-                    lighting.shadows_mode = str(mode or "none").strip().lower()
-        except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
-            _log_swallow("SCEN-004", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
-            pass
+    configure_scene_lighting(controller.window, scene, controller.scene_settings, scene_path)
 
     # Handle music
     music_path = controller.scene_settings.get("music")

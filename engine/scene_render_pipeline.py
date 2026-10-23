@@ -20,11 +20,6 @@ from engine.depth_tint_model import (
     apply_tint_to_sprite_color,
     compute_sprite_tint,
 )
-from engine.editor.sprite_outline_model import (
-    OutlineSettings,
-    compute_sprite_outline_draw_calls,
-    should_draw_outline,
-)
 from engine.parallax_model import (
     BackgroundPlane,
     compute_parallax_offset_with_zoom,
@@ -32,6 +27,11 @@ from engine.parallax_model import (
 )
 from engine.render_queue import DrawSpriteCmd
 from engine.render_sort_model import compute_sprite_render_sort_key
+from engine.sprite_outline_model import (
+    OutlineSettings,
+    compute_sprite_outline_draw_calls,
+    should_draw_outline,
+)
 from engine.sprite_shadow_model import compute_sprite_multi_shadow
 
 

@@ -90,8 +90,10 @@ class Projectile(Behaviour):
 
         import math
         rad = math.radians(self.direction)
-        self.entity.change_x = math.cos(rad) * self.speed
-        self.entity.change_y = math.sin(rad) * self.speed
+        # The scene moves sprites by change_x/y once per frame (arcade's unit: pixels per 1/60 s), and
+        # speed is pixels per second: unconverted, a 300 px/s shot jumped 300 px a frame, through anything.
+        self.entity.change_x = math.cos(rad) * self.speed / 60.0
+        self.entity.change_y = math.sin(rad) * self.speed / 60.0
         self.entity.angle = self.direction
 
     def update(self, dt: float) -> None:

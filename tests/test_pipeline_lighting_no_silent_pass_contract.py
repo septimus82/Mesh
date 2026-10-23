@@ -14,7 +14,7 @@ _TARGETS = (
 _APPROVED_LOG_HELPERS = {"_log_swallow", "_log_once_debug", "_log_once_error"}
 _BASELINE_SILENT_PASSES = {
     "mesh_cli/verify_steps/pipeline.py": (),
-    "engine/lighting/__init__.py": (370, 375, 380),
+    "engine/lighting/__init__.py": (378,),
     "engine/ui_overlays/hud.py": (),
 }
 _BASELINE_EXCEPTION_ENVELOPES = {
@@ -25,8 +25,8 @@ _BASELINE_EXCEPTION_ENVELOPES = {
         2480,
     ),
     "engine/lighting/__init__.py": (
-        416, 424, 433, 441, 450, 469, 478, 488, 813, 953,
-        982, 1019,
+        418, 426, 435, 443, 452, 471, 480, 490, 815, 955,
+        984, 1021,
     ),
     "engine/ui_overlays/hud.py": (62, 156),
 }
