@@ -37,6 +37,7 @@ from engine import project_ops as ops  # noqa: E402
 from engine.studio_project import Project  # noqa: E402
 
 ROWS = 15  # new rooms are 20 x 15 tiles of 32 px
+CLOCK = (480.0, 352.0)  # the Animate room's AnimationFactory object
 
 
 def cell(col: int, row: int) -> tuple[float, float]:
@@ -55,6 +56,20 @@ def entity(eid: str, name: str, at: tuple[float, float], sprite: str | None, beh
 
 
 # ------------------------------------------------------------------------------- the lab project
+def frame_colour(col: int, row: int) -> tuple[int, int, int, int]:
+    return 40 + 60 * col, 40 + 60 * row, 220, 255
+
+
+def frame_of(rgb: tuple[int, int, int]) -> tuple[int, int] | None:
+    """Which frame of lab_frames.png a pixel shows: (column, row from the top), or None."""
+    col, row = round((rgb[0] - 40) / 60), round((rgb[1] - 40) / 60)
+    if abs(rgb[2] - 220) > 25 or not (0 <= col < 4 and 0 <= row < 4):
+        return None
+    if abs(rgb[0] - (40 + 60 * col)) > 20 or abs(rgb[1] - (40 + 60 * row)) > 20:
+        return None
+    return col, row
+
+
 def make_assets(root: Path) -> None:
     from PIL import Image, ImageDraw
 
@@ -67,6 +82,12 @@ def make_assets(root: Path) -> None:
         img.save(sprites / f"{name}.png")
     for name, colour in (("lab_big_red", (220, 50, 50)), ("lab_big_blue", (50, 90, 230)), ("lab_big_white", (235, 235, 235))):
         Image.new("RGBA", (64, 64), colour + (255,)).save(sprites / f"{name}.png")
+    # Every frame a different solid colour: red = 40 + 60 * column, green = 40 + 60 * row (row 0 at the top).
+    sheet = Image.new("RGBA", (128, 128))
+    for row in range(4):
+        for col in range(4):
+            ImageDraw.Draw(sheet).rectangle([col * 32, row * 32, col * 32 + 31, row * 32 + 31], fill=frame_colour(col, row))
+    sheet.save(sprites / "lab_frames.png")
     backgrounds = root / "assets" / "backgrounds"
     backgrounds.mkdir(parents=True, exist_ok=True)
     stripes = Image.new("RGBA", (1600, 600), (20, 30, 70, 255))
@@ -124,7 +145,7 @@ def build_lab(root: Path) -> dict[str, str]:
     make_probe_mod(root)
     project = Project(root, config["world_file"])
     keys = {label: project.add_room(label) for label in ("Paths", "Lights", "Torch", "Sequence", "Camera", "Depth", "Audio",
-                                                         "Zoomed", "Day", "Look", "Unlit", "Enemy")}
+                                                         "Zoomed", "Day", "Look", "Unlit", "Enemy", "Animate")}
 
     def edit(key: str, fn: Callable[[dict[str, Any]], None]) -> None:
         def change(scene: dict[str, Any]) -> dict[str, Any]:
@@ -269,6 +290,19 @@ def build_lab(root: Path) -> dict[str, str]:
     add(keys["Enemy"], entity("grunt", "Grunt", cell(14, 11), "assets/sprites/lab_red.png", {
         "EnemyAI": {"target_tag": "player", "detect_radius": 500, "lose_radius": 600, "attack_radius": 40, "speed": 100,
                     "use_patrol": False}}))
+
+    # Animate: the player walks with Mesh Studio's Animator (a row of the colour sheet per direction, top-left
+    # order) and a clock plays an AnimationFactory clip (the older system: frames counted from the bottom-left).
+    # Unlit, so the colours on screen are the sheet's own. A door to Unlit and back for a room change.
+    edit(keys["Animate"], lambda s: s.update(settings={**(s.get("settings") or {}), "lighting_enabled": False}))
+    player_id = next(e["id"] for e in project.scene(keys["Animate"])["entities"] if e.get("tag") == "player")
+    clips = ops.character_clips("assets/sprites/lab_frames.png", 32, 32, 4, {"down": 0, "left": 1, "right": 2, "up": 3},
+                                walk_count=4, walk_fps=4, idle_fps=2, sheet_rows=4)
+    project.edit_scene(lambda s: ops.set_animation(s, player_id, clips), keys["Animate"])
+    add(keys["Animate"], entity("clock", "Clock", CLOCK, "assets/sprites/lab_frames.png", {},
+                                sprite_sheet={"frame_width": 32, "frame_height": 32},
+                                animations={"idle": {"frames": [0, 1, 2, 3], "fps": 4, "loop": True}}))
+    project.link_rooms(keys["Animate"], (560.0, 48.0), keys["Unlit"], (80.0, 48.0))
 
     # A door from Lights to Paths, for a scene transition.
     project.link_rooms(keys["Lights"], (128.0, 48.0), keys["Paths"], (560.0, 400.0))
@@ -662,6 +696,101 @@ def run(out: Path, only: set[str] | None = None) -> int:
         record("11. A positional sound changes with distance", "PASS" if near[-1]["volume"] > far[-1]["volume"] + 0.15 else "FAIL",
                {"far": far[-1], "near": near[-1]}, name)
 
+    def animation() -> None:
+        """Both animation systems, read off the screen: which frame of the colour sheet shows, many times a second."""
+        import threading
+
+        clock_at: dict[str, tuple[float, float]] = {}
+
+        def frame_now(target: str) -> tuple[int, int] | None:
+            """The sheet frame on screen for the player or the clock, from one capture of the window: the lab's
+            only sheet-coloured things are those two, told apart by where the clock is (the room fits the window,
+            so the camera doesn't move)."""
+            with Image.open(p().d.shot("_anim")) as image:
+                small = image.convert("RGB").reduce(4)
+            cx, cy = clock_at["xy"][0] / 4, clock_at["xy"][1] / 4
+            counts: dict[tuple[int, int], int] = {}
+            for i, rgb in enumerate(small.getdata()):
+                found = frame_of(rgb)
+                if found is None:
+                    continue
+                x, y = i % small.width, i // small.width
+                if ((x - cx) ** 2 + (y - cy) ** 2 < 12 ** 2) == (target == "clock"):
+                    counts[found] = counts.get(found, 0) + 1
+            return max(counts, key=lambda f: counts[f]) if counts else None
+        def watch(target: str, seconds: float) -> tuple[list[tuple[int, int]], float]:
+            seen: list[tuple[int, int]] = []
+            started = time.time()
+            while time.time() - started < seconds:
+                now = frame_now(target)
+                if now is not None and (not seen or seen[-1] != now):
+                    seen.append(now)
+            return seen, time.time() - started
+
+        def in_order(seen: list[tuple[int, int]], cycle: list[tuple[int, int]]) -> bool:
+            return len(seen) > 1 and all(b == cycle[(cycle.index(a) + 1) % len(cycle)] for a, b in zip(seen, seen[1:]))
+
+        def factory_check(label: str) -> dict[str, Any]:
+            seen, took = watch("clock", 3.0)
+            cycle = [(0, 3), (1, 3), (2, 3), (3, 3)]  # frames 0-3 counted from the bottom-left: the bottom row
+            rate = (len(seen) - 1) / took
+            ok = all(f in cycle for f in seen) and in_order(seen, cycle) and len(seen) >= 8 and 2.8 <= rate <= 5.2
+            record(f"AnimationFactory clip: bottom-left frame order, 4 fps, looping ({label})", "PASS" if ok else "FAIL",
+                   {"frames_seen": seen, "changes_per_second": round(rate, 2), "expected_cycle": cycle}, None)
+            return {"seen": seen}
+
+        def walk_check(key: str, direction: str, row: int, label: str) -> None:
+            seen: list[tuple[int, int]] = []
+            stop = threading.Event()
+
+            def sample() -> None:
+                while not stop.is_set():
+                    now = frame_now("player")
+                    if now is not None and (not seen or seen[-1] != now):
+                        seen.append(now)
+
+            sampler = threading.Thread(target=sample)
+            sampler.start()
+            p().d.hold(key, 1.5)
+            stop.set()
+            sampler.join()
+            time.sleep(0.4)
+            idle = frame_now("player")
+            cycle = [(c, row) for c in range(4)]
+            before = [f for f in seen[:1] if f not in cycle]  # the last facing, sampled before the key took effect
+            walk = seen[len(before):]
+            walk = walk[:-1] if walk and walk[-1] == (0, row) else walk  # stopping goes back to the idle frame
+            rate = (len(walk) - 1) / 1.5
+            ok = all(f in cycle for f in walk) and in_order(walk, cycle) and len(set(walk)) >= 3 and 2.5 <= rate <= 5.5
+            ok = ok and idle == (0, row)
+            record(f"Studio Animator walks {direction} on row {row} in top-left order, then idles facing {direction} ({label})",
+                   "PASS" if ok else "FAIL", {"frames_seen": seen, "changes_per_second": round(rate, 2), "idle_after": idle,
+                                              "expected_row": row}, None)
+
+        play_room("Animate")
+        time.sleep(1.0)
+        clock_at["xy"] = to_screen(CLOCK)
+        _, name = shot("animation")
+        start = frame_now("player")
+        record("Studio Animator starts idle, facing down (row 0, first frame)", "PASS" if start == (0, 0) else "FAIL",
+               {"frame": start}, name)
+        factory_check("first visit")
+        for key, direction, row in (("D", "right", 2), ("W", "up", 3), ("A", "left", 1), ("S", "down", 0)):
+            walk_check(key, direction, row, "first visit")
+        door = (560.0, 48.0)
+        here = play()["scene"]
+        p().go_to(door[0], door[1] + 90, tol=10)
+        p().d.hold("S", 0.6)
+        p().wait(lambda s: s["play"] and s["play"]["scene"] != here, "in the next room", timeout=8)
+        time.sleep(1.0)
+        p().go_to(80.0, 48.0 + 90, tol=10)
+        p().d.hold("S", 0.6)
+        p().wait(lambda s: s["play"] and s["play"]["scene"] == here, "back in Animate", timeout=8)
+        time.sleep(1.0)
+        factory_check("after leaving the room and coming back")
+        walk_check("A", "left", 1, "after coming back")
+        walk_check("W", "up", 3, "after coming back")
+
     # -------------------------------------------------------------------- run
     driver = Driver([sys.executable, "-m", "mesh_cli", "edit"], cwd=root, shots=out)
     holder["page"] = page = AuthorPage(driver, layout)
@@ -670,7 +799,8 @@ def run(out: Path, only: set[str] | None = None) -> int:
         page.wait(lambda s: s["mode"] == "edit" and s["objects"], "the Studio", timeout=60)
         for name, fn in (("navigation", nav), ("save_load", save_load), ("lights", lights), ("transition", transition),
                          ("torch", torch), ("sequence", sequence), ("camera", camera), ("depth", depth), ("audio", audio),
-                         ("zoomed", zoomed), ("day", day), ("look", look), ("unlit", unlit), ("enemy", enemy)):
+                         ("zoomed", zoomed), ("day", day), ("look", look), ("unlit", unlit), ("enemy", enemy),
+                         ("animation", animation)):
             if not only or name in only:
                 check(name, fn)
     finally:
