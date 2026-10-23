@@ -180,6 +180,11 @@ class InspectorMixin:
             size = self._image_size(sprite)
             rows.add(self._label(f"{sprite}" + (f"  ({size[0]}x{size[1]} px)" if size else "  (missing!)"),
                                  color=C_MUTED, size=9, width=width))
+            frame = _guess_frame(size)
+            animated = ops.animation_clips(entity) or entity.get("animations")
+            if size and not animated and (size[0] > frame[0] or size[1] > frame[1]):
+                rows.add(self._label("This looks like a sheet of frames: the whole sheet shows until you set up "
+                                     "its animation in the Animation tab.", color=(240, 200, 120), size=9, width=width))
         else:
             rows.add(self._label("No picture: it's invisible in the game (fine for zones and markers).",
                                  color=C_MUTED, size=10, width=width))
@@ -302,18 +307,32 @@ class InspectorMixin:
         target, columns = entity["id"], self._sheet_columns(clip)
         row_n, first = ops.clip_position(clip, columns)
         size = self._image_size(str(clip.get("sheet") or ""))
-        sheet_rows = max(1, size[1] // int(clip.get("frame_height") or 32)) if size else None
+        fw, fh = int(clip.get("frame_width") or 32), int(clip.get("frame_height") or 32)
 
         def update(**changes: Any) -> None:
             values = {"row": row_n, "first": first, "count": clip.get("frames", 1), "fps": clip.get("fps", 8),
-                      "flip": bool(clip.get("flip_x"))}
+                      "flip": bool(clip.get("flip_x")), "fw": fw, "fh": fh}
             values.update(changes)
+            try:  # a new frame size changes how many frames fit across and down
+                new_w, new_h = int(float(values["fw"])), int(float(values["fh"]))
+                across = max(1, size[0] // new_w) if size else columns
+                down = max(1, size[1] // new_h) if size else None
+            except (ValueError, ZeroDivisionError):
+                self._say("The frame size must be whole numbers of pixels.", ok=False)
+                self._rebuild()
+                return
+            if "fw" in changes or "fh" in changes:  # keep the clip's frame count inside the new row
+                values["first"], values["count"] = 0, min(int(values["count"]), across)
             self._edit(lambda s: ops.set_clip(s, target, name, ops.clip_spec(
-                clip["sheet"], clip.get("frame_width", 32), clip.get("frame_height", 32), columns,
-                values["row"], values["first"], values["count"], values["fps"], flip_x=values["flip"],
-                sheet_rows=sheet_rows)), f"{name} changed.")
+                clip["sheet"], new_w, new_h, across, values["row"], values["first"], values["count"], values["fps"],
+                flip_x=values["flip"], sheet_rows=down)), f"{name} changed.")
 
         quarter = (width - 122 - 12) // 2
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        row.add(self._label("Frame size w / h", color=C_MUTED, size=10, width=118))
+        row.add(self._field(str(fw), lambda v: update(fw=v), width=quarter, key="clip_fw"))
+        row.add(self._field(str(fh), lambda v: update(fh=v), width=quarter, key="clip_fh"))
+        rows.add(row)
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         row.add(self._label("Row / from frame", color=C_MUTED, size=10, width=118))
         row.add(self._field(str(row_n), lambda v: update(row=v), width=quarter, key="clip_row"))
@@ -394,14 +413,17 @@ class InspectorMixin:
         if not sheet:
             self._say("Give the object a picture first (Look tab): clips cut frames from it.", ok=False)
             return
-        n, name = 1, "clip"
+        n, name = 1, "idle" if "idle" not in clips else "clip"
         while name in clips:
             n += 1
             name = f"clip_{n}"
         size = self._image_size(sheet)
-        fw, fh = (size[0], size[1]) if size else (32, 32)
+        fw, fh = _guess_frame(size)  # never the whole sheet as one frame
+        across = max(1, size[0] // fw) if size else 1
         target = entity["id"]
-        if self._edit(lambda s: ops.set_clip(s, target, name, ops.clip_spec(sheet, fw, fh, 1, 0, 0, 1, 8)), f"Added {name}."):
+        spec = ops.clip_spec(sheet, fw, fh, across, 0, 0, across, 6)  # the first row, as a start
+        if self._edit(lambda s: ops.set_clip(s, target, name, spec),
+                      f"Added {name}: {across} frame(s) of {fw}x{fh}. Check the frame size and row below."):
             self.clip_sel = name
             self._rebuild()
 

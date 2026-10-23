@@ -169,3 +169,12 @@ def test_flag_uses_lists_every_flag_with_where_it_is_set_or_checked() -> None:
     assert list(uses) == ["grave_open", "has_shovel"]
     assert uses["grave_open"] == ["Cemetery: Grave sets it", "Cemetery: Grave checks it"]
     assert ops.counter_steps("graves, gold+5, lives-1") == {"graves": 1.0, "gold": 5.0, "lives": -1.0}
+
+
+def test_a_new_clip_guesses_frames_from_the_sheet_never_the_whole_picture() -> None:
+    from engine.studio_inspector import _guess_frame  # noqa: PLC0415
+
+    assert _guess_frame((256, 128)) == (64, 64)  # the starter sheet: 4 across, square frames
+    assert _guess_frame((96, 192)) == (32, 32)  # 3 across: a 3x4 character sheet with square frames
+    assert _guess_frame((384, 512)) == (128, 128)
+    assert _guess_frame(None) == (32, 32)
