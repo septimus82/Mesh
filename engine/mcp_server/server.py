@@ -26,7 +26,13 @@ try:  # pragma: no cover - exercised only when the optional SDK is installed
     FastMCP = _FastMCP
     HAS_MCP = True
 except ImportError:  # pragma: no cover - the import-guard path
-    pass
+    try:  # mcp 2.x renamed FastMCP to MCPServer; tool(), resource() and run() are unchanged
+        from mcp.server.mcpserver import MCPServer as _MCPServer
+
+        FastMCP = _MCPServer
+        HAS_MCP = True
+    except ImportError:
+        pass
 
 
 SERVER_NAME = "mesh"
