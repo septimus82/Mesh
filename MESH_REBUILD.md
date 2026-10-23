@@ -394,12 +394,44 @@ Each was confirmed in the real window except 4, which was read in the code and f
 3. **Tests swapped `sys.modules` entries and never put them back**, which made results depend on order.
 4. **Three bare `except: pass` blocks** (Creator Mode, July) broke the project's own swallow policy.
 
+## Milestone 10 — Studio lighting, animation verification, targeted cleanup
+
+**Goal:** light a game in Mesh Studio through its own controls; check both animation systems in the real window; fix the GUI driver's recurring flake; pay down the Studio inspector's type debt; reclaim the 15 GB broken web build. Report: [`docs/reviews/milestone10_lighting_animation.md`](docs/reviews/milestone10_lighting_animation.md).
+
+### Acceptance criteria and status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Reclaim the broken web build | **Done** | `build/web/` deleted (owner-authorised): **15.26 GB** freed, measured |
+| Beginner lighting in Studio: room on/off, room light, place / select / move / resize / recolour / duplicate / delete lights, flicker, preview, undo/redo, save/reopen | **Done** | **Lighting** panel and map handles; the edit view shows the game's own lighting; real-window acceptance 15/15 |
+| Advanced: exact values, flicker parameters, shadows | **Done** | **More settings**; shadows on/off per room; `LightSource` lights untouched |
+| Occluders | **Partial** | Walls painted on the map cast shadows (fixed: they never did for Studio maps). Rectangle occluders not added: a room's own occluder list replaces its wall shadows, so it would silently switch walls off. Polygon occluders stay in the legacy editor |
+| No second lighting implementation; old projects compatible; room and project settings don't override each other | **Done** | Scene keys the engine already reads, plus `lighting_ambient_color` (falls back to the project's); old light keys kept |
+| Animation playback verified in the real window | **Done** | Lab **Animate** room, 9/9; no defect found, nothing merged |
+| GUI driver cursor flake | **Done** | Verified after each move and before each press |
+| Inspector typing | **Done** | Inspector ~263 → 16; project-wide 516 → 272 beyond the unchanged baseline |
+
+### How it was validated
+
+- **Runtime gate:** 9/9 suites, lighting 15/15 and lab 36/36 (+1 KNOWN). Milestone 1 FLAKY once: something outside Mesh confined the cursor; the driver refused to click; the retry passed.
+- **Full suite:** 9,373 passed, 1 failed: a determinism test reading the live git hash; pinned, its file passes.
+- **Slow/e2e:** 31 failed, the Milestone 9 known list.
+- **Ruff gate and mypy island:** clean. **Type gate:** 272 beyond the baseline (was 516).
+
+### Engine defects found by the real-window runs
+
+1. Walls painted in Studio never cast shadows (the occluder builder read only Tiled map files).
+2. A wall reaching past a light's radius shaded the floor in front of it (corners were projected back onto the radius).
+3. A room couldn't be made lighter than the project's near-black ambient (it could only tint it).
+4. The Studio edit view ignored lighting.
+5. Dragging a light crashed Studio.
+
 ## Known limitations (honest list)
 
 - **Placeholder character art.** Still the coloured-square sheet; the owner's decision.
 - **No counter conditions.** Choices count up, but nothing can require "graves_dug ≥ 3"; flags gate everything.
 - **Event sequences beyond conversations** (wait, move, signal) run in `SequencePlayer`, which works since Milestone 7. Studio can't edit its steps yet (JSON only). `ActionListRunner` does nothing in the live game (see the Milestone 7 inventory).
-- **Lighting, parallax, camera zoom and the HD-2D look** work in the engine (Milestone 7 lab) but are set in JSON or the legacy editor; Studio has no controls for them yet.
+- **Lighting** has a Studio panel since Milestone 10 (room light, point lights, flicker, shadows from walls). Still JSON or the legacy editor: cookies, shafts, rectangle/polygon occluders, day/night. **Parallax, camera zoom and the HD-2D look** work in the engine (Milestone 7 lab) but have no Studio controls yet.
 - **Long inspector sections scroll** with the mouse wheel; there's no scrollbar to drag.
 - **Map tools are still basic.**
   - Three layers.

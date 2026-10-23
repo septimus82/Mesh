@@ -155,5 +155,20 @@ Restore anything with `git show 05a8d40:<path>`.
 | 18 slow/e2e tests repaired (stub signatures, patch targets, fixture prefab fields, facade lookup points); `test_integration.py`'s arcade mock keeps real key constants | Stale harnesses | — |
 | `tooling/mypy_gate.py` excludes untracked folders | A project's `main.py` stopped mypy entirely | The baseline is unchanged: the type debt is not hidden |
 | Creator Mode rollback swallows use `_log_swallow` (CRMC-001..003) | Bare `except: pass` broke the swallow policy | Same best-effort behaviour |
-| **Not deleted, recommended:** `build/web/mesh.apk` (15.2 GB, a broken March web build that swept up `artifacts/`) | Owner's disk, outside git, irreversible | Rebuild with `py -3.13 tooling/build_web.py` |
+| **Not deleted, recommended:** `build/web/mesh.apk` (15.2 GB, a broken March web build that swept up `artifacts/`) | Owner's disk, outside git, irreversible | Rebuild with `py -3.13 tooling/build_web.py`. **Deleted in Milestone 10** with the owner's authorisation |
+
+## Milestone 10: Studio lighting, animation verification, targeted cleanup
+
+Report: [`docs/reviews/milestone10_lighting_animation.md`](docs/reviews/milestone10_lighting_animation.md).
+
+| Change | Why | Note |
+|---|---|---|
+| **Deleted** `build/web/` (`mesh.apk` 15.2 GB, `mesh.tar.gz`, `index.html`, `favicon.png`; untracked, git-ignored) | Owner-authorised; a broken March build. 15.26 GB reclaimed | Rebuild: `py -3.13 tooling/build_web.py`. `build/lib`, `bdist.win-amd64`, `version.txt`, `web-cache` kept |
+| Automatic wall occluders also read a scene's inline `tile_layers` | Walls painted in Studio never cast shadows | **Behaviour change:** older Studio rooms with lighting and hard shadows on now get wall shadows |
+| Hard-shadow polygons extend past the radius and the corners (5 points, was 4) | Walls reaching past the radius shaded the lit side | The determinism golden was updated to the new shape |
+| A room's `lighting_ambient_color` is honoured | A room could only darken the project's ambient | A room without it uses the project's, as before |
+| Studio's edit view draws through the lighting layer | No preview of lighting while editing | Only when the room's lighting is on |
+| Lighting ops in `project_ops`; the authoring API accepts ops that return a light's index | Studio and AI share one validated path | — |
+| `InspectorMixin` declares its host interface (TYPE_CHECKING); callback params typed `-> object`; 12 lambdas → `functools.partial` | ~250 type errors from one pattern | No runtime change |
+| GUI driver verifies the cursor after each move and before each press | The recurring Milestone 1 FLAKY | Fails clearly instead of clicking elsewhere |
 
