@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 import engine.optional_arcade as optional_arcade
+from engine import behaviour_guide
 from engine import project_ops as ops
 from engine.studio_ui import C_MUTED, C_OK, C_TEXT, S_ACTIVE, S_BUTTON, S_DANGER, ask_path, gui
 
@@ -600,7 +601,7 @@ class InspectorMixin:
         rows.add(row)
 
     def _picture_size(self, entity: dict[str, Any]) -> tuple[float, float]:
-        sprite = self._sprites_by_id().get(entity.get("id"))
+        sprite = self._sprites_by_id().get(str(entity.get("id") or ""))
         if sprite is None or not entity.get("sprite"):
             return 32.0, 32.0
         return float(getattr(sprite, "width", 32) or 32), float(getattr(sprite, "height", 32) or 32)
@@ -611,7 +612,7 @@ class InspectorMixin:
         if kind == "box":  # the feet, following the picture: a new picture or size keeps them right
             self._edit(lambda s: ops.set_collider(s, target, "box", auto=True), "Footprint: the feet, sized to the picture.")
             return
-        sizes = {"circle": {"r": round(max(6.0, min(w, h) * 0.2)), "offset_y": round(-h * 0.3)}}.get(kind, {})
+        sizes: dict[str, Any] = {"circle": {"r": round(max(6.0, min(w, h) * 0.2)), "offset_y": round(-h * 0.3)}}.get(kind, {})
         self._edit(lambda s: ops.set_collider(s, target, kind, **sizes), "Collider changed.")
 
     # ---------------------------------------------------------------- Dialogue
@@ -908,13 +909,18 @@ class InspectorMixin:
         if not names:
             rows.add(self._label("None yet.", color=C_MUTED))
         for name in names:
+            info = behaviour_guide.guide(name)
             row = gui.UIBoxLayout(vertical=False, space_between=4)
             arrow = "v " if self.expanded == name else "> "
-            row.add(self._button(arrow + name, partial(self._toggle_expand, name), width=width - 80,
+            row.add(self._button(arrow + info.label, partial(self._toggle_expand, name), width=width - 80,
                                  style=S_ACTIVE if self.expanded == name else S_BUTTON))
             row.add(self._button("Remove", partial(self.remove_behaviour, name), width=76, style=S_DANGER))
             rows.add(row)
+            config = (entity.get("behaviour_config") or {}).get(name) or {}
+            for problem in behaviour_guide.problems(name, config if isinstance(config, dict) else {}):
+                rows.add(self._label(problem, color=(240, 200, 120), size=9, width=width))
             if self.expanded == name:
+                rows.add(self._label(f"{info.summary}  ({name})", color=C_MUTED, size=9, width=width))
                 self._behaviour_fields(rows, entity, name, width)
         rows.add(self._button("+ Add behaviour", self._open_picker, width=150, style=S_ACTIVE))
 

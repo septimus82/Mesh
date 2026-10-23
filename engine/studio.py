@@ -20,8 +20,10 @@ from pathlib import Path
 from typing import Any, Callable
 
 import engine.optional_arcade as optional_arcade
+from engine import behaviour_guide
 from engine import project_ops as ops
 from engine.prefabs import get_prefab_manager
+from engine.route_check import route_problems
 from engine.scene_loader import document_key
 from engine.studio_ai import Proposal, StudioAIHost
 from engine.studio_inspector import InspectorMixin, Rows, row_height
@@ -103,6 +105,11 @@ class Studio(InspectorMixin):
         self.panel = "inspect"  # inspect | add_behaviour | new_room
         self.expanded: str | None = None
         self.picker_query = ""
+        self.picker_category: str | None = None  # the category open in the behaviour picker
+        self.more_settings: set[str] = set()  # behaviours whose "More settings" are open
+        self.route: dict[str, str] | None = None  # the patrol route being edited: {entity, behaviour, setting}
+        self.route_sel: int | None = None  # its selected point
+        self.route_drag: dict[str, Any] | None = None  # a point being dragged
         self.pending_door_at: tuple[float, float] | None = None
         self.place_prefab: dict[str, Any] | None = None
         self.drag: dict[str, Any] | None = None
@@ -1285,6 +1292,8 @@ class Studio(InspectorMixin):
             self._flags_panel(rows, width)
         elif self.panel == "players":
             self._players_panel(rows, width)
+        elif self.panel == "route":
+            self._route_panel(rows, width)
         elif self.panel == "lighting":
             self._lighting_panel(rows, width)
         elif self.panel == "ai":
@@ -1372,47 +1381,194 @@ class Studio(InspectorMixin):
         return box
 
     def _behaviour_fields(self, box: gui.UIBoxLayout, entity: dict[str, Any], behaviour: str, width: int) -> None:
-        target = entity["id"]
+        """The behaviour's main settings, under the names the guide gives them; the rest behind More settings."""
         config = (entity.get("behaviour_config") or {}).get(behaviour) or {}
         info = next((b for b in ops.behaviour_catalog() if b["name"] == behaviour), None)
-        fields = info["fields"] if info else []
-        if not fields:
+        basics, more = behaviour_guide.visible_fields(behaviour, info["fields"] if info else [])
+        if not basics and not more:
             box.add(self._label("No settings.", color=C_MUTED))
-        for spec in fields:
-            name, kind = spec["name"], spec.get("type")
-            note = str(spec.get("description") or "")
-            if note.startswith("Alias for"):
-                continue  # the same setting under another name: one field is enough
-            value = config.get(name, spec.get("default"))
-            row = gui.UIBoxLayout(vertical=False, space_between=4)
-            row.add(self._label(name, color=C_MUTED, size=10, width=120))
-            if ops.is_point_list(spec) and all(isinstance(item, dict) for item in value or []):
-                note = "Points as x,y pairs, like 100,200; 300,200 (an object's Position is shown at the top)."
-                row.add(self._field(ops.points_text(value),
-                                    lambda v, n=name: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, n, v),
-                                                                 f"{n} changed."),
-                                    width=width - 128))
-            elif kind == "bool":
-                row.add(self._button("On" if value else "Off",
-                                     lambda n=name, v=bool(value): self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, n, not v)),
-                                     width=width - 128, style=S_ACTIVE if value else S_BUTTON))
-            elif kind in ("int", "float", "string"):
-                text = "" if value is None else str(value)
-                row.add(self._field(text, lambda v, n=name: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, n, v)),
-                                    width=width - 128))
-            elif kind == "array" and all(isinstance(item, (str, int, float)) for item in value or []):
-                # A list of names (flags, tags...) edits as comma-separated text.
-                row.add(self._field(", ".join(str(item) for item in value or []),
-                                    lambda v, n=name: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, n, v)),
-                                    width=width - 128))
-            else:
-                # Lists of objects and other structured settings: edited as checked text (JSON).
-                row.add(self._field(json.dumps(value) if value is not None else "",
-                                    lambda v, n=name: self._set_structured(target, behaviour, n, v),
-                                    width=width - 128, key=f"param_{behaviour}_{name}"))
+        show_more = behaviour in self.more_settings
+        for spec in basics + (more if show_more else []):
+            self._setting_row(box, entity, behaviour, spec, config, width)
+        if more:
+            box.add(self._button(f"{'v' if show_more else '>'} More settings ({len(more)})",
+                                 partial(self._toggle_more_settings, behaviour), width=width))
+
+    def _toggle_more_settings(self, behaviour: str) -> None:
+        self.more_settings ^= {behaviour}
+        self._rebuild()
+
+    def _setting_row(self, box: gui.UIBoxLayout, entity: dict[str, Any], behaviour: str, spec: dict[str, Any],
+                     config: dict[str, Any], width: int) -> None:
+        target = entity["id"]
+        name, kind = spec["name"], spec.get("type")
+        label = behaviour_guide.setting_label(behaviour, name)
+        note = str(spec.get("description") or "")
+        value = config.get(name, spec.get("default"))
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        row.add(self._label(label, color=C_MUTED, size=10, width=120))
+        if ops.is_point_list(spec) and all(isinstance(item, dict) for item in value or []):
+            points = [p for p in value or [] if isinstance(p, dict)]
+            row.add(self._button("Edit route on the map", partial(self.edit_route, target, behaviour, name),
+                                 width=width - 128, style=S_ACTIVE))
             box.add(row)
-            if note:
-                box.add(self._label(note, color=C_MUTED, size=9, width=width))
+            row = gui.UIBoxLayout(vertical=False, space_between=4)
+            row.add(self._label(f"{len(points)} point(s), x,y", color=C_MUTED, size=9, width=120))
+            row.add(self._field(ops.points_text(value),
+                                lambda v: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, name, v),
+                                                             f"{label} changed."),
+                                width=width - 128, key=f"points_{behaviour}_{name}"))
+            note = "Click Edit route, then click the map to add points; or type x,y pairs."
+        elif kind == "bool":
+            row.add(self._button("On" if value else "Off",
+                                 lambda: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, name, not bool(value))),
+                                 width=width - 128, style=S_ACTIVE if value else S_BUTTON))
+        elif kind in ("int", "float", "string"):
+            text = "" if value is None else str(value)
+            row.add(self._field(text, lambda v: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, name, v)),
+                                width=width - 128))
+        elif kind == "array" and all(isinstance(item, (str, int, float)) for item in value or []):
+            # A list of names (flags, tags...) edits as comma-separated text.
+            row.add(self._field(", ".join(str(item) for item in value or []),
+                                lambda v: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, name, v)),
+                                width=width - 128))
+        else:
+            # Lists of objects and other structured settings: edited as checked text (JSON).
+            row.add(self._field(json.dumps(value) if value is not None else "",
+                                lambda v: self._set_structured(target, behaviour, name, v),
+                                width=width - 128, key=f"param_{behaviour}_{name}"))
+        box.add(row)
+        if note:
+            box.add(self._label(note, color=C_MUTED, size=9, width=width))
+
+    # ==================================================================== patrol routes
+    def edit_route(self, entity_id: str, behaviour: str, setting: str) -> None:
+        self._flush_fields()
+        self.route = {"entity": entity_id, "behaviour": behaviour, "setting": setting}
+        self.route_sel, self.route_drag, self.place_prefab, self.tool = None, None, None, "select"
+        self.panel = "route"
+        self._rebuild()
+        self._say("Click the map to add points in walking order. Drag a point to move it; click one and press "
+                  "Delete to remove it.")
+
+    def finish_route(self) -> None:
+        self.route, self.route_sel, self.route_drag = None, None, None
+        self.panel = "inspect"
+        self._rebuild()
+        self._say("Route done.")
+
+    def _route_entity(self) -> dict[str, Any] | None:
+        return self._entity(self.route["entity"]) if self.route else None
+
+    def _route_points(self) -> list[tuple[float, float]]:
+        entity = self._route_entity()
+        if entity is None or self.route is None:
+            return []
+        config = (entity.get("behaviour_config") or {}).get(self.route["behaviour"]) or {}
+        return [(float(p["x"]), float(p["y"])) for p in config.get(self.route["setting"]) or []
+                if isinstance(p, dict) and "x" in p and "y" in p]
+
+    def _live_route_points(self) -> list[tuple[float, float]]:
+        points = self._route_points()
+        drag = self.route_drag
+        if drag is not None and drag["index"] < len(points):
+            points[drag["index"]] = drag["to"]
+        return points
+
+    def _set_route(self, points: list[tuple[float, float]], ok: str) -> None:
+        route = self.route
+        if route is None:
+            return
+        value = [{"x": x, "y": y} for x, y in points]
+        self._edit(lambda s: ops.set_behaviour_param(s, route["entity"], route["behaviour"], route["setting"], value), ok)
+
+    def _route_problems(self) -> list[Any]:
+        entity = self._route_entity()
+        if entity is None:
+            return []
+        start = (float(entity.get("x", 0)), float(entity.get("y", 0)))
+        return route_problems(self.project.scene(), start, self._live_route_points(), ignore=entity.get("id"))
+
+    def _route_point_at(self, x: float, y: float) -> int | None:
+        self._apply_camera()
+        for index, point in enumerate(self._live_route_points()):
+            sx, sy = self.window.camera.project(point)[:2]
+            if abs(sx - x) <= 10 and abs(sy - y) <= 10:
+                return index
+        return None
+
+    @staticmethod
+    def _tile_centre(wx: float, wy: float) -> tuple[float, float]:
+        tile = ops.TILE_SIZE
+        return float((wx // tile) * tile + tile / 2), float((wy // tile) * tile + tile / 2)
+
+    def remove_route_point(self) -> None:
+        points, index = self._route_points(), self.route_sel
+        if index is None or index >= len(points):
+            return
+        del points[index]
+        self.route_sel = None
+        self._set_route(points, f"Point {index + 1} removed.")
+
+    def clear_route(self) -> None:
+        self.route_sel = None
+        self._set_route([], "Route cleared.")
+
+    def _route_panel(self, rows: Rows, width: int) -> None:
+        entity = self._route_entity()
+        if entity is None or self.route is None:
+            rows.add(self._label("That object is gone.", color=C_MUTED))
+            rows.add(self._button("Done", self.finish_route, width=80))
+            return
+        info = behaviour_guide.guide(self.route["behaviour"])
+        rows.add(self._label("Route", bold=True, size=12))
+        rows.add(self._label(f"{entity.get('name') or 'Object'}: {info.label}", color=C_MUTED, size=10, width=width))
+        rows.add(self._label("Click the map to add the next point. Drag a point to move it. Click a point, then "
+                             "Delete (or the button) to remove it. It walks them in order, then back to the first.",
+                             color=C_MUTED, size=9, width=width))
+        points = self._route_points()
+        problems = self._route_problems()
+        rows.add(self._label(f"{len(points)} point(s)", size=11))
+        if not points:
+            rows.add(self._label("No points yet: click the map where it should walk.", color=(240, 200, 120), size=10, width=width))
+        elif len(points) < 2:
+            rows.add(self._label("Add at least one more point.", color=(240, 200, 120), size=10, width=width))
+        elif not problems:
+            rows.add(self._label("It can walk this route.", color=C_OK, size=10, width=width))
+        for problem in problems:
+            rows.add(self._label(problem.text, color=(240, 140, 120), size=10, width=width))
+        half = (width - 6) // 2
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._button(f"Remove point {self.route_sel + 1}" if self.route_sel is not None else "Remove point",
+                             self.remove_route_point, width=half, disabled=self.route_sel is None))
+        row.add(self._button("Clear route", self.clear_route, width=half, disabled=not points))
+        rows.add(row)
+        rows.add(self._button("Done", self.finish_route, width=80, style=S_ACTIVE))
+
+    def _draw_route(self) -> None:
+        a = optional_arcade.arcade
+        entity = self._route_entity()
+        if entity is None:
+            return
+        points = self._live_route_points()
+        problems = self._route_problems()
+        bad_points = {p.point for p in problems if p.point is not None}
+        bad_legs = {p.leg for p in problems if p.leg is not None}
+        start = (float(entity.get("x", 0)), float(entity.get("y", 0)))
+        legs: list[tuple[int | None, int]] = ([(None, 0)] if points else []) + [(i, i + 1) for i in range(len(points) - 1)]
+        if len(points) > 2:
+            legs.append((len(points) - 1, 0))
+        for leg in legs:
+            x0, y0 = start if leg[0] is None else points[leg[0]]
+            x1, y1 = points[leg[1]]
+            color = (240, 90, 80) if leg in bad_legs else ((255, 255, 255, 110) if leg[0] is None else (120, 220, 255))
+            a.draw_line(x0, y0, x1, y1, color, (2 if leg[0] is None else 3) / self.zoom)
+        for index, (x, y) in enumerate(points):
+            color = (240, 90, 80) if index in bad_points else (255, 220, 90)
+            a.draw_circle_filled(x, y, 9 / self.zoom, color)
+            if index == self.route_sel:
+                a.draw_circle_outline(x, y, 13 / self.zoom, (255, 255, 255), 2 / self.zoom)
+            self._text(f"route:{index}", str(index + 1), x, y + 12 / self.zoom, (255, 255, 255), 11)
 
     def _set_structured(self, target: str, behaviour: str, name: str, text: str) -> None:
         try:
@@ -1448,17 +1604,42 @@ class Studio(InspectorMixin):
         self._fill_picker(RIGHT_W - 20)
 
     def _fill_picker(self, width: int) -> None:
+        """Categories to open (Movement, Interaction...), or, while searching, everything that matches."""
         self._picker_box.clear()
         have = set(ops.entity_behaviours(self._entity(self.selected) or {}))
-        query = self.picker_query.strip().lower()
-        matches = [b for b in ops.behaviour_catalog()
-                   if b["name"] not in have and (not query or query in b["name"].lower() or query in b["description"].lower())]
-        for item in matches[:MAX_PICKER_ROWS]:
-            self._picker_box.add(self._button(item["name"], lambda n=item["name"]: self.add_behaviour(n), width=width))
-        if len(matches) > MAX_PICKER_ROWS:
-            self._picker_box.add(self._label(f"{len(matches) - MAX_PICKER_ROWS} more - type to narrow down.", color=C_MUTED, size=10))
-        if not matches:
-            self._picker_box.add(self._label("No behaviour matches.", color=C_MUTED))
+        catalog = [b for b in ops.behaviour_catalog() if b["name"] not in have]
+        query = self.picker_query.strip()
+        if query:
+            matches = behaviour_guide.entries(catalog, query)
+            for item in matches[:MAX_PICKER_ROWS]:
+                self._picker_entry(item, width, show_category=True)
+            if len(matches) > MAX_PICKER_ROWS:
+                self._picker_box.add(self._label(f"{len(matches) - MAX_PICKER_ROWS} more: type more to narrow it down.",
+                                                 color=C_MUTED, size=10))
+            if not matches:
+                self._picker_box.add(self._label("Nothing matches. Try other words, like walk, talk or light.", color=C_MUTED))
+            return
+        everything = behaviour_guide.entries(catalog, advanced=True)
+        for category in behaviour_guide.CATEGORIES:
+            inside = [e for e in everything if e["category"] == category]
+            if not inside:
+                continue
+            is_open = self.picker_category == category
+            self._picker_box.add(self._button(f"{'v' if is_open else '>'} {category} ({len(inside)})",
+                                              partial(self._open_picker_category, category), width=width,
+                                              style=S_ACTIVE if is_open else S_BUTTON))
+            if is_open:
+                for item in inside:
+                    self._picker_entry(item, width)
+
+    def _picker_entry(self, item: dict[str, Any], width: int, *, show_category: bool = False) -> None:
+        self._picker_box.add(self._button(item["label"], partial(self.add_behaviour, item["name"]), width=width))
+        where = f"{item['category']}: " if show_category else ""
+        self._picker_box.add(self._label(f"{where}{item['summary']}", color=C_MUTED, size=9, width=width))
+
+    def _open_picker_category(self, category: str) -> None:
+        self.picker_category = None if self.picker_category == category else category
+        self._fill_picker(RIGHT_W - 20)
 
     # ==================================================================== context menu
     def _open_menu(self, x: float, y: float, wx: float, wy: float) -> None:
@@ -1642,7 +1823,8 @@ class Studio(InspectorMixin):
                  "ai": [p.view() for p in self.ai.proposals], "revision": self.project.revision,
                  "dlg_order": list(ops.conversation(self._entity(self.selected) or {})["nodes"]) if self.selected else [],
                  "room_doc": self.project.scene() if self.mode == "edit" else None, "light": self.light,
-                 "lighting": runtime_snapshot(self.window).get("lighting") if self.mode == "edit" else None}
+                 "lighting": runtime_snapshot(self.window).get("lighting") if self.mode == "edit" else None,
+                 "route": self._route_dump() if self.panel == "route" and self.mode == "edit" else None}
         tmp = f"{path}.tmp"
         try:
             with open(tmp, "w", encoding="utf-8") as handle:
@@ -1650,6 +1832,12 @@ class Studio(InspectorMixin):
             os.replace(tmp, path)
         except OSError:
             pass  # a test is reading the file right now; the next dump will land
+
+    def _route_dump(self) -> dict[str, Any]:
+        points = self._live_route_points()
+        return {"points": [list(p) for p in points],
+                "screen": [list(self.window.camera.project(p)[:2]) for p in points], "selected": self.route_sel,
+                "problems": [{"kind": p.kind, "text": p.text, "point": p.point, "leg": p.leg} for p in self._route_problems()]}
 
     def _text(self, key: str, text: str, x: float, y: float, color: tuple[int, int, int], size: int = 10) -> None:
         label = self._labels.get(key)
@@ -1802,6 +1990,8 @@ class Studio(InspectorMixin):
                                     bright=eid == self.selected)
             if eid == self.selected:
                 a.draw_lrbt_rectangle_outline(cx - w / 2 - 3, cx + w / 2 + 3, cy - h / 2 - 3, cy + h / 2 + 3, C_SELECT, 2)
+        if self.panel == "route" and self.mode == "edit":
+            self._draw_route()
         if self.panel == "lighting" and self.mode == "edit":
             self._draw_lights()
         for handle in self._handles():
@@ -1972,10 +2162,14 @@ class Studio(InspectorMixin):
                 self.copy_selected()
             else:
                 self.paste_here()
+        elif symbol == k.DELETE and self.panel == "route":
+            self.remove_route_point()
         elif symbol == k.DELETE:
             self.delete_selected()
         elif symbol == k.ESCAPE and self.modal is not None:
             self._close_choice("cancel")
+        elif symbol == k.ESCAPE and self.panel == "route":
+            self.finish_route()
         elif symbol == k.ESCAPE:
             self.menu, self.place_prefab, self.stroke, self.sheet_drag = None, None, None, None
             if self.panel == "preview":
@@ -2091,6 +2285,17 @@ class Studio(InspectorMixin):
         elif button == optional_arcade.arcade.MOUSE_BUTTON_RIGHT:
             self._open_menu(x, y, wx, wy)
         elif button == optional_arcade.arcade.MOUSE_BUTTON_LEFT:
+            if self.panel == "route" and self.route is not None:
+                index = self._route_point_at(x, y)
+                if index is not None:  # pick it up (a click without moving just selects it)
+                    self.route_sel = index
+                    self.route_drag = {"index": index, "to": self._live_route_points()[index], "moved": False}
+                    self._rebuild()
+                else:
+                    points = self._route_points() + [self._tile_centre(wx, wy)]
+                    self.route_sel = len(points) - 1
+                    self._set_route(points, f"Point {len(points)} added.")
+                return True
             if self.tool in ("paint", "erase"):
                 # Map tools never select or move objects, so painting can't drag an NPC away.
                 cell = self._cell_under(x, y)
@@ -2151,6 +2356,10 @@ class Studio(InspectorMixin):
             if cell is not None:
                 self.stroke["cells"].extend(_line_cells(self.stroke["last"], cell)[1:])
                 self.stroke["last"] = cell
+        elif self.route_drag is not None:
+            to = self._tile_centre(*self._to_world(x, y))
+            if to != self.route_drag["to"]:
+                self.route_drag.update(to=to, moved=True)
         elif self.handle_drag is not None:
             self.handle_drag["moved"] = True
             self._drag_handle(*self._to_world(x, y))
@@ -2178,6 +2387,13 @@ class Studio(InspectorMixin):
                 self.stroke["cells"] = ops.rect_cells(start, end)
                 self.stroke["anchor"] = (min(start[0], end[0]), min(start[1], end[1]))
             self._commit_stroke()
+            return True
+        if self.route_drag is not None:
+            drag, self.route_drag = self.route_drag, None
+            if drag["moved"]:
+                points = self._route_points()
+                points[drag["index"]] = drag["to"]
+                self._set_route(points, f"Point {drag['index'] + 1} moved.")
             return True
         if self.handle_drag is not None:
             self._commit_handle()

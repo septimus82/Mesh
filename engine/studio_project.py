@@ -489,7 +489,7 @@ class Project:
         """Write every changed room and the world file. Returns the paths written."""
         written: list[str] = []
         self.last_save_backups = []
-        targets = [(self.path(key), self.scenes[key]) for key in sorted(self.dirty)]
+        targets: list[tuple[str, Any]] = [(self.path(key), self.scenes[key]) for key in sorted(self.dirty)]
         if self.world_dirty:
             targets.append((self.world_file, self.world))
         if self.player_dirty and self.player is not None:
