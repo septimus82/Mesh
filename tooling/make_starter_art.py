@@ -34,15 +34,15 @@ def _rect(d: ImageDraw.ImageDraw, x0: int, y0: int, x1: int, y1: int, colour) ->
 def _outline(img: Image.Image) -> Image.Image:
     """A one-pixel dark outline around everything drawn: reads clearly on any ground."""
     out = img.copy()
-    px, opx = img.load(), out.load()
     w, h = img.size
+    alpha = list(img.getchannel("A").getdata())
     for y in range(h):
         for x in range(w):
-            if px[x, y][3]:
+            if alpha[y * w + x]:
                 continue
-            if any(0 <= x + dx < w and 0 <= y + dy < h and px[x + dx, y + dy][3]
+            if any(0 <= x + dx < w and 0 <= y + dy < h and alpha[(y + dy) * w + x + dx]
                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
-                opx[x, y] = OUTLINE
+                out.putpixel((x, y), OUTLINE)
     return out
 
 

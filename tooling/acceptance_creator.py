@@ -40,6 +40,9 @@ from acceptance_map_building import MapPage  # noqa: E402
 from gui_driver import Driver, find_window_by_title  # noqa: E402
 
 GAME = "Lantern Vale"
+# What a step raises when it fails: its own checks, the GUI driver (RuntimeError, timeouts), files and the dumps.
+STEP_FAILURES = (AssertionError, RuntimeError, OSError, ValueError, KeyError, IndexError, TypeError, StopIteration,
+                 subprocess.SubprocessError)
 FLAG = "asked_about_ranger"
 
 
@@ -88,14 +91,14 @@ def run(out: Path) -> int:
         started = time.time()
         try:
             detail, ok, error = action(), True, None
-        except Exception as exc:  # noqa: BLE001  # REASON: record every failure in the report, then stop
+        except STEP_FAILURES as exc:  # record the failure in the report, then stop
             ok, error, detail = False, f"{type(exc).__name__}: {exc}", traceback.format_exc(limit=5)
         driver = held["studio"] or held["launcher"]
         shot = None
         if driver is not None and driver.proc.poll() is None:
             try:
                 shot = driver.shot(f"{len(results) + 1:02d}_{name}").name
-            except Exception:  # noqa: BLE001  # REASON: a window closing mid-capture must not hide the step's result
+            except (OSError, RuntimeError, ValueError):  # a window closing mid-capture must not hide the step's result
                 shot = None
         results.append({"step": name, "ok": ok, "error": error, "detail": detail,
                         "seconds": round(time.time() - started, 1), "screenshot": shot})
@@ -106,7 +109,7 @@ def run(out: Path) -> int:
         S().button(label)
         S().wait(lambda s: s["room"] == label.lower(), f"the {label} room")  # rooms are keyed by their slugged name
 
-    def select(name: str) -> dict[str, Any]:
+    def select(name: str) -> Any:
         S().d.key("ESC")
         S().click_obj(name)
         return S().wait(lambda s: s["selected"] == S().obj(name)["id"], f"{name} selected")
@@ -130,7 +133,7 @@ def run(out: Path) -> int:
         S().button("Create")
         S().wait(lambda s: any(w["type"] == "button" and w["text"] == label for w in s["widgets"]), f"the {label} room")
 
-    def menu(state: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    def menu(state: dict[str, Any] | None = None) -> Any:
         play = (state or S().state()).get("play") or {}
         return play.get("menu")
 
@@ -140,7 +143,7 @@ def run(out: Path) -> int:
             raise AssertionError(f"no '{prefix}' in the game menu: {menu()}")
         S().d.click(*S()._xy(found[0]["rect"]))
 
-    def walk(target: tuple[float, float], order: tuple[int, int] = (0, 1), tolerance: float = 8.0,
+    def walk(target: tuple[float, float], order: tuple[int, ...] = (0, 1), tolerance: float = 8.0,
              timeout: float = 25.0) -> tuple[float, float]:
         """Hold the movement keys until the player is near ``target``, one axis at a time."""
         deadline = time.time() + timeout
@@ -158,13 +161,14 @@ def run(out: Path) -> int:
                     raise AssertionError(f"blocked walking to {target}: the player is stuck at {S().player()}")
             else:
                 raise AssertionError(f"could not walk to {target}; the player is at {S().player()}")
-        return S().player()
+        at = S().player()
+        return float(at[0]), float(at[1])
 
     def sprite_at(state: dict[str, Any], name: str) -> tuple[float, float]:
         found = [s for s in state["play"]["sprites"] if s["name"] == name]
         if not found:
             raise AssertionError(f"no {name} in the game")
-        return tuple(found[0]["at"])  # type: ignore[return-value]
+        return float(found[0]["at"][0]), float(found[0]["at"][1])
 
     def mean_colour(shot: Path, rect: list[float], height: int) -> tuple[float, float, float]:
         from PIL import Image  # noqa: PLC0415
@@ -173,8 +177,8 @@ def run(out: Path) -> int:
         scale = image.width / S().state()["window"][0]
         x0, y0 = rect[0] * scale, (height - rect[1] - rect[3]) * scale
         box = image.crop((int(x0), int(y0), int(x0 + rect[2] * scale), int(y0 + rect[3] * scale)))
-        pixels = list(box.getdata())
-        return tuple(sum(p[i] for p in pixels) / len(pixels) for i in range(3))  # type: ignore[return-value]
+        r, g, b = (list(band.getdata()) for band in box.split())
+        return sum(r) / len(r), sum(g) / len(g), sum(b) / len(b)
 
     # --- the steps --------------------------------------------------------------------------
     def s01_new_project() -> dict[str, Any]:

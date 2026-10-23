@@ -2422,11 +2422,11 @@ class Studio(InspectorMixin):
             self._commit_stroke()
             return True
         if self.route_drag is not None:
-            drag, self.route_drag = self.route_drag, None
-            if drag["moved"]:
+            moving, self.route_drag = self.route_drag, None
+            if moving["moved"]:
                 points = self._route_points()
-                points[drag["index"]] = drag["to"]
-                self._set_route(points, f"Point {drag['index'] + 1} moved.")
+                points[moving["index"]] = moving["to"]
+                self._set_route(points, f"Point {moving['index'] + 1} moved.")
             return True
         if self.handle_drag is not None:
             self._commit_handle()
