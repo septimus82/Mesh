@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
 from math import hypot
 from pathlib import Path
@@ -159,6 +160,8 @@ class AudioManager:
     """Thin audio facade that caches short sounds and manages music playback."""
 
     def __init__(self) -> None:
+        # The last positional sounds and how loud they played: for diagnostics and verification.
+        self.recent_plays: deque[dict[str, Any]] = deque(maxlen=32)
         self._sounds: Dict[str, optional_arcade.arcade.Sound] = {}
         self._muffled_variant_cache: Dict[str, str | None] = {}
         self._music: Optional[optional_arcade.arcade.Sound] = None
@@ -424,6 +427,9 @@ class AudioManager:
                 if is_occluded:
                     pan_value *= float(WORLD_SFX_OCCLUDED_PAN_MUL)
 
+        self.recent_plays.append({"path": path, "volume": round(final_volume, 4), "pan": round(pan_value, 4),
+                                  "distance": round(hypot(dx, dy), 1) if world_xy and listener_xy else None,
+                                  "occluded": is_occluded})
         if final_volume <= 0.0:
             return
         sound_path = self._select_occluded_sound_path(path) if is_occluded else path

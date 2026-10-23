@@ -1315,9 +1315,13 @@ class Studio(InspectorMixin):
             flags = getattr(getattr(self.window, "game_state", None), "flags", None) or {}
             sprites_now = [{"name": (getattr(sp, "mesh_entity_data", None) or {}).get("name"), "visible": bool(sp.visible),
                             "alpha": int(getattr(sp, "alpha", 255)), "at": [sp.center_x, sp.center_y],
+                            "angle": float(getattr(sp, "angle", 0.0) or 0.0), "size": [sp.width, sp.height],
                             "solid": sp in (getattr(self.window, "solid_sprites", None) or [])}
                            for sp in self.window.scene_controller.all_sprites]
+            from engine.runtime_probe import runtime_snapshot  # noqa: PLC0415
+
             play = {"scene": self.window.scene_controller.current_scene_path, "sprites": sprites_now,
+                    "runtime": runtime_snapshot(self.window),
                     "flags": {name: bool(value) for name, value in dict(flags).items()},
                     "player": [player.center_x, player.center_y] if player is not None else None,
                     "player_screen": list(self.window.camera.project((player.center_x, player.center_y))[:2])
