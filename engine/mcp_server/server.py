@@ -71,6 +71,14 @@ def build_server() -> Any:
     server.tool()(tools.list_op_types)
     server.tool()(tools.apply_ops)
 
+    # One authoring API, shared with Mesh Studio and the `mesh author` command.
+    server.tool()(tools.authoring_operations)
+    server.tool()(tools.read_project)
+    server.tool()(tools.propose_changes)
+    server.tool()(tools.apply_changes)
+    server.tool()(tools.proposal_status)
+    server.tool()(tools.withdraw_proposal)
+
     # Safety.
     server.tool()(tools.validate_scene)
     server.tool()(tools.playability_check)

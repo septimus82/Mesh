@@ -124,6 +124,7 @@ def ensure_entity_ids(scene: Doc, scene_key: str) -> Doc:
 
 
 def place_prefab(scene: Doc, scene_key: str, prefab: Doc, x: float, y: float) -> tuple[Doc, str]:
+    """A new object of a project object type (prefab), at ``(x, y)``; returns its id."""
     prefab_id = str(prefab.get("id") or "object")
     out = copy.deepcopy(scene)
     entity_id = unique_entity_id(out, make_entity_id(scene_key, prefab_id, x, y))
@@ -168,6 +169,7 @@ def set_entity_fields(scene: Doc, entity_id: str, **fields: Any) -> Doc:
 
 
 def remove_entity(scene: Doc, entity_id: str) -> Doc:
+    """Delete an object from the room."""
     find_entity(scene, entity_id)
     out = copy.deepcopy(scene)
     out["entities"] = [e for e in entities(out) if e.get("id") != entity_id]
@@ -175,6 +177,7 @@ def remove_entity(scene: Doc, entity_id: str) -> Doc:
 
 
 def move_entity(scene: Doc, entity_id: str, x: float, y: float) -> Doc:
+    """Move an object to ``(x, y)`` (world pixels; y points up)."""
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
     entity["x"], entity["y"] = round(float(x), 2), round(float(y), 2)
@@ -182,6 +185,7 @@ def move_entity(scene: Doc, entity_id: str, x: float, y: float) -> Doc:
 
 
 def rename_entity(scene: Doc, entity_id: str, name: str) -> Doc:
+    """Rename an object; a speaker who used the old name follows."""
     name = str(name).strip()
     if not name:
         raise OpError("A name can't be empty.")
@@ -227,6 +231,7 @@ def entity_behaviours(entity: Doc) -> list[str]:
 
 
 def add_behaviour(scene: Doc, entity_id: str, behaviour: str) -> Doc:
+    """Give an object a behaviour (see list_behaviours), with that behaviour's default settings."""
     fields = _fields(behaviour)
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
@@ -241,6 +246,7 @@ def add_behaviour(scene: Doc, entity_id: str, behaviour: str) -> Doc:
 
 
 def remove_behaviour(scene: Doc, entity_id: str, behaviour: str) -> Doc:
+    """Take a behaviour (and its settings) off an object."""
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
     if behaviour not in entity_behaviours(entity):
@@ -269,6 +275,7 @@ def coerce_field(spec: Doc, value: Any) -> Any:
 
 
 def set_behaviour_param(scene: Doc, entity_id: str, behaviour: str, param: str, value: Any) -> Doc:
+    """Set one setting of one of the object's behaviours (checked against the behaviour's fields)."""
     fields = _fields(behaviour)
     if param not in fields:
         raise OpError(f"{behaviour} has no setting called '{param}'.")
@@ -303,6 +310,7 @@ def dialogue_text(entity: Doc) -> str:
 
 
 def set_dialogue_text(scene: Doc, entity_id: str, text: str) -> Doc:
+    """Set what the object says first (its conversation's opening line), creating the conversation if needed."""
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
     if "Dialogue" not in entity_behaviours(entity):
@@ -772,6 +780,7 @@ def reset_animation(scene: Doc, entity_id: str) -> Doc:
 
 
 def set_look(scene: Doc, entity_id: str, *, scale: Any = _UNSET, flip_x: Any = _UNSET) -> Doc:
+    """Set an object's size (scale) and whether its picture is mirrored."""
     fields: dict[str, Any] = {}
     if scale is not _UNSET:
         fields["scale"] = round(_number(scale, "The size", 0.1, 10), 3)
@@ -1015,6 +1024,7 @@ def add_line(scene: Doc, entity_id: str, *, after: str | None = None, text: str 
 
 def set_line(scene: Doc, entity_id: str, node_id: str, *, text: Any = _UNSET, speaker: Any = _UNSET,
              next_line: Any = _UNSET) -> Doc:
+    """Edit a conversation line: its words, speaker, and the line that follows (empty: the conversation ends)."""
     out = copy.deepcopy(scene)
     _config, _graph_doc, nodes = _graph(find_entity(out, entity_id))
     node = _node(nodes, node_id)
@@ -1065,6 +1075,7 @@ def remove_line(scene: Doc, entity_id: str, node_id: str) -> Doc:
 
 
 def add_choice(scene: Doc, entity_id: str, node_id: str, text: str = "Choice") -> Doc:
+    """Add a choice to a conversation line (choices replace the line's 'then' link)."""
     out = copy.deepcopy(scene)
     _config, _graph_doc, nodes = _graph(find_entity(out, entity_id))
     node = _node(nodes, node_id)
@@ -1122,6 +1133,7 @@ def set_choice(scene: Doc, entity_id: str, node_id: str, index: int, *, text: An
 
 
 def remove_choice(scene: Doc, entity_id: str, node_id: str, index: int) -> Doc:
+    """Remove a conversation line's choice ``index`` (0 is the first)."""
     out = copy.deepcopy(scene)
     _config, _graph_doc, nodes = _graph(find_entity(out, entity_id))
     node = _node(nodes, node_id)
@@ -1282,6 +1294,7 @@ def set_trigger_zone(scene: Doc, entity_id: str, *, width: Any, height: Any, onc
 
 
 def remove_trigger_zone(scene: Doc, entity_id: str) -> Doc:
+    """Stop the object being a trigger zone (its conversation stays)."""
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
     event = zone_event(entity_id)

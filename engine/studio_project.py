@@ -11,9 +11,10 @@ from __future__ import annotations
 import copy
 import json
 import posixpath
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterator
 
 from engine import project_ops as ops
 from engine.json_io import write_json_atomic
@@ -46,6 +47,9 @@ class Project:
         self.current: str = str(self.world.get("start_scene") or rooms[0][0])
         self._undo: list[_State] = []
         self._redo: list[_State] = []
+        self.revision = 0  # goes up with every change, undo and redo: what an AI's view is "as of"
+        self.writes_files = True  # False for a dry run: nothing touches the disk
+        self._tx_depth = 0
         self.scene(self.current)
 
     @classmethod
@@ -112,9 +116,44 @@ class Project:
         self.world_dirty = state.world_dirty
 
     def _record(self, before: _State) -> None:
+        if self._tx_depth:
+            return  # the transaction records once, at its end
         self._undo.append(before)
         del self._undo[:-UNDO_LIMIT]
         self._redo.clear()
+        self.revision += 1
+
+    @contextmanager
+    def transaction(self) -> Iterator[None]:
+        """Group several edits into one undo step; any exception puts everything back."""
+        before = self._snapshot()
+        self._tx_depth += 1
+        try:
+            yield
+        except BaseException:
+            self._tx_depth -= 1
+            self._restore(before)
+            raise
+        self._tx_depth -= 1
+        if not self._tx_depth and (self.scenes != before.scenes or self.world != before.world):
+            self._record(before)
+
+    def all_documents(self) -> Doc:
+        """``{"world": ..., "rooms": {key: room}}`` with every room loaded: a whole-project view."""
+        return {"world": self.world, "rooms": {key: self.scene(key) for key, _label, _path in self.rooms()}}
+
+    def clone(self) -> "Project":
+        """A copy to try changes on (a dry run): same documents, no undo history, writes nothing."""
+        copy_ = Project.__new__(Project)
+        copy_.root, copy_.world_file = self.root, self.world_file
+        copy_.world, copy_.scenes = copy.deepcopy(self.world), copy.deepcopy(self.scenes)
+        copy_.dirty, copy_.world_dirty, copy_.current = set(self.dirty), self.world_dirty, self.current
+        copy_._undo, copy_._redo, copy_.revision, copy_.writes_files, copy_._tx_depth = [], [], self.revision, False, 0
+        return copy_
+
+    def load_documents(self, docs: Doc) -> None:
+        """Replace the documents with ``docs`` (from ``all_documents``), for a clone made at another revision."""
+        self.world, self.scenes = copy.deepcopy(docs["world"]), copy.deepcopy(docs["rooms"])
 
     def edit_scene(self, change: Callable[[Doc], Doc], key: str | None = None) -> None:
         """Replace one room with ``change(room)``. An OpError leaves everything untouched."""
@@ -154,6 +193,8 @@ class Project:
         # The map file holds only the size, tileset and empty layers (the painted tiles live
         # in the room document), so it is written straight away: the Studio and play-tests
         # load it from disk even before the room is saved.
+        if not self.writes_files:
+            return
         ensure_starter_files(self.root)
         target = self.root / map_path
         if not target.is_file():
@@ -308,6 +349,7 @@ class Project:
                 write_json_atomic(self.root / map_rel, updated)
 
     def link_rooms(self, key_a: str, at_a: tuple[float, float], key_b: str, at_b: tuple[float, float]) -> None:
+        """Connect two rooms with a door in each (at ``at_a`` in room ``key_a``, ``at_b`` in ``key_b``), each with its arrival spot."""
         before = self._snapshot()
         a, b = ops.link_rooms(self.scene(key_a), key_a, self.label(key_a), at_a, self.scene(key_b), key_b, self.label(key_b), at_b)
         self._record(before)
@@ -319,6 +361,7 @@ class Project:
             return False
         self._redo.append(self._snapshot())
         self._restore(self._undo.pop())
+        self.revision += 1
         return True
 
     def redo(self) -> bool:
@@ -326,6 +369,7 @@ class Project:
             return False
         self._undo.append(self._snapshot())
         self._restore(self._redo.pop())
+        self.revision += 1
         return True
 
     def save(self) -> list[str]:
