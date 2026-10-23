@@ -129,6 +129,17 @@ def test_link_rooms_creates_mirrored_doors_with_arrival_spots() -> None:
         ops.link_rooms(start, "start", "Start", (0, 0), start, "start", "Start", (0, 0))
 
 
+
+def test_a_door_near_the_bottom_edge_gets_its_arrival_spot_on_the_map() -> None:
+    """Milestone 8: arrivals were always 96 px below the door, so a door on a room's bottom row put
+    players outside the map (seen in the real window: arriving at y = -48 and walking into the void)."""
+    world, house, key_b, _ = ops.new_room(_world(), "House", "packs/core_regions/scenes", PLAYER)
+    house, _, _ = ops.add_map(house, f"packs/core_regions/scenes/{key_b}.json", width=20, height=15)
+    start, house = ops.link_rooms(_scene(), "start", "Start", (400, 300), house, key_b, "House", (128, 48))
+    arrival = next(e for e in ops.entities(house) if e.get("tag") == "spawn_point")
+    assert 32 <= arrival["x"] <= 640 - 32 and 32 <= arrival["y"] <= 480 - 32, arrival
+    assert math.dist((arrival["x"], arrival["y"]), (128, 48)) >= 64
+
 def test_ensure_entity_ids_fills_only_missing_ids() -> None:
     scene = {"entities": [{"name": "A", "x": 1, "y": 2}, {"id": "keep", "name": "B", "x": 0, "y": 0}]}
     out = ops.ensure_entity_ids(scene, "start")

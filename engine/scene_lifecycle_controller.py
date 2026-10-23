@@ -9,6 +9,7 @@ from engine.background_layers import parse_background_layers, parse_foreground_l
 from engine.depth_tint_model import parse_depth_tint_settings
 from engine.parallax_model import parse_background_planes
 from engine.scene_lifecycle_model import SceneLoadInputs, build_scene_load_plan
+from engine.scene_runtime import room_memory
 from engine.scene_runtime.index_build import build_scene_index_from_sprites
 from engine.sprite_outline_model import parse_outline_settings
 from engine.swallowed_exceptions import _log_swallow
@@ -156,6 +157,10 @@ def handle_pending_scene_change(controller: Any) -> bool:
 def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     """Load entities from a JSON scene file and build sprites for them."""
     print(f"[Mesh][Scene] Loading scene '{scene_path}'")
+    # Every room change comes through here: note what was collected or defeated in the room being left.
+    # Not when loading a save: its game state, room memory included, has just replaced this one.
+    if not room_memory.is_save_slot(controller.window, scene_path):
+        room_memory.remember_removed(controller)
     controller._clear_scene_event_subscriptions()
     try:
         from engine.lighting.occluders import reset_entity_occluder_cache  # noqa: PLC0415
@@ -166,6 +171,8 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
         pass
     scene = controller.window.scene_loader.load_scene(scene_path)
     controller.current_scene_path = scene_path
+    # The room this is, also when it comes from a save slot (which records the room it was made in).
+    controller.room_path = room_memory.room_key(getattr(controller.window.scene_loader, "last_saved_from", None) or scene_path)
     controller._loaded_scene_data = scene
     controller.sensors_runtime.reset()
     # Keep a stable authored copy for debug authoring tools (avoid persisting runtime-only mutations).
@@ -261,6 +268,9 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
 
     getter = getattr(controller.window, "get_flag", None)
     entities_payload = filter_entities_by_flags(scene.get("entities", []), get_flag=getter if callable(getter) else None)
+    gone = room_memory.removed_ids(controller.window, controller.room_path)  # collected or defeated earlier
+    entities_payload = [e for e in entities_payload if not (isinstance(e, dict) and e.get("id") in gone)]
+    controller._room_spawned_ids = room_memory.spawned_ids(entities_payload)
     for entity in entities_payload:
         sprite = controller._create_sprite(entity)
         if not sprite:
@@ -277,6 +287,12 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     # Build deterministic per-scene entity index once per load.
     # Use the same iteration order as legacy lookup paths (layer order).
     controller.entities.apply_pending_ops(controller, stage="load")
+    pending = getattr(controller, "_pending_saved_entities", None)
+    if pending is not None:  # a loaded save's object states belong to this room, now that it exists
+        controller._pending_saved_entities = None
+        from engine.save_runtime.entity_state import apply_entities  # noqa: PLC0415
+
+        apply_entities(controller, pending)
     controller._scene_index = build_scene_index_from_sprites(controller.all_sprites)
     controller.entities.invalidate("scene_load")
 

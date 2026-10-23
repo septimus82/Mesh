@@ -298,6 +298,14 @@ class SaveManager:
                 self._fallback_to_start_scene(slot_name=slot_name, failed_path=path, reason_code=LOAD_APPLY_FAILED)
                 return False
 
+            # The saved objects' states (health, timers...) belong to the saved room, which only loads on
+            # the next frame: applied above, they reached the room being left. Apply them again once it exists.
+            normalized, _ = save_payloads.normalize_save_payload(data, source=path.as_posix())
+            saved_entities = normalized.get("saved_entities")
+            scene_controller = getattr(self.window, "scene_controller", None)
+            if isinstance(saved_entities, dict) and isinstance(saved_entities.get("entities"), list) and scene_controller is not None:
+                scene_controller._pending_saved_entities = saved_entities["entities"]
+
             # 2. Determine which scene to load
             # If the save file IS a valid scene (which build_scene_snapshot produces),
             # we can load it directly as a scene.

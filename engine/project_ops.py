@@ -394,7 +394,7 @@ def _add_door(scene: Doc, key: str, at: tuple[float, float], *, to_key: str, to_
         },
     }
     scene.setdefault("entities", []).append(door)
-    ax, ay = x + ARRIVAL_OFFSET[0], y + ARRIVAL_OFFSET[1]
+    ax, ay = _arrival_spot(scene, x, y)
     scene["entities"].append({
         "id": unique_entity_id(scene, make_entity_id(key, f"arrival_{to_key}", ax, ay)),
         "name": f"Arrival from {to_label}",
@@ -404,6 +404,22 @@ def _add_door(scene: Doc, key: str, at: tuple[float, float], *, to_key: str, to_
         "y": ay,
     })
 
+
+
+def _arrival_spot(scene: Doc, x: float, y: float) -> tuple[float, float]:
+    """Where a player coming through the door appears: below it, unless that is off the map (a door near
+    the bottom edge put arrivals in the void), then above it, then beside it. Rooms without a map keep below."""
+    info = map_info(scene)
+    offsets = (ARRIVAL_OFFSET, (0.0, -ARRIVAL_OFFSET[1]), (-ARRIVAL_OFFSET[1], 0.0), (ARRIVAL_OFFSET[1], 0.0))
+    if info is None:
+        return x + ARRIVAL_OFFSET[0], y + ARRIVAL_OFFSET[1]
+    w, h = info["width"] * info["tilewidth"], info["height"] * info["tileheight"]
+    margin = max(info["tilewidth"], info["tileheight"])  # keep clear of the border walls
+    for dx, dy in offsets:
+        ax, ay = x + dx, y + dy
+        if margin <= ax <= w - margin and margin <= ay <= h - margin:
+            return ax, ay
+    return x + ARRIVAL_OFFSET[0], y + ARRIVAL_OFFSET[1]
 
 # --- maps -----------------------------------------------------------------------------------
 

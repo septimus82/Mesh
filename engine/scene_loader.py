@@ -139,6 +139,7 @@ class SceneLoader:
 
     def __init__(self) -> None:
         self.documents: Dict[str, Dict[str, Any]] = {}
+        self.last_saved_from: str | None = None  # the room the last loaded save slot was made in
 
     def apply_scene_defaults(self, raw_scene: Dict[str, Any]) -> Dict[str, Any]:
         """Public wrapper so tooling can reuse the defaulting logic."""
@@ -173,6 +174,7 @@ class SceneLoader:
             meta = raw_scene.get("meta")
             saved_from = meta.get("scene_path") if isinstance(meta, dict) else None
             raw_scene = {k: v for k, v in raw_scene.items() if k in SCENE_TOP_LEVEL_KEYS}
+        self.last_saved_from = saved_from if isinstance(saved_from, str) and saved_from.strip() else None
         migrated_scene = migrate_payload("scene", raw_scene)
         validate(migrated_scene, "scene.schema.json", full_path)
         scene = self._apply_scene_defaults(migrated_scene, migrated=True)

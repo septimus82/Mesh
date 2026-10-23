@@ -713,6 +713,9 @@ class Studio(InspectorMixin):
         self.mode = "edit"
         self.keys.clear()
         self.ui.enable()
+        state = getattr(self.window, "game_state_controller", None)
+        if state is not None:
+            state.replace_state({})  # editing shows rooms as authored: nothing collected, no flags from play
         self._reload()  # the edited document, untouched by whatever happened in play
         self._rebuild()
         self._say("Back to editing. Nothing that happened while playing was saved into your rooms.")
@@ -1316,6 +1319,8 @@ class Studio(InspectorMixin):
             sprites_now = [{"name": (getattr(sp, "mesh_entity_data", None) or {}).get("name"), "visible": bool(sp.visible),
                             "alpha": int(getattr(sp, "alpha", 255)), "at": [sp.center_x, sp.center_y],
                             "angle": float(getattr(sp, "angle", 0.0) or 0.0), "size": [sp.width, sp.height],
+                            "hp": next((float(b.hp) for b in getattr(sp, "mesh_behaviours_runtime", None) or []
+                                        if type(b).__name__ == "Health"), None),
                             "solid": sp in (getattr(self.window, "solid_sprites", None) or [])}
                            for sp in self.window.scene_controller.all_sprites]
             from engine.runtime_probe import runtime_snapshot  # noqa: PLC0415
