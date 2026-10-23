@@ -318,3 +318,14 @@ def test_a_save_slot_finds_its_map_next_to_the_room_it_was_saved_in(tmp_path, mo
     loaded = SceneLoader().load_scene(str(tmp_path / "saves" / "quicksave.json"))
     expected = (room_path.parent / scene["tilemap"]["path"]).resolve()
     assert loaded["tilemap"]["resolved_path"] == str(expected)  # not saves/../maps/a.json
+
+
+def test_patrol_points_typed_as_pairs_become_points() -> None:
+    """Patrol's waypoints were split on commas into ["464", "192 700", "192"]: the patrol silently never ran."""
+    spec = {"name": "patrol_points", "type": "array", "description": "List of {x,y} waypoints to visit"}
+    assert ops.coerce_field(spec, "464,192; 700,192") == [{"x": 464.0, "y": 192.0}, {"x": 700.0, "y": 192.0}]
+    assert ops.points_text(ops.coerce_field(spec, "464, 192 700, 192")) == "464,192; 700,192"
+    with pytest.raises(ops.OpError):
+        ops.coerce_field(spec, "464,192 700")
+    assert ops.coerce_field({"name": "tags", "type": "array"}, '["a", "b"]') == ["a", "b"]  # JSON is read as JSON
+    assert ops.coerce_field({"name": "tags", "type": "array"}, "a, b") == ["a", "b"]

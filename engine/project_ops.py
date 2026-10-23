@@ -10,6 +10,7 @@ instead, with a message fit to show a user.
 from __future__ import annotations
 
 import copy
+import json
 import posixpath
 import re
 from typing import Any, Iterable
@@ -268,10 +269,32 @@ def coerce_field(spec: Doc, value: Any) -> Any:
         if kind == "string":
             return str(value)
         if kind == "array" and isinstance(value, str):
-            return [part.strip() for part in value.split(",") if part.strip()]  # "a, b" -> ["a", "b"]
+            text = value.strip()
+            if text.startswith(("[", "{")):  # structured (JSON) text
+                return json.loads(text)
+            if is_point_list(spec):
+                return points_from_text(text)
+            return [part.strip() for part in text.split(",") if part.strip()]  # "a, b" -> ["a", "b"]
     except (TypeError, ValueError) as exc:
         raise OpError(f"'{spec.get('name')}' needs a {kind}, not '{value}'.") from exc
     return value
+
+
+def is_point_list(spec: Doc) -> bool:
+    """A setting that is a list of {x, y} points (patrol waypoints and the like)."""
+    return spec.get("type") == "array" and "{x,y}" in str(spec.get("description", "")).replace(" ", "")
+
+
+def points_from_text(text: str) -> list[Doc]:
+    """``"100,200; 300,200"`` -> ``[{"x": 100, "y": 200}, {"x": 300, "y": 200}]`` (any separators between numbers)."""
+    numbers = [float(n) for n in re.findall(r"-?\d+(?:\.\d+)?", text)]
+    if len(numbers) % 2:
+        raise OpError("Write points as x,y pairs, like: 100,200; 300,200")
+    return [{"x": numbers[i], "y": numbers[i + 1]} for i in range(0, len(numbers), 2)]
+
+
+def points_text(value: Any) -> str:
+    return "; ".join(f"{p.get('x', 0):g},{p.get('y', 0):g}" for p in value or [] if isinstance(p, dict))
 
 
 def set_behaviour_param(scene: Doc, entity_id: str, behaviour: str, param: str, value: Any) -> Doc:

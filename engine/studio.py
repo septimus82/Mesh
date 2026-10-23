@@ -1345,10 +1345,19 @@ class Studio(InspectorMixin):
             box.add(self._label("No settings.", color=C_MUTED))
         for spec in fields:
             name, kind = spec["name"], spec.get("type")
+            note = str(spec.get("description") or "")
+            if note.startswith("Alias for"):
+                continue  # the same setting under another name: one field is enough
             value = config.get(name, spec.get("default"))
             row = gui.UIBoxLayout(vertical=False, space_between=4)
             row.add(self._label(name, color=C_MUTED, size=10, width=120))
-            if kind == "bool":
+            if ops.is_point_list(spec) and all(isinstance(item, dict) for item in value or []):
+                note = "Points as x,y pairs, like 100,200; 300,200 (an object's Position is shown at the top)."
+                row.add(self._field(ops.points_text(value),
+                                    lambda v, n=name: self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, n, v),
+                                                                 f"{n} changed."),
+                                    width=width - 128))
+            elif kind == "bool":
                 row.add(self._button("On" if value else "Off",
                                      lambda n=name, v=bool(value): self._edit(lambda s: ops.set_behaviour_param(s, target, behaviour, n, not v)),
                                      width=width - 128, style=S_ACTIVE if value else S_BUTTON))
@@ -1367,6 +1376,8 @@ class Studio(InspectorMixin):
                                     lambda v, n=name: self._set_structured(target, behaviour, n, v),
                                     width=width - 128, key=f"param_{behaviour}_{name}"))
             box.add(row)
+            if note:
+                box.add(self._label(note, color=C_MUTED, size=9, width=width))
 
     def _set_structured(self, target: str, behaviour: str, name: str, text: str) -> None:
         try:
@@ -1559,7 +1570,7 @@ class Studio(InspectorMixin):
                             "angle": float(getattr(sp, "angle", 0.0) or 0.0), "size": [sp.width, sp.height],
                             "hp": next((float(b.hp) for b in getattr(sp, "mesh_behaviours_runtime", None) or []
                                         if type(b).__name__ == "Health"), None),
-                            "solid": sp in (getattr(self.window, "solid_sprites", None) or [])}
+                            "solid": sp in (getattr(self.window.scene_controller, "solid_sprites", None) or [])}
                            for sp in self.window.scene_controller.all_sprites]
             play = {"scene": self.window.scene_controller.current_scene_path, "sprites": sprites_now,
                     "runtime": runtime_snapshot(self.window),
