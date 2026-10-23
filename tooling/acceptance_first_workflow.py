@@ -185,7 +185,7 @@ def run(out: Path) -> int:
             p.d.type_text("Health")
             p.wait(lambda s: any(w["type"] == "button" and w["text"] == "Health" for w in s["widgets"]), "Health in the picker")
             p.button("Health")
-            s = p.wait(lambda s: s["message"] == "Added Health.", "Health added")
+            s = p.wait(lambda s: s["message"] == "Added: Has health.", "Health added")
             assert any(w["type"] == "field" for w in s["widgets"]), "Health's settings should be editable fields"
 
         def new_room_with_door() -> None:

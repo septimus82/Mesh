@@ -182,7 +182,7 @@ def run(out: Path) -> int:
         p().button("Behaviours")
         p().wait(lambda s: s["tab"] == "behaviours", "the Behaviours tab")
         p().button("Remove", nth=0)
-        p().wait(lambda s: s["message"] == "Removed Dialogue.", "Dialogue removed")
+        p().wait(lambda s: s["message"] == "Removed: Talk.", "Dialogue removed")
         p().click_obj("Elder", right=True)
         p().wait(lambda s: any(w["text"] == "Add behaviour..." for w in s["widgets"]), "the context menu")
         p().button("Add behaviour...")
@@ -190,7 +190,7 @@ def run(out: Path) -> int:
         p().d.type_text("Dialogue")
         p().wait(lambda s: any(w["type"] == "button" and w["text"] == "Dialogue" for w in s["widgets"]), "Dialogue listed")
         p().button("Dialogue")
-        p().wait(lambda s: s["message"] == "Added Dialogue.", "Dialogue added")
+        p().wait(lambda s: s["message"] == "Added: Talk.", "Dialogue added")
         p().button("Dialogue")  # what they say is on the Dialogue tab
         p().wait(lambda s: s["tab"] == "dialogue", "the Dialogue tab")
         p().set_field("says", "Welcome to my room!")

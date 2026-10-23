@@ -705,14 +705,14 @@ class Studio(InspectorMixin):
 
     def add_behaviour(self, name: str) -> None:
         target = self.selected
-        if target and self._edit(lambda s: ops.add_behaviour(s, target, name), f"Added {name}."):
+        if target and self._edit(lambda s: ops.add_behaviour(s, target, name), f"Added: {behaviour_guide.guide(name).label}."):
             self.panel, self.expanded, self.tab = "inspect", name, "behaviours"
             self._rebuild()
 
     def remove_behaviour(self, name: str) -> None:
         target = self.selected
         if target:
-            self._edit(lambda s: ops.remove_behaviour(s, target, name), f"Removed {name}.")
+            self._edit(lambda s: ops.remove_behaviour(s, target, name), f"Removed: {behaviour_guide.guide(name).label}.")
 
     def create_room(self, label: str) -> None:
         door_at, self.pending_door_at = self.pending_door_at, None
@@ -1763,6 +1763,8 @@ class Studio(InspectorMixin):
                 elif isinstance(widget, gui.UIInputText):
                     widgets.append({"type": "field", "key": keys.get(id(widget)), "text": widget.text, "rect": rect,
                                     "active": widget.active})
+                elif isinstance(widget, gui.UILabel):
+                    widgets.append({"type": "label", "text": widget.text, "rect": rect})
         geometry = self._sheet_geometry() if self.mode == "edit" and self._sheet_space is not None else None
         if geometry is not None:
             tileset, px, cols, rows = geometry
