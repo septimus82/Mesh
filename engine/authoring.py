@@ -10,8 +10,8 @@ A change is a dict: ``{"op": "place_prefab", "room": "start", "prefab": "person"
 - ``room`` is a room key (``read_project`` lists them); it defaults to the project's current room.
 - Settings named ``entity_id`` take an object's id or its unique name.
 - ``prefab`` takes a prefab id (or display name); ``entity`` (to duplicate) takes an id or name.
-- ``"@2"`` stands for the id of the object created by change number 2 (counting from 0) of the
-  same batch, so one batch can add a person and give them a conversation.
+- ``"@2"`` stands for the id of the object (or the index of the light) created by change number 2
+  (counting from 0) of the same batch, so one batch can add a person and give them a conversation.
 
 ``apply`` runs a batch as one transaction: all of it, or (if any change is refused) none of it,
 with a message saying which change and why. ``changes_between`` and ``summarize`` describe what
@@ -51,14 +51,15 @@ class ChangeError(ValueError):
 
 
 def _room_ops() -> dict[str, Callable[..., Any]]:
-    """Every ``project_ops`` function that edits one room: ``(scene, ...) -> scene`` or ``(scene, id)``."""
+    """Every ``project_ops`` function that edits one room: ``(scene, ...) -> scene``, ``(scene, id)`` or
+    ``(scene, index)`` (a light)."""
     found = {}
     for name, func in vars(ops).items():
         if name.startswith("_") or name in _NOT_EDITS or not inspect.isfunction(func) or func.__module__ != ops.__name__:
             continue
         params = list(inspect.signature(func).parameters)
         returns = str(inspect.signature(func).return_annotation)
-        if params and params[0] == "scene" and returns in ("Doc", "tuple[Doc, str]"):
+        if params and params[0] == "scene" and returns in ("Doc", "tuple[Doc, str]", "tuple[Doc, int]"):
             found[name] = func
     return found
 
@@ -101,16 +102,16 @@ def apply(project: Project, changes: list[Doc]) -> Doc:
     """
     if not isinstance(changes, list) or not all(isinstance(c, dict) for c in changes):
         raise ChangeError(0, "?", "changes must be a list of objects like {\"op\": ..., ...}.")
-    created: dict[int, str] = {}
+    created: dict[int, str | int] = {}
     with project.transaction():
         for index, change in enumerate(changes):
             made = _apply_one(project, index, change, created)
-            if made:
+            if made is not None:
                 created[index] = made
     return {"ok": True, "applied": len(changes), "created": created}
 
 
-def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str]) -> str | None:
+def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str | int]) -> str | int | None:
     name = str(change.get("op") or change.get("type") or "")  # "type": how older Mesh tools spell it
     func = operations().get(name)
     if func is None:
@@ -174,7 +175,7 @@ def _bind(func: Callable[..., Any], args: Doc, scene: Doc, room: str, project: P
     return bound
 
 
-def _deref(value: Any, created: dict[int, str], index: int, name: str) -> Any:
+def _deref(value: Any, created: dict[int, str | int], index: int, name: str) -> Any:
     if isinstance(value, str) and value.startswith("@") and value[1:].isdigit():
         ref = int(value[1:])
         if ref not in created:

@@ -1364,3 +1364,148 @@ def flag_uses(rooms: dict[str, tuple[str, Doc]]) -> dict[str, list[str]]:
         for entity in entities(scene):
             walk({k: v for k, v in entity.items() if k not in ("x", "y")}, f"{label}: {entity.get('name') or 'object'}")
     return dict(sorted(found.items()))
+
+
+# --- lighting -------------------------------------------------------------------------------
+# Room lighting lives in the scene: ``lights`` (point lights the LightManager draws) and three room settings,
+# each of which falls back to the project's when the room doesn't set it: ``lighting_enabled``,
+# ``lighting_ambient_color`` (how light the room is away from the lamps) and ``lighting_shadows_mode``.
+
+LIGHT_COLOURS: dict[str, str] = {"Warm": "#ffcc88", "White": "#ffffff", "Cold": "#88bbff",
+                                 "Red": "#ff5555", "Green": "#66ff77", "Purple": "#bb77ff"}
+AMBIENT_PRESETS: dict[str, list[int]] = {"Day": [255, 255, 255, 255], "Dusk": [150, 120, 140, 255],
+                                         "Night": [60, 70, 110, 255], "Cave": [30, 30, 40, 255],
+                                         "Black": [6, 6, 10, 255]}
+FLICKER_DEFAULTS: Doc = {"flicker_amount": 0.2, "flicker_speed": 5.0}  # a torch; amount 0 would not move at all
+
+
+def lights(scene: Doc) -> list[Doc]:
+    value = scene.get("lights")
+    return value if isinstance(value, list) else []
+
+
+def _light(scene: Doc, index: int) -> Doc:
+    items = lights(scene)
+    if not 0 <= index < len(items) or not isinstance(items[index], dict):
+        raise OpError("That light is no longer in this room.")
+    return items[index]
+
+
+def rgb(value: Any) -> list[int]:
+    """A colour as ``[r, g, b]``: from ``"#rrggbb"`` or a list (anything else reads as white)."""
+    if isinstance(value, str) and len(value.strip().lstrip("#")) == 6:
+        try:
+            text = value.strip().lstrip("#")
+            return [int(text[i:i + 2], 16) for i in (0, 2, 4)]
+        except ValueError:
+            pass
+    if isinstance(value, (list, tuple)) and len(value) >= 3:
+        try:
+            return [max(0, min(255, int(c))) for c in value[:3]]
+        except (TypeError, ValueError):
+            pass
+    return [255, 255, 255]
+
+
+def _colour(value: Any) -> str | list[int]:
+    if isinstance(value, str) and value in LIGHT_COLOURS:
+        return LIGHT_COLOURS[value]
+    if isinstance(value, (list, tuple)):
+        if len(value) not in (3, 4):
+            raise OpError("A colour needs red, green and blue.")
+        return [int(_number(c, "Each colour part", 0, 255)) for c in value]
+    if isinstance(value, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", value.strip()):
+        return value.strip().lower()
+    raise OpError(f"Unknown colour: {value!r}.")
+
+
+def set_room_lighting(scene: Doc, *, enabled: Any = _UNSET, ambient: Any = _UNSET, shadows: Any = _UNSET) -> Doc:
+    """Change the room's lighting settings; ``None`` removes one, so the room follows the project again."""
+    out = copy.deepcopy(scene)
+    settings = out.setdefault("settings", {})
+    if not isinstance(settings, dict):
+        raise OpError("This room's settings aren't readable.")
+    if enabled is not _UNSET:
+        if enabled is None:
+            settings.pop("lighting_enabled", None)
+        else:
+            settings["lighting_enabled"] = bool(enabled)
+    if ambient is not _UNSET:
+        if ambient is None:
+            settings.pop("lighting_ambient_color", None)
+        else:
+            value = AMBIENT_PRESETS.get(ambient) if isinstance(ambient, str) else ambient
+            if not isinstance(value, (list, tuple)) or len(value) not in (3, 4):
+                raise OpError(f"Unknown room light: {ambient!r}.")
+            settings["lighting_ambient_color"] = [int(_number(c, "Each colour part", 0, 255)) for c in value[:3]] + [255]
+    if shadows is not _UNSET:
+        if shadows is None:
+            settings.pop("lighting_shadows_mode", None)
+        elif shadows in ("hard", "none"):
+            settings["lighting_shadows_mode"] = shadows
+        else:
+            raise OpError("Shadows are either 'hard' or 'none'.")
+    return _checked(scene, out)
+
+
+def add_light(scene: Doc, x: float, y: float, *, color: Any = "Warm", radius: Any = 160) -> tuple[Doc, int]:
+    """Place a point light; returns the scene and the new light's index."""
+    out = copy.deepcopy(scene)
+    if not isinstance(out.get("lights"), list):
+        out["lights"] = []
+    out["lights"].append({"x": float(round(x)), "y": float(round(y)), "radius": _number(radius, "Size", 8, 4000),
+                          "color": _colour(color), "mode": "soft"})
+    return _checked(scene, out), len(out["lights"]) - 1
+
+
+def set_light(scene: Doc, index: int, *, x: Any = _UNSET, y: Any = _UNSET, radius: Any = _UNSET, color: Any = _UNSET,
+              flicker_enabled: Any = _UNSET, flicker_amount: Any = _UNSET, flicker_speed: Any = _UNSET,
+              enabled: Any = _UNSET) -> Doc:
+    """Change a light: position, size (radius), colour (a name, "#rrggbb" or [r, g, b]), flicker, on/off.
+
+    Turning flicker on fills in a torch-like amount and speed if the light has none, so it visibly flickers.
+    Anything else the light carries (keys from older editors) is kept.
+    """
+    fields = {"x": x, "y": y, "radius": radius, "color": color, "flicker_enabled": flicker_enabled,
+              "flicker_amount": flicker_amount, "flicker_speed": flicker_speed, "enabled": enabled}
+    out = copy.deepcopy(scene)
+    light = _light(out, index)
+    for key, value in fields.items():
+        if value is _UNSET:
+            continue
+        if key in ("x", "y"):
+            light[key] = float(round(_number(value, key, -100000, 100000)))
+        elif key == "radius":
+            light[key] = float(round(_number(value, "Size", 8, 4000)))
+        elif key == "color":
+            light["color"] = _colour(value)
+            light.pop("color_rgba", None)  # an older editor's override would hide the new colour
+        elif key in ("flicker_enabled", "enabled"):
+            light[key] = bool(value)
+            if key == "flicker_enabled" and value:
+                for name, default in FLICKER_DEFAULTS.items():
+                    if not light.get(name):
+                        light[name] = default
+        elif key == "flicker_amount":
+            light[key] = _number(value, "Flicker amount", 0, 1)
+        elif key == "flicker_speed":
+            light[key] = _number(value, "Flicker speed", 0, 60)
+    return _checked(scene, out)
+
+
+def duplicate_light(scene: Doc, index: int, *, dx: float = 32, dy: float = -32) -> tuple[Doc, int]:
+    """Copy a light a little to the side; returns the scene and the copy's index."""
+    out = copy.deepcopy(scene)
+    copied = copy.deepcopy(_light(out, index))
+    copied.pop("id", None)
+    copied["x"], copied["y"] = float(copied.get("x", 0)) + dx, float(copied.get("y", 0)) + dy
+    out["lights"].append(copied)
+    return _checked(scene, out), len(out["lights"]) - 1
+
+
+def remove_light(scene: Doc, index: int) -> Doc:
+    """Delete a light (later lights move down one index)."""
+    out = copy.deepcopy(scene)
+    _light(out, index)
+    del out["lights"][index]
+    return _checked(scene, out)

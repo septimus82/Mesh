@@ -29,6 +29,9 @@ def runtime_snapshot(window: Any) -> dict[str, Any]:
             "ambient": list(getattr(lighting, "ambient_color", ()) or ()),
             "ambient_tint": list(getattr(lighting, "ambient_tint", ()) or ()),
             "static_lights": len(getattr(lighting, "_static_lights", []) or []),
+            "static": [{"at": _xy(getattr(light, "position", None)), "radius": float(getattr(light, "radius", 0) or 0),
+                        "color": list(getattr(light, "color", None) or getattr(light, "_color", ()) or ())}  # arcade keeps it private
+                       for light in getattr(lighting, "_static_lights", []) or []],
             "occluders": len(getattr(lighting, "_static_occluders", []) or []),
             "dynamic": [{"at": _xy(getattr(getattr(h, "light", None), "position", None)),
                          "radius": float(getattr(h, "base_radius", 0) or 0),
