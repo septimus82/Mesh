@@ -212,21 +212,32 @@ def end_hard_shadows_overlay(manager: Any) -> bool:
     drawn = 0
     draw_poly = getattr(engine.optional_arcade.arcade, "draw_polygon_filled", None)
     if callable(draw_poly):
-        vx = float(viewport.x)
-        vy = float(viewport.y)
-        for poly in polys:
-            if not isinstance(poly, list) or len(poly) < 3:
-                continue
-            pts = [(float(x - vx), float(y - vy)) for x, y in poly]
-            try:
-                draw_poly(pts, (0, 0, 0, 180))
-                drawn += 1
-            except Exception:  # pragma: no cover  # noqa: BLE001  # REASON: shadow pipeline fallback
-                _log_swallow(
-                    "SHDW-004",
-                    "engine.lighting.shadow_pipeline.end_hard_shadows_overlay draw_polygon_filled",
-                    once=True,
-                )
+        # Shadows are in world coordinates, like the lights: draw them through the world camera (scroll and
+        # zoom), then return to the GUI camera end() runs under. Subtracting the camera's corner ignored zoom,
+        # so at any zoom but 1 the shadows were drawn away from their occluders.
+        world_camera = getattr(window, "camera", None)
+        through_camera = callable(getattr(world_camera, "use", None))
+        vx, vy = (0.0, 0.0) if through_camera else (float(viewport.x), float(viewport.y))
+        if through_camera:
+            world_camera.use()
+        try:
+            for poly in polys:
+                if not isinstance(poly, list) or len(poly) < 3:
+                    continue
+                pts = [(float(x - vx), float(y - vy)) for x, y in poly]
+                try:
+                    draw_poly(pts, (0, 0, 0, 180))
+                    drawn += 1
+                except Exception:  # pragma: no cover  # noqa: BLE001  # REASON: shadow pipeline fallback
+                    _log_swallow(
+                        "SHDW-004",
+                        "engine.lighting.shadow_pipeline.end_hard_shadows_overlay draw_polygon_filled",
+                        once=True,
+                    )
+        finally:
+            restore = getattr(getattr(window, "camera_controller", None), "use_gui_camera", None)
+            if through_camera and callable(restore):
+                restore()
 
     manager._last_lighting_stats = {
         "shadows_mode": manager.shadows_mode,

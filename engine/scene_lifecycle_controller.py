@@ -45,6 +45,13 @@ def configure_scene_lighting(window: Any, scene: dict[str, Any], settings: Any, 
     clear_dynamic = getattr(lighting, "clear_dynamic_lights", None)
     if callable(clear_dynamic):
         clear_dynamic()
+    # A room may switch lighting on or off; one that doesn't say gets the project's setting. (Before this the
+    # scene key was documented and used by demo scenes but never read.) Set before objects spawn: their lights
+    # only register while lighting is on.
+    project_default = getattr(getattr(window, "engine_config", None), "lighting_enabled", None)
+    wanted = settings.get("lighting_enabled", project_default) if isinstance(settings, dict) else project_default
+    if wanted is not None:
+        lighting.enabled = bool(wanted) and bool(getattr(lighting, "available", True))
     lights_cfg = scene.get("lights")
     if isinstance(lights_cfg, list):
         lighting.configure_scene_lights(lights_cfg)

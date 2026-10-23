@@ -607,6 +607,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
             shadows_mode=getattr(self.engine_config, "lighting_shadows_mode", "hard"),
             debug_shadows=getattr(self.engine_config, "lighting_debug_shadows", False),
         )
+        self.lighting.base_ambient_color = getattr(self.lighting, "ambient_color", None)  # the project's; day/night changes ambient_color
         ambient_tint = getattr(self.engine_config, "ambient_light_rgba", None)
         if ambient_tint is not None:
             self.lighting.set_ambient_tint(ambient_tint)

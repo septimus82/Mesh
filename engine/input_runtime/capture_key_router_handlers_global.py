@@ -272,6 +272,13 @@ def _handle_savegame_load_or_play(window: Any) -> bool:
             starter()
             return True
 
+    manager = getattr(window, "save_manager", None)
+    if manager is not None:
+        # The quick save F5 writes (F9 loads it too). save_1.json is written only without a SaveManager, so
+        # loading it here brought back a stale or missing save.
+        manager.load_game(QUICKSAVE_SLOT)
+        return True
+
     from engine import savegame  # noqa: PLC0415
 
     try:

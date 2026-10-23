@@ -151,18 +151,20 @@ def apply_scene_settings(controller: Any, settings: Dict[str, Any]) -> None:
         return
 
     color_name = settings.get("background_color")
-    if isinstance(color_name, str):
-        color_value = getattr(optional_arcade.arcade.color, color_name.upper(), None)
-        if color_value:
-            optional_arcade.arcade.set_background_color(color_value)
-            return
-    optional_arcade.arcade.set_background_color(optional_arcade.arcade.color.DARK_BLUE_GRAY)
+    color_value = getattr(optional_arcade.arcade.color, color_name.upper(), None) if isinstance(color_name, str) else None
+    # (A named colour used to return here, so a room with one never applied its day/night keys or initial_spawn.)
+    optional_arcade.arcade.set_background_color(color_value or optional_arcade.arcade.color.DARK_BLUE_GRAY)
 
-    # Day/night overrides
+    # Day/night: a room that doesn't say gets the project's setting, not the last room's
     day_night = getattr(controller.window, "day_night", None)
     if day_night is not None:
-        if "day_night_enabled" in settings:
-            day_night.enabled = bool(settings.get("day_night_enabled"))
+        config = getattr(controller.window, "engine_config", None)
+        enabled = bool(settings.get("day_night_enabled", getattr(config, "day_night_enabled", False)))
+        lighting = getattr(controller.window, "lighting", None)
+        base_ambient = getattr(lighting, "base_ambient_color", None)
+        if getattr(day_night, "enabled", False) and not enabled and lighting is not None and base_ambient is not None:
+            lighting.ambient_color = base_ambient  # the clock stops: back to the project's ambient light
+        day_night.enabled = enabled
         if "time_of_day_hour" in settings:
             try:
                 day_night.set_hour(float(settings["time_of_day_hour"]))
