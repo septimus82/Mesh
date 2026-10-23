@@ -292,11 +292,49 @@ The Milestone 1 and 2 acceptance tests pass on the same code (15/15 and 23/23).
 2. **`live_add_entity_from_prefab` reported success** for changes that couldn't apply.
 3. **A replaced or removed picture silently dropped an object's animation** (the My Game1 report).
 
+## Milestone 7 — capability preservation and consolidation
+
+**Goal:** know what Mesh can actually do, verify it in the running engine, find duplicated or broken implementations, and make Mesh leaner without making it less capable. Reports:
+- [`docs/reviews/milestone7_capability_inventory.md`](docs/reviews/milestone7_capability_inventory.md)
+- [`docs/reviews/milestone7_capability_lab.md`](docs/reviews/milestone7_capability_lab.md)
+- [`docs/reviews/milestone7_consolidation_plan.md`](docs/reviews/milestone7_consolidation_plan.md)
+
+### Acceptance criteria and status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Capability inventory, classified, verified findings separate from code-read ones | **Done** | Inventory report; sections A–F, other subsystems, 2.5D |
+| Overlap investigation (events, quests, animation, saves, editor imports, input, project ops) | **Done** | Consolidation plan, section 1 |
+| Verification harness in the real window | **Done** | `tooling/capability_lab.py`: **16/17**. The remaining failure is a confirmed defect (`background_planes` rejected by the schema), documented, not patched. |
+| Studio integration per capability and a prioritised gap list | **Done** | Inventory "Studio" column; plan section 4 (lighting and HD-2D first) |
+| Only small, evidence-backed consolidation | **Done** | Eight engine bugs fixed at their source with regression tests; the outline model moved out of `engine/editor/`; nothing deleted |
+| 2.5D height investigated | **Done** | Not implemented anywhere (inventory, last section) |
+
+### How it was validated
+
+- **Lab:** the first run passed 7/17; after the fixes, 16/17 (measurements and screenshots in `docs/reviews/milestone7_lab/`).
+- **Earlier milestones' acceptance:** M1 15/15, M2 23/23, M3 15/15, M4 20/20, M5 17/17, M6 14/14.
+- **Full suite:** the 9 baseline failures, nothing new. The ruff gate and mypy island are clean.
+
+### Bugs found and fixed while building it
+
+Every one sat behind green unit tests.
+
+1. Light glow ignored the camera.
+2. Object lights were never removed, and leaked into later rooms.
+3. A room's darkness carried into the next room.
+4. Day/night overwrote the project's ambient light while switched off.
+5. SequencePlayer `move_to` (and Patrol, FollowTarget) moved their speed per frame.
+6. Batching broke y-sort.
+7. Sprite shadows were hidden under their sprites.
+8. Projectiles moved 300 px per frame.
+
 ## Known limitations (honest list)
 
 - **Placeholder character art.** Still the coloured-square sheet; the owner's decision.
 - **No counter conditions.** Choices count up, but nothing can require "graves_dug ≥ 3"; flags gate everything.
-- **Event sequences beyond conversations** (wait, move, sound) are `ActionListRunner` JSON in the Behaviours tab.
+- **Event sequences beyond conversations** (wait, move, signal) run in `SequencePlayer`, which works since Milestone 7. Studio can't edit its steps yet (JSON only). `ActionListRunner` does nothing in the live game (see the Milestone 7 inventory).
+- **Lighting, parallax, camera zoom and the HD-2D look** work in the engine (Milestone 7 lab) but are set in JSON or the legacy editor; Studio has no controls for them yet.
 - **Long inspector sections scroll** with the mouse wheel; there's no scrollbar to drag.
 - **Map tools are still basic.**
   - Three layers.
@@ -319,6 +357,7 @@ All recorded with restore instructions in `MESH_SALVAGE.md`:
 
 ## Next slices, in order
 
+0. **Runtime correctness, measured** (Milestone 7's recommendation): extend the Capabilities Lab to everything still UNVERIFIED, fix what it finds, and make the lab a gate. Then the low-risk consolidations (one event bus, quests #128, SaveManager-only, background planes → layers), then Studio's lighting controls.
 1. **Finish the single operation path:** route the legacy CLI scene commands that target Studio projects through `engine/authoring`, then retire their duplicate code; move the remaining `AIOps` operations (lights, quests, world links) onto `project_ops` operations.
 2. **Launcher follow-ups:** return to the launcher when the Studio closes; rename, move or delete projects; a packaged build.
 3. **Monster code as a plugin** via `PluginManager`; project-scoped `behaviours/` folder for custom scripts.

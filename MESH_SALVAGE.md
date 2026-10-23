@@ -33,7 +33,7 @@ Sources: five read-only code audits (runtime; behaviours and content; editor; Cr
 | Operation layers (`ai_ops.py`, live ops, plan executor, CLI scene ops) | **REFACTOR** (started) | Four mutation vocabularies; `ai_ops` writes files without validation; `OP_CATALOG` is a hand-kept copy. | New canonical layer `engine/project_ops.py` (pure, validated). The Studio uses it now; MCP/AI/CLI must be ported to it, with proposals as an optional wrapper. |
 | MCP server / live bridge | **KEEP** as adapters | 23 tools + 1 resource; stage/accept/reject over loopback. | Point them at `project_ops` next. |
 | CLI | **REFACTOR / ARCHIVE** | ~35 user, ~50 dev/CI, ~35 legacy/demo commands; ~22 dead candidates. | Not touched in this pass. |
-| Plugin system (`plugin_system.py`) | **REFACTOR later** | Loads `mods/` only from the engine repo root, only at game runtime; projects can't add behaviours. | Needed for "advanced scripting stays available". |
+| Plugin system (`plugin_system.py`) | **KEEP** (corrected in Milestone 7) | First audit said `mods/` loads only from the engine repo. The Milestone 7 lab showed otherwise: `find_repo_root` stops at the folder holding `config.json`, so a game run from a project loads `<project>/mods/`. A lab plugin added a behaviour that ran in play. | Projects *can* add behaviours. Still to do: `mesh new-behaviour` writes into the engine, not the project. |
 | Monster game (`engine/monster/`, 20 modules, ~5.7k lines) | **EXTRACT** to an optional plugin | One eager import (`game.py`) plus ~12 call sites; the core depends on monster, not the reverse; `PluginManager` can host it. | Not done yet. Steps listed in the audit (event for walk distance, plugin-registered debug keys and zone behaviours). |
 | Demo content (episodes, golden slices, act worlds, campaign/replay tooling, ~62 demo-only tests) | **ARCHIVE** | Hardcoded preset branches in the engine; ~6–9% of tests protect demo content. | Not done yet; large but mechanical. |
 | Root session leftovers, committed pytest artefacts (`.pytest-gate-deps/`, 224 files) | **REMOVE** | Nothing references them (grep). | See removal record. |
@@ -75,3 +75,40 @@ Further removals are listed under "Next" in `MESH_REBUILD.md`.
 | **Studio look and widgets** (colours, button styles, the text field and its clipboard keys, OS file pickers) | **Consolidated** into `engine/studio_ui.py`, used by both Mesh Studio and the launcher. | — |
 | **`mesh.bat`** (CLI shim) vs **`Mesh Engine.bat`** (double-click launcher) | Both kept: different jobs. `mesh.bat` runs `mesh_cli` commands; `Mesh Engine.bat` opens the launcher. | — |
 
+
+## Milestone 7: capability preservation
+
+Full reports:
+- [`docs/reviews/milestone7_capability_inventory.md`](docs/reviews/milestone7_capability_inventory.md)
+- [`docs/reviews/milestone7_capability_lab.md`](docs/reviews/milestone7_capability_lab.md)
+- [`docs/reviews/milestone7_consolidation_plan.md`](docs/reviews/milestone7_consolidation_plan.md)
+
+**Preservation decisions.**
+- Nothing was deleted.
+- Kept explicitly, whether or not Studio shows them yet:
+  - lighting and shadows (static, dynamic, flicker, occluders, cookies, shafts; soft shadows are kept although unreachable);
+  - HD-2D (y-sort, `render_layer`/`depth_z`, shadows, depth tint, outlines);
+  - parallax (`background_layers`; `background_planes` until converted);
+  - camera (follow, zoom, areas, shake);
+  - navigation and AI behaviours;
+  - all three timeline engines until merged;
+  - particles, audio, prefabs, plugins;
+  - asset tooling;
+  - save formats until migrated;
+  - generic combat.
+- Post-processing is unreachable, but is kept until someone wires it or decides to archive it.
+- Monster code stays a future plugin; no generic system depends on it.
+
+**Changed in Milestone 7** (bug fixes found by running the engine; each has a regression test):
+
+| Change | Why | Restore |
+|---|---|---|
+| `LightManager._draw_layer_safe` draws lights through the world camera, then returns to the GUI camera | Light glow ignored the camera (drawn at world coordinates in screen space) while shadows used it | `git show d32e58d:engine/lighting/__init__.py` |
+| `configure_scene_lighting` (split out of `load_scene`) clears object lights and resets the room ambient to the project default; new `LightManager.clear_dynamic_lights` | Lights and darkness leaked into later rooms | `git show d32e58d:engine/scene_lifecycle_controller.py` |
+| `DayNightCycle` applies its colour at start-up only when enabled | It overwrote the project's ambient while switched off | `git show d32e58d:engine/day_night.py` |
+| SequencePlayer `move_to`, Patrol and FollowTarget pass this frame's distance to the mover | They passed a speed and `dt`; the mover ignores `dt` | `git show d32e58d:engine/behaviours/<file>` |
+| `SpriteDrawList.build_batches` merges only consecutive draws | Batching broke y-sort order | `git show d32e58d:engine/render_queue.py` |
+| Sprite shadows anchor at the feet (`sprite_feet_y`, shared with y-sort; renamed from `_sprite_feet_y`) | Anchored at the centre, opaque sprites hid their own shadow | `git show d32e58d:engine/sprite_shadow_model.py` |
+| Projectile velocity converted to arcade's per-frame unit | Shots moved 300 px per frame | `git show d32e58d:engine/behaviours/projectile.py` |
+| `engine/editor/hd2d/sprite_outline_model.py` moved to `engine/sprite_outline_model.py`; both old import paths are shims | The render path's only `engine.editor` dependency | Shims keep old imports working |
+| Ratchet baselines: lighting exception-envelope line numbers (+2), silent-pass list (3 → 1); fast-marking allowlist (−1 entry) | Same handlers moved; one test file gained a marker | Documented update commands |
