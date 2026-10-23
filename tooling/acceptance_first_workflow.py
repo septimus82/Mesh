@@ -183,8 +183,9 @@ def run(out: Path) -> int:
             p.button("Add behaviour...")
             p.wait(lambda s: s["panel"] == "add_behaviour", "the behaviour picker")
             p.d.type_text("Health")
-            p.wait(lambda s: any(w["type"] == "button" and w["text"] == "Health" for w in s["widgets"]), "Health in the picker")
-            p.button("Health")
+            # The picker shows behaviours by their plain-language names (Milestone 11): Health is "Has health".
+            p.wait(lambda s: any(w["type"] == "button" and w["text"] == "Has health" for w in s["widgets"]), "Health in the picker")
+            p.button("Has health")
             s = p.wait(lambda s: s["message"] == "Added: Has health.", "Health added")
             assert any(w["type"] == "field" for w in s["widgets"]), "Health's settings should be editable fields"
 

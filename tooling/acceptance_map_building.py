@@ -181,15 +181,20 @@ def run(out: Path) -> int:
         # Take the Person's Dialogue off (Behaviours tab), then add it back through the right-click menu.
         p().button("Behaviours")
         p().wait(lambda s: s["tab"] == "behaviours", "the Behaviours tab")
-        p().button("Remove", nth=0)
+        # The Remove on Talk's row (a Person also has "Animate the picture" since Milestone 11).
+        s = p().state()
+        talk = next(w for w in s["widgets"] if w["type"] == "button" and w["text"].endswith(" Talk"))
+        remove = min((w for w in s["widgets"] if w["type"] == "button" and w["text"] == "Remove"),
+                     key=lambda w: abs(w["rect"][1] - talk["rect"][1]))
+        p().d.click(*p()._xy(remove["rect"]))
         p().wait(lambda s: s["message"] == "Removed: Talk.", "Dialogue removed")
         p().click_obj("Elder", right=True)
         p().wait(lambda s: any(w["text"] == "Add behaviour..." for w in s["widgets"]), "the context menu")
         p().button("Add behaviour...")
         p().wait(lambda s: s["panel"] == "add_behaviour", "the behaviour picker")
         p().d.type_text("Dialogue")
-        p().wait(lambda s: any(w["type"] == "button" and w["text"] == "Dialogue" for w in s["widgets"]), "Dialogue listed")
-        p().button("Dialogue")
+        p().wait(lambda s: any(w["type"] == "button" and w["text"] == "Talk" for w in s["widgets"]), "Dialogue listed (as Talk)")
+        p().button("Talk")
         p().wait(lambda s: s["message"] == "Added: Talk.", "Dialogue added")
         p().button("Dialogue")  # what they say is on the Dialogue tab
         p().wait(lambda s: s["tab"] == "dialogue", "the Dialogue tab")
@@ -292,11 +297,16 @@ def run(out: Path) -> int:
         after = p().player()
         wall_inner_edge = (ROOM_COLS.start + 1) * 32
         assert after[0] < before[0] - 20, f"the player should have walked left: {before} -> {after}"
-        assert after[0] >= wall_inner_edge + 24, f"the player walked into the wall: x={after[0]:.0f}"
+        # The player collides with its feet (Milestone 11): 60% of its width, centred.
+        w = next(sp["size"][0] for sp in p().state()["play"]["sprites"] if sp["name"] == "Player")
+        assert after[0] >= wall_inner_edge + w * 0.3 - 2, f"the player walked into the wall: x={after[0]:.0f} (width {w})"
         p().d.hold("W", 1.6)  # and at the top wall
         top = p().player()
         top_wall_inner_edge = (16 - ROOM_ROWS.start) * 32 - 32
-        assert top[1] <= top_wall_inner_edge - 24, f"the player walked into the top wall: y={top[1]:.0f}"
+        # Its feet (the bottom quarter, at least 8 px) stop at the wall: the head may overlap the wall's face.
+        h = next(sp["size"][1] for sp in p().state()["play"]["sprites"] if sp["name"] == "Player")
+        limit = top_wall_inner_edge + h / 2 - max(8.0, h * 0.25)
+        assert top[1] <= limit + 2, f"the player walked into the top wall: y={top[1]:.0f}, limit {limit:.0f}"
         return {"from": before, "stopped_at_left_wall": after, "stopped_at_top_wall": top}
 
     def s17_stop_unchanged() -> None:

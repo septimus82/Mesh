@@ -355,7 +355,12 @@ def run(out: Path) -> int:
         return json.loads((project / SCENE).read_text(encoding="utf-8"))
 
     def entity_on_disk(name: str) -> dict[str, Any]:
-        return next(e for e in scene_on_disk()["entities"] if e.get("name") == name)
+        found = [e for e in scene_on_disk()["entities"] if e.get("name") == name]
+        if found:
+            return found[0]
+        # The player is defined once for the whole game (Milestone 11): the project's "player" prefab.
+        prefabs = json.loads((project / "assets/prefabs.json").read_text(encoding="utf-8"))
+        return next(p["entity"] for p in prefabs if p["entity"].get("name") == name)
 
     def remember(name: str) -> None:
         o = p().obj(name)
@@ -437,11 +442,11 @@ def run(out: Path) -> int:
         p().tab("Dialogue")
         p().press("+ First line")
         p().fill("line_text", "I cannot dig with my bare hands.")
-        p().press("+ Line")  # line 2
+        p().press_prefix("+ Next line")  # line 2
         p().fill("line_text", "Elara Vance. Shall I dig?")
-        p().press("+ Line")  # line 3
+        p().press_prefix("+ Next line")  # line 3
         p().fill("line_text", "The coffin is empty.")
-        p().press("+ Line")  # line 4
+        p().press_prefix("+ Next line")  # line 4
         p().fill("line_text", "The grave is already open.")
         # Lines 1 and 3 end the conversation instead of running on into the next line.
         for number in (1, 3):
@@ -512,16 +517,16 @@ def run(out: Path) -> int:
         p().tab("Dialogue")
         p().fill("says", "Who's there? Grave robber!")
         p().press("Starts by itself: Off")
-        p().press("+ Line")
+        p().press_prefix("+ Next line")
         p().fill("line_text", "Easy, old man. I didn't come to steal.")
         p().fill("line_speaker", "Ezekiel")
-        p().press("+ Line")
+        p().press_prefix("+ Next line")
         p().fill("line_text", "Then what did you find down there?")
         p().press("+ Choice")
         p().fill("choice_text", "Nothing. It was empty.")
         p().press("+ Choice")
         p().fill("choice_text", "Say nothing")
-        p().press("+ Line")
+        p().press("+ Separate line")  # line 3 ends in choices: a choice leads here
         p().fill("line_text", "Empty? Then God help us both.")
         p().open_line(3)
         p().open_choice(0)

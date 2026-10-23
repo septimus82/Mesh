@@ -295,8 +295,18 @@ def run(out: Path, old_projects: list[Path]) -> int:
             s = studio_opens().state()
             held["studio"].shot(f"18_{index}_older_project_{original.name}")
             assert s.get("map") and s["objects"], f"{original.name}: nothing to edit"
-            opened[str(original)] = {"tilesets": s["tilesets"], "objects": len(s["objects"])}
-            close_studio()
+            opened[str(original)] = {"tilesets": s["tilesets"], "objects": len(s["objects"]), "message": s["message"]}
+            if s["dirty"]:
+                # Milestone 11: a project from before one shared player is migrated on open (and says so), so
+                # closing asks whether to save. Discard: the copy stays as it was.
+                held["studio"].click_close_button(wait=False)
+                held["S"].wait(lambda s: s["modal"] == "close", "the save-before-closing question")
+                held["S"].button("Discard")
+                held["studio"].proc.wait(timeout=20)
+                held["studio"] = None
+                studio_layout.unlink(missing_ok=True)
+            else:
+                close_studio()
             assert tree_digest(original) == before, f"{original} was modified"
         if not old_projects:
             raise AssertionError("no older projects given (--old)")

@@ -302,7 +302,11 @@ def run(out: Path) -> int:
         p().d.hold("W", 1.4)
         stopped = p().player()
         wall_bottom = 512 - (HOUSE[1][1] + 1) * 32
-        assert wall_bottom - 32 - 6 <= stopped[1] <= wall_bottom - 32 + 4, f"should stop flush below the wall: {stopped}"
+        # The player collides with its feet (Milestone 11): the top of the feet box meets the wall's bottom edge.
+        h = next(sp["size"][1] for sp in p().state()["play"]["sprites"] if sp["name"] == "Player")
+        feet_top = -h / 2 + max(8.0, h * 0.25)  # physics_runtime.footprint, relative to the centre
+        expected = wall_bottom - feet_top
+        assert expected - 6 <= stopped[1] <= expected + 4, f"should stop with its feet at the wall: {stopped}, expected {expected}"
         return {"stopped_at": stopped}
 
     def s15_stop_unchanged() -> None:
