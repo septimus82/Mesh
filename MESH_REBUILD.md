@@ -329,6 +329,41 @@ Every one sat behind green unit tests.
 7. Sprite shadows were hidden under their sprites.
 8. Projectiles moved 300 px per frame.
 
+## Milestone 8 — runtime reliability and persistent game state
+
+**Goal:** make the existing engine dependable before expanding it. Details and evidence: [`docs/reviews/milestone8_runtime_reliability.md`](docs/reviews/milestone8_runtime_reliability.md).
+
+### Acceptance criteria and status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| A trustworthy regression baseline | **Done** | Full suite at `da2616b`: exactly the 9 baseline failures. The baseline gate's two failures were investigated: a lost OS mouse press (rerun 15/15) and a lab sampling flaw (fixed in the harness). |
+| The capability lab as a repeatable gate | **Done** | `py -3.13 tooling/runtime_gate.py`: all eight real-window suites, one reused output folder, one retry with FLAKY reporting, KNOWN for documented defects. About 45 minutes; not in the quick cycle. |
+| Persistence across rooms, saves and a restart | **Done** | `tooling/acceptance_persistence.py`: 4/12 at first, 12/12 now, including closing and relaunching Mesh Studio before loading |
+| Newly confirmed runtime defects fixed and regression-tested | **Done** | 9 defects confirmed in the window and 1 found in the code, all fixed, each with a unit test that fails without it. The lab: 27/27 plus 1 KNOWN. |
+| Consolidation only where it improves reliability | **Partly** | QuestHook on the live event path; F6 loads the SaveManager quick save. `background_planes` and the quick snapshot are deferred, with the evidence why. |
+
+### How it was validated
+
+- **Full suite, final:** 9 failed, 9,365 passed, 8 skipped (`py -3.13 -m pytest -q -p no:cacheprovider` at the Milestone 8 head): exactly the 9 baseline failures.
+- **Runtime gate, final:** 8/8 suites, no retries: M1 15/15, M2 23/23, M3 15/15, M4 20/20 (with `./mygame` copied as the older project, original checked unchanged), M5 17/17, M6 14/14, persistence 12/12, capability lab 27/27 plus 1 KNOWN.
+- **Ruff gate and mypy island:** clean.
+
+### Bugs found and fixed while building it
+
+Each was confirmed in the real window except 4, which was read in the code and fixed because room memory needs the real room. Every one sat behind green unit tests.
+
+1. Door arrival spots off the map.
+2. Collected or defeated objects came back after leaving a room, or after loading a save.
+3. A loaded save's object states went to the room being left.
+4. Saves made after a load recorded the save file as their room.
+5. Hard shadows ignored camera zoom.
+6. Day/night never ran in Studio rooms, which name a background colour (that also skipped `initial_spawn`).
+7. A room couldn't switch lighting off.
+8. EnemyAI chased at 9 px/s for a speed of 100.
+9. NPC schedules never moved anyone.
+10. QuestHook heard no events in play.
+
 ## Known limitations (honest list)
 
 - **Placeholder character art.** Still the coloured-square sheet; the owner's decision.
@@ -357,7 +392,7 @@ All recorded with restore instructions in `MESH_SALVAGE.md`:
 
 ## Next slices, in order
 
-0. **Runtime correctness, measured** (Milestone 7's recommendation): extend the Capabilities Lab to everything still UNVERIFIED, fix what it finds, and make the lab a gate. Then the low-risk consolidations (one event bus, quests #128, SaveManager-only, background planes → layers), then Studio's lighting controls.
+0. **Studio lighting controls** on the now-verified runtime (lights, occluders, room ambient and lighting on/off), then the HD-2D look and camera zoom areas. Keep running `tooling/runtime_gate.py` at the end of each milestone. Deferred from Milestone 8: `background_planes` → `background_layers` (needs a visual-equivalence test), quick snapshots into SaveManager slots (monster companion state), a respawn option for defeated enemies, and the templates' CameraFollow `zoom: 1.0` that overrides a room's own zoom.
 1. **Finish the single operation path:** route the legacy CLI scene commands that target Studio projects through `engine/authoring`, then retire their duplicate code; move the remaining `AIOps` operations (lights, quests, world links) onto `project_ops` operations.
 2. **Launcher follow-ups:** return to the launcher when the Studio closes; rename, move or delete projects; a packaged build.
 3. **Monster code as a plugin** via `PluginManager`; project-scoped `behaviours/` folder for custom scripts.

@@ -677,6 +677,7 @@ def run(out: Path, only: set[str] | None = None) -> int:
         driver.close()
     headless(results, root, record)
     (out / "lab_report.json").write_text(json.dumps({"results": results}, indent=2), encoding="utf-8")
+    shutil.rmtree(root, ignore_errors=True)  # the disposable project goes; the report and screenshots stay
     passed = sum(r["status"] == "PASS" for r in results)
     known = sum(r["status"] == "KNOWN" for r in results)
     print(f"{passed}/{len(results) - known} checks passed; {known} known defect(s) reported apart; "

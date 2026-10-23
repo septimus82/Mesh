@@ -112,3 +112,24 @@ Full reports:
 | Projectile velocity converted to arcade's per-frame unit | Shots moved 300 px per frame | `git show d32e58d:engine/behaviours/projectile.py` |
 | `engine/editor/hd2d/sprite_outline_model.py` moved to `engine/sprite_outline_model.py`; both old import paths are shims | The render path's only `engine.editor` dependency | Shims keep old imports working |
 | Ratchet baselines: lighting exception-envelope line numbers (+2), silent-pass list (3 → 1); fast-marking allowlist (−1 entry) | Same handlers moved; one test file gained a marker | Documented update commands |
+
+## Milestone 8: runtime reliability
+
+Report: [`docs/reviews/milestone8_runtime_reliability.md`](docs/reviews/milestone8_runtime_reliability.md). Nothing was deleted. Restore any file as it was before with `git show da2616b:<path>`.
+
+| Change | Why | Restore / note |
+|---|---|---|
+| Room memory (`engine/scene_runtime/room_memory.py`; hooks in `load_scene` and `build_slot_payload`): authored objects removed during play stay removed per room, in the game state | Collected objects came back after leaving a room or loading a save | Stored as the game-state variable `room_memory`; a new game clears it. Older saves load unchanged: they simply have no room memory. |
+| `SceneController.room_path` and `SceneLoader.last_saved_from`; saves record the real room in `meta.scene_path` | After a load, saves recorded the save file as their room | — |
+| SaveManager queues a loaded save's object states for the saved room (`_pending_saved_entities`) | They were applied to the room being left | The immediate apply is unchanged |
+| `project_ops._arrival_spot`: door arrivals stay on the map | Arrivals 96 px below a bottom-row door were outside the map | Already-authored arrival spots are not moved |
+| Studio resets the game state when play stops | Editing would otherwise hide objects collected in play | `engine/studio.py` |
+| Hard-shadow polygons drawn through the world camera | They ignored zoom | `engine/lighting/shadow_pipeline.py` |
+| `apply_scene_settings` no longer returns early on a named background colour; a room without day/night keys gets the project's setting; `LightManager.base_ambient_color` | Day/night and `initial_spawn` were skipped in Studio rooms; day/night leaked between rooms | `engine/scene_runtime/scene_load_apply.py`, `engine/game.py` |
+| `settings.lighting_enabled` read per room | Documented and used by demo scenes, never read | Rooms without the key keep the project's setting |
+| EnemyAI moves every frame, steering every `repath_interval` | It moved only when it steered | `engine/behaviours/enemy_ai.py` |
+| NpcSchedule finds its Patrol on its first update | It looked before the behaviours were attached | `engine/behaviours/npc_schedule.py` |
+| QuestHook also listens on the live event path when no gameplay bus exists | It subscribed only to a bus the game never creates | **Consolidation:** the live bus is the one path in play. The gameplay bus stays for the episode harness; events go to one or the other, never both. |
+| F6 in play loads the SaveManager quick save | It loaded `save_1.json`, which F5 writes only without a SaveManager | **Consolidation:** `SaveGameV1` remains only as the no-SaveManager fallback of F5 and F6 |
+| **Deferred:** `background_planes` → `background_layers` | Different coordinate models; layers have no alpha or offset; no content uses planes | The lab reports it as KNOWN |
+| **Deferred:** quick snapshot (`quick.json`, Ctrl+F6) into slots | The monster companion's persistence is built on it | Needs a migration of that state |
