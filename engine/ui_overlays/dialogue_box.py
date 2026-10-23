@@ -449,9 +449,11 @@ class DialogueBox(UIElement):
 
         if self._choices:
             choice_x = text_x + 4.0
-            choice_y = layout.choice_y_start
             max_choice_width = layout.inner_width - 8.0
             for index, choice in enumerate(self._choices):
+                # Top to bottom in the authored order (y points up: the first choice gets the highest row), so
+                # "down" moves down the list. They were drawn bottom-up, the first choice last.
+                choice_y = layout.choice_y_start + (len(self._choices) - 1 - index) * CHOICE_LINE_HEIGHT
                 raw_text = str(choice.get("text", ""))
                 label = format_choice_label(raw_text, max_columns=layout.choice_label_columns)
                 disabled = bool(choice.get("disabled"))
@@ -479,7 +481,6 @@ class DialogueBox(UIElement):
                     width=int(max_choice_width),
                     cache=self._text_cache,
                 )
-                choice_y += CHOICE_LINE_HEIGHT
 
     def _compute_initial_choice_index(self) -> int:
         if not self._choices:
