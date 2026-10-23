@@ -12,12 +12,17 @@ _label), its edit path (_edit) and its state (project, selected).
 from __future__ import annotations
 
 import time
+from functools import partial
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 import engine.optional_arcade as optional_arcade
 from engine import project_ops as ops
 from engine.studio_ui import C_MUTED, C_OK, C_TEXT, S_ACTIVE, S_BUTTON, S_DANGER, ask_path, gui
+
+if TYPE_CHECKING:
+    from engine.studio_ai import Proposal, StudioAIHost
+    from engine.studio_project import Project
 
 TABS = (("look", "Look"), ("animation", "Animation"), ("collision", "Collision"),
         ("dialogue", "Dialogue"), ("conditions", "Conditions"), ("behaviours", "Behaviours"))
@@ -79,6 +84,35 @@ def _short(text: str, limit: int) -> str:
 class InspectorMixin:
     """The tabbed inspector, the picture browser, the conversation tester and the flag pickers."""
 
+    if TYPE_CHECKING:  # what the mixin uses of its host, ``engine.studio.Studio``
+        project: Project
+        ai: StudioAIHost
+        expanded: str | None
+        mouse: tuple[float, float]
+        _images: dict[str, Any]
+        _focusable: dict[str, gui.UIInputText]
+
+        def _label(self, text: str, *, color: tuple[int, int, int] = C_TEXT, size: int = 11, width: int | None = None,
+                   bold: bool = False) -> gui.UILabel: ...
+        def _button(self, text: str, action: Callable[[], object], *, width: int = 100, style: dict[str, Any] = S_BUTTON,
+                    disabled: bool = False) -> gui.UIFlatButton: ...
+        def _field(self, text: str, commit: Callable[[str], object], *, width: int, key: str | None = None) -> gui.UIInputText: ...
+        def _edit(self, change: Callable[[dict[str, Any]], dict[str, Any]], ok: str = "") -> bool: ...
+        def _rebuild(self) -> None: ...
+        def _say(self, text: str, ok: bool = True) -> None: ...
+        def _flush_fields(self) -> None: ...
+        def _cancel_panel(self) -> None: ...
+        def _toggle_expand(self, name: str) -> None: ...
+        def _open_picker(self) -> None: ...
+        def _image(self, path: str) -> Any: ...
+        def _entity(self, entity_id: str | None) -> dict[str, Any] | None: ...
+        def _sprites_by_id(self) -> dict[str, Any]: ...
+        def _behaviour_fields(self, box: gui.UIBoxLayout, entity: dict[str, Any], behaviour: str, width: int) -> None: ...
+        def remove_behaviour(self, name: str) -> None: ...
+        def delete_selected(self) -> None: ...
+        def accept_ai(self, proposal: Proposal) -> None: ...
+        def reject_ai(self, proposal: Proposal) -> None: ...
+
     # ---------------------------------------------------------------- shared state
     def _init_inspector(self) -> None:
         self.tab = "look"
@@ -96,7 +130,7 @@ class InspectorMixin:
         self._textures: dict[Any, Any] = {}
 
     # ---------------------------------------------------------------- small helpers
-    def _toggle(self, label: str, value: bool, flip: Callable[[bool], None], width: int) -> Any:
+    def _toggle(self, label: str, value: bool, flip: Callable[[bool], object], width: int) -> Any:
         return self._button(f"{label}: {'On' if value else 'Off'}", lambda: flip(not value), width=width,
                             style=S_ACTIVE if value else S_BUTTON)
 
@@ -106,19 +140,19 @@ class InspectorMixin:
         row.add(widget)
         rows.add(row)
 
-    def _flag_field(self, rows: Rows, label: str, values: Any, commit: Callable[[str], None], width: int, key: str) -> None:
+    def _flag_field(self, rows: Rows, label: str, values: Any, commit: Callable[[str], object], width: int, key: str) -> None:
         """A comma-separated flag list with a "Flags..." picker of the flags the project already uses."""
         field = self._field(_names(values), commit, width=width - 118 - 52 - 8, key=key)
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         row.add(self._label(label, color=C_MUTED, size=10, width=118))
         row.add(field)
-        row.add(self._button("Pick", lambda f=field: self._pick_flag(f, commit), width=52))
+        row.add(self._button("Pick", partial(self._pick_flag, field, commit), width=52))
         rows.add(row)
 
-    def _pick_flag(self, field: Any, commit: Callable[[str], None]) -> None:
+    def _pick_flag(self, field: Any, commit: Callable[[str], object]) -> None:
         known = list(self._flag_uses())
         current = [n.strip() for n in field.text.split(",") if n.strip()]
-        items: list[tuple[str, Callable[[], None]]] = []
+        items: list[tuple[str, Callable[[], object]]] = []
         for name in known:
             if name not in current:
                 items.append((name, lambda n=name: commit(", ".join(current + [n]))))
@@ -155,7 +189,7 @@ class InspectorMixin:
         for line in (TABS[:3], TABS[3:]):
             row = gui.UIBoxLayout(vertical=False, space_between=4)
             for key, title in line:
-                row.add(self._button(title, lambda k=key: self._open_tab(k), width=third,
+                row.add(self._button(title, partial(self._open_tab, key), width=third,
                                      style=S_ACTIVE if self.tab == key else S_BUTTON))
             rows.add(row)
         rows.add(gui.UISpace(height=4))
@@ -238,12 +272,12 @@ class InspectorMixin:
         rows.add(row)
 
     # ---------------------------------------------------------------- picture browser
-    def _open_picker_images(self, title: str, choose: Callable[[str], None]) -> None:
+    def _open_picker_images(self, title: str, choose: Callable[[str], object]) -> None:
         self.pick = {"title": title, "choose": choose}
         self.panel, self.panel_scroll = "pick_image", 0
         self._rebuild()
 
-    def _import_picture(self, then: Callable[[str], None]) -> None:
+    def _import_picture(self, then: Callable[[str], object]) -> None:
         path = ask_path(folder=False, title="Import a picture (PNG)", filetypes=IMAGE_FILES)
         if not path:
             return
@@ -271,7 +305,7 @@ class InspectorMixin:
             space = gui.UISpace(width=32, height=32)
             self._thumbs.append((space, str(self.project.root / rel)))
             row.add(space)
-            row.add(self._button(_short(rel.removeprefix("assets/"), 34), lambda r=rel: self._picked(r), width=width - 38))
+            row.add(self._button(_short(rel.removeprefix("assets/"), 34), partial(self._picked, rel), width=width - 38))
             rows.add(row)
 
     def _picked(self, rel: str) -> None:
@@ -308,7 +342,7 @@ class InspectorMixin:
                 columns = self._sheet_columns(clip)
                 r, first = ops.clip_position(clip, columns)
                 text = f"{name}: row {r}, {clip.get('frames', 1)} frame(s){'  (mirrored)' if clip.get('flip_x') else ''}"
-                rows.add(self._button(text, lambda n=name: self._select_clip(n), width=width,
+                rows.add(self._button(text, partial(self._select_clip, name), width=width,
                                       style=S_ACTIVE if name == self.clip_sel else S_BUTTON))
                 if name == self.clip_sel:
                     self._clip_editor(rows, entity, name, clip, width)
@@ -398,7 +432,7 @@ class InspectorMixin:
             "Image with the frames", lambda rel: (form.update(sheet=rel), self._rebuild())), width=80))
         rows.add(row)
 
-        def set_(key: str) -> Callable[[str], None]:
+        def set_(key: str) -> Callable[[str], object]:
             return lambda v: form.__setitem__(key, v.strip())
 
         half = (width - 122 - 12) // 2
@@ -492,7 +526,7 @@ class InspectorMixin:
         third = (width - 8) // 3
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         for kind, title in (("picture", "Whole picture"), ("box", "Footprint"), ("circle", "Circle")):
-            row.add(self._button(title, lambda k=kind: self._set_shape(entity, k), width=third,
+            row.add(self._button(title, partial(self._set_shape, entity, kind), width=third,
                                  style=S_ACTIVE if collider["kind"] == kind else S_BUTTON))
         rows.add(row)
 
@@ -594,7 +628,7 @@ class InspectorMixin:
             node = nodes[node_id]
             flow = " ?" if node.get("choices") else (f" > {number[node['next']]}" if node.get("next") in number else " (end)")
             text = f"{number[node_id]}. {_short(node.get('text', ''), 30)}{flow}"
-            rows.add(self._button(text, lambda n=node_id: self._select_line(n), width=width,
+            rows.add(self._button(text, partial(self._select_line, node_id), width=width,
                                   style=S_ACTIVE if node_id == self.dlg_line else S_BUTTON))
             if node_id == self.dlg_line:
                 rows.anchor("line_editor")
@@ -630,7 +664,7 @@ class InspectorMixin:
             s, target, starts + [{"node": order[0], "require_flags": [], "forbid_flags": []}]), "Added an opening: set its flags."),
             width=110))
 
-    def _line_ref(self, value: str, order: list[str], then: Callable[[str | None], None], allow_end: bool = True) -> None:
+    def _line_ref(self, value: str, order: list[str], then: Callable[[str | None], object], allow_end: bool = True) -> None:
         text = value.strip()
         if not text:
             if allow_end:
@@ -680,7 +714,7 @@ class InspectorMixin:
             goes = f" > {number[choice['next']]}" if choice.get("next") in number else " (end)"
             needs = f"  [needs {_names(choice.get('require_flags'))}]" if choice.get("require_flags") else ""
             rows.add(self._button(f"  {chr(97 + i)}) {_short(choice.get('text', ''), 22)}{goes}{needs}",
-                                  lambda i=i: self._select_choice(i), width=width,
+                                  partial(self._select_choice, i), width=width,
                                   style=S_ACTIVE if self.dlg_choice == i else S_BUTTON))
             if self.dlg_choice == i:
                 self._choice_editor(rows, target, node_id, i, choice, number, order, width)
@@ -775,7 +809,7 @@ class InspectorMixin:
                 missing = [f for f in choice.get("require_flags") or [] if f not in state["flags"]]
                 blocked = [f for f in choice.get("forbid_flags") or [] if f in state["flags"]]
                 reason = f"  (needs {_names(missing)})" if missing else (f"  (not with {_names(blocked)})" if blocked else "")
-                rows.add(self._button(_short(choice.get("text", ""), 30) + reason, lambda c=choice: self._preview_choose(c), width=width,
+                rows.add(self._button(_short(choice.get("text", ""), 30) + reason, partial(self._preview_choose, choice), width=width,
                                       disabled=bool(missing or blocked)))
             if not choices:
                 rows.add(self._button("Next" if node.get("next") else "End", lambda: self._preview_go(node.get("next")), width=120,
@@ -859,9 +893,9 @@ class InspectorMixin:
         for name in names:
             row = gui.UIBoxLayout(vertical=False, space_between=4)
             arrow = "v " if self.expanded == name else "> "
-            row.add(self._button(arrow + name, lambda n=name: self._toggle_expand(n), width=width - 80,
+            row.add(self._button(arrow + name, partial(self._toggle_expand, name), width=width - 80,
                                  style=S_ACTIVE if self.expanded == name else S_BUTTON))
-            row.add(self._button("Remove", lambda n=name: self.remove_behaviour(n), width=76, style=S_DANGER))
+            row.add(self._button("Remove", partial(self.remove_behaviour, name), width=76, style=S_DANGER))
             rows.add(row)
             if self.expanded == name:
                 self._behaviour_fields(rows, entity, name, width)
@@ -890,9 +924,9 @@ class InspectorMixin:
                     rows.add(self._label(f"  {clash.get('what') or clash['path']}: here {clash['studio']!r}, proposed {clash['ai']!r}",
                                          color=(240, 200, 120), size=9, width=width))
             row = gui.UIBoxLayout(vertical=False, space_between=6)
-            row.add(self._button("Accept", lambda p=proposal: self.accept_ai(p), width=half, style=S_ACTIVE,
+            row.add(self._button("Accept", partial(self.accept_ai, proposal), width=half, style=S_ACTIVE,
                                  disabled=proposal.status == "conflict"))
-            row.add(self._button("Reject", lambda p=proposal: self.reject_ai(p), width=half, style=S_DANGER))
+            row.add(self._button("Reject", partial(self.reject_ai, proposal), width=half, style=S_DANGER))
             rows.add(row)
         if done:
             rows.add(gui.UISpace(height=8))

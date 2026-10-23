@@ -68,7 +68,7 @@ def configure_scene_lighting(window: Any, scene: dict[str, Any], settings: Any, 
     # room's). While the day/night clock runs in this room, the clock sets the ambient light instead.
     if not getattr(getattr(window, "day_night", None), "enabled", False):
         base_ambient = getattr(lighting, "base_ambient_color", None)
-        room_ambient = settings.get("lighting_ambient_color") if isinstance(settings, dict) else None
+        room_ambient: Any = settings.get("lighting_ambient_color") if isinstance(settings, dict) else None
         try:
             r, g, b = (max(0, min(255, int(c))) for c in room_ambient[:3])
             lighting.ambient_color = (r, g, b, 255)

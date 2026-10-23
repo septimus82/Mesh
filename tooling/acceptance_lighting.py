@@ -101,7 +101,8 @@ def run(out: Path) -> int:
 
     # ------------------------------------------------------------------ reading the Studio
     def doc() -> dict[str, Any]:
-        return p().wait(lambda s: s.get("room_doc"), "the room")["room_doc"]
+        room: dict[str, Any] = p().wait(lambda s: s.get("room_doc"), "the room")["room_doc"]
+        return room
 
     def settings() -> dict[str, Any]:
         return doc().get("settings") or {}
@@ -115,7 +116,8 @@ def run(out: Path) -> int:
 
     def on_disk(key: str) -> dict[str, Any]:
         path = Project(root, json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"]).path(key)
-        return json.loads((root / path).read_text(encoding="utf-8"))
+        scene: dict[str, Any] = json.loads((root / path).read_text(encoding="utf-8"))
+        return scene
 
     def lighting_of(scene: dict[str, Any]) -> dict[str, Any]:
         keep = ("lighting_enabled", "lighting_ambient_color", "lighting_shadows_mode")
@@ -261,7 +263,7 @@ def run(out: Path) -> int:
         b = bright([behind, open_side, far])
         memo["edit_shadow"] = {"behind_pillar": b[0], "open_same_distance": b[1], "far_dark": b[2], "light": light}
         assert b[1] - b[0] > 10, f"no shadow behind the pillar: {memo['edit_shadow']}"
-        return memo["edit_shadow"]
+        return dict(memo["edit_shadow"])
 
     def s08_undo_redo() -> dict[str, Any]:
         full = lighting_of(doc())
@@ -286,7 +288,7 @@ def run(out: Path) -> int:
         p().wait(lambda s: not s["dirty"], "saved")
         memo["authored"] = {k: lighting_of(on_disk(keys[k])) for k in ("cellar", "garden")}
         assert memo["authored"]["cellar"]["settings"]["lighting_ambient_color"] == CAVE
-        return memo["authored"]
+        return dict(memo["authored"])
 
     def s10_play_between_rooms() -> dict[str, Any]:
         p().button("Cellar")
@@ -352,7 +354,7 @@ def run(out: Path) -> int:
         memo["saved"] = {k: lighting_of(on_disk(keys[k])) for k in ("cellar", "garden")}
         close()
         launch()
-        return memo["saved"]
+        return dict(memo["saved"])
 
     def s14_preserved() -> dict[str, Any]:
         assert memo["saved"] == memo["authored"], "what was saved differs from what was authored"

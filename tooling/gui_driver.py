@@ -158,6 +158,9 @@ class _Process:
 
 
 class Driver:
+    _cursor: tuple[int, int] | None  # where this driver last put the mouse
+    _target: tuple[int, int] | None  # where the last move was meant to put it
+
     @classmethod
     def attach(cls, title_prefix: str, shots: Path, logical_size: tuple[int, int] = (1280, 720),
                timeout: float = 60.0) -> "Driver":
@@ -233,8 +236,8 @@ class Driver:
         self.proc = subprocess.Popen(cmd, cwd=str(cwd), stdout=self._log, stderr=subprocess.STDOUT,
                                      env={**__import__("os").environ, "PYTHONUNBUFFERED": "1"})
         self.hwnd = 0
-        self._cursor: tuple[int, int] | None = None  # where this driver last put the mouse
-        self._target: tuple[int, int] | None = None  # where the last move was meant to put it
+        self._cursor = None
+        self._target = None
         deadline = time.time() + 60
         while not self.hwnd and time.time() < deadline:
             if self.proc.poll() is not None:
