@@ -201,6 +201,13 @@ def run(out: Path) -> int:
             ok, error, detail = False, f"{type(exc).__name__}: {exc}", traceback.format_exc(limit=4)
         driver = holder["driver"]
         shot = driver.shot(f"{len(results) + 1:02d}_{name}").name if driver and driver.proc.poll() is None else None
+        if not ok and driver and driver.proc.poll() is None:  # a failed step mustn't leave the next one in Play
+            try:
+                if p().state()["mode"] == "play":
+                    p().d.key("F4")
+                    p().wait(lambda s: s["mode"] == "edit", "editing")
+            except STEP_FAILURES:
+                pass
         results.append({"step": name, "ok": ok, "error": error, "detail": detail,
                         "seconds": round(time.time() - started, 1), "screenshot": shot})
         print(f"[{'PASS' if ok else 'FAIL'}] {name}" + (f" - {error}" if error else ""), flush=True)
@@ -733,7 +740,12 @@ def run(out: Path) -> int:
         darker: list[dict[str, Any]] = []
         start = time.time()
         for i, stop in enumerate(stops):
-            p().go_to(*stop, tol=12)
+            try:
+                p().go_to(*stop, tol=12)
+            except AssertionError:  # a key-up lost to another window leaves the player walking: clear the keys, retry
+                for key in "WASD":
+                    p().d.hold(key, 0.02)
+                p().go_to(*stop, tol=12)
             time.sleep(0.3)
             shot = snap(f"walk_{i}")
             s = shot[1]

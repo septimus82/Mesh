@@ -207,3 +207,18 @@ Report: [`docs/reviews/milestone12_shadow_quality.md`](docs/reviews/milestone12_
 | `MESH_LIGHTING_PROFILE=1`: GPU timer and CPU time around `lighting.end()`; the runtime snapshot carries `profile` and the renderer's `stats` | Measured performance | Off by default (reading a GPU timer waits for the GPU) |
 | `tooling/shadow_bench.py`, `tooling/shadow_lab.py` (in the runtime gate), `tests/test_shadow_*_gpu.py` (`MESH_GL_SMOKE=1`) | Pixel-level verification | The lab runs the GPU tests too |
 | `tests/test_pipeline_lighting_no_silent_pass_contract.py`: baseline line numbers moved | The same handlers, shifted by new lines | No handler added or removed |
+
+## Milestone 12.1: character shadows, natural flicker, shadow fine-tuning
+
+Report: [`docs/reviews/milestone12_1_lighting_polish.md`](docs/reviews/milestone12_1_lighting_polish.md).
+
+| Change | Why | Note |
+|---|---|---|
+| Characters cast shadows from lamps through the per-light compositor: `character_shadows`, `_character_quad`, a 14-float occluder vertex (atlas UV, body rect) | Players and NPCs had only the ellipse under their feet | Players and NPCs cast by default; entity `cast_shadow` (bool or `{enabled, height, strength, length}`) and the existing `shadow_enabled` (schema updated). Op `set_shadows` |
+| `flicker_sample` and `FLICKER_PRESETS` (Candle, Torch, Fire, Faulty lamp; Steady, Custom); brightness reaches the light through `set_light_colour` | The old flicker pulsed on a regular beat and only moved the reach; its brightness never reached the screen (Arcade keeps `Light` colour private) | **Kept:** `FlickerNoise` and `apply_light_flicker` (lights without a profile, their tests). New light keys `flicker_preset`, `flicker_strength`, `flicker_brightness`, `flicker_reach`, `flicker_irregularity` (schema updated). Older lights read as Custom from `flicker_amount` / `flicker_speed`, nothing rewritten |
+| Studio light panel: preset buttons and Calmer / Livelier replace the Flicker toggle and the amount / speed fields | Presets first, numbers under More settings | `tooling/acceptance_lighting.py` and `tooling/shadow_lab.py` press the preset buttons now |
+| Room fine-tuning: `lighting_shadow_edge`, `lighting_shadow_strength`, `lighting_shadow_quality`, `lighting_character_shadows`; `scene_lifecycle_controller.apply_shadow_look` | Tune shadows without losing the presets | Defaults are not stored; each falls back per room. The shadow bench applies settings through the same function |
+| User setting `reduced_flicker` ("Calmer Flickering" in the pause menu) | Accessibility | Golden user-settings and pause-menu row tests updated for the new row |
+| Lighting stats gain `character_feet`; the runtime snapshot's flicker `clock` to 4 decimals | Diagnostics; the lab checks each flicker sample against the formula | — |
+| `tooling/lighting_polish_lab.py` (in the runtime gate), `tests/test_natural_flicker.py`, `tests/test_character_shadows_gpu.py`, `tooling/flicker_plot.py` | Verification | GPU tests need `MESH_GL_SMOKE=1`; the lab runs them |
+| `tests/test_pipeline_lighting_no_silent_pass_contract.py`: baseline line numbers moved again | The same handlers, shifted | No handler added or removed |

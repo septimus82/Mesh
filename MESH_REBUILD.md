@@ -496,12 +496,46 @@ touch other lamps, and isn't black painted over the scene. Report:
 2. Polygon occluders' straight-ended shadows left a lit wedge behind long edges.
 3. Rectangle shadows started at the chord between the outermost corners, darkening part of the wall itself.
 
+## Milestone 12.1 — character shadows, natural flicker, lighting customisation
+
+**Goal:** characters cast shadows from the lamps around them; lights flicker like flames instead of pulsing; shadows
+can be tuned without losing the simple presets. Report:
+[`docs/reviews/milestone12_1_lighting_polish.md`](docs/reviews/milestone12_1_lighting_polish.md).
+
+### Acceptance criteria and status
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Players and NPCs cast directional shadows from nearby lamps (feet, away from the light, length with distance, softer with distance, the light's colour and ambient respected, none when a lamp is off or doesn't cast) | **Done** | Through the M12 per-light masks (no overlay); GPU tests 8/8; lab items 1-4, 7 |
+| Contact shadows kept, separately controllable; per-character settings (cast on/off, height, strength, length) | **Done** | Look tab "Under feet" / "From lamps" + fine-tune; `set_shadows`; lab items 5, 6 |
+| Natural flicker presets (Steady, Candle, Torch, Fire, Faulty lamp, Custom), no pulsing, reproducible, frame-rate independent, independent neighbours | **Done** | `flicker_sample`; `tests/test_natural_flicker.py` 14; lab items 10-16, every sample against the formula |
+| Torch then adjust; custom shown as Custom; flicker off restores the base; Studio = Play; reduced-flicker setting; no aggressive flashing | **Done** | Lab items 15, 17, 18; "Calmer Flickering"; a faulty lamp at most 3 smooth dips a second |
+| Shadow customisation: Sharp / Soft / Softer kept, collapsed fine-tune (edge, strength by occlusion, quality, characters on/off) | **Done** | `set_room_lighting(edge=, shadow_strength=, quality=, character_shadows=)`; lab items 8, 9 |
+| Performance measured; budget kept; diagnostics | **Done** | Bench: 6 characters +0.06 ms CPU; real window in lab item 22; stats `characters`, `character_shadows`, `character_feet` |
+| Real-window Lighting Polish Lab, 22 items, time series, GPU pixel tests, subjective inspection | **Done** | `tooling/lighting_polish_lab.py` (in the runtime gate) |
+
+### How it was validated
+
+- **Headless:** 9,423 passed; slow/e2e the known 31; ruff clean; type gate 259 (unchanged).
+- **Runtime gate:** final combined run 10/10 suites through shadow_lab. The run was stopped before the last two to free
+  the owner's computer; those passed on the same code (Lighting Polish Lab 18/18, capability lab 36/36).
+- **The first combined run (8/12)** failed on input lost while the PC was in use; those suites passed alone.
+- **Subjective inspection** of every lab screenshot and the flicker plots (report, Stage E).
+
+### Defects found on the way
+
+1. **Flicker's brightness never reached the screen.** Arcade's `Light` keeps its colour private and the code wrote a
+   public attribute that doesn't exist; only the reach ever moved.
+2. **The old flicker peaked only on its beat**, which owners saw as pulsing.
+3. **Five new type-gate errors.** The first two 12.1 commits brought four, and a fifth turned up while flicker went in.
+   All five are fixed, and the gate is back to 259.
+
 ## Known limitations (honest list)
 
 - **Starter art is simple:** a hero, a villager and a sign of Mesh's own (Milestone 11). The tileset still has no roof or door tiles.
 - **No counter conditions.** Choices count up, but nothing can require "graves_dug ≥ 3"; flags gate everything.
 - **Event sequences beyond conversations** (wait, move, signal) run in `SequencePlayer`, which works since Milestone 7. Studio can't edit its steps yet (JSON only). `ActionListRunner` does nothing in the live game (see the Milestone 7 inventory).
-- **Lighting** has a Studio panel since Milestone 10 (room light, point lights, flicker, shadows from walls); since Milestone 12 every lamp casts its own shadow (up to 16 a frame), with Sharp / Soft / Softer edges. Still JSON or the legacy editor: cookies, shafts, rectangle/polygon occluders, day/night. **Parallax, camera zoom and the HD-2D look** work in the engine (Milestone 7 lab) but have no Studio controls yet.
+- **Lighting** has a Studio panel since Milestone 10 (room light, point lights, flicker, shadows from walls); since Milestone 12 every lamp casts its own shadow (up to 16 a frame), with Sharp / Soft / Softer edges; since 12.1 players and NPCs cast shadows from lamps and lights flicker by preset (Candle, Torch, Fire, Faulty lamp, Custom). Still JSON or the legacy editor: cookies, shafts, rectangle/polygon occluders, day/night. **Parallax, camera zoom and the HD-2D look** work in the engine (Milestone 7 lab) but have no Studio controls yet.
 - **Long inspector sections scroll** with the mouse wheel; there's no scrollbar to drag.
 - **Map tools are still basic.**
   - Three layers.
