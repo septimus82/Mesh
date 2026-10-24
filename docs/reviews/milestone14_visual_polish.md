@@ -107,6 +107,12 @@ The pass count is unchanged. The footprint measurement runs once per picture.
 5. **`hard_wrap` reads pyglet's private layout.** The GPU test guards it, and it goes once pyglet fixes its wrap.
 6. **Unchanged, pending owner approval:** the wheel-packaging decision and the pause-menu "Soft Shadows" toggle.
 
+## Owner's verdict
+
+- **2026-10-24, shadows:** the owner played the "M14 Check" project (`Documents\Mesh Projects\M14 Check`) and said
+  the shadows "look great".
+- The other checks below were not yet reported on.
+
 ## Human checks pending (not claimed)
 
 1. Look at Soft and Softer character shadows near a lamp in a real game window. Do they read as one soft shadow?
