@@ -102,6 +102,16 @@ _FLICKER_HELP = {
 }
 
 
+def hard_wrap(label: Any) -> None:
+    """Give a wrapped label its lines as line breaks. pyglet 2.1 breaks at the right word but draws that word's
+    first letter at the end of the line before ("It w" / "orks"; Milestone 14); with the breaks in the text it
+    never wraps itself. ponytail: reads pyglet's private layout lines; tests/test_studio_label_wrap_gpu.py
+    fails if a pyglet upgrade changes them."""
+    layout = label._label._label
+    text = layout.document.text
+    label.text = "\n".join(text[line.start:line.start + line.length].rstrip() for line in layout._lines)
+
+
 def _colour_name(value: Any) -> str:
     rgb = ops.rgb(value)
     return next((name for name, hex_ in ops.LIGHT_COLOURS.items() if ops.rgb(hex_) == rgb), "custom")
@@ -888,6 +898,7 @@ class Studio(InspectorMixin):
         label = gui.UILabel(text=text, font_size=size, text_color=color, width=width, bold=bold,
                             multiline=width is not None)
         if width is not None:
+            hard_wrap(label)
             # Box layouts otherwise shrink labels to their text width (or, with a zero
             # minimum height, collapse them entirely).
             label.size_hint_min = (width, label.height)
@@ -1983,6 +1994,12 @@ class Studio(InspectorMixin):
         label = self._labels.get(key)
         if label is None or label.text != text:
             label = self._labels[key] = optional_arcade.arcade.Text(text, x, y, color, size, anchor_x="center")
+        # Kept inside the map view: a door on the map's edge had its name cut off by the side panel (Milestone 14).
+        left, right, _bottom, _top = self._map_rect()
+        view_l, view_r = (float(self.window.camera.unproject((sx, 0))[0]) for sx in (left + 4, right - 4))
+        half = label.content_width / 2
+        if view_r - view_l > 2 * half:
+            x = min(max(x, view_l + half), view_r - half)
         label.x, label.y, label.color = x, y, color
         label.draw()
 
