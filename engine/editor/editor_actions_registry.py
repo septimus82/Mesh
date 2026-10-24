@@ -810,17 +810,6 @@ DEFAULT_ACTION_DEFS: tuple[ActionDef, ...] = (
             in_menu=False,
         ),
         ActionDef(
-            id="runtime.soft_shadows.toggle",
-            title="Toggle Soft Shadows",
-            keywords=("soft", "shadows", "lighting"),
-            group=None,
-            shortcut="",
-            enabled="_enabled_always",
-            run="_toggle_soft_shadows",
-            in_palette=True,
-            in_menu=False,
-        ),
-        ActionDef(
             id="editor.asset_browser.toggle",
             title="Toggle Asset Browser",
             keywords=("asset", "browser", "view"),

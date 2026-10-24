@@ -98,7 +98,6 @@ class PauseMenu(UIElement):
             "music_volume": Slider(label="Music Volume", value=1.0, step=0.01, height=34.0),
             "sfx_volume": Slider(label="SFX Volume", value=1.0, step=0.01, height=34.0),
             "fog_enabled": Toggle(label="Fog", value=False, height=30.0),
-            "soft_shadows_enabled": Toggle(label="Soft Shadows", value=False, height=30.0),
             "reduced_flicker": Toggle(label="Calmer Flickering", value=False, height=30.0),
             "back": Button(text="Back", action_id="pause.settings.back", font_size=18, height=34.0),
         }
@@ -368,15 +367,12 @@ class PauseMenu(UIElement):
         music = self._settings_widgets["music_volume"]
         sfx = self._settings_widgets["sfx_volume"]
         fog = self._settings_widgets["fog_enabled"]
-        shadows = self._settings_widgets["soft_shadows_enabled"]
         if isinstance(music, Slider):
             music.value = float(settings.music_volume)
         if isinstance(sfx, Slider):
             sfx.value = float(settings.sfx_volume)
         if isinstance(fog, Toggle):
             fog.value = bool(settings.fog_enabled)
-        if isinstance(shadows, Toggle):
-            shadows.value = bool(settings.soft_shadows_enabled)
         calm = self._settings_widgets["reduced_flicker"]
         if isinstance(calm, Toggle):
             calm.value = bool(getattr(settings, "reduced_flicker", False))

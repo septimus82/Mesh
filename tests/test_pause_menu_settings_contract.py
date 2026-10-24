@@ -78,7 +78,7 @@ def test_pause_menu_settings_volume_clamps_and_applies(monkeypatch) -> None:
 
 
 @pytest.mark.fast
-def test_pause_menu_settings_toggles_fog_and_shadows(monkeypatch) -> None:
+def test_pause_menu_settings_toggles_fog(monkeypatch) -> None:
     from engine import arcade_fallback as arcade_stub
 
     monkeypatch.setattr(optional_arcade, "arcade", arcade_stub)
@@ -93,10 +93,10 @@ def test_pause_menu_settings_toggles_fog_and_shadows(monkeypatch) -> None:
     assert window.runtime_settings.fog_enabled is True
     assert cfg.fog_enabled is True
 
+    # The obsolete "Soft Shadows" row is gone: the next row is Calmer Flickering.
     menu._settings_index = 3
     menu.on_key_press(optional_arcade.arcade.key.ENTER, 0)
-    assert window.runtime_settings.soft_shadows_enabled is True
-    assert cfg.soft_shadows_enabled is True
+    assert window.runtime_settings.reduced_flicker is True
 
 
 @pytest.mark.fast

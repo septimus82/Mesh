@@ -577,7 +577,9 @@ Report: [`docs/reviews/milestone13_repository_consolidation.md`](docs/reviews/mi
     - **Pip install:** support pip-installed Mesh by putting the redistributable packs it needs in the wheel. First
       check their licences and the wheel's size.
     - **Pause menu:** remove the obsolete "Soft Shadows" toggle. Older saved settings that still contain it must
-      keep loading.
+      keep loading. **Done** (branch `chore/remove-soft-shadows-toggle`, its own draft PR): removed from the pause
+      and main menus, the player settings and the legacy editor's command list. Old `user_settings.json` and
+      project `config.json` files still load, and the key is ignored.
 
 ## Milestone 14 — visual polish and creator acceptance
 

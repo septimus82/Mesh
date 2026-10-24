@@ -16,7 +16,6 @@ def test_user_settings_json_golden(tmp_path, monkeypatch) -> None:
         music_volume=0.25,
         sfx_volume=0.5,
         fog_enabled=True,
-        soft_shadows_enabled=False,
     )
     save_runtime_settings(None, settings)
 
@@ -26,7 +25,6 @@ def test_user_settings_json_golden(tmp_path, monkeypatch) -> None:
         "music_volume": 0.25,
         "sfx_volume": 0.5,
         "fog_enabled": True,
-        "soft_shadows_enabled": False,
         "text_scale": 1.0,
         "reduced_flicker": False,
     }
