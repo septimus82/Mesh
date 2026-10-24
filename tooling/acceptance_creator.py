@@ -27,6 +27,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import traceback
 from pathlib import Path
@@ -48,7 +49,9 @@ FLAG = "asked_about_ranger"
 
 def run(out: Path) -> int:
     out.mkdir(parents=True, exist_ok=True)
-    work = out / "work"
+    # The games it creates go outside the engine folder: the launcher refuses a location inside it, and --out
+    # (artifacts/ by default) is inside it. One reused folder; the report and pictures stay in --out.
+    work = Path(tempfile.gettempdir()) / "mesh_acceptance_creator"
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir()
     dest = work / "games"

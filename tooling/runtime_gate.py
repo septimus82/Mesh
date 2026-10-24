@@ -87,15 +87,19 @@ def main() -> int:
     for name, script, about in SUITES:
         if args.only and name not in args.only:
             continue
-        command = [sys.executable, str(REPO / "tooling" / script), "--out", str(out / name)]
+        extra: list[str] = []
         note = ""
         if name == "launcher":
             old, note = older_projects(args.old, out)
-            command += ["--old", *map(str, old)]
+            extra = ["--old", *map(str, old)]
         print(f"=== {name}: {about}", flush=True)
         attempts: list[dict[str, Any]] = []
         for attempt in range(1 + max(0, args.retries)):
             start = time.time()
+            # Each retry has its own folder beside the failed attempt's: moving that one raced the suite's windows,
+            # still closing and holding their logs open.
+            folder = out / (name if attempt == 0 else f"{name}.retry{attempt}")
+            command = [sys.executable, str(REPO / "tooling" / script), "--out", str(folder), *extra]
             done = subprocess.run(command, cwd=REPO, capture_output=True, text=True, encoding="utf-8", errors="replace")
             text = done.stdout + done.stderr
             (out / f"{name}{'' if attempt == 0 else f'.retry{attempt}'}.log").write_text(text, encoding="utf-8")
@@ -111,8 +115,6 @@ def main() -> int:
                 print(f"    {line[:200]}", flush=True)
             if ok:
                 break
-            if (out / name).exists():  # keep the failed attempt's evidence beside the retry's
-                shutil.move(str(out / name), str(out / f"{name}.attempt{attempt + 1}"))
         ok = attempts[-1]["ok"]
         summary.append({"suite": name, "about": about, "ok": ok, "flaky": ok and len(attempts) > 1,
                         "attempts": attempts, "note": note})
