@@ -223,6 +223,51 @@ def build_shadow_polygons(
     return polys
 
 
+def _inside_polygon(x: float, y: float, points: Sequence[Point]) -> bool:
+    inside = False
+    for (x0, y0), (x1, y1) in zip(points, [*points[1:], points[0]]):
+        if (y0 > y) != (y1 > y) and x < x0 + (y - y0) * (x1 - x0) / (y1 - y0):
+            inside = not inside
+    return inside
+
+
+def light_shadow_polygons(
+    light_pos: Point,
+    light_radius: float,
+    occluder_rects: Sequence[Rect],
+    occluder_polys: Sequence[Polygon],
+) -> list[Polygon]:
+    """Every shadow one light throws, for a renderer that masks that light alone (light_compositor).
+
+    Shadows only remove their own light, so they may run past its reach. All of them end on one arc,
+    beyond the farthest corner in play, so two shadows meeting along a ray share their end points (no
+    cracks between neighbouring walls). A polygon's back edges each throw an arc-ended shadow (a straight
+    end inside the light's circle left a lit wedge behind long edges). An occluder the light is inside
+    casts nothing: there is no sensible shadow from within a wall.
+    """
+    lx, ly = float(light_pos[0]), float(light_pos[1])
+    if float(light_radius) <= 0:
+        return []
+    rects = [r for r in occluder_rects if not (r.x < lx < r.x + r.width and r.y < ly < r.y + r.height)]
+    polys = [p for p in (sanitize_poly(poly) for poly in occluder_polys) if len(p) >= 3 and not _inside_polygon(lx, ly, p)]
+    corners = [pt for r in rects for pt in ((r.x, r.y), (r.x + r.width, r.y + r.height), (r.x + r.width, r.y), (r.x, r.y + r.height))]
+    corners += [pt for p in polys for pt in p]
+    reach = max([float(light_radius), *(math.hypot(px - lx, py - ly) for px, py in corners)]) + 1.0
+    out = build_shadow_polygons((lx, ly), reach, rects)
+    for points in polys:
+        area = sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(points, [*points[1:], points[0]]))
+        if area == 0:
+            continue
+        for p0, p1 in zip(points, [*points[1:], points[0]]):
+            # An edge facing away from the light (its outward side away from it) throws the shadow.
+            ex, ey = p1[0] - p0[0], p1[1] - p0[1]
+            nx, ny = (ey, -ex) if area > 0 else (-ey, ex)
+            if nx * (lx - p0[0]) + ny * (ly - p0[1]) >= 0:
+                continue
+            out.append([(round(x, 3), round(y, 3)) for x, y in _shadow_behind(lx, ly, reach, p0, p1)])
+    return out
+
+
 def build_shadow_polygons_for_polys(
     light_pos: Point,
     light_radius: float,

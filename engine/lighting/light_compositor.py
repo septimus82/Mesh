@@ -248,8 +248,7 @@ def _light_spec(light: Any) -> tuple[float, float, float, float, tuple[float, fl
 
 def shadow_triangles(manager: Any, x: float, y: float, radius: float) -> tuple[array, int]:
     """The light's shadow polygons as triangles, cached per light position and size (walls don't move)."""
-    from .shadows import build_shadow_polygons, cull_occluders_for_light, cull_polygons_for_light  # noqa: PLC0415
-    from .shadows_v1 import build_shadow_polygons_v1  # noqa: PLC0415
+    from .shadows import cull_occluders_for_light, cull_polygons_for_light, light_shadow_polygons  # noqa: PLC0415
 
     reach = math.ceil(radius / 32.0) * 32.0  # flicker changes the radius: build for the next size up and reuse it
     key = (round(x, 1), round(y, 1), reach)
@@ -260,7 +259,7 @@ def shadow_triangles(manager: Any, x: float, y: float, radius: float) -> tuple[a
     rects, polys = manager._shadow_occluders
     near_rects = cull_occluders_for_light(x, y, reach, rects)
     near_polys = cull_polygons_for_light(x, y, reach, polys)
-    shapes = build_shadow_polygons((x, y), reach, near_rects) + build_shadow_polygons_v1((x, y), reach, near_polys)
+    shapes = light_shadow_polygons((x, y), reach, near_rects, near_polys)
     triangles = array("f")
     for shape in shapes:
         if len(shape) >= 3:
