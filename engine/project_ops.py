@@ -1456,8 +1456,15 @@ def _colour(value: Any) -> str | list[int]:
     raise OpError(f"Unknown colour: {value!r}.")
 
 
-def set_room_lighting(scene: Doc, *, enabled: Any = _UNSET, ambient: Any = _UNSET, shadows: Any = _UNSET) -> Doc:
-    """Change the room's lighting settings; ``None`` removes one, so the room follows the project again."""
+SHADOW_SOFTNESS = ("sharp", "soft", "softer")  # shadow edges (engine/lighting/light_compositor.SOFTNESS)
+
+
+def set_room_lighting(scene: Doc, *, enabled: Any = _UNSET, ambient: Any = _UNSET, shadows: Any = _UNSET,
+                      softness: Any = _UNSET) -> Doc:
+    """Change the room's lighting settings; ``None`` removes one, so the room follows the project again.
+
+    ``softness`` is how soft shadow edges are: ``"sharp"``, ``"soft"`` or ``"softer"``.
+    """
     out = copy.deepcopy(scene)
     settings = out.setdefault("settings", {})
     if not isinstance(settings, dict):
@@ -1482,6 +1489,13 @@ def set_room_lighting(scene: Doc, *, enabled: Any = _UNSET, ambient: Any = _UNSE
             settings["lighting_shadows_mode"] = shadows
         else:
             raise OpError("Shadows are either 'hard' or 'none'.")
+    if softness is not _UNSET:
+        if softness is None:
+            settings.pop("lighting_shadow_softness", None)
+        elif softness in SHADOW_SOFTNESS:
+            settings["lighting_shadow_softness"] = softness
+        else:
+            raise OpError("Shadow edges are 'sharp', 'soft' or 'softer'.")
     return _checked(scene, out)
 
 
@@ -1497,14 +1511,15 @@ def add_light(scene: Doc, x: float, y: float, *, color: Any = "Warm", radius: An
 
 def set_light(scene: Doc, index: int, *, x: Any = _UNSET, y: Any = _UNSET, radius: Any = _UNSET, color: Any = _UNSET,
               flicker_enabled: Any = _UNSET, flicker_amount: Any = _UNSET, flicker_speed: Any = _UNSET,
-              enabled: Any = _UNSET) -> Doc:
-    """Change a light: position, size (radius), colour (a name, "#rrggbb" or [r, g, b]), flicker, on/off.
+              enabled: Any = _UNSET, shadows: Any = _UNSET) -> Doc:
+    """Change a light: position, size (radius), colour (a name, "#rrggbb" or [r, g, b]), flicker, on/off,
+    and whether walls block it (``shadows``; on unless set off, when the room has shadows on).
 
     Turning flicker on fills in a torch-like amount and speed if the light has none, so it visibly flickers.
     Anything else the light carries (keys from older editors) is kept.
     """
     fields = {"x": x, "y": y, "radius": radius, "color": color, "flicker_enabled": flicker_enabled,
-              "flicker_amount": flicker_amount, "flicker_speed": flicker_speed, "enabled": enabled}
+              "flicker_amount": flicker_amount, "flicker_speed": flicker_speed, "enabled": enabled, "shadows": shadows}
     out = copy.deepcopy(scene)
     light = _light(out, index)
     for key, value in fields.items():
@@ -1517,6 +1532,11 @@ def set_light(scene: Doc, index: int, *, x: Any = _UNSET, y: Any = _UNSET, radiu
         elif key == "color":
             light["color"] = _colour(value)
             light.pop("color_rgba", None)  # an older editor's override would hide the new colour
+        elif key == "shadows":
+            if value:
+                light.pop("shadows", None)  # the default: no key, as older lights have
+            else:
+                light["shadows"] = False
         elif key in ("flicker_enabled", "enabled"):
             light[key] = bool(value)
             if key == "flicker_enabled" and value:

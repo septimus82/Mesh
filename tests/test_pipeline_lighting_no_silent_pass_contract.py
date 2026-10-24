@@ -14,7 +14,7 @@ _TARGETS = (
 _APPROVED_LOG_HELPERS = {"_log_swallow", "_log_once_debug", "_log_once_error"}
 _BASELINE_SILENT_PASSES = {
     "mesh_cli/verify_steps/pipeline.py": (),
-    "engine/lighting/__init__.py": (388,),
+    "engine/lighting/__init__.py": (389,),
     "engine/ui_overlays/hud.py": (),
 }
 _BASELINE_EXCEPTION_ENVELOPES = {
@@ -25,8 +25,8 @@ _BASELINE_EXCEPTION_ENVELOPES = {
         2480,
     ),
     "engine/lighting/__init__.py": (  # the same handlers; Milestone 12 moved them down (profiling, per-light shadows)
-        460, 468, 477, 485, 494, 513, 522, 532, 857, 997,
-        1026, 1063,
+        461, 469, 478, 486, 495, 514, 523, 533, 858, 998,
+        1027, 1064,
     ),
     "engine/ui_overlays/hud.py": (62, 156),
 }

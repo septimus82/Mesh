@@ -1082,11 +1082,22 @@ class Studio(InspectorMixin):
             row.add(self._button(text, partial(self.set_room_lighting, said, shadows=mode), width=third,
                                  style=S_ACTIVE if shadows == mode else S_BUTTON))
         rows.add(row)
+        if shadows != "none":
+            softness = settings.get("lighting_shadow_softness")
+            project_softness = getattr(getattr(self.window, "engine_config", None), "lighting_shadow_softness", "sharp")
+            rows.add(self._label("Shadow edges", color=C_MUTED, size=10))
+            row = gui.UIBoxLayout(vertical=False, space_between=4)
+            for text, value in (("Sharp", "sharp"), ("Soft", "soft"), ("Softer", "softer")):
+                active = (softness or project_softness) == value
+                row.add(self._button(text, partial(self.set_room_lighting, f"Shadow edges: {text.lower()}.", softness=value),
+                                     width=third, style=S_ACTIVE if active else S_BUTTON))
+            rows.add(row)
         if isinstance(scene.get("occluders"), list):
             rows.add(self._label(f"Shadows come from {len(scene['occluders'])} hand-drawn shape(s) made in the classic editor, "
                                  "not from the map's walls.", color=C_MUTED, size=9, width=width))
         else:
-            rows.add(self._label("Walls on the map cast shadows from the first light.", color=C_MUTED, size=9, width=width))
+            rows.add(self._label("Walls on the map block each light: a wall's shadow takes away only that light, "
+                                 "never the room light.", color=C_MUTED, size=9, width=width))
         rows.add(gui.UISpace(height=6))
         items = ops.lights(scene)
         row = gui.UIBoxLayout(vertical=False, space_between=6)
@@ -1131,6 +1142,13 @@ class Studio(InspectorMixin):
         rows.add(row)
         flicker = bool(light.get("flicker_enabled"))
         rows.add(self._toggle("Flicker", flicker, lambda on: self.set_light("Flickers." if on else "Steady.", flicker_enabled=on), width))
+        half = (width - 6) // 2
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._toggle("On", light.get("enabled", True) is not False,
+                             lambda on: self.set_light("Light on." if on else "Light off (kept, not deleted).", enabled=on), half))
+        row.add(self._toggle("Casts shadows", light.get("shadows", True) is not False,
+                             lambda on: self.set_light("Walls block it." if on else "It shines through walls.", shadows=on), half))
+        rows.add(row)
         row = gui.UIBoxLayout(vertical=False, space_between=6)
         row.add(self._button("Duplicate", self.duplicate_light, width=(width - 6) // 2))
         row.add(self._button("Delete", self.delete_light, width=(width - 6) // 2))

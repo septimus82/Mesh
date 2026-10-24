@@ -84,8 +84,7 @@ class Bench:
         m._last_lighting_stats = {}
         m.set_shadows_mode(scene.shadows)
         m.ambient_color = (*scene.ambient, 255)
-        if hasattr(m, "configure_room_settings"):
-            m.configure_room_settings(scene.settings)
+        m.shadow_softness = scene.settings.get("lighting_shadow_softness", "sharp")
         occluders = [{"id": f"w{i}", "type": "rect", "x": x, "y": y, "width": w, "height": h}
                      for i, (x, y, w, h) in enumerate(scene.walls)]
         occluders += [{"id": f"p{i}", "type": "poly", "points": [list(p) for p in poly]} for i, poly in enumerate(scene.polys)]
@@ -181,6 +180,8 @@ def bench_scenes() -> dict[str, Scene]:
         "crowded_10_lights_42_pillars": Scene(lights=lights_crowd, walls=grid),
         "crowded_zoom_2": Scene(lights=lights_crowd, walls=grid, zoom=2.0, camera=(100.0, 80.0)),
         "five_lights_no_shadows": Scene(lights=lights_many, walls=few, shadows="none"),
+        "crowded_soft": Scene(lights=lights_crowd, walls=grid, settings={"lighting_shadow_softness": "soft"}),
+        "crowded_softer": Scene(lights=lights_crowd, walls=grid, settings={"lighting_shadow_softness": "softer"}),
     }
 
 

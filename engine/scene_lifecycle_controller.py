@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import os
 from pathlib import Path
 from typing import Any, cast
 
@@ -104,13 +105,20 @@ def configure_scene_lighting(window: Any, scene: dict[str, Any], settings: Any, 
 
     try:
         settings_block = scene.get("settings", {})
-        if isinstance(settings_block, dict) and "lighting_shadows_mode" in settings_block:
-            mode = settings_block.get("lighting_shadows_mode")
+        settings_block = settings_block if isinstance(settings_block, dict) else {}
+        cfg = getattr(window, "engine_config", None)
+        # A room without its own setting follows the project's: the previous room's must not carry over.
+        mode = settings_block.get("lighting_shadows_mode")
+        if mode is None and not os.environ.get("MESH_SHADOWS_MODE"):  # a developer's override stays
+            mode = getattr(cfg, "lighting_shadows_mode", None)
+        if mode is not None:
             setter = getattr(lighting, "set_shadows_mode", None)
             if callable(setter):
                 setter(str(mode))
             else:
                 lighting.shadows_mode = str(mode or "none").strip().lower()
+        softness = settings_block.get("lighting_shadow_softness", getattr(cfg, "lighting_shadow_softness", "sharp"))
+        lighting.shadow_softness = softness if softness in ("sharp", "soft", "softer") else "sharp"
     except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
         _log_swallow("SCEN-004", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
         pass

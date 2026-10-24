@@ -273,6 +273,7 @@ class LightManager:
         self._shadow_cache: dict[Any, Any] = {}
         self._light_casts_shadows: dict[int, bool] = {}
         self.shadow_light_budget: int = _light_compositor.DEFAULT_SHADOW_LIGHT_BUDGET
+        self.shadow_softness: str = "sharp"  # shadow edges: sharp, soft or softer (light_compositor.SOFTNESS)
 
         if self.available:
             self._rebuild_layer()

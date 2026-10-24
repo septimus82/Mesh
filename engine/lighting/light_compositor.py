@@ -86,8 +86,11 @@ void main() {
 _OCCLUDER_VS = """
 #version 330
 uniform WindowBlock { mat4 projection; mat4 view; } window;
-in vec2 in_pos;
-void main() { gl_Position = window.projection * window.view * vec4(in_pos, 0.0, 1.0); }
+in vec3 in_pos;  // x, y and the pass's depth: overlapping shadows of one pass count once
+void main() {
+    gl_Position = window.projection * window.view * vec4(in_pos.xy, 0.0, 1.0);
+    gl_Position.z = in_pos.z * gl_Position.w;
+}
 """
 
 _OCCLUDER_FS = """
@@ -142,8 +145,8 @@ class LightCompositor:
                                                                   "in_instance_attenuation", "in_instance_color"],
                                  instanced=True),
         ])
-        self.triangles = ctx.buffer(reserve=4096)
-        self.occluder_vao = ctx.geometry([gl.BufferDescription(self.triangles, "2f", ["in_pos"])])
+        self.triangles = ctx.buffer(reserve=12 * 1024)  # 3 floats a vertex
+        self.occluder_vao = ctx.geometry([gl.BufferDescription(self.triangles, "3f", ["in_pos"])])
         self.fullscreen = gl.geometry.quad_2d_fs()
         self.accum: Any = None
         self.occlusion: Any = None
@@ -153,7 +156,8 @@ class LightCompositor:
             return
         # 8-bit RGB like Arcade's own light buffer: the same saturation, so unshadowed rooms look the same.
         self.accum = self.ctx.framebuffer(color_attachments=[self.ctx.texture(size, components=3)])
-        self.occlusion = self.ctx.framebuffer(color_attachments=[self.ctx.texture(size, components=1, dtype="f2")])
+        self.occlusion = self.ctx.framebuffer(color_attachments=[self.ctx.texture(size, components=1, dtype="f2")],
+                                              depth_attachment=self.ctx.depth_texture(size))
         self.size = size
 
     def _write(self, buffer: Any, data: array) -> None:
@@ -171,14 +175,19 @@ class LightCompositor:
         self.light_program["shadowed"] = 1 if shadowed else 0
         self.light_vao.render(self.light_program, mode=self.ctx.TRIANGLE_STRIP, instances=len(lights))
 
-    def render(self, *, diffuse: Any, plain: list[Any], shadowed: list[tuple[Any, list[tuple[float, array]]]],
+    def render(self, *, diffuse: Any, plain: list[Any], shadowed: list[tuple[Any, tuple[float, array]]],
                ambient: tuple[int, int, int], camera: Any, target: Any) -> None:
         """Add ``plain`` lights, then each shadowed light through its own mask, and combine onto ``target``.
 
         A light is ``(x, y, radius, attenuation, (r, g, b))`` in world units and 0-255 colour. A shadowed
-        light comes with its occlusion: ``(amount, triangles)`` pairs, the triangles a flat float array of
-        world points, each pass adding ``amount`` to the mask (1.0 for a hard shadow).
+        light comes with its occlusion, ``(amount, triangles)``: the triangles a flat float array of
+        ``x, y, depth`` points, one depth per pass. A pass is the shadow seen from one point of the lamp; it
+        adds ``amount`` to the mask once per pixel (the depth test stops two overlapping shadows of the same
+        pass counting twice). A hard shadow is one pass of 1.0; a soft one several passes from points spread
+        over the lamp, each adding its share, all drawn at once.
         """
+        from pyglet import gl as pgl  # noqa: PLC0415  # Arcade has no depth-function setting: LESS, said outright
+
         ctx = self.ctx
         self.ensure(tuple(diffuse.size))
         self.light_program["occlusion"] = 0
@@ -193,13 +202,16 @@ class LightCompositor:
                 self._draw_lights(plain, shadowed=False)
             for spec, passes in shadowed:
                 self.occlusion.use()
-                self.occlusion.clear()
-                for amount, triangles in passes:
-                    if not triangles:
-                        continue
+                self.occlusion.clear(depth=1.0)
+                ctx.enable(ctx.DEPTH_TEST)
+                pgl.glDepthFunc(pgl.GL_LESS)
+                try:
+                    amount, triangles = passes
                     self._write(self.triangles, triangles)
                     self.occluder_program["amount"] = float(amount)
-                    self.occluder_vao.render(self.occluder_program, mode=ctx.TRIANGLES, vertices=len(triangles) // 2)
+                    self.occluder_vao.render(self.occluder_program, mode=ctx.TRIANGLES, vertices=len(triangles) // 3)
+                finally:
+                    ctx.disable(ctx.DEPTH_TEST)
                 self.accum.use()
                 self.occlusion.color_attachments[0].use(0)
                 self._draw_lights([spec], shadowed=True)
@@ -215,11 +227,11 @@ class LightCompositor:
 
 
 # ------------------------------------------------------------------------------------- gathering
-def _fan(poly: list[tuple[float, float]], out: array) -> None:
-    """A convex polygon as triangles (every shadow polygon here is convex: rays from the light)."""
+def _fan(poly: list[tuple[float, float]], depth: float, out: array) -> None:
+    """A convex polygon as triangles at ``depth`` (every shadow polygon here is convex: rays from the light)."""
     x0, y0 = poly[0]
     for (x1, y1), (x2, y2) in zip(poly[1:], poly[2:]):
-        out.extend((x0, y0, x1, y1, x2, y2))
+        out.extend((x0, y0, depth, x1, y1, depth, x2, y2, depth))
 
 
 def _view_rect(window: Any, camera: Any) -> tuple[float, float, float, float] | None:
@@ -246,28 +258,50 @@ def _light_spec(light: Any) -> tuple[float, float, float, float, tuple[float, fl
     return float(x), float(y), radius, attenuation, colour  # type: ignore[return-value]
 
 
-def shadow_triangles(manager: Any, x: float, y: float, radius: float) -> tuple[array, int]:
-    """The light's shadow polygons as triangles, cached per light position and size (walls don't move)."""
+# Shadow edges. A lamp is treated as a small disc: a soft shadow is the average of the shadows seen from
+# points spread over it, so the edge blurs more the farther it falls from the wall (a real penumbra), and
+# the shadow right at the wall's foot stays sharp. (size of the disc in px, points sampled)
+SOFTNESS: dict[str, tuple[float, int]] = {"sharp": (0.0, 1), "soft": (10.0, 12), "softer": (22.0, 16)}
+
+
+def _disc(size: float, count: int) -> list[tuple[float, float]]:
+    """``count`` points spread evenly over a disc (a sunflower spiral); just the centre for a point lamp."""
+    if size <= 0 or count <= 1:
+        return [(0.0, 0.0)]
+    golden = math.pi * (3.0 - math.sqrt(5.0))
+    return [(math.cos(i * golden) * size * math.sqrt((i + 0.5) / count),
+             math.sin(i * golden) * size * math.sqrt((i + 0.5) / count)) for i in range(count)]
+
+
+def shadow_triangles(manager: Any, x: float, y: float, radius: float,
+                     softness: str = "sharp") -> tuple[tuple[float, array], int]:
+    """The light's occlusion (see LightCompositor.render), cached per light position, size and softness."""
     from .shadows import cull_occluders_for_light, cull_polygons_for_light, light_shadow_polygons  # noqa: PLC0415
 
+    size, count = SOFTNESS.get(softness, SOFTNESS["sharp"])
     reach = math.ceil(radius / 32.0) * 32.0  # flicker changes the radius: build for the next size up and reuse it
-    key = (round(x, 1), round(y, 1), reach)
-    cache: dict[Any, tuple[array, int]] = manager._shadow_cache
+    key = (round(x, 1), round(y, 1), reach, softness)
+    cache: dict[Any, tuple[tuple[float, array], int]] = manager._shadow_cache
     hit = cache.get(key)
     if hit is not None:
         return hit
     rects, polys = manager._shadow_occluders
-    near_rects = cull_occluders_for_light(x, y, reach, rects)
-    near_polys = cull_polygons_for_light(x, y, reach, polys)
-    shapes = light_shadow_polygons((x, y), reach, near_rects, near_polys)
+    near_rects = cull_occluders_for_light(x, y, reach + size, rects)
+    near_polys = cull_polygons_for_light(x, y, reach + size, polys)
     triangles = array("f")
-    for shape in shapes:
-        if len(shape) >= 3:
-            _fan(shape, triangles)
+    shapes_total = 0
+    points = _disc(size, count)
+    for number, (dx, dy) in enumerate(points):
+        depth = 0.9 - 1.8 * (number + 1) / (len(points) + 1)  # each pass nearer than the last
+        shapes = light_shadow_polygons((x + dx, y + dy), reach, near_rects, near_polys)
+        for shape in shapes:
+            if len(shape) >= 3:
+                _fan(shape, depth, triangles)
+        shapes_total += len(shapes)
     if len(cache) > 512:  # a light moving every frame: keep the cache small
         cache.clear()
-    cache[key] = (triangles, len(shapes))
-    return triangles, len(shapes)
+    cache[key] = ((1.0 / len(points), triangles), shapes_total)
+    return cache[key]
 
 
 def render_shadowed_lighting(manager: Any) -> bool:
@@ -302,8 +336,9 @@ def render_shadowed_lighting(manager: Any) -> bool:
     view = _view_rect(window, camera)
     budget = int(getattr(manager, "shadow_light_budget", DEFAULT_SHADOW_LIGHT_BUDGET))
     casts = getattr(manager, "_light_casts_shadows", {})
+    softness = str(getattr(manager, "shadow_softness", "sharp") or "sharp")
     plain: list[Any] = []
-    wanted: list[tuple[float, Any, list[tuple[float, array]]]] = []
+    wanted: list[tuple[float, Any, tuple[float, array]]] = []
     shapes = triangle_count = off_screen = 0
     for light in list(layer):
         spec = _light_spec(light)
@@ -314,12 +349,12 @@ def render_shadowed_lighting(manager: Any) -> bool:
             off_screen += 1  # it lights nothing on screen
             continue
         if (rects or polys) and casts.get(id(light), True):
-            triangles, count = shadow_triangles(manager, x, y, radius)
+            passes, count = shadow_triangles(manager, x, y, radius, softness)
             if count:
                 shapes += count
-                triangle_count += len(triangles) // 6
+                triangle_count += len(passes[1]) // 9
                 centre = ((view[0] + view[2]) / 2, (view[1] + view[3]) / 2) if view else (x, y)
-                wanted.append((math.hypot(x - centre[0], y - centre[1]), spec, [(1.0, triangles)]))
+                wanted.append((math.hypot(x - centre[0], y - centre[1]), spec, passes))
                 continue
         plain.append(spec)
     wanted.sort(key=lambda item: item[0])  # nearest the middle of the view first
@@ -343,7 +378,7 @@ def render_shadowed_lighting(manager: Any) -> bool:
         "lights": len(plain) + len(shadowed) + off_screen, "lights_drawn": len(plain) + len(shadowed),
         "lights_off_screen": off_screen, "shadowed_lights": len(shadowed), "shadow_light_budget": budget,
         "lights_over_budget": len(over), "occluder_count": len(rects) + len(polys),
-        "shadow_poly_count": shapes, "shadow_triangles": triangle_count,
+        "shadow_poly_count": shapes, "shadow_triangles": triangle_count, "shadow_softness": softness,
     }
     if over:
         manager._log_counter_once("shadow_budget", f"{len(wanted)} lights cast shadows here; {len(over)} beyond the "

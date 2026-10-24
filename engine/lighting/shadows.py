@@ -253,8 +253,11 @@ def light_shadow_polygons(
     corners = [pt for r in rects for pt in ((r.x, r.y), (r.x + r.width, r.y + r.height), (r.x + r.width, r.y), (r.x, r.y + r.height))]
     corners += [pt for p in polys for pt in p]
     reach = max([float(light_radius), *(math.hypot(px - lx, py - ly) for px, py in corners)]) + 1.0
-    out = build_shadow_polygons((lx, ly), reach, rects)
-    for points in polys:
+    # Rectangles cast like polygons, from their back edges: a shadow starting at the chord between the two
+    # outermost corners covered part of the wall itself (all of it when lit from straight on).
+    shapes = [[(r.x, r.y), (r.x + r.width, r.y), (r.x + r.width, r.y + r.height), (r.x, r.y + r.height)] for r in rects]
+    out: list[Polygon] = []
+    for points in shapes + polys:
         area = sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(points, [*points[1:], points[0]]))
         if area == 0:
             continue

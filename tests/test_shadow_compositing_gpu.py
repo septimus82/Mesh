@@ -51,10 +51,10 @@ def _shot(bench, **scene):
     return bench.frame()
 
 
-def _lamp(x: float, y: float, colour: str = "#ffffff", **extra):
+def _lamp(x: float, y: float, colour: str = "#ffffff", radius: float = 200, **extra):
     from shadow_bench import light
 
-    return light(x, y, 200, colour, **extra)
+    return light(x, y, radius, colour, **extra)
 
 
 def test_a_wall_blocks_its_lamp_and_the_room_light_stays(bench) -> None:
@@ -142,3 +142,57 @@ def test_when_the_gpu_cannot_build_the_shadow_renderer_the_room_is_lit_without_s
         bench.manager._compositor = saved
     assert list(image.getdata()) == list(unshadowed.getdata())
     assert stats.get("shadows_unavailable"), stats
+
+
+def _softly(bench, softness: str, **scene):
+    return _shot(bench, settings={"lighting_shadow_softness": softness}, **scene)
+
+
+@pytest.mark.parametrize("softness", ["soft", "softer"])
+def test_a_soft_shadow_still_leaves_the_room_light_in_its_core(bench, softness: str) -> None:
+    image = _softly(bench, softness, lights=[_lamp(200, 240)], walls=[WALL])
+    room_only = _shot(bench, lights=[], walls=[WALL])
+    for point in ((380, 240), (420, 230), (450, 250)):  # deep behind the wall
+        assert _close(bench.pixel(image, point), bench.pixel(room_only, point)), (softness, point)
+
+
+@pytest.mark.parametrize("softness", ["soft", "softer"])
+def test_joined_wall_tiles_cast_the_same_soft_shadow_as_one_wall(bench, softness: str) -> None:
+    """Each sample of the lamp counts once per pixel, however many tiles' shadows overlap there."""
+    tiles = [(300.0 + 32 * i, 200.0, 32.0, 32.0) for i in range(5)]
+    joined = _softly(bench, softness, lights=[_lamp(260, 120)], walls=tiles)
+    whole = _softly(bench, softness, lights=[_lamp(260, 120)], walls=[(300.0, 200.0, 160.0, 32.0)])
+    worst, where = 0, None
+    for x in range(0, 640, 2):
+        for y in range(0, 480, 2):
+            if 298 <= x <= 462 and 198 <= y <= 234:
+                continue  # the wall itself: separate tiles shade each other's tops, one wall has no inner edges
+            d = max(abs(m - n) for m, n in zip(bench.pixel(joined, (x, y)), bench.pixel(whole, (x, y))))
+            if d > worst:
+                worst, where = d, (x, y)
+    assert worst <= 3, f"{softness}: the joined tiles' shadow differs from one wall's by up to {worst} at {where}"
+
+
+def test_a_soft_edge_is_narrow_at_the_wall_and_wider_far_from_it(bench) -> None:
+    """A penumbra, not a blur: the lamp is a small disc, so the edge widens with distance from the wall."""
+    image = _softly(bench, "softer", lights=[_lamp(180, 240, radius=480)], walls=[WALL])
+    unshadowed = _shot(bench, lights=[_lamp(180, 240, radius=480)], walls=[WALL], shadows="none")
+    room_only = _shot(bench, lights=[], walls=[WALL])
+
+    def width(x: float) -> int:
+        """How many pixels, crossing the shadow's upper edge at column x, are part-lit."""
+        part = 0
+        for y in range(200, 480):
+            got, lit, dark = bench.pixel(image, (x, y))[0], bench.pixel(unshadowed, (x, y))[0], bench.pixel(room_only, (x, y))[0]
+            if lit - dark > 12 and dark + 3 < got < lit - 3:
+                part += 1
+        return part
+
+    near, far = width(335.0), width(450.0)
+    assert 0 < near < far, f"edge width near the wall {near} px, farther away {far} px"
+
+
+def test_softness_changes_nothing_for_a_lamp_with_nothing_to_block(bench) -> None:
+    sharp = _shot(bench, lights=[_lamp(200, 240)])
+    soft = _softly(bench, "softer", lights=[_lamp(200, 240)])
+    assert list(sharp.getdata()) == list(soft.getdata())

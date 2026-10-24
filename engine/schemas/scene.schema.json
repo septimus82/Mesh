@@ -218,6 +218,9 @@
         "radius": {
           "type": "number"
         },
+        "shadows": {
+          "type": "boolean"
+        },
         "type": {
           "type": "string",
           "minLength": 1

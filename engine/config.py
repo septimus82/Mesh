@@ -74,6 +74,7 @@ class EngineConfig:
     lighting_max_static_lights: int = 128
     lighting_max_dynamic_lights: int = 64
     lighting_shadows_mode: str = "hard"
+    lighting_shadow_softness: str = "sharp"  # shadow edges: sharp, soft or softer (rooms may set their own)
     lighting_debug_shadows: bool = False
 
     # Day/night cycle
