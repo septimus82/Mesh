@@ -463,7 +463,7 @@ class AIOps:
         from . import project_ops as ops
 
         _scene_file, before = self._load_scene(scene_path)
-        lights = before.get("lights") if isinstance(before.get("lights"), list) else []
+        lights = ops.lights(before)
         deleted = lights[index] if 0 <= index < len(lights) else None
         return self._edit_scene(scene_path, lambda s: ops.remove_light(s, index), f"Deleted light {index}",
                                 lambda _s: {"deleted": deleted, "index": index})

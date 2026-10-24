@@ -41,7 +41,10 @@ S_PLAY = button_style((44, 120, 70))
 S_MENU = button_style((52, 56, 68))
 
 
-class TextField(gui.UIInputText):
+_InputText: Any = gui.UIInputText  # arcade.gui comes through optional_arcade, untyped
+
+
+class TextField(_InputText):
     """Single-line text field whose caret lands at the end when you click into it.
 
     arcade.gui's own click handling leaves the caret at position 0, so clicking a
@@ -52,7 +55,7 @@ class TextField(gui.UIInputText):
         if isinstance(event, gui.UITextInputEvent) and any(ord(ch) < 32 for ch in event.text):
             return True  # Enter, Tab and Ctrl+letter arrive as control characters; never type them
         was_active = self.active
-        handled = super().on_event(event)
+        handled: bool | None = super().on_event(event)
         if self.active and not was_active:
             self.caret.position = len(self.text)
         return handled

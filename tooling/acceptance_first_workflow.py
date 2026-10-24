@@ -40,7 +40,8 @@ class Page:
     def state(self) -> dict[str, Any]:
         for _ in range(50):
             try:
-                return json.loads(self.layout.read_text(encoding="utf-8"))
+                value: dict[str, Any] = json.loads(self.layout.read_text(encoding="utf-8"))
+                return value
             except (OSError, ValueError):
                 time.sleep(0.1)
         raise AssertionError("the Studio never wrote its layout dump")
@@ -71,7 +72,8 @@ class Page:
         found = [w for w in self.state()["widgets"] if w["type"] == "field" and w["key"] == key]
         if not found:
             raise AssertionError(f"no '{key}' field on screen")
-        return found[0]
+        value: dict[str, Any] = found[0]
+        return value
 
     def set_field(self, key: str, text: str) -> None:
         current = self.field(key)
@@ -86,7 +88,8 @@ class Page:
         found = [o for o in self.state()["objects"] if o["name"] == name]
         if not found:
             raise AssertionError(f"no object '{name}' in the room")
-        return found[0]
+        value: dict[str, Any] = found[0]
+        return value
 
     def click_obj(self, name: str, *, right: bool = False) -> None:
         self.d.click(*self._xy(self.obj(name)["rect"]), right=right)
@@ -99,7 +102,7 @@ class Page:
     # --- play mode ---------------------------------------------------------------------------
     def player(self) -> tuple[float, float]:
         play = self.wait(lambda s: s.get("play") and s["play"].get("player"), "a player in the game")["play"]
-        return tuple(play["player"])  # type: ignore[return-value]
+        return tuple(play["player"])
 
     def walk_to(self, target: tuple[float, float], tolerance: float = 20.0, timeout: float = 20.0) -> None:
         deadline = time.time() + timeout
@@ -263,7 +266,7 @@ def run(out: Path) -> int:
             px, py = s["play"]["player"]
             assert abs(px - back["x"]) < 40 and abs(py - back["y"]) < 40, ((px, py), back)
 
-        def save_move_load() -> None:
+        def save_move_load() -> dict[str, Any]:
             before = p.player()
             p.d.key("F5")
             p.d.wait(0.8)

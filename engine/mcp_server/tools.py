@@ -954,7 +954,8 @@ def _apply_ops_through_authoring(operations: list[dict[str, Any]], changes: list
 
     outcome = authoring_session.apply(root, changes, source="an MCP client (apply_ops)")
     message = outcome.get("message") or "; ".join(outcome.get("summary") or []) or "applied"
-    results = [{"type": op.get("type"), "ok": bool(outcome.get("ok")), "message": message, "data": {}} for op in operations]
+    results: list[dict[str, Any]] = [{"type": op.get("type"), "ok": bool(outcome.get("ok")), "message": message, "data": {}}
+                                     for op in operations]
     payload = {"ok": bool(outcome.get("ok")), "results": results, "mode": outcome.get("source") or outcome.get("mode"),
                "authoring": outcome}
     payload["validation"] = {"ok": bool(outcome.get("ok")), "message": "checked by each operation (scene schema)"}

@@ -475,6 +475,7 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         pin_config(self.engine_config)
         config_base_dir = getattr(self.engine_config, "_config_base_dir", None)
         self.standalone_launch = False
+        self.launched_project_root: str | None
         if config_base_dir:
             launch_root = Path(str(config_base_dir))
             resolved_launch = launch_root.resolve()

@@ -353,10 +353,10 @@ def set_dialogue_text(scene: Doc, entity_id: str, text: str) -> Doc:
     if "Dialogue" not in entity_behaviours(entity):
         entity.setdefault("behaviours", []).append("Dialogue")
     config = entity.setdefault("behaviour_config", {}).setdefault("Dialogue", {})
-    dialogue = config.get("dialogue") if isinstance(config.get("dialogue"), dict) else None
+    dialogue: Doc | None = config.get("dialogue") if isinstance(config.get("dialogue"), dict) else None
     if dialogue is None:
         dialogue = config["dialogue"] = {"speaker": entity.get("name") or "", "start": "root", "nodes": {}}
-    start = dialogue.setdefault("start", "root")
+    start = str(dialogue.setdefault("start", "root"))
     dialogue.setdefault("nodes", {}).setdefault(start, {})["text"] = str(text)
     config.pop("dialogue_lines", None)  # the node graph is now the source of truth
     return _checked(scene, out)
@@ -800,9 +800,8 @@ def _behaviour_config(entity: Doc, behaviour: str, *, create: bool) -> Doc | Non
             return None
         entity.setdefault("behaviours", []).append(behaviour)
     root = entity.setdefault("behaviour_config", {})
-    config = root.get(behaviour)
-    if not isinstance(config, dict):
-        config = root[behaviour] = {}
+    config: Doc = root.get(behaviour) if isinstance(root.get(behaviour), dict) else {}
+    root[behaviour] = config
     return config
 
 
@@ -819,10 +818,9 @@ def place_blank(scene: Doc, scene_key: str, name: str, x: float, y: float) -> tu
     """A new object with no picture or behaviours yet: a shovel, a grave, a trigger zone..."""
     out = copy.deepcopy(scene)
     label = _unique_name(out, str(name).strip() or "Object")
-    entity = {"id": unique_entity_id(out, make_entity_id(scene_key, slug(label), x, y)), "name": label,
-              "x": round(float(x), 2), "y": round(float(y), 2)}
-    out.setdefault("entities", []).append(entity)
-    return _checked(scene, out), entity["id"]
+    entity_id = unique_entity_id(out, make_entity_id(scene_key, slug(label), x, y))
+    out.setdefault("entities", []).append({"id": entity_id, "name": label, "x": round(float(x), 2), "y": round(float(y), 2)})
+    return _checked(scene, out), entity_id
 
 
 def set_picture(scene: Doc, entity_id: str, sprite: str | None, *, follow: bool = False) -> Doc:
@@ -1118,8 +1116,10 @@ def conversation(entity: Doc) -> Doc:
     """An object's conversation, ready to show: lines (in order), start rules and options."""
     config = (entity.get("behaviour_config") or {}).get("Dialogue")
     config = config if isinstance(config, dict) else {}
-    graph = config.get("dialogue") if isinstance(config.get("dialogue"), dict) else {}
-    nodes = graph.get("nodes") if isinstance(graph.get("nodes"), dict) else {}
+    raw_graph = config.get("dialogue")
+    graph: Doc = raw_graph if isinstance(raw_graph, dict) else {}
+    raw_nodes = graph.get("nodes")
+    nodes: Doc = raw_nodes if isinstance(raw_nodes, dict) else {}
     return {"speaker": str(graph.get("speaker") or entity.get("name") or ""),
             "start": graph.get("start") if graph.get("start") in nodes else next(iter(nodes), None),
             "nodes": copy.deepcopy(nodes), "starts": copy.deepcopy(graph.get("starts") or []),

@@ -141,7 +141,7 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
         if isinstance(tilemap.get("tile_layers"), list):
             # The inline-layers format has no "overrides": its tiles are the painted data.
             for entry in tilemap["tile_layers"]:
-                tiles = controller.tilemap_instance.layer_data.get(entry.get("id")) if isinstance(entry, dict) else None
+                tiles = controller.tilemap_instance.layer_data.get(str(entry.get("id"))) if isinstance(entry, dict) else None
                 if tiles is not None:
                     entry["tiles"] = list(tiles)
         else:

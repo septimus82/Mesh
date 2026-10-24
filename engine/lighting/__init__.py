@@ -214,6 +214,8 @@ class LightManager:
         lighting.set_shadows_mode("none")
     """
 
+    base_ambient_color: tuple[int, int, int, int] | None = None  # the project's; day/night changes ambient_color
+
     def __init__(
         self,
         window: Any,
@@ -395,9 +397,9 @@ class LightManager:
         # and zoom). The composite onto the screen is a full-screen quad the camera doesn't affect. end()
         # runs under the GUI camera, so that is put back afterwards.
         window = getattr(self, "window", None)
-        camera = getattr(window, "camera", None)
-        if callable(getattr(camera, "use", None)):
-            camera.use()
+        use_camera = getattr(getattr(window, "camera", None), "use", None)
+        if use_camera is not None and callable(use_camera):
+            use_camera()
         try:
             for args, kwargs in (((), {"ambient_color": rgb}), ((rgb,), {}), ((), {})):
                 try:

@@ -215,11 +215,11 @@ def end_hard_shadows_overlay(manager: Any) -> bool:
         # Shadows are in world coordinates, like the lights: draw them through the world camera (scroll and
         # zoom), then return to the GUI camera end() runs under. Subtracting the camera's corner ignored zoom,
         # so at any zoom but 1 the shadows were drawn away from their occluders.
-        world_camera = getattr(window, "camera", None)
-        through_camera = callable(getattr(world_camera, "use", None))
+        use_world_camera = getattr(getattr(window, "camera", None), "use", None)
+        through_camera = callable(use_world_camera)
         vx, vy = (0.0, 0.0) if through_camera else (float(viewport.x), float(viewport.y))
-        if through_camera:
-            world_camera.use()
+        if use_world_camera is not None and through_camera:
+            use_world_camera()
         try:
             for poly in polys:
                 if not isinstance(poly, list) or len(poly) < 3:

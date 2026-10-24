@@ -110,15 +110,18 @@ class AuthorPage(MapPage):
 
     def panel_x(self) -> float:
         width = self.state()["window"][0]
-        return width - 160
+        value: float = width - 160
+        return value
 
     def fresh(self) -> dict[str, Any]:
         """The Studio's state as drawn after now (its dump is written every few frames)."""
         tick = self.state().get("tick")
-        return self.wait(lambda s: s.get("tick") != tick, "a fresh frame", timeout=5)
+        value: dict[str, Any] = self.wait(lambda s: s.get("tick") != tick, "a fresh frame", timeout=5)
+        return value
 
     def _find(self, *, key: str | None = None, text: str | None = None) -> dict[str, Any] | None:
-        for widget in self.fresh()["widgets"]:
+        widgets: list[dict[str, Any]] = self.fresh()["widgets"]
+        for widget in widgets:
             if key is not None and widget["type"] == "field" and widget["key"] == key:
                 return widget
             if text is not None and widget["type"] == "button" and widget["text"] == text:
@@ -224,14 +227,16 @@ class AuthorPage(MapPage):
         found = [o for o in self.state()["objects"] if o["name"] == name]
         if not found:
             raise AssertionError(f"no object '{name}' in the room")
-        return found[0]
+        value: dict[str, Any] = found[0]
+        return value
 
     def place(self, palette: str, cell: tuple[int, int]) -> str:
         before = {o["id"] for o in self.state()["objects"]}
         self.button(palette)
         self.click_cell(*cell)
         state = self.wait(lambda s: s["selected"] and s["selected"] not in before, f"a new {palette}")
-        return state["selected"]
+        value: str = state["selected"]
+        return value
 
     def select(self, name: str) -> None:
         self.click_obj(name)
@@ -250,18 +255,21 @@ class AuthorPage(MapPage):
 
     # --- play ---------------------------------------------------------------------------------
     def play_state(self) -> dict[str, Any]:
-        return self.state()["play"]
+        value: dict[str, Any] = self.state()["play"]
+        return value
 
     def flags(self) -> dict[str, bool]:
         return self.play_state().get("flags") or {}
 
     def dialogue(self) -> dict[str, Any] | None:
-        return self.play_state()["dialogue"]
+        value: dict[str, Any] | None = self.play_state()["dialogue"]
+        return value
 
     def wait_dialogue(self, part: str, timeout: float = 8.0) -> dict[str, Any]:
         state = self.wait(lambda s: s["play"] and s["play"]["dialogue"] and part in s["play"]["dialogue"]["text"],
                           f"dialogue containing {part!r}", timeout=timeout)
-        return state["play"]["dialogue"]
+        value: dict[str, Any] = state["play"]["dialogue"]
+        return value
 
     def tap(self, key: str, pause: float = 0.45) -> None:
         self.d.key(key)
@@ -274,15 +282,20 @@ class AuthorPage(MapPage):
             self.tap("E")
         assert not self.dialogue(), f"the dialogue didn't close: {self.dialogue()}"
 
+    def open_dialogue(self) -> dict[str, Any]:
+        found = self.dialogue()
+        assert found is not None, "no dialogue is open"
+        return found
+
     def choose(self, text: str) -> None:
-        names = [c["text"] for c in self.dialogue()["choices"]]
+        names = [c["text"] for c in self.open_dialogue()["choices"]]
         assert text in names, f"no choice {text!r} in {names}"
         target = names.index(text)
         for _ in range(len(names) + 1):
-            if self.dialogue()["cursor"] == target:
+            if self.open_dialogue()["cursor"] == target:
                 break
             self.tap("S", 0.3)
-        assert self.dialogue()["cursor"] == target, f"couldn't move to {text!r}: {self.dialogue()}"
+        assert self.open_dialogue()["cursor"] == target, f"couldn't move to {text!r}: {self.dialogue()}"
         self.tap("E", 0.6)
 
     def go_to(self, x: float, y: float, tol: float = 6.0) -> None:
@@ -308,7 +321,8 @@ class AuthorPage(MapPage):
         self.tap("E", 0.6)
 
     def obj_world(self, name: str) -> tuple[float, float]:
-        return self.memo_positions[name]
+        value: tuple[float, float] = self.memo_positions[name]
+        return value
 
 
 # ------------------------------------------------------------------------------------ run
@@ -349,15 +363,18 @@ def run(out: Path) -> int:
         return ok
 
     def p() -> AuthorPage:
-        return holder["page"]
+        value: AuthorPage = holder["page"]
+        return value
 
     def scene_on_disk() -> dict[str, Any]:
-        return json.loads((project / SCENE).read_text(encoding="utf-8"))
+        value: dict[str, Any] = json.loads((project / SCENE).read_text(encoding="utf-8"))
+        return value
 
     def entity_on_disk(name: str) -> dict[str, Any]:
         found = [e for e in scene_on_disk()["entities"] if e.get("name") == name]
         if found:
-            return found[0]
+            value: dict[str, Any] = found[0]
+            return value
         # The player is defined once for the whole game (Milestone 11): the project's "player" prefab.
         prefabs = json.loads((project / "assets/prefabs.json").read_text(encoding="utf-8"))
         return next(p["entity"] for p in prefabs if p["entity"].get("name") == name)

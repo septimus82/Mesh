@@ -201,6 +201,8 @@ class CreatorModeController:
         CreatorDoorStagingResult
         | CreatorEntityMoveStagingResult
         | CreatorEntityOpacityStagingResult
+        | CreatorEntityRenameStagingResult
+        | CreatorAddPersonStagingResult
         | CreatorProposalInboxNavigationResult
         | None
     ):
@@ -226,9 +228,9 @@ class CreatorModeController:
             self._person_line_focused = True
             return CreatorAddPersonStagingResult(ok=False, errors=())
         if action_id == ADD_PERSON_STAGE_ACTION_ID:
-            result = self.stage_add_person()
-            self._store_add_person_staging_result(result)
-            return result
+            person = self.stage_add_person()
+            self._store_add_person_staging_result(person)
+            return person
         if action_id == PROPOSAL_OPEN_INBOX_ACTION_ID:
             return self.open_ai_proposals_inbox()
         if action_id == ENTITY_RENAME_DRAFT_ACTION_ID:
@@ -245,23 +247,23 @@ class CreatorModeController:
             self._opacity_draft = percent
             return CreatorEntityOpacityStagingResult(ok=False, errors=())
         if action_id == ENTITY_RENAME_STAGE_ACTION_ID:
-            result = self.stage_selected_entity_rename()
-            self._store_rename_staging_result(result)
-            return result
+            rename = self.stage_selected_entity_rename()
+            self._store_rename_staging_result(rename)
+            return rename
         if action_id == ENTITY_OPACITY_STAGE_ACTION_ID:
-            result = self.stage_selected_entity_opacity()
-            self._store_opacity_staging_result(result)
-            return result
+            opacity = self.stage_selected_entity_opacity()
+            self._store_opacity_staging_result(opacity)
+            return opacity
         if action_id in ENTITY_MOVE_ACTION_ID_SET:
-            result = self.stage_selected_entity_move(action_id)
-            self._store_move_staging_result(result)
-            return result
+            move = self.stage_selected_entity_move(action_id)
+            self._store_move_staging_result(move)
+            return move
         if action_id != _DOOR_STAGE_PROPOSAL_ACTION:
             return None
 
-        result = self.stage_selected_door_proposal()
-        self._store_staging_result(result)
-        return result
+        door = self.stage_selected_door_proposal()
+        self._store_staging_result(door)
+        return door
 
     def stage_selected_entity_move(self, action_id: str) -> CreatorEntityMoveStagingResult:
         """Stage a one-grid-step movement proposal for the current selection."""
@@ -376,7 +378,7 @@ class CreatorModeController:
             line=self._person_line_draft,
             pending_proposal_id=self._pending_person_proposal_id(),
         )
-        if reason or not isinstance(scene, dict):
+        if editor is None or reason or not isinstance(scene, dict):
             return CreatorAddPersonStagingResult(ok=False, errors=(reason or "No map is loaded.",))
 
         from engine.editor.creator_mode.creator_overlay_renderer import creator_canvas_rect  # noqa: PLC0415

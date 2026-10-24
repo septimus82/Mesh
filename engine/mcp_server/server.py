@@ -14,25 +14,21 @@ and point any MCP client (Claude Desktop/Code/Cursor) at that command.
 
 from __future__ import annotations
 
+import importlib
 from typing import Any
 
 from engine.mcp_server import tools
 
 HAS_MCP = False
 FastMCP: Any = None
-try:  # pragma: no cover - exercised only when the optional SDK is installed
-    from mcp.server.fastmcp import FastMCP as _FastMCP
-
-    FastMCP = _FastMCP
-    HAS_MCP = True
-except ImportError:  # pragma: no cover - the import-guard path
-    try:  # mcp 2.x renamed FastMCP to MCPServer; tool(), resource() and run() are unchanged
-        from mcp.server.mcpserver import MCPServer as _MCPServer
-
-        FastMCP = _MCPServer
+# The optional SDK: mcp 1.x has FastMCP; 2.x renamed it MCPServer (tool(), resource() and run() are unchanged).
+for _module, _name in (("mcp.server.fastmcp", "FastMCP"), ("mcp.server.mcpserver", "MCPServer")):
+    try:  # pragma: no cover - exercised only when the optional SDK is installed
+        FastMCP = getattr(importlib.import_module(_module), _name)
         HAS_MCP = True
-    except ImportError:
-        pass
+        break
+    except (ImportError, AttributeError):  # pragma: no cover - the import-guard path
+        continue
 
 
 SERVER_NAME = "mesh"

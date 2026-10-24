@@ -18,6 +18,7 @@ import subprocess
 import sys
 import textwrap
 import time
+from functools import partial
 from pathlib import Path
 from typing import Any, Callable
 
@@ -174,6 +175,9 @@ class Launcher:
         self._read_fields()
         self.screen, self.message = screen, ""
         self._rebuild()
+
+    def _card_clicked(self, template: Template, _event: Any) -> None:
+        self.choose_template(template)
 
     def choose_template(self, template: Template) -> None:
         self._read_fields()
@@ -343,11 +347,11 @@ class Launcher:
             missing = not (path / "config.json").is_file()
             row = gui.UIBoxLayout(vertical=False, space_between=6)
             name = project_title(path) if not missing else path.name
-            button = self._button(name, lambda f=folder, m=missing: self.recent_clicked(f, m), width=300,
+            button = self._button(name, partial(self.recent_clicked, folder, missing), width=300,
                                   style=S_DANGER if missing else S_BUTTON)
             row.add(button)
             if missing:
-                row.add(self._button("Remove", lambda f=folder: self.remove_recent(f), width=90))
+                row.add(self._button("Remove", partial(self.remove_recent, folder), width=90))
             right.add(row)
             shown = folder if len(folder) <= 60 else "..." + folder[-57:]
             right.add(self._label(("Missing: " if missing else "") + shown, size=9, color=C_ERROR if missing else C_MUTED))
@@ -362,10 +366,10 @@ class Launcher:
         for template in self.templates:
             column = gui.UIBoxLayout(vertical=True, align="left", space_between=4)
             card = gui.UITextureButton(texture=self._preview(template), width=CARD_W, height=CARD_H)
-            card.on_click = lambda _e, t=template: self.choose_template(t)
+            card.on_click = partial(self._card_clicked, template)
             self._cards[template.id] = card
             column.add(card)
-            column.add(self._button(template.title, lambda t=template: self.choose_template(t), width=CARD_W,
+            column.add(self._button(template.title, partial(self.choose_template, template), width=CARD_W,
                                     style=S_ACTIVE if template is self.template else S_BUTTON))
             self._lines(column, template.description, chars=42, size=11)
             cards.add(column)

@@ -77,7 +77,8 @@ def build(root: Path) -> dict[str, str]:
                                    "speed": 0},
                  "Shooter": {"target_tag": "dummy", "cooldown": 0.6, "range": 400, "damage": 1}}},
         ]
-        return out
+        value: dict[str, Any] = out
+        return value
 
     project.edit_scene(target_practice, hall)
     project.save()
@@ -128,13 +129,15 @@ def run(out: Path) -> int:
         return ok
 
     def play() -> dict[str, Any]:
-        return p().fresh()["play"]
+        value: dict[str, Any] = p().fresh()["play"]
+        return value
 
     def names() -> list[str]:
         return [s["name"] for s in play()["sprites"] if s["visible"]]
 
     def scene_doc(key: str) -> dict[str, Any]:
-        return json.loads((root / project_path(key)).read_text(encoding="utf-8"))
+        value: dict[str, Any] = json.loads((root / project_path(key)).read_text(encoding="utf-8"))
+        return value
 
     def project_path(key: str) -> str:
         return Project(root, json.loads((root / "config.json").read_text(encoding="utf-8"))["world_file"]).path(key)
@@ -217,7 +220,8 @@ def run(out: Path) -> int:
         assert (root / "saves" / "quicksave.json").is_file(), "no quicksave written"
         hp = memo["saved"]["dummy_hp"]
         assert hp is not None and hp < 1000, f"the turret should have hit the dummy by now: {memo['saved']}"
-        return memo["saved"]
+        value: dict[str, Any] = memo["saved"]
+        return value
 
     def s08_change_things() -> dict[str, Any]:
         through_door(keys["hall"], keys["yard"])

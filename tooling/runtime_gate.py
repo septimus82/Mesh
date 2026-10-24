@@ -32,6 +32,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 REPO = Path(__file__).resolve().parents[1]
 SUITES = [  # name, script, what it covers
@@ -75,7 +76,7 @@ def main() -> int:
     out: Path = args.out
     shutil.rmtree(out, ignore_errors=True)  # one reused folder: no pile of old runs
     out.mkdir(parents=True)
-    summary: list[dict[str, object]] = []
+    summary: list[dict[str, Any]] = []
     for name, script, about in SUITES:
         if args.only and name not in args.only:
             continue
@@ -85,7 +86,7 @@ def main() -> int:
             old, note = older_projects(args.old, out)
             command += ["--old", *map(str, old)]
         print(f"=== {name}: {about}", flush=True)
-        attempts = []
+        attempts: list[dict[str, Any]] = []
         for attempt in range(1 + max(0, args.retries)):
             start = time.time()
             done = subprocess.run(command, cwd=REPO, capture_output=True, text=True, encoding="utf-8", errors="replace")

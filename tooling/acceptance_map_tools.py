@@ -105,7 +105,8 @@ def run(out: Path) -> int:
         return ok
 
     def gid(label: str) -> int:
-        return p().gid(label)
+        value: int = p().gid(label)
+        return value
 
     def layer_is(layer: str, where: list[tuple[int, int]], value: int) -> bool:
         return all(p().at(layer, c, r) == value for c, r in where)
@@ -124,7 +125,8 @@ def run(out: Path) -> int:
         found = [w for w in p().state()["widgets"] if w["type"] == "tile" and w["text"] == label]
         if not found:
             raise AssertionError(f"no '{label}' tile on the palette")
-        return p()._xy(found[0]["rect"])
+        value: tuple[float, float] = p()._xy(found[0]["rect"])
+        return value
 
     def field_click(key: str) -> None:
         field = p().field(key)

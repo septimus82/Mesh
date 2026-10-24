@@ -108,6 +108,8 @@ class InspectorMixin:
         mouse: tuple[float, float]
         _images: dict[str, Any]
         _focusable: dict[str, gui.UIInputText]
+        menu: tuple[float, float, list[tuple[str, Callable[[], object]]]] | None
+        _focus_after_build: str | None
 
         def _label(self, text: str, *, color: tuple[int, int, int] = C_TEXT, size: int = 11, width: int | None = None,
                    bold: bool = False) -> gui.UILabel: ...
@@ -174,7 +176,7 @@ class InspectorMixin:
         items: list[tuple[str, Callable[[], object]]] = []
         for name in known:
             if name not in current:
-                items.append((name, lambda n=name: commit(", ".join(current + [n]))))
+                items.append((name, partial(commit, ", ".join(current + [name]))))
         items.append(("New flag... (type it in the box)", lambda: self._activate(field)))
         x, y = self.mouse
         self.menu = (x - 220, y, items)
@@ -557,8 +559,11 @@ class InspectorMixin:
         rows.add(self._label("Rows count from 0 at the top. Leave Left empty to mirror Right.", color=C_MUTED, size=9, width=width))
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         row.add(self._label(_short(form["sheet"].removeprefix("assets/") or "no image", 26), size=10, width=width - 84))
-        row.add(self._button("Image...", lambda: self._open_picker_images(
-            "Image with the frames", lambda rel: (form.update(sheet=rel), self._rebuild())), width=80))
+        def use_sheet(rel: str) -> None:
+            form.update(sheet=rel)
+            self._rebuild()
+
+        row.add(self._button("Image...", lambda: self._open_picker_images("Image with the frames", use_sheet), width=80))
         rows.add(row)
 
         def set_(key: str) -> Callable[[str], object]:
@@ -642,7 +647,8 @@ class InspectorMixin:
                     frames.append(optional_arcade.arcade.Texture(ImageOps.mirror(frame) if flip else frame,
                                                                  hash=f"mesh-studio-clip-{key}-{index}"))
             self._textures[key] = frames
-        return self._textures[key]
+        cached: list[Any] = self._textures[key]
+        return cached
 
     # ---------------------------------------------------------------- Collision
     def _collision_tab(self, rows: Rows, entity: dict[str, Any], width: int) -> None:
@@ -783,23 +789,27 @@ class InspectorMixin:
         rows.add(self._label("Openings", bold=True, size=11))
         rows.add(self._label("The first that applies picks the opening line.", color=C_MUTED, size=9, width=width))
         starts = talk["starts"]
-        for i, rule in enumerate(starts):
-            def save_rule(i: int = i, **changes: Any) -> None:
+
+        def opening(i: int, rule: dict[str, Any]) -> None:  # one opening rule's row (i is this rule's, not the loop's)
+            def save_rule(**changes: Any) -> None:
                 rules = [dict(r) for r in starts]
                 rules[i].update(changes)
                 self._edit(lambda s: ops.set_start_rules(s, target, rules), "Opening changed.")
 
             row = gui.UIBoxLayout(vertical=False, space_between=4)
             row.add(self._label(f"{i + 1}. start at line", color=C_MUTED, size=10, width=118))
-            row.add(self._field(str(number.get(rule.get("node"), "")), lambda v, i=i: self._line_ref(
-                v, order, lambda node: save_rule(i, node=node)), width=50, key=f"open_node_{i}"))
-            row.add(self._button("Remove", lambda i=i: self._edit(lambda s: ops.set_start_rules(
+            row.add(self._field(str(number.get(str(rule.get("node")), "")), lambda v: self._line_ref(
+                v, order, lambda node: save_rule(node=node)), width=50, key=f"open_node_{i}"))
+            row.add(self._button("Remove", lambda: self._edit(lambda s: ops.set_start_rules(
                 s, target, [r for j, r in enumerate(starts) if j != i]), "Opening removed."), width=width - 122 - 50 - 8, style=S_DANGER))
             rows.add(row)
-            self._flag_field(rows, "  when flags set", rule.get("require_flags"), lambda v, i=i: save_rule(i, require_flags=v), width,
+            self._flag_field(rows, "  when flags set", rule.get("require_flags"), lambda v: save_rule(require_flags=v), width,
                              f"open_req_{i}")
-            self._flag_field(rows, "  and not set", rule.get("forbid_flags"), lambda v, i=i: save_rule(i, forbid_flags=v), width,
+            self._flag_field(rows, "  and not set", rule.get("forbid_flags"), lambda v: save_rule(forbid_flags=v), width,
                              f"open_forbid_{i}")
+
+        for i, rule in enumerate(starts):
+            opening(i, rule)
         self._labeled(rows, "Otherwise line", self._field(str(number.get(talk["start"], 1)), lambda v: self._line_ref(
             v, order, lambda node: self._edit(lambda s: ops.set_conversation(s, target, start=node), "Opening changed."), allow_end=False),
             width=60, key="dlg_start"), width)
@@ -851,7 +861,7 @@ class InspectorMixin:
         self._labeled(rows, "  Speaker (optional)", self._field(str(node.get("speaker", "")), lambda v: self._edit(
             lambda s: ops.set_line(s, target, node_id, speaker=v), "Speaker changed."), width=width - 122, key="line_speaker"), width)
         if not node.get("choices"):
-            self._labeled(rows, "  Then line (empty: end)", self._field(str(number.get(node.get("next"), "")), lambda v: self._line_ref(
+            self._labeled(rows, "  Then line (empty: end)", self._field(str(number.get(str(node.get("next")), "")), lambda v: self._line_ref(
                 v, order, lambda nxt: self._edit(lambda s: ops.set_line(s, target, node_id, next_line=nxt), "Flow changed.")),
                 width=width - 122, key="line_next"), width)
         for i, choice in enumerate(node.get("choices") or []):
@@ -892,7 +902,7 @@ class InspectorMixin:
 
         self._labeled(rows, "    Choice says", self._field(str(choice.get("text", "")), lambda v: save(text=v), width=width - 122,
                                                            key="choice_text"), width)
-        self._labeled(rows, "    Goes to line", self._field(str(number.get(choice.get("next"), "")), lambda v: self._line_ref(
+        self._labeled(rows, "    Goes to line", self._field(str(number.get(str(choice.get("next")), "")), lambda v: self._line_ref(
             v, order, lambda nxt: save(next_line=nxt)), width=width - 122, key="choice_next"), width)
         self._flag_field(rows, "    Requires flags", choice.get("require_flags"), lambda v: save(require_flags=v), width, "choice_req")
         self._flag_field(rows, "    Not if flags", choice.get("forbid_flags"), lambda v: save(forbid_flags=v), width, "choice_forbid")
@@ -928,8 +938,9 @@ class InspectorMixin:
         for rule in talk["starts"]:
             if rule.get("node") in talk["nodes"] and set(rule.get("require_flags") or []) <= flags \
                     and not set(rule.get("forbid_flags") or []) & flags:
-                return rule["node"]
-        return talk["start"]
+                return str(rule["node"])
+        start: str | None = talk["start"]
+        return start
 
     def _preview_panel(self, rows: Rows, width: int) -> None:
         state = self.preview or {}
@@ -1005,8 +1016,9 @@ class InspectorMixin:
         rows.anchor("pictures")
         rows.add(self._label("Looks different when", bold=True, size=12))
         rules = ops.picture_rules(entity)
-        for i, rule in enumerate(rules):
-            def save_rule(i: int = i, **changes: Any) -> None:
+
+        def picture_rule(i: int, rule: dict[str, Any]) -> None:  # one picture rule's row
+            def save_rule(**changes: Any) -> None:
                 updated = [dict(r) for r in rules]
                 updated[i].update(changes)
                 self._edit(lambda s: ops.set_picture_rules(s, target, updated), "Picture change saved.")
@@ -1015,13 +1027,16 @@ class InspectorMixin:
             space = gui.UISpace(width=32, height=32)
             self._thumbs.append((space, str(self.project.root / rule["sprite"])))
             row.add(space)
-            row.add(self._button(_short(Path(rule["sprite"]).name, 20), lambda i=i: self._open_picker_images(
-                "The picture to show", lambda rel, i=i: save_rule(i, sprite=rel)), width=width - 38 - 84))
-            row.add(self._button("Remove", lambda i=i: self._edit(lambda s: ops.set_picture_rules(
+            row.add(self._button(_short(Path(rule["sprite"]).name, 20), lambda: self._open_picker_images(
+                "The picture to show", lambda rel: save_rule(sprite=rel)), width=width - 38 - 84))
+            row.add(self._button("Remove", lambda: self._edit(lambda s: ops.set_picture_rules(
                 s, target, [r for j, r in enumerate(rules) if j != i]), "Picture change removed."), width=80, style=S_DANGER))
             rows.add(row)
-            self._flag_field(rows, "  when flags set", rule.get("require_flags"), lambda v, i=i: save_rule(i, require_flags=v), width, f"pic_req_{i}")
-            self._flag_field(rows, "  and not set", rule.get("forbid_flags"), lambda v, i=i: save_rule(i, forbid_flags=v), width, f"pic_forbid_{i}")
+            self._flag_field(rows, "  when flags set", rule.get("require_flags"), lambda v: save_rule(require_flags=v), width, f"pic_req_{i}")
+            self._flag_field(rows, "  and not set", rule.get("forbid_flags"), lambda v: save_rule(forbid_flags=v), width, f"pic_forbid_{i}")
+
+        for i, rule in enumerate(rules):
+            picture_rule(i, rule)
         rows.add(self._button("+ Picture change...", lambda: self._open_picker_images(
             "The picture to show", lambda rel: self._edit(lambda s: ops.set_picture_rules(
                 s, target, rules + [{"sprite": rel, "require_flags": [], "forbid_flags": []}]), "Added: now choose its flags.")),

@@ -23,7 +23,7 @@ def _is_plain_function_key(key: int, modifiers: int, expected_key: int | None) -
 def _is_shift_function_key(key: int, modifiers: int, expected_key: int | None) -> bool:
     key_ns = getattr(optional_arcade.arcade, "key", None)
     shift = int(getattr(key_ns, "MOD_SHIFT", 0) or 0)
-    return (
+    return bool(
         expected_key is not None
         and shift
         and key == expected_key
@@ -104,7 +104,7 @@ def on_key_press(window: "GameWindow", key: int, modifiers: int) -> None:  # noq
             _toggle_fe = getattr(editor, "toggle_find_everything", None)
             if callable(_toggle_fe):
                 _input_ctrl = getattr(window, "input_controller", None)
-                _keys_down = getattr(_input_ctrl, "get_keys_down", lambda: set())() if _input_ctrl is not None else set()
+                _keys_down: set[int] = getattr(_input_ctrl, "get_keys_down", set)() if _input_ctrl is not None else set()
                 _is_ctrl_k = key == optional_arcade.arcade.key.K and optional_arcade.arcade.key.LCTRL in _keys_down
                 _is_f1 = key == optional_arcade.arcade.key.F1
                 if _is_ctrl_k or _is_f1:

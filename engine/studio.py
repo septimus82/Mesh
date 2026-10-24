@@ -157,7 +157,7 @@ class Studio(InspectorMixin):
         self.ai = StudioAIHost(self)  # outside tools (AI over MCP, scripts) propose; the person decides
         if not os.environ.get("MESH_STUDIO_NO_AI_BRIDGE"):
             self.ai.start()
-        self._tile_textures: dict[tuple[str, int], Any] = {}
+        self._tile_textures: dict[tuple[str, int | str], Any] = {}  # (tileset, gid) or ("import", path)
         self._images: dict[str, Any] = {}
         self._sheet_space: Any = None
         self._import_space: Any = None
@@ -358,7 +358,7 @@ class Studio(InspectorMixin):
     def _entity_at(self, wx: float, wy: float) -> str | None:
         sprites = self._sprites_by_id()
         for entity in reversed(ops.entities(self.project.scene())):
-            cx, cy, w, h = self._bounds(entity, sprites.get(entity.get("id")))
+            cx, cy, w, h = self._bounds(entity, sprites.get(str(entity.get("id"))))
             if abs(wx - cx) <= w / 2 and abs(wy - cy) <= h / 2:
                 return entity.get("id")
         return None
@@ -698,6 +698,8 @@ class Studio(InspectorMixin):
 
     def place_at(self, wx: float, wy: float) -> None:
         prefab, self.place_prefab = self.place_prefab, None
+        if prefab is None:
+            return
         created: list[str] = []
 
         def change(scene: dict[str, Any]) -> dict[str, Any]:
@@ -711,7 +713,8 @@ class Studio(InspectorMixin):
             created.append(new_id)
             return out
 
-        hint = {"blank": " Give it a picture in Look.", "zone": " Drag its orange corner to size it."}.get(prefab.get("built_in"), "")
+        hint = {"blank": " Give it a picture in Look.", "zone": " Drag its orange corner to size it."}.get(
+            str(prefab.get("built_in")), "")
         if self._edit(change, f"Placed {prefab.get('display_name', prefab['id'])}.{hint}"):
             if prefab.get("built_in"):
                 self.tab = "collision" if prefab["built_in"] == "zone" else "look"
@@ -841,7 +844,8 @@ class Studio(InspectorMixin):
         state = getattr(self.window, "game_state", None)
         seen = (tuple(sorted((getattr(state, "flags", None) or {}).items())),
                 tuple(sorted((getattr(state, "counters", None) or {}).items())))
-        changed, self._play_flags_seen = seen != self._play_flags_seen, seen
+        changed = bool(seen != self._play_flags_seen)
+        self._play_flags_seen = seen
         return changed
 
     # ==================================================================== text fields
@@ -938,7 +942,7 @@ class Studio(InspectorMixin):
         box.add(self._label("Rooms", bold=True, size=12))
         for key, label, _path in self.project.rooms():
             style = S_ACTIVE if key == self.project.current else S_BUTTON
-            box.add(self._button(label, lambda k=key: self.switch_room(k), width=width, style=style))
+            box.add(self._button(label, partial(self.switch_room, key), width=width, style=style))
         box.add(self._button("+ New room", self._open_new_room, width=width))
         box.add(gui.UISpace(height=10))
         box.add(self._map_section(width))
@@ -949,7 +953,7 @@ class Studio(InspectorMixin):
         for prefab in self.prefabs + BUILT_IN_OBJECTS:
             style = S_ACTIVE if prefab is self.place_prefab else S_BUTTON
             text = str(prefab.get("display_name") or prefab["id"])
-            box.add(self._button(text, lambda p=prefab: self.arm_place(p), width=width, style=style))
+            box.add(self._button(text, partial(self.arm_place, prefab), width=width, style=style))
         box.add(self._label("Click one, then click the map.", color=C_MUTED, size=10))
         return box
 
@@ -1296,7 +1300,7 @@ class Studio(InspectorMixin):
         third, half = (width - 8) // 3, (width - 6) // 2
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         for layer, title in LAYER_BUTTONS:
-            row.add(self._button(title, lambda la=layer: self.set_layer(la), width=third,
+            row.add(self._button(title, partial(self.set_layer, layer), width=third,
                                  style=S_ACTIVE if self.layer == layer else S_BUTTON))
         box.add(row)
         row = gui.UIBoxLayout(vertical=False, space_between=6)
@@ -1306,7 +1310,7 @@ class Studio(InspectorMixin):
         row = gui.UIBoxLayout(vertical=False, space_between=4)
         for shape, title in (("brush", "Brush"), ("rect", "Rect"), ("fill", "Fill")):
             active = self.shape == shape and self.tool != "select"
-            row.add(self._button(title, lambda sh=shape: self.set_shape(sh), width=third, style=S_ACTIVE if active else S_BUTTON))
+            row.add(self._button(title, partial(self.set_shape, shape), width=third, style=S_ACTIVE if active else S_BUTTON))
         box.add(row)
         row = gui.UIBoxLayout(vertical=False, space_between=6)
         name = self.tilesets[self.sheet]["name"] if self.tilesets else "No tiles"
@@ -1449,13 +1453,14 @@ class Studio(InspectorMixin):
             return box
         room -= 2 * 22  # the "more above / below" lines
         last_page = len(items)
-        used = 0
+        used = 0.0
         while last_page > 0 and used + heights[last_page - 1] <= room:
             last_page -= 1
             used += heights[last_page]
         start = min(max(0, self.panel_scroll), last_page)
         self.panel_scroll = start
-        shown, used = [], 0
+        shown: list[int] = []
+        used = 0.0
         for index in range(start, len(items)):
             if shown and used + heights[index] > room:
                 break
@@ -1694,7 +1699,7 @@ class Studio(InspectorMixin):
     def _set_structured(self, target: str, behaviour: str, name: str, text: str) -> None:
         try:
             value = json.loads(text) if text.strip() else None
-        except ValueError as err:
+        except json.JSONDecodeError as err:
             self._say(f"{name} isn't valid: {err.msg} (at character {err.pos + 1}). Nothing was changed.", ok=False)
             self._rebuild()
             return
@@ -1771,7 +1776,7 @@ class Studio(InspectorMixin):
             entity = self._entity(entity_id) or {}
             items.append(("Rename", lambda: self._focus("name")))
             if "Dialogue" in ops.entity_behaviours(entity) or entity.get("tag") == "npc":
-                items.append(("Edit what they say", lambda: (setattr(self, "tab", "dialogue"), self._focus("says"))))
+                items.append(("Edit what they say", self._edit_what_they_say))
             items.append(("Add behaviour...", self._open_picker))
             if entity.get("tag") != "player":
                 items.append(("Copy", self.copy_selected))
@@ -1786,13 +1791,21 @@ class Studio(InspectorMixin):
                 items.append(("Paint with this tile", lambda: self.pick_from_map(cell)))
             for key, label, _ in self.project.rooms():
                 if key != self.project.current:
-                    items.append((f"Add door to {label}", lambda k=key: self.add_door_to(k, at)))
+                    items.append((f"Add door to {label}", partial(self.add_door_to, key, at)))
             items.append(("Add door to a new room...", lambda: self._open_new_room(door_at=at)))
             for prefab in self.prefabs + BUILT_IN_OBJECTS:
                 items.append((f"Place {prefab.get('display_name', prefab['id'])} here",
-                              lambda p=prefab: (setattr(self, "place_prefab", p), self.place_at(*at))))
+                              partial(self._place_here, prefab, at)))
         self.menu = (x, y, items)
         self._rebuild()
+
+    def _edit_what_they_say(self) -> None:
+        self.tab = "dialogue"
+        self._focus("says")
+
+    def _place_here(self, prefab: dict[str, Any], at: tuple[float, float]) -> None:
+        self.place_prefab = prefab
+        self.place_at(*at)
 
     def _focus(self, key: str) -> None:
         self.panel = "inspect"
@@ -1800,6 +1813,8 @@ class Studio(InspectorMixin):
         self._rebuild()
 
     def _add_menu(self, root: gui.UIAnchorLayout) -> None:
+        if self.menu is None:
+            return
         x, y, items = self.menu
         box = gui.UIBoxLayout(vertical=True, space_between=1)
         for text, action in items:
@@ -1883,7 +1898,7 @@ class Studio(InspectorMixin):
         if self.mode == "edit":
             self._apply_camera()  # in play the game's camera must not be touched
         for entity in ops.entities(self.project.scene()) if self.mode == "edit" else []:
-            cx, cy, ew, eh = self._bounds(entity, sprites.get(entity.get("id")))
+            cx, cy, ew, eh = self._bounds(entity, sprites.get(str(entity.get("id"))))
             x0, y0 = self.window.camera.project((cx - ew / 2, cy - eh / 2))[:2]
             x1, y1 = self.window.camera.project((cx + ew / 2, cy + eh / 2))[:2]
             objects.append({"id": entity.get("id"), "name": entity.get("name"), "tag": entity.get("tag"),
@@ -1952,8 +1967,8 @@ class Studio(InspectorMixin):
                  "route": self._route_dump() if self.panel == "route" and self.mode == "edit" else None}
         tmp = f"{path}.tmp"
         try:
-            with open(tmp, "w", encoding="utf-8") as handle:
-                json.dump(state, handle)
+            with open(tmp, "w", encoding="utf-8") as dump_file:
+                json.dump(state, dump_file)
             os.replace(tmp, path)
         except OSError:
             pass  # a test is reading the file right now; the next dump will land
@@ -2093,7 +2108,7 @@ class Studio(InspectorMixin):
         showing_collision = self.tab == "collision" and self.panel == "inspect"
         for entity in ops.entities(self.project.scene()):
             eid = entity.get("id")
-            cx, cy, w, h = self._bounds(entity, sprites.get(eid))
+            cx, cy, w, h = self._bounds(entity, sprites.get(str(eid)))
             zone = self._live_zone(entity)
             if zone is not None:
                 x0, x1 = cx - zone["width"] / 2, cx + zone["width"] / 2
@@ -2149,13 +2164,15 @@ class Studio(InspectorMixin):
     def _live_collider(self, entity: dict[str, Any]) -> dict[str, Any]:
         drag = self.handle_drag
         if drag is not None and drag.get("entity") == entity.get("id") and drag["name"].startswith("collider"):
-            return drag["collider"]
+            collider: dict[str, Any] = drag["collider"]
+            return collider
         return ops.collider_of(entity, self._picture_size(entity))
 
     def _live_zone(self, entity: dict[str, Any]) -> dict[str, Any] | None:
         drag = self.handle_drag
         if drag is not None and drag.get("entity") == entity.get("id") and drag["name"].startswith("zone"):
-            return drag["zone"]
+            zone: dict[str, Any] = drag["zone"]
+            return zone
         return ops.trigger_zone(entity)
 
     def _handles(self) -> list[dict[str, Any]]:
@@ -2511,8 +2528,8 @@ class Studio(InspectorMixin):
             return False
         self.panning = False
         if self.sheet_drag is not None:
-            drag, self.sheet_drag = self.sheet_drag, None
-            self._pick_from_sheet(*drag)
+            cells, self.sheet_drag = self.sheet_drag, None
+            self._pick_from_sheet(*cells)
             return True
         if self.stroke is not None:
             if "start" in self.stroke:

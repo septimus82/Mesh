@@ -27,6 +27,16 @@ class BattleStats:
         if self.sp_defense is None:
             object.__setattr__(self, "sp_defense", int(self.defense))
 
+    @property
+    def special_attack(self) -> int:
+        """sp_attack, which defaults to atk when it was made without one."""
+        return int(self.sp_attack) if self.sp_attack is not None else int(self.atk)
+
+    @property
+    def special_defense(self) -> int:
+        """sp_defense, which defaults to defense when it was made without one."""
+        return int(self.sp_defense) if self.sp_defense is not None else int(self.defense)
+
 
 @dataclass(frozen=True, slots=True)
 class BattleSpriteClip:
@@ -106,8 +116,18 @@ class MonsterInstance:
         object.__setattr__(self, "status_turns", max(0, int(self.status_turns)))
 
     @property
+    def hp(self) -> int:
+        """Hit points now (current_hp is always set once the instance is made)."""
+        return int(self.current_hp or 0)
+
+    @property
+    def battle_stats(self) -> BattleStats:
+        """Its stats (always set once the instance is made: derived from the species and level if not given)."""
+        return self.stats if self.stats is not None else derive_stats(self.species.base_stats, self.level)
+
+    @property
     def fainted(self) -> bool:
-        return int(self.current_hp or 0) <= 0
+        return self.hp <= 0
 
     def with_current_hp(self, hp: int) -> "MonsterInstance":
         return replace(self, current_hp=max(0, min(int(hp), self.stats.hp if self.stats else int(hp))))
@@ -152,8 +172,8 @@ def derive_stats(base: BattleStats, level: int) -> BattleStats:
         atk=max(1, int(base.atk) + half_level),
         defense=max(1, int(base.defense) + half_level),
         spd=max(1, int(base.spd) + half_level),
-        sp_attack=max(1, int(base.sp_attack) + half_level),
-        sp_defense=max(1, int(base.sp_defense) + half_level),
+        sp_attack=max(1, base.special_attack + half_level),
+        sp_defense=max(1, base.special_defense + half_level),
     )
 
 
@@ -236,7 +256,7 @@ def _attacker_offense_stat(attacker: MonsterInstance, move: Move) -> int:
     if stats is None:
         return 1
     if move.category == "special":
-        return int(stats.sp_attack)
+        return stats.special_attack
     return int(stats.atk)
 
 
@@ -245,7 +265,7 @@ def _defender_defense_stat(defender: MonsterInstance, move: Move) -> int:
     if stats is None:
         return 1
     if move.category == "special":
-        return int(stats.sp_defense)
+        return stats.special_defense
     return int(stats.defense)
 
 

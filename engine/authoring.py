@@ -53,7 +53,7 @@ class ChangeError(ValueError):
 def _room_ops() -> dict[str, Callable[..., Any]]:
     """Every ``project_ops`` function that edits one room: ``(scene, ...) -> scene``, ``(scene, id)`` or
     ``(scene, index)`` (a light)."""
-    found = {}
+    found: dict[str, Callable[..., Any]] = {}
     for name, func in vars(ops).items():
         if name.startswith("_") or name in _NOT_EDITS or not inspect.isfunction(func) or func.__module__ != ops.__name__:
             continue
@@ -128,7 +128,7 @@ def _apply_one(project: Project, index: int, change: Doc, created: dict[int, str
         result = func(**bound)
         new_scene, made = (result if isinstance(result, tuple) else (result, None))
         project.edit_scene(lambda _s: new_scene, room)
-        return made
+        return made if isinstance(made, (str, int)) else None
     except ops.OpError as err:
         raise ChangeError(index, name, str(err)) from err
     except (TypeError, ValueError) as err:

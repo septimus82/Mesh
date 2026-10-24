@@ -56,7 +56,7 @@ ISLAND_ANIMATION: list[str] = [
 ]
 
 # Sprite animator (runtime, well-typed)
-ISLAND_SPRITE = [
+ISLAND_SPRITE: list[str] = [
 ]
 
 # Pathfinding models

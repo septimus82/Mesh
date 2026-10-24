@@ -27,6 +27,8 @@ CELL = 12  # preview pixels per map tile
 def render(root: Path) -> Image.Image:
     scene = json.loads((root / "packs/core_regions/scenes/start.json").read_text(encoding="utf-8"))
     info = ops.map_info(scene)
+    if info is None:
+        raise SystemExit(f"{root}: the start room has no map to preview")
     sheet = Image.open(root / ops.TILESET_SOURCE.replace(".json", ".png")).convert("RGBA")
     columns = sheet.width // ops.TILE_SIZE
     image = Image.new("RGBA", (info["width"] * CELL, info["height"] * CELL), (30, 32, 38, 255))

@@ -921,7 +921,7 @@ class CameraController:
             "yes",
             "on",
         }
-        pre_viewport = (None, None)
+        pre_viewport: tuple[int | None, int | None] = (None, None)
         if diag_enabled:
             from engine import resize_diagnostics
 

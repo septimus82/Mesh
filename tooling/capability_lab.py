@@ -324,7 +324,7 @@ def brightness(img: Any, x: float, y: float, r: int = 3) -> float:
 
 
 def colour(img: Any, x: float, y: float) -> tuple[int, int, int]:
-    return tuple(img.getpixel((int(x), int(y)))[:3])  # type: ignore[return-value]
+    return tuple(img.getpixel((int(x), int(y)))[:3])
 
 
 def run(out: Path, only: set[str] | None = None) -> int:
@@ -363,12 +363,19 @@ def run(out: Path, only: set[str] | None = None) -> int:
         time.sleep(0.8)
 
     def play() -> dict[str, Any]:
-        return p().fresh()["play"]
+        value: dict[str, Any] = p().fresh()["play"]
+        return value
 
     def sprite(name: str, state: dict[str, Any] | None = None) -> dict[str, Any] | None:
         """An object as the game last reported it; pass ``state`` to compare it with other values from the same
         moment (a separate read is a later frame: a moving object then seems to lead its own light)."""
         return next((s for s in (state or play())["sprites"] if s["name"] == name), None)
+
+    def present(name: str) -> dict[str, Any]:
+        """``sprite`` for an object the room must have."""
+        found = sprite(name)
+        assert found is not None, f"no {name} in the room"
+        return found
 
     def to_screen(world: tuple[float, float], state: dict[str, Any] | None = None) -> tuple[float, float]:
         """World point -> screenshot pixel, from where the player is drawn (camera follows it)."""
@@ -416,7 +423,7 @@ def run(out: Path, only: set[str] | None = None) -> int:
 
     def save_load() -> None:
         before = play()
-        seer_saved = sprite("Seer")["at"]
+        seer_saved = present("Seer")["at"]
         player_saved = before["player"]
         p().d.key("F5")
         time.sleep(1.0)
@@ -427,7 +434,7 @@ def run(out: Path, only: set[str] | None = None) -> int:
         time.sleep(2.0)
         after = play()
         img, name = shot("save_load")
-        seer_back = sprite("Seer")["at"]
+        seer_back = present("Seer")["at"]
         ok = math.dist(after["player"], player_saved) < 4 and math.dist(seer_back, seer_saved) < 8
         record("12. Save and load restore runtime state (F5/F9)", "PASS" if ok else "FAIL",
                {"player_saved": player_saved, "player_moved_to": moved["player"], "player_after_load": after["player"],
@@ -571,7 +578,7 @@ def run(out: Path, only: set[str] | None = None) -> int:
 
     def torch() -> None:
         play_room("Torch")
-        seen = []
+        seen: list[dict[str, Any]] = []
         for _ in range(6):
             state = play()
             dyn = state["runtime"]["lighting"]["dynamic"]
@@ -623,9 +630,11 @@ def run(out: Path, only: set[str] | None = None) -> int:
         copy = next((s for s in sprites if s["name"] == "Twin (copy)"), None)
         record("Prefab reuse (a prefab reference and a copy)", "PASS" if ref and copy else "FAIL",
                {"reference_spawned_as": ref and ref["name"], "copy": copy and copy["name"]}, name)
-        a0 = sprite("Spinner")["angle"] if sprite("Spinner") else None
+        spinner = sprite("Spinner")
+        a0 = spinner["angle"] if spinner else None
         time.sleep(0.6)
-        a1 = sprite("Spinner")["angle"] if sprite("Spinner") else None
+        spinner = sprite("Spinner")
+        a1 = spinner["angle"] if spinner else None
         log = p().d.log_text()
         record("Custom behaviour from a plugin (mods/, LabSpinner)",
                "PASS" if a0 is not None and a1 is not None and a0 != a1 else "FAIL",
@@ -687,10 +696,12 @@ def run(out: Path, only: set[str] | None = None) -> int:
         img, name = shot("audio")
         if not far or not near:
             state = play()
+            time.sleep(0.25)
+            later = play()
             record("11. A positional sound changes with distance", "FAIL",
                    {"far": far[-2:], "near": near[-2:], "recent_sounds": state["runtime"]["audio"]["recent"][-4:],
                     "projectiles": [[round(v) for v in s["at"]] for s in state["sprites"] if str(s["name"]).startswith("proj_")],
-                    "projectiles_later": [[round(v) for v in s["at"]] for s in (time.sleep(0.25) or play())["sprites"]
+                    "projectiles_later": [[round(v) for v in s["at"]] for s in later["sprites"]
                                           if str(s["name"]).startswith("proj_")]}, name)
             return
         record("11. A positional sound changes with distance", "PASS" if near[-1]["volume"] > far[-1]["volume"] + 0.15 else "FAIL",

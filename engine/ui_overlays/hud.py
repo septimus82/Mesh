@@ -63,10 +63,11 @@ class InteractPromptOverlay(UIElement):
 
     def draw(self) -> None:
         payload = None
-        has_provider = callable(self.provider)
-        if has_provider:
+        provider = self.provider
+        has_provider = callable(provider)
+        if provider is not None and has_provider:
             try:
-                payload = self.provider(self.window)
+                payload = provider(self.window)
             except _HUD_PROVIDER_EXCEPTIONS:
                 _log_swallow("HUD-001", "engine.ui_overlays.hud.InteractPromptOverlay.draw provider")
                 return

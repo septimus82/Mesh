@@ -81,7 +81,8 @@ class McpClient:
             text = "".join(getattr(part, "text", "") for part in getattr(result, "content", []) or [])
             payload = json.loads(text) if text.strip().startswith("{") else {"text": text}
         self.transcript.append({"tool": tool, "arguments": arguments, "result": payload})
-        return payload
+        value: dict[str, Any] = payload
+        return value
 
     def close(self) -> None:
         async def shut() -> None:
@@ -135,7 +136,8 @@ def run(out: Path) -> int:
         return holder["page"]
 
     def ai(tool: str, **arguments: Any) -> dict[str, Any]:
-        return holder["mcp"].call(tool, root=str(project), **arguments)
+        value: dict[str, Any] = holder["mcp"].call(tool, root=str(project), **arguments)
+        return value
 
     def objects() -> dict[str, dict[str, Any]]:
         return {o["name"]: o for o in p().fresh()["objects"]}
@@ -144,7 +146,8 @@ def run(out: Path) -> int:
         return list(p().fresh()["map"]["layers"]["walls"])
 
     def on_disk() -> dict[str, Any]:
-        return json.loads((project / SCENE).read_text(encoding="utf-8"))
+        value: dict[str, Any] = json.loads((project / SCENE).read_text(encoding="utf-8"))
+        return value
 
     def review_and(button: str) -> dict[str, Any]:
         """Open the AI panel (it shows the waiting count) and press Accept or Reject."""
@@ -156,7 +159,8 @@ def run(out: Path) -> int:
         p().wait(lambda s: s["panel"] == "ai", "the AI panel")
         p().d.shot(f"{len(results) + 1:02d}_review_{button.lower()}")
         p().press(button)
-        return p().fresh()
+        value: dict[str, Any] = p().fresh()
+        return value
 
     # ------------------------------------------------------------------------- steps
     def s01_paint_unsaved() -> dict[str, Any]:

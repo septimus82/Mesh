@@ -240,8 +240,8 @@ class MonsterBattleOverlay(UIElement):
         controller = self.mode.controller
         if controller is None:
             return
-        self.displayed_player_hp = int(controller.player.current_hp)
-        self.displayed_opponent_hp = int(controller.opponent.current_hp)
+        self.displayed_player_hp = controller.player.hp
+        self.displayed_opponent_hp = controller.opponent.hp
 
     def begin_turn_presentation(
         self,
@@ -303,7 +303,7 @@ class MonsterBattleOverlay(UIElement):
     def _draw_monster_block(self, monster: MonsterInstance, x: float, y: float, *, width: float, hp: int | None = None) -> None:
         name = _display_name(monster)
         max_hp = max(1, int(monster.stats.hp if monster.stats else monster.current_hp or 1))
-        hp = max(0, int(monster.current_hp if hp is None else hp))
+        hp = max(0, monster.hp if hp is None else int(hp))
         ratio = max(0.0, min(1.0, hp / max_hp))
         draw_text_cached(f"{name}  Lv.{monster.level}", x, y, color=(255, 255, 255, 255), font_size=15, cache=self._text_cache)
         bar_top = y - 24
@@ -700,12 +700,12 @@ class MonsterBattleMode:
         before_player_hp = int(
             self.overlay.displayed_player_hp
             if self.overlay is not None and self.overlay.displayed_player_hp is not None
-            else self.controller.player.current_hp,
+            else self.controller.player.hp,
         )
         before_opponent_hp = int(
             self.overlay.displayed_opponent_hp
             if self.overlay is not None and self.overlay.displayed_opponent_hp is not None
-            else self.controller.opponent.current_hp,
+            else self.controller.opponent.hp,
         )
         reinforcement = str(kind)
         if reinforcement == "praise":
@@ -743,12 +743,12 @@ class MonsterBattleMode:
         before_player_hp = int(
             self.overlay.displayed_player_hp
             if self.overlay is not None and self.overlay.displayed_player_hp is not None
-            else self.controller.player.current_hp,
+            else self.controller.player.hp,
         )
         before_opponent_hp = int(
             self.overlay.displayed_opponent_hp
             if self.overlay is not None and self.overlay.displayed_opponent_hp is not None
-            else self.controller.opponent.current_hp,
+            else self.controller.opponent.hp,
         )
         before_len = len(self.controller.turn_log)
         rng = self.controller.rng if self.controller.rng is not None else self._capture_rng()
@@ -759,6 +759,7 @@ class MonsterBattleMode:
         behavior = decision.behavior_id
         self._last_companion_behavior = behavior
 
+        result: BattleResult | None
         if behavior == FLEE:
             result = self._companion_flee_result()
             self.companion_awaiting_reinforcement = False
@@ -838,7 +839,7 @@ class MonsterBattleMode:
         before_opponent_hp = int(
             self.overlay.displayed_opponent_hp
             if self.overlay is not None and self.overlay.displayed_opponent_hp is not None
-            else self.controller.opponent.current_hp,
+            else self.controller.opponent.hp,
         )
         next_name = _display_name(self.controller.player_party[next_index])
 
@@ -882,12 +883,12 @@ class MonsterBattleMode:
         before_player_hp = int(
             self.overlay.displayed_player_hp
             if self.overlay is not None and self.overlay.displayed_player_hp is not None
-            else self.controller.player.current_hp,
+            else self.controller.player.hp,
         )
         before_opponent_hp = int(
             self.overlay.displayed_opponent_hp
             if self.overlay is not None and self.overlay.displayed_opponent_hp is not None
-            else self.controller.opponent.current_hp,
+            else self.controller.opponent.hp,
         )
         before_len = len(self.controller.turn_log)
         result = self.controller.submit_action("player", str(move_id))
@@ -914,12 +915,12 @@ class MonsterBattleMode:
         before_player_hp = int(
             self.overlay.displayed_player_hp
             if self.overlay is not None and self.overlay.displayed_player_hp is not None
-            else self.controller.player.current_hp,
+            else self.controller.player.hp,
         )
         before_opponent_hp = int(
             self.overlay.displayed_opponent_hp
             if self.overlay is not None and self.overlay.displayed_opponent_hp is not None
-            else self.controller.opponent.current_hp,
+            else self.controller.opponent.hp,
         )
         before_len = len(self.controller.turn_log)
         self._pop_switch_screen_if_open()
@@ -1000,12 +1001,12 @@ class MonsterBattleMode:
                 player_hp = int(
                     self.overlay.displayed_player_hp
                     if self.overlay.displayed_player_hp is not None
-                    else self.controller.player.current_hp,
+                    else self.controller.player.hp,
                 )
                 opponent_hp = int(
                     self.overlay.displayed_opponent_hp
                     if self.overlay.displayed_opponent_hp is not None
-                    else self.controller.opponent.current_hp,
+                    else self.controller.opponent.hp,
                 )
                 opponent_name = _display_name(self.controller.opponent)
                 storage_line = (
@@ -1457,9 +1458,9 @@ class MonsterBattleMode:
     def _resolve_failed_capture_response(self, *, item_id: str, capture: CaptureResult) -> None:
         if self.controller is None or self.overlay is None:
             return
-        before_player_hp = int(self.overlay.displayed_player_hp if self.overlay.displayed_player_hp is not None else self.controller.player.current_hp)
+        before_player_hp = int(self.overlay.displayed_player_hp if self.overlay.displayed_player_hp is not None else self.controller.player.hp)
         before_opponent_hp = int(
-            self.overlay.displayed_opponent_hp if self.overlay.displayed_opponent_hp is not None else self.controller.opponent.current_hp,
+            self.overlay.displayed_opponent_hp if self.overlay.displayed_opponent_hp is not None else self.controller.opponent.hp,
         )
         try:
             opponent_action = self.controller._choose_opponent_action()
@@ -1670,8 +1671,8 @@ def _log_special_move_resolution(
         "[SpecialSplit] %s used %s (special): sp_attack=%d vs sp_defense=%d -> %d damage",
         actor,
         move_id,
-        int(attacker_stats.sp_attack),
-        int(defender_stats.sp_defense),
+        attacker_stats.special_attack,
+        defender_stats.special_defense,
         damage,
     )
 

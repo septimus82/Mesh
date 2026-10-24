@@ -98,6 +98,9 @@ class StudioAIHost:
     # ------------------------------------------------------------------ staging
     def stage_proposal_payload(self, payload: Doc) -> Proposal | Doc:
         changes = payload.get("changes", payload.get("ops"))
+        if not isinstance(changes, list):
+            return {"ok": False, "mode": "live_studio", "reason": "invalid_change", "index": 0, "op": "",
+                    "message": "A proposal needs its changes as a list."}
         title = str(payload.get("title") or "Changes from an AI").strip()[:80]
         source = str(payload.get("source") or "an AI").strip()[:60]
         revision = payload.get("base_revision")

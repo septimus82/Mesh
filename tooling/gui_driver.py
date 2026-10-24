@@ -126,7 +126,8 @@ class _Process:
     _QUERY, _TERMINATE, _STILL_ACTIVE = 0x1000, 0x0001, 259
 
     def __init__(self, pid: int) -> None:
-        self.pid, self.returncode = pid, None
+        self.pid = pid
+        self.returncode: int | None = None
 
     def poll(self) -> int | None:
         handle = ctypes.windll.kernel32.OpenProcess(self._QUERY, False, self.pid)
@@ -522,7 +523,8 @@ class Driver:
     def pixel(self, x: float, y: float) -> tuple[int, int, int]:
         """The colour at a point of the window (logical coordinates, top-left origin), from a fresh capture."""
         with Image.open(self.shot("_pixel")) as image:
-            return image.convert("RGB").getpixel((int(x), int(y)))
+            value: tuple[int, int, int] = image.convert("RGB").getpixel((int(x), int(y)))
+            return value
 
     # --- evidence -------------------------------------------------------------------------
     def shot(self, name: str) -> Path:
@@ -541,7 +543,7 @@ class Driver:
         user32.ReleaseDC(self.hwnd, hdc)
         # A DPI-unaware window's surface is its logical size, drawn into the top-left corner.
         path = self.shots / f"{name}.png"
-        Image.frombuffer("RGB", (w, h), buf, "raw", "BGRX", 0, 1).crop((0, 0, self.logical_w, self.logical_h)).save(path)
+        Image.frombuffer("RGB", (w, h), buf.raw, "raw", "BGRX", 0, 1).crop((0, 0, self.logical_w, self.logical_h)).save(path)
         return path
 
     def wait(self, seconds: float) -> None:

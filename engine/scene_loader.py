@@ -217,7 +217,7 @@ class SceneLoader:
         # A save slot lives in saves/, but its map path is relative to the room it was saved
         # from; resolving it from saves/ lost the map on every load.
         has_origin = isinstance(saved_from, str) and saved_from.strip()
-        tilemap_base = resolve_path(saved_from).parent if has_origin else full_path.parent
+        tilemap_base = resolve_path(str(saved_from)).parent if has_origin else full_path.parent
         normalized_tilemap = self._normalize_tilemap_section(scene.get("tilemap"), base_path=tilemap_base)
         if normalized_tilemap is not None:
             scene["tilemap"] = normalized_tilemap
