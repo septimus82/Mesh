@@ -256,3 +256,15 @@ Restore anything below with `git show db87ab8:<path>`.
 | verify-all: the swallow-scan artifact only with `--artifacts`; three tests' expectations and a fixture updated; the headless verify-all test's budget | Stale expectations and one real inconsistency | — |
 | Type fixes in ~45 files (no `type: ignore` added, two removed) | The type gate (259 → 0) | New read-only properties: `MonsterInstance.hp`, `.battle_stats`, `BattleStats.special_attack`, `.special_defense` |
 | `tests/conftest.py` uses pyglet's silent audio driver (`MESH_TEST_REAL_AUDIO=1` keeps the real one) | XAudio2 errors from the sound card failed random tests; tests could play sounds on the owner's speakers | — |
+
+## Milestone 14: visual polish and creator acceptance
+
+Report: [`docs/reviews/milestone14_visual_polish.md`](docs/reviews/milestone14_visual_polish.md).
+Restore anything below with `git show 7649074:<path>`.
+
+| Change | Why | Note |
+|---|---|---|
+| `light_compositor.CHARACTER_SPREAD`: a character samples the lamp within half its width | Soft/Softer character shadows fell apart into streaks | Same passes; walls still use the whole lamp disc |
+| `scene_render_pipeline._ground_shadow_size`: the contact shadow's size from the picture's opaque bottom rows | One 24×8 ellipse under everything | Measured once per sprite (`mesh_ground_shadow`); no picture: the old default |
+| `Studio._text` keeps world labels inside the map view | Labels at the map edge were cut off by the side panel | — |
+| `studio.hard_wrap`: wrapped labels get pyglet's break points as line breaks | pyglet 2.1.11 draws the first letter of a wrapped word at the end of the line before | Reads pyglet's private layout; `tests/test_studio_label_wrap_gpu.py` guards it |

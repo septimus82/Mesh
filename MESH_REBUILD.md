@@ -574,6 +574,19 @@ Report: [`docs/reviews/milestone13_repository_consolidation.md`](docs/reviews/mi
 - **Owner decisions.** Pip-installed Mesh (the wheel test), and the "Soft Shadows" pause-menu toggle, which has done
   nothing since M12.
 
+## Milestone 14 — visual polish and creator acceptance
+
+Report: [`docs/reviews/milestone14_visual_polish.md`](docs/reviews/milestone14_visual_polish.md). Hidden-window
+evidence only; human acceptance is pending (the report lists the checks).
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| M12.2 fixes hold (round tiles, L joints with two lamps, Softer leaks, doors) | **Confirmed** | `milestone14_evidence/`; polish check 10/10 |
+| Soft character shadows streaked | **Real, fixed** | One shadow at Soft/Softer; GPU test; bench unchanged |
+| Contact shadow fits the footprint | **Done** | Sized from the picture's bottom rows; characters keep 24×8 |
+| Three door styles: same destination, activation, undo, save/load, AI authoring | **Verified headless** | `tests/test_door_styles_integration.py`; live input pending |
+| Studio labels clipped at the map edge / split mid-word | **Real, fixed** | Kept in view; pyglet wrap bug bypassed (`studio.hard_wrap`) |
+
 ## Known limitations (honest list)
 
 - **Starter art is simple:** a hero, a villager and a sign of Mesh's own (Milestone 11). The tileset still has no roof or door tiles.
