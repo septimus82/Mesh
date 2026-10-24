@@ -37,7 +37,6 @@ __all__ = [
     "_action_apply_lighting_preset_2",
     "_action_apply_lighting_preset_3",
     "_toggle_fog",
-    "_toggle_soft_shadows",
     "_toggle_asset_browser",
     "_toggle_command_palette",
     "_open_keybinds",
@@ -185,12 +184,6 @@ def _action_apply_lighting_preset_3(window: Any) -> None:
 def _toggle_fog(window: Any) -> None:
     settings = ensure_runtime_settings(window)
     settings.fog_enabled = not bool(settings.fog_enabled)
-    settings.apply(window)
-
-
-def _toggle_soft_shadows(window: Any) -> None:
-    settings = ensure_runtime_settings(window)
-    settings.soft_shadows_enabled = not bool(settings.soft_shadows_enabled)
     settings.apply(window)
 
 

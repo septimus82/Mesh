@@ -58,7 +58,7 @@ class EngineConfig:
     music_crossfade_enabled: bool = False
     music_crossfade_out_s: float = 0.25
     music_crossfade_in_s: float = 0.25
-    soft_shadows_enabled: bool = False
+    soft_shadows_enabled: bool = False  # legacy: ignored since the per-light shadows (M12); kept so old configs load
     soft_shadows_expand_px: float = 6.0
     soft_shadows_alpha_scale: float = 0.35
     ambient_light_rgba: tuple[int, int, int, int] = (255, 255, 255, 255)

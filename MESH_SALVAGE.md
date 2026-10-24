@@ -268,3 +268,9 @@ Restore anything below with `git show 7649074:<path>`.
 | `scene_render_pipeline._ground_shadow_size`: the contact shadow's size from the picture's opaque bottom rows | One 24×8 ellipse under everything | Measured once per sprite (`mesh_ground_shadow`); no picture: the old default |
 | `Studio._text` keeps world labels inside the map view | Labels at the map edge were cut off by the side panel | — |
 | `studio.hard_wrap`: wrapped labels get pyglet's break points as line breaks | pyglet 2.1.11 draws the first letter of a wrapped word at the end of the line before | Reads pyglet's private layout; `tests/test_studio_label_wrap_gpu.py` guards it |
+
+## Post-Milestone 15 housekeeping: the "Soft Shadows" setting
+
+| Change | Why | Note |
+|---|---|---|
+| **Removed:** the "Soft Shadows" row (pause menu and main menu settings, `ui_overlays/_settings_data.SETTINGS_ROWS`), `RuntimeSettings.soft_shadows_enabled` (saving, loading, applying), and the legacy editor command `runtime.soft_shadows.toggle` ("Toggle Soft Shadows", `_toggle_soft_shadows`) | Nothing has read it since the per-light shadows (Milestone 12); the owner decided on 2026-10-24 to remove it | **Kept:** `EngineConfig.soft_shadows_*` and their schema entries, as ignored legacy keys, so older project configs load unchanged. Older `user_settings.json` files load; the key is ignored and dropped on the next save (`tests/test_soft_shadows_setting_removed.py`). Room and project shadow softness (`lighting_shadow_softness`) is unaffected |
