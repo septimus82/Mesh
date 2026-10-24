@@ -45,7 +45,8 @@ recent-project cards, icons or layout changes.
   - No toolbar control or click target moved.
   - In a window too narrow for both, the brand is left out.
 - **One font:** all labels, fields and map labels use the UI font. Before, buttons were Arial and labels Calibri.
-- **Tokens instead of literals:** 17 hard-coded chrome colours now use the tokens:
+- **Tokens instead of literals:** 21 hard-coded chrome colours across Studio, the inspector and the launcher now
+  use the tokens. (The theme commit's message says 17; the diff counts 21.) They are:
   - menu and dialog backgrounds;
   - the field fill and border;
   - the status bar;
