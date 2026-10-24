@@ -66,6 +66,7 @@ import importlib
 import importlib.util
 import math
 import os
+import time
 import zlib
 from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any, Iterable, Optional
@@ -75,6 +76,7 @@ from engine.logging_tools import get_logger
 from engine.swallowed_exceptions import _log_swallow
 
 from . import cookies as _cookies
+from . import light_compositor as _light_compositor
 from . import lighting_snapshot as _lighting_snapshot
 from . import lighting_stats as _lighting_stats
 from . import occluder_layer_builder as _occluder_layer_builder
@@ -264,10 +266,18 @@ class LightManager:
         self._shadowcast_debug_overridden: bool = False
         self._debug_geometry_overridden: bool = False
         self._shadows_mode_overridden: bool = False
+        # Per-light shadows (light_compositor): GPU resources, the room's occluders split for casting, cached
+        # shadow triangles per light, which lights cast shadows, and how many may in one frame.
+        self._compositor: Any = None
+        self._shadow_occluders: Any = None
+        self._shadow_cache: dict[Any, Any] = {}
+        self._light_casts_shadows: dict[int, bool] = {}
+        self.shadow_light_budget: int = _light_compositor.DEFAULT_SHADOW_LIGHT_BUDGET
 
         if self.available:
             self._rebuild_layer()
         self._last_lighting_stats: dict[str, Any] = {}
+        self._profile: list[tuple[float, float | None]] = []
 
     def toggle_shadowmask(self) -> bool:
         """Toggle shadow mask feature and rebuild light layer.
@@ -412,7 +422,39 @@ class LightManager:
     def end(self) -> None:
         if not self.enabled or self._layer is None:
             return
-        if self.shadows_mode == "hard":
+        if os.environ.get("MESH_LIGHTING_PROFILE") != "1":
+            self._end_frame()
+            return
+        # Measured on request only: reading a GPU timer waits for the GPU, which costs a little itself.
+        ctx = getattr(self.window, "ctx", None)
+        query = ctx.query(samples=False, primitives=False) if ctx is not None and hasattr(ctx, "query") else None
+        started = time.perf_counter()
+        if query is not None:
+            with query:
+                self._end_frame()
+        else:
+            self._end_frame()
+        cpu_ms = (time.perf_counter() - started) * 1000.0
+        gpu_ms = query.time_elapsed / 1e6 if query is not None else None
+        self._profile.append((cpu_ms, gpu_ms))
+        del self._profile[:-240]  # the last few seconds
+
+    def lighting_profile(self) -> dict[str, Any] | None:
+        """Mean CPU and GPU time of the lighting pass (lighting.end) over recent frames, with MESH_LIGHTING_PROFILE=1."""
+        if not self._profile:
+            return None
+        cpu = [c for c, _g in self._profile]
+        gpu = [g for _c, g in self._profile if g is not None]
+        return {"frames": len(cpu), "cpu_ms": round(sum(cpu) / len(cpu), 3),
+                "gpu_ms": round(sum(gpu) / len(gpu), 3) if gpu else None}
+
+    def _end_frame(self) -> None:
+        if self.shadows_mode == "hard" and os.environ.get("MESH_SHADOWS_RENDERER") != "legacy":
+            # Each light's shadow blocks only that light; the room light stays (light_compositor). If the
+            # GPU can't do it, the room is drawn lit without shadows: never black painted over it.
+            if not _light_compositor.render_shadowed_lighting(self):
+                self._draw_layer_safe()
+        elif self.shadows_mode == "hard":  # the pre-Milestone-12 overlay, kept for comparison (MESH_SHADOWS_RENDERER=legacy)
             try:
                 self._end_hard_shadows_overlay()
             except Exception:  # pragma: no cover - defensive  # noqa: BLE001  # REASON: shadow overlay

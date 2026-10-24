@@ -14,6 +14,8 @@ def rebuild_static_and_dynamic_lights(manager: Any) -> None:
     manager._static_lights = []
     manager._static_count = 0
     manager._flicker_lights = []
+    manager._light_casts_shadows = {}
+    manager._shadow_occluders = None  # rebuilt from the room's occluders on the next shadowed frame
 
     use_shadow_mask = manager.shadowmask_enabled
 
@@ -99,6 +101,7 @@ def rebuild_static_and_dynamic_lights(manager: Any) -> None:
             manager._static_lights.append(light)
             manager._add_light(light)
             manager._static_count += 1
+            manager._light_casts_shadows[id(light)] = cfg.get("shadows", True) is not False
 
     for handle in manager._dynamic_handles:
         manager._add_light(handle.light)

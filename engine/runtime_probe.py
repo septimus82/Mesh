@@ -33,6 +33,8 @@ def runtime_snapshot(window: Any) -> dict[str, Any]:
                         "color": list(getattr(light, "color", None) or getattr(light, "_color", ()) or ())}  # arcade keeps it private
                        for light in getattr(lighting, "_static_lights", []) or []],
             "occluders": len(getattr(lighting, "_static_occluders", []) or []),
+            "stats": dict(getattr(lighting, "_last_lighting_stats", None) or {}),
+            "profile": lighting.lighting_profile() if callable(getattr(lighting, "lighting_profile", None)) else None,
             "dynamic": [{"at": _xy(getattr(getattr(h, "light", None), "position", None)),
                          "radius": float(getattr(h, "base_radius", 0) or 0),
                          "owner": type(getattr(h, "owner", None)).__name__,
