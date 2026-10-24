@@ -14,7 +14,8 @@ import engine.optional_arcade as optional_arcade
 from engine.config import EngineConfig
 from tests._game_window_live import dispose_game_window
 
-pytestmark = pytest.mark.skipif(not optional_arcade.has_arcade(), reason="needs real arcade (a hidden window)")
+pytestmark = [pytest.mark.integration,
+              pytest.mark.skipif(not optional_arcade.has_arcade(), reason="needs real arcade (a hidden window)")]
 
 
 def _window():
