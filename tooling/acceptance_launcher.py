@@ -146,7 +146,7 @@ def run(out: Path, old_projects: list[Path]) -> int:
 
     def s02_launcher_appears() -> dict[str, Any]:
         s = L().state()
-        assert held["launcher"].title() == "Mesh Engine"
+        assert held["launcher"].title() == "Mesh Studio"  # the product's name since Milestone 15
         buttons = {w["text"] for w in s["widgets"] if w["type"] == "button"}
         assert {"New Project", "Open Project..."} <= buttons, buttons
         assert s["recent"] == [], "a fresh user has no recent projects"
