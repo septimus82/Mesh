@@ -28,6 +28,7 @@ from engine.project_templates import Template, list_templates
 from engine.studio_ui import (
     C_ACCENT,
     C_BG,
+    C_DANGER_TEXT,
     C_ERROR,
     C_FIELD,
     C_FIELD_EDGE,
@@ -39,14 +40,18 @@ from engine.studio_ui import (
     FONT,
     S_ACTIVE,
     S_BUTTON,
-    S_DANGER,
+    S_CARD,
+    S_CARD_MISSING,
     S_PLAY,
+    CardButton,
     FirstClicks,
     TextField,
+    TintedImage,
     ask_path,
     brand_texture,
     field_clipboard,
     gui,
+    icon_texture,
     make_button,
     set_app_icon,
 )
@@ -350,8 +355,13 @@ class Launcher:
                           "another folder.", chars=48)
         root.add(left, anchor_x="left", anchor_y="top", align_x=40, align_y=-48)
 
-        right = gui.UIBoxLayout(vertical=True, align="left", space_between=6)
-        right.add(self._label("Recent projects", size=13, bold=True))
+        right = gui.UIBoxLayout(vertical=True, align="left", space_between=8)
+        heading = gui.UIBoxLayout(vertical=False, space_between=8, align="center")
+        history = icon_texture("history")
+        if history is not None:
+            heading.add(TintedImage(texture=history, width=16, height=16, tint=C_MUTED))
+        heading.add(self._label("Recent projects", size=13, bold=True))
+        right.add(heading)
         recent = projects.get_recent_projects()
         if not recent:
             self._lines(right, "No recent projects yet. Create one, or open a project folder.", chars=50)
@@ -360,14 +370,15 @@ class Launcher:
             missing = not (path / "config.json").is_file()
             row = gui.UIBoxLayout(vertical=False, space_between=6)
             name = project_title(path) if not missing else path.name
-            button = self._button(name, partial(self.recent_clicked, folder, missing), width=300,
-                                  style=S_DANGER if missing else S_BUTTON)
+            # One card per project: its name, and under it where it is (or that it's gone).
+            button = CardButton(text=name, detail=folder, detail_prefix="Missing: " if missing else "", icon="folder",
+                                detail_color=C_DANGER_TEXT if missing else C_MUTED, width=324 if missing else 420, height=46,
+                                style=S_CARD_MISSING if missing else S_CARD)
+            button.on_click = lambda _e, f=folder, m=missing: self.recent_clicked(f, m)
             row.add(button)
             if missing:
-                row.add(self._button("Remove", partial(self.remove_recent, folder), width=90))
+                row.add(self._button("Remove", partial(self.remove_recent, folder), width=90, height=46))
             right.add(row)
-            shown = folder if len(folder) <= 60 else "..." + folder[-57:]
-            right.add(self._label(("Missing: " if missing else "") + shown, size=9, color=C_ERROR if missing else C_MUTED))
             self._recent_rows.append({"name": name, "path": folder, "missing": missing, "button": button})
         root.add(right, anchor_x="left", anchor_y="top", align_x=RECENT_X + 40, align_y=-56)
         wordmark = brand_texture("meshmind_studios_wordmark.png")

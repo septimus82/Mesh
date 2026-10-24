@@ -36,13 +36,15 @@ C_WARN = (240, 200, 120)
 C_ERROR = (240, 110, 100)
 C_PLAY = (28, 140, 96)
 C_DANGER = (70, 34, 36)
+C_DANGER_TEXT = (255, 190, 185)  # text on a danger surface
+C_DANGER_EDGE = (130, 60, 60)
 C_SPAWN = (120, 230, 140)
 
 
 def button_style(bg: tuple[int, int, int], fg: tuple[int, int, int] = C_TEXT,
-                 border: tuple[int, int, int] | None = None) -> dict[str, Any]:
+                 border: tuple[int, int, int] | None = None, size: int = 10) -> dict[str, Any]:
     def style(fill: tuple[int, int, int], colour: tuple[int, int, int], edge: tuple[int, int, int] | None) -> Any:
-        return gui.UIFlatButton.UIStyle(font_size=10, font_name=FONT, font_color=colour, bg=fill, border=edge,
+        return gui.UIFlatButton.UIStyle(font_size=size, font_name=FONT, font_color=colour, bg=fill, border=edge,
                                         border_width=1 if edge else 0)
 
     def shade(by: int) -> tuple[int, int, int]:
@@ -59,9 +61,11 @@ def button_style(bg: tuple[int, int, int], fg: tuple[int, int, int] = C_TEXT,
 
 S_BUTTON = button_style(C_BUTTON, border=C_LINE)
 S_ACTIVE = button_style(C_ACCENT_DIM, C_ACCENT_TEXT, border=C_ACCENT)  # selected: a cyan outline, a quiet fill
-S_DANGER = button_style(C_DANGER, (255, 190, 185), border=(130, 60, 60))
+S_DANGER = button_style(C_DANGER, C_DANGER_TEXT, border=C_DANGER_EDGE)
 S_PLAY = button_style(C_PLAY)
 S_MENU = button_style(C_RAISED)
+S_CARD = button_style(C_RAISED, border=C_LINE, size=11)  # a list entry: the launcher's recent projects
+S_CARD_MISSING = button_style(C_DANGER, C_DANGER_TEXT, border=C_DANGER_EDGE, size=11)
 
 # MeshMind Studios brand assets (assets/branding/NOTICE.md): the mark beside "Mesh Studio", the wordmark as the
 # publisher's credit, and the app icon. A copy of Mesh without them still runs, unbranded.
@@ -150,6 +154,37 @@ class IconButton(_FlatButton):
                                  tint=style.get("font_color", C_TEXT) if style else C_TEXT)
         self.place_text(anchor_x="center", align_x=(ICON_SIZE + ICON_GAP) / 2, anchor_y="center")
         self.add(self._icon, anchor_x="center", align_x=-text_w / 2 - ICON_GAP / 2, anchor_y="center")
+
+    def _apply_style(self, style: Any) -> None:
+        super()._apply_style(style)
+        if self._icon is not None:
+            self._icon.tint = style.get("font_color", C_TEXT)
+
+
+class CardButton(_FlatButton):
+    """A two-line list entry: an icon, the button's text as its title and a smaller line of detail under it. A
+    button like any other (its text is the title; the whole card is the click target)."""
+
+    def __init__(self, *, detail: str, detail_prefix: str = "", detail_color: tuple[int, int, int] = C_MUTED,
+                 icon: str | None = None, **kwargs: Any) -> None:
+        self._icon: TintedImage | None = None
+        super().__init__(**kwargs)
+        x = 14
+        texture = icon_texture(icon, 32) if icon else None
+        if texture is not None:
+            style = self.get_current_style()
+            self._icon = TintedImage(texture=texture, width=20, height=20, tint=style.get("font_color", C_TEXT) if style else C_TEXT)
+            self.add(self._icon, anchor_x="left", align_x=x, anchor_y="center")
+            x += 20 + 12
+        self.place_text(anchor_x="left", align_x=x, anchor_y="top", align_y=-6)
+        # The detail (a path) loses its start, not its end, when it's too long: "Missing: ...\Games\Old".
+        line = gui.UILabel(text=detail_prefix + detail, font_size=9, font_name=FONT, text_color=detail_color)
+        room, cut = self.width - x - 12, 0
+        while line._label.content_width > room and cut < len(detail) - 4:
+            cut += 2
+            line.text = f"{detail_prefix}...{detail[cut:]}"
+        line.fit_content()
+        self.add(line, anchor_x="left", align_x=x, anchor_y="bottom", align_y=6)
 
     def _apply_style(self, style: Any) -> None:
         super()._apply_style(style)
