@@ -37,7 +37,6 @@ class HelpOverlay(UIElement):
             "Tab: Inventory",
             "I: Inspector",
             "C: Character",
-            "F2: Editor",
             "H: Help",
             "V: Golden Slice Variants",
             "",

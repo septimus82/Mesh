@@ -706,7 +706,7 @@ class PlayerHUD(UIElement):
             if "hub" not in filename:
                 return None
 
-        hint = "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  F2: Editor  H: Help"
+        hint = "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help"
         setter = getattr(window, "set_flag", None)
         if callable(setter):
             setter(flag_name, True)

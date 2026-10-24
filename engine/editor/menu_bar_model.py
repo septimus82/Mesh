@@ -29,8 +29,6 @@ MENU_ACTION_ORDER: dict[str, tuple[str, ...]] = {
         "editor.scene.save",
         "editor.scene_browser.open",
         "|",
-        "app.export_web_demo",
-        "|",
         "app.quit",
     ),
     "Edit": (
@@ -152,7 +150,7 @@ def build_menu_groups(controller: Any, window: Any) -> List[MenuGroup]:
         action = action_map.get(action_id)
         if action is None or not action.in_menu:
             return False
-        if is_web and action.id in {"app.export_web_demo", "app.quit"}:
+        if is_web and action.id == "app.quit":
             return False
         return True
 

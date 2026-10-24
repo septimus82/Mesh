@@ -958,17 +958,6 @@ DEFAULT_ACTION_DEFS: tuple[ActionDef, ...] = (
             in_menu=True,
         ),
         ActionDef(
-            id="app.export_web_demo",
-            title="Export Web Demo...",
-            keywords=("export", "web", "demo"),
-            group="File",
-            shortcut="",
-            enabled="_enabled_not_web",
-            run="_export_web_demo",
-            in_palette=False,
-            in_menu=True,
-        ),
-        ActionDef(
             id="app.quit",
             title="Quit",
             keywords=("quit", "exit"),

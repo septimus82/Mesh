@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import sys
 from dataclasses import dataclass
@@ -116,6 +117,14 @@ def compute_project_browser_menu_layout(
 
 def _is_web_runtime() -> bool:
     return sys.platform == "emscripten" or os.environ.get("PYGBAG") == "1"
+
+
+def _tool_available(module: str) -> bool:
+    """Whether a developer tool (a ``tooling`` module of the engine checkout) can be imported here."""
+    try:
+        return importlib.util.find_spec(module) is not None
+    except (ImportError, ValueError):
+        return False
 
 
 def get_menu_legend(input_source: str) -> str:
@@ -385,8 +394,12 @@ class MainMenuOverlay(UIElement):
             ]
         )
         if not _is_web_runtime():
-            items.append(("Run Web Demo (Local Preview)", "run_web_preview"))
-            items.append(("Export Web Demo (.zip)", "export_web"))
+            # Developer tools from the engine checkout's tooling/: shown only where they can run. In a creator's
+            # own game (or a pip install) they weren't there, and the items did nothing.
+            if _tool_available("tooling.web_preview"):
+                items.append(("Run Web Demo (Local Preview)", "run_web_preview"))
+            if _tool_available("tooling.release_web_demo"):
+                items.append(("Export Web Demo (.zip)", "export_web"))
             items.append(("Quit", "quit"))
         return items
 
