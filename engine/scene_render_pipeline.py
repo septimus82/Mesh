@@ -206,15 +206,64 @@ def _coerce_sprite_scale_for_bounds(scale: Any) -> float:
         return 1.0
 
 
+# The shadow under an object fits what touches the ground (Milestone 14): one fixed 24x8 ellipse sat as a speck
+# under a large prop and as a slab under a sign's post. Sized from the picture's opaque pixels across its bottom
+# rows; a character (12 px of feet) keeps the 24x8 it always had.
+FOOT_ROWS = 0.15  # the bottom share of the picture's opaque height that counts as its footprint
+_FOOT_WIDTHS: dict[Any, float | None] = {}
+
+
+def _bottom_width(image: Any) -> float | None:
+    """Width of the opaque pixels across the picture's bottom rows (picture pixels), or None if it has none."""
+    if "A" not in image.getbands():
+        return None
+    alpha = image.getchannel("A")
+    box = alpha.getbbox()
+    if not box:
+        return None
+    left, top, right, bottom = box
+    rows = max(2, int((bottom - top) * FOOT_ROWS))
+    feet = alpha.crop((left, bottom - rows, right, bottom)).point(lambda v: 255 if v > 128 else 0).getbbox()
+    return float(feet[2] - feet[0]) if feet else None
+
+
+def _ground_shadow_size(sprite: Any) -> tuple[float, float] | None:
+    """(width, height) of the shadow under ``sprite``, measured once per sprite (a walk cycle doesn't make it pulse);
+    None: the defaults (no picture to measure)."""
+    cached = getattr(sprite, "mesh_ground_shadow", None)
+    if cached is not None:
+        return cast(tuple[float, float], cached)
+    texture = getattr(sprite, "texture", None)
+    image = getattr(texture, "image", None)
+    if image is None:
+        return None
+    key = getattr(texture, "atlas_name", None) or id(texture)
+    if key not in _FOOT_WIDTHS:
+        _FOOT_WIDTHS[key] = _bottom_width(image)
+    foot = _FOOT_WIDTHS[key]
+    if foot is None:
+        return None
+    scale = abs(float(getattr(sprite, "scale_x", 1.0) or 1.0))
+    width = max(10.0, min(220.0, (foot * 1.5 + 6.0) * scale))
+    size = (width, max(4.0, width / 3.0))
+    try:
+        sprite.mesh_ground_shadow = size
+    except AttributeError:  # a sprite type that takes no attributes: measured each frame
+        pass
+    return size
+
+
 def _compute_shadow_ops(ctx: RenderContext, sorted_sprites: List[Any]) -> List[ShadowDrawOp]:
     ops = []
     shadow_base_color = (20, 20, 20)
 
     for sprite in sorted_sprites:
+        size = _ground_shadow_size(sprite)
         multi_shadow = compute_sprite_multi_shadow(
             sprite,
             contact_enabled=ctx.shadows_contact_enabled,
             ao_enabled=ctx.shadows_ao_enabled,
+            **({"base_width": size[0], "base_height": size[1]} if size else {}),
         )
         if multi_shadow is None:
             continue
