@@ -92,7 +92,7 @@ def build(root: Path) -> dict[str, str]:
 
     def slant(scene: dict[str, Any]) -> dict[str, Any]:
         # A slanted wall as an object's outline (occluder_poly): Studio has no tool for it yet; the engine reads it.
-        out = json.loads(json.dumps(scene))
+        out: dict[str, Any] = json.loads(json.dumps(scene))
         out.setdefault("entities", []).append({"id": "shapes_slanted_wall", "name": "Slanted wall", "x": SLANT_AT[0],
                                                "y": SLANT_AT[1], "occluder_poly": SLANT})
         return out
@@ -283,7 +283,8 @@ def run(out: Path, renderer: str) -> int:
         kx, ky = image.width / state["window"][0], image.height / state["window"][1]
         cx, cy = int(sx * kx), int(sy * ky)
         pixels = [image.getpixel((cx + dx, cy + dy)) for dx in range(-r, r + 1) for dy in range(-r, r + 1)]
-        return tuple(round(sum(px[i] for px in pixels) / len(pixels), 1) for i in range(3))  # type: ignore[return-value]
+        r_, g_, b_ = (round(sum(px[i] for px in pixels) / len(pixels), 1) for i in range(3))
+        return r_, g_, b_
 
     def same(a: tuple[float, ...], b: tuple[float, ...], tol: float = 4.0) -> bool:
         return all(abs(x - y) <= tol for x, y in zip(a, b))
@@ -437,14 +438,17 @@ def run(out: Path, renderer: str) -> int:
         panel(False)
         r, lit_pt = world(R), (world(LAMP_A)[0] + 120, world(LAMP_A)[1])
         none_r = rgb(memo["two_shots"]["none"], r)
-        samples = []
+        behind: list[tuple[float, float, float]] = []
+        lit_side: list[float] = []
         for i in range(8):
             shot = snap(f"flicker_{i}")
-            samples.append({"R": rgb(shot, r), "lit": lum(rgb(shot, lit_pt))})
+            behind.append(rgb(shot, r))
+            lit_side.append(lum(rgb(shot, lit_pt)))
             time.sleep(0.11)
-        for sample in samples:
-            assert same(sample["R"], none_r, 5), f"a flickering lamp's light got behind the wall: {sample['R']} vs {none_r}"
-        varies = max(x["lit"] for x in samples) - min(x["lit"] for x in samples)
+        for seen in behind:
+            assert same(seen, none_r, 5), f"a flickering lamp's light got behind the wall: {seen} vs {none_r}"
+        varies = max(lit_side) - min(lit_side)
+        samples = [{"R": seen, "lit": lit} for seen, lit in zip(behind, lit_side)]
         panel(True)
         select_light(1)
         p().press_prefix("Flicker: ")
@@ -539,10 +543,11 @@ def run(out: Path, renderer: str) -> int:
         time.sleep(0.4)
         moved = p().fresh()["play"]["player"]
         scrolled = ratios(snap("play_scrolled"))
-        memo["play"] = {"edit": edit, "play": play, "scrolled": scrolled, "player": [start, moved]}
-        assert close_enough(play, edit), memo["play"]
-        assert close_enough(scrolled, play), memo["play"]
-        return memo["play"]
+        result: dict[str, Any] = {"edit": edit, "play": play, "scrolled": scrolled, "player": [start, moved]}
+        memo["play"] = result
+        assert close_enough(play, edit), result
+        assert close_enough(scrolled, play), result
+        return result
 
     def s15_room_change_and_back() -> dict[str, Any]:
         def door_of(key: str) -> tuple[float, float]:

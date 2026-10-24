@@ -21,20 +21,19 @@ import math
 from array import array
 from typing import Any
 
+import engine.optional_arcade as optional_arcade
 from engine.swallowed_exceptions import _log_swallow
 
 
 def _gl_failures() -> tuple[type[BaseException], ...]:
     """What building or drawing with the GL layer raises when the driver or context can't do it."""
     found: list[type[BaseException]] = [RuntimeError, OSError, ValueError, TypeError, AttributeError]
-    try:
-        from arcade.gl.exceptions import ShaderException  # noqa: PLC0415
-        from pyglet.gl.lib import GLException, MissingFunctionException  # noqa: PLC0415
+    shader_error = getattr(getattr(optional_arcade.arcade, "gl", None), "ShaderException", None)
+    if isinstance(shader_error, type) and issubclass(shader_error, BaseException):
+        found.append(shader_error)
+    from pyglet.gl.lib import GLException, MissingFunctionException  # noqa: PLC0415  # only reached when GL draws
 
-        found += [ShaderException, GLException, MissingFunctionException]
-    except ImportError:
-        pass
-    return tuple(found)
+    return (*found, GLException, MissingFunctionException)
 
 
 # How many lights may cast shadows in one frame; the rest are drawn lit, without shadows, and the stats
@@ -130,8 +129,7 @@ class LightCompositor:
     """GPU resources for one window: built once, resized with the light layer."""
 
     def __init__(self, ctx: Any) -> None:
-        from arcade import gl  # noqa: PLC0415  # the GL layer is only needed once lighting draws
-
+        gl = optional_arcade.arcade.gl
         self.ctx = ctx
         self.size: tuple[int, int] = (0, 0)
         self.light_program = ctx.program(vertex_shader=_LIGHT_VS, fragment_shader=_LIGHT_FS)
@@ -274,7 +272,7 @@ def _light_spec(light: Any) -> tuple[float, float, float, float, tuple[float, fl
         return None
     if radius <= 0:
         return None
-    return float(x), float(y), radius, attenuation, colour  # type: ignore[return-value]
+    return float(x), float(y), radius, attenuation, (colour[0], colour[1], colour[2])
 
 
 # Shadow edges. A lamp is treated as a small disc: a soft shadow is the average of the shadows seen from
