@@ -153,9 +153,10 @@ All of these ran, headless or in hidden windows, after all three changes:
   still draws nothing of them.
 - **Map interior, Stage 2 vs Stage 3:** 0 changed pixels in the yard, the court and the garden.
 
-**Not run, pending your permission:** the real-window suites (`acceptance_creator`, `acceptance_launcher`). They
-drive the desktop. Their button texts, sizes and positions are unchanged, so they should behave as before, but that
-is unverified until run.
+**Real-window suites (run by the owner on the desktop, after Stage 3):**
+- **creator:** 21/21.
+- **launcher:** at first 1/20. Its step 2 still expected the launcher window to be titled "Mesh Engine"; Stage 2 had
+  renamed it "Mesh Studio". After the test's expectation was updated (`74464e3`), 20/20.
 
 ## Known limitations
 
