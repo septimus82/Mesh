@@ -578,7 +578,7 @@ def run_verify_steps(state: VerifyStepContext) -> None:
                     code = int(find_blanket_swallow.main(["--roots", "engine", "mesh_cli"]))
 
                 scan_path = repo_root / "artifacts" / "swallow_scan.json"
-                if scan_path.exists():
+                if scan_path.exists() and artifacts_dir is not None:  # an artifact only when asked for, as every step
                     artifact = _normalize_path_for_json(scan_path, repo_root=repo_root)
                     artifacts_written["swallow_scan"] = artifact
 
