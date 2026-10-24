@@ -82,21 +82,53 @@ void main() {
 }
 """
 
+# One vertex format for wall shadows and character shadows (14 floats): x, y, the pass's depth (overlapping
+# shadows of one pass count once); a texture position in Arcade's sprite atlas (negative: solid, a wall);
+# how much of the light it blocks; and, for a character, its own upright picture (world rectangle and atlas
+# rectangle), so its shadow never darkens the character itself.
 _OCCLUDER_VS = """
 #version 330
 uniform WindowBlock { mat4 projection; mat4 view; } window;
-in vec3 in_pos;  // x, y and the pass's depth: overlapping shadows of one pass count once
+in vec3 in_pos;
+in vec2 in_uv;
+in float in_amount;
+in vec4 in_body;
+in vec4 in_body_uv;
+out vec2 v_uv;
+out float v_amount;
+out vec2 v_world;
+flat out vec4 v_body;
+flat out vec4 v_body_uv;
 void main() {
     gl_Position = window.projection * window.view * vec4(in_pos.xy, 0.0, 1.0);
     gl_Position.z = in_pos.z * gl_Position.w;
+    v_uv = in_uv;
+    v_amount = in_amount;
+    v_world = in_pos.xy;
+    v_body = in_body;
+    v_body_uv = in_body_uv;
 }
 """
 
 _OCCLUDER_FS = """
 #version 330
-uniform float amount;
+uniform sampler2D atlas;
+in vec2 v_uv;
+in float v_amount;
+in vec2 v_world;
+flat in vec4 v_body;
+flat in vec4 v_body_uv;
 out vec4 f_color;
-void main() { f_color = vec4(amount, 0.0, 0.0, 1.0); }
+void main() {
+    float a = 1.0;
+    if (v_uv.x >= 0.0) a = texture(atlas, v_uv).a;  // a character: its picture's shape
+    if (a < 0.05) discard;
+    if (v_body.z > v_body.x && v_world.x >= v_body.x && v_world.x <= v_body.z && v_world.y >= v_body.y && v_world.y <= v_body.w) {
+        vec2 t = (v_world - v_body.xy) / (v_body.zw - v_body.xy);
+        if (texture(atlas, mix(v_body_uv.xy, v_body_uv.zw, t)).a > 0.3) discard;  // its own body stays lit
+    }
+    f_color = vec4(a * v_amount, 0.0, 0.0, 1.0);
+}
 """
 
 # Arcade's combine (combine_fs.glsl): the scene lit by the room light plus the summed lamps.
@@ -123,6 +155,9 @@ void main() {
 """
 
 _STRIDE = 28  # 2f position, 1f radius, 1f attenuation, 3f colour
+_VERTEX = 14  # floats per occluder vertex
+_SOLID = (-1.0, -1.0)  # "no picture": a wall blocks with its whole shape
+_NO_BODY = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
 
 class LightCompositor:
@@ -143,8 +178,9 @@ class LightCompositor:
                                                                   "in_instance_attenuation", "in_instance_color"],
                                  instanced=True),
         ])
-        self.triangles = ctx.buffer(reserve=12 * 1024)  # 3 floats a vertex
-        self.occluder_vao = ctx.geometry([gl.BufferDescription(self.triangles, "3f", ["in_pos"])])
+        self.triangles = ctx.buffer(reserve=56 * 1024)  # 14 floats a vertex
+        self.occluder_vao = ctx.geometry([gl.BufferDescription(self.triangles, "3f 2f 1f 4f 4f",
+                                                               ["in_pos", "in_uv", "in_amount", "in_body", "in_body_uv"])])
         self.fullscreen = gl.geometry.quad_2d_fs()
         self.accum: Any = None
         self.occlusion: Any = None
@@ -186,16 +222,16 @@ class LightCompositor:
         self.light_program["shadowed"] = 1 if shadowed else 0
         self.light_vao.render(self.light_program, mode=self.ctx.TRIANGLE_STRIP, instances=len(lights))
 
-    def render(self, *, diffuse: Any, plain: list[Any], shadowed: list[tuple[Any, tuple[float, array]]],
-               ambient: tuple[int, int, int], camera: Any, target: Any) -> None:
+    def render(self, *, diffuse: Any, plain: list[Any], shadowed: list[tuple[Any, array]],
+               ambient: tuple[int, int, int], camera: Any, target: Any, atlas: Any = None) -> None:
         """Add ``plain`` lights, then each shadowed light through its own mask, and combine onto ``target``.
 
         A light is ``(x, y, radius, attenuation, (r, g, b))`` in world units and 0-255 colour. A shadowed
-        light comes with its occlusion, ``(amount, triangles)``: the triangles a flat float array of
-        ``x, y, depth`` points, one depth per pass. A pass is the shadow seen from one point of the lamp; it
-        adds ``amount`` to the mask once per pixel (the depth test stops two overlapping shadows of the same
-        pass counting twice). A hard shadow is one pass of 1.0; a soft one several passes from points spread
-        over the lamp, each adding its share, all drawn at once.
+        light comes with its occlusion triangles (the 14-float format above), pass after pass. A pass is the
+        shadow seen from one point of the lamp; each of its triangles adds its amount to the mask once per
+        pixel (the depth test stops two overlapping shadows of the same pass counting twice). A hard shadow is
+        one pass; a soft one several passes from points spread over the lamp, all drawn at once. ``atlas`` is
+        the sprite atlas texture character shadows take their shape from.
         """
         from pyglet import gl as pgl  # noqa: PLC0415  # Arcade has no depth-function setting: LESS, said outright
 
@@ -222,10 +258,11 @@ class LightCompositor:
                 ctx.enable(ctx.DEPTH_TEST)
                 pgl.glDepthFunc(pgl.GL_LESS)
                 try:
-                    amount, triangles = passes
-                    self._write(self.triangles, triangles)
-                    self.occluder_program["amount"] = float(amount)
-                    self.occluder_vao.render(self.occluder_program, mode=ctx.TRIANGLES, vertices=len(triangles) // 3)
+                    if atlas is not None:
+                        atlas.use(1)
+                    self.occluder_program["atlas"] = 1
+                    self._write(self.triangles, passes)
+                    self.occluder_vao.render(self.occluder_program, mode=ctx.TRIANGLES, vertices=len(passes) // _VERTEX)
                 finally:
                     ctx.disable(ctx.DEPTH_TEST)
                     self.occlusion.scissor = None
@@ -244,11 +281,16 @@ class LightCompositor:
 
 
 # ------------------------------------------------------------------------------------- gathering
-def _fan(poly: list[tuple[float, float]], depth: float, out: array) -> None:
+def _fan(poly: list[tuple[float, float]], depth: float, amount: float, out: array) -> None:
     """A convex polygon as triangles at ``depth`` (every shadow polygon here is convex: rays from the light)."""
     x0, y0 = poly[0]
     for (x1, y1), (x2, y2) in zip(poly[1:], poly[2:]):
-        out.extend((x0, y0, depth, x1, y1, depth, x2, y2, depth))
+        for x, y in ((x0, y0), (x1, y1), (x2, y2)):
+            out.extend((x, y, depth, *_SOLID, amount, *_NO_BODY))
+
+
+def _pass_depth(number: int, count: int) -> float:
+    return 0.9 - 1.8 * (number + 1) / (count + 1)  # each pass nearer than the last
 
 
 def _view_rect(window: Any, camera: Any) -> tuple[float, float, float, float] | None:
@@ -279,6 +321,23 @@ def _light_spec(light: Any) -> tuple[float, float, float, float, tuple[float, fl
 # points spread over it, so the edge blurs more the farther it falls from the wall (a real penumbra), and
 # the shadow right at the wall's foot stays sharp. (size of the disc in px, points sampled)
 SOFTNESS: dict[str, tuple[float, int]] = {"sharp": (0.0, 1), "soft": (10.0, 12), "softer": (22.0, 16)}
+# How many points of the lamp a soft shadow samples, by quality (more: smoother edges, more GPU fill).
+QUALITY_SAMPLES: dict[str, float] = {"low": 0.5, "normal": 1.0, "high": 1.75}
+
+
+def shadow_look(manager: Any) -> tuple[float, int, float]:
+    """The room's shadow edge (disc size px), passes and strength, from its preset and fine-tuning."""
+    preset = str(getattr(manager, "shadow_softness", "sharp") or "sharp")
+    size, count = SOFTNESS.get(preset, SOFTNESS["sharp"])
+    edge = getattr(manager, "shadow_edge_px", None)
+    if edge is not None:
+        size = max(0.0, min(48.0, float(edge)))
+        count = 1 if size <= 0 else max(count, 12)
+    if size > 0:
+        quality = QUALITY_SAMPLES.get(str(getattr(manager, "shadow_quality", "normal") or "normal"), 1.0)
+        count = max(4, min(32, round(count * quality)))
+    strength = max(0.0, min(1.0, float(getattr(manager, "shadow_strength", 1.0) or 0.0)))
+    return size, count, strength
 
 
 def _disc(size: float, count: int) -> list[tuple[float, float]]:
@@ -291,34 +350,149 @@ def _disc(size: float, count: int) -> list[tuple[float, float]]:
 
 
 def shadow_triangles(manager: Any, x: float, y: float, radius: float,
-                     softness: str = "sharp") -> tuple[tuple[float, array], int]:
-    """The light's occlusion (see LightCompositor.render), cached per light position, size and softness."""
+                     look: tuple[float, int, float]) -> tuple[list[array], int, array]:
+    """The light's wall shadows: one triangle array per pass, how many shapes, and all passes joined. Cached per
+    light position, size and look."""
     from .shadows import cull_occluders_for_light, cull_polygons_for_light, light_shadow_polygons  # noqa: PLC0415
 
-    size, count = SOFTNESS.get(softness, SOFTNESS["sharp"])
+    size, count, strength = look
     reach = math.ceil(radius / 32.0) * 32.0  # flicker changes the radius: build for the next size up and reuse it
-    key = (round(x, 1), round(y, 1), reach, softness)
-    cache: dict[Any, tuple[tuple[float, array], int]] = manager._shadow_cache
+    key = (round(x, 1), round(y, 1), reach, size, count, strength)
+    cache: dict[Any, tuple[list[array], int, array]] = manager._shadow_cache
     hit = cache.get(key)
     if hit is not None:
         return hit
     rects, polys = manager._shadow_occluders
     near_rects = cull_occluders_for_light(x, y, reach + size, rects)
     near_polys = cull_polygons_for_light(x, y, reach + size, polys)
-    triangles = array("f")
+    passes: list[array] = []
     shapes_total = 0
     points = _disc(size, count)
     for number, (dx, dy) in enumerate(points):
-        depth = 0.9 - 1.8 * (number + 1) / (len(points) + 1)  # each pass nearer than the last
+        triangles = array("f")
         shapes = light_shadow_polygons((x + dx, y + dy), reach, near_rects, near_polys)
         for shape in shapes:
             if len(shape) >= 3:
-                _fan(shape, depth, triangles)
+                _fan(shape, _pass_depth(number, len(points)), strength / len(points), triangles)
         shapes_total += len(shapes)
+        passes.append(triangles)
+    joined = array("f")
+    for part in passes:
+        joined.extend(part)
     if len(cache) > 512:  # a light moving every frame: keep the cache small
         cache.clear()
-    cache[key] = ((1.0 / len(points), triangles), shapes_total)
+    cache[key] = (passes, shapes_total, joined)
     return cache[key]
+
+
+# --------------------------------------------------------------------------------- character shadows
+class CharacterShadow:
+    """One character's shadow-casting picture this frame (see character_shadows)."""
+
+    __slots__ = ("feet", "height", "half_width", "uv", "body", "body_uv", "strength", "length", "key")
+
+    def __init__(self, feet: tuple[float, float], height: float, half_width: float, uv: tuple[float, float, float, float],
+                 body: tuple[float, float, float, float], body_uv: tuple[float, float, float, float],
+                 strength: float, length: float, key: int) -> None:
+        self.feet, self.height, self.half_width, self.uv = feet, height, half_width, uv
+        self.body, self.body_uv, self.strength, self.length, self.key = body, body_uv, strength, length, key
+
+
+CHARACTER_TAGS = ("player", "npc")  # cast a shadow unless told not to; anything else only when told to
+DEFAULT_CHARACTER_STRENGTH = 0.85
+
+
+def _cast_settings(data: dict[str, Any]) -> dict[str, Any] | None:
+    """An entity's cast-shadow settings, or None if it casts none."""
+    value = data.get("cast_shadow")
+    settings = dict(value) if isinstance(value, dict) else {"enabled": value} if isinstance(value, bool) else {}
+    enabled = settings.get("enabled")
+    if enabled is None:
+        enabled = data.get("tag") in CHARACTER_TAGS
+    return settings if enabled else None
+
+
+def _opaque_box(texture: Any, cache: dict[Any, Any]) -> tuple[int, int, int, int] | None:
+    """The picture's non-transparent rectangle (left, top, right, bottom; image pixels, y down), cached."""
+    name = getattr(texture, "atlas_name", None) or id(texture)
+    if name not in cache:
+        image = getattr(texture, "image", None)
+        box = None
+        if image is not None:
+            try:
+                box = image.getchannel("A").getbbox()
+            except (ValueError, AttributeError):
+                box = (0, 0, image.width, image.height)
+        cache[name] = box
+    return cache[name]
+
+
+def character_shadows(manager: Any, window: Any, atlas: Any) -> list[CharacterShadow]:
+    """The characters that cast shadows this frame, with what their pictures look like right now."""
+    scene = getattr(window, "scene_controller", None)
+    sprites = getattr(scene, "all_sprites", None) if scene is not None else None
+    if not sprites or atlas is None:
+        return []
+    boxes: dict[Any, Any] = manager._opaque_boxes
+    heights: dict[int, float] = manager._character_heights
+    out: list[CharacterShadow] = []
+    for sprite in sprites:
+        data = getattr(sprite, "mesh_entity_data", None)
+        if not isinstance(data, dict) or not getattr(sprite, "visible", True) or getattr(sprite, "alpha", 255) < 20:
+            continue
+        settings = _cast_settings(data)
+        texture = getattr(sprite, "texture", None)
+        if settings is None or texture is None:
+            continue
+        try:
+            region = atlas.get_texture_region_info(texture.atlas_name)
+        except (KeyError, AttributeError):
+            continue  # not drawn yet (not in the atlas): next frame
+        box = _opaque_box(texture, boxes)
+        if box is None:
+            continue
+        tw, th = float(texture.width), float(texture.height)
+        u0, v0, u1, _a, _b, v1, _c, _d = region.texture_coordinates  # v0: the picture's top row
+        left, top, right, bottom = box
+        # The shape from the feet (lowest opaque row) to the top of the head (highest opaque row).
+        uv = (u0 + (u1 - u0) * left / tw, v0 + (v1 - v0) * bottom / th, u0 + (u1 - u0) * right / tw, v0 + (v1 - v0) * top / th)
+        sx, sy = abs(float(getattr(sprite, "scale_x", 1.0) or 1.0)), abs(float(getattr(sprite, "scale_y", 1.0) or 1.0))
+        cx, cy = float(sprite.center_x), float(sprite.center_y)
+        feet = (cx + ((left + right) / 2 - tw / 2) * sx, cy - (bottom - th / 2) * sy)
+        key = id(sprite)
+        if key not in heights:  # once per character: the walk cycle must not make its shadow breathe
+            heights[key] = max(4.0, (bottom - top) * sy)
+        height = float(settings.get("height") or heights[key])
+        half_w, half_h = tw * sx / 2, th * sy / 2
+        body = (cx - half_w, cy - half_h, cx + half_w, cy + half_h)
+        body_uv = (u0, v1, u1, v0)  # world bottom-left is the picture's bottom row
+        strength = max(0.0, min(1.0, float(settings.get("strength", DEFAULT_CHARACTER_STRENGTH))))
+        length = max(0.2, min(3.0, float(settings.get("length", 1.0))))
+        out.append(CharacterShadow(feet, height, (right - left) * sx / 2, uv, body, body_uv, strength, length, key))
+    return out
+
+
+def _character_quad(char: CharacterShadow, lx: float, ly: float, radius: float, depth: float, amount: float,
+                    out: array) -> bool:
+    """The character's picture laid on the ground, from its feet away from a light at (lx, ly)."""
+    fx, fy = char.feet
+    dx, dy = fx - lx, fy - ly
+    dist = math.hypot(dx, dy)
+    if dist < 1.0:
+        return False
+    ux, uy = dx / dist, dy / dist
+    # A lamp a little above head height: the shadow lengthens as the character walks away from it.
+    length = max(char.height * 0.35, min(char.height * 4.0, dist * 1.25)) * char.length
+    px, py = uy, -ux  # to the right, looking along the shadow
+    hw, tip = char.half_width, char.half_width * 1.15
+    u0, v_feet, u1, v_head = char.uv
+    corners = ((fx - px * hw, fy - py * hw, u0, v_feet), (fx + px * hw, fy + py * hw, u1, v_feet),
+               (fx + ux * length + px * tip, fy + uy * length + py * tip, u1, v_head),
+               (fx + ux * length - px * tip, fy + uy * length - py * tip, u0, v_head))
+    for i in (0, 1, 2, 0, 2, 3):
+        x, y, u, v = corners[i]
+        out.extend((x, y, depth, u, v, amount * char.strength, *char.body, *char.body_uv))
+    return True
 
 
 def render_shadowed_lighting(manager: Any) -> bool:
@@ -354,9 +528,13 @@ def render_shadowed_lighting(manager: Any) -> bool:
     budget = int(getattr(manager, "shadow_light_budget", DEFAULT_SHADOW_LIGHT_BUDGET))
     casts = getattr(manager, "_light_casts_shadows", {})
     softness = str(getattr(manager, "shadow_softness", "sharp") or "sharp")
+    look = shadow_look(manager)
+    atlas = getattr(ctx, "default_atlas", None)
+    characters = character_shadows(manager, window, atlas) if getattr(manager, "character_shadows", True) else []
+    disc = _disc(look[0], look[1])
     plain: list[Any] = []
-    wanted: list[tuple[float, Any, tuple[float, array]]] = []
-    shapes = triangle_count = off_screen = 0
+    wanted: list[tuple[float, Any, array]] = []
+    shapes = triangle_count = off_screen = character_casts = 0
     for light in list(layer):
         spec = _light_spec(light)
         if spec is None:
@@ -365,22 +543,37 @@ def render_shadowed_lighting(manager: Any) -> bool:
         if view is not None and (x + radius < view[0] or x - radius > view[2] or y + radius < view[1] or y - radius > view[3]):
             off_screen += 1  # it lights nothing on screen
             continue
-        if (rects or polys) and casts.get(id(light), True):
-            passes, count = shadow_triangles(manager, x, y, radius, softness)
-            if count:
-                shapes += count
-                triangle_count += len(passes[1]) // 9
-                centre = ((view[0] + view[2]) / 2, (view[1] + view[3]) / 2) if view else (x, y)
-                wanted.append((math.hypot(x - centre[0], y - centre[1]), spec, passes))
-                continue
-        plain.append(spec)
+        if not casts.get(id(light), True):
+            plain.append(spec)
+            continue
+        walls, count, joined = shadow_triangles(manager, x, y, radius, look) if (rects or polys) else ([], 0, array("f"))
+        near = [c for c in characters if math.hypot(c.feet[0] - x, c.feet[1] - y) < radius
+                and not (c.body[0] - 4 <= x <= c.body[2] + 4 and c.body[1] - 4 <= y <= c.body[3] + 4)]  # its own lamp
+        if not count and not near:
+            plain.append(spec)
+            continue
+        if near:  # walls and characters, pass by pass: each pass nearer than the last
+            data = array("f")
+            for number, (ox, oy) in enumerate(disc):
+                if walls:
+                    data.extend(walls[number])
+                for char in near:
+                    _character_quad(char, x + ox, y + oy, radius, _pass_depth(number, len(disc)), look[2] / len(disc), data)
+            character_casts += len(near)
+        else:
+            data = joined
+        shapes += count
+        triangle_count += len(data) // (_VERTEX * 3)
+        centre = ((view[0] + view[2]) / 2, (view[1] + view[3]) / 2) if view else (x, y)
+        wanted.append((math.hypot(x - centre[0], y - centre[1]), spec, data))
     wanted.sort(key=lambda item: item[0])  # nearest the middle of the view first
     over = wanted[budget:]
     plain.extend(spec for _d, spec, _p in over)
     shadowed = [(spec, passes) for _d, spec, passes in wanted[:budget]]
     try:
         compositor.render(diffuse=diffuse, plain=plain, shadowed=shadowed, ambient=manager._ambient_rgb(),
-                          camera=camera, target=getattr(layer, "window", None) or ctx.screen)
+                          camera=camera, target=getattr(layer, "window", None) or ctx.screen,
+                          atlas=getattr(atlas, "texture", None))
     except _gl_failures() as exc:  # a GL failure mid-frame: the room is lit, without shadows, not black
         _log_swallow("LCMP-002", f"engine/lighting/light_compositor.py render: {exc}", once=True)
         manager._last_lighting_stats = {"shadows_mode": manager.shadows_mode, "renderer": "unshadowed",
@@ -396,6 +589,8 @@ def render_shadowed_lighting(manager: Any) -> bool:
         "lights_off_screen": off_screen, "shadowed_lights": len(shadowed), "shadow_light_budget": budget,
         "lights_over_budget": len(over), "occluder_count": len(rects) + len(polys),
         "shadow_poly_count": shapes, "shadow_triangles": triangle_count, "shadow_softness": softness,
+        "shadow_edge_px": look[0], "shadow_passes": look[1], "shadow_strength": look[2],
+        "characters": len(characters), "character_shadows": character_casts,
     }
     if over:
         manager._log_counter_once("shadow_budget", f"{len(wanted)} lights cast shadows here; {len(over)} beyond the "

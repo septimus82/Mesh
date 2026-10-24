@@ -1,0 +1,127 @@
+"""Milestone 12.1: characters cast directional shadows from lamps, through the same per-light masks as walls.
+
+Real GPU pixels (tooling/shadow_bench.py): a flat grey floor, the starter hero, one or two lamps. A
+character's shadow starts at its feet, points away from the lamp, takes away only that lamp's light (never
+the room light or another lamp's), never darkens the character itself, and goes when the character or the
+lamp is set not to cast it. GL-gated: set MESH_GL_SMOKE=1.
+"""
+
+from __future__ import annotations
+
+import math
+import os
+import sys
+from pathlib import Path
+
+import pytest
+
+from engine import optional_arcade
+
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(os.environ.get("MESH_GL_SMOKE") != "1" or not optional_arcade.has_arcade(),
+                       reason="real-GPU render test is opt-in (set MESH_GL_SMOKE=1 with a display/GL context)"),
+]
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tooling"))
+
+LAMP = (200.0, 240.0)
+HERO = (300.0, 240.0)  # the sprite's centre; its feet are 24 px lower
+
+
+@pytest.fixture(scope="module")
+def bench():
+    from shadow_bench import Bench
+
+    os.environ.pop("MESH_SHADOWS_RENDERER", None)
+    b = Bench()
+    yield b
+    b.close()
+
+
+def _shot(bench, **scene):
+    from shadow_bench import Scene
+
+    bench.load(Scene(**scene))
+    return bench.frame()
+
+
+def _lamp(x: float, y: float, colour: str = "#ffffff", radius: float = 300, **extra):
+    from shadow_bench import light
+
+    return light(x, y, radius, colour, **extra)
+
+
+def _feet(bench) -> tuple[float, float]:
+    sprite = bench.sprites[0]
+    return float(sprite.center_x), float(sprite.bottom)
+
+
+def _along(bench, lamp: tuple[float, float], distance: float) -> tuple[float, float]:
+    """A floor point ``distance`` px from the feet, straight away from the lamp: inside the shadow."""
+    fx, fy = _feet(bench)
+    dx, dy = fx - lamp[0], fy - lamp[1]
+    d = math.hypot(dx, dy)
+    return fx + dx / d * distance, fy + dy / d * distance
+
+
+def test_a_character_casts_a_shadow_away_from_the_lamp(bench) -> None:
+    with_hero = _shot(bench, lights=[_lamp(*LAMP)], characters=[(*HERO, 0, {})])
+    behind = _along(bench, LAMP, 30)
+    no_shadow = _shot(bench, lights=[_lamp(*LAMP)], characters=[(*HERO, 0, {"cast_shadow": False})])
+    room = _shot(bench, lights=[], characters=[(*HERO, 0, {"cast_shadow": False})])
+    got, lit, dark = (bench.pixel(img, behind)[0] for img in (with_hero, no_shadow, room))
+    assert got < lit - 15, f"behind the character, away from the lamp: {got} (lit {lit})"
+    assert got >= dark - 1, f"a character's shadow never goes below the room light: {got} vs {dark}"
+    toward = (_feet(bench)[0] - 30, _feet(bench)[1])  # on the lamp's side of the feet
+    assert abs(bench.pixel(with_hero, toward)[0] - bench.pixel(no_shadow, toward)[0]) <= 2, "no shadow on the lamp's side"
+
+
+def test_a_characters_shadow_takes_only_its_own_lamps_light(bench) -> None:
+    other = (300.0, 420.0)  # a second lamp above: its shadow falls downward, not where this one falls
+    both = _shot(bench, lights=[_lamp(*LAMP), _lamp(*other, "#88bbff")], characters=[(*HERO, 0, {})])
+    behind = _along(bench, LAMP, 34)
+    only_other = _shot(bench, lights=[_lamp(*other, "#88bbff")], characters=[(*HERO, 0, {})])
+    lamp_only_lit = _shot(bench, lights=[_lamp(*LAMP)], characters=[(*HERO, 0, {"cast_shadow": False})])
+    room = _shot(bench, lights=[], characters=[(*HERO, 0, {"cast_shadow": False})])
+    # Behind the hero from the first lamp: the second lamp's light is all still there.
+    a, b = bench.pixel(both, behind), bench.pixel(only_other, behind)
+    first_lamp_left = bench.pixel(lamp_only_lit, behind)[2] - bench.pixel(room, behind)[2]
+    assert a[2] >= b[2] - 2, f"the other lamp's light survives: {a} vs {b}"
+    assert a[2] - b[2] < first_lamp_left, "and the first lamp's light is (mostly) gone there"
+
+
+def test_the_character_itself_is_not_darkened_by_its_own_shadow(bench) -> None:
+    lamp_below = (300.0, 120.0)  # the shadow falls up the screen, over where the body is drawn
+    on = _shot(bench, lights=[_lamp(*lamp_below)], characters=[(*HERO, 0, {})])
+    off = _shot(bench, lights=[_lamp(*lamp_below)], characters=[(*HERO, 0, {"cast_shadow": False})])
+    for dy in (-12, 0, 12):  # across the body
+        point = (HERO[0], HERO[1] + dy)
+        assert abs(bench.pixel(on, point)[0] - bench.pixel(off, point)[0]) <= 2, point
+
+
+def test_a_lamp_set_not_to_cast_shadows_casts_no_character_shadow(bench) -> None:
+    on = _shot(bench, lights=[_lamp(*LAMP, shadows=False)], characters=[(*HERO, 0, {})])
+    off = _shot(bench, lights=[_lamp(*LAMP, shadows=False)], characters=[(*HERO, 0, {"cast_shadow": False})])
+    assert list(on.getdata()) == list(off.getdata())
+
+
+def test_walking_frames_do_not_make_the_shadow_breathe(bench) -> None:
+    """The shadow's length comes from the character, not the frame: the tip stays put over a walk cycle."""
+    tips = []
+    for frame in (8, 9, 10, 11):  # the walk-right row
+        image = _shot(bench, lights=[_lamp(*LAMP)], characters=[(*HERO, frame, {})])
+        lit = [d for d in range(10, 140) if bench.pixel(image, _along(bench, LAMP, d))[0]
+               < bench.pixel(image, (_feet(bench)[0] + d, _feet(bench)[1] + 60))[0] - 10]
+        tips.append(max(lit) if lit else 0)
+    assert max(tips) - min(tips) <= 6, f"shadow length over the walk frames: {tips}"
+
+
+def test_shadow_strength_is_how_much_of_the_lamp_it_blocks(bench) -> None:
+    behind = None
+    values = []
+    for strength in (0.3, 0.85):
+        image = _shot(bench, lights=[_lamp(*LAMP)], characters=[(*HERO, 0, {"cast_shadow": {"strength": strength}})])
+        behind = behind or _along(bench, LAMP, 30)
+        values.append(bench.pixel(image, behind)[0])
+    assert values[0] > values[1] + 10, values

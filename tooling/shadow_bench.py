@@ -43,6 +43,8 @@ class Scene:
     camera: tuple[float, float] = (0.0, 0.0)
     zoom: float = 1.0
     settings: dict[str, Any] = field(default_factory=dict)  # room settings (e.g. lighting_shadow_softness)
+    # Characters: (x, y of the sprite's centre, frame of the starter hero sheet (row * 4 + column), entity data).
+    characters: list[tuple[float, float, int, dict[str, Any]]] = field(default_factory=list)
 
 
 class _CameraController:
@@ -68,6 +70,9 @@ class Bench:
         self.window.gui_camera = arcade.Camera2D()
         self.window.camera_controller = _CameraController(self.window)
         self.window.scene_controller = None
+        self.sprites = arcade.SpriteList()
+        sheet = arcade.load_spritesheet(str(REPO / "assets/sprites/starter_hero.png"))
+        self.hero_frames = sheet.get_texture_grid(size=(32, 48), columns=4, count=16)
         self.window.engine_config = None
         self.window.show_debug = False
         self.size = size
@@ -90,6 +95,15 @@ class Bench:
         occluders += [{"id": f"p{i}", "type": "poly", "points": [list(p) for p in poly]} for i, poly in enumerate(scene.polys)]
         m.configure_scene_occluders(occluders)
         m.configure_scene_lights(scene.lights)
+        self.sprites.clear()
+        for x, y, frame, data in scene.characters:
+            sprite = self.arcade.Sprite(self.hero_frames[frame], scale=float(data.get("scale", 1.0)), center_x=x, center_y=y)
+            sprite.mesh_entity_data = {"tag": "player", **data}
+            sprite.sync_hit_box_to_texture()
+            self.sprites.append(sprite)
+        from types import SimpleNamespace
+
+        self.window.scene_controller = SimpleNamespace(all_sprites=self.sprites) if scene.characters else None
 
     def _place_camera(self) -> None:
         cam = self.window.camera
@@ -109,6 +123,7 @@ class Bench:
                 a.draw_lrbt_rectangle_filled(x, x + w, y, y + h, WALL)
             for poly in self.scene.polys:
                 a.draw_polygon_filled(poly, WALL)
+            self.sprites.draw(pixelated=True)
         self.window.camera_controller.use_gui_camera()
         self.manager.end()
 

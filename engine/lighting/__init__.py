@@ -274,6 +274,13 @@ class LightManager:
         self._light_casts_shadows: dict[int, bool] = {}
         self.shadow_light_budget: int = _light_compositor.DEFAULT_SHADOW_LIGHT_BUDGET
         self.shadow_softness: str = "sharp"  # shadow edges: sharp, soft or softer (light_compositor.SOFTNESS)
+        # Fine-tuning (room settings): edge width in px (None: the preset's), strength 0-1, quality.
+        self.shadow_edge_px: float | None = None
+        self.shadow_strength: float = 1.0
+        self.shadow_quality: str = "normal"
+        self.character_shadows: bool = True  # characters cast shadows from lamps (light_compositor.character_shadows)
+        self._opaque_boxes: dict[Any, Any] = {}
+        self._character_heights: dict[int, float] = {}
 
         if self.available:
             self._rebuild_layer()
