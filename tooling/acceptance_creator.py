@@ -70,13 +70,13 @@ def run(out: Path) -> int:
         launcher_layout.unlink(missing_ok=True)
         subprocess.Popen(["cmd", "/c", str(REPO / "Mesh Engine.bat")], cwd=str(REPO), env=env,
                          creationflags=subprocess.CREATE_NO_WINDOW)
-        driver = Driver.attach("Mesh Engine", out / "shots", logical_size=(960, 640))
+        driver = Driver.attach("Mesh Studio", out / "shots", logical_size=(960, 640))  # the launcher (Milestone 15: "Mesh Studio")
         held["launcher"], held["L"] = driver, Page(driver, launcher_layout)
         held["L"].wait(lambda s: s["screen"] == "home", "the launcher's home screen", timeout=30)
         return held["L"]
 
     def studio_opens() -> MapPage:
-        driver = Driver.attach("Mesh Studio", out / "shots", timeout=90)
+        driver = Driver.attach("Mesh Studio - ", out / "shots", timeout=90)  # Studio itself: "Mesh Studio - <room>"
         held["studio"], held["S"] = driver, MapPage(driver, studio_layout)
         held["S"].wait(lambda s: s["mode"] == "edit" and s["objects"], "Mesh Studio", timeout=30)
         if held["launcher"] is not None:

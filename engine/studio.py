@@ -32,12 +32,18 @@ from engine.studio_project import Project
 from engine.studio_ui import (
     C_BG,
     C_ERROR,
+    C_FIELD,
+    C_FIELD_EDGE,
+    C_LINE,
     C_MUTED,
     C_OK,
     C_PANEL,
+    C_RAISED,
     C_SELECT,
     C_SPAWN,
     C_TEXT,
+    C_WARN,
+    FONT,
     S_ACTIVE,
     S_BUTTON,
     S_DANGER,
@@ -46,8 +52,10 @@ from engine.studio_ui import (
     FirstClicks,
     TextField,
     ask_path,
+    brand_texture,
     field_clipboard,
     gui,
+    set_app_icon,
 )
 from engine.world_controller import WorldController
 
@@ -836,7 +844,7 @@ class Studio(InspectorMixin):
             box.add(button)
         for name, value in sorted(counters.items())[:8]:
             box.add(self._label(f"{name} = {float(value):g}", color=C_TEXT, size=10))
-        box.with_padding(all=8).with_background(color=(30, 32, 38, 235))
+        box.with_padding(all=8).with_background(color=(*C_RAISED, 235))
         root.add(box, anchor_x="right", anchor_y="top", align_x=-8, align_y=-44)
 
     def _toggle_play_flags(self) -> None:
@@ -860,9 +868,9 @@ class Studio(InspectorMixin):
 
     # ==================================================================== text fields
     def _field(self, text: str, commit: Callable[[str], object], *, width: int, key: str | None = None) -> gui.UIInputText:
-        field = TextField(text=text, width=width, height=26, font_size=11, text_color=C_TEXT,
-                                caret_color=C_TEXT, border_color=(90, 96, 112), border_width=1)
-        field.with_background(color=(24, 26, 31))
+        field = TextField(text=text, width=width, height=26, font_size=11, font_name=FONT, text_color=C_TEXT,
+                          caret_color=C_TEXT, border_color=C_FIELD_EDGE, border_width=1)
+        field.with_background(color=C_FIELD)
         self._fields.append((field, text, commit))
         if key:
             self._focusable[key] = field
@@ -895,7 +903,7 @@ class Studio(InspectorMixin):
 
     def _label(self, text: str, *, color: tuple[int, int, int] = C_TEXT, size: int = 11, width: int | None = None,
                bold: bool = False) -> gui.UILabel:
-        label = gui.UILabel(text=text, font_size=size, text_color=color, width=width, bold=bold,
+        label = gui.UILabel(text=text, font_size=size, font_name=FONT, text_color=color, width=width, bold=bold,
                             multiline=width is not None)
         if width is not None:
             hard_wrap(label)
@@ -911,7 +919,7 @@ class Studio(InspectorMixin):
         self._fields, self._focusable = [], {}
         self._thumbs, self._anim_space = [], None
         root = self.ui.add(gui.UIAnchorLayout())
-        root.add(self._top_bar(), anchor_x="left", anchor_y="top", align_x=8, align_y=-8)
+        self._top_bar_box = root.add(self._top_bar(), anchor_x="left", anchor_y="top", align_x=8, align_y=-8)
         root.add(self._left_panel(), anchor_x="left", anchor_y="top", align_x=10, align_y=-(TOP_H + 10))
         root.add(self._right_panel(), anchor_x="right", anchor_y="top", align_x=-10, align_y=-(TOP_H + 10))
         self._status_label = self._label("", size=10)
@@ -1667,13 +1675,13 @@ class Studio(InspectorMixin):
         problems = self._route_problems()
         rows.add(self._label(f"{len(points)} point(s)", size=11))
         if not points:
-            rows.add(self._label("No points yet: click the map where it should walk.", color=(240, 200, 120), size=10, width=width))
+            rows.add(self._label("No points yet: click the map where it should walk.", color=C_WARN, size=10, width=width))
         elif len(points) < 2:
-            rows.add(self._label("Add at least one more point.", color=(240, 200, 120), size=10, width=width))
+            rows.add(self._label("Add at least one more point.", color=C_WARN, size=10, width=width))
         elif not problems:
             rows.add(self._label("It can walk this route.", color=C_OK, size=10, width=width))
         for problem in problems:
-            rows.add(self._label(problem.text, color=(240, 140, 120), size=10, width=width))
+            rows.add(self._label(problem.text, color=C_ERROR, size=10, width=width))
         half = (width - 6) // 2
         row = gui.UIBoxLayout(vertical=False, space_between=6)
         row.add(self._button(f"Remove point {self.route_sel + 1}" if self.route_sel is not None else "Remove point",
@@ -1993,7 +2001,7 @@ class Studio(InspectorMixin):
     def _text(self, key: str, text: str, x: float, y: float, color: tuple[int, int, int], size: int = 10) -> None:
         label = self._labels.get(key)
         if label is None or label.text != text:
-            label = self._labels[key] = optional_arcade.arcade.Text(text, x, y, color, size, anchor_x="center")
+            label = self._labels[key] = optional_arcade.arcade.Text(text, x, y, color, size, anchor_x="center", font_name=FONT)
         # Kept inside the map view: a door on the map's edge had its name cut off by the side panel (Milestone 14).
         left, right, _bottom, _top = self._map_rect()
         view_l, view_r = (float(self.window.camera.unproject((sx, 0))[0]) for sx in (left + 4, right - 4))
@@ -2064,7 +2072,7 @@ class Studio(InspectorMixin):
         a = optional_arcade.arcade
         tileset, px, cols, rows = geometry
         left, top = space.left, space.top
-        a.draw_lrbt_rectangle_filled(left, left + cols * px, top - rows * px, top, (22, 24, 29))
+        a.draw_lrbt_rectangle_filled(left, left + cols * px, top - rows * px, top, C_FIELD)
         c0, r0 = self.sheet_scroll
         for r in range(rows):
             for c in range(cols):
@@ -2269,11 +2277,34 @@ class Studio(InspectorMixin):
                                               offset_x=c["offset_x"], offset_y=c["offset_y"]), "Collider changed.")
 
     def _draw_panels(self) -> None:
+        a = optional_arcade.arcade
         w, h = self.window.width, self.window.height
-        optional_arcade.arcade.draw_lrbt_rectangle_filled(0, w, h - TOP_H, h, C_PANEL)
-        optional_arcade.arcade.draw_lrbt_rectangle_filled(0, LEFT_W, 0, h - TOP_H, C_PANEL)
-        optional_arcade.arcade.draw_lrbt_rectangle_filled(w - RIGHT_W, w, 0, h - TOP_H, C_PANEL)
-        optional_arcade.arcade.draw_lrbt_rectangle_filled(LEFT_W, w - RIGHT_W, 0, STATUS_H, (26, 28, 33))
+        a.draw_lrbt_rectangle_filled(0, w, h - TOP_H, h, C_RAISED)
+        a.draw_lrbt_rectangle_filled(0, LEFT_W, 0, h - TOP_H, C_PANEL)
+        a.draw_lrbt_rectangle_filled(w - RIGHT_W, w, 0, h - TOP_H, C_PANEL)
+        a.draw_lrbt_rectangle_filled(LEFT_W, w - RIGHT_W, 0, STATUS_H, C_BG)
+        a.draw_lines([(0, h - TOP_H), (w, h - TOP_H), (LEFT_W, 0), (LEFT_W, h - TOP_H), (w - RIGHT_W, 0),
+                      (w - RIGHT_W, h - TOP_H), (LEFT_W, STATUS_H), (w - RIGHT_W, STATUS_H)], C_LINE, 1)
+        self._draw_brand(w - 12, h - TOP_H / 2)
+
+    def _draw_brand(self, right: float, middle: float) -> None:
+        """Mesh Studio's mark and name at the top bar's right end: only where it's clear of the toolbar, which
+        never moves to make room for it."""
+        mark = brand_texture("mesh_studio_mark_64.png")
+        if mark is None:
+            return
+        if getattr(self, "_brand_name", None) is None:
+            self._brand_name = optional_arcade.arcade.Text("Mesh Studio", 0, 0, C_TEXT, 12, bold=True, font_name=FONT,
+                                                           anchor_x="right", anchor_y="center")
+        name, size = self._brand_name, 26
+        left = right - name.content_width - 8 - size
+        bar = getattr(self, "_top_bar_box", None)
+        if bar is not None and bar.rect.right + 24 > left:
+            return  # a narrow window: the toolbar comes first
+        name.x, name.y = right, middle
+        name.draw()
+        height = size * mark.height / mark.width
+        optional_arcade.arcade.draw_texture_rect(mark, optional_arcade.arcade.LBWH(left, middle - height / 2, size, height))
 
     # ==================================================================== input (edit mode)
     def on_update(self, delta_time: float) -> bool:
@@ -2377,7 +2408,7 @@ class Studio(InspectorMixin):
         row.add(self._button("Discard", lambda: self._close_choice("discard"), width=110, style=S_DANGER))
         row.add(self._button("Cancel", lambda: self._close_choice("cancel"), width=110))
         box.add(row)
-        box.with_padding(all=18).with_background(color=(46, 50, 60, 250))
+        box.with_padding(all=18).with_background(color=(*C_RAISED, 250))
         root.add(box, anchor_x="center", anchor_y="center")
 
     def _close_choice(self, choice: str) -> None:
@@ -2585,4 +2616,5 @@ def open_studio(window: Any, root: Any, world_file: str | None, scene_path: str 
                 project.scene(key)
     studio = Studio(window, project)
     window.studio = studio
+    set_app_icon(window)
     return studio

@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import engine.optional_arcade as optional_arcade
 from engine import behaviour_guide
 from engine import project_ops as ops
-from engine.studio_ui import C_MUTED, C_OK, C_TEXT, S_ACTIVE, S_BUTTON, S_DANGER, ask_path, gui
+from engine.studio_ui import C_ERROR, C_FIELD, C_MUTED, C_OK, C_TEXT, C_WARN, S_ACTIVE, S_BUTTON, S_DANGER, ask_path, gui
 
 if TYPE_CHECKING:
     from engine.studio_ai import Proposal, StudioAIHost
@@ -211,7 +211,7 @@ class InspectorMixin:
                                  "room. Only where it starts belongs to this room.", color=C_OK, size=9, width=width))
         elif entity.get("tag") == "player" and self.project.player is None:
             rows.add(self._label("This room has its own player: changes here don't reach other rooms.",
-                                 color=(240, 200, 120), size=9, width=width))
+                                 color=C_WARN, size=9, width=width))
             rows.add(self._button("Use one player in every room...", self._open_players, width=width))
         tabs = _tabs_for(entity)
         if entity.get("tag") == "spawn_point":
@@ -274,7 +274,7 @@ class InspectorMixin:
             single = size is not None and (size[0] == size[1] <= 64 or min(frame) < 16)
             if size and not animated and not single and (size[0] > frame[0] or size[1] > frame[1]):
                 rows.add(self._label("This looks like a sheet of frames: the whole sheet shows until you set up "
-                                     "its animation in the Animation tab.", color=(240, 200, 120), size=9, width=width))
+                                     "its animation in the Animation tab.", color=C_WARN, size=9, width=width))
         else:
             rows.add(self._label("No picture: it's invisible in the game (fine for zones and markers).",
                                  color=C_MUTED, size=10, width=width))
@@ -388,7 +388,7 @@ class InspectorMixin:
         if not problem:
             return
         target = entity["id"]
-        rows.add(self._label(problem + " So the game would show the wrong part of the picture.", color=(240, 200, 120),
+        rows.add(self._label(problem + " So the game would show the wrong part of the picture.", color=C_WARN,
                              size=9, width=width))
         rows.add(self._label("A single picture: show it as it is. A sheet of frames: set up its frames in the "
                              "Animation tab.", color=C_MUTED, size=9, width=width))
@@ -1060,7 +1060,7 @@ class InspectorMixin:
             rows.add(row)
             config = (entity.get("behaviour_config") or {}).get(name) or {}
             for problem in behaviour_guide.problems(name, config if isinstance(config, dict) else {}):
-                rows.add(self._label(problem, color=(240, 200, 120), size=9, width=width))
+                rows.add(self._label(problem, color=C_WARN, size=9, width=width))
             if self.expanded == name:
                 rows.add(self._label(f"{info.summary}  ({name})", color=C_MUTED, size=9, width=width))
                 self._behaviour_fields(rows, entity, name, width)
@@ -1084,10 +1084,10 @@ class InspectorMixin:
             if len(proposal.summary) > 24:
                 rows.add(self._label(f"... and {len(proposal.summary) - 24} more", color=C_MUTED, size=9))
             if proposal.status == "conflict":
-                rows.add(self._label(proposal.message, color=(240, 200, 120), size=9, width=width))
+                rows.add(self._label(proposal.message, color=C_WARN, size=9, width=width))
                 for clash in proposal.conflicts[:8]:
                     rows.add(self._label(f"  {clash.get('what') or clash['path']}: here {clash['studio']!r}, proposed {clash['ai']!r}",
-                                         color=(240, 200, 120), size=9, width=width))
+                                         color=C_WARN, size=9, width=width))
             row = gui.UIBoxLayout(vertical=False, space_between=6)
             row.add(self._button("Accept", partial(self.accept_ai, proposal), width=half, style=S_ACTIVE,
                                  disabled=proposal.status == "conflict"))
@@ -1114,7 +1114,7 @@ class InspectorMixin:
         if differences:
             rows.add(self._label(f"Compared with {self.project.label(self.project.start_key())}'s player:", size=10))
             for key, what in differences.items():
-                rows.add(self._label(f"  {self.project.label(key)}: different {', '.join(what)}", color=(240, 200, 120),
+                rows.add(self._label(f"  {self.project.label(key)}: different {', '.join(what)}", color=C_WARN,
                                      size=10, width=width))
         rows.add(self._label("Whose player should every room use?", size=10))
         for key in self.project.own_players():
@@ -1142,19 +1142,19 @@ class InspectorMixin:
                 continue
             image = self._image(path)
             if image is None:
-                a.draw_lrbt_rectangle_outline(space.left, space.right, space.bottom, space.top, (200, 80, 80), 1)
+                a.draw_lrbt_rectangle_outline(space.left, space.right, space.bottom, space.top, C_ERROR, 1)
                 continue
             key = ("thumb", path)
             if key not in self._textures:
                 self._textures[key] = a.Texture(image, hash=f"mesh-studio-thumb-{path}")
             scale = min(space.width / image.width, space.height / image.height, 4.0)
             w, h = image.width * scale, image.height * scale
-            a.draw_lrbt_rectangle_filled(space.left, space.right, space.bottom, space.top, (24, 26, 31))
+            a.draw_lrbt_rectangle_filled(space.left, space.right, space.bottom, space.top, C_FIELD)
             a.draw_texture_rect(self._textures[key], a.XYWH(space.center_x, space.center_y, w, h), pixelated=True)
         space = self._anim_space
         if space is not None and self.panel == "inspect" and self.tab == "animation" and _on_screen(space):
             frames = self._clip_frames(getattr(space, "mesh_clip", {}) or {})
-            a.draw_lrbt_rectangle_filled(space.left, space.right, space.bottom, space.top, (24, 26, 31))
+            a.draw_lrbt_rectangle_filled(space.left, space.right, space.bottom, space.top, C_FIELD)
             if frames:
                 fps = float((getattr(space, "mesh_clip", {}) or {}).get("fps", 8) or 8)
                 frame = frames[int(time.monotonic() * fps) % len(frames)]

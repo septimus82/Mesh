@@ -1,4 +1,4 @@
-"""The Mesh launcher: the first window you see when you open Mesh.
+"""The Mesh Studio launcher: the first window you see when you open Mesh.
 
 Create a game from a template, open one from disk or from the recent list, and it
 opens in Mesh Studio. The launcher is a thin front on what already exists: projects
@@ -26,12 +26,17 @@ import engine.optional_arcade as optional_arcade
 from engine import projects
 from engine.project_templates import Template, list_templates
 from engine.studio_ui import (
+    C_ACCENT,
     C_BG,
     C_ERROR,
+    C_FIELD,
+    C_FIELD_EDGE,
+    C_LINE,
     C_MUTED,
     C_OK,
-    C_SELECT,
+    C_PANEL,
     C_TEXT,
+    FONT,
     S_ACTIVE,
     S_BUTTON,
     S_DANGER,
@@ -39,12 +44,15 @@ from engine.studio_ui import (
     FirstClicks,
     TextField,
     ask_path,
+    brand_texture,
     field_clipboard,
     gui,
+    set_app_icon,
 )
 
 ENGINE_ROOT = Path(__file__).resolve().parents[1]
 WIDTH, HEIGHT = 960, 640
+RECENT_X = 430  # where the recent list's surface starts
 CARD_W, CARD_H = 288, 192
 _BAD_CHARS = set('<>:"/\\|?*')
 _RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)), *(f"LPT{i}" for i in range(1, 10))}
@@ -257,11 +265,15 @@ class Launcher:
             self.window.close()  # Studio is up; the launcher's job is done
 
     def on_draw(self) -> bool:
+        a = optional_arcade.arcade
         self.window.clear(color=C_BG)
+        if self.screen == "home":  # the recent list on its own surface
+            a.draw_lrbt_rectangle_filled(RECENT_X, self.window.width, 0, self.window.height, C_PANEL)
+            a.draw_line(RECENT_X, 0, RECENT_X, self.window.height, C_LINE, 1)
         self.ui.draw()
         card = self._cards.get(self.template.id) if self.screen == "new" else None
         if card is not None:
-            optional_arcade.arcade.draw_lrbt_rectangle_outline(card.left - 4, card.right + 4, card.bottom - 4, card.top + 4, C_SELECT, 3)
+            a.draw_lrbt_rectangle_outline(card.left - 3, card.right + 3, card.bottom - 3, card.top + 3, C_ACCENT, 2)
         self._dump_layout()
         return True
 
@@ -293,7 +305,7 @@ class Launcher:
         return button
 
     def _label(self, text: str, *, size: int = 11, color: tuple[int, int, int] = C_TEXT, bold: bool = False) -> Any:
-        return gui.UILabel(text=text, font_size=size, text_color=color, bold=bold)
+        return gui.UILabel(text=text, font_size=size, font_name=FONT, text_color=color, bold=bold)
 
     def _lines(self, box: Any, text: str, *, chars: int, size: int = 10, color: tuple[int, int, int] = C_MUTED) -> None:
         # One label per line: arcade's multi-line labels can split words.
@@ -301,9 +313,9 @@ class Launcher:
             box.add(self._label(line, size=size, color=color))
 
     def _field(self, key: str, width: int) -> Any:
-        field = TextField(text=self.form[key], width=width, height=28, font_size=11, text_color=C_TEXT,
-                          caret_color=C_TEXT, border_color=(90, 96, 112), border_width=1)
-        field.with_background(color=(24, 26, 31))
+        field = TextField(text=self.form[key], width=width, height=28, font_size=11, font_name=FONT, text_color=C_TEXT,
+                          caret_color=C_TEXT, border_color=C_FIELD_EDGE, border_width=1)
+        field.with_background(color=C_FIELD)
         self._fields[key] = field
         return field
 
@@ -327,7 +339,7 @@ class Launcher:
 
     def _home(self, root: Any) -> None:
         left = gui.UIBoxLayout(vertical=True, align="left", space_between=10)
-        left.add(self._label("Mesh Engine", size=30, bold=True))
+        left.add(self._title())
         self._lines(left, "Make your own 2D games: maps, characters, stories.", chars=60, size=12)
         left.add(gui.UISpace(height=24))
         left.add(self._button("New Project", lambda: self.go("new"), width=300, height=44, style=S_ACTIVE))
@@ -356,7 +368,22 @@ class Launcher:
             shown = folder if len(folder) <= 60 else "..." + folder[-57:]
             right.add(self._label(("Missing: " if missing else "") + shown, size=9, color=C_ERROR if missing else C_MUTED))
             self._recent_rows.append({"name": name, "path": folder, "missing": missing, "button": button})
-        root.add(right, anchor_x="left", anchor_y="top", align_x=470, align_y=-56)
+        root.add(right, anchor_x="left", anchor_y="top", align_x=RECENT_X + 40, align_y=-56)
+        wordmark = brand_texture("meshmind_studios_wordmark.png")
+        if wordmark is not None and not self.message:  # the publisher's credit (a message takes its place)
+            credit = gui.UIBoxLayout(vertical=False, space_between=8, align="center")
+            credit.add(self._label("by", size=10, color=C_MUTED))
+            credit.add(gui.UIImage(texture=wordmark, width=136, height=round(136 * wordmark.height / wordmark.width)))
+            root.add(credit, anchor_x="left", anchor_y="bottom", align_x=40, align_y=22)
+
+    def _title(self) -> Any:
+        """Mesh Studio's mark and name, the launcher's heading."""
+        row = gui.UIBoxLayout(vertical=False, space_between=12, align="center")
+        mark = brand_texture("mesh_studio_mark_128.png")
+        if mark is not None:
+            row.add(gui.UIImage(texture=mark, width=56, height=round(56 * mark.height / mark.width)))
+        row.add(self._label("Mesh Studio", size=26, bold=True))
+        return row
 
     def _new(self, root: Any) -> None:
         box = gui.UIBoxLayout(vertical=True, align="left", space_between=8)
@@ -405,7 +432,7 @@ class Launcher:
 
     def _opening(self, root: Any) -> None:
         box = gui.UIBoxLayout(vertical=True, align="left", space_between=10)
-        box.add(self._label("Mesh Engine", size=30, bold=True))
+        box.add(self._title())
         name = self.opening["name"] if self.opening else ""
         box.add(self._label(f"Opening {name} in Mesh Studio...", size=14))
         root.add(box, anchor_x="left", anchor_y="top", align_x=40, align_y=-48)
@@ -464,7 +491,7 @@ def show_crash(what: str, log_path: Path | str) -> None:
     """
     if sys.platform == "win32":
         text = f"{what} stopped because of an error.\n\nThe details are in:\n{log_path}"
-        ctypes.windll.user32.MessageBoxW(None, text, "Mesh Engine", 0x10)  # MB_ICONERROR
+        ctypes.windll.user32.MessageBoxW(None, text, "Mesh Studio", 0x10)  # MB_ICONERROR
 
 
 def main() -> int:
@@ -477,7 +504,8 @@ def main() -> int:
             show_crash("The Mesh launcher", log_path)
 
         sys.excepthook = crashed
-    window = optional_arcade.arcade.Window(WIDTH, HEIGHT, "Mesh Engine")
+    window = optional_arcade.arcade.Window(WIDTH, HEIGHT, "Mesh Studio")
+    set_app_icon(window)
     window.center_window()  # Windows' default placement can push the bottom (and its buttons) off-screen
     Launcher(window)
     optional_arcade.arcade.run()

@@ -8,37 +8,83 @@ arcade.gui (through ``optional_arcade``), so they look and behave the same.
 from __future__ import annotations
 
 import time
+from pathlib import Path
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
 
 gui = optional_arcade.gui()
 
-C_BG = (30, 32, 38)
-C_PANEL = (38, 41, 49)
-C_TEXT = (220, 224, 232)
-C_MUTED = (140, 146, 160)
-C_ERROR = (255, 120, 110)
-C_OK = (130, 210, 150)
-C_SELECT = (90, 200, 255)
+# The theme, "Graphite + MeshMind cyan" (Milestone 15; docs/reviews/milestone15_stage1_visual_direction.md).
+# Surfaces carry no colour; the one accent is the MeshMind logo's cyan and means selected / focused.
+FONT = ("Segoe UI", "Calibri", "Arial")  # the Windows UI font, then what other systems have
+C_BG = (21, 23, 28)  # the window, the status bar
+C_PANEL = (27, 30, 36)  # the side panels
+C_RAISED = (34, 38, 46)  # the top bar, menus, dialogs
+C_LINE = (44, 49, 58)  # dividers and button outlines
+C_BUTTON = (40, 45, 54)
+C_FIELD = (17, 19, 23)  # text fields and picture wells
+C_FIELD_EDGE = (62, 68, 80)
+C_TEXT = (228, 232, 238)
+C_MUTED = (138, 146, 160)
+C_ACCENT = (0, 156, 240)  # MeshMind cyan
+C_ACCENT_DIM = (16, 62, 92)  # a selected button's fill
+C_ACCENT_TEXT = (190, 230, 255)
+C_SELECT = (0, 176, 248)  # selection on the map: the logo's lighter cyan, to read over any tiles
+C_OK = (110, 205, 150)
+C_WARN = (240, 200, 120)
+C_ERROR = (240, 110, 100)
+C_PLAY = (28, 140, 96)
+C_DANGER = (70, 34, 36)
 C_SPAWN = (120, 230, 140)
 
 
-def button_style(bg: tuple[int, int, int], fg: tuple[int, int, int] = C_TEXT) -> dict[str, Any]:
-    base = gui.UIFlatButton.UIStyle(font_size=11, font_color=fg, bg=bg, border=None, border_width=0)
+def button_style(bg: tuple[int, int, int], fg: tuple[int, int, int] = C_TEXT,
+                 border: tuple[int, int, int] | None = None) -> dict[str, Any]:
+    def style(fill: tuple[int, int, int], colour: tuple[int, int, int], edge: tuple[int, int, int] | None) -> Any:
+        return gui.UIFlatButton.UIStyle(font_size=10, font_name=FONT, font_color=colour, bg=fill, border=edge,
+                                        border_width=1 if edge else 0)
+
+    def shade(by: int) -> tuple[int, int, int]:
+        r, g, b = (max(0, min(255, c + by)) for c in bg)
+        return r, g, b
+
     return {
-        "normal": base,
-        "hover": gui.UIFlatButton.UIStyle(font_size=11, font_color=fg, bg=tuple(min(255, c + 22) for c in bg), border=None, border_width=0),
-        "press": gui.UIFlatButton.UIStyle(font_size=11, font_color=fg, bg=tuple(max(0, c - 18) for c in bg), border=None, border_width=0),
-        "disabled": gui.UIFlatButton.UIStyle(font_size=11, font_color=C_MUTED, bg=(48, 50, 58), border=None, border_width=0),
+        "normal": style(bg, fg, border),
+        "hover": style(shade(14), fg, border),
+        "press": style(shade(-10), fg, border),
+        "disabled": style(C_PANEL, C_MUTED, C_LINE),
     }
 
 
-S_BUTTON = button_style((58, 63, 76))
-S_ACTIVE = button_style((48, 110, 170))
-S_DANGER = button_style((120, 52, 52))
-S_PLAY = button_style((44, 120, 70))
-S_MENU = button_style((52, 56, 68))
+S_BUTTON = button_style(C_BUTTON, border=C_LINE)
+S_ACTIVE = button_style(C_ACCENT_DIM, C_ACCENT_TEXT, border=C_ACCENT)  # selected: a cyan outline, a quiet fill
+S_DANGER = button_style(C_DANGER, (255, 190, 185), border=(130, 60, 60))
+S_PLAY = button_style(C_PLAY)
+S_MENU = button_style(C_RAISED)
+
+# MeshMind Studios brand assets (assets/branding/NOTICE.md): the mark beside "Mesh Studio", the wordmark as the
+# publisher's credit, and the app icon. A copy of Mesh without them still runs, unbranded.
+BRANDING = Path(__file__).resolve().parents[1] / "assets" / "branding"
+_BRAND_TEXTURES: dict[str, Any] = {}
+
+
+def brand_texture(name: str) -> Any | None:
+    """An image from assets/branding as a texture (loaded once), or None if it isn't there."""
+    if name not in _BRAND_TEXTURES:
+        path = BRANDING / name
+        _BRAND_TEXTURES[name] = optional_arcade.arcade.load_texture(path) if path.is_file() else None
+    return _BRAND_TEXTURES[name]
+
+
+def set_app_icon(window: Any) -> None:
+    """Mesh Studio's icon (the brain-and-network mark) on ``window``'s title bar and taskbar button."""
+    import pyglet  # noqa: PLC0415
+
+    images = [pyglet.image.load(str(path)) for size in (16, 24, 32, 48, 64, 256)
+              if (path := BRANDING / f"mesh_studio_icon_{size}.png").is_file()]
+    if images:
+        window.set_icon(*images)
 
 
 _InputText: Any = gui.UIInputText  # arcade.gui comes through optional_arcade, untyped
