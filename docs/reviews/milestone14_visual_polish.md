@@ -111,7 +111,10 @@ The pass count is unchanged. The footprint measurement runs once per picture.
 
 - **2026-10-24, shadows:** the owner played the "M14 Check" project (`Documents\Mesh Projects\M14 Check`) and said
   the shadows "look great".
-- The other checks below were not yet reported on.
+- **2026-10-24, the remaining checks:** the owner reported they "look fine". These were the door and passage
+  editing and play-through, the contact shadows, and Studio's labels and text.
+- **Milestone 14 is accepted by the owner.** This is the owner's own judgement after playing; automated results
+  did not decide it.
 
 ## Human checks pending (not claimed)
 
