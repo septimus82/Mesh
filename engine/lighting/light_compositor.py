@@ -414,6 +414,7 @@ class CharacterShadow:
 
 CHARACTER_TAGS = ("player", "npc")  # cast a shadow unless told not to (project_ops.casts_shadow); others when told to
 DEFAULT_CHARACTER_STRENGTH = 0.85
+CHARACTER_SPREAD = 0.5  # a soft character shadow samples the lamp within this share of the character's width
 
 
 def _cast_settings(data: dict[str, Any]) -> dict[str, Any] | None:
@@ -570,12 +571,16 @@ def render_shadowed_lighting(manager: Any) -> bool:
             continue
         if near:  # walls and characters, pass by pass: each pass nearer than the last
             data = array("f")
+            # A character is thin: offset by the whole lamp disc, its copies fell apart into separate streaks
+            # (Milestone 14). Within about its own width they overlap into one soft shadow.
+            spread = {id(c): min(1.0, CHARACTER_SPREAD * c.half_width / look[0]) if look[0] > 0 else 1.0 for c in near}
             for number, (ox, oy) in enumerate(points):
                 if walls:
                     data.extend(walls[number])
                 for char in near:
-                    _character_quad(char, x + ox, y + oy, radius, _pass_depth(number, len(points)), look[2] / len(points),
-                                    data)
+                    k = spread[id(char)]
+                    _character_quad(char, x + ox * k, y + oy * k, radius, _pass_depth(number, len(points)),
+                                    look[2] / len(points), data)
             character_casts += len(near)
         else:
             data = joined

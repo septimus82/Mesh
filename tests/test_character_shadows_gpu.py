@@ -151,3 +151,25 @@ def test_room_fine_tuning_strength_edge_and_the_character_switch(bench) -> None:
 
     assert edge_width({"lighting_shadow_softness": "soft", "lighting_shadow_edge": 30}) \
         > edge_width({"lighting_shadow_softness": "soft", "lighting_shadow_edge": 6}) + 4
+
+
+def _separate_dips(values: list[int], prominence: float = 4.0) -> int:
+    """Dark dips with a lighter gap on both sides: separate copies of the silhouette (streaks), not one shadow."""
+    count = 0
+    for i in range(1, len(values) - 1):
+        if values[i] < values[i - 1] and values[i] <= values[i + 1]:
+            if min(max(values[max(0, i - 6):i]), max(values[i + 1:i + 7])) - values[i] >= prominence:
+                count += 1
+    return count
+
+
+def test_a_soft_character_shadow_is_one_shadow_not_streaks(bench) -> None:
+    """Milestone 14: at Softer the lamp's 16 sample points spread a thin silhouette into separate copies. Across the
+    shadow there must be one smooth dark band (before: 1-2 extra dips 50-70 px from the feet)."""
+    for softness in ("soft", "softer"):
+        image = _shot(bench, lights=[_lamp(*LAMP)], characters=[(*HERO, 0, {})],
+                      settings={"lighting_shadow_softness": softness})
+        fx, fy = _feet(bench)
+        for d in (30, 50, 70):
+            column = [bench.pixel(image, (fx + d, fy + dy))[0] for dy in range(-40, 41)]
+            assert _separate_dips(column) == 0, (softness, d, column)
