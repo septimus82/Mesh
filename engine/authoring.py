@@ -189,15 +189,10 @@ def _deref(value: Any, created: dict[int, str | int], index: int, name: str) -> 
 
 
 def _resolve_entity(scene: Doc, value: Any, index: int, name: str) -> str:
-    text = str(value or "").strip()
-    if any(e.get("id") == text for e in ops.entities(scene)):
-        return text
-    named = [e for e in ops.entities(scene) if e.get("name") == text]
-    if len(named) == 1:
-        return str(named[0]["id"])
-    if len(named) > 1:
-        raise ChangeError(index, name, f"{len(named)} objects are called '{text}'; use an id.")
-    raise ChangeError(index, name, f"there is no object '{text}' in this room.")
+    try:
+        return ops.entity_ref(scene, value)
+    except ops.OpError as exc:
+        raise ChangeError(index, name, str(exc)) from None
 
 
 def prefabs(project: Project) -> list[Doc]:

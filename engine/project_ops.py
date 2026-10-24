@@ -62,6 +62,19 @@ def find_entity(scene: Doc, entity_id: str) -> Doc:
     raise OpError(f"There is no object with id '{entity_id}' in this room.")
 
 
+def entity_ref(scene: Doc, ref: Any) -> str:
+    """The id of the object ``ref`` names: its id, or its name when exactly one object has it."""
+    text = str(ref or "").strip()
+    if any(e.get("id") == text for e in entities(scene)):
+        return text
+    named = [e for e in entities(scene) if e.get("name") == text]
+    if len(named) == 1 and named[0].get("id"):
+        return str(named[0]["id"])
+    if len(named) > 1:
+        raise OpError(f"{len(named)} objects are called '{text}'; use an id.")
+    raise OpError(f"There is no object '{text}' in this room.")
+
+
 def unique_entity_id(scene: Doc, base: str) -> str:
     taken = {e.get("id") for e in entities(scene)}
     candidate, n = base, 2
@@ -1662,9 +1675,11 @@ def add_light(scene: Doc, x: float, y: float, *, color: Any = "Warm", radius: An
 def set_light(scene: Doc, index: int, *, x: Any = _UNSET, y: Any = _UNSET, radius: Any = _UNSET, color: Any = _UNSET,
               flicker_enabled: Any = _UNSET, flicker_amount: Any = _UNSET, flicker_speed: Any = _UNSET,
               enabled: Any = _UNSET, shadows: Any = _UNSET, flicker: Any = _UNSET, flicker_strength: Any = _UNSET,
-              flicker_brightness: Any = _UNSET, flicker_reach: Any = _UNSET, flicker_irregularity: Any = _UNSET) -> Doc:
+              flicker_brightness: Any = _UNSET, flicker_reach: Any = _UNSET, flicker_irregularity: Any = _UNSET,
+              mode: Any = _UNSET) -> Doc:
     """Change a light: position, size (radius), colour (a name, "#rrggbb" or [r, g, b]), flicker, on/off,
-    and whether walls block it (``shadows``; on unless set off, when the room has shadows on).
+    whether walls block it (``shadows``; on unless set off, when the room has shadows on), and its falloff
+    (``mode``: "soft" or "hard").
 
     ``flicker`` is a preset: "steady" (none), "candle", "torch", "fire", "faulty" or "custom";
     ``flicker_strength`` scales it (1 = as the preset). Custom flicker: ``flicker_speed`` (wavers a
@@ -1679,6 +1694,10 @@ def set_light(scene: Doc, index: int, *, x: Any = _UNSET, y: Any = _UNSET, radiu
               "flicker_amount": flicker_amount, "enabled": enabled, "shadows": shadows}
     out = copy.deepcopy(scene)
     light = _light(out, index)
+    if mode is not _UNSET:
+        if mode not in ("soft", "hard"):
+            raise OpError("A light's mode is 'soft' or 'hard'.")
+        light["mode"] = mode
     if flicker is not _UNSET:
         if flicker not in FLICKER_NAMES:
             raise OpError(f"Flicker is one of: {', '.join(FLICKER_NAMES)}.")

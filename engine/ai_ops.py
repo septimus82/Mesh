@@ -6,7 +6,7 @@ import json
 from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from . import json_io
 from .editor_palette import load_prefab_palette
@@ -34,6 +34,17 @@ def _deep_merge(dest: dict[str, Any], src: dict[str, Any]) -> dict[str, Any]:
         else:
             merged[key] = deepcopy(value)
     return merged
+
+
+def _unknown_light_settings(settings: dict[str, Any]) -> str | None:
+    """A refusal naming settings a light doesn't have (the canonical set_light's), or None."""
+    import inspect
+
+    from . import project_ops as ops
+
+    known = [name for name in inspect.signature(ops.set_light).parameters if name not in ("scene", "index")]
+    unknown = sorted(set(settings) - set(known))
+    return f"Lights have no setting {', '.join(map(repr, unknown))}. They have: {', '.join(known)}." if unknown else None
 
 
 def find_prefab_palette_entry(
@@ -205,18 +216,27 @@ class AIOps:
         self._save_scene(scene_file, scene)
         return AIOpsResult(True, f"Added prefab '{prefab_name}' to {scene_path}", {"entity_name": entity_def["name"]})
 
-    def delete_entity(self, scene_path: str, entity_id: str) -> AIOpsResult:
+    def _edit_scene(self, scene_path: str, change: Callable[[dict[str, Any]], dict[str, Any]], done: str,
+                    data: Callable[[dict[str, Any]], dict[str, Any]] | None = None) -> AIOpsResult:
+        """One edit of one scene file through the canonical, validated operations (``project_ops``, as Mesh
+        Studio and the authoring API use): the same result and the same refusals whoever asks."""
+        from . import project_ops as ops
+
         scene_file, scene = self._load_scene(scene_path)
-        entities = scene.get("entities", [])
-        if not isinstance(entities, list):
-            return AIOpsResult(False, "Scene entities is not a list")
-        before = len(entities)
-        entities = [e for e in entities if not (isinstance(e, dict) and str(e.get("name")) == entity_id)]
-        if len(entities) == before:
-            return AIOpsResult(False, f"Entity '{entity_id}' not found")
-        scene["entities"] = entities
-        self._save_scene(scene_file, scene)
-        return AIOpsResult(True, f"Deleted entity '{entity_id}'")
+        if any(isinstance(e, dict) and not e.get("id") for e in ops.entities(scene)):
+            scene = ops.ensure_entity_ids(scene, scene_file.stem)  # older scenes: objects are edited by id
+        try:
+            out = change(scene)
+        except (ops.OpError, TypeError) as exc:
+            return AIOpsResult(False, str(exc))
+        self._save_scene(scene_file, out)
+        return AIOpsResult(True, done, data(out) if data else {})
+
+    def delete_entity(self, scene_path: str, entity_id: str) -> AIOpsResult:
+        from . import project_ops as ops
+
+        return self._edit_scene(scene_path, lambda s: ops.remove_entity(s, ops.entity_ref(s, entity_id)),
+                                f"Deleted entity '{entity_id}'")
 
     def set_behaviour_params(
         self,
@@ -225,26 +245,23 @@ class AIOps:
         behaviour_name: str,
         params: dict[str, Any],
     ) -> AIOpsResult:
-        scene_file, scene = self._load_scene(scene_path)
-        found = False
-        for entity in scene.get("entities", []):
-            if not isinstance(entity, dict):
-                continue
-            if str(entity.get("name")) != entity_id:
-                continue
-            found = True
-            cfg_root = entity.setdefault("behaviour_config", {})
-            if not isinstance(cfg_root, dict):
-                entity["behaviour_config"] = {}
-                cfg_root = entity["behaviour_config"]
-            current = cfg_root.get(behaviour_name, {})
-            if not isinstance(current, dict):
-                current = {}
-            cfg_root[behaviour_name] = _deep_merge(current, params)
-        if not found:
-            return AIOpsResult(False, f"Entity '{entity_id}' not found")
-        self._save_scene(scene_file, scene)
-        return AIOpsResult(True, f"Updated {behaviour_name} on '{entity_id}'")
+        """Give the object the behaviour if it lacks it, then set each param. A dict value is merged into the
+        current one (so a partial dialogue patch keeps the rest)."""
+        from . import project_ops as ops
+
+        def change(scene: dict[str, Any]) -> dict[str, Any]:
+            target = ops.entity_ref(scene, entity_id)
+            if behaviour_name not in ops.entity_behaviours(ops.find_entity(scene, target)):
+                scene = ops.add_behaviour(scene, target, behaviour_name)
+            for param, value in (params or {}).items():
+                config = (ops.find_entity(scene, target).get("behaviour_config") or {}).get(behaviour_name) or {}
+                current = config.get(param)
+                if isinstance(value, dict) and isinstance(current, dict):
+                    value = _deep_merge(deepcopy(current), value)
+                scene = ops.set_behaviour_param(scene, target, behaviour_name, param, value)
+            return scene
+
+        return self._edit_scene(scene_path, change, f"Updated {behaviour_name} on '{entity_id}'")
 
     def edit_dialogue(self, scene_path: str, entity_id: str, patch: dict[str, Any]) -> AIOpsResult:
         return self.set_behaviour_params(scene_path, entity_id, "Dialogue", {"dialogue": patch})
@@ -418,51 +435,38 @@ class AIOps:
 
     # --- lights ------------------------------------------------------
     def add_light(self, scene_path: str, light: dict[str, Any]) -> AIOpsResult:
-        scene_file, scene = self._load_scene(scene_path)
-        lights = scene.setdefault("lights", [])
-        if not isinstance(lights, list):
-            return AIOpsResult(False, "Scene 'lights' must be a list")
-        normalized = {
-            "x": float(light.get("x", 0.0)),
-            "y": float(light.get("y", 0.0)),
-            "radius": float(light.get("radius", 160.0)),
-            "color": light.get("color", "#ffddaa"),
-            "mode": str(light.get("mode", "soft")),
-        }
-        lights.append(normalized)
-        self._save_scene(scene_file, scene)
-        return AIOpsResult(True, f"Added light {len(lights)-1}", {"index": len(lights) - 1, "light": normalized})
+        """A point light; settings beyond position, size and colour as ``update_light`` takes them."""
+        from . import project_ops as ops
+
+        rest = {k: v for k, v in light.items() if k not in ("x", "y", "radius", "color")}
+        if unknown := _unknown_light_settings(rest):
+            return AIOpsResult(False, unknown)
+
+        def change(scene: dict[str, Any]) -> dict[str, Any]:
+            out, index = ops.add_light(scene, float(light.get("x", 0.0)), float(light.get("y", 0.0)),
+                                       color=light.get("color", "#ffddaa"), radius=light.get("radius", 160.0))
+            return ops.set_light(out, index, **rest) if rest else out
+
+        return self._edit_scene(scene_path, change, "Added light", lambda s: {
+            "index": len(s["lights"]) - 1, "light": s["lights"][-1]})
 
     def update_light(self, scene_path: str, index: int, patch: dict[str, Any]) -> AIOpsResult:
-        scene_file, scene = self._load_scene(scene_path)
-        lights = scene.get("lights")
-        if not isinstance(lights, list):
-            return AIOpsResult(False, "Scene has no lights array")
-        if index < 0 or index >= len(lights):
-            return AIOpsResult(False, f"Light index {index} out of range")
-        target = lights[index]
-        for key, value in patch.items():
-            if key in {"x", "y", "radius"}:
-                target[key] = float(value)
-            elif key == "mode":
-                target[key] = str(value)
-            elif key == "color":
-                target[key] = value
-            else:
-                target[key] = value
-        self._save_scene(scene_file, scene)
-        return AIOpsResult(True, f"Updated light {index}", {"index": index, "light": target})
+        from . import project_ops as ops
+
+        if unknown := _unknown_light_settings(patch):
+            return AIOpsResult(False, unknown)
+
+        return self._edit_scene(scene_path, lambda s: ops.set_light(s, index, **patch), f"Updated light {index}",
+                                lambda s: {"index": index, "light": s["lights"][index]})
 
     def delete_light(self, scene_path: str, index: int) -> AIOpsResult:
-        scene_file, scene = self._load_scene(scene_path)
-        lights = scene.get("lights")
-        if not isinstance(lights, list):
-            return AIOpsResult(False, "Scene has no lights array")
-        if index < 0 or index >= len(lights):
-            return AIOpsResult(False, f"Light index {index} out of range")
-        deleted = lights.pop(index)
-        self._save_scene(scene_file, scene)
-        return AIOpsResult(True, f"Deleted light {index}", {"deleted": deleted, "index": index})
+        from . import project_ops as ops
+
+        _scene_file, before = self._load_scene(scene_path)
+        lights = before.get("lights") if isinstance(before.get("lights"), list) else []
+        deleted = lights[index] if 0 <= index < len(lights) else None
+        return self._edit_scene(scene_path, lambda s: ops.remove_light(s, index), f"Deleted light {index}",
+                                lambda _s: {"deleted": deleted, "index": index})
 
     # ------------------------------------------------------------------ cutscene operations
     def add_or_update_cutscene(

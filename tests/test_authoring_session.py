@@ -174,7 +174,11 @@ def test_a_studio_save_keeps_a_version_something_else_wrote_meanwhile(root: Path
 
 
 def test_apply_ops_wont_write_files_under_an_open_studio(root: Path, live) -> None:
+    _studio, host = live
     before = _room(root)
-    result = tools.apply_ops([{"type": "add_light", "scene_path": "packs/core_regions/scenes/start.json", "x": 1, "y": 1}],
-                             root=str(root))
-    assert result["ok"] is False and result["reason"] == "studio_open" and _room(root) == before
+    refused = tools.apply_ops([{"type": "create_scene", "name": "cellar"}], root=str(root))
+    assert refused["ok"] is False and refused["reason"] == "studio_open" and _room(root) == before
+    # Lights go the shared authoring path (Milestone 13): proposed to the open Studio, the files untouched.
+    proposed = tools.apply_ops([{"type": "add_light", "scene_path": "packs/core_regions/scenes/start.json",
+                                 "light": {"x": 1, "y": 1}}], root=str(root))
+    assert proposed["ok"] is True and _room(root) == before and len(host.pending()) == 1

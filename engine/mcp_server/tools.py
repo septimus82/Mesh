@@ -492,12 +492,13 @@ def add_entity_from_prefab(
     from (e.g. ``assets/prefabs.json``); when omitted the engine's default
     palette is used.
     """
-    from engine.ai_ops import AIOps
-
-    result = AIOps(base_dir=root).add_entity_from_prefab(
-        scene_path, prefab_name, float(x), float(y), prefab_path=prefab_path
-    )
-    return _result_to_dict(result)
+    op: dict[str, Any] = {"type": "add_entity_from_prefab", "scene_path": scene_path, "prefab_name": prefab_name,
+                          "x": float(x), "y": float(y)}
+    if prefab_path:
+        op["prefab_path"] = prefab_path
+    outcome = apply_ops([op], root=root, validate=False)  # as apply_ops: a Studio project goes the shared authoring path
+    result = (outcome.get("results") or [{"ok": False, "message": outcome.get("message", "")}])[0]
+    return {"ok": bool(result.get("ok")), "message": result.get("message", ""), "data": result.get("data") or {}}
 
 
 def live_add_entity_from_prefab(
@@ -891,7 +892,8 @@ def withdraw_proposal(proposal_id: str, root: str = ".") -> dict[str, Any]:
 
 # The everyday apply_ops operations, on a Mesh Studio project, run through the same validated
 # authoring path (and so never overwrite an open Studio's unsaved work). Others keep using AIOps.
-_ADAPTED_OPS = {"add_entity_from_prefab", "delete_entity", "set_behaviour_params", "paint_tiles"}
+_ADAPTED_OPS = {"add_entity_from_prefab", "delete_entity", "set_behaviour_params", "paint_tiles",
+                "add_light", "update_light", "delete_light"}
 
 
 def _studio_changes(operations: list[dict[str, Any]], root: str) -> list[dict[str, Any]] | None:
@@ -926,6 +928,16 @@ def _studio_changes(operations: list[dict[str, Any]], root: str) -> list[dict[st
             for param, value in (op.get("params") or {}).items():
                 changes.append({"op": "set_behaviour_param", "room": room, "entity_id": entity_ref,
                                 "behaviour": behaviour, "param": param, "value": value})
+        elif kind == "add_light":
+            light = dict(op.get("light") or {})
+            changes.append({"op": "add_light", "room": room, "x": light.pop("x", 0.0), "y": light.pop("y", 0.0),
+                            "color": light.pop("color", "#ffddaa"), "radius": light.pop("radius", 160.0)})
+            if light:  # the rest as update_light takes it, on the light just added
+                changes.append({"op": "set_light", "room": room, "index": len(ops_.lights(project.scene(room))), **light})
+        elif kind == "update_light":
+            changes.append({"op": "set_light", "room": room, "index": int(op.get("index", 0)), **(op.get("patch") or {})})
+        elif kind == "delete_light":
+            changes.append({"op": "remove_light", "room": room, "index": int(op.get("index", 0))})
         else:  # paint_tiles: one change per (layer, tile)
             groups: dict[tuple[str, int], list[list[int]]] = {}
             for cell in op.get("ops") or []:
