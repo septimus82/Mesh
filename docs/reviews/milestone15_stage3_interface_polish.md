@@ -194,3 +194,8 @@ All of these ran, headless or in hidden windows, after all three changes:
    ```
    py -3.13 tooling/runtime_gate.py --owner-present --only launcher creator
    ```
+
+## Owner verdict
+
+**2026-10-24:** the owner reviewed Stage 3 and said it "looks good". Stage 3 is accepted by the owner: the icons, the
+launcher cards and the map canvas.
