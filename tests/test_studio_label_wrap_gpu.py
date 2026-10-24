@@ -51,6 +51,7 @@ def test_a_wrapped_label_breaks_between_words_and_pyglet_no_longer_wraps_it(wind
         lines = label.text.split("\n")
         assert len(lines) >= 2 and " ".join(lines) == TEXT, "breaks only where spaces were"
         assert _lines(label) == lines, "each line fits: pyglet draws them as given"
+        assert label.mesh_text == TEXT, "the text as written, for Studio's layout dump and its tests"
     short = gui.UILabel(text="Area changed.", font_size=9, width=310, multiline=True)
     hard_wrap(short)
     assert short.text == "Area changed."

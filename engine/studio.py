@@ -106,9 +106,9 @@ def hard_wrap(label: Any) -> None:
     """Give a wrapped label its lines as line breaks. pyglet 2.1 breaks at the right word but draws that word's
     first letter at the end of the line before ("It w" / "orks"; Milestone 14); with the breaks in the text it
     never wraps itself. ponytail: reads pyglet's private layout lines; tests/test_studio_label_wrap_gpu.py
-    fails if a pyglet upgrade changes them."""
+    fails if a pyglet upgrade changes them. ``mesh_text`` keeps the text as written (Studio's layout dump reports it)."""
     layout = label._label._label
-    text = layout.document.text
+    text = label.mesh_text = layout.document.text
     label.text = "\n".join(text[line.start:line.start + line.length].rstrip() for line in layout._lines)
 
 
@@ -1888,7 +1888,7 @@ class Studio(InspectorMixin):
                     widgets.append({"type": "field", "key": keys.get(id(widget)), "text": widget.text, "rect": rect,
                                     "active": widget.active})
                 elif isinstance(widget, gui.UILabel):
-                    widgets.append({"type": "label", "text": widget.text, "rect": rect})
+                    widgets.append({"type": "label", "text": getattr(widget, "mesh_text", widget.text), "rect": rect})
         geometry = self._sheet_geometry() if self.mode == "edit" and self._sheet_space is not None else None
         if geometry is not None:
             tileset, px, cols, rows = geometry
