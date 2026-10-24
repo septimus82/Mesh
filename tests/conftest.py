@@ -5,7 +5,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from engine.behaviours import load_builtin_behaviours
+# Tests never use the sound card (Milestone 13): XAudio2 raised "Critical Error" (0x80070490, the audio device went
+# away) asynchronously into whichever test was running, and test sounds could play on the owner's speakers.
+# Set before pyglet.media is first imported. MESH_TEST_REAL_AUDIO=1 keeps the system's driver.
+if os.getenv("MESH_TEST_REAL_AUDIO") != "1" and os.getenv("MESH_TEST_BLOCK_ARCADE") != "1":
+    try:
+        import pyglet
+
+        pyglet.options["audio"] = ("silent",)
+    except ImportError:
+        pass
+
+from engine.behaviours import load_builtin_behaviours  # noqa: E402
 
 
 class _ArcadeBlocker(importlib.abc.MetaPathFinder):
@@ -84,6 +95,22 @@ def _undo_launched_project_root_pin():
 
 
 @pytest.fixture(scope="session", autouse=True)
+def _private_recent_projects(tmp_path_factory):
+    # The recent-projects list lives in the user's profile; tests must never touch the real one.
+    import os
+
+    user = tmp_path_factory.mktemp("mesh_user")
+    added = {key: value for key, value in (("MESH_PROJECTS_PATH", str(user / "projects.json")),
+                                           ("MESH_USER_DIR", str(user)),
+                                           ("MESH_PROJECTS_DIR", str(user / "Mesh Projects")))
+             if not os.environ.get(key)}
+    os.environ.update(added)
+    yield
+    for key in added:
+        os.environ.pop(key, None)
+
+
+@pytest.fixture(scope="session", autouse=True)
 def _repo_projects_json_untouched():
     # Tests have leaked last_root into the tracked projects.json three times;
     # fail loudly instead of shipping it.
@@ -95,6 +122,31 @@ def _repo_projects_json_untouched():
     after = path.read_bytes() if path.exists() else None
     if after != before:
         pytest.fail(f"test session modified {path}; write to tmp_path instead", pytrace=False)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _windows_never_shown():
+    # Tests that need a real GL window (a GameWindow, the shadow bench) get a hidden one: a test run never puts a
+    # window on the owner's desktop or takes focus from what they are doing (Milestone 13). A shown window
+    # also failed one test intermittently, when the owner's own clicks reached it. MESH_TEST_SHOW_WINDOWS=1
+    # shows them, for debugging.
+    if os.getenv("MESH_TEST_SHOW_WINDOWS") == "1" or os.getenv("MESH_TEST_BLOCK_ARCADE") == "1":
+        yield
+        return
+    try:
+        import pyglet.window
+    except ImportError:  # no arcade/pyglet: nothing opens windows
+        yield
+        return
+    original = pyglet.window.Window.__init__
+
+    def hidden(self, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+        kwargs["visible"] = False
+        original(self, *args, **kwargs)
+
+    pyglet.window.Window.__init__ = hidden
+    yield
+    pyglet.window.Window.__init__ = original
 
 
 @pytest.fixture(scope="session")

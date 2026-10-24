@@ -294,7 +294,12 @@ class TestBuildZip:
 class TestDeterminism:
     """Verify same inputs → byte-identical ZIP."""
 
-    def test_same_seed_identical_zips(self, tmp_path: Path):
+    def test_same_seed_identical_zips(self, tmp_path: Path, monkeypatch):
+        # The bundle records the live checkout's `git rev-parse HEAD` (5 s timeout): under a loaded full run one
+        # build could get the hash and the other not. Pin it; determinism is about the bundle's own inputs.
+        import mesh_cli.release_bundle as release_bundle
+
+        monkeypatch.setattr(release_bundle, "_git_hash", lambda: "0" * 40)
         pipeline = _make_pipeline(
             _fake_step_ok("step1"),
             _fake_step_ok("step2"),

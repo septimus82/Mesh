@@ -31,7 +31,7 @@ class MockWindow:
     def clear_ui_elements(self):
         pass
 
-    def register_ui_element(self, element):
+    def register_ui_element(self, element, *, editor_chrome=None):  # the real signature (since 1616991)
         pass
 
     def get_next_spawn_point(self):

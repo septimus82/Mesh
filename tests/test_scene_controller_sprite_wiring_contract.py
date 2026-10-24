@@ -90,6 +90,8 @@ def test_create_sprite_populates_runtime_metadata_and_normalized_entity_data(mon
     assert (sprite.center_x, sprite.center_y, sprite.scale, sprite.angle) == (12.0, 34.0, 1.5, 45.0)
     assert sprite.mesh_name == "Hero"
     assert sprite.mesh_tag == "player"
+    assert sprite.mesh_tags == ["player"]  # target_tags filters (trigger zones) read the list
+    assert sprite.mesh_id == sprite.mesh_entity_data.get("id")
     assert sprite.mesh_behaviours == ["wander", "talk"]
     assert sprite.mesh_behaviour_configs == [
         {"type": "wander", "params": {}},

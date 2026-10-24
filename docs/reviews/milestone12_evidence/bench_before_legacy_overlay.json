@@ -1,0 +1,351 @@
+{
+ "renderer": "legacy",
+ "examples": {
+  "open": {
+   "lit_open": [
+    152,
+    152,
+    165
+   ],
+   "behind_wall": [
+    41,
+    41,
+    53
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    137,
+    137,
+    149
+   ]
+  },
+  "A_one_lantern_one_wall": {
+   "lit_open": [
+    152,
+    152,
+    165
+   ],
+   "behind_wall": [
+    12,
+    12,
+    16
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    137,
+    137,
+    149
+   ]
+  },
+  "B_two_lanterns": {
+   "lit_open": [
+    152,
+    152,
+    165
+   ],
+   "behind_wall": [
+    14,
+    15,
+    19
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    137,
+    137,
+    149
+   ]
+  },
+  "B_only_lantern_b": {
+   "lit_open": [
+    7,
+    7,
+    11
+   ],
+   "behind_wall": [
+    32,
+    34,
+    51
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    7,
+    7,
+    11
+   ]
+  },
+  "C_no_lights": {
+   "lit_open": [
+    25,
+    25,
+    38
+   ],
+   "behind_wall": [
+    25,
+    25,
+    38
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    25,
+    25,
+    38
+   ]
+  },
+  "C_no_lights_shadows_off": {
+   "lit_open": [
+    25,
+    25,
+    38
+   ],
+   "behind_wall": [
+    25,
+    25,
+    38
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    25,
+    25,
+    38
+   ]
+  },
+  "D_daylight": {
+   "lit_open": [
+    253,
+    253,
+    247
+   ],
+   "behind_wall": [
+    41,
+    41,
+    40
+   ],
+   "far_dark": [
+    125,
+    125,
+    119
+   ],
+   "between": [
+    237,
+    237,
+    231
+   ]
+  },
+  "D_daylight_no_lamp": {
+   "lit_open": [
+    125,
+    125,
+    119
+   ],
+   "behind_wall": [
+    125,
+    125,
+    119
+   ],
+   "far_dark": [
+    125,
+    125,
+    119
+   ],
+   "between": [
+    125,
+    125,
+    119
+   ]
+  },
+  "A_shadows_off": {
+   "lit_open": [
+    152,
+    152,
+    165
+   ],
+   "behind_wall": [
+    41,
+    41,
+    53
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    137,
+    137,
+    149
+   ]
+  }
+ },
+ "bench": {
+  "one_light_few_walls": {
+   "frame_ms": 1.793,
+   "frames": 240,
+   "cpu_ms": 0.853,
+   "gpu_ms": 0.019,
+   "stats": {
+    "shadows_mode": "hard",
+    "occluder_count": 3,
+    "culled_occluder_count": 2,
+    "shadow_poly_count": 2,
+    "mask_rendered": true,
+    "mask_backend": "overlay",
+    "composite_ok": true,
+    "fallback_drawn": true,
+    "selected_shadow_light_type": "static",
+    "selected_shadow_light_pos": [
+     200.0,
+     240.0
+    ],
+    "selected_shadow_light_radius": 200.0
+   }
+  },
+  "five_lights_overlapping": {
+   "frame_ms": 1.15,
+   "frames": 240,
+   "cpu_ms": 0.414,
+   "gpu_ms": 0.02,
+   "stats": {
+    "shadows_mode": "hard",
+    "occluder_count": 3,
+    "culled_occluder_count": 0,
+    "shadow_poly_count": 0,
+    "mask_rendered": false,
+    "mask_backend": "overlay",
+    "composite_ok": true,
+    "fallback_drawn": false,
+    "selected_shadow_light_type": "static",
+    "selected_shadow_light_pos": [
+     80.0,
+     120.0
+    ],
+    "selected_shadow_light_radius": 180.0
+   }
+  },
+  "crowded_10_lights_42_pillars": {
+   "frame_ms": 3.04,
+   "frames": 240,
+   "cpu_ms": 1.022,
+   "gpu_ms": 0.036,
+   "stats": {
+    "shadows_mode": "hard",
+    "occluder_count": 42,
+    "culled_occluder_count": 6,
+    "shadow_poly_count": 6,
+    "mask_rendered": true,
+    "mask_backend": "overlay",
+    "composite_ok": true,
+    "fallback_drawn": true,
+    "selected_shadow_light_type": "static",
+    "selected_shadow_light_pos": [
+     40.0,
+     60.0
+    ],
+    "selected_shadow_light_radius": 160.0
+   }
+  },
+  "crowded_zoom_2": {
+   "frame_ms": 2.974,
+   "frames": 240,
+   "cpu_ms": 1.001,
+   "gpu_ms": 0.035,
+   "stats": {
+    "shadows_mode": "hard",
+    "occluder_count": 42,
+    "culled_occluder_count": 6,
+    "shadow_poly_count": 6,
+    "mask_rendered": true,
+    "mask_backend": "overlay",
+    "composite_ok": true,
+    "fallback_drawn": true,
+    "selected_shadow_light_type": "static",
+    "selected_shadow_light_pos": [
+     40.0,
+     60.0
+    ],
+    "selected_shadow_light_radius": 160.0
+   }
+  },
+  "five_lights_no_shadows": {
+   "frame_ms": 0.992,
+   "frames": 240,
+   "cpu_ms": 0.288,
+   "gpu_ms": 0.018,
+   "stats": {}
+  },
+  "crowded_soft": {
+   "frame_ms": 3.062,
+   "frames": 240,
+   "cpu_ms": 1.028,
+   "gpu_ms": 0.036,
+   "stats": {
+    "shadows_mode": "hard",
+    "occluder_count": 42,
+    "culled_occluder_count": 6,
+    "shadow_poly_count": 6,
+    "mask_rendered": true,
+    "mask_backend": "overlay",
+    "composite_ok": true,
+    "fallback_drawn": true,
+    "selected_shadow_light_type": "static",
+    "selected_shadow_light_pos": [
+     40.0,
+     60.0
+    ],
+    "selected_shadow_light_radius": 160.0
+   }
+  },
+  "crowded_softer": {
+   "frame_ms": 3.143,
+   "frames": 240,
+   "cpu_ms": 1.072,
+   "gpu_ms": 0.054,
+   "stats": {
+    "shadows_mode": "hard",
+    "occluder_count": 42,
+    "culled_occluder_count": 6,
+    "shadow_poly_count": 6,
+    "mask_rendered": true,
+    "mask_backend": "overlay",
+    "composite_ok": true,
+    "fallback_drawn": true,
+    "selected_shadow_light_type": "static",
+    "selected_shadow_light_pos": [
+     40.0,
+     60.0
+    ],
+    "selected_shadow_light_radius": 160.0
+   }
+  }
+ },
+ "gl": {
+  "version": [
+   4,
+   6
+  ],
+  "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ }
+}

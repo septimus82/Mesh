@@ -58,6 +58,10 @@ DEFAULT_ENTITY: dict[str, Any] = {
 }
 
 KNOWN_EXTRA_FIELDS = {
+    "cast_shadow",
+    "shadow_enabled",
+    "picture_hidden",
+    "door_style",
     "name",
     "mesh_name",
     "tag",
@@ -76,6 +80,7 @@ KNOWN_EXTRA_FIELDS = {
     "forbid_flags",
     "collision_poly",
     "occluder_poly",
+    "components",  # the movement collider (schema-documented; Studio's Footprint and Circle write it)
 }
 KNOWN_ENTITY_FIELDS: Set[str] = set(DEFAULT_ENTITY.keys()) | KNOWN_EXTRA_FIELDS
 
@@ -117,8 +122,29 @@ class ValidationReport:
         return not self.errors
 
 
+SCENE_TOP_LEVEL_KEYS = frozenset({
+    "name", "version", "schema_version", "description", "settings", "state", "layers",
+    "collision_rules", "entities", "tilemap", "background_layers", "foreground_layers",
+    "lights", "occluders",
+})
+
+
+def document_key(path: Path | str) -> str:
+    """Normalised key for an open scene document (case- and separator-insensitive on Windows)."""
+    return str(Path(path).resolve()).replace("\\", "/").lower()
+
+
 class SceneLoader:
-    """Loads JSON scene files and validates minimal entity data."""
+    """Loads JSON scene files and validates minimal entity data.
+
+    ``documents`` maps :func:`document_key` paths to scene dicts the editor has open.
+    They take precedence over the file on disk, so play-testing and scene transitions
+    see unsaved edits (including rooms that exist only in the editor so far).
+    """
+
+    def __init__(self) -> None:
+        self.documents: Dict[str, Dict[str, Any]] = {}
+        self.last_saved_from: str | None = None  # the room the last loaded save slot was made in
 
     def apply_scene_defaults(self, raw_scene: Dict[str, Any]) -> Dict[str, Any]:
         """Public wrapper so tooling can reuse the defaulting logic."""
@@ -131,9 +157,12 @@ class SceneLoader:
         return self._apply_entity_defaults(raw_entity)
 
     def load_scene(self, scene_path: str) -> Dict[str, Any]:
-        """Return the full scene dictionary from a JSON file."""
+        """Return the full scene dictionary from an open document or a JSON file."""
         full_path = resolve_path(scene_path)
-        if not full_path.exists():
+        document = self.documents.get(document_key(full_path))
+        if document is not None:
+            raw_scene: Dict[str, Any] = copy.deepcopy(document)
+        elif not full_path.exists():
             diag_warn(
                 "scene_loader.scene_missing",
                 f"Missing scene file '{scene_path}'",
@@ -141,8 +170,16 @@ class SceneLoader:
                 location=str(scene_path),
             )
             raise FileNotFoundError(f"Scene file not found: {scene_path}")
-
-        raw_scene: Dict[str, Any] = json.loads(full_path.read_text(encoding="utf-8"))
+        else:
+            raw_scene = json.loads(full_path.read_text(encoding="utf-8"))
+        saved_from: str | None = None  # the room a save slot was made in
+        if isinstance(raw_scene, dict) and "save_format_version" in raw_scene:
+            # A save slot is a scene snapshot plus save metadata (restored separately by
+            # SaveManager before it loads the slot as a scene); keep only the scene part.
+            meta = raw_scene.get("meta")
+            saved_from = meta.get("scene_path") if isinstance(meta, dict) else None
+            raw_scene = {k: v for k, v in raw_scene.items() if k in SCENE_TOP_LEVEL_KEYS}
+        self.last_saved_from = saved_from if isinstance(saved_from, str) and saved_from.strip() else None
         migrated_scene = migrate_payload("scene", raw_scene)
         validate(migrated_scene, "scene.schema.json", full_path)
         scene = self._apply_scene_defaults(migrated_scene, migrated=True)
@@ -177,7 +214,11 @@ class SceneLoader:
 
         scene["entities"] = normalized_entities
 
-        normalized_tilemap = self._normalize_tilemap_section(scene.get("tilemap"), base_path=full_path.parent)
+        # A save slot lives in saves/, but its map path is relative to the room it was saved
+        # from; resolving it from saves/ lost the map on every load.
+        has_origin = isinstance(saved_from, str) and saved_from.strip()
+        tilemap_base = resolve_path(str(saved_from)).parent if has_origin else full_path.parent
+        normalized_tilemap = self._normalize_tilemap_section(scene.get("tilemap"), base_path=tilemap_base)
         if normalized_tilemap is not None:
             scene["tilemap"] = normalized_tilemap
         else:
@@ -226,24 +267,8 @@ class SceneLoader:
             report.add_error("Scene root must be a JSON object (dictionary)")
             return report
 
-        allowed_keys = {
-            "name",
-            "version",
-            "schema_version",
-            "description",
-            "settings",
-            "state",
-            "layers",
-            "collision_rules",
-            "entities",
-            "tilemap",
-            "background_layers",
-            "foreground_layers",
-            "lights",
-            "occluders",
-        }
         for key in scene.keys():
-            if key not in allowed_keys:
+            if key not in SCENE_TOP_LEVEL_KEYS:
                 report.add_warning(f"Unknown top-level key '{key}' will be ignored")
 
         settings = scene.get("settings")
@@ -289,6 +314,9 @@ class SceneLoader:
         if not isinstance(entities, list):
             report.add_error("Scene 'entities' must be an array of entity objects")
         elif validate_entities:
+            # Behaviour names are checked against the registry; an unloaded registry
+            # would reject every valid scene (it did for every mesh_cli validator).
+            load_builtin_behaviours()
             for index, entity in enumerate(entities):
                 entity_report = self.validate_entity(entity, index=index, strict=strict)
                 report.extend(entity_report)

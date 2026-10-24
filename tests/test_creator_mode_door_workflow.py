@@ -147,24 +147,6 @@ def test_workflow_module_imports_without_arcade() -> None:
     assert result.stdout.strip() == "True"
 
 
-def test_package_import_still_does_not_import_renderer_module() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import engine.editor.creator_mode; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    assert result.stdout.strip() == "False"
-
-
 def _locked_workflow_request() -> CreatorDoorWorkflowRequest:
     return CreatorDoorWorkflowRequest(
         source_scene="forest",

@@ -230,6 +230,7 @@ def _coerce_prefab_palette_rows(value: object) -> list[dict[str, Any]] | None:
     return rows
 
 class EditorModeController:
+    tile_layer_index: int  # set by editor_controller_bootstrap
     _file_ops_ctl: EditorFileOpsController
     _ui_flow_ctl: EditorUIFlowController
     _selection_ctl: EditorSelectionController

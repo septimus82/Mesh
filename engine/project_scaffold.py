@@ -13,35 +13,20 @@ from .logging_tools import get_logger
 _LOG = get_logger("engine.project_scaffold")
 
 _MAIN_PY = '''\
-"""Entry point for {name}."""
-
-import sys
-import warnings
-from collections import deque
-
-warnings.filterwarnings("ignore", message=".*draw_text is an extremely slow function.*")
-
-try:
-    import pyglet
-    if sys.platform == "win32":
-        import pyglet.window.win32
-        _old_init = pyglet.window.win32.Win32Window.__init__
-
-        def _new_init(self, *args, **kwargs):
-            _old_init(self, *args, **kwargs)
-            if hasattr(self, "_event_queue") and not isinstance(self._event_queue, deque):
-                self._event_queue = deque(self._event_queue)
-
-        pyglet.window.win32.Win32Window.__init__ = _new_init
-except (ImportError, AttributeError):
-    pass
-
-from engine.config import load_config
-from engine.game import GameWindow
-from engine.game_runtime.scene_flow import resolve_game_start_scene
+"""{name}: run the game with `python main.py` (or press Play in Mesh Studio)."""
 
 
 def main() -> None:
+    # The engine is imported here, after the DPI mode is set: pyglet fixes it when it
+    # loads, and Mesh draws at a stable scale only when Windows doesn't rescale it.
+    from engine.dpi_bootstrap import set_process_dpi_unaware
+
+    set_process_dpi_unaware()
+
+    from engine.config import load_config
+    from engine.game import GameWindow
+    from engine.game_runtime.scene_flow import resolve_game_start_scene
+
     config = load_config()
     window = GameWindow(
         width=config.width,
@@ -52,21 +37,36 @@ def main() -> None:
         config=config,
         config_path="config.json",
     )
-    if config.main_menu_scene:
-        initial_scene = config.main_menu_scene
-    else:
-        wc = getattr(window, "world_controller", None)
-        initial_scene = resolve_game_start_scene(
-            engine_config=config,
-            world_controller=wc,
-        ) or config.start_scene
-    window.load_scene(initial_scene)
-    __import__("arcade").run()
+    start = config.main_menu_scene or resolve_game_start_scene(
+        engine_config=config, world_controller=getattr(window, "world_controller", None)
+    ) or config.start_scene
+    window.load_scene(start)
+    window.run()
 
 
 if __name__ == "__main__":
     main()
 '''
+
+# Every new project gets these: the starter art (tooling/make_starter_art.py), the older
+# placeholder sheet earlier projects use, and the door the editor uses when it links two
+# rooms (engine.project_ops.DOOR_SPRITE).
+_STARTER_FILES = (
+    "assets/sprites/starter_hero.png",
+    "assets/sprites/starter_villager.png",
+    "assets/sprites/starter_sign.png",
+    "assets/sprites/animated_player.png",
+    "assets/sprites/door.png",
+    "assets/tilesets/starter.png",  # project_ops.TILESET_SOURCE and its image
+    "assets/tilesets/starter.json",
+)
+
+
+def ensure_starter_files(root: Path) -> None:
+    """Copy any missing starter file into an existing project (e.g. one made before maps)."""
+    for rel_path in _STARTER_FILES:
+        if not (Path(root) / rel_path).is_file():
+            _copy_engine_asset(rel_path, Path(root))
 
 _MONSTER_STARTER_FILES = (
     "assets/data/monster_species.json",
@@ -177,7 +177,8 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
         config["input_bindings"] = engine_bindings
 
     json_io.write_json_atomic(root / "config.json", config)
-    (root / "main.py").write_text(_MAIN_PY.replace("{name}", str(name)), encoding="utf-8")
+    safe_name = " ".join(str(name).replace("\\", "/").replace('"', "'").split())  # it goes into a docstring
+    (root / "main.py").write_text(_MAIN_PY.replace("{name}", safe_name), encoding="utf-8")
 
     world = {
         "id": "main",
@@ -197,6 +198,10 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
     json_io.write_json_atomic(root / "assets/data/events.json", {"events": []})
 
     apply_template(root, template_id)
-    _copy_monster_starter_pack(root)
+    for rel_path in _STARTER_FILES:
+        _copy_engine_asset(rel_path, root)
+    # The monster game was a test project; only its own template ships its data.
+    if template_id == "monster":
+        _copy_monster_starter_pack(root)
 
     _LOG.info("Project created successfully.")

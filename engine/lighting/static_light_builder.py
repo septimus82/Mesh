@@ -6,14 +6,24 @@ from typing import Any
 
 from engine.swallowed_exceptions import _log_swallow
 
-from .flicker import FlickerNoise, apply_light_flicker
-from .types import _FlickerLightState
+from .flicker import apply_flicker, flicker_state
+
+
+def _light_seed(cfg: dict[str, Any], index: int) -> int:
+    """A light's own flicker seed when it has none: from where it is, so neighbours don't flicker together."""
+    try:
+        x, y = int(float(cfg.get("x", 0))), int(float(cfg.get("y", 0)))
+    except (TypeError, ValueError):
+        x = y = 0
+    return ((x * 73856093) ^ (y * 19349663) ^ (index * 83492791)) & 0x7FFFFFFF
 
 
 def rebuild_static_and_dynamic_lights(manager: Any) -> None:
     manager._static_lights = []
     manager._static_count = 0
     manager._flicker_lights = []
+    manager._light_casts_shadows = {}
+    manager._shadow_occluders = None  # rebuilt from the room's occluders on the next shadowed frame
 
     use_shadow_mask = manager.shadowmask_enabled
 
@@ -45,101 +55,27 @@ def rebuild_static_and_dynamic_lights(manager: Any) -> None:
         base_color = manager._normalize_color(color)
         light = manager._create_light(x, y, base_radius, base_color, mode)
         if light is not None:
-            flicker_enabled = bool(cfg.get("flicker_enabled", False))
-            if flicker_enabled:
+            if bool(cfg.get("flicker_enabled", False)):
                 seed_value = cfg.get("flicker_seed")
-                if seed_value is None:
-                    seed_value = len(manager._flicker_lights)
                 try:
-                    seed = int(seed_value)
-                except Exception:  # noqa: BLE001  # REASON: malformed flicker seed values should fall back to a deterministic zero seed
-                    _log_swallow("SLBD-001", "engine/lighting/static_light_builder.py blanket swallow", once=True)
+                    seed = int(seed_value) if seed_value is not None else _light_seed(cfg, len(manager._flicker_lights))
+                except (TypeError, ValueError):
+                    _log_swallow("SLBD-001", "engine/lighting/static_light_builder.py flicker seed", once=True)
                     seed = 0
-                speed = float(cfg.get("flicker_speed", 1.0))
-                amount = float(cfg.get("flicker_amount", 0.0))
-                radius_px = cfg.get("flicker_radius_px")
-                intensity = cfg.get("flicker_intensity")
-                if radius_px is not None:
-                    try:
-                        radius_px = float(radius_px)
-                    except Exception:  # noqa: BLE001  # REASON: malformed flicker radius overrides should fall back to the base light radius
-                        _log_swallow("SLBD-002", "engine/lighting/static_light_builder.py blanket swallow", once=True)
-                        radius_px = None
-                if intensity is not None:
-                    try:
-                        intensity = float(intensity)
-                    except Exception:  # noqa: BLE001  # REASON: malformed flicker intensity overrides should fall back to the base light color intensity
-                        _log_swallow("SLBD-003", "engine/lighting/static_light_builder.py blanket swallow", once=True)
-                        intensity = None
-                state = _FlickerLightState(
-                    light=light,
-                    base_radius=base_radius,
-                    base_color=base_color,
-                    noise=FlickerNoise(seed),
-                    speed=speed,
-                    amount=amount,
-                    radius_px=radius_px,
-                    intensity=intensity,
-                )
+                state = flicker_state(light, base_radius, base_color, {**cfg, "radius": base_radius}, seed)
                 manager._flicker_lights.append(state)
-                flicker_radius, flicker_color = apply_light_flicker(
-                    base_radius=state.base_radius,
-                    base_color=state.base_color,
-                    noise=state.noise,
-                    time_s=manager._flicker_time,
-                    speed=state.speed,
-                    amount=state.amount,
-                    radius_px=state.radius_px,
-                    intensity=state.intensity,
-                )
-                if hasattr(light, "radius"):
-                    light.radius = flicker_radius
-                if hasattr(light, "color"):
-                    light.color = flicker_color
+                apply_flicker(state, manager._flicker_time, bool(getattr(manager, "reduced_flicker", False)))
             manager._static_lights.append(light)
             manager._add_light(light)
             manager._static_count += 1
+            manager._light_casts_shadows[id(light)] = cfg.get("shadows", True) is not False
 
     for handle in manager._dynamic_handles:
         manager._add_light(handle.light)
         if handle.flicker_enabled:
-            seed = 0 if handle.flicker_seed is None else int(handle.flicker_seed)
-            radius_px = handle.flicker_radius_px
-            if radius_px is not None:
-                try:
-                    radius_px = float(radius_px)
-                except Exception:  # noqa: BLE001  # REASON: malformed dynamic flicker radius overrides should fall back to the base light radius
-                    _log_swallow("SLBD-004", "engine/lighting/static_light_builder.py blanket swallow", once=True)
-                    radius_px = None
-            intensity = handle.flicker_intensity
-            if intensity is not None:
-                try:
-                    intensity = float(intensity)
-                except Exception:  # noqa: BLE001  # REASON: malformed dynamic flicker intensity overrides should fall back to the base light color intensity
-                    _log_swallow("SLBD-005", "engine/lighting/static_light_builder.py blanket swallow", once=True)
-                    intensity = None
-            state = _FlickerLightState(
-                light=handle.light,
-                base_radius=handle.base_radius,
-                base_color=handle.base_color,
-                noise=FlickerNoise(seed),
-                speed=float(handle.flicker_speed),
-                amount=float(handle.flicker_amount),
-                radius_px=radius_px,
-                intensity=intensity,
-            )
+            from . import _dynamic_flicker_settings  # noqa: PLC0415
+
+            state = flicker_state(handle.light, handle.base_radius, handle.base_color, _dynamic_flicker_settings(handle),
+                                  int(handle.flicker_seed or 0))
             manager._flicker_lights.append(state)
-            flicker_radius, flicker_color = apply_light_flicker(
-                base_radius=state.base_radius,
-                base_color=state.base_color,
-                noise=state.noise,
-                time_s=manager._flicker_time,
-                speed=state.speed,
-                amount=state.amount,
-                radius_px=state.radius_px,
-                intensity=state.intensity,
-            )
-            if hasattr(handle.light, "radius"):
-                handle.light.radius = flicker_radius
-            if hasattr(handle.light, "color"):
-                handle.light.color = flicker_color
+            apply_flicker(state, manager._flicker_time, bool(getattr(manager, "reduced_flicker", False)))

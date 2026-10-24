@@ -46,7 +46,8 @@ class DayNightCycle:
             self._keys = self._default_keys()
         else:
             self._keys = sorted(keys, key=lambda k: k.hour)
-        self._apply_ambient()
+        if self.enabled:  # switched off, it must leave the project's ambient light alone
+            self._apply_ambient()
 
     def _default_keys(self) -> List[TimeKey]:
         return [

@@ -7,5 +7,6 @@ SETTINGS_ROWS: tuple[tuple[str, str, str], ...] = (
     ("sfx_volume", "SFX Volume", "slider"),
     ("fog_enabled", "Fog", "toggle"),
     ("soft_shadows_enabled", "Soft Shadows", "toggle"),
+    ("reduced_flicker", "Calmer Flickering", "toggle"),  # gentler flicker, no stutter (accessibility)
     ("back", "Back", "action"),
 )

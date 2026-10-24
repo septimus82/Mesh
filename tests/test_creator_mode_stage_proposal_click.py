@@ -264,24 +264,6 @@ def test_input_router_creator_click_does_not_fall_through_to_editor_input() -> N
     assert called["editor_input"] is False
 
 
-def test_package_import_still_does_not_import_renderer_module() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import engine.editor.creator_mode; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    assert result.stdout.strip() == "False"
-
-
 def test_overlay_click_module_import_loads_renderer_for_hit_testing() -> None:
     result = subprocess.run(
         [

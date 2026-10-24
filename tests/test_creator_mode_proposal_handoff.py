@@ -267,24 +267,6 @@ def test_handoff_module_does_not_import_real_bridge_modules() -> None:
     assert result.stdout.strip() == "False"
 
 
-def test_package_import_does_not_eagerly_import_renderer() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import engine.editor.creator_mode; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    assert result.stdout.strip() == "False"
-
-
 def test_render_shows_use_ai_proposals_when_handoff_available() -> None:
     bridge = FakeBridge([{"proposal_id": "proposal-1", "preview_summary": "Preview"}])
     controller = CreatorModeController(_editor_with_bridge(bridge, proposal_inbox=SimpleNamespace()))

@@ -54,6 +54,8 @@ def normalize_alpha(value: object) -> float | None:
 
     if isinstance(value, bool):
         return None
+    if not isinstance(value, (int, float, str)):
+        return None
     try:
         alpha = float(value)
     except (TypeError, ValueError):

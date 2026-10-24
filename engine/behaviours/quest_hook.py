@@ -175,6 +175,17 @@ class QuestHookBehaviour(Behaviour):
         self._completed = False
         self._event_count = 0
 
+    def subscribed_event_types(self) -> frozenset[str] | None:
+        return frozenset(self.listen_events)
+
+    def on_event(self, event: Any) -> None:
+        """The live game's event path. The separate gameplay bus is only created by the episode harness (where
+        events go to it instead of here, so nothing counts twice); without this, QuestHook heard nothing in play."""
+        if getattr(self.window, "gameplay_event_bus", None) is not None:
+            return
+        if getattr(event, "type", None) in self.listen_events:
+            self._on_event(event)
+
     def _subscribe(self) -> None:
         """Subscribe to gameplay events."""
         bus = getattr(self.window, "gameplay_event_bus", None)

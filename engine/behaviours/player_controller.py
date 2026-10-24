@@ -97,8 +97,9 @@ class PlayerController(Behaviour):
             vy = (vy / length) * speed
             self._update_facing_from_velocity(vx, vy)
         self._sync_animation_state(vx, vy)
-        self.entity.mesh_velocity_x = vx
-        self.entity.mesh_velocity_y = vy
+        sprite: Any = self.entity  # Mesh's own sprite attributes (mesh_*) are set dynamically
+        sprite.mesh_velocity_x = vx
+        sprite.mesh_velocity_y = vy
 
         before_x = float(getattr(self.entity, "center_x", 0.0))
         before_y = float(getattr(self.entity, "center_y", 0.0))

@@ -1,0 +1,286 @@
+{
+  "passed": true,
+  "steps": [
+    {
+      "step": "play_the_hall",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "scene": "packs/core_regions/scenes/start.json",
+        "player": [
+          128.0,
+          128.0
+        ],
+        "flags": {
+          "hint_shown_controls": true
+        },
+        "coin": true,
+        "gate": false,
+        "dummy_hp": 999.0
+      },
+      "seconds": 8.1,
+      "screenshot": "01_play_the_hall.png"
+    },
+    {
+      "step": "collect_the_coin",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "scene": "packs/core_regions/scenes/start.json",
+        "player": [
+          296.0,
+          128.0
+        ],
+        "flags": {
+          "hint_shown_controls": true
+        },
+        "coin": false,
+        "gate": false,
+        "dummy_hp": 991.0
+      },
+      "seconds": 4.5,
+      "screenshot": "02_collect_the_coin.png"
+    },
+    {
+      "step": "light_the_lamp",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "scene": "packs/core_regions/scenes/start.json",
+        "player": [
+          471.5,
+          218.2
+        ],
+        "flags": {
+          "hint_shown_controls": true,
+          "lamp_lit": true
+        },
+        "coin": false,
+        "gate": true,
+        "dummy_hp": 983.0
+      },
+      "seconds": 4.8,
+      "screenshot": "03_light_the_lamp.png"
+    },
+    {
+      "step": "to_the_yard_and_back",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "in_yard": {
+          "scene": "packs/core_regions/scenes/yard.json",
+          "player": [
+            128.0,
+            144.0
+          ],
+          "flags": {
+            "hint_shown_controls": true,
+            "lamp_lit": true
+          },
+          "coin": false,
+          "gate": false,
+          "dummy_hp": null
+        },
+        "back_in_hall": {
+          "scene": "packs/core_regions/scenes/start.json",
+          "player": [
+            544.0,
+            144.0
+          ],
+          "flags": {
+            "hint_shown_controls": true,
+            "lamp_lit": true
+          },
+          "coin": false,
+          "gate": true,
+          "dummy_hp": 997.0
+        }
+      },
+      "seconds": 7.7,
+      "screenshot": "04_to_the_yard_and_back.png"
+    },
+    {
+      "step": "coin_stays_gone",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "scene": "packs/core_regions/scenes/start.json",
+        "player": [
+          544.0,
+          144.0
+        ],
+        "flags": {
+          "hint_shown_controls": true,
+          "lamp_lit": true
+        },
+        "coin": false,
+        "gate": true,
+        "dummy_hp": 996.0
+      },
+      "seconds": 0.7,
+      "screenshot": "05_coin_stays_gone.png"
+    },
+    {
+      "step": "flag_and_gate_kept",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "scene": "packs/core_regions/scenes/start.json",
+        "player": [
+          544.0,
+          144.0
+        ],
+        "flags": {
+          "hint_shown_controls": true,
+          "lamp_lit": true
+        },
+        "coin": false,
+        "gate": true,
+        "dummy_hp": 995.0
+      },
+      "seconds": 0.8,
+      "screenshot": "06_flag_and_gate_kept.png"
+    },
+    {
+      "step": "save",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "scene": "packs/core_regions/scenes/start.json",
+        "player": [
+          403.8,
+          151.5
+        ],
+        "flags": {
+          "hint_shown_controls": true,
+          "lamp_lit": true
+        },
+        "coin": false,
+        "gate": true,
+        "dummy_hp": 990.0
+      },
+      "seconds": 4.5,
+      "screenshot": "07_save.png"
+    },
+    {
+      "step": "change_things",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "scene": "packs/core_regions/scenes/yard.json",
+        "player": [
+          128.0,
+          144.0
+        ],
+        "flags": {
+          "hint_shown_controls": true,
+          "lamp_lit": true
+        },
+        "coin": false,
+        "gate": false,
+        "dummy_hp": null
+      },
+      "seconds": 4.9,
+      "screenshot": "08_change_things.png"
+    },
+    {
+      "step": "load_restores",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "scene": "saves\\quicksave.json",
+        "player": [
+          403.8,
+          151.5
+        ],
+        "flags": {
+          "hint_shown_controls": true,
+          "lamp_lit": true
+        },
+        "coin": false,
+        "gate": true,
+        "dummy_hp": 986.0
+      },
+      "seconds": 2.9,
+      "screenshot": "09_load_restores.png"
+    },
+    {
+      "step": "after_load_rooms_still_right",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "scene": "packs/core_regions/scenes/start.json",
+        "player": [
+          544.0,
+          144.0
+        ],
+        "flags": {
+          "hint_shown_controls": true,
+          "lamp_lit": true
+        },
+        "coin": false,
+        "gate": true,
+        "dummy_hp": 997.0
+      },
+      "seconds": 6.6,
+      "screenshot": "10_after_load_rooms_still_right.png"
+    },
+    {
+      "step": "restart_and_load",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "new_game": {
+          "scene": "packs/core_regions/scenes/start.json",
+          "player": [
+            128.0,
+            128.0
+          ],
+          "flags": {
+            "hint_shown_controls": true
+          },
+          "coin": true,
+          "gate": false,
+          "dummy_hp": 999.0
+        },
+        "loaded": {
+          "scene": "saves\\quicksave.json",
+          "player": [
+            403.8,
+            151.5
+          ],
+          "flags": {
+            "hint_shown_controls": true,
+            "lamp_lit": true
+          },
+          "coin": false,
+          "gate": true,
+          "dummy_hp": 986.0
+        }
+      },
+      "seconds": 11.3,
+      "screenshot": "11_restart_and_load.png"
+    },
+    {
+      "step": "restarted_rooms_still_right",
+      "ok": true,
+      "error": null,
+      "detail": {
+        "scene": "packs/core_regions/scenes/start.json",
+        "player": [
+          544.0,
+          144.0
+        ],
+        "flags": {
+          "hint_shown_controls": true,
+          "lamp_lit": true
+        },
+        "coin": false,
+        "gate": true,
+        "dummy_hp": 997.0
+      },
+      "seconds": 6.7,
+      "screenshot": "12_restarted_rooms_still_right.png"
+    }
+  ]
+}

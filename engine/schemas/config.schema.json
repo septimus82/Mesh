@@ -125,6 +125,14 @@
       "type": "string",
       "minLength": 1
     },
+    "lighting_shadow_softness": {
+      "type": "string",
+      "enum": [
+        "sharp",
+        "soft",
+        "softer"
+      ]
+    },
     "main_menu_scene": {
       "$ref": "#/$defs/jsonPathOrNull"
     },

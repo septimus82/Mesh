@@ -81,6 +81,8 @@ class SceneTransition(Behaviour):
         "event_field": ParamDef(str, default="", description="Payload field to check"),
         "event_value": ParamDef(str, default="", description="Optional value that event_field must equal"),
         "once": ParamDef(bool, default=False, description="Prevent the transition from firing more than once"),
+        "area_width": ParamDef(float, default=0.0, description="Width of the area walking into triggers (0: the picture)"),
+        "area_height": ParamDef(float, default=0.0, description="Height of that area (0: the picture)"),
     }
 
     def __init__(self, entity: Any, window: Any, **config: Any) -> None:
@@ -107,6 +109,11 @@ class SceneTransition(Behaviour):
         raw_value = merged.get("event_value", merged.get("payload_value"))
         self.event_value = str(raw_value).strip() if raw_value not in (None, "") else None
         self.once = bool(merged.get("once", False))
+        # A passage without a picture (or over painted map art) is an area, not its placeholder picture's box.
+        try:
+            self.area = (max(0.0, float(merged.get("area_width") or 0)), max(0.0, float(merged.get("area_height") or 0)))
+        except (TypeError, ValueError):
+            self.area = (0.0, 0.0)
         self.config.update(
             {
                 "target_scene": self.target_scene,
@@ -146,6 +153,15 @@ class SceneTransition(Behaviour):
                 candidates.append(sprite)
 
         if not candidates:
+            return
+        if self.area[0] > 0 and self.area[1] > 0:
+            x, y = float(self.entity.center_x), float(self.entity.center_y)
+            half_w, half_h = self.area[0] / 2, self.area[1] / 2
+            for candidate in candidates:
+                if (candidate.left < x + half_w and candidate.right > x - half_w
+                        and candidate.bottom < y + half_h and candidate.top > y - half_h):
+                    self._trigger_transition(reason="collision", actor=candidate)
+                    return
             return
         sprite_list = optional_arcade.arcade.SpriteList()
         for candidate in candidates:

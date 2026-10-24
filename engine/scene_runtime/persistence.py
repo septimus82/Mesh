@@ -138,11 +138,18 @@ def build_scene_snapshot(controller: SceneController, compact: bool = False) -> 
         tilemap = snapshot.get("tilemap") or {}
         if not isinstance(tilemap, dict):
             tilemap = {}
-        overrides = tilemap.get("overrides") or {}
-        if not isinstance(overrides, dict):
-            overrides = {}
-        overrides["layers"] = dict(controller.tilemap_instance.layer_data)
-        tilemap["overrides"] = overrides
+        if isinstance(tilemap.get("tile_layers"), list):
+            # The inline-layers format has no "overrides": its tiles are the painted data.
+            for entry in tilemap["tile_layers"]:
+                tiles = controller.tilemap_instance.layer_data.get(str(entry.get("id"))) if isinstance(entry, dict) else None
+                if tiles is not None:
+                    entry["tiles"] = list(tiles)
+        else:
+            overrides = tilemap.get("overrides") or {}
+            if not isinstance(overrides, dict):
+                overrides = {}
+            overrides["layers"] = dict(controller.tilemap_instance.layer_data)
+            tilemap["overrides"] = overrides
         snapshot["tilemap"] = tilemap
     _remove_runtime_tilemap_fields(snapshot)
 
@@ -166,11 +173,13 @@ _AUTHORED_ENTITY_FIELDS = {
     "behaviour_config",
     "behaviours",
     "collision_poly",
+    "components",  # e.g. a feet collider: without it a loaded player collides with its whole sprite
     "depth_z",
     "dialogue",
     "dialogue_lines",
     "encounter_cost",
     "encounter_group",
+    "flip_x",
     "follow_speed",
     "follow_target",
     "forbid_flags",
@@ -277,6 +286,8 @@ def _remove_runtime_tilemap_fields(snapshot: dict[str, Any]) -> None:
     if not isinstance(tilemap, dict):
         return
     tilemap.pop("resolved_path", None)
+    if "tile_layers" in tilemap and not tilemap.get("layers"):
+        tilemap.pop("layers", None)  # added empty by the loader; the inline-layers format forbids it
 
 
 def apply_scene_state(controller: SceneController, state_block: Any) -> None:

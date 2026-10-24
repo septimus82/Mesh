@@ -20,12 +20,18 @@ class TierDef:
     pytest_mark: str | None
     verify_all: bool
     compileall: bool
+    paths: tuple[str, ...] = ()  # test files to run (default: all of tests/)
+    env: tuple[tuple[str, str], ...] = ()
 
+
+_GPU_TESTS = tuple(sorted(f"tests/{p.name}" for p in (Path(__file__).resolve().parents[1] / "tests").glob("test_*_gpu.py")))
 
 TIERS: dict[str, TierDef] = {
     "tier0": TierDef(pytest_mark="fast", verify_all=False, compileall=True),
     "tier1": TierDef(pytest_mark="fast or integration", verify_all=True, compileall=False),
     "tier2": TierDef(pytest_mark=None, verify_all=False, compileall=False),
+    # The exact-pixel GPU tests, in hidden windows (nothing shown on the desktop, no input): rendering changes.
+    "gpu": TierDef(pytest_mark=None, verify_all=False, compileall=False, paths=_GPU_TESTS, env=(("MESH_GL_SMOKE", "1"),)),
 }
 
 
@@ -44,6 +50,8 @@ def _pytest_cmd(
 ) -> list[str]:
     pytest_args = [
         "-q",
+        "-p",
+        "no:cacheprovider",  # a tier needs no cache; an unwritable .pytest_cache failed every run under -W error
         "-W",
         "error",
         "--strict-markers",
@@ -54,6 +62,12 @@ def _pytest_cmd(
         pytest_args += ["-n", xdist_jobs]
     pytest_args += extra_args
     return [sys.executable, "-m", "pytest", *build_pytest_args(pytest_args)]
+
+
+def _tier_env(tier_cfg: TierDef) -> dict[str, str]:
+    env = build_pytest_env()
+    env.update(dict(tier_cfg.env))
+    return env
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -88,7 +102,7 @@ def main(argv: list[str] | None = None) -> int:
 
     pytest_cmd = _pytest_cmd(
         mark_expr=tier_cfg.pytest_mark,
-        extra_args=extra_args,
+        extra_args=[*tier_cfg.paths, *extra_args],
         xdist_jobs=xdist_jobs,
     )
     log_path = repo_root / "artifacts" / f"pytest_{args.tier}.log"
@@ -105,7 +119,7 @@ def main(argv: list[str] | None = None) -> int:
         pytest_cmd,
     )
     print(f"test-tiers: wrote log: {log_path}")
-    rc = _run(pytest_cmd, cwd=repo_root, env=build_pytest_env())
+    rc = _run(pytest_cmd, cwd=repo_root, env=_tier_env(tier_cfg))
     if rc != 0:
         return rc
 

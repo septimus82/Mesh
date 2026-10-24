@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import os
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 import engine.optional_arcade as optional_arcade
 from engine.arcade_compat import (
@@ -138,6 +138,34 @@ def cull_polygons_for_light(
     return kept
 
 
+def _shadow_behind(lx: float, ly: float, radius: float, near_a: Point, near_b: Point) -> Polygon:
+    """The shadow an occluder's silhouette edge ``near_a``-``near_b`` throws away from the light at (lx, ly).
+
+    It covers what the light would have lit behind the edge and nothing more: out to the light's reach, along an
+    arc so a wide edge's shadow follows the light's circle. Past the reach only the room's own ambient light falls,
+    and a shadow drawn there showed as black beams across the map. A corner already beyond the reach keeps its
+    place (the arc goes out to it): pulling it back onto the radius put the shadow between the light and the
+    wall, over the lit floor.
+    """
+
+    def unit(p: Point) -> tuple[float, float, float]:
+        dx, dy = p[0] - lx, p[1] - ly
+        d = math.hypot(dx, dy)
+        return (dx / d, dy / d, d) if d > 1e-9 else (0.0, 0.0, 0.0)
+
+    ax, ay, da = unit(near_a)
+    bx, by, db = unit(near_b)
+    if da == 0.0 or db == 0.0:  # the light sits on a corner: nothing sensible to cast
+        return [near_a, near_b, (lx, ly)]
+    reach = max(radius, da, db)
+    start, turn = math.atan2(by, bx), math.atan2(ay, ax) - math.atan2(by, bx)
+    turn = (turn + math.pi) % (2 * math.pi) - math.pi  # from b round to a, the short way (through the shadow)
+    steps = max(1, math.ceil(abs(turn) / math.radians(15)))
+    arc = [(lx + math.cos(start + turn * i / steps) * reach, ly + math.sin(start + turn * i / steps) * reach)
+           for i in range(steps + 1)]
+    return [near_a, near_b, *arc]
+
+
 def build_shadow_polygons(
     light_pos: Point,
     light_radius: float,
@@ -146,7 +174,7 @@ def build_shadow_polygons(
     """
     Build deterministic shadow polygons by extruding an occluder's silhouette corners away from the light.
 
-    Returns one quad per occluder: [near_a, near_b, far_b, far_a].
+    Returns one polygon per occluder: its near edge, then an arc at the light's reach behind it.
     """
     lx, ly = float(light_pos[0]), float(light_pos[1])
     radius = float(light_radius)
@@ -186,25 +214,116 @@ def build_shadow_polygons(
         near_a = angles[start_idx][1]
         near_b = angles[end_idx][1]
 
-        def _far(p: Point) -> Point:
-            dx = p[0] - lx
-            dy = p[1] - ly
-            d = math.hypot(dx, dy)
-            if d <= 1e-9:
-                return (lx, ly)
-            scale = radius / d
-            return (lx + dx * scale, ly + dy * scale)
-
-        far_a = _far(near_a)
-        far_b = _far(near_b)
-
-        poly = [near_a, near_b, far_b, far_a]
+        poly = _shadow_behind(lx, ly, radius, near_a, near_b)
         polys.append([(round(x, 3), round(y, 3)) for x, y in poly])
 
     polys.sort(key=lambda p: (p[0][1], p[0][0], p[1][1], p[1][0]))
     if len(polys) > MAX_SHADOW_POLYS_PER_LIGHT:
         polys = polys[:MAX_SHADOW_POLYS_PER_LIGHT]
     return polys
+
+
+def _inside_polygon(x: float, y: float, points: Sequence[Point]) -> bool:
+    inside = False
+    for (x0, y0), (x1, y1) in zip(points, [*points[1:], points[0]]):
+        if (y0 > y) != (y1 > y) and x < x0 + (y - y0) * (x1 - x0) / (y1 - y0):
+            inside = not inside
+    return inside
+
+
+def light_shadow_polygons(
+    light_pos: Point,
+    light_radius: float,
+    occluder_rects: Sequence[Rect],
+    occluder_polys: Sequence[Polygon],
+) -> list[Polygon]:
+    """Every shadow one light throws, for a renderer that masks that light alone (light_compositor).
+
+    Shadows only remove their own light, so they may run past its reach. All of them end on one arc,
+    beyond the farthest corner in play, so two shadows meeting along a ray share their end points (no
+    cracks between neighbouring walls). A polygon's back edges each throw an arc-ended shadow (a straight
+    end inside the light's circle left a lit wedge behind long edges). An occluder the light is inside
+    casts nothing: there is no sensible shadow from within a wall.
+    """
+    lx, ly = float(light_pos[0]), float(light_pos[1])
+    if float(light_radius) <= 0:
+        return []
+    rects = [r for r in occluder_rects if not (r.x < lx < r.x + r.width and r.y < ly < r.y + r.height)]
+    polys = [p for p in (sanitize_poly(poly) for poly in occluder_polys) if len(p) >= 3 and not _inside_polygon(lx, ly, p)]
+    corners = [pt for r in rects for pt in ((r.x, r.y), (r.x + r.width, r.y + r.height), (r.x + r.width, r.y), (r.x, r.y + r.height))]
+    corners += [pt for p in polys for pt in p]
+    reach = max([float(light_radius), *(math.hypot(px - lx, py - ly) for px, py in corners)]) + 1.0
+    # Rectangles cast like polygons, from their back edges: a shadow starting at the chord between the two
+    # outermost corners covered part of the wall itself (all of it when lit from straight on).
+    shapes = [[(r.x, r.y), (r.x + r.width, r.y), (r.x + r.width, r.y + r.height), (r.x, r.y + r.height)] for r in rects]
+    joined = _same_wall(rects)
+    out: list[Polygon] = []
+    for index, points in enumerate(shapes + polys):
+        area = sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(points, [*points[1:], points[0]]))
+        if area == 0:
+            continue
+        neighbours = [rects[j] for j in joined[index]] if index < len(rects) else []
+        for p0, p1 in zip(points, [*points[1:], points[0]]):
+            # An edge facing away from the light (its outward side away from it) throws the shadow.
+            ex, ey = p1[0] - p0[0], p1[1] - p0[1]
+            nx, ny = (ey, -ex) if area > 0 else (-ey, ex)
+            if nx * (lx - p0[0]) + ny * (ly - p0[1]) >= 0:
+                continue
+            pieces = [_shadow_behind(lx, ly, reach, p0, p1)]
+            for other in neighbours:  # one wall never shadows its own face (an L of tiles is several rectangles)
+                pieces = [part for piece in pieces for part in _minus_rect(piece, other)]
+            out.extend([(round(x, 3), round(y, 3)) for x, y in piece] for piece in pieces)
+    return out
+
+
+def _same_wall(rects: Sequence[Rect]) -> list[list[int]]:
+    """For each rectangle, the others it touches through a chain of touching rectangles: one painted wall."""
+    group = list(range(len(rects)))
+
+    def root(i: int) -> int:
+        while group[i] != i:
+            group[i] = group[group[i]]
+            i = group[i]
+        return i
+
+    for i, a in enumerate(rects):  # ponytail: O(n^2) over the light's nearby rectangles (merged strips: few)
+        for j in range(i + 1, len(rects)):
+            b = rects[j]
+            if a.x <= b.x + b.width and b.x <= a.x + a.width and a.y <= b.y + b.height and b.y <= a.y + a.height:
+                group[root(i)] = root(j)
+    members: dict[int, list[int]] = {}
+    for i in range(len(rects)):
+        members.setdefault(root(i), []).append(i)
+    return [[j for j in members[root(i)] if j != i] for i in range(len(rects))]
+
+
+def _clip(poly: Polygon, keep: Callable[[Point], float]) -> Polygon:
+    """The part of a convex polygon where ``keep`` is >= 0 (a half-plane; Sutherland-Hodgman)."""
+    out: Polygon = []
+    for a, b in zip(poly, [*poly[1:], poly[0]]):
+        ka, kb = keep(a), keep(b)
+        if ka >= 0:
+            out.append(a)
+        if (ka >= 0) != (kb >= 0):
+            t = ka / (ka - kb)
+            out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+    return out
+
+
+def _minus_rect(poly: Polygon, r: Rect) -> list[Polygon]:
+    """A convex polygon less a rectangle: up to four convex pieces (left, right, below, above it)."""
+    xs, ys = [p[0] for p in poly], [p[1] for p in poly]
+    if max(xs) <= r.x or min(xs) >= r.x + r.width or max(ys) <= r.y or min(ys) >= r.y + r.height:
+        return [poly]
+    x0, x1, y0, y1 = r.x, r.x + r.width, r.y, r.y + r.height
+    pieces = [_clip(poly, lambda p: x0 - p[0])]
+    rest = _clip(poly, lambda p: p[0] - x0)
+    pieces.append(_clip(rest, lambda p: p[0] - x1))
+    rest = _clip(rest, lambda p: x1 - p[0])
+    pieces.append(_clip(rest, lambda p: y0 - p[1]))
+    pieces.append(_clip(_clip(rest, lambda p: p[1] - y0), lambda p: p[1] - y1))
+    return [piece for piece in pieces if len(piece) >= 3 and abs(sum(
+        ax * by - bx * ay for (ax, ay), (bx, by) in zip(piece, [*piece[1:], piece[0]]))) > 1e-6]
 
 
 def build_shadow_polygons_for_polys(
@@ -246,18 +365,7 @@ def build_shadow_polygons_for_polys(
         near_a = angles[start_idx][1]
         near_b = angles[end_idx][1]
 
-        def _far(p: Point) -> Point:
-            dx = p[0] - lx
-            dy = p[1] - ly
-            d = math.hypot(dx, dy)
-            if d <= 1e-9:
-                return (lx, ly)
-            scale = radius / d
-            return (lx + dx * scale, ly + dy * scale)
-
-        far_a = _far(near_a)
-        far_b = _far(near_b)
-        poly_out = [near_a, near_b, far_b, far_a]
+        poly_out = _shadow_behind(lx, ly, radius, near_a, near_b)
         polys_out.append([(round(x, 3), round(y, 3)) for x, y in poly_out])
 
     polys_out.sort(key=lambda p: (p[0][1], p[0][0], p[1][1], p[1][0]))

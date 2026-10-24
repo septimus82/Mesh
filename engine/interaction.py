@@ -144,6 +144,8 @@ def _behaviour_can_interact(behaviour: Any, actor: Any) -> bool:
 
 
 def _eligible_behaviours(entity: Any, actor: Any) -> tuple[Any, ...]:
+    if getattr(entity, "visible", True) is False:
+        return ()  # hidden (e.g. by ConditionalActivator): nothing there to interact with
     seen: set[int] = set()
     result: list[Any] = []
     for behaviour in _behaviour_list(entity):

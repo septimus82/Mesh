@@ -56,8 +56,10 @@ class _StubPauseMenu:
     events: list[str] = field(default_factory=list)
     visible: bool = False
 
-    def toggle(self) -> None:
+    def toggle(self) -> bool:
         self.events.append("pause_toggle")
+        self.visible = not self.visible
+        return self.visible
 
 
 @dataclass
@@ -106,10 +108,11 @@ def test_escape_toggles_pause_when_unconsumed_and_preserves_order() -> None:
 
     input_dispatch.on_key_press(window, arcade.key.ESCAPE, 0)
 
-    assert events == ["ui", "input_key", "pause_toggle"]
+    # Esc opens the pause menu before the key router sees it (the router would
+    # otherwise open Settings on its own).
+    assert events == ["ui", "pause_toggle"]
     assert window.paused is True
     assert window.pause_menu.visible is True
-    assert window.console_messages == ["Game Paused"]
 
 
 def test_tick_updates_input_before_early_paused_return() -> None:

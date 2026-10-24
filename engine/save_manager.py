@@ -150,11 +150,9 @@ class SaveManager:
             # Keep the same JSON formatting (indent=2, sort_keys=True) with standardized trailing newline.
             save_io.write_json_pretty_atomic(path, snapshot)
 
-            # Toast if content changed or first save
-            if content_hash != self._last_saved_signature:
-                if hasattr(self.window, "player_hud"):
-                    self.window.player_hud.enqueue_toast("Game Saved")
-                self._last_saved_signature = content_hash
+            # Said only once the file is written: a player who saves twice should hear it twice.
+            self._toast("Game saved")
+            self._last_saved_signature = content_hash
 
             sys.stderr.write(f"[Mesh][Save] Game saved to '{path}'\n")
             return True
@@ -174,7 +172,14 @@ class SaveManager:
                 hint=hint,
             )
             sys.stderr.write(f"[Mesh][Save] ERROR: Failed to save game: {exc}\n")
+            self._toast(f"Couldn't save the game: {hint or exc}")
             return False
+
+    def _toast(self, message: str) -> None:
+        hud = getattr(self.window, "player_hud", None)
+        enqueue = getattr(hud, "enqueue_toast", None)
+        if callable(enqueue):
+            enqueue(message)
 
     def load_game(self, slot_name: str) -> bool:
         """Load a game state from a slot."""
@@ -298,6 +303,14 @@ class SaveManager:
                 self._fallback_to_start_scene(slot_name=slot_name, failed_path=path, reason_code=LOAD_APPLY_FAILED)
                 return False
 
+            # The saved objects' states (health, timers...) belong to the saved room, which only loads on
+            # the next frame: applied above, they reached the room being left. Apply them again once it exists.
+            normalized, _ = save_payloads.normalize_save_payload(data, source=path.as_posix())
+            saved_entities = normalized.get("saved_entities")
+            scene_controller = getattr(self.window, "scene_controller", None)
+            if isinstance(saved_entities, dict) and isinstance(saved_entities.get("entities"), list) and scene_controller is not None:
+                scene_controller._pending_saved_entities = saved_entities["entities"]
+
             # 2. Determine which scene to load
             # If the save file IS a valid scene (which build_scene_snapshot produces),
             # we can load it directly as a scene.
@@ -307,15 +320,11 @@ class SaveManager:
             # But wait, load_scene reads the file again.
             # That's fine.
 
-            # Check signature to avoid spamming "Loaded"
-            current_signature = (str(path), path.stat().st_mtime_ns)
-            should_toast = current_signature != self._last_loaded_signature
-            self._last_loaded_signature = current_signature
-
+            # Every load the player asks for is confirmed (a repeated load used to say nothing).
+            self._last_loaded_signature = (str(path), path.stat().st_mtime_ns)
             if hasattr(self.window, "player_hud"):
                 self.window.player_hud.clear_toasts()
-                if should_toast:
-                    self.window.player_hud.enqueue_toast("Loaded")
+                self.window.player_hud.enqueue_toast("Game loaded")
 
             sys.stderr.write(f"[Mesh][Save] Loading save from '{path}'\n")
             self.window.request_scene_change(str(path))
@@ -377,6 +386,15 @@ class SaveManager:
         return "The save data appears corrupted. Restore from a backup or create a new save."
 
     def _fallback_to_start_scene(self, *, slot_name: str, failed_path: Path, reason_code: str) -> None:
+        # Only a "Continue" with no game running should fall back to the start scene.
+        # Mid-game, a failed load must not throw the player back to the beginning.
+        scene = getattr(self.window, "scene_controller", None)
+        if getattr(scene, "current_scene_path", None):
+            hud = getattr(self.window, "player_hud", None)
+            if hud is not None and hasattr(hud, "enqueue_toast"):
+                hud.enqueue_toast("No saved game yet: save first (Esc, then Save Game; or F5)" if reason_code == LOAD_NOT_FOUND
+                                  else "Couldn't load that save: it may be damaged or from another version")
+            return
         cfg = getattr(self.window, "engine_config", None)
         target_scene = str(getattr(cfg, "start_scene", "") or "").strip()
         requester = getattr(self.window, "request_scene_change", None)

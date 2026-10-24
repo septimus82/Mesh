@@ -497,6 +497,9 @@ def build_slot_payload(
     compact: bool,
     timestamp: str,
 ) -> tuple[dict[str, Any], str]:
+    from engine.scene_runtime.room_memory import remember_removed
+
+    remember_removed(window.scene_controller)  # this room's collected or defeated objects, into the game state
     snapshot = window.scene_controller.build_scene_snapshot(compact=compact)
     controller = getattr(window, "game_state_controller", None)
     if controller is not None:
@@ -523,17 +526,22 @@ def build_slot_payload(
     snapshot["save_schema_version"] = SAVE_SCHEMA_VERSION
     snapshot, _ = normalize_save_payload(snapshot, source="save_runtime/build_slot_payload")
 
+    # The room this was saved in. After loading a save the current scene is the save file itself;
+    # recording that made the next save point at a save, and its map was then looked for in saves/.
+    room = getattr(window.scene_controller, "room_path", None)
+    if not isinstance(room, str) or not room:
+        room = window.scene_controller.current_scene_path
     content_to_hash = {
         "data": snapshot,
         "slot": slot_name,
-        "scene_path": window.scene_controller.current_scene_path,
+        "scene_path": room,
     }
     content_str = json.dumps(content_to_hash, sort_keys=True)
     content_hash = __import__("hashlib").md5(content_str.encode("utf-8")).hexdigest()
 
     snapshot["meta"] = {
         "slot": slot_name,
-        "scene_path": window.scene_controller.current_scene_path,
+        "scene_path": room,
         "timestamp": timestamp,
         "version": constants.SLOT_META_VERSION,
     }

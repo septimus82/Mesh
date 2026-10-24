@@ -1,0 +1,15 @@
+one_light_few_walls                            before   1.67/ 0.03  after   1.65/ 0.03
+five_lights_overlapping                        before   1.86/ 0.07  after   1.82/ 0.07
+crowded_10_lights_42_pillars                   before   4.12/ 0.16  after   4.02/ 0.15
+crowded_zoom_2                                 before   3.75/ 0.12  after   3.76/ 0.12
+five_lights_no_shadows                         before   1.04/ 0.02  after   1.08/ 0.02
+crowded_soft                                   before   4.54/ 0.37  after   4.19/ 0.26
+crowded_softer                                 before   4.63/ 0.50  after   4.55/ 0.46
+two_lights_1_character                         before   1.58/ 0.07  after   1.61/ 0.07
+two_lights_6_characters                        before   1.70/ 0.08  after   1.73/ 0.07
+two_lights_6_characters_soft                   before   2.20/ 0.12  after   2.23/ 0.11
+two_lights_6_characters_softer                 before   2.34/ 0.13  after   2.50/ 0.14
+two_lights_6_characters_softer_high            before   3.25/ 0.22  after   2.98/ 0.18
+two_lights_6_characters_zoom_2                 before   2.21/ 0.11  after   2.10/ 0.09
+two_torches_6_characters                       before   2.21/ 0.11  after   2.31/ 0.11
+two_lights_6_characters_no_character_shadows   before   2.05/ 0.09  after   2.19/ 0.07

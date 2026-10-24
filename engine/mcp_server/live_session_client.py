@@ -206,10 +206,15 @@ def live_stage_and_accept_add_entity(op: dict[str, Any], *, root: str = ".", tim
         return stage
     proposal = stage.get("proposal")
     dry_run = proposal.get("dry_run") if isinstance(proposal, dict) else None
-    if not isinstance(dry_run, dict) or dry_run.get("ok") is not True:
-        stage.setdefault("ok", False)
-        return stage
     proposal_id = str(stage.get("proposal_id") or "")
+    if not isinstance(dry_run, dict) or dry_run.get("ok") is not True:
+        # It can't apply: say so (staging itself "succeeded"), and don't leave it in the editor's inbox.
+        if proposal_id:
+            live_reject_proposal(proposal_id, root=root, timeout=timeout)
+        return {**stage, "ok": False, "reason": "dry_run_failed",
+                "message": str((dry_run or {}).get("message") or "The change can't be applied to the live scene.")}
     if not proposal_id:
         return _failure("invalid_live_session", "Bridge did not return a proposal id")
-    return live_accept_proposal(proposal_id, root=root, timeout=timeout)
+    accepted = live_accept_proposal(proposal_id, root=root, timeout=timeout)
+    accepted.setdefault("proposal_id", proposal_id)  # if the editor wants a person to accept, it's waiting there
+    return accepted

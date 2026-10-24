@@ -74,18 +74,18 @@ class TestHD2DRenderOrderIntegration:
         assert ids == ["ground_decal", "player", "flying_enemy"]
 
     def test_y_sort_within_same_layer(self) -> None:
-        """Within same layer, lower y should render first (further back)."""
+        """Within same layer, higher y (further up the screen, further back) renders first."""
         sprites = [
-            MockSprite("e1", center_y=150.0, render_layer=0),  # Front
-            MockSprite("e2", center_y=50.0, render_layer=0),   # Back
+            MockSprite("e1", center_y=150.0, render_layer=0),  # Back
+            MockSprite("e2", center_y=50.0, render_layer=0),   # Front
             MockSprite("e3", center_y=100.0, render_layer=0),  # Middle
         ]
 
         result = sort_sprites_for_render(sprites, sort_mode="y_sort")
         ids = [s.mesh_entity_data["id"] for s in result]
 
-        # Lower y (back) should come first
-        assert ids == ["e2", "e3", "e1"]
+        # Further back (higher y) comes first
+        assert ids == ["e1", "e3", "e2"]
 
     def test_explicit_z_mode(self) -> None:
         """explicit_z mode should use depth_z instead of y."""
@@ -125,13 +125,13 @@ class TestHD2DRenderOrderIntegration:
         result = sort_sprites_for_render(shuffled, sort_mode="y_sort")
         ids = [s.mesh_entity_data["id"] for s in result]
 
-        # Expected order:
-        # Layer -1: bg_tree_2 (y=180), bg_tree_1 (y=200)
-        # Layer 0: enemy_b (y=80), npc (y=100, "npc" < "player"), player (y=100), enemy_a (y=120)
+        # Expected order (further back = higher y first):
+        # Layer -1: bg_tree_1 (y=200), bg_tree_2 (y=180)
+        # Layer 0: enemy_a (y=120), npc (y=100, "npc" < "player"), player (y=100), enemy_b (y=80)
         # Layer 1: fg_particle
         expected = [
-            "bg_tree_2", "bg_tree_1",  # Layer -1
-            "enemy_b", "npc", "player", "enemy_a",  # Layer 0
+            "bg_tree_1", "bg_tree_2",  # Layer -1
+            "enemy_a", "npc", "player", "enemy_b",  # Layer 0
             "fg_particle",  # Layer 1
         ]
         assert ids == expected
@@ -152,9 +152,9 @@ class TestHD2DRenderOrderIntegration:
 
         # Should not crash, uses defaults (render_layer=0, empty id)
         result = sort_sprites_for_render(sprites, sort_mode="y_sort")
-        # All have same id (""), so sort by y
+        # All have same id (""), so sort by y: further back (higher y) first
         ys = [s.center_y for s in result]
-        assert ys == [50.0, 75.0, 100.0]
+        assert ys == [100.0, 75.0, 50.0]
 
 
 class TestExplicitZModeIntegration:
@@ -169,10 +169,10 @@ class TestExplicitZModeIntegration:
             MockSprite("ground_decal", center_y=50.0, depth_z=100.0, render_layer=0), # low y, high z
         ]
 
-        # y_sort: should order by y (50, 100, 200)
+        # y_sort: further back (higher y) first (200, 100, 50)
         y_result = sort_sprites_for_render(sprites, sort_mode="y_sort")
         y_ids = [s.mesh_entity_data["id"] for s in y_result]
-        assert y_ids == ["ground_decal", "player", "tall_tree"]
+        assert y_ids == ["tall_tree", "player", "ground_decal"]
 
         # explicit_z: should order by depth_z (0, 50, 100)
         z_result = sort_sprites_for_render(sprites, sort_mode="explicit_z")
@@ -190,8 +190,8 @@ class TestExplicitZModeIntegration:
         result = sort_sprites_for_render(sprites, sort_mode="explicit_z")
         ids = [s.mesh_entity_data["id"] for s in result]
 
-        # Same depth_z (50), so fall back to y: c_entity (y=50), then a/b (y=100, alphabetically)
-        assert ids == ["c_entity", "a_entity", "b_entity"]
+        # Same depth_z (50), so fall back to y: a/b (y=100, further back; alphabetically), then c_entity
+        assert ids == ["a_entity", "b_entity", "c_entity"]
 
     def test_complex_scene_with_explicit_z(self) -> None:
         """Complex scene with explicit_z should be deterministic."""

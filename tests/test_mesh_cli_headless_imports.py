@@ -9,7 +9,7 @@ import pytest
 from tests.subprocess_tools import run_checked
 
 
-def _run_blocking_arcade(code: str, *, cwd: Path) -> "subprocess.CompletedProcess[str]":
+def _run_blocking_arcade(code: str, *, cwd: Path, timeout_s: float = 60.0) -> "subprocess.CompletedProcess[str]":
     script = r"""
 import importlib.abc
 import sys
@@ -25,6 +25,7 @@ sys.meta_path.insert(0, _BlockArcade())
     return run_checked(
         [sys.executable, "-c", script],
         cwd=str(cwd),
+        timeout_s=timeout_s,
     )
 
 
@@ -54,5 +55,6 @@ def test_mesh_cli_verify_all_runs_headless_without_arcade(tmp_path: Path) -> Non
             f"raise SystemExit(int(main(['verify-all','--artifacts',{artifacts_dir.as_posix()!r}])))\n"
         ),
         cwd=repo_root,
+        timeout_s=1800,  # the whole pipeline (type check, scans, smokes): minutes, not the 60 s a quick command gets
     )
     assert result.returncode == 0, result.stderr + result.stdout

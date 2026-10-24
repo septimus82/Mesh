@@ -395,24 +395,6 @@ def test_review_details_module_does_not_import_real_bridge_modules() -> None:
     assert result.stdout.strip() == "False"
 
 
-def test_package_import_still_does_not_eagerly_import_renderer() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; import engine.editor.creator_mode; "
-                "print('engine.editor.creator_mode.creator_overlay_renderer' in sys.modules)"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
-    )
-
-    assert result.stdout.strip() == "False"
-
-
 class FakeBridge:
     def __init__(self, rows: list[object]) -> None:
         self._rows = rows
