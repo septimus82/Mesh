@@ -248,6 +248,11 @@
           "name": "label",
           "type": "string",
           "value": "Water"
+        },
+        {
+          "name": "casts_shadow",
+          "type": "bool",
+          "value": false
         }
       ]
     }

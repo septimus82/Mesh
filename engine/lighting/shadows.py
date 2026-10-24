@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import os
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 import engine.optional_arcade as optional_arcade
 from engine.arcade_compat import (
@@ -256,19 +256,74 @@ def light_shadow_polygons(
     # Rectangles cast like polygons, from their back edges: a shadow starting at the chord between the two
     # outermost corners covered part of the wall itself (all of it when lit from straight on).
     shapes = [[(r.x, r.y), (r.x + r.width, r.y), (r.x + r.width, r.y + r.height), (r.x, r.y + r.height)] for r in rects]
+    joined = _same_wall(rects)
     out: list[Polygon] = []
-    for points in shapes + polys:
+    for index, points in enumerate(shapes + polys):
         area = sum(x0 * y1 - x1 * y0 for (x0, y0), (x1, y1) in zip(points, [*points[1:], points[0]]))
         if area == 0:
             continue
+        neighbours = [rects[j] for j in joined[index]] if index < len(rects) else []
         for p0, p1 in zip(points, [*points[1:], points[0]]):
             # An edge facing away from the light (its outward side away from it) throws the shadow.
             ex, ey = p1[0] - p0[0], p1[1] - p0[1]
             nx, ny = (ey, -ex) if area > 0 else (-ey, ex)
             if nx * (lx - p0[0]) + ny * (ly - p0[1]) >= 0:
                 continue
-            out.append([(round(x, 3), round(y, 3)) for x, y in _shadow_behind(lx, ly, reach, p0, p1)])
+            pieces = [_shadow_behind(lx, ly, reach, p0, p1)]
+            for other in neighbours:  # one wall never shadows its own face (an L of tiles is several rectangles)
+                pieces = [part for piece in pieces for part in _minus_rect(piece, other)]
+            out.extend([(round(x, 3), round(y, 3)) for x, y in piece] for piece in pieces)
     return out
+
+
+def _same_wall(rects: Sequence[Rect]) -> list[list[int]]:
+    """For each rectangle, the others it touches through a chain of touching rectangles: one painted wall."""
+    group = list(range(len(rects)))
+
+    def root(i: int) -> int:
+        while group[i] != i:
+            group[i] = group[group[i]]
+            i = group[i]
+        return i
+
+    for i, a in enumerate(rects):  # ponytail: O(n^2) over the light's nearby rectangles (merged strips: few)
+        for j in range(i + 1, len(rects)):
+            b = rects[j]
+            if a.x <= b.x + b.width and b.x <= a.x + a.width and a.y <= b.y + b.height and b.y <= a.y + a.height:
+                group[root(i)] = root(j)
+    members: dict[int, list[int]] = {}
+    for i in range(len(rects)):
+        members.setdefault(root(i), []).append(i)
+    return [[j for j in members[root(i)] if j != i] for i in range(len(rects))]
+
+
+def _clip(poly: Polygon, keep: Callable[[Point], float]) -> Polygon:
+    """The part of a convex polygon where ``keep`` is >= 0 (a half-plane; Sutherland-Hodgman)."""
+    out: Polygon = []
+    for a, b in zip(poly, [*poly[1:], poly[0]]):
+        ka, kb = keep(a), keep(b)
+        if ka >= 0:
+            out.append(a)
+        if (ka >= 0) != (kb >= 0):
+            t = ka / (ka - kb)
+            out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+    return out
+
+
+def _minus_rect(poly: Polygon, r: Rect) -> list[Polygon]:
+    """A convex polygon less a rectangle: up to four convex pieces (left, right, below, above it)."""
+    xs, ys = [p[0] for p in poly], [p[1] for p in poly]
+    if max(xs) <= r.x or min(xs) >= r.x + r.width or max(ys) <= r.y or min(ys) >= r.y + r.height:
+        return [poly]
+    x0, x1, y0, y1 = r.x, r.x + r.width, r.y, r.y + r.height
+    pieces = [_clip(poly, lambda p: x0 - p[0])]
+    rest = _clip(poly, lambda p: p[0] - x0)
+    pieces.append(_clip(rest, lambda p: p[0] - x1))
+    rest = _clip(rest, lambda p: x1 - p[0])
+    pieces.append(_clip(rest, lambda p: y0 - p[1]))
+    pieces.append(_clip(_clip(rest, lambda p: p[1] - y0), lambda p: p[1] - y1))
+    return [piece for piece in pieces if len(piece) >= 3 and abs(sum(
+        ax * by - bx * ay for (ax, ay), (bx, by) in zip(piece, [*piece[1:], piece[0]]))) > 1e-6]
 
 
 def build_shadow_polygons_for_polys(

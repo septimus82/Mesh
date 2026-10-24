@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Mapping, Optional, Sequence
 
 from engine.geometry_tools import sanitize_poly
@@ -149,6 +150,115 @@ def _inline_collision_layer(tilemap_cfg: Mapping[str, Any], layer_id: str) -> di
         "layers": [{"type": "tilelayer", "name": layer_id, "data": tiles}]}
 
 
+# --- the shape of a wall tile (Milestone 12.2) -----------------------------------------------------------------
+# A rock, a bush or a tree painted on the walls layer blocks its whole tile, but its picture is round: cast as the
+# whole tile it threw a square shadow. A mostly see-through tile casts the outline of what is drawn on it instead
+# (a few-sided convex outline: shadows stay cheap). A tile its tileset marks ``casts_shadow: false`` (water)
+# casts none. Solid tiles cast as before: whole tiles, merged with their neighbours.
+FULL_TILE = 0.9  # this share of a tile's pixels drawn: it casts as the whole tile
+OUTLINE_POINTS = 12  # an outline's corners at most
+GID_MASK = 0x1FFFFFFF  # Tiled keeps flip flags in a gid's top bits
+_TILESET_SHAPES: dict[tuple[str, float], dict[int, list[tuple[float, float]] | None]] = {}
+
+
+def _convex_hull(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    pts = sorted(set(points))
+    if len(pts) < 3:
+        return pts
+
+    def cross(o: tuple[float, float], a: tuple[float, float], b: tuple[float, float]) -> float:
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    lower: list[tuple[float, float]] = []
+    upper: list[tuple[float, float]] = []
+    for pt in pts:
+        while len(lower) >= 2 and cross(lower[-2], lower[-1], pt) <= 0:
+            lower.pop()
+        lower.append(pt)
+    for pt in reversed(pts):
+        while len(upper) >= 2 and cross(upper[-2], upper[-1], pt) <= 0:
+            upper.pop()
+        upper.append(pt)
+    return lower[:-1] + upper[:-1]
+
+
+def _fewer_corners(poly: list[tuple[float, float]], limit: int) -> list[tuple[float, float]]:
+    """Drop the corners that matter least (the smallest triangle with their neighbours) down to ``limit``."""
+    poly = list(poly)
+    while len(poly) > limit:
+        n = len(poly)
+        areas = [abs((poly[i][0] - poly[i - 1][0]) * (poly[(i + 1) % n][1] - poly[i - 1][1])
+                     - (poly[(i + 1) % n][0] - poly[i - 1][0]) * (poly[i][1] - poly[i - 1][1])) for i in range(n)]
+        del poly[areas.index(min(areas))]
+    return poly
+
+
+def _tileset_shapes(tileset_file: Path) -> dict[int, list[tuple[float, float]] | None]:
+    """Local tile id -> its outline (tile pixels, x right, y up from the tile's bottom) or None (no shadow).
+    Tiles not listed cast as the whole tile. Cached per tileset file and change time."""
+    try:
+        key = (str(tileset_file), tileset_file.stat().st_mtime)
+    except OSError:
+        return {}
+    if key in _TILESET_SHAPES:
+        return _TILESET_SHAPES[key]
+    shapes: dict[int, list[tuple[float, float]] | None] = {}
+    try:
+        from PIL import Image  # noqa: PLC0415
+
+        data = json.loads(tileset_file.read_text(encoding="utf-8"))
+        tw, th = int(data["tilewidth"]), int(data["tileheight"])
+        columns, margin, spacing = int(data["columns"]), int(data.get("margin") or 0), int(data.get("spacing") or 0)
+        alpha = Image.open(tileset_file.parent / str(data["image"])).convert("RGBA").getchannel("A")
+        count = int(data.get("tilecount") or columns * ((alpha.height - margin + spacing) // (th + spacing)))
+    except (OSError, ValueError, KeyError, TypeError):
+        _TILESET_SHAPES[key] = shapes
+        return shapes
+    no_shadow = {int(t.get("id", -1)) for t in data.get("tiles") or [] if isinstance(t, dict)
+                 and any(isinstance(prop, dict) and prop.get("name") == "casts_shadow" and prop.get("value") is False
+                         for prop in t.get("properties") or [])}
+    for lid in range(count):
+        if lid in no_shadow:
+            shapes[lid] = None
+            continue
+        x0, y0 = margin + (lid % columns) * (tw + spacing), margin + (lid // columns) * (th + spacing)
+        cells = list(alpha.crop((x0, y0, x0 + tw, y0 + th)).getdata())
+        drawn = [(i % tw, i // tw) for i, value in enumerate(cells) if value > 128]
+        if len(drawn) >= FULL_TILE * tw * th:
+            continue
+        if not drawn:
+            shapes[lid] = None
+            continue
+        corners = [(float(x + dx), float(th - y - dy)) for x, y in drawn for dx in (0, 1) for dy in (0, 1)]
+        shapes[lid] = _fewer_corners(_convex_hull(corners), OUTLINE_POINTS)
+    _TILESET_SHAPES[key] = shapes
+    return shapes
+
+
+def tile_shapes(tilemap_cfg: Mapping[str, Any], scene_path: str | None) -> dict[int, list[tuple[float, float]] | None]:
+    """gid -> how that tile casts (see _tileset_shapes), from the map file's tilesets. Empty when the map or its
+    tilesets can't be found: every wall tile then casts as the whole tile, as before."""
+    map_rel = str(tilemap_cfg.get("path") or "").strip()
+    if not map_rel or not scene_path:
+        return {}
+    candidates = [resolve_path(str(scene_path)).parent / map_rel, resolve_path(map_rel)]
+    map_file = next((c for c in candidates if c.is_file()), None)
+    if map_file is None:
+        return {}
+    try:
+        tilesets = json.loads(map_file.read_text(encoding="utf-8")).get("tilesets") or []
+    except (OSError, ValueError):
+        return {}
+    out: dict[int, list[tuple[float, float]] | None] = {}
+    for entry in tilesets:
+        if not isinstance(entry, dict) or not entry.get("source"):
+            continue
+        first = int(entry.get("firstgid") or 1)
+        for lid, shape in _tileset_shapes((map_file.parent / str(entry["source"])).resolve()).items():
+            out[first + lid] = shape
+    return out
+
+
 def build_occluders_from_scene_payload(
     scene_payload: Mapping[str, Any],
     *,
@@ -215,6 +325,17 @@ def build_occluders_from_scene_payload(
                                         layer_data = [int(v or 0) for v in override_data]
 
                             grid = [layer_data[y * width : (y + 1) * width] for y in range(height)]
+                            shapes = tile_shapes(tilemap_cfg, scene_path)
+                            if shapes:  # see-through tiles cast their outline, one each; solid ones merge as before
+                                for row_i, row in enumerate(grid):
+                                    for col_i, gid in enumerate(row):
+                                        outline = shapes.get(int(gid) & GID_MASK, ()) if gid else ()
+                                        if not outline:
+                                            continue
+                                        bx, by = col_i * tile_w, (height - row_i - 1) * tile_h
+                                        occluders.append({"id": f"auto_{collision_layer_id}_tile_{bx}_{by}", "type": "poly",
+                                                          "points": [(bx + px, by + py) for px, py in outline]})
+                                grid = [[0 if gid and (int(gid) & GID_MASK) in shapes else gid for gid in row] for row in grid]
                             rects = build_occluders_from_tile_layer(grid, (tile_w, tile_h))
 
                             for r in rects:

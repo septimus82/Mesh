@@ -349,16 +349,30 @@ def _disc(size: float, count: int) -> list[tuple[float, float]]:
              math.sin(i * golden) * size * math.sqrt((i + 0.5) / count)) for i in range(count)]
 
 
+def _lamp_points(x: float, y: float, size: float, count: int, rects: Any, polys: Any) -> list[tuple[float, float]]:
+    """Where a soft lamp's light comes from: its disc's sample points, less those inside a wall. A point inside a
+    wall casts no shadow of it (light_shadow_polygons), so a lamp beside a wall leaked wedges of light behind it."""
+    from .shadows import _inside_polygon  # noqa: PLC0415
+
+    points = _disc(size, count)
+    if len(points) == 1:
+        return points  # a point lamp: as Milestone 12 (inside a wall it casts nothing of it)
+    clear = [(dx, dy) for dx, dy in points
+             if not any(r.x < x + dx < r.x + r.width and r.y < y + dy < r.y + r.height for r in rects)
+             and not any(_inside_polygon(x + dx, y + dy, poly) for poly in polys)]
+    return clear or [(0.0, 0.0)]
+
+
 def shadow_triangles(manager: Any, x: float, y: float, radius: float,
-                     look: tuple[float, int, float]) -> tuple[list[array], int, array]:
-    """The light's wall shadows: one triangle array per pass, how many shapes, and all passes joined. Cached per
-    light position, size and look."""
+                     look: tuple[float, int, float]) -> tuple[list[array], int, array, list[tuple[float, float]]]:
+    """The light's wall shadows: one triangle array per pass, how many shapes, all passes joined, and the lamp's
+    sample points the passes are cast from. Cached per light position, size and look."""
     from .shadows import cull_occluders_for_light, cull_polygons_for_light, light_shadow_polygons  # noqa: PLC0415
 
     size, count, strength = look
     reach = math.ceil(radius / 32.0) * 32.0  # flicker changes the radius: build for the next size up and reuse it
     key = (round(x, 1), round(y, 1), reach, size, count, strength)
-    cache: dict[Any, tuple[list[array], int, array]] = manager._shadow_cache
+    cache: dict[Any, tuple[list[array], int, array, list[tuple[float, float]]]] = manager._shadow_cache
     hit = cache.get(key)
     if hit is not None:
         return hit
@@ -367,7 +381,7 @@ def shadow_triangles(manager: Any, x: float, y: float, radius: float,
     near_polys = cull_polygons_for_light(x, y, reach + size, polys)
     passes: list[array] = []
     shapes_total = 0
-    points = _disc(size, count)
+    points = _lamp_points(x, y, size, count, near_rects, near_polys)
     for number, (dx, dy) in enumerate(points):
         triangles = array("f")
         shapes = light_shadow_polygons((x + dx, y + dy), reach, near_rects, near_polys)
@@ -381,7 +395,7 @@ def shadow_triangles(manager: Any, x: float, y: float, radius: float,
         joined.extend(part)
     if len(cache) > 512:  # a light moving every frame: keep the cache small
         cache.clear()
-    cache[key] = (passes, shapes_total, joined)
+    cache[key] = (passes, shapes_total, joined, points)
     return cache[key]
 
 
@@ -546,7 +560,8 @@ def render_shadowed_lighting(manager: Any) -> bool:
         if not casts.get(id(light), True):
             plain.append(spec)
             continue
-        walls, count, joined = shadow_triangles(manager, x, y, radius, look) if (rects or polys) else ([], 0, array("f"))
+        walls, count, joined, points = (shadow_triangles(manager, x, y, radius, look) if (rects or polys)
+                                        else ([], 0, array("f"), disc))
         near = [c for c in characters if math.hypot(c.feet[0] - x, c.feet[1] - y) < radius
                 and not (c.body[0] - 4 <= x <= c.body[2] + 4 and c.body[1] - 4 <= y <= c.body[3] + 4)]  # its own lamp
         if not count and not near:
@@ -554,11 +569,12 @@ def render_shadowed_lighting(manager: Any) -> bool:
             continue
         if near:  # walls and characters, pass by pass: each pass nearer than the last
             data = array("f")
-            for number, (ox, oy) in enumerate(disc):
+            for number, (ox, oy) in enumerate(points):
                 if walls:
                     data.extend(walls[number])
                 for char in near:
-                    _character_quad(char, x + ox, y + oy, radius, _pass_depth(number, len(disc)), look[2] / len(disc), data)
+                    _character_quad(char, x + ox, y + oy, radius, _pass_depth(number, len(points)), look[2] / len(points),
+                                    data)
             character_casts += len(near)
         else:
             data = joined
