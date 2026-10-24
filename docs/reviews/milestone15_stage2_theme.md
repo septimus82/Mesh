@@ -111,3 +111,7 @@ recent list; Studio uses a scratch copy of M14 Check.
    - All text should be in one font.
    - Every control should be where it was.
 3. **Segoe UI at your monitor's scaling.** Is the 10 pt button text comfortable? It was 11 pt Arial before.
+
+## Owner verdict
+
+**2026-10-24:** the owner tried Stage 2 and said it looks good. Stage 2 is accepted by the owner.
