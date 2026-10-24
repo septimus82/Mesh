@@ -30,13 +30,13 @@ def test_controls_hint_enqueued_once_on_hub_entry() -> None:
     assert first is True
     assert window.get_flag("hint_shown_controls") is True
     assert window.player_hud.toasts == [
-        "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  F2: Editor  H: Help",
+        "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help",
     ]
 
     second = maybe_enqueue_controls_hint_toast(window, scene_id=hub, seconds=4.0)
     assert second is False
     assert window.player_hud.toasts == [
-        "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  F2: Editor  H: Help",
+        "Q: Quest Log  Tab: Inventory  I: Inspector  C: Character  H: Help",
     ]
 
 
