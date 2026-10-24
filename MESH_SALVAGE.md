@@ -222,3 +222,16 @@ Report: [`docs/reviews/milestone12_1_lighting_polish.md`](docs/reviews/milestone
 | Lighting stats gain `character_feet`; the runtime snapshot's flicker `clock` to 4 decimals | Diagnostics; the lab checks each flicker sample against the formula | — |
 | `tooling/lighting_polish_lab.py` (in the runtime gate), `tests/test_natural_flicker.py`, `tests/test_character_shadows_gpu.py`, `tooling/flicker_plot.py` | Verification | GPU tests need `MESH_GL_SMOKE=1`; the lab runs them |
 | `tests/test_pipeline_lighting_no_silent_pass_contract.py`: baseline line numbers moved again | The same handlers, shifted | No handler added or removed |
+
+## Milestone 12.2: visual consistency, transitions, shadow verification
+
+Report: [`docs/reviews/milestone12_2_visual_consistency.md`](docs/reviews/milestone12_2_visual_consistency.md).
+
+| Change | Why | Note |
+|---|---|---|
+| Entity `picture_hidden` (any object) and `door_style` (`passage`, `map_art`); SceneTransition `area_width` / `area_height` | One door behaviour with three looks; a hidden picture still works (touch, press E) | Hidden sprites stay `visible` (the interaction system skips invisible ones) and are marked `mesh_drawn = False`: not drawn, no ground blob, no lamp shadow. Schema and loader updated; absent = as before |
+| Ground-shadow default by kind (`sprite_shadow_model.ground_shadow_default`): none for doors, transitions, arrival spots, hidden pictures | A round blob under a door looked like a mistake | An object's own `shadow_enabled` still wins; Look shows the effective value (`has_ground_shadow`) and stores only a difference |
+| See-through wall tiles cast their picture's convex outline (`occluders.tile_shapes`); tiles marked `casts_shadow: false` cast none (starter Water) | Rocks, bushes, trees cast squares; water cast wall shadows | Solid tiles still merge into rectangles; no map file found: as before. Existing projects keep their own tileset copy (Water there still casts until marked) |
+| One wall's touching rectangles never shadow each other's face (`shadows._same_wall`, `_minus_rect`) | A dark triangle on an L of wall tiles at the joint | Other walls' shadows still fall on walls |
+| Soft lamp sample points inside a wall are dropped (`light_compositor._lamp_points`) | Softer lamps beside a wall leaked wedges of light behind it | `shadow_triangles` now also returns the points; the character passes use them |
+| `tooling/scene_snapshot.py` (hidden GameWindow or Studio), `tooling/visual_polish_check.py`, `tests/test_door_presentation.py`, `tests/test_shadow_shapes.py`, `tests/test_shadow_corners_gpu.py` | Verification without taking over the desktop | The snapshot tool forces `visible=False` in its own process only |

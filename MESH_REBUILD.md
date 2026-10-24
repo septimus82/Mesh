@@ -530,6 +530,28 @@ can be tuned without losing the simple presets. Report:
 3. **Five new type-gate errors.** The first two 12.1 commits brought four, and a fifth turned up while flicker went in.
    All five are fixed, and the gate is back to 259.
 
+## Milestone 12.2 — visual consistency, transitions, shadow verification
+
+**Goal:** a game looks finished, not like a set of editor objects. Report:
+[`docs/reviews/milestone12_2_visual_consistency.md`](docs/reviews/milestone12_2_visual_consistency.md).
+From this milestone on, no test drives the owner's mouse or keyboard without permission. Verification is headless
+plus hidden-window renders of the real game and Studio.
+
+| Criterion | Status | Evidence |
+|---|---|---|
+| Doors: one SceneTransition, shown as Door / Invisible passage / Map artwork; picture hideable; area, walk-in and press-E | **Done** | `set_door`; Look tab "How it shows"; `tests/test_door_presentation.py`; hidden-window check 10/10 |
+| No round shadow under doors, passages, arrival spots, hidden pictures; characters keep theirs | **Done** | `ground_shadow_default`; check: door drawn without blob, passages not drawn |
+| Round objects: angular shadows? | **Real, fixed** | See-through wall tiles cast their outline; water none (`a3_rock.png`) |
+| Corner joints: partial wedges? | **Real, fixed (two causes)** | An L of tiles shadowed its own face; Softer lamps by a wall leaked light (2,506/5,101 px wrong, now 1). `tests/test_shadow_corners_gpu.py` |
+| Editor-only symbols absent in play | **Done** | Passage areas identical to the room without them; outlines only in Studio |
+
+**Deferred: needs someone at the screen.** A live walk through a passage, dragging and typing in the door panel, and
+the real-window suites touched by these changes:
+
+```
+py -3.13 tooling/runtime_gate.py --only shadow_lab lighting_polish_lab lighting creator
+```
+
 ## Known limitations (honest list)
 
 - **Starter art is simple:** a hero, a villager and a sign of Mesh's own (Milestone 11). The tileset still has no roof or door tiles.
