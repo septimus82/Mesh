@@ -55,6 +55,7 @@ from engine.studio_ui import (
     brand_texture,
     field_clipboard,
     gui,
+    make_button,
     set_app_icon,
 )
 from engine.world_controller import WorldController
@@ -817,13 +818,13 @@ class Studio(InspectorMixin):
         self.play_ui.clear()
         root = self.play_ui.add(gui.UIAnchorLayout())
         bar = gui.UIBoxLayout(vertical=False, space_between=8)
-        stop = gui.UIFlatButton(text="Stop (F4)", width=120, height=30, style=S_DANGER)
+        stop = make_button("Stop (F4)", width=120, height=30, style=S_DANGER)
         stop.on_click = lambda _e: self.stop()
         bar.add(stop)
-        flags = gui.UIFlatButton(text="Flags", width=80, height=30, style=S_ACTIVE if self.play_flags_open else S_BUTTON)
+        flags = make_button("Flags", width=80, height=30, style=S_ACTIVE if self.play_flags_open else S_BUTTON)
         flags.on_click = lambda _e: self._toggle_play_flags()
         bar.add(flags)
-        menu = gui.UIFlatButton(text="Menu (Esc)", width=110, height=30, style=S_BUTTON)  # save, load, exit
+        menu = make_button("Menu (Esc)", width=110, height=30, style=S_BUTTON)  # save, load, exit
         menu.on_click = lambda _e: dispatch_action(self.window, "pause_menu")
         bar.add(menu)
         root.add(bar, anchor_x="center", anchor_y="top", align_y=-6)
@@ -887,8 +888,8 @@ class Studio(InspectorMixin):
 
     # ==================================================================== UI construction
     def _button(self, text: str, action: Callable[[], object], *, width: int = 100, style: dict[str, Any] = S_BUTTON,
-                disabled: bool = False) -> gui.UIFlatButton:
-        button = gui.UIFlatButton(text=text, width=width, height=28, style=style)
+                disabled: bool = False, icon: str | None = None) -> gui.UIFlatButton:
+        button = make_button(text, width=width, height=28, style=style, icon=icon)
         button.disabled = disabled
 
         def on_click(_event: Any) -> None:
@@ -961,7 +962,7 @@ class Studio(InspectorMixin):
         box.add(self._label("Rooms", bold=True, size=12))
         for key, label, _path in self.project.rooms():
             style = S_ACTIVE if key == self.project.current else S_BUTTON
-            box.add(self._button(label, partial(self.switch_room, key), width=width, style=style))
+            box.add(self._button(label, partial(self.switch_room, key), width=width, style=style, icon="map"))
         box.add(self._button("+ New room", self._open_new_room, width=width))
         box.add(gui.UISpace(height=10))
         box.add(self._map_section(width))
@@ -1334,7 +1335,7 @@ class Studio(InspectorMixin):
         row = gui.UIBoxLayout(vertical=False, space_between=6)
         name = self.tilesets[self.sheet]["name"] if self.tilesets else "No tiles"
         row.add(self._button(name + ("  >" if len(self.tilesets) > 1 else ""), self.cycle_tileset,
-                             width=width - 92, disabled=len(self.tilesets) < 2))
+                             width=width - 92, disabled=len(self.tilesets) < 2, icon="layout-grid"))
         row.add(self._button("Import...", self.open_import, width=86))
         box.add(row)
         info = ops.map_info(self.project.scene()) or {}

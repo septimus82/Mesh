@@ -77,6 +77,91 @@ def brand_texture(name: str) -> Any | None:
     return _BRAND_TEXTURES[name]
 
 
+# Icons (Milestone 15 Stage 3): Lucide (ISC licence; assets/icons/lucide/LICENSE), drawn white by
+# tooling/make_icons.py and tinted with the button's own text colour, so selected, disabled, hover and danger
+# states need nothing of their own. A button's icon comes from its label, in this one table.
+ICONS = Path(__file__).resolve().parents[1] / "assets" / "icons"
+ICON_SIZE, ICON_GAP = 16, 6
+BUTTON_ICONS = {
+    "Play (F4)": "play", "Stop (F4)": "square", "Save": "save", "Undo": "undo-2", "Redo": "redo-2", "Flags": "flag",
+    "Lighting": "lightbulb", "AI": "sparkles", "Menu (Esc)": "menu",
+    # Ground / Walls / Above stay text-only: at 67 px, "Ground" and an icon don't fit, and the row stays alike.
+    "Select": "mouse-pointer-2", "Eraser": "eraser",
+    "Brush": "paintbrush", "Rect": "square", "Fill": "paint-bucket", "Import...": "image-plus", "Resize...": "scaling",
+    "Person": "user", "Sign": "signpost", "Empty object": "box", "Trigger zone": "square-dashed",
+    "Look": "eye", "Animation": "film", "Collision": "scan", "Dialogue": "message-square", "Conditions": "list-checks",
+    "Behaviours": "sliders-horizontal", "Delete object": "trash-2", "Choose picture...": "image", "Import PNG...": "upload",
+    "New Project": "folder-plus", "Open Project...": "folder-open", "Browse...": "folder", "Back": "arrow-left",
+    "Create & Open": "check",
+}
+_ICON_TEXTURES: dict[tuple[str, int], Any] = {}
+
+
+def icon_texture(name: str, size: int = ICON_SIZE) -> Any | None:
+    """A white icon from assets/icons as a texture (loaded once), or None if it isn't there."""
+    key = (name, size)
+    if key not in _ICON_TEXTURES:
+        path = ICONS / f"{name}_{size}.png"
+        _ICON_TEXTURES[key] = optional_arcade.arcade.load_texture(path) if path.is_file() else None
+    return _ICON_TEXTURES[key]
+
+
+_Image: Any = gui.UIImage  # arcade.gui comes through optional_arcade, untyped
+_FlatButton: Any = gui.UIFlatButton
+
+
+class TintedImage(_Image):
+    """An icon drawn in a colour: white artwork tinted to match the text beside it."""
+
+    def __init__(self, *, texture: Any, tint: tuple[int, ...] = C_TEXT, **kwargs: Any) -> None:
+        super().__init__(texture=texture, **kwargs)
+        self._tint = tint
+
+    @property
+    def tint(self) -> tuple[int, ...]:
+        return self._tint
+
+    @tint.setter
+    def tint(self, value: tuple[int, ...]) -> None:
+        if tuple(value) != tuple(self._tint):
+            self._tint = value
+            self.trigger_render()
+
+    def do_render(self, surface: Any) -> None:
+        self.prepare_render(surface)
+        a = optional_arcade.arcade
+        a.draw_texture_rect(self.texture, a.LBWH(0, 0, self.content_width, self.content_height),
+                            color=a.types.Color.from_iterable(self._tint))
+
+
+class IconButton(_FlatButton):
+    """A flat button with an icon left of its text, the pair centred. Same size, text and click target as a plain
+    button; the icon is left out if it's missing or the text wouldn't fit beside it."""
+
+    def __init__(self, *, icon: str | None = None, **kwargs: Any) -> None:
+        self._icon: TintedImage | None = None
+        super().__init__(**kwargs)
+        texture = icon_texture(icon) if icon else None
+        text_w = self.ui_label._label.content_width  # the text itself (the label widget's box adds padding)
+        if texture is None or text_w + ICON_SIZE + ICON_GAP + 8 > self.width:
+            return
+        style = self.get_current_style()
+        self._icon = TintedImage(texture=texture, width=ICON_SIZE, height=ICON_SIZE,
+                                 tint=style.get("font_color", C_TEXT) if style else C_TEXT)
+        self.place_text(anchor_x="center", align_x=(ICON_SIZE + ICON_GAP) / 2, anchor_y="center")
+        self.add(self._icon, anchor_x="center", align_x=-text_w / 2 - ICON_GAP / 2, anchor_y="center")
+
+    def _apply_style(self, style: Any) -> None:
+        super()._apply_style(style)
+        if self._icon is not None:
+            self._icon.tint = style.get("font_color", C_TEXT)
+
+
+def make_button(text: str, *, width: float, height: float, style: dict[str, Any], icon: str | None = None) -> Any:
+    """Mesh Studio's button: ``icon`` (a name in assets/icons), else the one its label has in BUTTON_ICONS."""
+    return IconButton(text=text, width=width, height=height, style=style, icon=icon or BUTTON_ICONS.get(text))
+
+
 def set_app_icon(window: Any) -> None:
     """Mesh Studio's icon (the brain-and-network mark) on ``window``'s title bar and taskbar button."""
     import pyglet  # noqa: PLC0415

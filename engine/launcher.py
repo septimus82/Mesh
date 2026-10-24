@@ -47,6 +47,7 @@ from engine.studio_ui import (
     brand_texture,
     field_clipboard,
     gui,
+    make_button,
     set_app_icon,
 )
 
@@ -300,7 +301,7 @@ class Launcher:
 
     def _button(self, text: str, action: Callable[[], None], *, width: int = 200, style: dict[str, Any] = S_BUTTON,
                 height: int = 32) -> Any:
-        button = gui.UIFlatButton(text=text, width=width, height=height, style=style)
+        button = make_button(text, width=width, height=height, style=style)
         button.on_click = lambda _e: action()
         return button
 
