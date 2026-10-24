@@ -60,6 +60,8 @@ DEFAULT_ENTITY: dict[str, Any] = {
 KNOWN_EXTRA_FIELDS = {
     "cast_shadow",
     "shadow_enabled",
+    "picture_hidden",
+    "door_style",
     "name",
     "mesh_name",
     "tag",

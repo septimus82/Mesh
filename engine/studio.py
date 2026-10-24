@@ -347,6 +347,10 @@ class Studio(InspectorMixin):
         return out
 
     def _bounds(self, entity: dict[str, Any], sprite: Any) -> tuple[float, float, float, float]:
+        if entity.get("tag") == "door" and ops.door_style(entity) != "door":  # a passage: its area, not a picture
+            door = ops.door_settings(entity)
+            if door["width"] > 0 and door["height"] > 0:
+                return float(entity.get("x", 0)), float(entity.get("y", 0)), door["width"], door["height"]
         if sprite is not None and entity.get("sprite") and getattr(sprite, "width", 0) > 2:
             return sprite.center_x, sprite.center_y, sprite.width, sprite.height
         return float(entity.get("x", 0)), float(entity.get("y", 0)), 32.0, 32.0
@@ -2097,7 +2101,8 @@ class Studio(InspectorMixin):
                 a.draw_lrbt_rectangle_filled(x0, x1, y0, y1, (255, 150, 40, 45))
                 a.draw_lrbt_rectangle_outline(x0, x1, y0, y1, (255, 160, 60), 2)
                 self._text(f"zone:{eid}", f"Zone: {entity.get('name') or ''}", cx, y1 + 4, (255, 180, 90))
-            elif not entity.get("sprite") and entity.get("tag") not in ("spawn_point", "door", "player"):
+            elif (not entity.get("sprite") or entity.get("picture_hidden") is True) and entity.get("tag") not in (
+                    "spawn_point", "door", "player"):
                 # No picture: invisible in the game, but it must be findable here.
                 a.draw_lrbt_rectangle_outline(cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2, (200, 200, 210, 140), 1)
                 self._text(f"blank:{eid}", str(entity.get("name") or "Object"), cx, cy + h / 2 + 4, (200, 200, 210))
@@ -2108,7 +2113,8 @@ class Studio(InspectorMixin):
                 # Walking into the picture takes the player through: show that area.
                 a.draw_lrbt_rectangle_filled(cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2, (240, 210, 140, 40))
                 a.draw_lrbt_rectangle_outline(cx - w / 2, cx + w / 2, cy - h / 2, cy + h / 2, (240, 210, 140), 1)
-                self._text(f"door:{eid}", str(entity.get("name") or "Door"), cx, cy + h / 2 + 4, (240, 210, 140))
+                style = {"passage": " (passage)", "map_art": " (map artwork)"}.get(ops.door_style(entity), "")
+                self._text(f"door:{eid}", str(entity.get("name") or "Door") + style, cx, cy + h / 2 + 4, (240, 210, 140))
             if showing_collision or eid == self.selected:
                 self._draw_collider(entity, float(entity.get("x", 0)), float(entity.get("y", 0)), w, h,
                                     bright=eid == self.selected)

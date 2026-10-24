@@ -396,6 +396,22 @@ def should_draw_shadow(
     return default_enabled
 
 
+NO_GROUND_SHADOW_TAGS = ("door", "spawn_point")
+
+
+def ground_shadow_default(entity_data: Dict[str, Any] | None) -> bool:
+    """Whether an object gets the small shadow under it when it doesn't say: things standing on the floor do.
+    Doors and passages (set in a wall, or not drawn at all), arrival spots and objects whose picture is hidden
+    don't: a round shadow under a door looked like a mistake."""
+    if not entity_data:
+        return True
+    if entity_data.get("tag") in NO_GROUND_SHADOW_TAGS or entity_data.get("picture_hidden") is True:
+        return False
+    names = {b if isinstance(b, str) else b.get("type") if isinstance(b, dict) else None
+             for b in entity_data.get("behaviours") or []}
+    return "SceneTransition" not in names
+
+
 def should_draw_contact_shadow(
     entity_data: Dict[str, Any] | None,
     *,
@@ -591,7 +607,7 @@ def compute_sprite_shadow(
     entity_data = getattr(sprite, "mesh_entity_data", None) or {}
 
     # Check if shadow enabled
-    if not should_draw_shadow(entity_data):
+    if not should_draw_shadow(entity_data, default_enabled=ground_shadow_default(entity_data)):
         return None
 
     # Get render depth values
@@ -681,7 +697,7 @@ def compute_sprite_multi_shadow(
     entity_data = getattr(sprite, "mesh_entity_data", None) or {}
 
     # Check if base shadow enabled
-    if not should_draw_shadow(entity_data):
+    if not should_draw_shadow(entity_data, default_enabled=ground_shadow_default(entity_data)):
         return None
 
     # Get render depth values

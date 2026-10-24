@@ -66,8 +66,11 @@ def _create_sprite(self, entity: dict[str, Any]) -> Any | None:
         sprite = scene_controller_module.optional_arcade.arcade.Sprite()
         sprite.texture = texture
         # Logic-only entities (arrival spots, triggers) keep the placeholder for their
-        # hitbox but are never drawn: players shouldn't see grey squares.
-        sprite.visible = bool(entity.get("sprite"))
+        # hitbox but are never drawn: players shouldn't see grey squares. An object with its picture hidden
+        # (a passage, a door over painted map art) is there to touch and use, but never drawn either.
+        hidden_picture = entity.get("picture_hidden") is True
+        sprite.visible = bool(entity.get("sprite")) or hidden_picture
+        cast(Any, sprite).mesh_drawn = bool(entity.get("sprite")) and not hidden_picture
         sprite.center_x = float(entity.get("x", 0))
         sprite.center_y = float(entity.get("y", 0))
         sprite.scale = float(entity.get("scale", 1.0))

@@ -452,7 +452,8 @@ def character_shadows(manager: Any, window: Any, atlas: Any) -> list[CharacterSh
     out: list[CharacterShadow] = []
     for sprite in sprites:
         data = getattr(sprite, "mesh_entity_data", None)
-        if not isinstance(data, dict) or not getattr(sprite, "visible", True) or getattr(sprite, "alpha", 255) < 20:
+        if (not isinstance(data, dict) or not getattr(sprite, "visible", True) or not getattr(sprite, "mesh_drawn", True)
+                or getattr(sprite, "alpha", 255) < 20):
             continue
         settings = _cast_settings(data)
         texture = getattr(sprite, "texture", None)

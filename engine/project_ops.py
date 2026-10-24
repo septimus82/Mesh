@@ -668,6 +668,65 @@ def with_tileset(map_doc: Doc, map_project_path: str, tileset_project_path: str,
 # =============================================================================================
 
 _UNSET: Any = object()
+
+
+# --- how a door shows (Milestone 12.2) ------------------------------------------------------------
+# One door behaviour (SceneTransition); three ways to show it. A door picture; an invisible passage (an area the
+# player walks into, outlined only in Studio); or an area over a door, stairs or opening painted on the map. The
+# hidden styles keep the picture (hidden: picture_hidden) so choosing "door" again brings it back.
+DOOR_STYLES = ("door", "passage", "map_art")
+DOOR_STYLE_AREA = {"passage": (64.0, 64.0), "map_art": (32.0, 32.0)}  # a new area's size: a walkway, one tile
+
+
+def door_style(entity: Doc) -> str:
+    """How the door shows: "door" (its picture), "passage" or "map_art"."""
+    style = entity.get("door_style")
+    return style if style in DOOR_STYLES else "door"
+
+
+def door_settings(entity: Doc) -> Doc:
+    """A door's style, its area (when it has one), and how the player goes through: walking in, pressing E."""
+    config = (entity.get("behaviour_config") or {}).get("SceneTransition") or {}
+    return {"style": door_style(entity), "width": float(config.get("area_width") or 0),
+            "height": float(config.get("area_height") or 0),
+            "touch": bool(config.get("trigger_on_touch", False)), "interact": bool(config.get("allow_interact", True))}
+
+
+def set_door(scene: Doc, entity_id: str, *, style: Any = _UNSET, width: Any = _UNSET, height: Any = _UNSET,
+             touch: Any = _UNSET, interact: Any = _UNSET) -> Doc:
+    """Change how a door shows and works. ``style``: "door" (a picture; the starter door if it has none),
+    "passage" or "map_art" (the picture hidden, an area instead). ``width``/``height``: the area (px).
+    ``touch``: walking into it goes through; ``interact``: pressing E beside it does. One of them stays on."""
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    config = _behaviour_config(entity, "SceneTransition", create=False)
+    if config is None:
+        raise OpError("That object isn't a door (it has no SceneTransition).")
+    if style is not _UNSET:
+        if style not in DOOR_STYLES:
+            raise OpError(f"A door shows as one of: {', '.join(DOOR_STYLES)}.")
+        if style == "door":
+            entity.pop("door_style", None)
+            entity.pop("picture_hidden", None)
+            entity.setdefault("sprite", DOOR_SPRITE)
+            config.pop("area_width", None)
+            config.pop("area_height", None)
+        else:
+            entity["door_style"], entity["picture_hidden"] = style, True
+            if not config.get("area_width") or not config.get("area_height"):
+                config["area_width"], config["area_height"] = DOOR_STYLE_AREA[style]
+    for key, value in (("area_width", width), ("area_height", height)):
+        if value is not _UNSET:
+            if door_style(entity) == "door":
+                raise OpError("A door picture is its own area; choose Invisible passage or Map artwork to size one.")
+            config[key] = round(_number(value, "The area's size", 8, 2048), 1)
+    if touch is not _UNSET:
+        config["trigger_on_touch"] = bool(touch)
+    if interact is not _UNSET:
+        config["allow_interact"] = bool(interact)
+    if not config.get("trigger_on_touch") and not config.get("allow_interact", True):
+        raise OpError("A door needs a way through: walking into it, pressing E, or both.")
+    return _checked(scene, out)
 _FLAG_NAME = re.compile(r"^[A-Za-z0-9_.:-]+$")
 DIRECTIONS = ("down", "left", "right", "up")
 
@@ -842,6 +901,15 @@ def casts_shadow(entity: Doc) -> bool:
     return entity.get("tag") in CHARACTER_TAGS
 
 
+def has_ground_shadow(entity: Doc) -> bool:
+    """Whether the object has the small shadow under it: its own setting, else the default for what it is
+    (yes for things on the floor; no for doors, passages, arrival spots and hidden pictures)."""
+    from engine.sprite_shadow_model import ground_shadow_default  # noqa: PLC0415
+
+    value = entity.get("shadow_enabled")
+    return bool(value) if isinstance(value, bool) else ground_shadow_default(entity)
+
+
 def set_shadows(scene: Doc, entity_id: str, *, ground: Any = _UNSET, cast: Any = _UNSET, height: Any = _UNSET,
                 strength: Any = _UNSET, length: Any = _UNSET) -> Doc:
     """An object's shadows: ``ground`` (the small shadow under its feet) and ``cast`` (its shadow from lamps).
@@ -852,10 +920,11 @@ def set_shadows(scene: Doc, entity_id: str, *, ground: Any = _UNSET, cast: Any =
     out = copy.deepcopy(scene)
     entity = find_entity(out, entity_id)
     if ground is not _UNSET:
-        if ground is None or ground is True:
-            entity.pop("shadow_enabled", None)  # on is the default
-        else:
-            entity["shadow_enabled"] = False
+        from engine.sprite_shadow_model import ground_shadow_default  # noqa: PLC0415
+
+        entity.pop("shadow_enabled", None)
+        if ground is not None and bool(ground) != ground_shadow_default(entity):
+            entity["shadow_enabled"] = bool(ground)  # only what differs from the default is stored
     value = entity.get("cast_shadow")
     settings: Doc = dict(value) if isinstance(value, dict) else ({"enabled": value} if isinstance(value, bool) else {})
     if cast is not _UNSET:

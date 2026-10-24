@@ -234,6 +234,15 @@
       "type": "boolean",
       "description": "The small ground shadow under the object's feet"
     },
+    "picture_hidden": {
+      "type": "boolean",
+      "description": "The picture is not drawn in the game; the object still works (a passage, a door over map art)"
+    },
+    "door_style": {
+      "type": "string",
+      "enum": ["passage", "map_art"],
+      "description": "How a door shows: an invisible passage, or an area over a door painted on the map (none: a door picture)"
+    },
     "solid": {
       "type": "boolean"
     },

@@ -39,6 +39,11 @@ def _tabs_for(entity: dict[str, Any]) -> tuple[tuple[str, str], ...]:
         return tuple(t for t in TABS if t[0] in _DOOR_TABS)
     return TABS
 THUMB = 96  # picture and animation previews, in pixels
+_DOOR_STYLE_HELP = {  # short lines: they must not need wrapping
+    "door": ("A door picture the player goes through.", "Change the picture below; it blocks no one."),
+    "passage": ("Not drawn in the game: an opening, a way off the map.", "It works in its outlined area."),
+    "map_art": ("Not drawn: put its area over a door or stairs", "you painted on the map."),
+}
 IMAGE_FILES = [("Images", "*.png *.gif *.bmp *.jpg *.jpeg *.webp"), ("All files", "*.*")]
 
 
@@ -236,7 +241,9 @@ class InspectorMixin:
         config = (entity.get("behaviour_config") or {}).get("SceneTransition") or {}
         rooms = {key: label for key, label, _path in self.project.rooms()}
         where = rooms.get(str(config.get("target_scene") or ""), "another room")
-        return (f"A door to {where}: the player goes through by walking into it (its outlined area on the map). "
+        door = ops.door_settings(entity)
+        how = " or ".join(w for w, on in (("walking into it", door["touch"]), ("pressing E beside it", door["interact"])) if on)
+        return (f"A door to {where}: the player goes through by {how} (its outlined area on the map). "
                 "The arrival spot shows where they come back in.")
 
     def _open_tab(self, key: str) -> None:
@@ -246,6 +253,11 @@ class InspectorMixin:
     # ---------------------------------------------------------------- Look
     def _look_tab(self, rows: Rows, entity: dict[str, Any], width: int) -> None:
         target, sprite = entity["id"], str(entity.get("sprite") or "")
+        if entity.get("tag") == "door" and "SceneTransition" in ops.entity_behaviours(entity):
+            self._door_look(rows, entity, width)
+            if ops.door_style(entity) != "door":
+                self._shadow_settings(rows, entity, width)
+                return
         rows.add(self._label("Picture", bold=True, size=12))
         if sprite:
             space = gui.UISpace(width=THUMB, height=THUMB)
@@ -286,6 +298,39 @@ class InspectorMixin:
         rows.add(self._label("To change the picture with the story (a dug grave), use Conditions.", color=C_MUTED, size=9, width=width))
         self._shadow_settings(rows, entity, width)
 
+    def _door_look(self, rows: Rows, entity: dict[str, Any], width: int) -> None:
+        """How a door shows (a picture, an invisible passage, or an area over painted map art) and how the player
+        goes through it. One door behaviour underneath; the style only changes what is drawn."""
+        target, door = entity["id"], ops.door_settings(entity)
+        rows.add(self._label("How it shows", bold=True, size=12))
+        third = (width - 8) // 3
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for style, text in (("door", "Door"), ("passage", "Passage"), ("map_art", "Map artwork")):
+            row.add(self._button(text, partial(self._set_door, target, f"Shows as: {text.lower()}.", style=style),
+                                 width=third, style=S_ACTIVE if door["style"] == style else S_BUTTON))
+        rows.add(row)
+        for line in _DOOR_STYLE_HELP[door["style"]]:
+            rows.add(self._label(line, color=C_MUTED, size=9))
+        if door["style"] != "door":
+            field_w = width - 122
+            for label, key in (("Area width (px)", "width"), ("Area height (px)", "height")):
+                self._labeled(rows, label, self._field(f"{door[key]:g}", partial(self._set_door_area, target, key),
+                                                       width=field_w, key=f"door_{key}"), width)
+        half = (width - 6) // 2
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._toggle("Walk in", door["touch"], lambda on: self._edit(
+            lambda s: ops.set_door(s, target, touch=on), "Walking into it goes through." if on else "Walking in does nothing."), half))
+        row.add(self._toggle("Press E", door["interact"], lambda on: self._edit(
+            lambda s: ops.set_door(s, target, interact=on), "Pressing E beside it goes through." if on else "E does nothing."), half))
+        rows.add(row)
+        rows.add(gui.UISpace(height=6))
+
+    def _set_door(self, target: str, message: str, **change: Any) -> None:
+        self._edit(lambda s: ops.set_door(s, target, **change), message)
+
+    def _set_door_area(self, target: str, key: str, text: str) -> None:
+        self._set_door(target, "Area changed.", **{key: text})
+
     def _shadow_settings(self, rows: Rows, entity: dict[str, Any], width: int) -> None:
         """The object's two shadows: the small one under its feet, and the one lamps cast of it."""
         target = entity["id"]
@@ -293,7 +338,7 @@ class InspectorMixin:
         rows.add(self._label("Shadows", bold=True, size=12))
         half = (width - 6) // 2
         row = gui.UIBoxLayout(vertical=False, space_between=6)
-        row.add(self._toggle("Under feet", entity.get("shadow_enabled", True) is not False,
+        row.add(self._toggle("Under feet", ops.has_ground_shadow(entity),
                              lambda on: self._edit(lambda s: ops.set_shadows(s, target, ground=on),
                                                    "Shadow under its feet." if on else "No shadow under its feet."), half))
         casting = ops.casts_shadow(entity)

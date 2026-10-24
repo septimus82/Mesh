@@ -41,7 +41,8 @@ def draw(self) -> None:
     for layer in self._layer_draw_order():
         # The draw plan renders sprites itself, bypassing SpriteList's handling of
         # ``visible``, so hidden sprites (e.g. arrival markers) must be left out here.
-        all_sprites.extend(sprite for sprite in layer if getattr(sprite, "visible", True))
+        all_sprites.extend(sprite for sprite in layer
+                           if getattr(sprite, "visible", True) and getattr(sprite, "mesh_drawn", True))
     self._set_world_entities_counter(len(all_sprites))
 
     ctx = scene_controller_module.build_render_context(
