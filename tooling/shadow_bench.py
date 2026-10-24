@@ -154,6 +154,7 @@ class Bench:
         ctx = self.window.ctx
         started = time.perf_counter()
         for _ in range(frames):
+            self.manager.update(1 / 60)  # flicker moves, as in the game
             self.draw()
             ctx.finish()
             self.window.flip()
@@ -191,6 +192,12 @@ def bench_scenes() -> dict[str, Scene]:
     lights_many = [light(80 + 120 * i, 120 + 160 * (i % 2), 180, ["#ffcc88", "#88bbff", "#ff5555", "#66ff77"][i % 4])
                    for i in range(5)]
     lights_crowd = [light(40 + 70 * i, 60 + 90 * (i % 5), 160, "#ffcc88") for i in range(10)]
+    two = [light(200, 240, 260), light(460, 300, 260, "#ffcc88")]
+
+    def hero(x: float, y: float, frame: int = 0) -> tuple[float, float, int, dict[str, Any]]:
+        return (x, y, frame, {"tag": "npc"})
+
+    crowd = [hero(120 + 80 * i, 160 + 70 * (i % 2), (i * 5) % 16) for i in range(6)]
     return {
         "one_light_few_walls": Scene(lights=[light(200, 240)], walls=few),
         "five_lights_overlapping": Scene(lights=lights_many, walls=few),
@@ -199,6 +206,19 @@ def bench_scenes() -> dict[str, Scene]:
         "five_lights_no_shadows": Scene(lights=lights_many, walls=few, shadows="none"),
         "crowded_soft": Scene(lights=lights_crowd, walls=grid, settings={"lighting_shadow_softness": "soft"}),
         "crowded_softer": Scene(lights=lights_crowd, walls=grid, settings={"lighting_shadow_softness": "softer"}),
+        # Milestone 12.1: characters casting shadows, flickering lamps.
+        "two_lights_1_character": Scene(lights=two, walls=few, characters=[hero(320, 240)]),
+        "two_lights_6_characters": Scene(lights=two, walls=few, characters=crowd),
+        "two_lights_6_characters_soft": Scene(lights=two, walls=few, characters=crowd, settings={"lighting_shadow_softness": "soft"}),
+        "two_lights_6_characters_softer": Scene(lights=two, walls=few, characters=crowd,
+                                                settings={"lighting_shadow_softness": "softer"}),
+        "two_lights_6_characters_softer_high": Scene(lights=two, walls=few, characters=crowd,
+                                                     settings={"lighting_shadow_softness": "softer", "lighting_shadow_quality": "high"}),
+        "two_lights_6_characters_zoom_2": Scene(lights=two, walls=few, characters=crowd, zoom=2.0, camera=(160.0, 120.0)),
+        "two_torches_6_characters": Scene(lights=[{**lamp, "flicker_enabled": True, "flicker_preset": "torch"} for lamp in two],
+                                          walls=few, characters=crowd),
+        "two_lights_6_characters_no_character_shadows": Scene(lights=two, walls=few, characters=crowd,
+                                                              settings={"lighting_character_shadows": False}),
     }
 
 

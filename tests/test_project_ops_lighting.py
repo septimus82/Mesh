@@ -165,3 +165,8 @@ def test_shadow_fine_tuning_applies_only_in_its_room() -> None:
     configure_scene_lighting(window, {"settings": {}}, {}, "b.json")
     assert (lighting.shadow_edge_px, lighting.shadow_strength, lighting.shadow_quality, lighting.character_shadows) \
         == (None, 1.0, "normal", True)
+
+
+def test_shadow_fine_tuning_back_at_its_defaults_stores_nothing() -> None:
+    room = ops.set_room_lighting(_scene(), shadow_strength=0.5, quality="high")
+    assert ops.set_room_lighting(room, shadow_strength=1, quality="normal")["settings"] == {}

@@ -1560,13 +1560,14 @@ def set_room_lighting(scene: Doc, *, enabled: Any = _UNSET, ambient: Any = _UNSE
         else:
             settings["lighting_shadow_edge"] = round(_number(edge, "The shadow edge", 0, 48), 1)
     if shadow_strength is not _UNSET:
-        if shadow_strength is None or shadow_strength == "":
-            settings.pop("lighting_shadow_strength", None)
+        value = None if shadow_strength in (None, "") else round(_number(shadow_strength, "The shadow strength", 0, 1), 2)
+        if value is None or value == 1.0:
+            settings.pop("lighting_shadow_strength", None)  # full strength is the default
         else:
-            settings["lighting_shadow_strength"] = round(_number(shadow_strength, "The shadow strength", 0, 1), 2)
+            settings["lighting_shadow_strength"] = value
     if quality is not _UNSET:
-        if quality is None:
-            settings.pop("lighting_shadow_quality", None)
+        if quality is None or quality == "normal":
+            settings.pop("lighting_shadow_quality", None)  # normal is the default
         elif quality in SHADOW_QUALITY:
             settings["lighting_shadow_quality"] = quality
         else:
