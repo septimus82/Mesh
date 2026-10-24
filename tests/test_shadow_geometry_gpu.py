@@ -108,7 +108,8 @@ def bench():
 
 
 def _mismatches(bench, light: Point, radius: float, rects: list, polys: list) -> tuple[int, int, list]:
-    from shadow_bench import Scene, light as lamp
+    from shadow_bench import Scene
+    from shadow_bench import light as lamp
 
     walls = [tuple(r) for r in rects]
     shapes = [_rect_poly(*r) for r in rects] + [list(p) for p in polys]
