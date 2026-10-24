@@ -1,0 +1,339 @@
+{
+ "renderer": "new",
+ "examples": {
+  "open": {
+   "lit_open": [
+    152,
+    152,
+    165
+   ],
+   "behind_wall": [
+    41,
+    41,
+    53
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    137,
+    137,
+    149
+   ]
+  },
+  "A_one_lantern_one_wall": {
+   "lit_open": [
+    152,
+    152,
+    165
+   ],
+   "behind_wall": [
+    25,
+    25,
+    38
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    137,
+    137,
+    149
+   ]
+  },
+  "B_two_lanterns": {
+   "lit_open": [
+    152,
+    152,
+    165
+   ],
+   "behind_wall": [
+    32,
+    34,
+    51
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    137,
+    137,
+    149
+   ]
+  },
+  "B_only_lantern_b": {
+   "lit_open": [
+    25,
+    25,
+    38
+   ],
+   "behind_wall": [
+    32,
+    34,
+    51
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    25,
+    25,
+    38
+   ]
+  },
+  "C_no_lights": {
+   "lit_open": [
+    25,
+    25,
+    38
+   ],
+   "behind_wall": [
+    25,
+    25,
+    38
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    25,
+    25,
+    38
+   ]
+  },
+  "C_no_lights_shadows_off": {
+   "lit_open": [
+    25,
+    25,
+    38
+   ],
+   "behind_wall": [
+    25,
+    25,
+    38
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    25,
+    25,
+    38
+   ]
+  },
+  "D_daylight": {
+   "lit_open": [
+    253,
+    253,
+    247
+   ],
+   "behind_wall": [
+    125,
+    125,
+    119
+   ],
+   "far_dark": [
+    125,
+    125,
+    119
+   ],
+   "between": [
+    237,
+    237,
+    231
+   ]
+  },
+  "D_daylight_no_lamp": {
+   "lit_open": [
+    125,
+    125,
+    119
+   ],
+   "behind_wall": [
+    125,
+    125,
+    119
+   ],
+   "far_dark": [
+    125,
+    125,
+    119
+   ],
+   "between": [
+    125,
+    125,
+    119
+   ]
+  },
+  "A_shadows_off": {
+   "lit_open": [
+    152,
+    152,
+    165
+   ],
+   "behind_wall": [
+    41,
+    41,
+    53
+   ],
+   "far_dark": [
+    25,
+    25,
+    38
+   ],
+   "between": [
+    137,
+    137,
+    149
+   ]
+  }
+ },
+ "bench": {
+  "one_light_few_walls": {
+   "frame_ms": 1.367,
+   "frames": 240,
+   "cpu_ms": 0.564,
+   "gpu_ms": 0.023,
+   "stats": {
+    "shadows_mode": "hard",
+    "renderer": "per_light",
+    "lights": 1,
+    "lights_drawn": 1,
+    "lights_off_screen": 0,
+    "shadowed_lights": 1,
+    "shadow_light_budget": 16,
+    "lights_over_budget": 0,
+    "occluder_count": 3,
+    "shadow_poly_count": 7,
+    "shadow_triangles": 20,
+    "shadow_softness": "sharp"
+   }
+  },
+  "five_lights_overlapping": {
+   "frame_ms": 1.784,
+   "frames": 240,
+   "cpu_ms": 1.043,
+   "gpu_ms": 0.068,
+   "stats": {
+    "shadows_mode": "hard",
+    "renderer": "per_light",
+    "lights": 5,
+    "lights_drawn": 5,
+    "lights_off_screen": 0,
+    "shadowed_lights": 4,
+    "shadow_light_budget": 16,
+    "lights_over_budget": 0,
+    "occluder_count": 3,
+    "shadow_poly_count": 15,
+    "shadow_triangles": 45,
+    "shadow_softness": "sharp"
+   }
+  },
+  "crowded_10_lights_42_pillars": {
+   "frame_ms": 4.026,
+   "frames": 240,
+   "cpu_ms": 2.07,
+   "gpu_ms": 0.181,
+   "stats": {
+    "shadows_mode": "hard",
+    "renderer": "per_light",
+    "lights": 10,
+    "lights_drawn": 10,
+    "lights_off_screen": 0,
+    "shadowed_lights": 10,
+    "shadow_light_budget": 16,
+    "lights_over_budget": 0,
+    "occluder_count": 42,
+    "shadow_poly_count": 246,
+    "shadow_triangles": 529,
+    "shadow_softness": "sharp"
+   }
+  },
+  "crowded_zoom_2": {
+   "frame_ms": 3.655,
+   "frames": 240,
+   "cpu_ms": 1.715,
+   "gpu_ms": 0.14,
+   "stats": {
+    "shadows_mode": "hard",
+    "renderer": "per_light",
+    "lights": 10,
+    "lights_drawn": 8,
+    "lights_off_screen": 2,
+    "shadowed_lights": 8,
+    "shadow_light_budget": 16,
+    "lights_over_budget": 0,
+    "occluder_count": 42,
+    "shadow_poly_count": 210,
+    "shadow_triangles": 452,
+    "shadow_softness": "sharp"
+   }
+  },
+  "five_lights_no_shadows": {
+   "frame_ms": 1.01,
+   "frames": 240,
+   "cpu_ms": 0.309,
+   "gpu_ms": 0.031,
+   "stats": {}
+  },
+  "crowded_soft": {
+   "frame_ms": 4.704,
+   "frames": 240,
+   "cpu_ms": 2.607,
+   "gpu_ms": 0.433,
+   "stats": {
+    "shadows_mode": "hard",
+    "renderer": "per_light",
+    "lights": 10,
+    "lights_drawn": 10,
+    "lights_off_screen": 0,
+    "shadowed_lights": 10,
+    "shadow_light_budget": 16,
+    "lights_over_budget": 0,
+    "occluder_count": 42,
+    "shadow_poly_count": 3185,
+    "shadow_triangles": 6827,
+    "shadow_softness": "soft"
+   }
+  },
+  "crowded_softer": {
+   "frame_ms": 5.175,
+   "frames": 240,
+   "cpu_ms": 3.073,
+   "gpu_ms": 0.614,
+   "stats": {
+    "shadows_mode": "hard",
+    "renderer": "per_light",
+    "lights": 10,
+    "lights_drawn": 10,
+    "lights_off_screen": 0,
+    "shadowed_lights": 10,
+    "shadow_light_budget": 16,
+    "lights_over_budget": 0,
+    "occluder_count": 42,
+    "shadow_poly_count": 4647,
+    "shadow_triangles": 9996,
+    "shadow_softness": "softer"
+   }
+  }
+ },
+ "gl": {
+  "version": [
+   4,
+   6
+  ],
+  "renderer": "NVIDIA GeForce RTX 4070/PCIe/SSE2"
+ }
+}

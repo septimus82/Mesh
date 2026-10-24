@@ -191,3 +191,19 @@ Report: [`docs/reviews/milestone11_creator_experience.md`](docs/reviews/mileston
 | Animator fits the hit box to each new frame; measures movement when there's no velocity | Shadows and depth sorting used the whole sheet; patrolling NPCs never walked or turned | Same as the frame-list animator already did |
 | `project_ops.add_line(link=False)` | "+ Separate line" | Default unchanged |
 | Studio layout dump: labels, the game menu and active toasts | The Milestone 11 acceptance test | Test-only (`MESH_STUDIO_LAYOUT`) |
+
+## Milestone 12: shadows that belong to their light
+
+Report: [`docs/reviews/milestone12_shadow_quality.md`](docs/reviews/milestone12_shadow_quality.md).
+
+| Change | Why | Note |
+|---|---|---|
+| With shadows on, `LightManager` draws through `engine/lighting/light_compositor.py`: per-light occlusion masks, `final = diffuse * (ambient + sum light_i * (1 - occlusion_i))` | The overlay painted black over the room light and every other lamp, from one chosen light | Shadows off: Arcade's `LightLayer.draw()` exactly as before. GPU failure: lit without shadows, `shadows_unavailable` in the stats |
+| **Kept for comparison, not deleted:** `end_hard_shadows_overlay` behind `MESH_SHADOWS_RENDERER=legacy` | Before/after measurements | Retire with `end_hard_shadows_composite` (still unreachable), `hard_shadows_backend.py` and `shadow_selection` once the owner has seen the new shadows |
+| `shadows.light_shadow_polygons`: back-edge, arc-ended shadows on one shared reach; rectangles cast like polygons | Lit wedges behind long slanted walls, cracks between joined walls, walls shadowing themselves | `build_shadow_polygons` and `build_shadow_polygons_v1` unchanged (legacy path and their tests) |
+| Soft edges: `lighting_shadow_softness` (`sharp`, `soft`, `softer`) per room and in the project config; the lamp sampled as a disc | Controlled softness without blurring the scene | **New config key** (schema updated); default `sharp`. The pause menu's "Soft Shadows" runtime toggle still does nothing (it fed only the unreachable composite path) |
+| Light `"shadows": false` (schema updated); ops `set_light(shadows=)`, `set_room_lighting(softness=)` | Per-light control | No key means it casts shadows, as before |
+| A room without `lighting_shadows_mode` follows the project's | It kept the previous room's: lighting state leaked between rooms | `MESH_SHADOWS_MODE` still overrides |
+| `MESH_LIGHTING_PROFILE=1`: GPU timer and CPU time around `lighting.end()`; the runtime snapshot carries `profile` and the renderer's `stats` | Measured performance | Off by default (reading a GPU timer waits for the GPU) |
+| `tooling/shadow_bench.py`, `tooling/shadow_lab.py` (in the runtime gate), `tests/test_shadow_*_gpu.py` (`MESH_GL_SMOKE=1`) | Pixel-level verification | The lab runs the GPU tests too |
+| `tests/test_pipeline_lighting_no_silent_pass_contract.py`: baseline line numbers moved | The same handlers, shifted by new lines | No handler added or removed |
