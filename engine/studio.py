@@ -31,10 +31,12 @@ from engine.studio_inspector import InspectorMixin, Rows, row_height
 from engine.studio_project import Project
 from engine.studio_ui import (
     C_BG,
+    C_CANVAS,
     C_ERROR,
     C_FIELD,
     C_FIELD_EDGE,
     C_LINE,
+    C_MAP_EDGE,
     C_MUTED,
     C_OK,
     C_PANEL,
@@ -1867,6 +1869,7 @@ class Studio(InspectorMixin):
             w.camera.use()
         else:
             w.scene_controller.draw()
+        self._draw_canvas()
         self._draw_world_overlay()
         w.camera_controller.use_gui_camera()
         self._draw_panels()
@@ -2027,7 +2030,7 @@ class Studio(InspectorMixin):
         for row in range(rows + 1):
             points += [(0, row * th), (map_w, row * th)]
         a.draw_lines(points, (255, 255, 255, 70 if painting else 26), 1)
-        a.draw_lrbt_rectangle_outline(0, map_w, 0, map_h, (255, 255, 255, 120), 2)
+        a.draw_lrbt_rectangle_outline(0, map_w, 0, map_h, C_MAP_EDGE, 2)
         if self.stroke is not None and "start" in self.stroke:
             start, end = self.stroke["start"], self.stroke["end"]
             self._draw_cells(info, ops.rect_cells(start, end), (min(start[0], end[0]), min(start[1], end[1])), hover=False)
@@ -2126,6 +2129,23 @@ class Studio(InspectorMixin):
             a.draw_lrbt_rectangle_filled(space.left + cols * tile * scale, space.right, space.bottom, space.top, (220, 60, 60, 110))
         if image.height % tile:
             a.draw_lrbt_rectangle_filled(space.left, space.right, space.bottom, space.top - rows * tile * scale, (220, 60, 60, 110))
+
+    def _draw_canvas(self) -> None:
+        """The workspace around the map in graphite, so the map stands out (Milestone 15 Stage 3). It covers only
+        what lies outside the map's bounds (lit rooms left that black), before the editor's overlays; anything
+        overhanging the edge still shows through, dimmed. The map itself is untouched."""
+        info = ops.map_info(self.project.scene())
+        if info is None:
+            return
+        map_w, map_h = info["width"] * info["tilewidth"], info["height"] * info["tileheight"]
+        left, right, bottom, top = self._map_rect()
+        x0, y0 = (float(v) for v in self.window.camera.unproject((left, bottom))[:2])
+        x1, y1 = (float(v) for v in self.window.camera.unproject((right, top))[:2])
+        colour = (*C_CANVAS, 230)
+        a = optional_arcade.arcade
+        for l_, r_, b_, t_ in ((x0, 0, y0, y1), (map_w, x1, y0, y1), (0, map_w, y0, 0), (0, map_w, map_h, y1)):
+            if r_ > l_ and t_ > b_:
+                a.draw_lrbt_rectangle_filled(l_, r_, b_, t_, colour)
 
     def _draw_world_overlay(self) -> None:
         a = optional_arcade.arcade

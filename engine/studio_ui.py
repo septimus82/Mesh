@@ -18,6 +18,8 @@ gui = optional_arcade.gui()
 # The theme, "Graphite + MeshMind cyan" (Milestone 15; docs/reviews/milestone15_stage1_visual_direction.md).
 # Surfaces carry no colour; the one accent is the MeshMind logo's cyan and means selected / focused.
 FONT = ("Segoe UI", "Calibri", "Arial")  # the Windows UI font, then what other systems have
+C_CANVAS = (17, 19, 23)  # the workspace around the map
+C_MAP_EDGE = (96, 104, 118)  # the map's border on it
 C_BG = (21, 23, 28)  # the window, the status bar
 C_PANEL = (27, 30, 36)  # the side panels
 C_RAISED = (34, 38, 46)  # the top bar, menus, dialogs
