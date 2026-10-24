@@ -114,8 +114,25 @@ The pass count is unchanged. The footprint measurement runs once per picture.
 3. In Studio, click a passage's outlined area, drag it, type a width, undo, then press F4 and walk through it.
 4. Do the same with a map-artwork door painted over a doorway.
 5. Read Studio's wrapped help texts and edge labels at your monitor's scaling.
-6. Real-window suites touched by these changes (needs you present):
+## Real-window gate (run with the owner's permission, after the report)
 
-   ```
-   py -3.13 tooling/runtime_gate.py --owner-present --only shadow_lab lighting_polish_lab lighting creator
-   ```
+`runtime_gate.py --owner-present --only shadow_lab lighting_polish_lab lighting creator`:
+
+| Suite | Result |
+|---|---|
+| lighting | 15/15 |
+| shadow_lab | 14/14 |
+| lighting_polish_lab | 18/18 |
+| creator | 21/21 |
+
+`creator` passed after three fixes. None of the three was a product defect:
+
+1. **The suite could never create its game through the gate.** The gate's output folder is inside the engine folder,
+   which the launcher refuses for new games. It now creates them in the temp folder.
+2. **My label wrap fix put line breaks into Studio's reported label text.** Studio now reports the text as written.
+3. **Step 12 had an intermittent race.** It typed into the next box before Studio had rebuilt the panel for the
+   previous commit. The step now waits like the others.
+   - Bisected: M11 passes. Failures from M12.1 on are intermittent: three bisect runs and one run at M13 failed,
+     two bisect runs passed.
+
+The gate's retry no longer crashes on a still-closing window.

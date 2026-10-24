@@ -336,6 +336,9 @@ def run(out: Path) -> int:
         S().button("+ Choice")
         S().wait(lambda s: any(w["type"] == "field" and w["key"] == "choice_text" for w in s["widgets"]), "the new choice")
         S().set_field("choice_text", "I'll look for them.")
+        # Wait for the commit's rebuild: clicking the next box before it activated the box being replaced, and the
+        # flag typed into it was lost (intermittent; more often as the panel grew).
+        S().wait(lambda s: s["message"] == "Choice changed.", "the choice's text saved")
         S().set_field("choice_sets", FLAG)
         S().wait(lambda s: FLAG in json.dumps(s["room_doc"]), "the choice setting the flag")
 
