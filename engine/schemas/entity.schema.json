@@ -36,6 +36,41 @@
         "$ref": "#/$defs/behaviourEntry"
       }
     },
+    "cast_shadow": {
+      "description": "Shadow cast from lamps: true/false, or settings (height px, strength 0-1, length multiplier)",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "height": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 4,
+              "maximum": 1000
+            },
+            "strength": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "length": {
+              "type": "number",
+              "minimum": 0.2,
+              "maximum": 3
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
     "flip_x": {
       "type": "boolean",
       "description": "Show the sprite mirrored left-to-right."
@@ -194,6 +229,10 @@
     },
     "scale": {
       "type": "number"
+    },
+    "shadow_enabled": {
+      "type": "boolean",
+      "description": "The small ground shadow under the object's feet"
     },
     "solid": {
       "type": "boolean"

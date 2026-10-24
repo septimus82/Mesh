@@ -829,6 +829,56 @@ def set_look(scene: Doc, entity_id: str, *, scale: Any = _UNSET, flip_x: Any = _
     return set_entity_fields(scene, entity_id, **fields)
 
 
+CHARACTER_TAGS = ("player", "npc")  # cast shadows from lamps unless told not to (light_compositor.CHARACTER_TAGS)
+
+
+def casts_shadow(entity: Doc) -> bool:
+    """Whether the object casts a shadow from lamps: its own setting, else yes for players and NPCs."""
+    value = entity.get("cast_shadow")
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, dict) and isinstance(value.get("enabled"), bool):
+        return bool(value["enabled"])
+    return entity.get("tag") in CHARACTER_TAGS
+
+
+def set_shadows(scene: Doc, entity_id: str, *, ground: Any = _UNSET, cast: Any = _UNSET, height: Any = _UNSET,
+                strength: Any = _UNSET, length: Any = _UNSET) -> Doc:
+    """An object's shadows: ``ground`` (the small shadow under its feet) and ``cast`` (its shadow from lamps).
+
+    ``height`` (px; None: from the picture), ``strength`` (0-1, how much of a lamp's light it blocks) and
+    ``length`` (a multiplier) tune the cast shadow. Settings left at their defaults are not stored.
+    """
+    out = copy.deepcopy(scene)
+    entity = find_entity(out, entity_id)
+    if ground is not _UNSET:
+        if ground is None or ground is True:
+            entity.pop("shadow_enabled", None)  # on is the default
+        else:
+            entity["shadow_enabled"] = False
+    value = entity.get("cast_shadow")
+    settings: Doc = dict(value) if isinstance(value, dict) else ({"enabled": value} if isinstance(value, bool) else {})
+    if cast is not _UNSET:
+        settings["enabled"] = bool(cast)
+    if height is not _UNSET:
+        settings["height"] = None if height in (None, "") else round(_number(height, "The height", 4, 1000), 1)
+    if strength is not _UNSET:
+        settings["strength"] = round(_number(strength, "The strength", 0, 1), 2)
+    if length is not _UNSET:
+        settings["length"] = round(_number(length, "The length", 0.2, 3), 2)
+    default_cast = entity.get("tag") in CHARACTER_TAGS
+    if settings.get("enabled") == default_cast:
+        settings.pop("enabled")
+    for key, default in (("height", None), ("strength", 0.85), ("length", 1.0)):
+        if key in settings and settings[key] == default:
+            settings.pop(key)
+    if settings:
+        entity["cast_shadow"] = settings
+    else:
+        entity.pop("cast_shadow", None)
+    return _checked(scene, out)
+
+
 # --- collision --------------------------------------------------------------------------------
 
 COLLIDER_SHAPES = ("picture", "box", "circle")

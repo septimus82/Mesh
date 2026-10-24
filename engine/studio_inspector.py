@@ -284,6 +284,44 @@ class InspectorMixin:
                               lambda on: self._edit(lambda s: ops.set_look(s, target, flip_x=on), "Mirrored." if on else "Not mirrored."),
                               width))
         rows.add(self._label("To change the picture with the story (a dug grave), use Conditions.", color=C_MUTED, size=9, width=width))
+        self._shadow_settings(rows, entity, width)
+
+    def _shadow_settings(self, rows: Rows, entity: dict[str, Any], width: int) -> None:
+        """The object's two shadows: the small one under its feet, and the one lamps cast of it."""
+        target = entity["id"]
+        rows.add(gui.UISpace(height=6))
+        rows.add(self._label("Shadows", bold=True, size=12))
+        half = (width - 6) // 2
+        row = gui.UIBoxLayout(vertical=False, space_between=6)
+        row.add(self._toggle("Under feet", entity.get("shadow_enabled", True) is not False,
+                             lambda on: self._edit(lambda s: ops.set_shadows(s, target, ground=on),
+                                                   "Shadow under its feet." if on else "No shadow under its feet."), half))
+        casting = ops.casts_shadow(entity)
+        row.add(self._toggle("From lamps", casting,
+                             lambda on: self._edit(lambda s: ops.set_shadows(s, target, cast=on),
+                                                   "Lamps cast its shadow." if on else "Lamps cast no shadow of it."), half))
+        rows.add(row)
+        if not casting:
+            return
+        settings = entity.get("cast_shadow") if isinstance(entity.get("cast_shadow"), dict) else {}
+        more = self.expanded == "shadow_more"
+        rows.add(self._button(("v " if more else "> ") + "Shadow from lamps: fine-tune", lambda: self._toggle_expand("shadow_more"),
+                              width=width))
+        if not more:
+            return
+        field_w = width - 122
+        height = settings.get("height")
+        self._labeled(rows, "Height (px, empty: from picture)", self._field("" if height is None else f"{float(height):g}",
+                      lambda v: self._edit(lambda s: ops.set_shadows(s, target, height=v.strip() or None), "Shadow height changed."),
+                      width=field_w, key="shadow_height"), width)
+        self._labeled(rows, "Darkness (0-1)", self._field(f"{float(settings.get('strength', 0.85)):g}",
+                      lambda v: self._edit(lambda s: ops.set_shadows(s, target, strength=v), "Shadow darkness changed."),
+                      width=field_w, key="shadow_strength"), width)
+        self._labeled(rows, "Length (x)", self._field(f"{float(settings.get('length', 1.0)):g}",
+                      lambda v: self._edit(lambda s: ops.set_shadows(s, target, length=v), "Shadow length changed."),
+                      width=field_w, key="shadow_length"), width)
+        rows.add(self._label("Lamps throw its shadow away from them, longer the farther it stands. Height is how tall it "
+                             "looks; darkness, how much of a lamp's light it blocks.", color=C_MUTED, size=9, width=width))
 
     def _choose_picture(self, entity: dict[str, Any], rel: str, message: str) -> None:
         """Change the picture; an animation follows a same-layout sheet, otherwise it's kept and flagged."""

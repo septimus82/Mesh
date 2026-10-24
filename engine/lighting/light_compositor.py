@@ -398,7 +398,7 @@ class CharacterShadow:
         self.body, self.body_uv, self.strength, self.length, self.key = body, body_uv, strength, length, key
 
 
-CHARACTER_TAGS = ("player", "npc")  # cast a shadow unless told not to; anything else only when told to
+CHARACTER_TAGS = ("player", "npc")  # cast a shadow unless told not to (project_ops.casts_shadow); others when told to
 DEFAULT_CHARACTER_STRENGTH = 0.85
 
 

@@ -218,3 +218,20 @@ def test_arrival_spots_and_doors_only_get_the_tabs_that_mean_something() -> None
     assert _tabs_for({"tag": "spawn_point"}) == ()
     assert [key for key, _title in _tabs_for({"tag": "door"})] == ["look", "conditions", "behaviours"]
     assert _tabs_for({"tag": "npc"}) == TABS
+
+
+def test_shadow_settings_store_only_what_differs_from_the_defaults() -> None:
+    """Milestone 12.1: an object's two shadows. Players and NPCs cast from lamps unless told not to."""
+    scene = {"entities": [{"id": "p", "name": "Hero", "tag": "player", "x": 1, "y": 1},
+                          {"id": "d", "name": "Sign", "tag": "sign", "x": 5, "y": 5}]}
+    assert ops.casts_shadow(scene["entities"][0]) and not ops.casts_shadow(scene["entities"][1])
+    scene = ops.set_shadows(scene, "p", strength=0.5, height=60)
+    assert scene["entities"][0]["cast_shadow"] == {"height": 60.0, "strength": 0.5}
+    scene = ops.set_shadows(scene, "p", strength=0.85, height=None)  # back to the defaults: nothing stored
+    assert "cast_shadow" not in scene["entities"][0]
+    scene = ops.set_shadows(scene, "p", cast=False, ground=False)
+    assert scene["entities"][0]["shadow_enabled"] is False and not ops.casts_shadow(scene["entities"][0])
+    scene = ops.set_shadows(scene, "d", cast=True)
+    assert ops.casts_shadow(scene["entities"][1])
+    with pytest.raises(ops.OpError, match="strength"):
+        ops.set_shadows(scene, "p", strength=5)
