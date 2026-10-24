@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sysconfig
 from pathlib import Path
 from typing import Iterable, Optional, cast
 
@@ -17,6 +18,33 @@ _LAUNCHED_PROJECT_ROOT: Path | None = None
 def engine_source_root() -> Path:
     """Return the Mesh engine source tree root (the directory containing ``engine/``)."""
     return Path(__file__).resolve().parent.parent
+
+
+# Where a pip install puts the engine's own bundled files: <prefix>/share/mesh-engine (pyproject.toml's
+# [tool.setuptools.data-files], an explicit allow-list of redistributable files).
+BUNDLED_SHARE: tuple[str, ...] = ("share", "mesh-engine")
+
+
+def bundled_data_roots() -> list[Path]:
+    """Where the engine's bundled files are: the source tree (a checkout or an editable install), then
+    ``<prefix>/share/mesh-engine`` of a pip install (a venv or system Python, or ``--user``)."""
+    roots = [engine_source_root()]
+    prefixes = [sysconfig.get_path("data")]
+    try:
+        prefixes.append(sysconfig.get_path("data", sysconfig.get_preferred_scheme("user")))
+    except (KeyError, ValueError):
+        pass  # no user scheme on this platform
+    roots += [Path(prefix).joinpath(*BUNDLED_SHARE) for prefix in prefixes if prefix]
+    return list(dict.fromkeys(roots))
+
+
+def bundled_file(rel_path: str) -> Optional[Path]:
+    """An engine-bundled file (``assets/data/monster_moves.json``, ``config.json``...), or None if no root has it."""
+    for root in bundled_data_roots():
+        candidate = root / rel_path
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 def pin_launched_project_root(root: Path, *, config: object | None = None) -> Path:

@@ -54,8 +54,28 @@ zip-safe = false
 [tool.setuptools.packages.find]
 include = ["engine*", "mesh_cli*"]
 
-# Runtime data is included via MANIFEST.in + include-package-data = true
-# See MANIFEST.in for the complete list of included assets
+# MANIFEST.in lists the source distribution's data. A wheel only carries files inside packages, so the
+# engine's own bundled files a pip install needs (new projects copy them; monster data falls back to them)
+# are installed under <prefix>/share/mesh-engine and found by engine.repo_root.bundled_file.
+# An explicit allow-list: only Mesh's own, redistributable files (docs/packaging.md). Add a file here only
+# once its licence allows redistribution.
+[tool.setuptools.data-files]
+"share/mesh-engine" = ["config.json"]
+"share/mesh-engine/assets/data" = [
+    "assets/data/monster_species.json",
+    "assets/data/monster_moves.json",
+    "assets/data/monster_type_chart.json",
+]
+"share/mesh-engine/assets/sounds" = [
+    "assets/sounds/attack.wav",
+    "assets/sounds/die.wav",
+    "assets/sounds/hit.wav",
+    "assets/sounds/ui_click.wav",
+    "assets/sounds/ui_close.wav",
+    "assets/sounds/ui_hover.wav",
+    "assets/sounds/ui_open.wav",
+]
+"share/mesh-engine/assets/music" = ["assets/music/dungeon_theme.wav"]
 
 [tool.ruff]
 line-length = 160

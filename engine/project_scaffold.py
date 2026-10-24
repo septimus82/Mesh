@@ -9,6 +9,7 @@ from typing import Any
 
 from . import json_io
 from .logging_tools import get_logger
+from .repo_root import bundled_file
 
 _LOG = get_logger("engine.project_scaffold")
 
@@ -98,23 +99,22 @@ def validate_new_project_target(root: Path) -> tuple[bool, str]:
     return True, ""
 
 
-def _engine_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
 def _copy_engine_asset(rel_path: str, dest_root: Path) -> None:
-    src = _engine_root() / rel_path
+    src = bundled_file(rel_path)  # the source tree, or a pip install's share/mesh-engine
     dest = dest_root / rel_path
-    if not src.is_file():
-        _LOG.warning("Engine starter asset missing: %s", src)
+    if src is None:
+        _LOG.warning("Engine starter asset missing: %s (not bundled with this install)", rel_path)
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dest)
 
 
 def _engine_input_bindings() -> dict[str, Any]:
+    config = bundled_file("config.json")
     try:
-        data = json.loads((_engine_root() / "config.json").read_text(encoding="utf-8"))
+        if config is None:
+            raise OSError("not bundled")
+        data = json.loads(config.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         _LOG.warning("Engine config.json unreadable; new project gets no input_bindings")
         return {}

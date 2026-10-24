@@ -42,7 +42,7 @@ _INTEGRATION_NODEID_PARTS = (
 _SLOW_NODEID_PARTS = (
     "help_regressions",
     "release_contract",
-    "wheel_includes_pack_data",
+    "wheel_bundles_engine_data",
 )
 
 
