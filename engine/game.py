@@ -988,9 +988,20 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         if callable(stop_live_bridge):
             stop_live_bridge()
         self._stop_asset_hot_reload_watcher()
-        base_close = getattr(engine.optional_arcade.arcade.Window, "close", None)
+        arcade = engine.optional_arcade.arcade
+        try:
+            active = arcade.get_window() if callable(getattr(arcade, "get_window", None)) else None
+        except RuntimeError:  # no active window
+            active = None
+        base_close = getattr(arcade.Window, "close", None)
         if callable(base_close):
             base_close(self)
+        # Arcade forgets the active window whenever any window closes, even one that isn't active (pyglet also
+        # closes a window when it is garbage-collected, at an unpredictable moment): the window in use then
+        # lost its context mid-frame ("No window is active"). Closing another window keeps the active one.
+        set_window = getattr(arcade, "set_window", None)
+        if active is not None and active is not self and callable(set_window):
+            set_window(active)
 
     def on_resize(self, width: int, height: int) -> None:
         super().on_resize(width, height)

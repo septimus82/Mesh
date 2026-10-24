@@ -72,7 +72,14 @@ def main() -> int:
     parser.add_argument("--only", nargs="*", help="suite names: " + ", ".join(name for name, _, _ in SUITES))
     parser.add_argument("--old", type=Path, nargs="*", default=[], help="older projects for the launcher suite")
     parser.add_argument("--retries", type=int, default=1, help="reruns of a failed suite (default 1)")
+    parser.add_argument("--owner-present", action="store_true",
+                        help="required: these suites move the real mouse and press real keys for ~45 minutes")
     args = parser.parse_args()
+    if not args.owner_present:
+        print("runtime_gate: these suites take over the desktop's mouse and keyboard. Run them only when the owner "
+              "has agreed and isn't using the computer, with --owner-present. Headless and hidden-window checks: "
+              "py -3.13 -m tooling.test_tiers tier2 / gpu.")
+        return 2
     out: Path = args.out
     shutil.rmtree(out, ignore_errors=True)  # one reused folder: no pile of old runs
     out.mkdir(parents=True)

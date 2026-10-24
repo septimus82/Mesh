@@ -113,6 +113,31 @@ def _repo_projects_json_untouched():
         pytest.fail(f"test session modified {path}; write to tmp_path instead", pytrace=False)
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _windows_never_shown():
+    # Tests that need a real GL window (a GameWindow, the shadow bench) get a hidden one: a test run never puts a
+    # window on the owner's desktop or takes focus from what they are doing (Milestone 13). A shown window
+    # also failed one test intermittently, when the owner's own clicks reached it. MESH_TEST_SHOW_WINDOWS=1
+    # shows them, for debugging.
+    if os.getenv("MESH_TEST_SHOW_WINDOWS") == "1" or os.getenv("MESH_TEST_BLOCK_ARCADE") == "1":
+        yield
+        return
+    try:
+        import pyglet.window
+    except ImportError:  # no arcade/pyglet: nothing opens windows
+        yield
+        return
+    original = pyglet.window.Window.__init__
+
+    def hidden(self, *args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+        kwargs["visible"] = False
+        original(self, *args, **kwargs)
+
+    pyglet.window.Window.__init__ = hidden
+    yield
+    pyglet.window.Window.__init__ = original
+
+
 @pytest.fixture(scope="session")
 def unmarked_test_nodeids(pytestconfig):
     return list(getattr(pytestconfig, "_mesh_unmarked_nodeids", []))
