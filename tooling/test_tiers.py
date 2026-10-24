@@ -50,6 +50,8 @@ def _pytest_cmd(
 ) -> list[str]:
     pytest_args = [
         "-q",
+        "-p",
+        "no:cacheprovider",  # a tier needs no cache; an unwritable .pytest_cache failed every run under -W error
         "-W",
         "error",
         "--strict-markers",

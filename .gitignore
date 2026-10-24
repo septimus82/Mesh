@@ -30,3 +30,6 @@ saves/
 /context.json
 .pytest-debug-temp/
 .pytest-gate-deps/
+
+# Local state (recent projects live in the user folder since Milestone 4)
+/projects.json

@@ -559,32 +559,8 @@ class LightManager:
     def _end_hard_shadows_overlay(self) -> bool:
         return _shadow_pipeline.end_hard_shadows_overlay(self)
 
-    def _draw_pending_shadow_fallback(self) -> None:
-        _shadow_pipeline.draw_pending_shadow_fallback(self)
-
     def _draw_direct_shadows(self) -> None:
         _shadow_pipeline.draw_direct_shadows(self)
-
-    def _end_hard_shadows_composite(self) -> bool:
-        return _shadow_pipeline.end_hard_shadows_composite(self)
-
-    def _draw_hard_shadow_fallback(
-        self,
-        *,
-        draw: Any,
-        offset: tuple[float, float],
-        viewport: Any,
-        polys: list[list[tuple[float, float]]],
-        stats: dict[str, Any],
-    ) -> bool:
-        return _shadow_pipeline.draw_hard_shadow_fallback(
-            self,
-            draw=draw,
-            offset=offset,
-            viewport=viewport,
-            polys=polys,
-            stats=stats,
-        )
 
     def _select_shadow_light_params(self) -> tuple[float, float, float] | None:
         return _shadow_selection.select_shadow_light_params(self)
