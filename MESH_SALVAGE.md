@@ -235,3 +235,24 @@ Report: [`docs/reviews/milestone12_2_visual_consistency.md`](docs/reviews/milest
 | One wall's touching rectangles never shadow each other's face (`shadows._same_wall`, `_minus_rect`) | A dark triangle on an L of wall tiles at the joint | Other walls' shadows still fall on walls |
 | Soft lamp sample points inside a wall are dropped (`light_compositor._lamp_points`) | Softer lamps beside a wall leaked wedges of light behind it | `shadow_triangles` now also returns the points; the character passes use them |
 | `tooling/scene_snapshot.py` (hidden GameWindow or Studio), `tooling/visual_polish_check.py`, `tests/test_door_presentation.py`, `tests/test_shadow_shapes.py`, `tests/test_shadow_corners_gpu.py` | Verification without taking over the desktop | The snapshot tool forces `visible=False` in its own process only |
+
+## Milestone 13: repository health and consolidation
+
+Report: [`docs/reviews/milestone13_repository_consolidation.md`](docs/reviews/milestone13_repository_consolidation.md).
+Restore anything below with `git show db87ab8:<path>`.
+
+| Change | Why | Note |
+|---|---|---|
+| AIOps `add_light` / `update_light` / `delete_light`, `delete_entity`, `set_behaviour_params` call `project_ops` (code removed from `engine/ai_ops.py`) | Three interpretations of the same edit (Studio, authoring, AIOps) | AIOps keeps its request shapes; unknown light keys and behaviour params are refused now; id-less objects in older scenes get ids when edited |
+| `project_ops.entity_ref` (id or unique name); `authoring._resolve_entity` uses it | One resolver | — |
+| `project_ops.set_light(mode=)` | The one setting AIOps clients could set that the canonical op lacked | `soft` / `hard` |
+| MCP: light ops on Studio projects through `authoring`; the one-call `add_entity_from_prefab` tool through `apply_ops` | It wrote files behind an open Studio | Becomes a proposal while Studio is open |
+| **Removed:** `engine/lighting/hard_shadows_backend.py`; `shadow_pipeline.end_hard_shadows_composite`, `draw_hard_shadow_fallback`, `draw_pending_shadow_fallback`, `_ambient_rgb_from_rgba`, `_draw_layer_target_compat`, `_draw_layer_screen_compat`; `LightManager._end_hard_shadows_composite`, `_draw_hard_shadow_fallback`, `_draw_pending_shadow_fallback` | Unreachable (no caller since before the redesign); replaced by the M12 per-light compositor | **Kept:** the legacy overlay (`MESH_SHADOWS_RENDERER=legacy`) and `draw_direct_shadows` |
+| **Removed tests:** `test_hard_shadows_composite_*` (5), `test_hard_shadows_backend_headless_safe`, `test_hard_shadows_fallback_visible_path`, `test_soft_shadows_render_inputs_contract`, `test_ambient_tint_defaults_contract` | They tested only the removed path | — |
+| **Untracked:** repo-root `projects.json` (now in `.gitignore`) | Not read since recent projects moved to the user folder (M4); held a local path | — |
+| `GameWindow.close` keeps another active window active | Arcade forgets the active window when any window closes (also on garbage collection): intermittent "No window is active" | `tests/test_game_window_close_keeps_active.py` |
+| `tests/conftest.py` hides every window tests create (`MESH_TEST_SHOW_WINDOWS=1` shows them) | The default suite put game windows on the owner's screen | — |
+| `tooling/test_tiers.py`: `gpu` tier; no pytest cache; `tooling/runtime_gate.py --owner-present` | Practical, safe entry points | — |
+| verify-all: the swallow-scan artifact only with `--artifacts`; three tests' expectations and a fixture updated; the headless verify-all test's budget | Stale expectations and one real inconsistency | — |
+| Type fixes in ~45 files (no `type: ignore` added, two removed) | The type gate (259 → 0) | New read-only properties: `MonsterInstance.hp`, `.battle_stats`, `BattleStats.special_attack`, `.special_defense` |
+| `tests/conftest.py` uses pyglet's silent audio driver (`MESH_TEST_REAL_AUDIO=1` keeps the real one) | XAudio2 errors from the sound card failed random tests; tests could play sounds on the owner's speakers | — |

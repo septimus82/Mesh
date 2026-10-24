@@ -5,7 +5,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from engine.behaviours import load_builtin_behaviours
+# Tests never use the sound card (Milestone 13): XAudio2 raised "Critical Error" (0x80070490, the audio device went
+# away) asynchronously into whichever test was running, and test sounds could play on the owner's speakers.
+# Set before pyglet.media is first imported. MESH_TEST_REAL_AUDIO=1 keeps the system's driver.
+if os.getenv("MESH_TEST_REAL_AUDIO") != "1" and os.getenv("MESH_TEST_BLOCK_ARCADE") != "1":
+    try:
+        import pyglet
+
+        pyglet.options["audio"] = ("silent",)
+    except ImportError:
+        pass
+
+from engine.behaviours import load_builtin_behaviours  # noqa: E402
 
 
 class _ArcadeBlocker(importlib.abc.MetaPathFinder):

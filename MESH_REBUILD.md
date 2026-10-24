@@ -552,6 +552,28 @@ the real-window suites touched by these changes:
 py -3.13 tooling/runtime_gate.py --only shadow_lab lighting_polish_lab lighting creator
 ```
 
+## Milestone 13 — repository health and consolidation
+
+Report: [`docs/reviews/milestone13_repository_consolidation.md`](docs/reviews/milestone13_repository_consolidation.md).
+
+- **One implementation for common edits.** Lights, object removal and behaviour settings run through `project_ops`
+  for Studio, the authoring API, MCP and the in-game console's AI jobs. Objects are resolved by one function, and the
+  same request gets the same result and the same refusal everywhere.
+- **Type debt: 259 errors beyond the baseline down to 0.** The type gate passes, and with it the 30 `verify-all`
+  tests it blocked.
+- **Verification.**
+  - Slow/e2e failures dropped from 31 to the wheel test (an owner decision); default suite 9,435 passed, 0 failed.
+  - Test windows are always hidden.
+  - An intermittent "No window is active" failure was traced to arcade forgetting the active window when another
+    closes, and fixed in `GameWindow.close`.
+  - The swallow-scan step honours `--artifacts`.
+  - New `gpu` test tier; tiers no longer depend on a writable pytest cache.
+  - The real-window gate needs `--owner-present`.
+- **Dead code.** The unreachable hard-shadow composite path and its backend (`shadow_pipeline.py` 787 → 237 lines),
+  8 test files that tested only it, and the unread repo-root `projects.json` are gone.
+- **Owner decisions.** Pip-installed Mesh (the wheel test), and the "Soft Shadows" pause-menu toggle, which has done
+  nothing since M12.
+
 ## Known limitations (honest list)
 
 - **Starter art is simple:** a hero, a villager and a sign of Mesh's own (Milestone 11). The tileset still has no roof or door tiles.
@@ -580,7 +602,7 @@ All recorded with restore instructions in `MESH_SALVAGE.md`:
 
 ## Next slices, in order
 
-0. **Pay down the type debt** (Milestone 9's top recommendation): start with the Studio inspector mixin (263 of 516 errors), then `studio.py` and `monster/data_load.py`. That makes the type gate and the `verify-all` pipeline usable again. Then make the full headless gate (default run plus slow/e2e) routine.
+0. ~~Pay down the type debt~~ **Done in Milestone 13** (0 beyond the baseline; `verify-all` runs green apart from the wheel decision). Keep the full headless gate (default run plus slow/e2e, both desktop-safe now) routine.
 0. **Studio lighting controls** on the now-verified runtime (lights, occluders, room ambient and lighting on/off), then the HD-2D look and camera zoom areas. Keep running `tooling/runtime_gate.py` at the end of each milestone. Deferred from Milestone 8: `background_planes` → `background_layers` (needs a visual-equivalence test), quick snapshots into SaveManager slots (monster companion state), a respawn option for defeated enemies, and the templates' CameraFollow `zoom: 1.0` that overrides a room's own zoom.
 1. **Finish the single operation path:** route the legacy CLI scene commands that target Studio projects through `engine/authoring`, then retire their duplicate code; move the remaining `AIOps` operations (lights, quests, world links) onto `project_ops` operations.
 2. **Launcher follow-ups:** return to the launcher when the Studio closes; rename, move or delete projects; a packaged build.
