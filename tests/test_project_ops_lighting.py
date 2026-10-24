@@ -122,3 +122,46 @@ def test_walls_painted_in_studio_cast_shadows() -> None:
     OCCLUDER_CACHE.invalidate()
     occluders = build_occluders_from_scene_payload(scene, scene_path="studio-walls-test.json")
     assert [(o["x"], o["y"], o["width"], o["height"]) for o in occluders] == [(64.0, 32.0, 32.0, 64.0)]
+
+
+def test_flicker_presets_tuning_makes_a_custom_copy_and_steady_restores_the_base() -> None:
+    lit, _ = ops.add_light(_scene(), 0, 0, radius=150)
+    torch = ops.set_light(lit, 0, flicker="torch")["lights"][0]
+    assert torch["flicker_enabled"] is True and torch["flicker_preset"] == "torch" and ops.flicker_name(torch) == "torch"
+    stronger = ops.set_light(ops.set_light(lit, 0, flicker="torch"), 0, flicker_strength=1.5)["lights"][0]
+    assert stronger["flicker_preset"] == "torch" and stronger["flicker_strength"] == 1.5
+    tuned = ops.set_light(ops.set_light(lit, 0, flicker="torch"), 0, flicker_reach=0.1)
+    light = tuned["lights"][0]
+    assert ops.flicker_name(light) == "custom" and light["flicker_reach"] == 0.1 and light["flicker_brightness"] == 0.2
+    again = ops.set_light(ops.set_light(tuned, 0, flicker="candle"), 0, flicker="custom")["lights"][0]
+    assert again["flicker_reach"] == 0.1, "the owner's own custom values come back"
+    steady = ops.set_light(tuned, 0, flicker="steady")["lights"][0]
+    assert ops.flicker_name(steady) == "steady" and steady["radius"] == 150.0
+    with pytest.raises(ops.OpError):
+        ops.set_light(lit, 0, flicker="strobe")
+
+
+def test_shadow_fine_tuning_is_stored_and_a_softness_preset_clears_the_edge() -> None:
+    room = ops.set_room_lighting(_scene(), softness="soft", edge=20, shadow_strength=0.6, quality="high",
+                                 character_shadows=False)
+    assert room["settings"] == {"lighting_shadow_softness": "soft", "lighting_shadow_edge": 20.0,
+                                "lighting_shadow_strength": 0.6, "lighting_shadow_quality": "high",
+                                "lighting_character_shadows": False}
+    room = ops.set_room_lighting(room, softness="softer", character_shadows=True)
+    assert "lighting_shadow_edge" not in room["settings"] and "lighting_character_shadows" not in room["settings"]
+    for bad in ({"edge": 99}, {"shadow_strength": 2}, {"quality": "ultra"}):
+        with pytest.raises(ops.OpError):
+            ops.set_room_lighting(_scene(), **bad)
+
+
+def test_shadow_fine_tuning_applies_only_in_its_room() -> None:
+    lighting = _Lighting()
+    window = SimpleNamespace(lighting=lighting, engine_config=None, day_night=None)
+    tuned = {"lighting_shadow_edge": 12, "lighting_shadow_strength": 0.5, "lighting_shadow_quality": "low",
+             "lighting_character_shadows": False}
+    configure_scene_lighting(window, {"settings": tuned}, tuned, "a.json")
+    assert (lighting.shadow_edge_px, lighting.shadow_strength, lighting.shadow_quality, lighting.character_shadows) \
+        == (12.0, 0.5, "low", False)
+    configure_scene_lighting(window, {"settings": {}}, {}, "b.json")
+    assert (lighting.shadow_edge_px, lighting.shadow_strength, lighting.shadow_quality, lighting.character_shadows) \
+        == (None, 1.0, "normal", True)

@@ -250,9 +250,9 @@ def run(out: Path) -> int:
 
     def s06_flicker() -> dict[str, Any]:
         select_light(2)
-        press("Flicker: Off")
+        press("Torch")
         light = until(lambda: lights()[1] if lights()[1].get("flicker_enabled") else None, "light 2 flickers")
-        assert light.get("flicker_amount", 0) > 0 and light.get("flicker_speed", 0) > 0, light
+        assert light.get("flicker_preset") == "torch", light
         return {"light": light}
 
     def s07_shadows() -> dict[str, Any]:

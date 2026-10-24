@@ -25,7 +25,7 @@ def runtime_snapshot(window: Any) -> dict[str, Any]:
             "available": bool(getattr(lighting, "available", False)),
             "enabled": bool(getattr(lighting, "enabled", False)),
             "shadows_mode": str(getattr(lighting, "shadows_mode", "")),
-            "clock": round(float(getattr(lighting, "_flicker_time", 0.0) or 0.0), 2),
+            "clock": round(float(getattr(lighting, "_flicker_time", 0.0) or 0.0), 4),  # flicker time: to the frame
             "ambient": list(getattr(lighting, "ambient_color", ()) or ()),
             "ambient_tint": list(getattr(lighting, "ambient_tint", ()) or ()),
             "static_lights": len(getattr(lighting, "_static_lights", []) or []),

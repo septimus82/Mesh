@@ -1509,11 +1509,18 @@ def _colour(value: Any) -> str | list[int]:
 SHADOW_SOFTNESS = ("sharp", "soft", "softer")  # shadow edges (engine/lighting/light_compositor.SOFTNESS)
 
 
+SHADOW_QUALITY = ("low", "normal", "high")  # soft-edge smoothness against cost (light_compositor.QUALITY_SAMPLES)
+
+
 def set_room_lighting(scene: Doc, *, enabled: Any = _UNSET, ambient: Any = _UNSET, shadows: Any = _UNSET,
-                      softness: Any = _UNSET) -> Doc:
+                      softness: Any = _UNSET, edge: Any = _UNSET, shadow_strength: Any = _UNSET, quality: Any = _UNSET,
+                      character_shadows: Any = _UNSET) -> Doc:
     """Change the room's lighting settings; ``None`` removes one, so the room follows the project again.
 
-    ``softness`` is how soft shadow edges are: ``"sharp"``, ``"soft"`` or ``"softer"``.
+    ``softness`` is how soft shadow edges are: ``"sharp"``, ``"soft"`` or ``"softer"``. Fine-tuning:
+    ``edge`` (the soft edge's width, 0-48 px, instead of the preset's), ``shadow_strength`` (0-1: how much
+    of a lamp a wall blocks), ``quality`` (``"low"``, ``"normal"``, ``"high"``: smoother soft edges cost
+    more) and ``character_shadows`` (whether characters cast shadows from lamps in this room).
     """
     out = copy.deepcopy(scene)
     settings = out.setdefault("settings", {})
@@ -1544,8 +1551,31 @@ def set_room_lighting(scene: Doc, *, enabled: Any = _UNSET, ambient: Any = _UNSE
             settings.pop("lighting_shadow_softness", None)
         elif softness in SHADOW_SOFTNESS:
             settings["lighting_shadow_softness"] = softness
+            settings.pop("lighting_shadow_edge", None)  # a preset chosen: its own edge again
         else:
             raise OpError("Shadow edges are 'sharp', 'soft' or 'softer'.")
+    if edge is not _UNSET:
+        if edge is None or edge == "":
+            settings.pop("lighting_shadow_edge", None)
+        else:
+            settings["lighting_shadow_edge"] = round(_number(edge, "The shadow edge", 0, 48), 1)
+    if shadow_strength is not _UNSET:
+        if shadow_strength is None or shadow_strength == "":
+            settings.pop("lighting_shadow_strength", None)
+        else:
+            settings["lighting_shadow_strength"] = round(_number(shadow_strength, "The shadow strength", 0, 1), 2)
+    if quality is not _UNSET:
+        if quality is None:
+            settings.pop("lighting_shadow_quality", None)
+        elif quality in SHADOW_QUALITY:
+            settings["lighting_shadow_quality"] = quality
+        else:
+            raise OpError("Shadow quality is 'low', 'normal' or 'high'.")
+    if character_shadows is not _UNSET:
+        if character_shadows is None or character_shadows is True:
+            settings.pop("lighting_character_shadows", None)  # on is the default
+        else:
+            settings["lighting_character_shadows"] = False
     return _checked(scene, out)
 
 
@@ -1561,17 +1591,47 @@ def add_light(scene: Doc, x: float, y: float, *, color: Any = "Warm", radius: An
 
 def set_light(scene: Doc, index: int, *, x: Any = _UNSET, y: Any = _UNSET, radius: Any = _UNSET, color: Any = _UNSET,
               flicker_enabled: Any = _UNSET, flicker_amount: Any = _UNSET, flicker_speed: Any = _UNSET,
-              enabled: Any = _UNSET, shadows: Any = _UNSET) -> Doc:
+              enabled: Any = _UNSET, shadows: Any = _UNSET, flicker: Any = _UNSET, flicker_strength: Any = _UNSET,
+              flicker_brightness: Any = _UNSET, flicker_reach: Any = _UNSET, flicker_irregularity: Any = _UNSET) -> Doc:
     """Change a light: position, size (radius), colour (a name, "#rrggbb" or [r, g, b]), flicker, on/off,
     and whether walls block it (``shadows``; on unless set off, when the room has shadows on).
 
-    Turning flicker on fills in a torch-like amount and speed if the light has none, so it visibly flickers.
-    Anything else the light carries (keys from older editors) is kept.
+    ``flicker`` is a preset: "steady" (none), "candle", "torch", "fire", "faulty" or "custom";
+    ``flicker_strength`` scales it (1 = as the preset). Custom flicker: ``flicker_speed`` (wavers a
+    second), ``flicker_brightness`` (0-1), ``flicker_reach`` (0-0.5), ``flicker_irregularity`` (0-1).
+    Changing one of those on a named preset makes a custom copy of it. ``flicker_enabled`` alone (from before
+    presets) still works: on fills in a torch-like amount and speed if the light has none. Anything else the
+    light carries (keys from older editors) is kept.
     """
+    from engine.lighting.flicker import FLICKER_NAMES, FLICKER_PRESETS, FLICKER_RANGES  # noqa: PLC0415
+
     fields = {"x": x, "y": y, "radius": radius, "color": color, "flicker_enabled": flicker_enabled,
-              "flicker_amount": flicker_amount, "flicker_speed": flicker_speed, "enabled": enabled, "shadows": shadows}
+              "flicker_amount": flicker_amount, "enabled": enabled, "shadows": shadows}
     out = copy.deepcopy(scene)
     light = _light(out, index)
+    if flicker is not _UNSET:
+        if flicker not in FLICKER_NAMES:
+            raise OpError(f"Flicker is one of: {', '.join(FLICKER_NAMES)}.")
+        light["flicker_enabled"] = flicker != "steady"
+        if flicker != "steady":
+            if (flicker == "custom" and light.get("flicker_preset") in FLICKER_PRESETS
+                    and "flicker_brightness" not in light):  # a custom of the owner's own is kept
+                _custom_from(light, FLICKER_PRESETS[light["flicker_preset"]])
+            light["flicker_preset"] = flicker
+    custom = {"speed": flicker_speed, "brightness": flicker_brightness, "reach": flicker_reach,
+              "irregularity": flicker_irregularity}
+    if any(value is not _UNSET for value in custom.values()):
+        if light.get("flicker_preset") in FLICKER_PRESETS:  # tuning a preset: a custom copy of it
+            _custom_from(light, FLICKER_PRESETS[light["flicker_preset"]])
+            light["flicker_preset"] = "custom"
+        for name, value in custom.items():
+            if value is not _UNSET:
+                low, high = FLICKER_RANGES[name]
+                light[f"flicker_{name}"] = round(_number(value, f"Flicker {name}", low, high), 3)
+    if flicker_strength is not _UNSET:
+        light["flicker_strength"] = round(_number(flicker_strength, "Flicker strength", 0, 3), 2)
+        if light["flicker_strength"] == 1.0:
+            light.pop("flicker_strength")
     for key, value in fields.items():
         if value is _UNSET:
             continue
@@ -1595,9 +1655,23 @@ def set_light(scene: Doc, index: int, *, x: Any = _UNSET, y: Any = _UNSET, radiu
                         light[name] = default
         elif key == "flicker_amount":
             light[key] = _number(value, "Flicker amount", 0, 1)
-        elif key == "flicker_speed":
-            light[key] = _number(value, "Flicker speed", 0, 60)
     return _checked(scene, out)
+
+
+def _custom_from(light: Doc, profile: Any) -> None:
+    """Write a preset's values into the light's custom flicker settings (so "custom" starts from it)."""
+    light["flicker_speed"] = profile.speed
+    light["flicker_brightness"] = profile.brightness
+    light["flicker_reach"] = profile.reach
+    light["flicker_irregularity"] = profile.irregularity
+
+
+def flicker_name(light: Doc) -> str:
+    """The light's flicker as the Lighting panel names it: a preset, "custom", or "steady"."""
+    if not light.get("flicker_enabled"):
+        return "steady"
+    preset = light.get("flicker_preset")
+    return preset if isinstance(preset, str) and preset not in ("", "steady") else "custom"
 
 
 def duplicate_light(scene: Doc, index: int, *, dx: float = 32, dy: float = -32) -> tuple[Doc, int]:

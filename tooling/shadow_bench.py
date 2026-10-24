@@ -84,12 +84,14 @@ class Bench:
 
     def load(self, scene: Scene) -> None:
         """Configure the manager as the scene loader does: settings, lights, occluders."""
+        from engine.scene_lifecycle_controller import apply_shadow_look  # noqa: PLC0415
+
         self.scene = scene
         m = self.manager
         m._last_lighting_stats = {}
         m.set_shadows_mode(scene.shadows)
         m.ambient_color = (*scene.ambient, 255)
-        m.shadow_softness = scene.settings.get("lighting_shadow_softness", "sharp")
+        apply_shadow_look(m, scene.settings)  # as the scene loader does
         occluders = [{"id": f"w{i}", "type": "rect", "x": x, "y": y, "width": w, "height": h}
                      for i, (x, y, w, h) in enumerate(scene.walls)]
         occluders += [{"id": f"p{i}", "type": "poly", "points": [list(p) for p in poly]} for i, poly in enumerate(scene.polys)]

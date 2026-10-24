@@ -28,4 +28,5 @@ def test_user_settings_json_golden(tmp_path, monkeypatch) -> None:
         "fog_enabled": True,
         "soft_shadows_enabled": False,
         "text_scale": 1.0,
+        "reduced_flicker": False,
     }

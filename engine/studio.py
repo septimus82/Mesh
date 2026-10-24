@@ -92,6 +92,16 @@ def _guess_tile_size(width: int, height: int) -> int:
     return next((t for t in (32, 16, 48, 24, 64) if width % t == 0 and height % t == 0), 32)
 
 
+_FLICKER_HELP = {
+    "steady": "No flicker: a lamp, a magic light.",
+    "candle": "A gentle, uneven waver; the lit area hardly moves.",
+    "torch": "A lively flame with now and then a brighter moment.",
+    "fire": "A restless blaze: a fireplace, a bonfire.",
+    "faulty": "Steady, then now and then it stutters or drops out.",
+    "custom": "Your own: set speed, brightness, reach and irregularity under More settings.",
+}
+
+
 def _colour_name(value: Any) -> str:
     rgb = ops.rgb(value)
     return next((name for name, hex_ in ops.LIGHT_COLOURS.items() if ops.rgb(hex_) == rgb), "custom")
@@ -1092,6 +1102,10 @@ class Studio(InspectorMixin):
                 row.add(self._button(text, partial(self.set_room_lighting, f"Shadow edges: {text.lower()}.", softness=value),
                                      width=third, style=S_ACTIVE if active else S_BUTTON))
             rows.add(row)
+            rows.add(self._label({"sharp": "Sharp: crisp boundaries.", "soft": "Soft: gently feathered boundaries.",
+                                  "softer": "Softer: broad, atmospheric boundaries."}[softness or project_softness],
+                                 color=C_MUTED, size=9, width=width))
+            self._shadow_fine_tune(rows, settings, width)
         if isinstance(scene.get("occluders"), list):
             rows.add(self._label(f"Shadows come from {len(scene['occluders'])} hand-drawn shape(s) made in the classic editor, "
                                  "not from the map's walls.", color=C_MUTED, size=9, width=width))
@@ -1114,8 +1128,61 @@ class Studio(InspectorMixin):
         rows.add(self._label("While this panel is open, clicks on the map work on lights.", color=C_MUTED, size=9, width=width))
         rows.add(self._button("Done", self.open_lighting, width=80))
 
+    def _shadow_fine_tune(self, rows: Rows, settings: dict[str, Any], width: int) -> None:
+        """The collapsed "Fine-tune shadows": edge width, strength, quality, characters' shadows."""
+        more = self.expanded == "shadow_fine"
+        rows.add(self._button(("v " if more else "> ") + "Fine-tune shadows", lambda: self._toggle_expand("shadow_fine"),
+                              width=width))
+        if not more:
+            return
+        field_w, third = width - 122, (width - 8) // 3
+        edge = settings.get("lighting_shadow_edge")
+        self._labeled(rows, "Edge width (px, empty: as the preset)", self._field(
+            "" if edge is None else f"{float(edge):g}",
+            lambda v: self.set_room_lighting("Shadow edge changed.", edge=v.strip() or None), width=field_w, key="shadow_edge"), width)
+        self._labeled(rows, "Strength (0-1, 1: walls block all)", self._field(
+            f"{float(settings.get('lighting_shadow_strength', 1.0)):g}",
+            lambda v: self.set_room_lighting("Shadow strength changed.", shadow_strength=v), width=field_w,
+            key="shadow_strength_room"), width)
+        quality = settings.get("lighting_shadow_quality", "normal")
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        for name in ("low", "normal", "high"):
+            row.add(self._button(name.capitalize(), partial(self.set_room_lighting, f"Shadow quality: {name}.", quality=name),
+                                 width=third, style=S_ACTIVE if quality == name else S_BUTTON))
+        rows.add(row)
+        rows.add(self._label("Quality: smoother soft edges cost a little more each frame.", color=C_MUTED, size=9, width=width))
+        rows.add(self._toggle("Characters cast shadows", settings.get("lighting_character_shadows") is not False,
+                              lambda on: self.set_room_lighting("Characters cast shadows." if on else "No character shadows here.",
+                                                                character_shadows=on), width))
+
     def _set_light_field(self, key: str, text: str) -> None:
         self.set_light("Changed.", **{key: text})
+
+    def _flicker_rows(self, rows: Rows, light: dict[str, Any], width: int) -> None:
+        """Flicker: a preset (what a creator usually wants), then how strong; fine values under More settings."""
+        from engine.lighting.flicker import FLICKER_LABELS  # noqa: PLC0415
+
+        third = (width - 8) // 3
+        current = ops.flicker_name(light)
+        rows.add(self._label("Flicker", color=C_MUTED, size=10))
+        for names in (("steady", "candle", "torch"), ("fire", "faulty", "custom")):
+            row = gui.UIBoxLayout(vertical=False, space_between=4)
+            for name in names:
+                row.add(self._button(FLICKER_LABELS[name], partial(self.set_light, f"Flicker: {FLICKER_LABELS[name].lower()}.",
+                                                                   flicker=name),
+                                     width=third, style=S_ACTIVE if current == name else S_BUTTON))
+            rows.add(row)
+        rows.add(self._label(_FLICKER_HELP[current], color=C_MUTED, size=9, width=width))
+        if current == "steady":
+            return
+        strength = float(light.get("flicker_strength", 1.0))
+        row = gui.UIBoxLayout(vertical=False, space_between=4)
+        row.add(self._button("Calmer", lambda: self.set_light("Calmer.", flicker_strength=max(0.1, round(strength * 0.75, 2))),
+                             width=third))
+        row.add(self._label(f"strength {strength:g}x", color=C_MUTED, size=10, width=third))
+        row.add(self._button("Livelier", lambda: self.set_light("Livelier.", flicker_strength=min(3.0, round(strength * 1.33, 2))),
+                             width=third))
+        rows.add(row)
 
     def _select_light(self, index: int) -> None:
         self._flush_fields()
@@ -1140,8 +1207,7 @@ class Studio(InspectorMixin):
         row.add(self._label(f"size {radius:g}", color=C_MUTED, size=10, width=third))
         row.add(self._button("Bigger", lambda: self.set_light("Bigger.", radius=min(4000, round(radius * 1.25))), width=third))
         rows.add(row)
-        flicker = bool(light.get("flicker_enabled"))
-        rows.add(self._toggle("Flicker", flicker, lambda on: self.set_light("Flickers." if on else "Steady.", flicker_enabled=on), width))
+        self._flicker_rows(rows, light, width)
         half = (width - 6) // 2
         row = gui.UIBoxLayout(vertical=False, space_between=6)
         row.add(self._toggle("On", light.get("enabled", True) is not False,
@@ -1158,10 +1224,20 @@ class Studio(InspectorMixin):
         if not more:
             return
         field_w = width - 122
-        for label, key in (("X", "x"), ("Y", "y"), ("Size", "radius"), ("Flicker amount (0-1)", "flicker_amount"),
-                           ("Flicker speed", "flicker_speed")):
+        for label, key in (("X", "x"), ("Y", "y"), ("Size", "radius")):
             self._labeled(rows, label, self._field(f"{float(light.get(key) or 0):g}", partial(self._set_light_field, key),
                                                    width=field_w, key=f"light_{key}"), width)
+        if light.get("flicker_enabled"):
+            from engine.lighting.flicker import FLICKER_PRESETS, flicker_profile  # noqa: PLC0415
+
+            profile = flicker_profile(light) or FLICKER_PRESETS["torch"]
+            rows.add(self._label("Flicker (changing one makes a custom flicker)", color=C_MUTED, size=10, width=width))
+            for label, key, value in (("Speed (wavers/s)", "flicker_speed", profile.speed),
+                                      ("Brightness (0-1)", "flicker_brightness", profile.brightness),
+                                      ("Reach (0-0.5)", "flicker_reach", profile.reach),
+                                      ("Irregularity (0-1)", "flicker_irregularity", profile.irregularity)):
+                self._labeled(rows, label, self._field(f"{float(value):g}", partial(self._set_light_field, key),
+                                                       width=field_w, key=f"light_{key}"), width)
         self._labeled(rows, "Colour (R, G, B)", self._field(", ".join(str(c) for c in current),
                       lambda v: self.set_light("Colour changed.", color=[p.strip() for p in v.split(",")]),
                       width=field_w, key="light_rgb"), width)

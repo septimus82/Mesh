@@ -303,7 +303,8 @@ class InspectorMixin:
         rows.add(row)
         if not casting:
             return
-        settings = entity.get("cast_shadow") if isinstance(entity.get("cast_shadow"), dict) else {}
+        raw = entity.get("cast_shadow")
+        settings = raw if isinstance(raw, dict) else {}
         more = self.expanded == "shadow_more"
         rows.add(self._button(("v " if more else "> ") + "Shadow from lamps: fine-tune", lambda: self._toggle_expand("shadow_more"),
                               width=width))

@@ -412,7 +412,7 @@ def _cast_settings(data: dict[str, Any]) -> dict[str, Any] | None:
     return settings if enabled else None
 
 
-def _opaque_box(texture: Any, cache: dict[Any, Any]) -> tuple[int, int, int, int] | None:
+def _opaque_box(texture: Any, cache: dict[Any, tuple[int, int, int, int] | None]) -> tuple[int, int, int, int] | None:
     """The picture's non-transparent rectangle (left, top, right, bottom; image pixels, y down), cached."""
     name = getattr(texture, "atlas_name", None) or id(texture)
     if name not in cache:
@@ -591,6 +591,7 @@ def render_shadowed_lighting(manager: Any) -> bool:
         "shadow_poly_count": shapes, "shadow_triangles": triangle_count, "shadow_softness": softness,
         "shadow_edge_px": look[0], "shadow_passes": look[1], "shadow_strength": look[2],
         "characters": len(characters), "character_shadows": character_casts,
+        "character_feet": [[round(c.feet[0], 1), round(c.feet[1], 1)] for c in characters[:16]],  # where shadows start
     }
     if over:
         manager._log_counter_once("shadow_budget", f"{len(wanted)} lights cast shadows here; {len(over)} beyond the "

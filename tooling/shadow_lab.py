@@ -306,7 +306,7 @@ def run(out: Path, renderer: str) -> int:
             if light.get("flicker_enabled"):
                 panel(True)
                 select_light(number)
-                p().press_prefix("Flicker: ")
+                press("Steady")
                 until(lambda: not ops.lights(doc())[number - 1].get("flicker_enabled"), "steady")
                 panel(False)
         if (doc().get("settings") or {}).get("lighting_shadows_mode") != "hard":
@@ -433,7 +433,7 @@ def run(out: Path, renderer: str) -> int:
         light_on(2, False)
         panel(True)
         select_light(1)
-        p().press_prefix("Flicker: ")
+        press("Torch")
         until(lambda: ops.lights(doc())[0].get("flicker_enabled"), "lamp A flickers")
         panel(False)
         r, lit_pt = world(R), (world(LAMP_A)[0] + 120, world(LAMP_A)[1])
@@ -451,7 +451,7 @@ def run(out: Path, renderer: str) -> int:
         samples = [{"R": seen, "lit": lit} for seen, lit in zip(behind, lit_side)]
         panel(True)
         select_light(1)
-        p().press_prefix("Flicker: ")
+        press("Steady")
         until(lambda: not ops.lights(doc())[0].get("flicker_enabled"), "lamp A steady")
         panel(False)
         light_on(2, True)

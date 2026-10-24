@@ -299,7 +299,10 @@ def test_settings_selection_styling_follows_keyboard_and_gamepad_navigation() ->
     assert menu.on_key_press(optional_arcade.arcade.key.DOWN, 0) is True
     assert _selected_setting_actions(menu) == {"pause.settings.soft_shadows_enabled"}
 
-    menu._settings_index = 4
+    assert menu.on_key_press(optional_arcade.arcade.key.DOWN, 0) is True
+    assert _selected_setting_actions(menu) == {"pause.settings.reduced_flicker"}  # Milestone 12.1
+
+    menu._settings_index = 5
     menu._invalidate_layout()
     assert _selected_setting_actions(menu) == {"pause.settings.back"}
 
@@ -313,7 +316,7 @@ def test_settings_selection_styling_follows_keyboard_and_gamepad_navigation() ->
     )
     manager.update(0.016)
     menu.update(0.016)
-    assert _selected_setting_actions(menu) == {"pause.settings.soft_shadows_enabled"}
+    assert _selected_setting_actions(menu) == {"pause.settings.reduced_flicker"}
 
 
 def test_save_mouse_wheel_reaches_new_save_and_back(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -445,12 +448,14 @@ def test_settings_widgets_click_keyboard_and_gamepad_apply_and_persist() -> None
     assert isinstance(widgets["pause.settings.sfx_volume"], Slider)
     assert isinstance(widgets["pause.settings.fog_enabled"], Toggle)
     assert isinstance(widgets["pause.settings.soft_shadows_enabled"], Toggle)
+    assert isinstance(widgets["pause.settings.reduced_flicker"], Toggle)
     assert isinstance(widgets["pause.settings.back"], Button)
     assert [target.action_id for target in layout.hit_targets] == [
         "pause.settings.music_volume",
         "pause.settings.sfx_volume",
         "pause.settings.fog_enabled",
         "pause.settings.soft_shadows_enabled",
+        "pause.settings.reduced_flicker",
         "pause.settings.back",
     ]
 

@@ -117,8 +117,7 @@ def configure_scene_lighting(window: Any, scene: dict[str, Any], settings: Any, 
                 setter(str(mode))
             else:
                 lighting.shadows_mode = str(mode or "none").strip().lower()
-        softness = settings_block.get("lighting_shadow_softness", getattr(cfg, "lighting_shadow_softness", "sharp"))
-        lighting.shadow_softness = softness if softness in ("sharp", "soft", "softer") else "sharp"
+        apply_shadow_look(lighting, settings_block, getattr(cfg, "lighting_shadow_softness", "sharp"))
     except Exception:  # noqa: BLE001  # REASON: scene lifecycle controller fallback isolation
         _log_swallow("SCEN-004", "engine/scene_lifecycle_controller.py pass-only blanket swallow")
         pass
@@ -356,3 +355,17 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
         frame_scene()
     controller.window.clear_input_locks()
     return cast(dict[str, Any], scene)
+
+
+def apply_shadow_look(lighting: Any, settings_block: dict[str, Any], default_softness: str = "sharp") -> None:
+    """A room's shadow edges and their fine-tuning. Each falls back to its default, so one room's never carries
+    into the next."""
+    softness = settings_block.get("lighting_shadow_softness", default_softness)
+    lighting.shadow_softness = softness if softness in ("sharp", "soft", "softer") else "sharp"
+    edge = settings_block.get("lighting_shadow_edge")
+    lighting.shadow_edge_px = float(edge) if isinstance(edge, (int, float)) else None
+    strength = settings_block.get("lighting_shadow_strength")
+    lighting.shadow_strength = float(strength) if isinstance(strength, (int, float)) else 1.0
+    quality = settings_block.get("lighting_shadow_quality")
+    lighting.shadow_quality = quality if quality in ("low", "normal", "high") else "normal"
+    lighting.character_shadows = settings_block.get("lighting_character_shadows") is not False

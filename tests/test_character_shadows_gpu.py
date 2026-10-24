@@ -125,3 +125,29 @@ def test_shadow_strength_is_how_much_of_the_lamp_it_blocks(bench) -> None:
         behind = behind or _along(bench, LAMP, 30)
         values.append(bench.pixel(image, behind)[0])
     assert values[0] > values[1] + 10, values
+
+
+def test_room_fine_tuning_strength_edge_and_the_character_switch(bench) -> None:
+    """Fine-tune shadows: a weaker shadow lets some of the lamp through (never darker), a wider edge
+    widens the soft edge, and the room's switch takes characters' shadows away (walls keep theirs)."""
+    lamp, wall = [_lamp(*LAMP)], [(240.0, 300.0, 16.0, 60.0)]
+    full = _shot(bench, lights=lamp, characters=[(*HERO, 0, {})])
+    behind = _along(bench, LAMP, 30)
+    half = _shot(bench, lights=lamp, characters=[(*HERO, 0, {})], settings={"lighting_shadow_strength": 0.4})
+    lit = _shot(bench, lights=lamp, characters=[(*HERO, 0, {"cast_shadow": False})])
+    a, b, c = (bench.pixel(img, behind)[0] for img in (full, half, lit))
+    assert a + 8 < b < c, f"strength 0.4 lies between a full shadow and none: {a}, {b}, {c}"
+    off = _shot(bench, lights=lamp, walls=wall, characters=[(*HERO, 0, {})], settings={"lighting_character_shadows": False})
+    on = _shot(bench, lights=lamp, walls=wall, characters=[(*HERO, 0, {"cast_shadow": False})])
+    assert list(off.getdata()) == list(on.getdata()), "the room's switch: no character shadows, the wall's stays"
+
+    def edge_width(settings: dict) -> int:
+        image = _shot(bench, lights=lamp, walls=wall, settings=settings)
+        row = [bench.pixel(image, (x, 330.0))[0] for x in range(250, 460)]  # across the wall's shadow, sideways
+        column = [bench.pixel(image, (300.0, y))[0] for y in range(300, 420)]
+        values = row + column
+        low, high = min(values), max(values)
+        return sum(1 for v in values if low + 0.1 * (high - low) < v < low + 0.9 * (high - low))
+
+    assert edge_width({"lighting_shadow_softness": "soft", "lighting_shadow_edge": 30}) \
+        > edge_width({"lighting_shadow_softness": "soft", "lighting_shadow_edge": 6}) + 4

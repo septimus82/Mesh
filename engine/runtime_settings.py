@@ -34,6 +34,7 @@ class RuntimeSettings:
     fog_enabled: bool = False
     soft_shadows_enabled: bool = False
     text_scale: float = 1.0
+    reduced_flicker: bool = False  # calmer flickering lights: gentler, no faulty-lamp stutter (accessibility)
 
     def to_payload(self) -> dict[str, object]:
         return {
@@ -42,6 +43,7 @@ class RuntimeSettings:
             "fog_enabled": bool(self.fog_enabled),
             "soft_shadows_enabled": bool(self.soft_shadows_enabled),
             "text_scale": float(_clamp_text_scale(self.text_scale)),
+            "reduced_flicker": bool(self.reduced_flicker),
         }
 
     @classmethod
@@ -52,6 +54,7 @@ class RuntimeSettings:
             fog_enabled=bool(getattr(cfg, "fog_enabled", False)),
             soft_shadows_enabled=bool(getattr(cfg, "soft_shadows_enabled", False)),
             text_scale=_clamp_text_scale(getattr(cfg, "text_scale", 1.0)),
+            reduced_flicker=bool(getattr(cfg, "reduced_flicker", False)),
         )
 
     @classmethod
@@ -70,6 +73,7 @@ class RuntimeSettings:
                 fog_enabled=base.fog_enabled,
                 soft_shadows_enabled=base.soft_shadows_enabled,
                 text_scale=base.text_scale,
+                reduced_flicker=base.reduced_flicker,
             )
         return cls(
             music_volume=_clamp01(payload.get("music_volume", base.music_volume), base.music_volume),
@@ -77,6 +81,7 @@ class RuntimeSettings:
             fog_enabled=bool(payload.get("fog_enabled", base.fog_enabled)),
             soft_shadows_enabled=bool(payload.get("soft_shadows_enabled", base.soft_shadows_enabled)),
             text_scale=_clamp_text_scale(payload.get("text_scale", base.text_scale)),
+            reduced_flicker=bool(payload.get("reduced_flicker", base.reduced_flicker)),
         )
 
     def apply(self, window: Any) -> None:
@@ -92,6 +97,10 @@ class RuntimeSettings:
             setter = getattr(audio, "set_sfx_volume", None)
             if callable(setter):
                 setter(self.sfx_volume)
+
+        lighting = getattr(window, "lighting", None)
+        if lighting is not None:
+            lighting.reduced_flicker = bool(self.reduced_flicker)
 
         cfg = getattr(window, "engine_config", None)
         if cfg is not None:

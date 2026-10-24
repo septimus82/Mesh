@@ -87,7 +87,7 @@ from . import shadow_selection as _shadow_selection
 from . import shadowcast_snapshot as _shadowcast_snapshot
 from . import shafts as _shafts
 from . import static_light_builder as _static_light_builder
-from .flicker import FlickerNoise, apply_light_flicker
+from .flicker import FlickerNoise, apply_flicker, apply_light_flicker, flicker_state
 from .types import DynamicLightHandle, _FlickerLightState, _LayerContext
 
 logger = get_logger(__name__)
@@ -116,6 +116,15 @@ _LIGHT_MODULE_CANDIDATES: tuple[str, ...] = (
     "arcade.lights",
     "arcade.future.light",
 )
+
+
+def _dynamic_flicker_settings(handle: DynamicLightHandle) -> dict[str, Any]:
+    """A carried light's flicker settings: its owner's (preset, strength...), else the older single values."""
+    if handle.flicker_settings:
+        return {**handle.flicker_settings, "radius": handle.base_radius}
+    return {"flicker_speed": handle.flicker_speed, "flicker_amount": handle.flicker_amount,
+            "flicker_radius_px": handle.flicker_radius_px, "flicker_intensity": handle.flicker_intensity,
+            "radius": handle.base_radius}
 
 
 def _resolve_light_symbols(
@@ -274,6 +283,7 @@ class LightManager:
         self._light_casts_shadows: dict[int, bool] = {}
         self.shadow_light_budget: int = _light_compositor.DEFAULT_SHADOW_LIGHT_BUDGET
         self.shadow_softness: str = "sharp"  # shadow edges: sharp, soft or softer (light_compositor.SOFTNESS)
+        self.reduced_flicker: bool = False  # calmer flickering (an accessibility setting): gentler, no stutter
         # Fine-tuning (room settings): edge width in px (None: the preset's), strength 0-1, quality.
         self.shadow_edge_px: float | None = None
         self.shadow_strength: float = 1.0
@@ -664,6 +674,7 @@ class LightManager:
         flicker_amount: float = 0.0,
         flicker_radius_px: float | None = None,
         flicker_intensity: float | None = None,
+        flicker_settings: dict[str, Any] | None = None,
         cookie_id: str | None = None,
         cookie_scale: float = 1.0,
         cookie_rotation_deg: float = 0.0,
@@ -715,7 +726,7 @@ class LightManager:
             flicker_amount = 0.0
         seed_used = None
         if flicker_enabled:
-            if flicker_seed is None:
+            if not flicker_seed:  # None or 0 means "any": each light its own, so torches don't flicker together
                 seed_used = self._derive_flicker_seed(owner, len(self._flicker_lights))
             else:
                 try:
@@ -737,6 +748,7 @@ class LightManager:
             color_rgba=color_rgba,
             flicker_enabled=bool(flicker_enabled),
             flicker_seed=seed_used,
+            flicker_settings=dict(flicker_settings) if flicker_settings else None,
             flicker_speed=flicker_speed,
             flicker_amount=flicker_amount,
             flicker_radius_px=flicker_radius_px,
@@ -756,54 +768,9 @@ class LightManager:
         self._dynamic_handles.append(handle)
         self._add_light(light)
         if handle.flicker_enabled:
-            seed = 0 if handle.flicker_seed is None else int(handle.flicker_seed)
-            radius_px = handle.flicker_radius_px
-            if radius_px is not None:
-                try:
-                    radius_px = float(radius_px)
-                except (TypeError, ValueError):  # noqa: BLE001  # REASON: radius parse
-                    _log_swallow(
-                        "LGIN-016",
-                        "engine.lighting.__init__.LightManager.register_dynamic_light parse_flicker_radius_px",
-                        once=False,
-                    )
-                    radius_px = None
-            intensity = handle.flicker_intensity
-            if intensity is not None:
-                try:
-                    intensity = float(intensity)
-                except (TypeError, ValueError):  # noqa: BLE001  # REASON: intensity parse
-                    _log_swallow(
-                        "LGIN-017",
-                        "engine.lighting.__init__.LightManager.register_dynamic_light parse_flicker_intensity",
-                        once=False,
-                    )
-                    intensity = None
-            state = _FlickerLightState(
-                light=light,
-                base_radius=base_radius,
-                base_color=base_color,
-                noise=FlickerNoise(seed),
-                speed=float(handle.flicker_speed),
-                amount=float(handle.flicker_amount),
-                radius_px=radius_px,
-                intensity=intensity,
-            )
+            state = flicker_state(light, base_radius, base_color, _dynamic_flicker_settings(handle), int(seed_used or 0))
             self._flicker_lights.append(state)
-            flicker_radius, flicker_color = apply_light_flicker(
-                base_radius=state.base_radius,
-                base_color=state.base_color,
-                noise=state.noise,
-                time_s=self._flicker_time,
-                speed=state.speed,
-                amount=state.amount,
-                radius_px=state.radius_px,
-                intensity=state.intensity,
-            )
-            if hasattr(light, "radius"):
-                light.radius = flicker_radius
-            if hasattr(light, "color"):
-                light.color = flicker_color
+            apply_flicker(state, self._flicker_time, bool(getattr(self, "reduced_flicker", False)))
         return handle
 
     def update(self, dt: float) -> None:  # noqa: ARG002
@@ -829,22 +796,8 @@ class LightManager:
                 if hasattr(handle.light, "y"):
                     handle.light.y = ly
 
-        if self._flicker_lights:
-            for entry in self._flicker_lights:
-                radius, color = apply_light_flicker(
-                    base_radius=entry.base_radius,
-                    base_color=entry.base_color,
-                    noise=entry.noise,
-                    time_s=self._flicker_time,
-                    speed=entry.speed,
-                    amount=entry.amount,
-                    radius_px=entry.radius_px,
-                    intensity=entry.intensity,
-                )
-                if hasattr(entry.light, "radius"):
-                    entry.light.radius = radius
-                if hasattr(entry.light, "color"):
-                    entry.light.color = color
+        for entry in self._flicker_lights:
+            apply_flicker(entry, self._flicker_time, bool(getattr(self, "reduced_flicker", False)))
 
     def resize(self, width: int, height: int) -> None:
         self._width = int(width)
