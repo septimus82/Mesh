@@ -44,6 +44,7 @@ SUITES = [  # name, script, what it covers
     ("persistence", "acceptance_persistence.py", "Milestone 8: game state across rooms, saves and a restart"),
     ("lighting", "acceptance_lighting.py", "Milestone 10: lighting a game in Mesh Studio"),
     ("creator", "acceptance_creator.py", "Milestone 11: a first-time creator's game, launcher to loaded save"),
+    ("shadow_lab", "shadow_lab.py", "Milestone 12: lighting and shadows, pixel by pixel"),
     ("capability_lab", "capability_lab.py", "Milestone 7+: engine capabilities, measured"),
 ]
 RESULT = re.compile(r"^(\d+)/(\d+) (?:steps|checks) passed", re.MULTILINE)

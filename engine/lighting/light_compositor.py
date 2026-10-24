@@ -166,6 +166,19 @@ class LightCompositor:
             buffer.orphan(size=buffer.size * 2)
         buffer.write(data)
 
+    def _screen_box(self, camera: Any, spec: Any) -> tuple[int, int, int, int] | None:
+        """The light's square (centre +- radius) in target pixels, clamped; None when it is off the target."""
+        x, y, radius = spec[0], spec[1], spec[2]
+        a = camera.project((x - radius, y - radius))
+        b = camera.project((x + radius, y + radius))
+        x0, x1 = sorted((float(a[0]), float(b[0])))
+        y0, y1 = sorted((float(a[1]), float(b[1])))
+        left, bottom = max(0, int(math.floor(x0)) - 2), max(0, int(math.floor(y0)) - 2)
+        right, top = min(self.size[0], int(math.ceil(x1)) + 2), min(self.size[1], int(math.ceil(y1)) + 2)
+        if right <= left or top <= bottom:
+            return None
+        return left, bottom, right - left, top - bottom
+
     def _draw_lights(self, lights: list[tuple[float, float, float, float, tuple[float, float, float]]], *,
                      shadowed: bool) -> None:
         data = array("f")
@@ -201,8 +214,13 @@ class LightCompositor:
             if plain:
                 self._draw_lights(plain, shadowed=False)
             for spec, passes in shadowed:
+                # Only the light's own square on screen matters: clear and fill just that (scissor).
+                box = self._screen_box(camera, spec)
+                if box is None:
+                    continue
                 self.occlusion.use()
-                self.occlusion.clear(depth=1.0)
+                self.occlusion.clear(depth=1.0, viewport=box)
+                self.occlusion.scissor = box
                 ctx.enable(ctx.DEPTH_TEST)
                 pgl.glDepthFunc(pgl.GL_LESS)
                 try:
@@ -212,6 +230,7 @@ class LightCompositor:
                     self.occluder_vao.render(self.occluder_program, mode=ctx.TRIANGLES, vertices=len(triangles) // 3)
                 finally:
                     ctx.disable(ctx.DEPTH_TEST)
+                    self.occlusion.scissor = None
                 self.accum.use()
                 self.occlusion.color_attachments[0].use(0)
                 self._draw_lights([spec], shadowed=True)
