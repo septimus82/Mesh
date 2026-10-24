@@ -573,6 +573,11 @@ Report: [`docs/reviews/milestone13_repository_consolidation.md`](docs/reviews/mi
   8 test files that tested only it, and the unread repo-root `projects.json` are gone.
 - **Owner decisions.** Pip-installed Mesh (the wheel test), and the "Soft Shadows" pause-menu toggle, which has done
   nothing since M12.
+  - **Decided by the owner, 2026-10-24.** Both are housekeeping, kept separate from the UI redesign:
+    - **Pip install:** support pip-installed Mesh by putting the redistributable packs it needs in the wheel. First
+      check their licences and the wheel's size.
+    - **Pause menu:** remove the obsolete "Soft Shadows" toggle. Older saved settings that still contain it must
+      keep loading.
 
 ## Milestone 14 — visual polish and creator acceptance
 
