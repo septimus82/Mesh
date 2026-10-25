@@ -19,8 +19,8 @@ py -3.13 tooling/hd2d_assets/make_starter_kit.py --blender D:/program/blender.ex
 
 **The template's other files.** The template also uses these files of Mesh's own:
 
-- **Characters:** `assets/sprites/starter_hero.png`, `starter_villager.png`, `starter_sign.png` and
-  `starter_merchant.png` (`tooling/make_starter_art.py`; see `docs/starter_art.md`).
+- **Characters:** `assets/sprites/hd2d_hero.png`, `hd2d_villager.png` and `hd2d_merchant.png`, Mesh's HD-2D
+  character style, and `starter_sign.png` (`tooling/make_starter_art.py`; see `docs/starter_art.md`).
 - **The door:** `assets/sprites/door.png`.
 - **Interface sounds:** `assets/sounds/ui_open.wav`, `ui_close.wav`, `ui_click.wav` and `ui_hover.wav`. These are
   tones synthesised by `tooling/generate_sounds.py`, and the shipped files are byte-identical to its output.
