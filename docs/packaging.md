@@ -27,7 +27,7 @@ repository, where creating projects, Mesh Studio, play and export were all exerc
 
 ## The allow-list
 
-`pyproject.toml`'s `[tool.setuptools.data-files]` names **176 files** (0.99 MB) by path, so nothing goes in by accident.
+`pyproject.toml`'s `[tool.setuptools.data-files]` names **178 files** (1.07 MB) by path, so nothing goes in by accident.
 pip installs them under `<prefix>/share/mesh-engine/`, the conventional place for an application's shared data.
 
 | Group | Files | Size |
@@ -37,7 +37,8 @@ pip installs them under `<prefix>/share/mesh-engine/`, the conventional place fo
 | Sounds (`attack`, `die`, `hit`, `ui_*`) and music (`dungeon_theme`) | 8 | 468 KB |
 | Sprites: starter hero, villager, sign; HD-2D hero, villager, merchant; door | 7 | 12 KB |
 | Starter tileset | 2 | 9 KB |
-| Launcher template pictures | 2 | 10 KB |
+| Launcher template pictures (Blank, Top-down Adventure, HD-2D RPG Preview) | 3 | 86 KB |
+| The HD-2D RPG (Preview)'s creator help (`docs/hd2d_preview.md`, copied into new HD-2D projects) | 1 | 6 KB |
 | HD-2D starter kit: 14 models, 14 previews, 2 textures, catalogue, provenance | 32 | 272 KB |
 | Mesh Studio branding, with its notice | 10 | 122 KB |
 | Mesh Studio icons: PNGs, the Lucide SVGs, `NOTICE.md` and the ISC `LICENSE` | 110 | 61 KB |

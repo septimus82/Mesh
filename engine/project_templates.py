@@ -36,10 +36,11 @@ _TEMPLATES = [
              "a house you can enter, trees and water in your way. Esc opens the menu to save and load.",
              launcher=True, preview="assets/templates/adventure.png"),
     Template("starter", "Starter Room", "Walkable player and a Guide NPC who says hello."),
-    # Milestone 16 Stage 6A: developer-only (not in the launcher) until the installed-engine gate passes (Stage 6B).
-    Template("hd2d_rpg", "HD-2D RPG (developer preview)",
-             "A small 3D village to play and edit: hills joined by a bridge, stairs, a cottage you can enter, a shop, "
-             "people to talk to and a sign; built from Mesh's HD-2D starter kit of Blender models."),
+    # Milestone 16: a Preview (owner-approved after Stage 6B's installed-engine gate); creator help: docs/hd2d_preview.md.
+    Template("hd2d_rpg", "HD-2D RPG (Preview)",
+             "A playable, editable example: 3D buildings, pixel-art characters, stairs, a bridge, lighting and people "
+             "to talk to. Import Blender GLB models and edit in 3D. A preview: some features are still experimental.",
+             launcher=True, preview="assets/templates/hd2d_rpg.png"),
     Template("monster", "Monster Test Game", "Blank room plus the companion-monster test data (species, moves, battle sprites, sounds)."),
     # Older scene layout (top-level "layers"); Mesh Studio can't edit these. Kept for the CLI.
     Template("lighting_playground", "Lighting Playground", "Scene with lights, occluders, and fog preset."),

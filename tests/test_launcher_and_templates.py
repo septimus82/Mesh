@@ -54,9 +54,9 @@ def test_studio_runs_in_its_own_process_with_the_engine_importable(tmp_path) -> 
     assert env["PYTHONPATH"].split(";" if sys.platform == "win32" else ":")[0] == str(ENGINE_ROOT)
 
 
-def test_the_launcher_offers_blank_and_adventure_with_pictures() -> None:
+def test_the_launcher_offers_blank_adventure_and_the_hd2d_preview_with_pictures() -> None:
     offered = list_templates(launcher_only=True)
-    assert [t.id for t in offered] == ["blank", "adventure"]
+    assert [t.id for t in offered] == ["blank", "adventure", "hd2d_rpg"]
     for template in offered:
         assert (ENGINE_ROOT / template.preview).is_file(), f"run tooling/make_template_previews.py ({template.id})"
     assert {"starter", "lighting_playground", "demo_slice", "monster"} <= {t.id for t in list_templates()}

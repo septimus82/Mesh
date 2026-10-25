@@ -12,6 +12,7 @@ A pip-installed Mesh carries these files under `<prefix>/share/mesh-engine/` (`p
 | `assets/tilesets/starter.png`, `starter.json` | The starter tileset, drawn in code by `tooling/make_starter_tileset.py` | Mesh's own |
 | `assets/sounds/*.wav`, `assets/music/dungeon_theme.wav` | Tones and a loop synthesised by `tooling/generate_sounds.py` and `tooling/generate_music.py` | Mesh's own |
 | `assets/templates/*.png` | The launcher's template pictures, rendered from Mesh's own templates | Mesh's own |
+| `docs/hd2d_preview.md` | The HD-2D RPG (Preview)'s creator help (copied into each new HD-2D project as `HD-2D Help.md`) | Mesh's own |
 | `assets/hd2d_starter/**` | The HD-2D starter kit: models built by Mesh's Blender scripts, pixel textures drawn in code, CPU previews | Mesh's own: see `assets/hd2d_starter/PROVENANCE.md` |
 | `assets/branding/*` | The MeshMind Studios brand: Mesh Studio's application icon and the publisher's wordmark | © MeshMind Studios, all rights reserved; **not** covered by Mesh's code licence: see `assets/branding/NOTICE.md` |
 | `assets/icons/*.png`, `assets/icons/lucide/*.svg` | Mesh Studio's button icons, from [Lucide](https://lucide.dev) (`lucide-static@1.61.0`) | ISC licence: the notice is `assets/icons/lucide/LICENSE`, kept with every copy (`assets/icons/NOTICE.md`) |

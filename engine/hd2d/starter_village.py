@@ -1,4 +1,4 @@
-"""The HD-2D RPG project template (Milestone 16 Stage 6A, developer-only until its distribution gate passes): a small
+"""The HD-2D RPG (Preview) project template (Milestone 16; creator help: docs/hd2d_preview.md): a small
 playable village made from Mesh's HD-2D starter kit, built with the same validated operations as Mesh Studio.
 
 What a new project gets:
@@ -36,6 +36,7 @@ KIT = "assets/hd2d_starter"
 GRASS = f"{KIT}/textures/grass.png"
 HD_HERO, HD_VILLAGER, HD_MERCHANT = (f"assets/sprites/hd2d_{name}.png" for name in ("hero", "villager", "merchant"))
 # The game's dialogue and menu sounds: tones synthesised by tooling/generate_sounds.py (Mesh's own).
+HELP = "docs/hd2d_preview.md"  # creator help for the HD-2D RPG (Preview)
 UI_SOUNDS = tuple(f"assets/sounds/ui_{name}.wav" for name in ("open", "close", "click", "hover"))
 START = "packs/core_regions/scenes/start.json"
 WORLD = "packs/core_regions/worlds/main.json"
@@ -149,6 +150,7 @@ def build(root: Path, bundled: Callable[[str], Path | None], person: dict[str, A
     for rel in (GRASS, f"{KIT}/textures/dirt.png", HD_HERO, HD_VILLAGER, HD_MERCHANT, *UI_SOUNDS):
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(engine_file(rel), root / rel)
+    shutil.copyfile(engine_file(HELP), root / "HD-2D Help.md")  # the creator's help, beside their game
     person = walking(person, HD_VILLAGER)
     prefabs_path = root / "assets" / "prefabs.json"  # Mesh Studio's Person object: the same style
     prefabs = json.loads(prefabs_path.read_text(encoding="utf-8"))

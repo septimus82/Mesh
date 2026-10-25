@@ -36,9 +36,12 @@ def _rooms(project: Path) -> dict[str, dict]:
     return {rel: json.loads((project / rel).read_text(encoding="utf-8")) for rel in ROOMS}
 
 
-def test_the_template_is_developer_only() -> None:
-    assert "hd2d_rpg" in [t.id for t in list_templates()]
-    assert "hd2d_rpg" not in [t.id for t in list_templates(launcher_only=True)], "not in the launcher until Stage 6B"
+def test_the_template_is_offered_as_a_labelled_preview() -> None:
+    offered = list_templates(launcher_only=True)
+    hd2d = next(t for t in offered if t.id == "hd2d_rpg")
+    assert hd2d.title == "HD-2D RPG (Preview)" and "experimental" in hd2d.description
+    assert not any(word in hd2d.description.lower() for word in ("executable", "production", ".exe"))
+    assert [t.id for t in offered][:2] == ["blank", "adventure"], "after the existing templates, which are unchanged"
 
 
 def test_the_project_has_the_kit_and_only_mesh_art(project: Path) -> None:
@@ -51,6 +54,8 @@ def test_the_project_has_the_kit_and_only_mesh_art(project: Path) -> None:
     assert sprites == ["door.png", "hd2d_hero.png", "hd2d_merchant.png", "hd2d_villager.png", "starter_hero.png",
                        "starter_sign.png", "starter_villager.png"]
     assert not (project / "assets" / "sprites" / "animated_player.png").exists(), "no unverified legacy art"
+    help_text = (project / "HD-2D Help.md").read_text(encoding="utf-8")
+    assert "Blender" in help_text and "Keep pixels sharp" in help_text and "Python" in help_text, "the creator's help"
 
 
 def test_nothing_in_the_project_points_outside_it(project: Path) -> None:

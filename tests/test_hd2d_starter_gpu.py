@@ -1,4 +1,4 @@
-"""Milestone 16 Stage 6A, proven in a hidden window: a project made from the developer-only HD-2D RPG template opens
+"""Milestone 16 Stage 6A, proven in a hidden window: a project made from the HD-2D RPG (Preview) template opens
 in Mesh Studio, is edited there (a building moved, a person placed on a raised floor in 3D, a lamp changed, an AI's
 proposal accepted), saved, reopened and played: stairs, bridge, underpass, three conversations, a sign, a door to
 the second room, quick save and load (tooling/hd2d_starter_demo.py). GL-gated: set MESH_GL_SMOKE=1."""
@@ -71,6 +71,11 @@ def test_a_person_is_placed_on_a_raised_floor_by_clicking_in_3d(run: dict) -> No
     assert place["gone_after_undo"] and place["back_after_redo"]
 
 
+def test_what_the_new_person_says_is_edited_in_studio(run: dict) -> None:
+    edit = run["edit_person"]
+    assert edit["selected"] == run["place_person"]["entity"]["id"] and edit["says"] == "Welcome to the west hill!"
+
+
 def test_a_lamp_changes_colour_and_height(run: dict) -> None:
     lamp = run["modify_light"]["lamp"]
     assert lamp["color"] == "#88bbff" and lamp["elevation"] == 96.0 and run["modify_light"]["renderer_lamps"] == 2
@@ -95,6 +100,7 @@ def test_play_climbs_crosses_ducks_under_talks_reads_and_changes_rooms(run: dict
     talks = {key: w[key] for key in ("talked to the new person", "talked to the Elder", "read the sign")}
     assert all(t["dialogue_opened"] and t["dialogue_closed"] for t in talks.values())
     assert talks["talked to the new person"]["speaker"] == "Person"
+    assert talks["talked to the new person"]["first_line"] == "Welcome to the west hill!", "the line edited in Studio"
     assert talks["talked to the Elder"]["speaker"] == "Elder"
     assert talks["talked to the Elder"]["first_line"] == "Welcome to Mesh Village!"
     assert talks["read the sign"]["first_line"] == "Mesh Village"
