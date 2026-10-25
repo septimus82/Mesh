@@ -6,6 +6,9 @@ was active (the screen, or the post-processing target). Structures are batched s
 are transformed once at load and merged into one vertex and index buffer per texture, so a village costs a few draw
 calls. Sprites are batched per texture every frame. Pixel art's binary alpha is alpha-tested, so the depth buffer
 alone gives correct occlusion, with no sorting.
+
+Every surface is lit per fragment where it is in the world (``engine.hd2d.lighting``: ambient, the sun, lamps,
+shadow maps); a frame is the sun's shadow pass (and, once, the lamps'), then the scene.
 """
 
 from __future__ import annotations
@@ -18,6 +21,7 @@ from typing import Any, Callable
 from PIL import Image
 
 from engine.hd2d.glb import Model, load_glb
+from engine.hd2d.lighting import LIGHTING_GLSL, Lighting
 from engine.hd2d.settings import PIXELS_PER_METRE, Hd2dSettings
 from engine.logging_tools import get_logger
 
@@ -27,33 +31,37 @@ MESH_VS = """
 #version 330
 uniform mat4 u_vp; uniform mat4 u_model;
 in vec3 in_pos; in vec3 in_nrm; in vec2 in_uv;
-out vec3 v_nrm; out vec2 v_uv;
-void main() { v_nrm = mat3(u_model) * in_nrm; v_uv = in_uv; gl_Position = u_vp * u_model * vec4(in_pos, 1.0); }
+out vec3 v_nrm; out vec2 v_uv; out vec3 v_world;
+void main() {
+    vec4 w = u_model * vec4(in_pos, 1.0);
+    v_nrm = mat3(u_model) * in_nrm; v_uv = in_uv; v_world = w.xyz; gl_Position = u_vp * w;
+}
 """
 MESH_FS = """
 #version 330
-uniform sampler2D u_tex; uniform vec3 u_sun; uniform float u_ambient;
-in vec3 v_nrm; in vec2 v_uv; out vec4 f_color;
+uniform sampler2D u_tex;
+in vec3 v_nrm; in vec2 v_uv; in vec3 v_world; out vec4 f_color;
+""" + LIGHTING_GLSL + """
 void main() {
     vec4 c = texture(u_tex, v_uv);
-    float light = u_ambient + (1.0 - u_ambient) * max(dot(normalize(v_nrm), u_sun), 0.0);
-    f_color = vec4(c.rgb * light, 1.0);
+    f_color = vec4(c.rgb * light_at(v_world, normalize(v_nrm), false), 1.0);
 }
 """
 SPRITE_VS = """
 #version 330
 uniform mat4 u_vp;
-in vec3 in_pos; in vec2 in_uv; out vec2 v_uv;
-void main() { v_uv = in_uv; gl_Position = u_vp * vec4(in_pos, 1.0); }
+in vec3 in_pos; in vec2 in_uv; out vec2 v_uv; out vec3 v_world;
+void main() { v_uv = in_uv; v_world = in_pos; gl_Position = u_vp * vec4(in_pos, 1.0); }
 """
 SPRITE_FS = """
 #version 330
-uniform sampler2D u_tex; uniform float u_light; uniform int u_solid;
-in vec2 v_uv; out vec4 f_color;
+uniform sampler2D u_tex; uniform int u_solid;
+in vec2 v_uv; in vec3 v_world; out vec4 f_color;
+""" + LIGHTING_GLSL + """
 void main() {
     vec4 c = texture(u_tex, v_uv);
     if (c.a < 0.5) discard;  // binary alpha: discard, write depth for the rest; no sorting needed
-    f_color = u_solid == 1 ? vec4(1.0, 0.0, 0.0, 1.0) : vec4(c.rgb * u_light, 1.0);
+    f_color = u_solid == 1 ? vec4(1.0, 0.0, 0.0, 1.0) : vec4(c.rgb * light_at(v_world, vec3(0.0, -1.0, 0.0), true), 1.0);
 }
 """
 SHADOW_FS = """
@@ -163,6 +171,32 @@ class Hd2dRenderer:
         self.static: list[tuple[Any, Any, tuple[float, ...]]] = []  # (geometry, texture, model matrix)
         self._build_structures()
         self.ground = self._build_ground(resolve) if settings.ground is not None else None
+        self.lighting = Lighting(ctx, self.arcade, settings, *self.world_box())
+
+    def world_box(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+        """The room's extent in metres (structures and ground, with headroom for characters): what the sun's
+        shadow map covers."""
+        corners: list[tuple[float, float, float]] = []
+        for st in self.settings.structures:
+            m = _placement(st.x / PIXELS_PER_METRE, st.y / PIXELS_PER_METRE, st.elevation / PIXELS_PER_METRE,
+                           st.rotation, st.scale)
+            lo, hi = self.models[st.model].bounds()
+            for x in (lo[0], hi[0]):
+                for y in (lo[1], hi[1]):
+                    for z in (lo[2], hi[2]):
+                        corners.append((m[0][0] * x + m[0][1] * y + m[0][2] * z + m[0][3],
+                                        m[1][0] * x + m[1][1] * y + m[1][2] * z + m[1][3],
+                                        m[2][0] * x + m[2][1] * y + m[2][2] * z + m[2][3]))
+        g = self.settings.ground
+        if g is not None:
+            z = g.elevation / PIXELS_PER_METRE
+            corners += [(g.lo[0] / PIXELS_PER_METRE, g.lo[1] / PIXELS_PER_METRE, z),
+                        (g.hi[0] / PIXELS_PER_METRE, g.hi[1] / PIXELS_PER_METRE, z)]
+        if not corners:
+            corners = [(0.0, 0.0, 0.0), (1.0, 1.0, 0.0)]
+        lo3 = (min(c[0] for c in corners), min(c[1] for c in corners), min(c[2] for c in corners))
+        hi3 = (max(c[0] for c in corners), max(c[1] for c in corners), max(c[2] for c in corners) + 2.5)
+        return lo3, hi3
 
     # ------------------------------------------------------------------ resources
     def _buffer(self, data: bytes) -> Any:
@@ -280,6 +314,7 @@ class Hd2dRenderer:
         self.ground = None
         for program in (self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog):
             program.delete()
+        self.lighting.release()
 
     # ------------------------------------------------------------------ the scene's sprites
     def _sprites(self) -> list[Any]:
@@ -394,16 +429,22 @@ class Hd2dRenderer:
             self.update(0.0)
         vp = _column_major(self.camera.view_projection(size[0] / max(1, size[1])))
         self.draw_calls = 0
+        ctx.disable(ctx.CULL_FACE)
+        lighting = self.lighting
+        # This frame's characters first: the sun's shadow pass needs them before the scene is drawn. With real
+        # shadows on, no painted blob under them (their shadows fall from the sun); off, Stage 2's soft blob.
+        sprites = [solid] if solid is not None else self._sprites()
+        verts, idx, ranges = self._sprite_quads(sprites, shadows=solid is None and not lighting.enabled)
+        geometry_sprites = self._upload_dynamic(verts, idx) if sprites else None
+        if solid is None:
+            lighting.render_shadows(self.static, geometry_sprites, ranges)  # the ground receives, never casts
         fbo.use()
         fbo.clear(color=(118, 160, 214, 255), depth=1.0)
         ctx.enable(ctx.DEPTH_TEST)
-        ctx.disable(ctx.CULL_FACE)
         mp = self.mesh_prog
         mp["u_vp"] = vp
-        sun = self.settings.sun
-        length = math.sqrt(sum(v * v for v in sun))
-        mp["u_sun"] = tuple(v / length for v in sun)
-        mp["u_ambient"] = self.settings.ambient
+        mp["u_tex"] = 0
+        lighting.bind(mp)
         statics = ([(self.ground[0], self.ground[1], IDENTITY)] if self.ground else []) + self.static
         for geometry, texture, matrix in statics:
             mp["u_model"] = matrix
@@ -414,15 +455,14 @@ class Hd2dRenderer:
             fbo.depth_mask = False
             fbo.clear(color=(0, 0, 0, 255))
             fbo.depth_mask = True
-        sprites = [solid] if solid is not None else self._sprites()
         sp = self.sprite_prog
         sp["u_vp"] = vp
-        sp["u_light"] = self.settings.ambient + (1 - self.settings.ambient) * 0.75
+        sp["u_tex"] = 0
         sp["u_solid"] = 1 if solid is not None else 0
+        lighting.bind(sp)
         self.shadow_prog["u_vp"] = vp
-        if sprites:
-            verts, idx, ranges = self._sprite_quads(sprites, shadows=solid is None)
-            geometry = self._upload_dynamic(verts, idx)
+        if geometry_sprites is not None:
+            geometry = geometry_sprites
             for texture, first, count in ranges:
                 if texture is None:  # soft shadows: blended, no depth writes
                     with ctx.enabled(ctx.BLEND):
@@ -453,4 +493,7 @@ class Hd2dRenderer:
         buffer_bytes = sum(b.size for b in self._buffers + list(self._dynamic[1:] if self._dynamic else []))
         return {"draw_calls": self.draw_calls, "static_draws": len(self.static) + (1 if self.ground else 0),
                 "triangles": self.triangles, "buffer_bytes": buffer_bytes,
-                "texture_bytes": texture_bytes, "target_bytes": target_bytes, "batched": self.batched}
+                "texture_bytes": texture_bytes, "target_bytes": target_bytes, "batched": self.batched,
+                "shadows": self.lighting.enabled, "shadow_draws": self.lighting.shadow_draws,
+                "shadow_map_bytes": self.lighting.memory_bytes(), "lamps": len(self.lighting.lamps),
+                "shadow_lamps": sum(1 for slot in self.lighting.lamp_slots if slot >= 0)}

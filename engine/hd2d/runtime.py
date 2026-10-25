@@ -9,6 +9,7 @@ A scene whose HD-2D settings or models are broken still loads (drawn 2D) and the
 
 from __future__ import annotations
 
+import dataclasses
 from typing import Any
 
 from engine.logging_tools import get_logger
@@ -24,7 +25,7 @@ def release(window: Any) -> None:
     window.hd2d_world = None
 
 
-def configure_scene(window: Any, settings: Any) -> None:
+def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
     """Called while a scene loads: drop the previous scene's renderer, make this one's if it asks for HD-2D."""
     release(window)
     window.hd2d_error = None
@@ -33,13 +34,15 @@ def configure_scene(window: Any, settings: Any) -> None:
         return
     from engine.hd2d.glb import GlbError  # noqa: PLC0415  # only HD-2D scenes load the 3D code
     from engine.hd2d.renderer import Hd2dRenderer  # noqa: PLC0415
-    from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d  # noqa: PLC0415
+    from engine.hd2d.settings import Hd2dSettingsError, parse_hd2d, parse_scene_lights  # noqa: PLC0415
     from engine.paths import resolve_path  # noqa: PLC0415
 
     world = (settings.get("world_width"), settings.get("world_height"))
     map_size = (float(world[0]), float(world[1])) if all(isinstance(v, (int, float)) for v in world) else None
     try:
         hd2d = parse_hd2d(raw, map_size_px=map_size)
+        lights = scene.get("lights") if isinstance(scene, dict) else None
+        hd2d = dataclasses.replace(hd2d, **parse_scene_lights(lights, settings))  # the room's own lights
         window.hd2d_renderer = Hd2dRenderer(window, hd2d, resolve_path)
         models = window.hd2d_renderer.models
         if any(model.colliders for model in models.values()):  # floors and walls authored in the GLBs

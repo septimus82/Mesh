@@ -192,6 +192,10 @@
         "enabled": {
           "type": "boolean"
         },
+        "elevation": {
+          "type": "number",
+          "description": "HD-2D rooms only: the lamp's height above the ground in pixels (32 px = 1 m; default 48). 2D rooms ignore it."
+        },
         "flicker_amount": {
           "type": "number"
         },

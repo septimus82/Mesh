@@ -6,8 +6,9 @@
 ``build`` makes an ordinary Mesh project (the blank template: its player, animation and controls) whose start room is
 the stone crossing (``tooling/hd2d_assets/stone_crossing.glb``, built by ``build_crossing.py`` with its collision
 authored in Blender): ground, two platforms 2 m up with a staircase each, a railed bridge between them over an open
-underpass, and a hut. A warden (the template's person) walks between the east platform and the ground below it with
-``FloorRoute``, by the stairs. Not a template.
+underpass, and a hut. A warden (the template's person) walks with ``FloorRoute`` from the east platform down its stairs, under the
+bridge and back. Lit (Stage 4) by a sun, the sky's ambient tint and two lamps, from the scene's ordinary
+``lights``. Not a template.
 
 ``check`` drives the player only by holding arrow keys (key press / release events into the hidden window, as the
 OS would send them) until a spot is reached or the player is blocked: never by setting positions. It records each
@@ -66,15 +67,28 @@ def build(project: Path) -> Path:
             "structures": [{"id": "crossing", "model": "assets/models/stone_crossing.glb", "x": CENTRE[0], "y": CENTRE[1]}],
             "ground": {"texture": "assets/textures/grass.png", "from": [0, 0], "to": [WIDTH * 32, HEIGHT * 32]},
             "camera": {"pitch": 32, "fov": 30, "distance": 15, "follow": "player"},
+            # Stage 4: a warm sun from the north-east (shadows fall towards the camera), a dim bluish sky light
+            "sun": {"direction": [0.35, 0.5, 0.79], "color": "#fff0d8", "intensity": 1.0}, "ambient": 0.35,
         },
+        "lighting_shadow_softness": "soft",
     })
+    # The room's ordinary lights (as a 2D room has them; HD-2D adds their height): the sky's tint, a warm lamp at
+    # the foot of the west stairs, and a blue lamp on the east platform whose light the hut blocks.
+    scene["lights"] = [
+        {"id": "sky", "type": "ambient", "color": "#8a96c8", "mode": "soft"},
+        {"id": "stairs_lamp", "x": 288.0, "y": 128.0, "elevation": 48.0, "radius": 224.0, "color": "#ffb060",
+         "intensity": 1.6, "mode": "soft"},
+        {"id": "hut_lamp", "x": 624.0, "y": 432.0, "elevation": 102.4, "radius": 224.0, "color": "#5a8cff",
+         "intensity": 1.8, "mode": "soft"},
+    ]
     # Positions are sprite centres; a 48 px character's feet (its movement box) are 18 px below its centre.
     scene["entities"] = [
         {"id": "start_player_128_128_0_0", "prefab_id": "player", "x": 512.0, "y": 96.0 + 18.0},
         {"id": "warden", "prefab_id": "person", "mesh_name": "Warden", "x": 784.0, "y": 336.0 + 18.0, "elevation": 64.0,
          "behaviours": ["Dialogue", "Animator", "FloorRoute"],
          # feet points: on the east platform (2 m up), then on the ground south of its stairs
-         "behaviour_config": {"FloorRoute": {"route": [[704.0, 96.0, 0.0], [784.0, 336.0, 64.0]], "speed": 70.0,
+         "behaviour_config": {"FloorRoute": {"route": [[704.0, 96.0, 0.0], [512.0, 384.0, 0.0],
+                                                                       [784.0, 336.0, 64.0]], "speed": 70.0,
                                              "wait": 0.5}}},
     ]
     _write(start, scene)
@@ -86,6 +100,30 @@ def _feet(sprite: Any) -> tuple[float, float]:
 
     box = _sprite_to_aabb(sprite)
     return box.x / PX, box.y / PX
+
+
+def hold_key(game: Any, player: Any, key: int, axis: int, target: float, max_frames: int = 900,
+             each_frame: Any = None) -> bool:
+    """Hold ``key`` (press and release events, as the OS sends them) until the player's feet reach ``target`` (m) on
+    ``axis``, or it stops moving (blocked). True if reached."""
+    keys = game.arcade.key
+    sign = 1 if key in (keys.RIGHT, keys.UP) else -1
+    game.window.dispatch_event("on_key_press", key, 0)
+    reached, stalled = False, 0
+    for _ in range(max_frames):
+        before = _feet(player)[axis]
+        if (before - target) * sign >= 0:
+            reached = True
+            break
+        game.step(1)
+        if each_frame is not None:
+            each_frame()
+        stalled = stalled + 1 if abs(_feet(player)[axis] - before) < 1e-4 else 0
+        if stalled > 12:
+            break
+    game.window.dispatch_event("on_key_release", key, 0)
+    game.step(2)
+    return reached
 
 
 def check(project: Path, out: Path) -> dict[str, Any]:
@@ -127,25 +165,12 @@ def check(project: Path, out: Path) -> dict[str, Any]:
             report["legs"].append(entry)
             return entry
 
+        def each_frame() -> None:
+            camera_z.append(hd.camera.target[2])
+            clips.add(_clip(player) or "")
+
         def drive(key: int, axis: int, target: float, max_frames: int = 900) -> bool:
-            """Hold ``key`` until the feet reach ``target`` (m) on ``axis``, or stop moving (blocked)."""
-            sign = 1 if key in (keys.RIGHT, keys.UP) else -1
-            game.window.dispatch_event("on_key_press", key, 0)
-            reached, stalled = False, 0
-            for _ in range(max_frames):
-                before = _feet(player)[axis]
-                if (before - target) * sign >= 0:
-                    reached = True
-                    break
-                game.step(1)
-                camera_z.append(hd.camera.target[2])
-                clips.add(_clip(player) or "")
-                stalled = stalled + 1 if abs(_feet(player)[axis] - before) < 1e-4 else 0
-                if stalled > 12:
-                    break
-            game.window.dispatch_event("on_key_release", key, 0)
-            game.step(2)
-            return reached
+            return hold_key(game, player, key, axis, target, max_frames, each_frame)
 
         state("start: on the ground", "01_ground.png")
         # -- the upper route: ground -> west stairs -> west platform -> bridge -> east platform -> east stairs -> ground

@@ -245,7 +245,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     controller.window.world_width = controller.scene_settings.get("world_width")
     controller.window.world_height = controller.scene_settings.get("world_height")
     configure_scene_lighting(controller.window, scene, controller.scene_settings, scene_path)
-    configure_hd2d_scene(controller.window, controller.scene_settings)
+    configure_hd2d_scene(controller.window, controller.scene_settings, scene)
 
     # Handle music
     music_path = controller.scene_settings.get("music")
