@@ -20,20 +20,24 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from blender_kit import box, export, material, ramp, reset  # noqa: E402
 
-OUT = Path(sys.argv[sys.argv.index("--") + 1]).resolve()
-
-reset()
-TREAD, SIDE, LANDING = (material(t, interpolation="Linear") for t in ("floorboards", "timber", "cobbles"))
 W, H, STEPS = 1.0, 2.0, 8
 
-for k in range(STEPS):
-    y0 = -2.0 + 0.5 * k
-    box(f"step_{k}", -W, y0, 0.0, W, 2.0, 0.25 * (k + 1), (TREAD, SIDE))
-box("landing", -W, 2.0, 0.0, W, 4.0, H, (LANDING, SIDE))
-ramp("col_stairs", -W, W, -2.5, 1.5, H)  # through the steps' front edges
-box("col_landing", -W, 1.5, 0.0, W, 4.0, H, collision="solid")
-for side, (x0, x1) in (("west", (-W - 0.12, -W)), ("east", (W, W + 0.12))):
-    box(f"side_{side}", x0, -2.0, 0.0, x1, 4.0, H + 0.8, (SIDE, SIDE))
-    box(f"col_side_{side}", x0, -2.0, 0.0, x1, 4.0, H + 0.8, collision="wall")
 
-export(OUT)
+def build(interpolation: str = "Linear") -> None:
+    """The staircase in the current Blender scene; ``interpolation`` is its textures' ("Closest" for the starter kit)."""
+    tread, side, landing = (material(t, interpolation=interpolation) for t in ("floorboards", "timber", "cobbles"))
+    for k in range(STEPS):
+        y0 = -2.0 + 0.5 * k
+        box(f"step_{k}", -W, y0, 0.0, W, 2.0, 0.25 * (k + 1), (tread, side))
+    box("landing", -W, 2.0, 0.0, W, 4.0, H, (landing, side))
+    ramp("col_stairs", -W, W, -2.5, 1.5, H)  # through the steps' front edges
+    box("col_landing", -W, 1.5, 0.0, W, 4.0, H, collision="solid")
+    for name, (x0, x1) in (("west", (-W - 0.12, -W)), ("east", (W, W + 0.12))):
+        box(f"side_{name}", x0, -2.0, 0.0, x1, 4.0, H + 0.8, (side, side))
+        box(f"col_side_{name}", x0, -2.0, 0.0, x1, 4.0, H + 0.8, collision="wall")
+
+
+if __name__ == "__main__":
+    reset()
+    build()
+    export(Path(sys.argv[sys.argv.index("--") + 1]).resolve())

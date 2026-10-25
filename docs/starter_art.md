@@ -1,12 +1,13 @@
 # Starter art: provenance
 
-New Mesh projects get three pictures of Mesh's own (Milestone 11):
+New Mesh projects get three pictures of Mesh's own (Milestone 11); the HD-2D starter adds a fourth:
 
 | File | What | Layout |
 |---|---|---|
 | `assets/sprites/starter_hero.png` | the player: brown hair, blue tunic, red scarf | 4 x 4 sheet of 32 x 48 frames |
 | `assets/sprites/starter_villager.png` | the "Person" object: straw hat, green tunic, apron | 4 x 4 sheet of 32 x 48 frames |
 | `assets/sprites/starter_sign.png` | the "Sign" object: a wooden signpost | one 32 x 32 picture |
+| `assets/sprites/starter_merchant.png` | the HD-2D starter village's shopkeeper: dark hair, plum tunic, cream apron, brown hat (Milestone 16 Stage 6A) | 4 x 4 sheet of 32 x 48 frames |
 
 The character sheets have one row per direction (down, left, right, up) and four columns: stand, step, stand,
 other step. The templates set them up exactly as Studio's "Set up walking" does (`project_ops.character_clips`):

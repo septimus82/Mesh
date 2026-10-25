@@ -76,6 +76,22 @@ def box(name, x0, y0, z0, x1, y1, z1, mats=None, collision=None):
     return _finish(name, bm, mats, collision)
 
 
+def prism(name, cx, cy, radius, z0, z1, sides=8, mats=None, collision=None):
+    """An upright prism (a barrel, a post): ``sides`` faces around (cx, cy), from z0 to z1."""
+    import math
+
+    bm = bmesh.new()
+    ring0 = [bm.verts.new((cx + radius * math.cos(2 * math.pi * i / sides), cy + radius * math.sin(2 * math.pi * i / sides), z0))
+             for i in range(sides)]
+    ring1 = [bm.verts.new((v.co.x, v.co.y, z1)) for v in ring0]
+    for i in range(sides):
+        j = (i + 1) % sides
+        bm.faces.new((ring0[i], ring0[j], ring1[j], ring1[i]))
+    bm.faces.new(tuple(reversed(ring0)))
+    bm.faces.new(tuple(ring1))
+    return _finish(name, bm, mats, collision)
+
+
 def ramp(name, x0, x1, y0, y1, z_top, collision="solid"):
     """A collision ramp rising from (y0, z 0) to (y1, z_top): stairs as one walkable slope."""
     bm = bmesh.new()

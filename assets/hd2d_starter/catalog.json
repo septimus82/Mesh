@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "kit": "Mesh HD-2D starter kit",
+  "version": 1,
+  "models": [
+    {
+      "id": "cottage",
+      "model": "models/cottage.glb",
+      "name": "Cottage",
+      "category": "Buildings",
+      "preview": "previews/cottage.png",
+      "notes": "A timber-and-plaster cottage with a doorway; walk inside.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 1,
+        "floor": 0,
+        "wall": 6
+      },
+      "floors": [
+        "col_floor"
+      ]
+    },
+    {
+      "id": "shop",
+      "model": "models/shop.glb",
+      "name": "Shop",
+      "category": "Buildings",
+      "preview": "previews/shop.png",
+      "notes": "A stall-shop with a counter and awning; walk in at the counter's east end.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 1,
+        "floor": 0,
+        "wall": 6
+      },
+      "floors": [
+        "col_floor"
+      ]
+    },
+    {
+      "id": "wall_2m",
+      "model": "models/wall_2m.glb",
+      "name": "Wall (2 m)",
+      "category": "Building parts",
+      "preview": "previews/wall_2m.png",
+      "notes": "A wall module, 2.5 m high: line several up.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 0,
+        "floor": 0,
+        "wall": 1
+      },
+      "floors": []
+    },
+    {
+      "id": "roof_4m",
+      "model": "models/roof_4m.glb",
+      "name": "Roof (4 x 4 m)",
+      "category": "Building parts",
+      "preview": "previews/roof_4m.png",
+      "notes": "A gable roof: place it 2.5 m up on four wall modules.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 0,
+        "floor": 0,
+        "wall": 0
+      },
+      "floors": []
+    },
+    {
+      "id": "interior",
+      "model": "models/interior.glb",
+      "name": "Cottage interior",
+      "category": "Building parts",
+      "preview": "previews/interior.png",
+      "notes": "A room with no roof, for an inside room.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 1,
+        "floor": 0,
+        "wall": 7
+      },
+      "floors": [
+        "col_floor"
+      ]
+    },
+    {
+      "id": "platform_4m",
+      "model": "models/platform_4m.glb",
+      "name": "Platform (4 x 4 m)",
+      "category": "Terrain",
+      "preview": "previews/platform_4m.png",
+      "notes": "A 2 m cliff section with grass on top: join several.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 1,
+        "floor": 0,
+        "wall": 0
+      },
+      "floors": [
+        "col_platform"
+      ]
+    },
+    {
+      "id": "platform_2m",
+      "model": "models/platform_2m.glb",
+      "name": "Platform (2 x 4 m)",
+      "category": "Terrain",
+      "preview": "previews/platform_2m.png",
+      "notes": "A narrower 2 m cliff section.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 1,
+        "floor": 0,
+        "wall": 0
+      },
+      "floors": [
+        "col_platform"
+      ]
+    },
+    {
+      "id": "stairs",
+      "model": "models/stairs.glb",
+      "name": "Staircase",
+      "category": "Terrain",
+      "preview": "previews/stairs.png",
+      "notes": "Climbs 2 m (a platform's height) to a landing.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 2,
+        "floor": 0,
+        "wall": 2
+      },
+      "floors": [
+        "col_landing",
+        "col_stairs"
+      ]
+    },
+    {
+      "id": "bridge_6m",
+      "model": "models/bridge_6m.glb",
+      "name": "Bridge (6 m)",
+      "category": "Terrain",
+      "preview": "previews/bridge_6m.png",
+      "notes": "A deck 2 m up between two platforms; walk under it too.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 0,
+        "floor": 1,
+        "wall": 2
+      },
+      "floors": [
+        "col_deck"
+      ]
+    },
+    {
+      "id": "path_2m",
+      "model": "models/path_2m.glb",
+      "name": "Path tile (2 m)",
+      "category": "Terrain",
+      "preview": "previews/path_2m.png",
+      "notes": "Earth path on the grass; nothing to collide with.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 0,
+        "floor": 0,
+        "wall": 0
+      },
+      "floors": []
+    },
+    {
+      "id": "fence_2m",
+      "model": "models/fence_2m.glb",
+      "name": "Fence (2 m)",
+      "category": "Props",
+      "preview": "previews/fence_2m.png",
+      "notes": "A 1 m high fence section.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 0,
+        "floor": 0,
+        "wall": 1
+      },
+      "floors": []
+    },
+    {
+      "id": "crate",
+      "model": "models/crate.glb",
+      "name": "Crate",
+      "category": "Props",
+      "preview": "previews/crate.png",
+      "notes": "A 1 m wooden crate.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 1,
+        "floor": 0,
+        "wall": 0
+      },
+      "floors": [
+        "col_crate"
+      ]
+    },
+    {
+      "id": "barrel",
+      "model": "models/barrel.glb",
+      "name": "Barrel",
+      "category": "Props",
+      "preview": "previews/barrel.png",
+      "notes": "A 1 m barrel.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 1,
+        "floor": 0,
+        "wall": 0
+      },
+      "floors": [
+        "col_barrel"
+      ]
+    },
+    {
+      "id": "lamp_post",
+      "model": "models/lamp_post.glb",
+      "name": "Lamp post",
+      "category": "Props",
+      "preview": "previews/lamp_post.png",
+      "notes": "Add a lamp light at its lantern, 2.5 m up.",
+      "license": "Mesh HD-2D starter kit: original, made by Mesh's own scripts; ships with Mesh",
+      "collision": {
+        "solid": 0,
+        "floor": 0,
+        "wall": 1
+      },
+      "floors": []
+    }
+  ]
+}
