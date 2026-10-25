@@ -141,7 +141,11 @@ def on_draw(window: "GameWindow") -> None:
 
     try:
         lighting = getattr(window, "lighting", None)
-        if lighting is not None and lighting.enabled:
+        hd2d = getattr(window, "hd2d_renderer", None)
+        if hd2d is not None:  # an HD-2D scene: its 3D world replaces the 2D world drawing (engine.hd2d)
+            if not menu_visible:
+                hd2d.draw()
+        elif lighting is not None and lighting.enabled:
             with lighting.begin():
                 if not menu_visible:
                     window.scene_controller.draw()
@@ -231,6 +235,9 @@ def on_update(window: "GameWindow", delta_time: float) -> None:
         window.cutscene_controller.update(delta_time)
 
     window.scene_controller.update(delta_time)
+    hd2d = getattr(window, "hd2d_renderer", None)
+    if hd2d is not None:
+        hd2d.update(delta_time)
     window.particle_manager.update()
     lighting = getattr(window, "lighting", None)
     if lighting is not None:

@@ -81,6 +81,7 @@ KNOWN_EXTRA_FIELDS = {
     "collision_poly",
     "occluder_poly",
     "components",  # the movement collider (schema-documented; Studio's Footprint and Circle write it)
+    "elevation",  # HD-2D scenes only: height above the ground (engine.hd2d); 2D ignores it
 }
 KNOWN_ENTITY_FIELDS: Set[str] = set(DEFAULT_ENTITY.keys()) | KNOWN_EXTRA_FIELDS
 

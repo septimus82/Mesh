@@ -284,6 +284,10 @@
     "depth_z": {
       "type": "number"
     },
+    "elevation": {
+      "type": "number",
+      "description": "HD-2D scenes only: height above the ground in pixels (32 px = 1 m). 2D scenes ignore it. Not depth_z, which is draw order."
+    },
     "trigger_radius": {
       "type": [
         "number",
