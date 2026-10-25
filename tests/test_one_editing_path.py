@@ -61,8 +61,11 @@ def test_light_changes_are_validated_the_same_everywhere(game: Path, tmp_path: P
     assert stored["mode"] == "hard" and stored["color"] == "#ffddaa"
     bad = aiops.update_light("start.json", 0, {"radius": 3})
     assert not bad.ok and "Size" in bad.message, "too small: the same refusal as in Studio"
-    unknown = aiops.update_light("start.json", 0, {"intensity": 2})
-    assert not unknown.ok and "'intensity'" in unknown.message, unknown.message
+    unknown = aiops.update_light("start.json", 0, {"sparkle": 2})
+    assert not unknown.ok and "'sparkle'" in unknown.message, unknown.message
+    lamp = aiops.update_light("start.json", 0, {"intensity": 2, "elevation": 80})  # an HD-2D lamp's (Stage 6A)
+    assert lamp.ok and lamp.data["light"]["intensity"] == 2.0 and lamp.data["light"]["elevation"] == 80.0
+    assert not aiops.update_light("start.json", 0, {"elevation": -1}).ok, "validated like every other setting"
     missing = aiops.delete_light("start.json", 5)
     assert not missing.ok
     with pytest.raises(ops.OpError):

@@ -19,37 +19,40 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from blender_kit import box, export, gable_roof, material, reset  # noqa: E402
 
-args = sys.argv[sys.argv.index("--") + 1:]
-OUT, V2 = Path(args[0]).resolve(), "--v2" in args
-
-reset()
-TIMBER, PLASTER, SHINGLES = material("timber"), material("plaster"), material("shingles")
-FLOOR, COBBLES = material("floorboards"), material("cobbles")
 X0, X1, Y0, Y1, T, FLOOR_TOP, EAVES = -2.5, 2.5, -2.0, 2.0, 0.2, 0.1, 2.5
 DOOR = 0.6  # half the doorway's width
 
-box("floor", X0, Y0, 0.0, X1, Y1, FLOOR_TOP, (FLOOR, TIMBER))
-box("col_floor", X0, Y0, 0.0, X1, Y1, FLOOR_TOP, collision="solid")
-walls = {
-    "north": (X0, Y1 - T, X1, Y1),
-    "west": (X0, Y0, X0 + T, Y1),
-    "east": (X1 - T, Y0, X1, Y1),
-    "south_w": (X0, Y0, -DOOR, Y0 + T),
-    "south_e": (DOOR, Y0, X1, Y0 + T),
-}
-for name, (x0, y0, x1, y1) in walls.items():
-    box(f"wall_{name}_low", x0, y0, FLOOR_TOP, x1, y1, 1.3, TIMBER)
-    box(f"wall_{name}_high", x0, y0, 1.3, x1, y1, EAVES, PLASTER)
-    box(f"col_wall_{name}", x0, y0, 0.0, x1, y1, EAVES, collision="wall")
-box("lintel", -DOOR, Y0, 2.0, DOOR, Y0 + T, EAVES, TIMBER)
-box("col_lintel", -DOOR, Y0, 2.0, DOOR, Y0 + T, EAVES, collision="wall")
-gable_roof("roof", X0 - 0.3, Y0 - 0.3, X1 + 0.3, Y1 + 0.3, EAVES, 3.8, SHINGLES, PLASTER)
 
-if V2:
-    box("porch", -1.5, Y0 - 1.2, 0.0, 1.5, Y0, 0.15, (COBBLES, COBBLES))
-    box("col_porch", -1.5, Y0 - 1.2, 0.0, 1.5, Y0, 0.15, collision="solid")
-    box("hearth", X1 - T - 0.7, -0.6, FLOOR_TOP, X1 - T, 0.6, 1.0, (COBBLES, COBBLES))
-    box("col_hearth", X1 - T - 0.7, -0.6, FLOOR_TOP, X1 - T, 0.6, 1.0, collision="wall")
-    box("chimney", X1 - T - 0.6, -0.35, 2.9, X1 - T - 0.1, 0.35, 4.4, (COBBLES, COBBLES))
+def build(v2: bool = False) -> None:
+    """The cottage (``v2``: after the edit) in the current Blender scene."""
+    TIMBER, PLASTER, SHINGLES = material("timber"), material("plaster"), material("shingles")
+    FLOOR, COBBLES = material("floorboards"), material("cobbles")
+    box("floor", X0, Y0, 0.0, X1, Y1, FLOOR_TOP, (FLOOR, TIMBER))
+    box("col_floor", X0, Y0, 0.0, X1, Y1, FLOOR_TOP, collision="solid")
+    walls = {
+        "north": (X0, Y1 - T, X1, Y1),
+        "west": (X0, Y0, X0 + T, Y1),
+        "east": (X1 - T, Y0, X1, Y1),
+        "south_w": (X0, Y0, -DOOR, Y0 + T),
+        "south_e": (DOOR, Y0, X1, Y0 + T),
+    }
+    for name, (x0, y0, x1, y1) in walls.items():
+        box(f"wall_{name}_low", x0, y0, FLOOR_TOP, x1, y1, 1.3, TIMBER)
+        box(f"wall_{name}_high", x0, y0, 1.3, x1, y1, EAVES, PLASTER)
+        box(f"col_wall_{name}", x0, y0, 0.0, x1, y1, EAVES, collision="wall")
+    box("lintel", -DOOR, Y0, 2.0, DOOR, Y0 + T, EAVES, TIMBER)
+    box("col_lintel", -DOOR, Y0, 2.0, DOOR, Y0 + T, EAVES, collision="wall")
+    gable_roof("roof", X0 - 0.3, Y0 - 0.3, X1 + 0.3, Y1 + 0.3, EAVES, 3.8, SHINGLES, PLASTER)
+    if v2:
+        box("porch", -1.5, Y0 - 1.2, 0.0, 1.5, Y0, 0.15, (COBBLES, COBBLES))
+        box("col_porch", -1.5, Y0 - 1.2, 0.0, 1.5, Y0, 0.15, collision="solid")
+        box("hearth", X1 - T - 0.7, -0.6, FLOOR_TOP, X1 - T, 0.6, 1.0, (COBBLES, COBBLES))
+        box("col_hearth", X1 - T - 0.7, -0.6, FLOOR_TOP, X1 - T, 0.6, 1.0, collision="wall")
+        box("chimney", X1 - T - 0.6, -0.35, 2.9, X1 - T - 0.1, 0.35, 4.4, (COBBLES, COBBLES))
 
-export(OUT)
+
+if __name__ == "__main__":
+    args = sys.argv[sys.argv.index("--") + 1:]
+    reset()
+    build("--v2" in args)
+    export(Path(args[0]).resolve())

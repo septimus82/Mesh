@@ -595,7 +595,7 @@ class Hd2dRenderer:
         if solid is None:
             lighting.render_shadows(self.static + live, geometry_sprites, ranges)  # the ground receives, never casts
         fbo.use()
-        fbo.clear(color=(118, 160, 214, 255), depth=1.0)
+        fbo.clear(color=(*(round(c * 255) for c in self.settings.sky), 255), depth=1.0)
         ctx.enable(ctx.DEPTH_TEST)
         mp = self.mesh_prog
         mp["u_vp"] = vp

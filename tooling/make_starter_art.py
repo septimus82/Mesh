@@ -25,6 +25,10 @@ HERO = {"hair": (122, 74, 38, 255), "body": (58, 110, 204, 255), "shade": (40, 8
 VILLAGER = {"hair": (150, 150, 150, 255), "body": (92, 150, 72, 255), "shade": (66, 112, 52, 255),
             "accent": (232, 222, 190, 255), "legs": (110, 80, 52, 255), "boots": (70, 50, 34, 255),
             "hat": (226, 190, 96, 255)}
+# The HD-2D starter village's shopkeeper (Milestone 16 Stage 6A): dark hair, a plum tunic and a cream apron.
+MERCHANT = {"hair": (60, 40, 30, 255), "body": (128, 64, 120, 255), "shade": (96, 46, 90, 255),
+            "accent": (236, 226, 200, 255), "legs": (64, 58, 70, 255), "boots": (52, 36, 26, 255),
+            "hat": (172, 120, 70, 255)}
 
 
 def _rect(d: ImageDraw.ImageDraw, x0: int, y0: int, x1: int, y1: int, colour) -> None:
@@ -143,7 +147,8 @@ def main() -> None:
     character_sheet(HERO).save(out / "starter_hero.png")
     character_sheet(VILLAGER).save(out / "starter_villager.png")
     sign().save(out / "starter_sign.png")
-    print("wrote starter_hero.png, starter_villager.png, starter_sign.png")
+    character_sheet(MERCHANT).save(out / "starter_merchant.png")
+    print("wrote starter_hero.png, starter_villager.png, starter_sign.png, starter_merchant.png")
 
 
 if __name__ == "__main__":

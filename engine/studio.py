@@ -726,26 +726,31 @@ class Studio(InspectorMixin):
         elif self.clipboard is not None:
             self.paste_at((float(self.clipboard.get("x", 0)) + 32, float(self.clipboard.get("y", 0)) - 32))
 
-    def place_at(self, wx: float, wy: float) -> None:
+    def place_at(self, wx: float, wy: float, *, elevation: float = 0.0, where: str = "", snap: bool = True) -> None:
+        """Place the armed object at (wx, wy) on the map; in an HD-2D room, ``elevation`` px up (on a floor that
+        far above the ground: ``where`` names it for the message)."""
         prefab, self.place_prefab = self.place_prefab, None
         if prefab is None:
             return
         created: list[str] = []
 
         def change(scene: dict[str, Any]) -> dict[str, Any]:
-            kind, at = prefab.get("built_in"), (_snap(wx), _snap(wy))
+            kind, at = prefab.get("built_in"), ((_snap(wx), _snap(wy)) if snap else (round(wx, 2), round(wy, 2)))
             if kind:
                 out, new_id = ops.place_blank(scene, self.project.current, "Zone" if kind == "zone" else "Object", *at)
                 if kind == "zone":
                     out = ops.set_trigger_zone(out, new_id, width=96, height=96)
             else:
-                out, new_id = ops.place_prefab(scene, self.project.current, prefab, *at)
+                out, new_id = ops.place_prefab(scene, self.project.current, prefab, *at, elevation=elevation)
+            if elevation and kind:
+                out = ops.set_entity_fields(out, new_id, elevation=round(float(elevation), 2))
             created.append(new_id)
             return out
 
         hint = {"blank": " Give it a picture in Look.", "zone": " Drag its orange corner to size it."}.get(
             str(prefab.get("built_in")), "")
-        if self._edit(change, f"Placed {prefab.get('display_name', prefab['id'])}.{hint}"):
+        on = f" on {where}, {elevation / 32:.1f} m up" if where else ""
+        if self._edit(change, f"Placed {prefab.get('display_name', prefab['id'])}{on}.{hint}"):
             if prefab.get("built_in"):
                 self.tab = "collision" if prefab["built_in"] == "zone" else "look"
             self.select(created[0])
@@ -1200,6 +1205,14 @@ class Studio(InspectorMixin):
     def _set_light_field(self, key: str, text: str) -> None:
         self.set_light("Changed.", **{key: text})
 
+    def _set_light_height(self, text: str) -> None:
+        try:
+            metres = float(text)
+        except ValueError:
+            self._say("The height is a number of metres, like 2.5.", ok=False)
+            return
+        self.set_light(f"The lamp now hangs {metres:g} m up.", elevation=metres * 32.0)
+
     def _flicker_rows(self, rows: Rows, light: dict[str, Any], width: int) -> None:
         """Flicker: a preset (what a creator usually wants), then how strong; fine values under More settings."""
         from engine.lighting.flicker import FLICKER_LABELS  # noqa: PLC0415
@@ -1269,6 +1282,10 @@ class Studio(InspectorMixin):
         for label, key in (("X", "x"), ("Y", "y"), ("Size", "radius")):
             self._labeled(rows, label, self._field(f"{float(light.get(key) or 0):g}", partial(self._set_light_field, key),
                                                    width=field_w, key=f"light_{key}"), width)
+        if self.hd2d.active:  # an HD-2D lamp hangs above the ground (1.5 m unless set)
+            height = float(light.get("elevation", 48.0) or 0.0) / 32.0
+            self._labeled(rows, "Height (m)", self._field(f"{height:g}", self._set_light_height, width=field_w,
+                                                          key="light_height"), width)
         if light.get("flicker_enabled"):
             from engine.lighting.flicker import FLICKER_PRESETS, flicker_profile  # noqa: PLC0415
 
@@ -2230,7 +2247,7 @@ class Studio(InspectorMixin):
             size = 6 / self.zoom
             a.draw_lrbt_rectangle_filled(handle["x"] - size, handle["x"] + size, handle["y"] - size, handle["y"] + size, color)
             a.draw_lrbt_rectangle_outline(handle["x"] - size, handle["x"] + size, handle["y"] - size, handle["y"] + size, (20, 20, 20), 1)
-        if self.place_prefab is not None and self._in_map(*self.mouse):
+        if self.place_prefab is not None and self._in_map(*self.mouse) and not self.hd2d.active:
             wx, wy = self._to_world(*self.mouse)
             a.draw_lrbt_rectangle_outline(_snap(wx) - 32, _snap(wx) + 32, _snap(wy) - 32, _snap(wy) + 32, C_SELECT, 1)
 
@@ -2579,6 +2596,9 @@ class Studio(InspectorMixin):
                     self.stroke = {"start": cell, "end": cell, "anchor": cell, "cells": []}
                 else:
                     self.stroke = {"cells": [cell], "last": cell, "anchor": cell}
+                return True
+            if self.place_prefab is not None and self.hd2d.active:
+                self.hd2d.place_object(x, y)  # on the floor under the mouse, at its height
                 return True
             if self.place_prefab is not None:
                 self.place_at(wx, wy)

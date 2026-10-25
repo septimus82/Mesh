@@ -93,7 +93,100 @@ def cobbles() -> Image.Image:
     return img
 
 
-TEXTURES = {"timber": timber, "plaster": plaster, "shingles": shingles, "floorboards": floorboards, "cobbles": cobbles}
+def grass() -> Image.Image:
+    """Short grass in three greens with a few tufts and flowers: the village ground and the platforms' tops."""
+    rng = random.Random(56)
+    img = Image.new("RGBA", (SIZE, SIZE), (86, 140, 62, 255))
+    _speckle(img, rng, [(74, 126, 54), (98, 154, 70), (80, 132, 58)], 260)
+    d = ImageDraw.Draw(img)
+    for _ in range(10):
+        x, y = rng.randrange(1, SIZE - 1), rng.randrange(2, SIZE)
+        d.line([x, y, x, y - 2], fill=(112, 170, 80, 255))
+    for colour in ((236, 220, 120), (230, 150, 170)):
+        x, y = rng.randrange(SIZE), rng.randrange(SIZE)
+        img.putpixel((x, y), (*colour, 255))
+    return img
+
+
+def dirt() -> Image.Image:
+    """A packed earth path with pebbles."""
+    rng = random.Random(57)
+    img = Image.new("RGBA", (SIZE, SIZE), (150, 116, 78, 255))
+    _speckle(img, rng, [(138, 106, 70), (162, 128, 88), (128, 98, 66)], 220)
+    _speckle(img, rng, [(176, 168, 156), (110, 104, 96)], 14)
+    return img
+
+
+def rock() -> Image.Image:
+    """Layered cliff rock: ledges of grey-brown stone with dark cracks."""
+    rng = random.Random(58)
+    img = Image.new("RGBA", (SIZE, SIZE), (96, 88, 80, 255))
+    d = ImageDraw.Draw(img)
+    top = 0
+    while top < SIZE:
+        height = rng.choice([5, 6, 7])
+        colour = rng.choice([(118, 108, 96), (106, 98, 88), (128, 118, 104)])
+        d.rectangle([0, top, SIZE - 1, top + height - 2], fill=(*colour, 255))
+        d.line([0, top, SIZE - 1, top], fill=(146, 136, 120, 255))
+        for _ in range(2):
+            x = rng.randrange(SIZE)
+            d.line([x, top + 1, x + rng.choice([-1, 1]), top + height - 2], fill=(70, 64, 58, 255))
+        top += height
+    return img
+
+
+def crate() -> Image.Image:
+    """A wooden crate face: planks inside a frame with a diagonal brace."""
+    img = Image.new("RGBA", (SIZE, SIZE), (164, 118, 66, 255))
+    d = ImageDraw.Draw(img)
+    for x in range(0, SIZE, 8):
+        d.line([x, 0, x, SIZE - 1], fill=(132, 92, 50, 255))
+    d.rectangle([0, 0, SIZE - 1, SIZE - 1], outline=(96, 64, 34, 255), width=3)
+    d.line([3, SIZE - 4, SIZE - 4, 3], fill=(110, 76, 40, 255), width=3)
+    return img
+
+
+def barrel() -> Image.Image:
+    """Barrel staves with two iron hoops (wrapped once around a barrel, one metre of texture)."""
+    img = Image.new("RGBA", (SIZE, SIZE), (138, 92, 52, 255))
+    d = ImageDraw.Draw(img)
+    for x in range(0, SIZE, 4):
+        d.line([x, 0, x, SIZE - 1], fill=(112, 74, 40, 255))
+    for y in (6, 25):
+        d.rectangle([0, y, SIZE - 1, y + 2], fill=(72, 72, 80, 255))
+        d.line([0, y, SIZE - 1, y], fill=(120, 120, 130, 255))
+    return img
+
+
+def iron() -> Image.Image:
+    """Dark painted iron for the lamp post."""
+    rng = random.Random(59)
+    img = Image.new("RGBA", (SIZE, SIZE), (46, 48, 56, 255))
+    _speckle(img, rng, [(58, 60, 70), (38, 40, 46)], 60)
+    return img
+
+
+def awning() -> Image.Image:
+    """Red and cream striped cloth for the shop's awning."""
+    img = Image.new("RGBA", (SIZE, SIZE), (232, 220, 196, 255))
+    d = ImageDraw.Draw(img)
+    for x in range(0, SIZE, 8):
+        d.rectangle([x, 0, x + 3, SIZE - 1], fill=(186, 62, 52, 255))
+    return img
+
+
+def lantern() -> Image.Image:
+    """A lit lantern pane: warm glow in a dark frame."""
+    img = Image.new("RGBA", (SIZE, SIZE), (255, 214, 120, 255))
+    d = ImageDraw.Draw(img)
+    d.rectangle([0, 0, SIZE - 1, SIZE - 1], outline=(46, 48, 56, 255), width=4)
+    d.rectangle([12, 10, 19, 22], fill=(255, 240, 190, 255))
+    return img
+
+
+TEXTURES = {"timber": timber, "plaster": plaster, "shingles": shingles, "floorboards": floorboards, "cobbles": cobbles,
+            "grass": grass, "dirt": dirt, "rock": rock, "crate": crate, "barrel": barrel, "iron": iron, "awning": awning,
+            "lantern": lantern}
 
 
 def main() -> None:

@@ -98,20 +98,33 @@ class StudioDriver:
         self.frame()
 
     def button(self, text: str, *, prefix: bool = False) -> None:
-        """Click Mesh Studio's button with this text (or, with ``prefix``, starting with it), where it is on screen."""
-        for widget in self.studio.ui.walk_widgets():
-            label = getattr(widget, "text", None)
-            if label == text or (prefix and isinstance(label, str) and label.startswith(text)):
-                r = widget.rect
-                self.click(r.left + r.width / 2, r.bottom + r.height / 2)
-                return
+        """Click Mesh Studio's button with this text (or, with ``prefix``, starting with it), where it is on screen;
+        if the right panel has more below, scroll it with the mouse wheel first, as a person would."""
+        for _ in range(30):
+            for widget in self.studio.ui.walk_widgets():
+                label = getattr(widget, "text", None)
+                if label == text or (prefix and isinstance(label, str) and label.startswith(text)):
+                    r = widget.rect
+                    self.click(r.left + r.width / 2, r.bottom + r.height / 2)
+                    return
+            if not self.studio._panel_more[1]:
+                break
+            self.window.dispatch_event("on_mouse_scroll", self.window.width - 100, self.window.height / 2, 0, -1)
+            self.frame()
         raise AssertionError(f"no button '{text}' on screen")
 
     def type_into(self, key: str, text: str) -> None:
         """Click Mesh Studio's text field ``key``, select what is in it (Ctrl+A), type ``text`` and press Enter, as a
         person types (key and text events into the window)."""
         k = self.arcade.key
+        for _ in range(30):  # scrolled out of the right panel: scroll it in, as a person would
+            field = self.studio._focusable[key]
+            if getattr(field, "parent", None) is not None or not self.studio._panel_more[1]:
+                break
+            self.window.dispatch_event("on_mouse_scroll", self.window.width - 100, self.window.height / 2, 0, -1)
+            self.frame()
         field = self.studio._focusable[key]
+        assert getattr(field, "parent", None) is not None, f"the field '{key}' isn't on screen"
         r = field.rect
         self.click(r.left + r.width / 2, r.bottom + r.height / 2)
         self.window.dispatch_event("on_key_press", k.A, k.MOD_CTRL)
