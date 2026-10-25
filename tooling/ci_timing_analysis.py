@@ -18,10 +18,17 @@ Input is either a compact data file (``--data``, written by ``--write-data``) or
 (``post-opt`` for the code the budgets were measured on, ``pre-opt`` for the slower code before it), ``durations``
 (file name), and optionally ``job_s`` and ``full_pytest_s`` (the whole CI job and its full-pytest step, in seconds).
 
+``--write-model`` fits the advisory runner-speed model that verify-all reads (``tooling/metrics/verify_step_speed_model.json``,
+evaluated by ``mesh_cli/verify_speed_advisory.py``; policy "A" below is that exact rule). ``--rolling N`` judges the last N
+runs per OS against a committed model, for persistent slowdowns that a per-run rule cannot see.
+
 Usage::
 
     python tooling/ci_timing_analysis.py --data data.json > report.md
     python tooling/ci_timing_analysis.py --index index.json --durations-dir durations --write-data data.json
+    python tooling/ci_timing_analysis.py --data data.json --index new.json --durations-dir new --write-data data.json  # merge
+    python tooling/ci_timing_analysis.py --data data.json --write-model tooling/metrics/verify_step_speed_model.json
+    python tooling/ci_timing_analysis.py --data recent.json --rolling 20
 
 Standard library only; the output is deterministic for a given input.
 """
@@ -34,7 +41,7 @@ import math
 import statistics
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 IMPORTANT_STEPS = ("pytest-fast", "verify-demo", "mypy-gate", "exception-policy-scan", "swallow-scan-gate", "web-smoke")
 STEP_FACTORS = (1.25, 1.5, 2.0)
@@ -56,6 +63,11 @@ DEFAULT_TOLERANCE_MS = 50
 NULL_MEDIAN_MARGIN_MS = {"player-package-gate": 700, "verify-demo": 250, "web-smoke": 600}
 EXTERNAL_KEY = "<full pytest>"
 DEFAULT_BUDGET_PATH = Path(__file__).resolve().parent / "metrics" / "verify_step_budget.json"
+DEFAULT_MODEL_PATH = Path(__file__).resolve().parent / "metrics" / "verify_step_speed_model.json"
+# Copy of mesh_cli/verify_speed_advisory.py's DEFAULT_MIN_REFERENCE_STEPS: with fewer reference steps left, no estimate.
+MIN_REFERENCE_STEPS = 3
+# The median of n iid normal draws has sd ~ MEDIAN_SD_FACTOR * sd / sqrt(n).
+MEDIAN_SD_FACTOR = 1.2533
 
 
 @dataclass(frozen=True)
@@ -343,12 +355,74 @@ def recommended_policy(checked: Sequence[str], k: float) -> Fitter:
     return normalised_policy(checked, covariate="loo", slope=None, k=k)
 
 
+def model_checked_steps(thresholds: Mapping[str, int]) -> list[str]:
+    """Steps the advisory model covers: the budgeted and important ones, without the cache-bound mypy steps."""
+    return sorted((set(thresholds) | set(IMPORTANT_STEPS)) - REFERENCE_EXCLUDE)
+
+
+def fit_platform_model(post: Sequence[Run], checked: Sequence[str], k: float) -> dict[str, Any]:
+    """The advisory model for one platform: B's fitted line per step, with a constant allowance exp(k*sigma)."""
+    ref = reference_medians(post)
+    speeds = [log_speed({kk: float(v) for kk, v in r.steps.items()}, ref) for r in post]
+    steps: dict[str, Any] = {}
+    for name in checked:
+        z = [log_speed({kk: float(v) for kk, v in r.steps.items()}, ref, exclude=name) for r in post]
+        line = fit_line(z, [math.log(max(r.steps[name], 1)) for r in post], None)
+        steps[name] = {
+            "base_ms": round(math.exp(line.a)),
+            "slope": round(line.b, 4),
+            "sigma": round(line.sigma, 4),
+            "allowance": round(math.exp(k * line.sigma), 4),
+            "n": line.n,
+        }
+    return {
+        "runs": len(post),
+        "first_run": min(r.date for r in post),
+        "last_run": max(r.date for r in post),
+        "speed_reference_ms": {name: round(v) for name, v in ref.items()},
+        "speed_seen": [round(math.exp(min(speeds)), 3), round(math.exp(max(speeds)), 3)],
+        "speed_log_sd": round(statistics.stdev(speeds), 4),
+        "steps": steps,
+    }
+
+
+def model_estimate(platform_model: Mapping[str, Any], steps: Mapping[str, float], name: str) -> tuple[float, float] | None:
+    """(expected ms, advisory threshold ms) for one step, by the formula of mesh_cli/verify_speed_advisory.py; None = no estimate."""
+    params = platform_model["steps"][name]
+    ref = platform_model["speed_reference_ms"]
+    logs = [math.log(max(steps[kk], 1.0) / float(v)) for kk, v in ref.items() if kk != name and kk in steps]
+    if len(logs) < MIN_REFERENCE_STEPS:
+        return None
+    expected = float(params["base_ms"]) * math.exp(statistics.median(logs)) ** float(params["slope"])
+    return expected, expected * float(params["allowance"])
+
+
+def model_policy(checked: Sequence[str], k: float) -> Fitter:
+    """A. The advisory rule exactly as verify-all evaluates it, fitted on the training runs."""
+
+    def fit(train: Sequence[Run]) -> Checker:
+        model = fit_platform_model(train, checked, k)
+
+        def check(sample: Sample) -> frozenset[str]:
+            flagged = set()
+            for name in checked:
+                estimate = model_estimate(model, sample.steps, name) if name in sample.steps else None
+                if estimate is not None and sample.steps[name] > estimate[1]:
+                    flagged.add(name)
+            return frozenset(flagged)
+
+        return check
+
+    return fit
+
+
 def policies(thresholds: Mapping[str, int], checked: Sequence[str], k: float) -> list[tuple[str, Fitter]]:
     return [
         ("a. current rule (committed budgets)", current_policy(thresholds)),
         ("x. same-run total normalisation (unsafe)", normalised_policy(checked, covariate="total", slope=1.0, k=k)),
         ("b1. leave-one-out speed, unit slope", normalised_policy(checked, covariate="loo", slope=1.0, k=k)),
         ("B. recommended: leave-one-out speed, fitted slope", recommended_policy(checked, k)),
+        ("A. advisory model (B as verify-all evaluates it)", model_policy(model_checked_steps(thresholds), k)),
         ("b3. B + speed cap", normalised_policy(checked, covariate="loo", slope=None, k=k, cap=True)),
         ("c1. per-platform limit, k*sigma of log time", normalised_policy(checked, covariate="none", slope=0.0, k=k)),
         ("c2. per-platform limit, slowest/median + 0.10", empirical_ratio_policy(checked)),
@@ -578,13 +652,14 @@ def trend_section(os_name: str, post: Sequence[Run]) -> str:
 def combined_section(runs: Sequence[Run], budget_path: Path, k: float) -> str:
     """A code regression usually shows on both OSes; a PR fails if either job flags the regressed step."""
     os_names = sorted({r.os for r in runs})
-    labels = ("a. current rule", "B. recommended")
+    labels = ("a. current rule", "B. recommended", "A. advisory model")
     folds: dict[tuple[str, str], dict[int, tuple[Run, Checker]]] = {}
     for os_name in os_names:
         post = [r for r in runs if r.os == os_name and r.regime == "post-opt"]
         thresholds = current_thresholds(budget_path, os_name)
         checked = sorted(set(thresholds) | set(IMPORTANT_STEPS))
-        for label, fitter in zip(labels, (current_policy(thresholds), recommended_policy(checked, k))):
+        fitters = (current_policy(thresholds), recommended_policy(checked, k), model_policy(model_checked_steps(thresholds), k))
+        for label, fitter in zip(labels, fitters):
             folds[(os_name, label)] = {r.run_id: (r, c) for r, c in cross_validate(post, fitter)}
     shared = sorted(set.intersection(*(set(folds[(o, labels[1])]) for o in os_names)))
 
@@ -717,6 +792,75 @@ def report(runs: Sequence[Run], budget_path: Path, k: float) -> str:
     return "\n".join(out) + "\n"
 
 
+def build_model(runs: Sequence[Run], budget_path: Path, k: float) -> dict[str, Any]:
+    platforms = {}
+    for os_name in sorted({r.os for r in runs}):
+        post = [r for r in runs if r.os == os_name and r.regime == "post-opt"]
+        platforms[os_name] = fit_platform_model(post, model_checked_steps(current_thresholds(budget_path, os_name)), k)
+    return {
+        "schema_version": 1,
+        "advisory_only": True,
+        "description": (
+            "Runner-speed model for verify-all's ADVISORY slow-step check (mesh_cli/verify_speed_advisory.py). It never "
+            "fails a run; the enforced budgets are verify_step_budget.json. Expected = base_ms * speed**slope, advisory "
+            "threshold = expected * allowance (allowance = exp(k*sigma)); speed = median over the speed_reference_ms steps "
+            "other than the judged one of current/reference. Refit with tooling/ci_timing_analysis.py --write-model."
+        ),
+        "fitted_from": "post-opt CI samples (tests job, step verify-all) of GitHub Actions workflow CI",
+        "k": k,
+        "min_reference_steps": MIN_REFERENCE_STEPS,
+        "platforms": platforms,
+    }
+
+
+def write_model(runs: Sequence[Run], budget_path: Path, k: float, path: Path) -> None:
+    path.write_text(json.dumps(build_model(runs, budget_path, k), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def rolling_report(runs: Sequence[Run], model: Mapping[str, Any], window: int, k: float) -> str:
+    """Persistent slowdowns: the last ``window`` runs per OS, judged against a committed (frozen) model.
+
+    A uniform slowdown of every step looks like a slow runner to the per-run rule; over many runs it moves the median
+    runner speed instead. A persistent single-step regression moves the median of that step's runner-adjusted residual.
+    Both are compared with k standard deviations of a median of ``window`` independent runs.
+    """
+    out = [f"# Rolling verify-all timing check (last {window} runs per OS; k = {k:g})", ""]
+    for os_name in sorted({r.os for r in runs}):
+        pm = model.get("platforms", {}).get(os_name)
+        recent = sorted((r for r in runs if r.os == os_name and r.regime == "post-opt"), key=lambda r: (r.date, r.run_id))[-window:]
+        if not isinstance(pm, dict) or not recent:
+            out += [f"## {os_name}: no model or no runs", ""]
+            continue
+        ref = {name: float(v) for name, v in pm["speed_reference_ms"].items()}
+        n = len(recent)
+        speeds = [log_speed({kk: float(v) for kk, v in r.steps.items()}, ref) for r in recent]
+        speed_limit = math.exp(k * MEDIAN_SD_FACTOR * float(pm["speed_log_sd"]) / math.sqrt(n))
+        median_speed = math.exp(statistics.median(speeds))
+        verdict = "PERSISTENT SLOWDOWN" if median_speed > speed_limit else "ok"
+        out += [
+            f"## {os_name}: {n} runs, {recent[0].date} to {recent[-1].date}",
+            "",
+            f"Median runner speed {median_speed:.3f} (limit {speed_limit:.3f}; fitted runs' range {pm['speed_seen'][0]}-{pm['speed_seen'][1]}): {verdict}.",
+            "",
+        ]
+        rows = []
+        for name, params in sorted(pm["steps"].items()):
+            resid = []
+            for r in recent:
+                steps = {kk: float(v) for kk, v in r.steps.items()}
+                estimate = model_estimate(pm, steps, name) if name in steps else None
+                if estimate is not None:
+                    resid.append(math.log(max(steps[name], 1.0) / estimate[0]))
+            if not resid:
+                rows.append([name, "-", "-", "no data"])
+                continue
+            limit = math.exp(k * MEDIAN_SD_FACTOR * float(params["sigma"]) / math.sqrt(len(resid)))
+            factor = math.exp(statistics.median(resid))
+            rows.append([name, f"{factor:.3f}", f"{limit:.3f}", "PERSISTENT REGRESSION" if factor > limit else "ok"])
+        out += [table(["step", "median observed/expected", "limit", "verdict"], rows), ""]
+    return "\n".join(out)
+
+
 def demo() -> None:
     """Self-check on synthetic runs: a slow runner passes the recommended rule, an isolated 2x regression does not."""
     names = ("pytest-fast", "verify-demo", "web-smoke", "exception-policy-scan", "swallow-scan-gate", "mypy-gate", "player-package-gate", "verify-strict")
@@ -740,21 +884,31 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--durations-dir", type=Path, help="folder with the runs' verify_step_durations JSON files")
     parser.add_argument("--budget", type=Path, default=DEFAULT_BUDGET_PATH, help="verify_step_budget.json to replay")
     parser.add_argument("--k", type=float, default=DEFAULT_K, help="sigma multiple for the fitted rules")
-    parser.add_argument("--write-data", type=Path, help="write the compact data file and exit")
+    parser.add_argument("--write-data", type=Path, help="write the compact data file (--data and --index together: merged) and exit")
+    parser.add_argument("--write-model", type=Path, help="fit the advisory speed model from the post-opt runs, write it and exit")
+    parser.add_argument("--model", type=Path, default=DEFAULT_MODEL_PATH, help="advisory speed model judged against by --rolling")
+    parser.add_argument("--rolling", type=int, metavar="N", help="rolling check of the last N runs per OS against --model, then exit")
     parser.add_argument("--self-check", action="store_true", help="run the synthetic self-check and exit")
     args = parser.parse_args(argv)
     if args.self_check:
         demo()
         print("self-check ok")
         return 0
-    if args.data is not None:
-        runs = load_data(args.data)
-    elif args.index is not None and args.durations_dir is not None:
-        runs = load_index(args.index, args.durations_dir)
-    else:
+    if args.data is None and (args.index is None or args.durations_dir is None):
         parser.error("give --data, or --index with --durations-dir")
+    loaded = load_data(args.data) if args.data is not None else []
+    if args.index is not None and args.durations_dir is not None:
+        known = {(r.run_id, r.os) for r in loaded}
+        loaded += [r for r in load_index(args.index, args.durations_dir) if (r.run_id, r.os) not in known]
+    runs = sorted(loaded, key=lambda r: (r.os, r.date, r.run_id))
     if args.write_data is not None:
         write_data(runs, args.write_data)
+        return 0
+    if args.write_model is not None:
+        write_model(runs, args.budget, args.k, args.write_model)
+        return 0
+    if args.rolling is not None:
+        print(rolling_report(runs, json.loads(args.model.read_text(encoding="utf-8")), args.rolling, args.k), end="")
         return 0
     print(report(runs, args.budget, args.k), end="")
     return 0

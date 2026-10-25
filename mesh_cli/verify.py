@@ -51,6 +51,7 @@ _VERIFY_LOCAL_STEP_EXCEPTIONS: tuple[type[Exception], ...] = (
     TypeError,
     ValueError,
 )
+_VERIFY_SPEED_ADVISORY_EXCEPTIONS: tuple[type[Exception], ...] = (*_VERIFY_LOCAL_STEP_EXCEPTIONS, KeyError, ArithmeticError)
 _VERIFY_STEP_BUDGET_RATIO_LIMIT_OVERRIDES: dict[str, float] = {
     "mypy-gate": 1.35,
 }
@@ -1299,6 +1300,38 @@ def _evaluate_verify_step_budget_guard(
     )
 
 
+def _write_verify_step_speed_advisory(
+    *,
+    repo_root: Path,
+    artifacts_dir: Path,
+    step_durations_payload: dict[str, object],
+    budget_payload: dict[str, object],
+) -> None:
+    """Advisory runner-speed check: writes verify_step_speed_advisory.json and prints a comparison to stderr.
+
+    It returns nothing and reads the enforced budget payload without changing it, so it cannot alter the enforced
+    verdict or the exit code; any error in it is logged and skipped.
+    """
+    try:
+        from engine.logging_tools import suppress_stdout
+        from engine.persistence_io import write_json_atomic
+        from mesh_cli.verify_speed_advisory import MODEL_RELATIVE_PATH, build_speed_advisory, format_speed_advisory, load_speed_model
+
+        payload = build_speed_advisory(
+            step_durations_payload=step_durations_payload,
+            budget_payload=budget_payload,
+            model=load_speed_model(repo_root / MODEL_RELATIVE_PATH),
+            platform=_verify_step_budget_platform(),
+            enforcement_active=_verify_step_budget_enforced(),
+        )
+        with suppress_stdout():
+            write_json_atomic(artifacts_dir / "verify_step_speed_advisory.json", payload, indent=2, sort_keys=True, trailing_newline=True)
+        print("\n".join(format_speed_advisory(payload)), file=sys.stderr)
+    except _VERIFY_SPEED_ADVISORY_EXCEPTIONS as exc:
+        _log_swallow("VFYC-033", "verify step speed advisory skipped", once=False)
+        print(f"[Mesh][Verify][advisory] runner-speed check skipped: {type(exc).__name__}: {exc}", file=sys.stderr)
+
+
 def _verify_all_scene_index_out_paths(repo_root, out_dir: str):
     from pathlib import Path
 
@@ -2090,6 +2123,12 @@ def _build_verify_all_payload(args: argparse.Namespace):
                 sort_keys=True,
                 trailing_newline=True,
             )
+        _write_verify_step_speed_advisory(
+            repo_root=repo_root,
+            artifacts_dir=artifacts_dir,
+            step_durations_payload=step_durations_payload,
+            budget_payload=verify_step_budget_payload,
+        )
         if budget_code != 0:
             overall_ok, exit_code = _apply_verify_step_budget_exit_state(
                 overall_ok=overall_ok,
