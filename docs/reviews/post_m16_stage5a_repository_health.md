@@ -1,27 +1,25 @@
 # Post-M16 Stage 5A: repository health checkpoint
 
-**Verdict: CONDITIONAL PASS.** Stage 5A is hardened and integrated (#355). The fixes are in draft PR
-[#358](https://github.com/septimus82/Mesh/pull/358), head `c877698`. For the first time:
+**Verdict: PASS.** Stage 5A is hardened and integrated (#355). Every gate of the normal CI job now passes on Linux and
+Windows: the full test suite, all 32 `verify-all` steps, the enforced per-platform step budgets, the artifact baseline
+diff, and the release bundle build and strict verification.
 
-- the full test suite passes on Linux and Windows CI: 9,587 passed, 0 failed on each;
-- all 32 `verify-all` steps pass on both, and the step-time budgets are enforced on both.
+- **This had never happened before.** Each gate after pytest was being reached for the first time, at some point in
+  this checkpoint.
+- **Where it is.** The work is in draft PR [#358](https://github.com/septimus82/Mesh/pull/358), head `b697b6f`, CI
+  runs `40195573992` (push) and `40195576678` (PR).
+- **The owner's decisions are implemented:** Windows Mesa (pinned and SHA-256-verified, no third-party action);
+  step budgets (de-duplication, then per-platform budgets from repeated CI measurements); and #360 option A (total
+  time is informational, and broken bundles are errors).
 
-Both of the owner's CI decisions are implemented:
+**Tracked separately, as the owner directed:**
 
-1. **Windows Mesa:** a pinned, SHA-256-verified release installed for the job's Python only, with no third-party
-   action.
-2. **Step budgets:** the duplicated work was removed first, then per-platform budgets were set from 6 CI samples each.
+- **Release-only: [#359](https://github.com/septimus82/Mesh/issues/359).** The `ship` job's 13 replay goldens are
+  stale, so that job stays red until each digest change is checked against intended gameplay.
+- **Still open:** #356, #357, the #345 packaging gaps, and replacing the three unverified sprites with original,
+  redistributable art.
 
-The conditions:
-
-1. **Still red: [#360](https://github.com/septimus82/Mesh/issues/360).** CI's "Diff against baseline" gate, now
-   reached for the first time, compares total run time with a 50 ms threshold against a February local run. It needs
-   an owner decision; it was not re-baselined. The release-bundle steps after it are still unobserved.
-2. **Release-only and unaffected by #358: [#359](https://github.com/septimus82/Mesh/issues/359).** The replay goldens
-   are stale.
-3. **Still open:** #356, #357, the #345 gaps and the three unverified sprites.
-
-None of these blocks Stage 5B technically. Stage 5B should start only after the owner's review.
+#358 stays a draft for owner review. Stage 5B should start only after that review.
 
 This checkpoint covered five things:
 
@@ -65,7 +63,7 @@ reach; **Low** is minor or hygiene.
 | 12 | Low | **GPU-gated tests never run in CI** (`MESH_GL_SMOKE` isn't set). #351 rotted unnoticed. | — | Recommendation: run the GPU tier locally before each merge, as these stages did, or add a scheduled GL lane |
 | 13 | Low | **Studio's per-frame UI layout:** arcade 3's `UIManager.draw()` lays every widget out every frame, about 4.4 ms of a 10 ms Studio frame (profiled), in 2D and HD-2D alike. | cProfile (Phase 4) | Noted; proportional to widget count, not a defect |
 | 15 | Medium | **`verify-all`'s step-time budget is out of date and has never been enforced.** The fast tier takes 87–129 s against a 43 s budget set in June, when it had 62% fewer tests. Now that CI reaches `verify-all`, this is the last red check on both OSes. | CI run `40187015582`; local timing; test counts at `c25c2b2` and now | **Fixed:** de-duplicated, then per-platform budgets from 6 CI samples each; enforced and passing on both OSes (see CI results) |
-| 16 | Medium | **CI's "Diff against baseline" gate can't pass reliably.** Total `verify-all` time is compared with a fixed 50 ms threshold against one local run from February (36.5 s then, 115 s now, with more than 10% spread between identical runs). It had never been reached. | CI runs `40193191718`, `40193196720` | **Open: [#360](https://github.com/septimus82/Mesh/issues/360)** (owner decision) |
+| 16 | Medium | **CI's "Diff against baseline" gate can't pass reliably.** Total `verify-all` time is compared with a fixed 50 ms threshold against one local run from February (36.5 s then, 115 s now, with more than 10% spread between identical runs). It had never been reached. | CI runs `40193191718`, `40193196720` | **Fixed (option A):** total time is informational; broken bundles are errors; the report is built after the summary. Passing in CI. Closes [#360](https://github.com/septimus82/Mesh/issues/360) when #358 merges |
 | 17 | Low | **All 13 release replay goldens are stale.** They're used only by the `ship` job (dispatch and `release/` branches); the base branch gives identical digests. | CI run `40190965398`; local runs on the base and the branch | **Open: [#359](https://github.com/septimus82/Mesh/issues/359)** |
 | 14 | Low | **Repeated selections grow Python memory slowly**: a one-off ~3.8 MB warm-up (pyglet vertex domains, glyph caches), then about 4 KB per selection inside pyglet and arcade-gui. GL objects stay flat and nothing goes stale. | `tracemalloc` over 120 selections plus 20 edit/undo cycles | Noted |
 
@@ -109,29 +107,93 @@ All of these were reproduced against the integrated branch, from CI logs on Linu
 
 ## CI results
 
-Final: PR [#358](https://github.com/septimus82/Mesh/pull/358) head `c877698`. Push run `40193191718` and PR run
-`40193196720` gave the same result.
+Final: PR [#358](https://github.com/septimus82/Mesh/pull/358) head `b697b6f`. Push run `40195573992` and PR run
+`40195576678` gave the same result. Every step was read from the job logs, not inferred from a green check.
 
 | Check | Linux (ubuntu-latest, py3.11) | Windows (windows-latest, py3.11) |
 |---|---|---|
 | `arcade3-canary` (required) | **pass** | — |
 | `web-smoke` (required) | **pass** | — |
-| Full pytest suite | **pass**: 9,587 passed, 0 failed, 87 skipped, 53 subtests | **pass**: 9,587 passed, 0 failed, 87 skipped, 53 subtests |
-| `verify-all`: all 32 steps (type gate, mypy baseline and island, ruff, exception budget, swallow scan, exception policy, fast tier, smokes, perf compare, content audits, …) | **pass** | **pass** |
-| `verify-all` step-time budgets, enforced (finding 15) | **pass**: all 5 steps, both runs | **pass**: all 5 steps, both runs |
-| "Diff against baseline" (`artifacts-diff --fail-on-regression`) | **fail**: [#360](https://github.com/septimus82/Mesh/issues/360) | **fail**: [#360](https://github.com/septimus82/Mesh/issues/360) |
-| Release bundle build and strict verify (after the diff) | not reached | not reached |
+| Full pytest suite | **pass**: 9,609 passed, 0 failed, 87 skipped, 53 subtests | **pass**: 9,609 passed, 0 failed, 87 skipped, 53 subtests |
+| `verify-all`: all 32 steps | **pass** | **pass** |
+| Step-time budgets, enforced (finding 15) | **pass**: `pytest-fast` 64.6 s and 56.0 s (threshold 79.0 s) | **pass**: `pytest-fast` 60.2 s and 103.1 s (threshold 121.8 s) |
+| Artifact bundle validation | **pass** | **pass** |
+| "Diff against baseline" (finding 16) | **pass**: 0 regressions, 0 changed, 1 informational (`timing.total_ms` 36,470 → 113,499 and 94,622 ms) | **pass**: 0 regressions, 0 changed, 1 informational (36,470 → 96,249 and 172,873 ms) |
+| Release bundle build (seeded) | **pass**: `release_bundle.zip`, 5,854 files, 25.7 MB | **pass**: 5,854 files, 25.8 MB |
+| Release bundle strict verify | **pass**: 5,856/5,856 verifiable files, sealed manifest verified, 0 extras, missing or mismatches | **pass**: the same |
 
-**Still red: "Diff against baseline" ([#360](https://github.com/septimus82/Mesh/issues/360), finding 16).** This gate
-had never been reached in CI either. It compares one number, the total `verify-all` wall time, with a fixed 50 ms
-threshold against a single local run recorded on 2026-02-15. It reported 36,470 → 115,419 ms. With runs varying by
-more than 10%, it can't pass reliably even with a fresh baseline. It is a separate performance ratchet, and the brief
-says not to change other budgets, so it was neither re-baselined nor changed. The issue lists the options.
+- **The reports are accurate now.** In all four jobs, `verify_report.json` read `verify_all_summary.json` and
+  records `verify_summary.ok: true`, with no failing steps. The diff's former `verify_summary.ok: true -> null`
+  "change" is gone.
+- **Total time is still visible.** It appears in the diff's text, Markdown and JSON output, and in the PR comment:
+  "No regressions. Improvements: 0, Changed: 0, Informational: 1", then `timing.total_ms`: `36470` -> `94622`. The
+  spread across these four runs (94.6–172.9 s) is why a fixed 50 ms total-time gate couldn't work.
 
-- **A minor defect also found here.** `verify_report.json` is built before `verify_all_summary.json` is written, so
-  it records `verify_summary.ok: null`. The diff counts this only as "changed", so it doesn't cause the failure.
-- **Behind the gate.** The release bundle steps after it have never run in CI. A local preview was inconclusive: it
-  hit the known Windows path-length limit with a deep temp folder.
+### The baseline gate fix (#360, owner decision: option A)
+
+**`mesh_cli/artifacts_diff.py`:**
+
+- **Total time is informational.**
+  - A `timing.total_ms` difference beyond the 50 ms threshold is a new `informational` category, listed last. It
+    appears in text ("INFORMATIONAL (does not fail):"), Markdown ("## Informational (does not fail)") and JSON
+    (`informational` plus `counts.informational`), with the base and current values.
+  - It never counts as a regression, and `ok` in the JSON still means "no regressions".
+  - The baseline's 36,470 ms and the zero-sentinel rule are kept. The field isn't suppressed and the baseline isn't
+    zeroed.
+- **Everything else still fails `--fail-on-regression`:** `verify_summary.ok`, the exception, step and
+  authoring-trace budget `ok` flips, swallowed-exception total, distinct and `ok`, unchanged.
+- **Broken bundles are errors.** A `verify_report.json` that is missing (also behind an `index.json` pointing to
+  nowhere), corrupt, not a JSON object, or without a boolean `verify_summary.ok` raises `ArtifactsDiffError`, in
+  either the base or the current bundle.
+  - The command exits 2 whether or not `--fail-on-regression` is set. It prints the reason to stderr and writes it to
+    `--out`.
+  - Before this, it printed an error and exited 0.
+
+**`mesh_cli/verify.py`** (the ordering defect):
+
+- **The outcome is settled first.** The required-metric-artifacts check now runs before the reports.
+- **Then the summary.** `verify_all_summary.json` is written next, followed by the reports derived from it:
+  `verify_report.json`, the release notes (which read it too and had the same staleness), `verify_summary` and
+  `index.json`.
+- **Rewritten at the end,** as before, so it also lists those reports. They read only the summary and never each
+  other, so there is no circular dependency.
+
+**Also changed:**
+
+- **`.github/workflows/ci.yml`:** the step summary and PR comment count and list informational items.
+- **`docs/generated/cli_snapshot.json`:** regenerated for the new `--fail-on-regression` help text. It also lacked
+  the `author` command. `docs/generated/commands.md` is stale too, but its generator (`engine/tooling/docs_command.py`)
+  is referenced nowhere and CI doesn't check it, so it was left alone and noted here.
+
+**Tests:**
+
+- **`tests/test_artifacts_diff.py`:** 76 passing.
+  - The 3 tests that pinned the old behaviour now pin the new one.
+  - New cases:
+    - the committed baseline passes a slow but healthy run (36,470 → 115,419 ms, exit 0, reported);
+    - Markdown and JSON keep the total time;
+    - a verify failure, step budget, exception budget, swallowed total or swallowed distinct regression still exits 2,
+      even when total time also changed;
+    - five kinds of broken current bundle exit 2, with and without the flag, and a broken baseline does too.
+- **`tests/test_verify_report_reflects_completed_run.py`:** new, 4 tests, driving the real
+  `_build_verify_all_payload` with stubbed steps.
+  - A successful run reports `ok: true` from the summary (in the report, the release notes and the index), and the
+    index lists the report and the summary. The run passes the real CI baseline diff.
+  - A failed step reports `ok: false` and names the step; the diff exits 2.
+  - A violated, enforced step budget makes the run fail, and the report says so; the diff exits 2.
+  - The report, index, summary and release notes are byte-identical across runs.
+  - With the old `verify.py`, three of the four fail. The determinism test passes either way.
+- **Locally on Windows:** 188 related verify and diff tests pass, and the fast tier passes (4,499). The type gate,
+  `mypy --platform linux` on the changed files, the ruff gate and the CI workflow contract tests pass.
+
+### History
+
+| Point | Linux | Windows |
+|---|---|---|
+| Before this checkpoint | 26 pytest failures; `verify-all` never ran | always cancelled (`fail-fast`); when run, 13 OpenGL failures |
+| `09f3841` (run `40187015582`) | pytest and 32 steps pass; step budget fails | same |
+| `c877698` (runs `40193191718`, `40193196720`) | everything up to the baseline diff passes; the diff fails (#360) | same |
+| `b697b6f` (runs `40195573992`, `40195576678`) | **every step passes, including the release bundle** | **same** |
 
 **Another long-hidden failure, found by a manual dispatch: the release replay suite ([#359](https://github.com/septimus82/Mesh/issues/359)).**
 
@@ -140,14 +202,6 @@ says not to change other budgets, so it was neither re-baselined nor changed. Th
 - The base branch `35b7c03` produces byte-identical digests, as do Linux and Windows, so #358 didn't cause it. The
   goldens date from February.
 - They were not re-recorded. Push and PR runs never run this job.
-
-### History
-
-| Point | Linux | Windows |
-|---|---|---|
-| Before this checkpoint | 26 pytest failures; `verify-all` never ran | always cancelled (`fail-fast`); when run, 13 OpenGL failures |
-| `09f3841` (run `40187015582`) | pytest and 32 steps pass; budget fails | same |
-| `c877698` (final) | everything passes up to the baseline diff (#360) | same |
 
 ### Windows Mesa (decision 1)
 
@@ -349,16 +403,18 @@ It predates redesign's content, so it is now incomplete:
 | Status | Items |
 |---|---|
 | Resolved here | #351, the #352 failure set (all 26), the light-layer lifetime, test isolation (`user_settings.json`, the fixtures PNG), the Linux type gate, sprite-sheet re-slicing |
-| Fixed in | [#358](https://github.com/septimus82/Mesh/pull/358) (draft): all of the above, plus Windows CI OpenGL (pinned, verified Mesa), `fail-fast`, the fast-tier de-duplication and per-platform step budgets |
-| Remaining, tracked | **#356** (2D GL buffer leak), **#357** (pip install and `tooling/`), **#345** gaps (above), the three unconfirmed sprites (to be replaced with original, redistributable art), **#360** (the baseline-diff gate, owner decision), **#359** (release replay goldens), GPU tests not in CI (recommendation) |
+| Fixed in | [#358](https://github.com/septimus82/Mesh/pull/358) (draft): all of the above, plus Windows CI OpenGL (pinned, verified Mesa), `fail-fast`, the fast-tier de-duplication, per-platform step budgets, and the #360 baseline-diff and report-ordering fixes |
+| Remaining, tracked | **#356** (2D GL buffer leak), **#357** (pip install and `tooling/`), **#345** gaps (above), the three unconfirmed sprites (to be replaced with original, redistributable art), **#359** (release replay goldens: not re-recorded; each digest change must be checked against intended gameplay), GPU tests not in CI (recommendation) |
 
 ## Risks and next actions
 
 **Risks:**
 
-- **CI was blind for a long time.** Everything up to the baseline diff now runs on both OSes. The baseline diff
-  (#360) and the release-bundle steps after it are the last parts never seen green. Window tests on Windows CI use
-  Mesa's software renderer, which is closer to Linux CI than to a player's GPU driver.
+- **CI was blind for a long time.** That is fixed: every step of the normal CI job has now run and passed on both
+  OSes. The release-only `ship` job is still red (#359). Window tests on Windows CI use Mesa's software renderer, which
+  is closer to Linux CI than to a player's GPU driver.
+- **Total time no longer fails CI on its own.** A slowdown has to show up in one of the 5 budgeted steps, or in a
+  functional gate, to fail. The total stays visible in every diff and PR comment.
 - **Step budgets are tighter than before.** Windows `pytest-fast` and `verify-demo` have only 10–11% headroom over
   the slowest run seen in 6 samples. If runner variance grows, the remedy is more samples and a recomputed allowance
   using the same rule, not a blanket increase.
@@ -368,10 +424,9 @@ It predates redesign's content, so it is now incomplete:
 
 **Next actions:**
 
-1. Owner decision on #360. After that, the release-bundle steps run for the first time.
-2. Merge #358 once reviewed.
-3. Re-record or fix the replay goldens (#359), with a decision per case.
-4. Replace the three unverified sprites with original, redistributable art.
-5. Update #345 per the plan above.
-6. #356 and #357.
-7. Then Stage 5B.
+1. Owner review of #358, then merge it (it closes #360).
+2. Release only: go through the 13 replay goldens (#359), case by case.
+3. Replace the three unverified sprites with original, redistributable art.
+4. Update #345 per the plan above.
+5. #356 and #357.
+6. Then Stage 5B.
