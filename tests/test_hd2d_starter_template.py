@@ -101,6 +101,10 @@ def test_the_village_has_what_the_starter_promises(project: Path) -> None:
     lamps = [light for light in village["lights"] if light.get("type") != "ambient"]
     assert len(lamps) == 2 and all(light["elevation"] == 80.0 for light in lamps)
     assert village["settings"]["hd2d"]["sun"] and "player" in (e.get("prefab_id") for e in village["entities"])
+    assert parse_hd2d(village["settings"]["hd2d"]).sky == parse_hd2d({}).sky, "daylight outside"
+    assert max(parse_hd2d(inside["settings"]["hd2d"]).sky) < 0.1, "dark around the cottage's inside"
+    with pytest.raises(ValueError, match="sky must be a colour"):
+        parse_hd2d({"sky": "blue"})
 
 
 def test_existing_templates_keep_their_files(tmp_path: Path) -> None:

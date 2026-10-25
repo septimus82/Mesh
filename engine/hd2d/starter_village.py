@@ -69,10 +69,12 @@ def _read(path: Path) -> dict[str, Any]:
 
 
 def _hd2d(width_m: float, height_m: float, *, ground: bool = True, pitch: float = 34.0, distance: float = 15.0,
-          ambient: float = 0.45) -> dict[str, Any]:
+          ambient: float = 0.45, sky: str | None = None) -> dict[str, Any]:
     out: dict[str, Any] = {"structures": [], "camera": {"pitch": pitch, "fov": 30, "distance": distance, "follow": "player"},
                            "sun": {"direction": [0.35, 0.5, 0.79], "color": "#fff0d8", "intensity": 1.0},
                            "ambient": ambient}
+    if sky:
+        out["sky"] = sky
     if ground:
         out["ground"] = {"texture": GRASS, "from": [0, 0], "to": [width_m * PX, height_m * PX]}
     return out
@@ -155,7 +157,8 @@ def build(root: Path, engine_root: Path, person: dict[str, Any], sign: dict[str,
     world["scenes"]["start"]["label"] = "Village"
     world, inside, inside_key, inside_path = ops.new_room(world, "Cottage", "packs/core_regions/scenes", player)
     inside = _map(inside, inside_path, 16, 12, root)
-    inside["settings"]["hd2d"] = _hd2d(16, 12, ground=False, pitch=55.0, distance=10.0, ambient=0.55)
+    inside["settings"]["hd2d"] = _hd2d(16, 12, ground=False, pitch=55.0, distance=10.0, ambient=0.55,
+                                      sky="#120e0b")  # dark around the room, not daylight
     inside = _place(inside, "room", "interior", 8.0, 6.0, margin=False)
     inside["lights"] = []
     inside = _lamp(inside, 8.0, 7.0, 2.0, "#ffd29a", 200, margin=False)
