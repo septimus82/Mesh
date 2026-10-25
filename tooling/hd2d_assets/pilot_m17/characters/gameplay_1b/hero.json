@@ -1,0 +1,679 @@
+{
+  "set": "hero",
+  "size": [
+    1280,
+    720
+  ],
+  "spots": {
+    "cottage": "beside the cottage door",
+    "path": "on the path south-east of the cottage",
+    "centre": "the village centre"
+  },
+  "variants": {
+    "H0": {
+      "label": "H0: starter hero",
+      "cottage": "starter",
+      "hero": "starter",
+      "spots": {
+        "cottage": {
+          "feet_m": [
+            11.48,
+            8.55
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 82,
+          "player_visible_pct": 100.0,
+          "player_screen_px": [
+            569.8,
+            320.2
+          ],
+          "camera_target_m": [
+            12.59,
+            8.42,
+            0.8
+          ],
+          "pixels": 1721,
+          "edge_luma_step": 32.8,
+          "edge_colour_step": 52.6,
+          "edge_luma_below_12_pct": 24.8,
+          "screen_centre": [
+            569.4,
+            361.4
+          ],
+          "close_feet_px": [
+            501.0,
+            438.8
+          ]
+        },
+        "path": {
+          "feet_m": [
+            13.52,
+            6.98
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 83,
+          "player_visible_pct": 99.0,
+          "player_screen_px": [
+            640.0,
+            268.4
+          ],
+          "camera_target_m": [
+            13.52,
+            8.42,
+            0.8
+          ],
+          "pixels": 2431,
+          "edge_luma_step": 41.8,
+          "edge_colour_step": 66.7,
+          "edge_luma_below_12_pct": 10.7,
+          "screen_centre": [
+            639.5,
+            415.2
+          ],
+          "close_feet_px": [
+            640.0,
+            546.2
+          ]
+        },
+        "centre": {
+          "feet_m": [
+            20.0,
+            15.03
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 82,
+          "player_visible_pct": 99.0,
+          "player_screen_px": [
+            640.0,
+            322.1
+          ],
+          "camera_target_m": [
+            20.0,
+            14.84,
+            0.8
+          ],
+          "pixels": 2392,
+          "edge_luma_step": 44.6,
+          "edge_colour_step": 75.1,
+          "edge_luma_below_12_pct": 11.0,
+          "screen_centre": [
+            639.5,
+            361.7
+          ],
+          "close_feet_px": [
+            640.0,
+            435.0
+          ]
+        }
+      },
+      "gl_after_load": {
+        "buffer": 1054,
+        "texture": 29,
+        "framebuffer": 3,
+        "program": 27
+      },
+      "hd2d_error": null,
+      "frame": {
+        "update_ms": 0.86,
+        "draw_cpu_ms": 4.51,
+        "hd2d_renderer_cpu_ms": 3.8,
+        "gpu_wait_ms": 1.81,
+        "frame_ms": 7.21,
+        "frame_ms_p95": 8.76,
+        "readback_ms": 5.63
+      },
+      "renderer": {
+        "draw_calls": 29,
+        "triangles": 1372,
+        "texture_bytes": 241664
+      },
+      "gl_after_reload": {
+        "buffer": 3952,
+        "texture": 40,
+        "framebuffer": 6,
+        "program": 27
+      }
+    },
+    "H1": {
+      "label": "H1: Stage 1 PixelLab hero",
+      "cottage": "starter",
+      "hero": "hero_m17.png",
+      "spots": {
+        "cottage": {
+          "feet_m": [
+            11.48,
+            8.55
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 86,
+          "player_visible_pct": 100.0,
+          "player_screen_px": [
+            569.8,
+            320.2
+          ],
+          "camera_target_m": [
+            12.59,
+            8.42,
+            0.8
+          ],
+          "pixels": 1416,
+          "edge_luma_step": 26.4,
+          "edge_colour_step": 46.6,
+          "edge_luma_below_12_pct": 22.3,
+          "screen_centre": [
+            569.2,
+            358.6
+          ],
+          "close_feet_px": [
+            501.0,
+            438.8
+          ]
+        },
+        "path": {
+          "feet_m": [
+            13.52,
+            6.98
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 87,
+          "player_visible_pct": 99.5,
+          "player_screen_px": [
+            640.0,
+            268.4
+          ],
+          "camera_target_m": [
+            13.52,
+            8.42,
+            0.8
+          ],
+          "pixels": 1888,
+          "edge_luma_step": 37.4,
+          "edge_colour_step": 60.1,
+          "edge_luma_below_12_pct": 14.2,
+          "screen_centre": [
+            639.6,
+            412.8
+          ],
+          "close_feet_px": [
+            640.0,
+            546.2
+          ]
+        },
+        "centre": {
+          "feet_m": [
+            20.0,
+            15.03
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 88,
+          "player_visible_pct": 99.5,
+          "player_screen_px": [
+            640.0,
+            322.1
+          ],
+          "camera_target_m": [
+            20.0,
+            14.84,
+            0.8
+          ],
+          "pixels": 1996,
+          "edge_luma_step": 41.6,
+          "edge_colour_step": 69.7,
+          "edge_luma_below_12_pct": 9.1,
+          "screen_centre": [
+            639.5,
+            358.8
+          ],
+          "close_feet_px": [
+            640.0,
+            435.0
+          ]
+        }
+      },
+      "gl_after_load": {
+        "buffer": 1054,
+        "texture": 29,
+        "framebuffer": 3,
+        "program": 27
+      },
+      "hd2d_error": null,
+      "frame": {
+        "update_ms": 0.86,
+        "draw_cpu_ms": 4.36,
+        "hd2d_renderer_cpu_ms": 3.67,
+        "gpu_wait_ms": 2.89,
+        "frame_ms": 8.1,
+        "frame_ms_p95": 12.4,
+        "readback_ms": 5.62
+      },
+      "renderer": {
+        "draw_calls": 29,
+        "triangles": 1372,
+        "texture_bytes": 241664
+      },
+      "gl_after_reload": {
+        "buffer": 3952,
+        "texture": 40,
+        "framebuffer": 6,
+        "program": 27
+      }
+    },
+    "H2": {
+      "label": "H2: repaired",
+      "cottage": "starter",
+      "hero": "hero_m17_h2.png",
+      "spots": {
+        "cottage": {
+          "feet_m": [
+            11.48,
+            8.55
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 86,
+          "player_visible_pct": 100.0,
+          "player_screen_px": [
+            569.8,
+            320.2
+          ],
+          "camera_target_m": [
+            12.59,
+            8.42,
+            0.8
+          ],
+          "pixels": 1416,
+          "edge_luma_step": 27.7,
+          "edge_colour_step": 48.2,
+          "edge_luma_below_12_pct": 22.3,
+          "screen_centre": [
+            569.2,
+            358.6
+          ],
+          "close_feet_px": [
+            501.0,
+            438.8
+          ]
+        },
+        "path": {
+          "feet_m": [
+            13.52,
+            6.98
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 87,
+          "player_visible_pct": 99.1,
+          "player_screen_px": [
+            640.0,
+            268.4
+          ],
+          "camera_target_m": [
+            13.52,
+            8.42,
+            0.8
+          ],
+          "pixels": 1940,
+          "edge_luma_step": 36.9,
+          "edge_colour_step": 59.3,
+          "edge_luma_below_12_pct": 14.6,
+          "screen_centre": [
+            639.8,
+            413.9
+          ],
+          "close_feet_px": [
+            640.0,
+            546.2
+          ]
+        },
+        "centre": {
+          "feet_m": [
+            20.0,
+            15.03
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 88,
+          "player_visible_pct": 99.0,
+          "player_screen_px": [
+            640.0,
+            322.1
+          ],
+          "camera_target_m": [
+            20.0,
+            14.84,
+            0.8
+          ],
+          "pixels": 2092,
+          "edge_luma_step": 40.3,
+          "edge_colour_step": 67.5,
+          "edge_luma_below_12_pct": 13.1,
+          "screen_centre": [
+            639.1,
+            360.5
+          ],
+          "close_feet_px": [
+            640.0,
+            435.0
+          ]
+        }
+      },
+      "gl_after_load": {
+        "buffer": 1054,
+        "texture": 29,
+        "framebuffer": 3,
+        "program": 27
+      },
+      "hd2d_error": null,
+      "frame": {
+        "update_ms": 0.82,
+        "draw_cpu_ms": 4.17,
+        "hd2d_renderer_cpu_ms": 3.51,
+        "gpu_wait_ms": 2.91,
+        "frame_ms": 7.95,
+        "frame_ms_p95": 12.25,
+        "readback_ms": 5.67
+      },
+      "renderer": {
+        "draw_calls": 29,
+        "triangles": 1372,
+        "texture_bytes": 241664
+      },
+      "gl_after_reload": {
+        "buffer": 3952,
+        "texture": 40,
+        "framebuffer": 6,
+        "program": 27
+      }
+    },
+    "H3": {
+      "label": "H3: moss tunic",
+      "cottage": "starter",
+      "hero": "hero_m17_h3.png",
+      "spots": {
+        "cottage": {
+          "feet_m": [
+            11.48,
+            8.55
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 86,
+          "player_visible_pct": 100.0,
+          "player_screen_px": [
+            569.8,
+            320.2
+          ],
+          "camera_target_m": [
+            12.59,
+            8.42,
+            0.8
+          ],
+          "pixels": 1416,
+          "edge_luma_step": 27.6,
+          "edge_colour_step": 47.9,
+          "edge_luma_below_12_pct": 22.3,
+          "screen_centre": [
+            569.2,
+            358.6
+          ],
+          "close_feet_px": [
+            501.0,
+            438.8
+          ]
+        },
+        "path": {
+          "feet_m": [
+            13.52,
+            6.98
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 87,
+          "player_visible_pct": 99.1,
+          "player_screen_px": [
+            640.0,
+            268.4
+          ],
+          "camera_target_m": [
+            13.52,
+            8.42,
+            0.8
+          ],
+          "pixels": 1940,
+          "edge_luma_step": 36.9,
+          "edge_colour_step": 59.3,
+          "edge_luma_below_12_pct": 14.6,
+          "screen_centre": [
+            639.8,
+            413.9
+          ],
+          "close_feet_px": [
+            640.0,
+            546.2
+          ]
+        },
+        "centre": {
+          "feet_m": [
+            20.0,
+            15.03
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 88,
+          "player_visible_pct": 99.0,
+          "player_screen_px": [
+            640.0,
+            322.1
+          ],
+          "camera_target_m": [
+            20.0,
+            14.84,
+            0.8
+          ],
+          "pixels": 2092,
+          "edge_luma_step": 40.3,
+          "edge_colour_step": 67.5,
+          "edge_luma_below_12_pct": 13.1,
+          "screen_centre": [
+            639.1,
+            360.5
+          ],
+          "close_feet_px": [
+            640.0,
+            435.0
+          ]
+        }
+      },
+      "gl_after_load": {
+        "buffer": 1054,
+        "texture": 29,
+        "framebuffer": 3,
+        "program": 27
+      },
+      "hd2d_error": null,
+      "frame": {
+        "update_ms": 0.83,
+        "draw_cpu_ms": 4.21,
+        "hd2d_renderer_cpu_ms": 3.52,
+        "gpu_wait_ms": 2.88,
+        "frame_ms": 7.96,
+        "frame_ms_p95": 12.65,
+        "readback_ms": 5.55
+      },
+      "renderer": {
+        "draw_calls": 29,
+        "triangles": 1372,
+        "texture_bytes": 241664
+      },
+      "gl_after_reload": {
+        "buffer": 3952,
+        "texture": 40,
+        "framebuffer": 6,
+        "program": 27
+      }
+    },
+    "H4": {
+      "label": "H4: legible",
+      "cottage": "starter",
+      "hero": "hero_m17_h4.png",
+      "spots": {
+        "cottage": {
+          "feet_m": [
+            11.48,
+            8.55
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 88,
+          "player_visible_pct": 100.0,
+          "player_screen_px": [
+            569.8,
+            320.2
+          ],
+          "camera_target_m": [
+            12.59,
+            8.42,
+            0.8
+          ],
+          "pixels": 1785,
+          "edge_luma_step": 36.1,
+          "edge_colour_step": 56.4,
+          "edge_luma_below_12_pct": 17.8,
+          "screen_centre": [
+            569.2,
+            358.7
+          ],
+          "close_feet_px": [
+            501.0,
+            438.8
+          ]
+        },
+        "path": {
+          "feet_m": [
+            13.52,
+            6.98
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 90,
+          "player_visible_pct": 99.1,
+          "player_screen_px": [
+            640.0,
+            268.4
+          ],
+          "camera_target_m": [
+            13.52,
+            8.42,
+            0.8
+          ],
+          "pixels": 2326,
+          "edge_luma_step": 53.0,
+          "edge_colour_step": 83.5,
+          "edge_luma_below_12_pct": 9.2,
+          "screen_centre": [
+            639.8,
+            413.3
+          ],
+          "close_feet_px": [
+            640.0,
+            546.2
+          ]
+        },
+        "centre": {
+          "feet_m": [
+            20.0,
+            15.03
+          ],
+          "elevation_m": 0.0,
+          "floor": "ground",
+          "room": "start.json",
+          "background_pct": 0.0,
+          "player_height_px": 90,
+          "player_visible_pct": 98.9,
+          "player_screen_px": [
+            640.0,
+            322.1
+          ],
+          "camera_target_m": [
+            20.0,
+            14.84,
+            0.8
+          ],
+          "pixels": 2476,
+          "edge_luma_step": 54.7,
+          "edge_colour_step": 91.8,
+          "edge_luma_below_12_pct": 10.1,
+          "screen_centre": [
+            639.1,
+            360.0
+          ],
+          "close_feet_px": [
+            640.0,
+            435.0
+          ]
+        }
+      },
+      "gl_after_load": {
+        "buffer": 1054,
+        "texture": 29,
+        "framebuffer": 3,
+        "program": 27
+      },
+      "hd2d_error": null,
+      "frame": {
+        "update_ms": 0.82,
+        "draw_cpu_ms": 4.34,
+        "hd2d_renderer_cpu_ms": 3.64,
+        "gpu_wait_ms": 2.88,
+        "frame_ms": 8.11,
+        "frame_ms_p95": 12.46,
+        "readback_ms": 5.29
+      },
+      "renderer": {
+        "draw_calls": 29,
+        "triangles": 1372,
+        "texture_bytes": 241664
+      },
+      "gl_after_reload": {
+        "buffer": 3952,
+        "texture": 40,
+        "framebuffer": 6,
+        "program": 27
+      }
+    }
+  }
+}
