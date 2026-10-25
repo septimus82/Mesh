@@ -6,6 +6,7 @@ import math
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
+from engine.hd2d.world import World as Hd2dWorld
 from engine.swallowed_exceptions import _log_swallow
 
 from ..animation_state import request_animation_state
@@ -108,7 +109,10 @@ class PlayerController(Behaviour):
         scene_controller = getattr(self.window, "scene_controller", None)
         solid_sprites = getattr(scene_controller, "solid_sprites", None)
 
-        if solid_sprites is not None:
+        hd2d_world = getattr(self.window, "hd2d_world", None)
+        if isinstance(hd2d_world, Hd2dWorld):  # an HD-2D room with floors: height-aware movement
+            hd2d_world.move(self.entity, (vx * dt, vy * dt), solid_sprites)
+        elif solid_sprites is not None:
             from engine.physics_runtime import move_entity_with_physics
             move_entity_with_physics(self.entity, (vx * dt, vy * dt), solid_sprites)
         else:

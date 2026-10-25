@@ -311,6 +311,8 @@ Displays speaker-tagged lines when interacted with or when events fire.
 | role | Role of the speaker (e.g. Merchant, Guard) | string | - |
 | dialogue_lines | Legacy array of dialogue line entries | array | [] |
 | dialogue_nodes | Graph-based dialogue nodes map | object | {} |
+| require_flags | Flags that must all be set before this dialogue can start (by talking, an event or auto_start) | array | [] |
+| forbid_flags | Flags that must all be clear before this dialogue can start | array | [] |
 
 Example configuration snippet:
 ```json
@@ -522,6 +524,29 @@ Example configuration snippet:
   "behaviour_config": {
     "FleeFromTarget": {
       "threat_tags": "<value>"
+    }
+  }
+}
+```
+
+## FloorRoute
+HD-2D: walks between points on different floors, using stairs and bridges.
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| route | Points to visit in turn: [x, y, elevation] in px | array | [] |
+| speed | Walking speed (px per second) | float | 60.0 |
+| wait | Seconds to stand at each point | float | 1.0 |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["FloorRoute"],
+  "behaviour_config": {
+    "FloorRoute": {
+      "route": "<value>"
     }
   }
 }
@@ -749,6 +774,11 @@ Adds a dynamic light that follows the entity.
 | flicker_radius_px | Override radius flicker in pixels (legacy). | float | - |
 | flicker_intensity | Override intensity flicker scale (0..1). | float | - |
 | flicker_speed | Flicker speed in cycles per second (roughly). | float | 5.0 |
+| flicker_preset | How it flickers: candle, torch, fire, faulty or custom (custom: the values below). | string | - |
+| flicker_strength | How noticeable the flicker is (1 = as the preset). | float | 1.0 |
+| flicker_brightness | Custom: how much it brightens and dims (0..1). | float | - |
+| flicker_reach | Custom: how much its lit area grows and shrinks (0..0.5). | float | - |
+| flicker_irregularity | Custom: 0 smooth, 1 restless. | float | - |
 | shafts_enabled | - | bool | False |
 | shafts_length_px | - | float | 220.0 |
 | shafts_width_px | - | float | 140.0 |
@@ -1094,6 +1124,27 @@ Example configuration snippet:
 }
 ```
 
+## PictureByFlags
+Shows a different picture while flags allow it: the first matching rule wins, otherwise the object's own sprite.
+
+| Name | Description | Type | Default |
+| --- | --- | --- | --- |
+| pictures | Rules: [{sprite, require_flags, forbid_flags}], checked in order | array | [] |
+
+Example configuration snippet:
+```json
+{
+  "name": "ExampleEntity",
+  "sprite": "assets/example.png",
+  "behaviours": ["PictureByFlags"],
+  "behaviour_config": {
+    "PictureByFlags": {
+      "pictures": "<value>"
+    }
+  }
+}
+```
+
 ## PlayerController
 Handles WASD movement and interaction for the player sprite.
 
@@ -1327,6 +1378,10 @@ Requests a new scene when the player interacts or an event fires.
 | event_field | Optional payload field to check before reacting to the event | string | - |
 | event_value | Optional value that event_field must equal | string | - |
 | once | Prevent the transition from firing more than once | bool | False |
+| trigger_on_touch | Trigger transition on collision | bool | False |
+| target_tag | Tag of entity that triggers collision | string | player |
+| area_width | Width of the area walking into triggers (0: the picture) | float | 0.0 |
+| area_height | Height of that area (0: the picture) | float | 0.0 |
 
 Example configuration snippet:
 ```json

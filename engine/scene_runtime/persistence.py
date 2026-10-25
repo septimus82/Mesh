@@ -220,6 +220,7 @@ _SPRITE_SYNC_ENTITY_FIELDS = {
     "behaviours",
     "collision_poly",
     "depth_z",
+    "elevation",  # changes as an HD-2D character climbs stairs: the floor it stands on is saved with it
     "layer",
     "mesh_name",
     "occluder_poly",

@@ -38,6 +38,7 @@ _BUILTIN_MODULES: tuple[str, ...] = (
     "engine.behaviours.drop_table",
     "engine.behaviours.encounter_cleared",
     "engine.behaviours.emit_event_on_event",
+    "engine.behaviours.floor_route",
     "engine.behaviours.enemy_ai",
     "engine.behaviours.event_logger",
     "engine.behaviours.flee_from_target",

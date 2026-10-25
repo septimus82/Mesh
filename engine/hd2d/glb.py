@@ -5,6 +5,13 @@ children), triangle primitives with POSITION, NORMAL, TEXCOORD_0 and indices, ma
 embedded in the GLB (PNG), and samplers (NEAREST for pixel art, REPEAT / CLAMP_TO_EDGE). glTF's Y-up becomes Mesh's
 Z-up: (x, y, z) -> (x, -z, y), so x is east, y north and z height, in metres.
 
+Collision is authored in Blender, never guessed from the picture: an object with the custom property
+``mesh_collision`` (exported as the node's ``extras``) is collision only and never drawn. Its kind:
+
+- ``"solid"``: walkable on its upward faces and solid underneath (a platform, terrain, stairs as one ramp);
+- ``"floor"``: walkable on its upward faces and open underneath (a bridge deck: you can walk under it);
+- ``"wall"``: blocks a body within its box (a hut, a railing, a pillar).
+
 Anything else is refused with a ``GlbError`` that says what and where (skins, animation, morph targets, external
 .bin or image files, non-triangle primitives, missing positions, unknown accessors), never silently skipped.
 """
@@ -56,10 +63,27 @@ class Part:
         return len(self.vertices) // 8
 
 
+COLLISION_KINDS = ("solid", "floor", "wall")
+Triangle = tuple[tuple[float, float, float], tuple[float, float, float], tuple[float, float, float]]
+
+
+@dataclass
+class Collider:
+    """A collision-only node, in the model's own space (Z-up metres): its triangles (for solid and floor, the
+    upward-facing ones: the walkable surface) and its box (lo, hi)."""
+
+    node: str
+    kind: str
+    triangles: list[Triangle]
+    lo: tuple[float, float, float]
+    hi: tuple[float, float, float]
+
+
 @dataclass
 class Model:
     path: Path
     parts: list[Part] = field(default_factory=list)
+    colliders: list[Collider] = field(default_factory=list)
 
     def bounds(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         lo, hi = [math.inf] * 3, [-math.inf] * 3
@@ -191,6 +215,42 @@ class _Reader:
         return out or [Material("default", None)]
 
 
+def _transform(m: Matrix, p: tuple[float, ...]) -> tuple[float, float, float]:
+    x, y, z = p
+    return (m[0][0] * x + m[0][1] * y + m[0][2] * z + m[0][3], m[1][0] * x + m[1][1] * y + m[1][2] * z + m[1][3],
+            m[2][0] * x + m[2][1] * y + m[2][2] * z + m[2][3])
+
+
+def _collider(reader: _Reader, doc: dict, node: dict, index: int, world: Matrix, kind: Any) -> Collider:
+    name = str(node.get("name", index))
+    if kind not in COLLISION_KINDS:
+        raise reader.fail(f"node '{name}': mesh_collision must be one of {', '.join(COLLISION_KINDS)} (got {kind!r})")
+    points: list[tuple[float, float, float]] = []
+    triangles: list[Triangle] = []
+    for prim in doc["meshes"][node["mesh"]]["primitives"]:
+        if prim.get("mode", 4) != 4 or "POSITION" not in prim.get("attributes", {}):
+            raise reader.fail(f"collider '{name}' must be triangles with positions")
+        pos = [_transform(world, p) for p in reader.accessor(prim["attributes"]["POSITION"], "VEC3")]
+        idx = reader.accessor(prim["indices"], "SCALAR") if "indices" in prim else list(range(len(pos)))
+        if idx and max(idx) >= len(pos):
+            raise reader.fail(f"collider '{name}' has an index past its {len(pos)} vertices")
+        points.extend(pos)
+        for i in range(0, len(idx) - 2, 3):
+            a, b, c = pos[idx[i]], pos[idx[i + 1]], pos[idx[i + 2]]
+            u = (b[0] - a[0], b[1] - a[1], b[2] - a[2])
+            v = (c[0] - a[0], c[1] - a[1], c[2] - a[2])
+            n = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+            if kind != "wall" and n[2] >= 0.5 * (math.sqrt(n[0] ** 2 + n[1] ** 2 + n[2] ** 2) or 1.0):
+                triangles.append((a, b, c))  # walkable: faces up (slopes to 60 degrees)
+    if not points:
+        raise reader.fail(f"collider '{name}' has no geometry")
+    if kind != "wall" and not triangles:
+        raise reader.fail(f"collider '{name}' ({kind}) has no upward-facing faces to walk on")
+    lo = (min(p[0] for p in points), min(p[1] for p in points), min(p[2] for p in points))
+    hi = (max(p[0] for p in points), max(p[1] for p in points), max(p[2] for p in points))
+    return Collider(name, kind, triangles, lo, hi)
+
+
 def load_glb(path: str | Path) -> Model:
     """A GLB file as a Model (Z-up metres). Raises GlbError, naming the file and the problem."""
     reader = _Reader(Path(path))
@@ -203,7 +263,10 @@ def load_glb(path: str | Path) -> Model:
             raise reader.fail("node hierarchy too deep (a cycle?)")
         node = doc["nodes"][index]
         world = _mul(parent, _node_matrix(node))
-        if "mesh" in node:
+        kind = (node.get("extras") or {}).get("mesh_collision") if isinstance(node.get("extras"), dict) else None
+        if kind is not None and "mesh" in node:
+            model.colliders.append(_collider(reader, doc, node, index, world, kind))
+        elif "mesh" in node:
             nmat = _normal_matrix(world)
             for p, prim in enumerate(doc["meshes"][node["mesh"]]["primitives"]):
                 where = f"node '{node.get('name', index)}' primitive {p}"
