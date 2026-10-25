@@ -63,7 +63,17 @@ class Rows:
         self.anchors[name] = len(self.items)
 
 
+class LazyRow:
+    """A right-panel row of a known height whose widgets are made only if it is shown: a long list (the model
+    browser) costs what fits on screen, not what is in it (an arcade button takes milliseconds to make)."""
+
+    def __init__(self, height: float, make: Any) -> None:
+        self.height, self.make = height, make
+
+
 def row_height(widget: Any) -> float:
+    if isinstance(widget, LazyRow):
+        return widget.height
     if isinstance(widget, gui.UIBoxLayout):
         kids = list(widget.children)
         if not kids:

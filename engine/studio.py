@@ -28,7 +28,7 @@ from engine.route_check import route_problems
 from engine.scene_loader import document_key
 from engine.studio_ai import Proposal, StudioAIHost
 from engine.studio_hd2d import Hd2dView
-from engine.studio_inspector import InspectorMixin, Rows, row_height
+from engine.studio_inspector import InspectorMixin, LazyRow, Rows, row_height
 from engine.studio_project import Project
 from engine.studio_ui import (
     C_BG,
@@ -1493,7 +1493,7 @@ class Studio(InspectorMixin):
         if sum(heights) <= room:
             self.panel_scroll, self._panel_more = 0, (0, 0)
             for widget in items:
-                box.add(widget)
+                box.add(widget.make() if isinstance(widget, LazyRow) else widget)
             return box
         room -= 2 * 22  # the "more above / below" lines
         last_page = len(items)
@@ -1515,7 +1515,7 @@ class Studio(InspectorMixin):
         if start:
             box.add(self._label(f"^ {start} more above (scroll up)", color=C_MUTED, size=9))
         for index in shown:
-            box.add(items[index])
+            box.add(items[index].make() if isinstance(items[index], LazyRow) else items[index])
         if below:
             box.add(self._label(f"v {below} more below (scroll down)", color=C_MUTED, size=9))
         return box

@@ -40,6 +40,7 @@ from engine import project_ops as ops
 from engine.hd2d.picking import Picker, box, box_edges, ground_point
 from engine.hd2d.renderer import Camera
 from engine.hd2d.settings import PIXELS_PER_METRE
+from engine.studio_inspector import LazyRow
 from engine.studio_ui import C_ERROR, C_MUTED, C_WARN, S_ACTIVE, S_BUTTON, gui
 
 if TYPE_CHECKING:
@@ -589,8 +590,10 @@ class Hd2dView:
             studio._textures.pop(("thumb", key), None)
         self._assets = None
 
-    def choose_model(self, asset_id: str) -> None:
-        self.chosen_model = None if self.chosen_model == asset_id else asset_id
+    def choose_model(self, asset_id: str | None) -> None:
+        """Show a model's page (None: back to the list)."""
+        self.chosen_model = asset_id
+        self.studio.panel_scroll = 0
         self.studio._rebuild()
 
     def set_model_filter(self, text: str) -> None:
@@ -599,7 +602,21 @@ class Hd2dView:
         self.studio._rebuild()
 
     def models_panel(self, rows: Any, width: int) -> None:
+        """The list of models, or the chosen model's page."""
         studio = self.studio
+        here: dict[str, int] = {}
+        for st in self.structures():
+            here[st.model] = here.get(st.model, 0) + 1
+        chosen = self._asset(self.chosen_model)
+        if chosen is not None:
+            row = _row()
+            row.add(studio._button("< All models", partial(self.choose_model, None), width=width - 86))
+            row.add(studio._button("Close", self.open_models, width=80))
+            rows.add(row)
+            rows.add(studio._label(chosen.name, bold=True, size=12))
+            rows.add(studio._label(f"{chosen.category or 'Uncatalogued'}  -  3D model (.glb)", color=C_MUTED, size=10))
+            self._model_details(rows, chosen, width, here.get(chosen.model, 0))
+            return
         rows.add(studio._label("Models", bold=True, size=12))
         rows.add(studio._label("3D structures made in Blender (.glb). Pictures and sprites are under each object's "
                                "Picture.", color=C_MUTED, size=10, width=width))
@@ -617,23 +634,20 @@ class Hd2dView:
                                    "then Import 3D model.", color=C_MUTED, width=width))
         elif not shown:
             rows.add(studio._label(f"No model matches '{self.model_filter}'.", color=C_MUTED, width=width))
-        here: dict[str, int] = {}
-        for st in self.structures():
-            here[st.model] = here.get(st.model, 0) + 1
         category = None
         for asset in shown:
             if asset.category != category and asset.category:
                 category = asset.category
                 rows.add(studio._label(category, color=C_MUTED, size=10))
-            row = _row()
-            self._thumbnail(row, asset, 48, 36)
             count = here.get(asset.model, 0)
             label = asset.name + (" (missing file)" if asset.missing else f"  x{count}" if count else "")
-            row.add(self._button(label, partial(self.choose_model, asset.id), f"{asset.model}", width=width - 54,
-                                 style=S_ACTIVE if asset.id == self.chosen_model else S_BUTTON))
-            rows.add(row)
-            if asset.id == self.chosen_model:
-                self._model_details(rows, asset, width, count)
+            rows.add(LazyRow(36, partial(self._model_row, asset, label, width)))
+
+    def _model_row(self, asset: Any, label: str, width: int) -> Any:
+        row = _row()
+        self._thumbnail(row, asset, 48, 36)
+        row.add(self._button(label, partial(self.choose_model, asset.id), f"{asset.model}", width=width - 54))
+        return row
 
     def _search_row(self, width: int) -> Any:
         row = _row()
@@ -764,16 +778,20 @@ class Hd2dView:
             rows.add(studio._label("Choose a file to see what it holds.", color=C_MUTED, size=10, width=width))
         elif not found.ok:
             rows.add(studio._label(found.problem or "", color=C_ERROR, size=10, width=width))
-        else:
-            self._inspection_picture(rows, found, width)
-            for line in found.report.lines() if found.report else []:
-                rows.add(studio._label(line, color=C_MUTED, size=10, width=width))
-            if found.sharpened:
-                rows.add(studio._label(f"Made sharp: {', '.join(found.sharpened)}.", color=C_WARN, size=10, width=width))
+        else:  # what happens and what to watch first, then the picture, then the facts
             if found.duplicate_of:
                 rows.add(studio._label(f"Already imported as '{found.duplicate_of}'.", color=C_ERROR, size=10, width=width))
             else:
                 rows.add(studio._label(f"It becomes assets/models/{found.asset_id}.glb.", color=C_MUTED, size=10, width=width))
+            if found.sharpened:
+                rows.add(studio._label(f"Made sharp: {', '.join(found.sharpened)}.", color=C_WARN, size=10, width=width))
+            report = found.report
+            for line in report.warnings if report else []:
+                if not (found.sharpened and line.startswith("Smooth")):
+                    rows.add(studio._label(line, color=C_WARN, size=10, width=width))
+            self._inspection_picture(rows, found, width)
+            for line in report.lines()[:len(report.lines()) - len(report.warnings)] if report else []:
+                rows.add(studio._label(line, color=C_MUTED, size=10, width=width))
 
     def open_models_again(self) -> None:
         self.studio.panel, self.studio.panel_scroll = "structures", 0
@@ -836,12 +854,12 @@ class Hd2dView:
         if problem or plan is None:
             rows.add(studio._label(problem or "", color=C_ERROR, size=10, width=width))
         else:
-            self._inspection_picture(rows, plan.inspection, width)
             rows.add(studio._label("What changes", bold=True, size=11))
-            for line in plan.changes:
-                rows.add(studio._label(line, color=C_MUTED, size=10, width=width))
             for line in plan.warnings:
                 rows.add(studio._label(line, color=C_WARN, size=10, width=width))
+            for line in plan.changes:
+                rows.add(studio._label(line, color=C_MUTED, size=10, width=width))
+            self._inspection_picture(rows, plan.inspection, width)
 
     def reimport_now(self) -> None:
         studio, form = self.studio, self.reimport_form
@@ -871,9 +889,9 @@ class Hd2dView:
             studio._say(f"The room couldn't use the new {asset.name} ({error}); the previous version is back.", ok=False)
             return
         self.open_models_again()
-        changed = "; ".join(plan.changes[:2])
-        studio._say(f"Reimported {asset.name}: {changed}" + (f" ({len(plan.warnings)} warning(s))" if plan.warnings else ""),
-                    ok=not plan.warnings)
+        changed = "; ".join(line.rstrip(".") for line in plan.changes[:2])
+        warned = f" Check: {plan.warnings[0]}" if plan.warnings else ""
+        studio._say(f"Reimported {asset.name}: {changed}.{warned}", ok=not plan.warnings)
 
     def inspector(self, rows: Any, width: int) -> None:
         """The selected structure: what it is, where it is (metres, degrees), and buttons to move it."""
