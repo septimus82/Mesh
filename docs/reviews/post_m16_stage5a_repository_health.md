@@ -1,12 +1,25 @@
 # Post-M16 Stage 5A: repository health checkpoint
 
-**Verdict: CONDITIONAL PASS.** Stage 5A is hardened and integrated (#355). The full test suite now passes on Linux
-and Windows CI for the first time. All 32 `verify-all` steps pass on both. The fixes are in draft PR
-[#358](https://github.com/septimus82/Mesh/pull/358). The conditions are:
+**Verdict: CONDITIONAL PASS.** Stage 5A is hardened and integrated (#355). The fixes are in draft PR
+[#358](https://github.com/septimus82/Mesh/pull/358), head `c877698`. For the first time:
 
-1. The owner's OK for the Windows CI Mesa action.
-2. A decision on the out-of-date step-time budget, the one check still red (finding 15).
-3. #356 and #357 stay open, along with the packaging gaps and the three unconfirmed sprites.
+- the full test suite passes on Linux and Windows CI: 9,587 passed, 0 failed on each;
+- all 32 `verify-all` steps pass on both, and the step-time budgets are enforced on both.
+
+Both of the owner's CI decisions are implemented:
+
+1. **Windows Mesa:** a pinned, SHA-256-verified release installed for the job's Python only, with no third-party
+   action.
+2. **Step budgets:** the duplicated work was removed first, then per-platform budgets were set from 6 CI samples each.
+
+The conditions:
+
+1. **Still red: [#360](https://github.com/septimus82/Mesh/issues/360).** CI's "Diff against baseline" gate, now
+   reached for the first time, compares total run time with a 50 ms threshold against a February local run. It needs
+   an owner decision; it was not re-baselined. The release-bundle steps after it are still unobserved.
+2. **Release-only and unaffected by #358: [#359](https://github.com/septimus82/Mesh/issues/359).** The replay goldens
+   are stale.
+3. **Still open:** #356, #357, the #345 gaps and the three unverified sprites.
 
 None of these blocks Stage 5B technically. Stage 5B should start only after the owner's review.
 
@@ -51,7 +64,9 @@ reach; **Low** is minor or hygiene.
 | 11 | Low | **The Linux type gate:** Windows-only GUI tooling (`gui_driver`, two acceptance scripts) was 12 Linux-only mypy errors. It hadn't been seen, because the gate never ran (#1). | `mypy --platform linux` | Fixed |
 | 12 | Low | **GPU-gated tests never run in CI** (`MESH_GL_SMOKE` isn't set). #351 rotted unnoticed. | — | Recommendation: run the GPU tier locally before each merge, as these stages did, or add a scheduled GL lane |
 | 13 | Low | **Studio's per-frame UI layout:** arcade 3's `UIManager.draw()` lays every widget out every frame, about 4.4 ms of a 10 ms Studio frame (profiled), in 2D and HD-2D alike. | cProfile (Phase 4) | Noted; proportional to widget count, not a defect |
-| 15 | Medium | **`verify-all`'s step-time budget is out of date and has never been enforced.** The fast tier takes 87–129 s against a 43 s budget set in June, when it had 62% fewer tests. Now that CI reaches `verify-all`, this is the last red check on both OSes. | CI run `40187015582`; local timing; test counts at `c25c2b2` and now | **Open: owner decision** (see CI results) |
+| 15 | Medium | **`verify-all`'s step-time budget is out of date and has never been enforced.** The fast tier takes 87–129 s against a 43 s budget set in June, when it had 62% fewer tests. Now that CI reaches `verify-all`, this is the last red check on both OSes. | CI run `40187015582`; local timing; test counts at `c25c2b2` and now | **Fixed:** de-duplicated, then per-platform budgets from 6 CI samples each; enforced and passing on both OSes (see CI results) |
+| 16 | Medium | **CI's "Diff against baseline" gate can't pass reliably.** Total `verify-all` time is compared with a fixed 50 ms threshold against one local run from February (36.5 s then, 115 s now, with more than 10% spread between identical runs). It had never been reached. | CI runs `40193191718`, `40193196720` | **Open: [#360](https://github.com/septimus82/Mesh/issues/360)** (owner decision) |
+| 17 | Low | **All 13 release replay goldens are stale.** They're used only by the `ship` job (dispatch and `release/` branches); the base branch gives identical digests. | CI run `40190965398`; local runs on the base and the branch | **Open: [#359](https://github.com/septimus82/Mesh/issues/359)** |
 | 14 | Low | **Repeated selections grow Python memory slowly**: a one-off ~3.8 MB warm-up (pyglet vertex domains, glyph caches), then about 4 KB per selection inside pyglet and arcade-gui. GL objects stay flat and nothing goes stale. | `tracemalloc` over 120 selections plus 20 edit/undo cycles | Noted |
 
 **Checked and found healthy:**
@@ -94,45 +109,143 @@ All of these were reproduced against the integrated branch, from CI logs on Linu
 
 ## CI results
 
-PR [#358](https://github.com/septimus82/Mesh/pull/358), commit `09f3841`, CI run `40187015582`. The PR's own run
-(`40187033537`) gave the same result.
+Final: PR [#358](https://github.com/septimus82/Mesh/pull/358) head `c877698`. Push run `40193191718` and PR run
+`40193196720` gave the same result.
 
 | Check | Linux (ubuntu-latest, py3.11) | Windows (windows-latest, py3.11) |
 |---|---|---|
 | `arcade3-canary` (required) | **pass** | — |
 | `web-smoke` (required) | **pass** | — |
-| Full pytest suite | **pass**: 9,579 passed, 0 failed, 87 skipped, 53 subtests (4 min 24 s) | **pass**: 9,579 passed, 0 failed, 87 skipped, 53 subtests (6 min 34 s) |
-| `verify-all`: all 32 steps (type gate, mypy baseline and island, ruff, exception budget, swallow scan, exception policy, fast tier, runtime and player-package smokes, web smoke, perf compare, content audits, doctor-assets, …) | **pass** | **pass** |
-| `verify-all`: step-time budget (`MESH_VERIFY_BUDGET_ENFORCE=1`, CI only) | **fail** | **fail** |
+| Full pytest suite | **pass**: 9,587 passed, 0 failed, 87 skipped, 53 subtests | **pass**: 9,587 passed, 0 failed, 87 skipped, 53 subtests |
+| `verify-all`: all 32 steps (type gate, mypy baseline and island, ruff, exception budget, swallow scan, exception policy, fast tier, smokes, perf compare, content audits, …) | **pass** | **pass** |
+| `verify-all` step-time budgets, enforced (finding 15) | **pass**: all 5 steps, both runs | **pass**: all 5 steps, both runs |
+| "Diff against baseline" (`artifacts-diff --fail-on-regression`) | **fail**: [#360](https://github.com/septimus82/Mesh/issues/360) | **fail**: [#360](https://github.com/septimus82/Mesh/issues/360) |
+| Release bundle build and strict verify (after the diff) | not reached | not reached |
 
-- **Before this checkpoint:**
-  - Linux: 26 failures, and `verify-all` never ran.
-  - Windows: always cancelled. When it did run, it had 13 OpenGL failures (no GL driver on the runner) and 0 other
-    failures.
-- **How Windows was fixed.** The runner had only Microsoft's OpenGL 1.1. It now installs Mesa's software OpenGL, the
-  Windows counterpart of Linux's Xvfb + Mesa, so those 13 window tests really run and pass. Nothing was skipped.
-  This adds a third-party action, `ssciwr/setup-mesa-dist-win@v2`, which **needs the owner's OK** (see the PR).
-- **`fail-fast` is now off**, so a failure on one OS no longer hides the other's result.
+**Still red: "Diff against baseline" ([#360](https://github.com/septimus82/Mesh/issues/360), finding 16).** This gate
+had never been reached in CI either. It compares one number, the total `verify-all` wall time, with a fixed 50 ms
+threshold against a single local run recorded on 2026-02-15. It reported 36,470 → 115,419 ms. With runs varying by
+more than 10%, it can't pass reliably even with a fresh baseline. It is a separate performance ratchet, and the brief
+says not to change other budgets, so it was neither re-baselined nor changed. The issue lists the options.
 
-**What remains red, and why: the step-time budget (finding 15).**
+- **A minor defect also found here.** `verify_report.json` is built before `verify_all_summary.json` is written, so
+  it records `verify_summary.ok: null`. The diff counts this only as "changed", so it doesn't cause the failure.
+- **Behind the gate.** The release bundle steps after it have never run in CI. A local preview was inconclusive: it
+  hit the known Windows path-length limit with a deep temp folder.
 
-- **The numbers.** `pytest-fast` has a 43.2 s budget (threshold 54 s). It took 87 s on Linux CI, 123 s on Windows
-  CI and 129 s on the owner's PC. `exception-policy-scan`: 2.3 s budget, 3.7 s and 4.1 s.
-- **Why the budget is out of date:**
-  - It was written on 2026-06-11 (`c25c2b2`), when the fast tier had about 2,510 tests in 351 files. It now has 4,066
-    tests in 505 files.
-  - The policy scan has grown with the code it scans.
-  - The budget was never enforced: CI stopped at pytest before `verify-all` could run, and the check is off outside
-    CI.
-- **Not a single regression.** No one test explains it. The slowest 25 take about 52 s together: four repository
-  scans for the exception policy (about 15 s), and about 15 Creator-mode "doesn't import X" checks, each in its own
-  subprocess (about 1.15 s each).
-- **Deliberately not re-baselined.** Lowering the bar on a ratchet is the owner's call.
-- **Options, which can be combined:**
-  - (a) Speed up the fast tier. Share one scan across the policy-scan tests; check all the Creator-mode import
-    boundaries in one subprocess. Together that saves about 30 s.
-  - (b) An explicit, reviewed re-baseline, with budgets measured on CI runners. One budget can't fit machines that
-    take 87, 123 and 129 s for the same tests.
+**Another long-hidden failure, found by a manual dispatch: the release replay suite ([#359](https://github.com/septimus82/Mesh/issues/359)).**
+
+- The `ship (release branches)` job runs only on `workflow_dispatch` and on `release/` branches. Its golden replay
+  ratchet reports a mismatch on all 13 cases.
+- The base branch `35b7c03` produces byte-identical digests, as do Linux and Windows, so #358 didn't cause it. The
+  goldens date from February.
+- They were not re-recorded. Push and PR runs never run this job.
+
+### History
+
+| Point | Linux | Windows |
+|---|---|---|
+| Before this checkpoint | 26 pytest failures; `verify-all` never ran | always cancelled (`fail-fast`); when run, 13 OpenGL failures |
+| `09f3841` (run `40187015582`) | pytest and 32 steps pass; budget fails | same |
+| `c877698` (final) | everything passes up to the baseline diff (#360) | same |
+
+### Windows Mesa (decision 1)
+
+- **The action is gone.** `ssciwr/setup-mesa-dist-win@v2` was a moving tag. Audited at `6657792`: it downloads
+  the archive without any integrity check and runs the archive's `systemwidedeploy.cmd`, which copies into System32
+  and registers an OpenGL driver.
+- **Source and version.** The job downloads `mesa3d-26.0.3-release-msvc.7z` (68,883,699 bytes) from
+  [pal1000/mesa-dist-win](https://github.com/pal1000/mesa-dist-win/releases/tag/26.0.3) release `26.0.3`, published
+  2026-03-20 by the maintainer `pal1000`.
+- **Integrity.**
+  - It checks the archive's SHA-256, `de1ec45c906164de2c046288a8969e83cf2d51d031dc8dfd1f9371bb31cd6755`, before
+    extracting anything. That digest is the one GitHub recorded when the asset was uploaded (the API's `digest`
+    field), not one computed from a download. The asset's upload time is earlier than the release's publication, so
+    it hasn't been replaced since.
+  - A mismatch fails the job.
+- **Installation.**
+  - Only `opengl32.dll` and `libgallium_wgl.dll` (plus `libglapi.dll`, if a release has one) are copied beside the
+    job's `python.exe`. Windows loads them before System32's. `GALLIUM_DRIVER=llvmpipe` is set.
+  - No script from the archive runs; nothing is written to System32 or the registry. Everything lives on the
+    disposable runner.
+  - The step then opens a hidden pyglet window. CI logs:
+    `OpenGL 4.5 (Compatibility Profile) Mesa 26.0.3 | llvmpipe (LLVM 22.1.1, 256 bits)`.
+- **Updating.** The procedure is in the step's comment in `.github/workflows/ci.yml`:
+  1. Choose a release.
+  2. Read its digest with
+     `gh api repos/pal1000/mesa-dist-win/releases/tags/<version> --jq '.assets[] | select(.name | endswith("-release-msvc.7z")) | .digest'`.
+  3. Change `MESA_VERSION` and `MESA_SHA256` together.
+- **Not changed.** The `tests` job keeps `pull-requests: write`, which the baseline-diff PR comment uses. The Mesa
+  step doesn't need it.
+
+### Step-time budgets (decision 2)
+
+**De-duplication first.** No assertion or boundary was removed.
+
+- **Exception-policy scan.**
+  - The scanner now walks statements only, since handlers and `raise` can't occur in expressions. Its output on
+    `engine`, `mesh_cli`, `tooling` and `tests` is byte-identical, in the same order, and it is 27% faster.
+  - The schema, baseline and missing-reason tests share one session scan, and the determinism test still compares
+    two independent scans. That is 5 scans per fast run down to 2: 15.5 s → 6.4 s locally.
+  - A new test pins the statement walk to `ast.walk`'s handlers.
+- **Creator-mode import boundaries.**
+  - 20 checks each started a fresh Python, about 1 s each, because `engine.editor` imports arcade. They now share one
+    long-lived interpreter, or one with arcade unimportable from the start.
+  - A check whose watched modules are already loaded falls back to a fresh interpreter, so the answers are a fresh
+    interpreter's. The snippets and assertions are unchanged.
+  - **Proof:** with a planted violation (a bridge import and an `arcade` import), the original and the converted tests
+    failed on exactly the same 18 cases.
+  - The helper has its own test (`tests/test_shared_python_helper.py`).
+- **Result.** The fast tier went from 129 s to 99 s on the owner's PC.
+
+**Before and after on CI (ms).** "Before" is run `40187015582`. "After" is 6 samples per platform: runs
+`40189903113` ×2, `40189903845` ×3 and `40190965398`.
+
+| Step | Linux before | Linux after: median (range) | Windows before | Windows after: median (range) |
+|---|---|---|---|---|
+| `pytest-fast` | 86,551 | **63,237** (53,118–64,097) | 123,391 | **93,708** (65,511–109,785) |
+| `exception-policy-scan` | 3,682 | **2,845** (2,441–3,018) | 4,061 | **2,989** (2,494–3,075) |
+| `verify-demo` | 10,313 | 10,217 (6,589–10,513) | 17,115 | 18,171 (10,766–23,269) |
+| `web-smoke` | 3,693 | 3,657 (3,074–3,844) | 5,231 | 5,218 (3,306–5,468) |
+| `player-package-gate` | 1,101 | 1,095 (874–1,114) | 1,762 | 1,770 (1,195–1,941) |
+
+**New budgets** (`tooling/metrics/verify_step_budget.json`, `platforms.linux` / `platforms.windows`):
+
+- **The rule.**
+  - The budget is the median of the 6 CI samples.
+  - The allowance stays the existing 25% (ratio 1.25). It is widened only where a step's observed spread
+    (slowest ÷ median) plus 10 points exceeds that, rounded up to 0.05.
+  - The threshold is `max(budget + 50 ms, budget × ratio)`, plus the guard's existing near-miss margins.
+
+| Step | Linux budget / ratio → threshold | Windows budget / ratio → threshold |
+|---|---|---|
+| `pytest-fast` | 63,237 / 1.25 → 79,046 | 93,708 / **1.30** → 121,820 |
+| `exception-policy-scan` | 2,845 / 1.25 → 3,556 | 2,989 / 1.25 → 3,736 |
+| `verify-demo` | 10,217 / 1.25 → 13,021 | 18,171 / **1.40** → 25,689 |
+| `web-smoke` | 3,657 / 1.25 → 5,171 | 5,218 / 1.25 → 7,122 |
+| `player-package-gate` | 1,095 / 1.25 → 2,068 | 1,770 / 1.25 → 2,912 |
+
+- **They still catch regressions.**
+  - Fed through the real guard, all 12 "after" samples pass. Both pre-optimisation runs fail: Linux `pytest-fast`
+    86.6 s > 79.0 s, Windows 123.4 s > 121.8 s, and `exception-policy-scan` 3.68 s > 3.56 s and 4.06 s > 3.74 s. So
+    undoing the de-duplication would be caught on both platforms.
+  - Several budgets are now much tighter than June's single values. For example, Linux `verify-demo` went from 21.8 s
+    to 10.2 s, and `web-smoke` from 10.1 s to 3.7 s.
+- **The mechanism.** `platforms.<name>` overrides the top-level budgets and ratios on that platform only. Other
+  platforms, and every other budget (mypy, exception, authoring-trace, the pytest duration guard), are unchanged.
+  - The failure message names the platform.
+  - The baseline writer that the message suggests now replaces only the current platform's section.
+  - Tests cover the override, the fallback and the writer, and the baseline schema test covers the new section.
+- **Final runs** (`c877698`), with every step under its threshold:
+  - Linux `pytest-fast` 65.4 s and 51.5 s;
+  - Windows `pytest-fast` 75.5 s and 65.6 s.
+
+**Historical data, kept:**
+
+- The June budget (`c25c2b2`, 2026-06-11): `pytest-fast` 43,203 ms, `exception-policy-scan` 2,268 ms, `verify-demo`
+  21,789 ms, `web-smoke` 10,071 ms, `player-package-gate` 2,512 ms. These stay as the top-level fallback.
+- Then, the fast tier had about 2,510 tests in 351 files. It has 4,066 tests in 505 files at `c877698`.
+- Fast tier on the owner's PC: 129 s before this work, 99 s after.
 
 ## GPU lifetime (Phase 3)
 
@@ -236,22 +349,29 @@ It predates redesign's content, so it is now incomplete:
 | Status | Items |
 |---|---|
 | Resolved here | #351, the #352 failure set (all 26), the light-layer lifetime, test isolation (`user_settings.json`, the fixtures PNG), the Linux type gate, sprite-sheet re-slicing |
-| Fixed in | [#358](https://github.com/septimus82/Mesh/pull/358) (draft): all of the above, plus Windows CI OpenGL and `fail-fast` |
-| Remaining, tracked | **#356** (2D GL buffer leak), **#357** (pip install and `tooling/`), **#345** gaps (above), the three unconfirmed sprites (owner decision pending), the step-time budget (finding 15, owner decision), GPU tests not in CI (recommendation) |
+| Fixed in | [#358](https://github.com/septimus82/Mesh/pull/358) (draft): all of the above, plus Windows CI OpenGL (pinned, verified Mesa), `fail-fast`, the fast-tier de-duplication and per-platform step budgets |
+| Remaining, tracked | **#356** (2D GL buffer leak), **#357** (pip install and `tooling/`), **#345** gaps (above), the three unconfirmed sprites (to be replaced with original, redistributable art), **#360** (the baseline-diff gate, owner decision), **#359** (release replay goldens), GPU tests not in CI (recommendation) |
 
 ## Risks and next actions
 
 **Risks:**
 
-- **CI was blind for a long time.** That is now fixed: every gate has run on both OSes. Window tests on Windows CI
-  use Mesa's software OpenGL, which is closer to Linux CI than to a player's GPU driver.
+- **CI was blind for a long time.** Everything up to the baseline diff now runs on both OSes. The baseline diff
+  (#360) and the release-bundle steps after it are the last parts never seen green. Window tests on Windows CI use
+  Mesa's software renderer, which is closer to Linux CI than to a player's GPU driver.
+- **Step budgets are tighter than before.** Windows `pytest-fast` and `verify-demo` have only 10–11% headroom over
+  the slowest run seen in 6 samples. If runner variance grows, the remedy is more samples and a recomputed allowance
+  using the same rule, not a blanket increase.
+- **The Mesa pin needs a deliberate update.** A new version means a new digest, read from GitHub's release record.
 - **#356** grows slowly in long Studio sessions with 2D rooms.
 - **Packaging** isn't usable for creators until the #345 gaps and #357 are closed.
 
 **Next actions:**
 
-1. Merge #358 once reviewed, including the owner's OK for the Mesa action.
-2. Owner decisions: the step-time budget (speed-up, re-baseline, or both) and the three sprites.
-3. Update #345 per the plan above.
-4. #356 and #357.
-5. Then Stage 5B.
+1. Owner decision on #360. After that, the release-bundle steps run for the first time.
+2. Merge #358 once reviewed.
+3. Re-record or fix the replay goldens (#359), with a decision per case.
+4. Replace the three unverified sprites with original, redistributable art.
+5. Update #345 per the plan above.
+6. #356 and #357.
+7. Then Stage 5B.
