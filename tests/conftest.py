@@ -158,6 +158,16 @@ def unmarked_test_nodeids(pytestconfig):
     return list(getattr(pytestconfig, "_mesh_unmarked_nodeids", []))
 
 
+@pytest.fixture(scope="session")
+def exception_policy_scan():
+    """One exception-policy scan of the repository, shared by the tests that only read it (a scan takes seconds)."""
+    from pathlib import Path
+
+    from tooling.scan_exception_policies import scan
+
+    return scan(["engine", "mesh_cli", "tooling"], repo_root=Path(__file__).resolve().parent.parent)
+
+
 def pytest_collection_modifyitems(config, items):
     unmarked: list[str] = []
     for item in items:
