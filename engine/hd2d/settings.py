@@ -2,7 +2,7 @@
 scene (x east, y north); 32 px is one metre in the 3D world.
 
     "settings": {"hd2d": {
-        "structures": [{"model": "assets/models/stone_outpost.glb", "x": 384, "y": 256, "elevation": 0,
+        "structures": [{"id": "outpost", "model": "assets/models/stone_outpost.glb", "x": 384, "y": 256, "elevation": 0,
                         "rotation": 0, "scale": 1.0}],
         "ground": {"texture": "assets/textures/grass.png", "from": [0, 0], "to": [768, 512], "elevation": 0},
         "camera": {"pitch": 32, "fov": 30, "distance": 15, "ortho": false, "follow": "player", "height": 0.8},
@@ -30,6 +30,7 @@ class Structure:
     elevation: float = 0.0
     rotation: float = 0.0  # degrees, about the vertical axis
     scale: float = 1.0
+    id: str = ""  # stable within the scene ("structure<index>" when not given): names its floors ("outpost/deck")
 
 
 @dataclass(frozen=True)
@@ -83,16 +84,26 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
     if unknown:
         raise Hd2dSettingsError(f"settings.hd2d has unknown keys: {', '.join(sorted(unknown))}")
     structures = []
+    seen: set[str] = set()
     for i, item in enumerate(raw.get("structures", []) or []):
         where = f"settings.hd2d.structures[{i}]"
         if not isinstance(item, dict):
             raise Hd2dSettingsError(f"{where} must be an object")
+        extra = set(item) - {"id", "model", "x", "y", "elevation", "rotation", "scale"}
+        if extra:
+            raise Hd2dSettingsError(f"{where} has unknown keys: {', '.join(sorted(extra))}")
         model = item.get("model")
         if not isinstance(model, str) or not model.lower().endswith(".glb"):
             raise Hd2dSettingsError(f"{where}.model must be a project-relative .glb path (got {model!r})")
+        sid = item.get("id", f"structure{i}")
+        if not isinstance(sid, str) or not sid.strip() or "/" in sid:
+            raise Hd2dSettingsError(f"{where}.id must be a non-empty name without '/' (got {sid!r})")
+        if sid in seen:
+            raise Hd2dSettingsError(f"{where}.id '{sid}' is used twice; structure ids must be unique in a scene")
+        seen.add(sid)
         structures.append(Structure(model, _number(item, "x", where, 0.0), _number(item, "y", where, 0.0),
                                     _number(item, "elevation", where, 0.0), _number(item, "rotation", where, 0.0),
-                                    _number(item, "scale", where, 1.0, 0.01, 100.0)))
+                                    _number(item, "scale", where, 1.0, 0.01, 100.0), sid))
     ground = None
     if raw.get("ground") is not None:
         g = raw["ground"]

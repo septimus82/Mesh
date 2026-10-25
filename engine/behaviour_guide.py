@@ -53,6 +53,8 @@ GUIDES: dict[str, Guide] = {
     "PatrolPath": _G("Walk a route (loop or back and forth)", "Walks waypoints, looping or turning back at the end.",
                      "Advanced", ("waypoints", "mode", "speed"), {"waypoints": "Route", "wait_time": "Wait at each (s)"}),
     "FollowPath": _G("Walk to a spot", "Finds its way to a point or a named object once.", "Advanced"),
+    "FloorRoute": _G("Walk a route across floors (HD-2D)", "In an HD-2D room: walks between points on different "
+                     "floors, finding its way over stairs and bridges.", "Advanced", ("route", "speed", "wait")),
     # --- Interaction
     "Interactable": _G("React when the player presses E", "Something happens when the player stands close and presses E.",
                        "Interaction", ("interact_label", "interact_event"), {"interact_label": "Prompt",
