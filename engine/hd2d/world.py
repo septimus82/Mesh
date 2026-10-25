@@ -222,6 +222,10 @@ class World:
                         self._nav[(i, j)] = heights
         return self._nav
 
+    def walkable(self) -> int:
+        """How many places (navigation cells, counting each floor of a stack) a character can stand."""
+        return sum(len(heights) for heights in self._nav_grid().values())
+
     def _cell(self, x: float, y: float) -> tuple[int, int]:
         return int((x - self.bounds[0]) // NAV_CELL), int((y - self.bounds[1]) // NAV_CELL)
 
