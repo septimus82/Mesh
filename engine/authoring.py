@@ -10,6 +10,8 @@ A change is a dict: ``{"op": "place_prefab", "room": "start", "prefab": "person"
 - ``room`` is a room key (``read_project`` lists them); it defaults to the project's current room.
 - Settings named ``entity_id`` take an object's id or its unique name.
 - ``prefab`` takes a prefab id (or display name); ``entity`` (to duplicate) takes an id or name.
+- ``model`` (an HD-2D structure) takes a model from ``models`` (``read_project`` lists them): its catalogue id or
+  its project-relative .glb path. Models are imported by a person in Mesh Studio; changes can't add files.
 - ``"@2"`` stands for the id of the object (or the index of the light) created by change number 2
   (counting from 0) of the same batch, so one batch can add a person and give them a conversation.
 
@@ -168,8 +170,14 @@ def _bind(func: Callable[..., Any], args: Doc, scene: Doc, room: str, project: P
         elif key == "anchor" and isinstance(value, list):
             value = tuple(value)
         elif key == "model" and isinstance(value, str):  # an HD-2D structure's .glb: it must exist and be usable
+            from engine.hd2d.catalog import CatalogError, find  # noqa: PLC0415
             from engine.hd2d.glb import model_problem  # noqa: PLC0415
 
+            try:
+                listed = find(project.root, value) if not value.lower().endswith(".glb") else None
+            except CatalogError:
+                listed = None
+            value = listed.model if listed is not None else value  # a catalogue id names its file
             problem = model_problem(project.root, value)
             if problem:
                 raise ChangeError(index, name, problem)
@@ -199,6 +207,17 @@ def _resolve_entity(scene: Doc, value: Any, index: int, name: str) -> str:
         return ops.entity_ref(scene, value)
     except ops.OpError as exc:
         raise ChangeError(index, name, str(exc)) from None
+
+
+def models(project: Project) -> list[Doc]:
+    """The project's Blender models, as AI tools read them (``read_project``'s ``models``): catalogue id, file,
+    name, category, default turn and scale, collision, floors, licence, and whether the file is missing."""
+    from engine.hd2d.catalog import CatalogError, assets  # noqa: PLC0415
+
+    try:
+        return [asset.as_dict() for asset in assets(project.root)]
+    except CatalogError as err:
+        return [{"error": str(err)}]
 
 
 def prefabs(project: Project) -> list[Doc]:

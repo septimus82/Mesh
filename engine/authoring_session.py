@@ -82,7 +82,7 @@ def read_project(root: str | Path = ".") -> Doc:
     # Rooms with the shared player filled in, as Studio shows them; ``player`` is its one definition.
     rooms = {key: {"label": label, "path": path, "room": project.scene(key)} for key, label, path in project.rooms()}
     return {"ok": True, "source": "files", "revision": None, "current_room": project.current, "world": docs["world"],
-            "rooms": rooms, "player": docs["player"]}
+            "rooms": rooms, "player": docs["player"], "models": authoring.models(project)}
 
 
 def propose(root: str | Path, changes: list[Doc], *, title: str = "", base_revision: int | None = None,
