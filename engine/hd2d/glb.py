@@ -252,15 +252,31 @@ def _collider(reader: _Reader, doc: dict, node: dict, index: int, world: Matrix,
 
 
 def model_problem(root: str | Path, model: str) -> str | None:
-    """Why a project-relative ``model`` can't be placed as a structure (missing, not a usable GLB), or None."""
-    path = Path(root) / str(model)
-    if not str(model).lower().endswith(".glb") or not path.is_file():
+    """Why ``model`` can't be placed as a structure, or None: it must be a project-relative path inside the project
+    (``engine.hd2d.settings.asset_path``; and, symlinks followed, still inside it), an existing .glb, and usable."""
+    from engine.hd2d.settings import Hd2dSettingsError, asset_path  # noqa: PLC0415
+
+    try:
+        rel = asset_path(model, "The model")
+    except Hd2dSettingsError as err:
+        return str(err)
+    if not contained(root, rel):
+        return f"The model '{model}' lies outside the project (a link out of it); copy the file into the project."
+    path = Path(root) / rel
+    if not rel.lower().endswith(".glb") or not path.is_file():
         return f"There is no model '{model}' in the project (a .glb file, as Blender exports it)."
     try:
         load_glb(path)
     except GlbError as err:
         return str(err)
     return None
+
+
+def contained(root: str | Path, rel: str) -> bool:
+    """Whether ``root / rel``, every link followed, is still inside ``root``."""
+    base = Path(root).resolve()
+    target = (base / rel).resolve()
+    return target == base or base in target.parents
 
 
 def load_glb(path: str | Path) -> Model:

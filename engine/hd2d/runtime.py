@@ -25,6 +25,23 @@ def release(window: Any) -> None:
     window.hd2d_world = None
 
 
+def _contained(resolve: Any) -> Any:
+    """``resolve`` (engine.paths.resolve_path), refusing a file that, links followed, lies outside every content
+    root: a scene can name only the project's own assets."""
+    from pathlib import Path  # noqa: PLC0415
+
+    from engine.hd2d.settings import Hd2dSettingsError  # noqa: PLC0415
+    from engine.paths import is_path_under_content_roots  # noqa: PLC0415
+
+    def resolve_inside(rel: str) -> Path:
+        path = Path(resolve(rel))
+        if not is_path_under_content_roots(path):  # links followed
+            raise Hd2dSettingsError(f"'{rel}' lies outside the project's content (a link out of it?)")
+        return path
+
+    return resolve_inside
+
+
 def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
     """Called while a scene loads: drop the previous scene's renderer, make this one's if it asks for HD-2D."""
     release(window)
@@ -43,7 +60,7 @@ def configure_scene(window: Any, settings: Any, scene: Any = None) -> None:
         hd2d = parse_hd2d(raw, map_size_px=map_size)
         lights = scene.get("lights") if isinstance(scene, dict) else None
         hd2d = dataclasses.replace(hd2d, **parse_scene_lights(lights, settings))  # the room's own lights
-        window.hd2d_renderer = Hd2dRenderer(window, hd2d, resolve_path)
+        window.hd2d_renderer = Hd2dRenderer(window, hd2d, _contained(resolve_path))
         models = window.hd2d_renderer.models
         if any(model.colliders for model in models.values()):  # floors and walls authored in the GLBs
             from engine.hd2d.world import World  # noqa: PLC0415

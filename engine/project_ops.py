@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import posixpath
 import re
 from typing import Any, Iterable
@@ -1914,8 +1915,8 @@ def _checked_structures(after: Doc) -> Doc:
 
 
 def _structure_number(name: str, value: Any) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise OpError(f"A structure's {name} must be a number (got {value!r}).")
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        raise OpError(f"A structure's {name} must be a finite number (got {value!r}).")
     return float(value)
 
 
@@ -1941,10 +1942,16 @@ def place_structure(scene: Doc, model: str, x: float, y: float, elevation: float
     hd2d = _hd2d_block(out)
     if not isinstance(model, str) or not model.lower().endswith(".glb"):
         raise OpError(f"A structure's model must be a project-relative .glb file (got {model!r}).")
+    from engine.hd2d.settings import Hd2dSettingsError, asset_path  # noqa: PLC0415
+
+    try:
+        model = asset_path(model, "A structure's model")
+    except Hd2dSettingsError as err:
+        raise OpError(str(err)) from err
     sid = str(structure_id) if structure_id else unique_structure_id(out, posixpath.splitext(posixpath.basename(model.replace("\\", "/")))[0])
     if find_structure(out, sid) is not None:
         raise OpError(f"There is already a structure '{sid}' in this room.")
-    entry: Doc = {"id": sid, "model": model.replace("\\", "/"), "x": round(_structure_number("x", x), 2),
+    entry: Doc = {"id": sid, "model": model, "x": round(_structure_number("x", x), 2),
                   "y": round(_structure_number("y", y), 2)}
     for key, value, default in (("elevation", elevation, 0.0), ("rotation", rotation, 0.0), ("scale", scale, 1.0)):
         number = _structure_number(key, value)

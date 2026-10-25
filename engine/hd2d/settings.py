@@ -19,6 +19,9 @@ shape 2D ones.
 
 from __future__ import annotations
 
+import math
+import posixpath
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -92,10 +95,27 @@ class Hd2dSettings:
     lights: tuple[PointLight, ...] = ()
 
 
+def asset_path(value: Any, where: str) -> str:
+    """The one rule for an HD-2D asset path (a structure's model, the ground's texture): relative to the project,
+    inside it: no absolute or drive path, no '..'. Returns it with '/' separators. Whether the file really lies in
+    the project (symlinks) is checked where the project's files are known (``engine.hd2d.glb.model_problem``,
+    ``engine.hd2d.runtime``)."""
+    if not isinstance(value, str) or not value.strip() or "\0" in value:
+        raise Hd2dSettingsError(f"{where} must be a project-relative path (got {value!r})")
+    path = value.strip().replace("\\", "/")
+    if path.startswith("/") or re.match(r"^[A-Za-z]:", path) or ".." in path.split("/"):
+        raise Hd2dSettingsError(f"{where} must stay inside the project: a relative path without '..' (got {value!r})")
+    return posixpath.normpath(path)
+
+
+def _finite(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
 def _number(block: dict, key: str, where: str, default: float, lo: float | None = None, hi: float | None = None) -> float:
     value = block.get(key, default)
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise Hd2dSettingsError(f"{where}.{key} must be a number (got {value!r})")
+    if not _finite(value):
+        raise Hd2dSettingsError(f"{where}.{key} must be a finite number (got {value!r})")
     if (lo is not None and value < lo) or (hi is not None and value > hi):
         raise Hd2dSettingsError(f"{where}.{key} must be between {lo} and {hi} (got {value})")
     return float(value)
@@ -103,8 +123,8 @@ def _number(block: dict, key: str, where: str, default: float, lo: float | None 
 
 def _pair(block: dict, key: str, where: str, default: tuple[float, float]) -> tuple[float, float]:
     value = block.get(key, default)
-    if not (isinstance(value, (list, tuple)) and len(value) == 2 and all(isinstance(v, (int, float)) for v in value)):
-        raise Hd2dSettingsError(f"{where}.{key} must be [x, y] (got {value!r})")
+    if not (isinstance(value, (list, tuple)) and len(value) == 2 and all(_finite(v) for v in value)):
+        raise Hd2dSettingsError(f"{where}.{key} must be [x, y], finite numbers (got {value!r})")
     return float(value[0]), float(value[1])
 
 
@@ -127,6 +147,7 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
         model = item.get("model")
         if not isinstance(model, str) or not model.lower().endswith(".glb"):
             raise Hd2dSettingsError(f"{where}.model must be a project-relative .glb path (got {model!r})")
+        model = asset_path(model, f"{where}.model")
         sid = item.get("id", f"structure{i}")
         if not isinstance(sid, str) or not sid.strip() or "/" in sid:
             raise Hd2dSettingsError(f"{where}.id must be a non-empty name without '/' (got {sid!r})")
@@ -142,8 +163,8 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
         if not isinstance(g, dict):
             raise Hd2dSettingsError("settings.hd2d.ground must be an object")
         texture = g.get("texture")
-        if texture is not None and not isinstance(texture, str):
-            raise Hd2dSettingsError("settings.hd2d.ground.texture must be a project-relative image path")
+        if texture is not None:
+            texture = asset_path(texture, "settings.hd2d.ground.texture")
         default_hi = map_size_px or (32.0 * 24, 32.0 * 16)
         ground = Ground(texture, _pair(g, "from", "settings.hd2d.ground", (0.0, 0.0)),
                         _pair(g, "to", "settings.hd2d.ground", default_hi),
@@ -161,9 +182,8 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
     if extra:
         raise Hd2dSettingsError(f"settings.hd2d.sun has unknown keys: {', '.join(sorted(extra))}")
     sun = sun_block.get("direction", [-0.45, -0.55, 0.70])
-    if not (isinstance(sun, (list, tuple)) and len(sun) == 3 and all(isinstance(v, (int, float)) for v in sun)
-            and any(sun)):
-        raise Hd2dSettingsError(f"settings.hd2d.sun must be a direction [x, y, z] (got {sun!r})")
+    if not (isinstance(sun, (list, tuple)) and len(sun) == 3 and all(_finite(v) for v in sun) and any(sun)):
+        raise Hd2dSettingsError(f"settings.hd2d.sun must be a direction [x, y, z] of finite numbers (got {sun!r})")
     sun_color = rgb(sun_block.get("color", (255, 255, 255)))
     if sun_color is None:
         raise Hd2dSettingsError(f"settings.hd2d.sun.color must be a colour (got {sun_block.get('color')!r})")

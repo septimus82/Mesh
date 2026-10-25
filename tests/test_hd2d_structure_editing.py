@@ -49,7 +49,7 @@ def test_place_move_turn_and_remove_a_structure() -> None:
     (lambda r: ops.place_structure(r, MODEL, 1, 1, structure_id="crossing"), "already a structure 'crossing'"),
     (lambda r: ops.place_structure(r, MODEL, 5000, 1), "outside the room's ground"),
     (lambda r: ops.set_structure(r, "nope", x=1), "no structure 'nope'"),
-    (lambda r: ops.set_structure(r, "crossing", x="east"), "x must be a number"),
+    (lambda r: ops.set_structure(r, "crossing", x="east"), "x must be a finite number"),
     (lambda r: ops.set_structure(r, "crossing", scale=0), "scale must be between"),
     (lambda r: ops.remove_structure(r, "nope"), "no structure 'nope'"),
 ])
