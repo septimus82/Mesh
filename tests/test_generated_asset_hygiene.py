@@ -99,5 +99,5 @@ def test_the_patterns_catch_what_they_are_for() -> None:
     assert all(pattern.search(url) for name, pattern in FORBIDDEN.items() if name != "bearer token literal")
     described = "backblaze.pixellab.ai/file/pixellab-characters/<account>/<character>/...?t=..."
     assert not any(pattern.search(described) for pattern in FORBIDDEN.values())
-    assert FORBIDDEN["bearer token literal"].search("Authorization: Bearer abcdefghij0123456789xyz")
+    assert FORBIDDEN["bearer token literal"].search("Authorization: Bear" + "er abcdefghij0123456789xyz")
     assert not FORBIDDEN["bearer token literal"].search('{"Authorization": "Bearer " + token}')
