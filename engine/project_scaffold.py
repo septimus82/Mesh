@@ -9,6 +9,7 @@ from typing import Any
 
 from . import json_io
 from .logging_tools import get_logger
+from .repo_root import bundled_file
 
 _LOG = get_logger("engine.project_scaffold")
 
@@ -49,8 +50,8 @@ if __name__ == "__main__":
 '''
 
 # Every new project gets these: the starter art (tooling/make_starter_art.py), the older
-# placeholder sheet earlier projects use, and the door the editor uses when it links two
-# rooms (engine.project_ops.DOOR_SPRITE).
+# placeholder sheet earlier projects use (only a project that names it), and the door the editor
+# uses when it links two rooms (engine.project_ops.DOOR_SPRITE).
 _STARTER_FILES = (
     "assets/sprites/starter_hero.png",
     "assets/sprites/starter_villager.png",
@@ -110,23 +111,22 @@ def validate_new_project_target(root: Path) -> tuple[bool, str]:
     return True, ""
 
 
-def _engine_root() -> Path:
-    return Path(__file__).resolve().parent.parent
-
-
 def _copy_engine_asset(rel_path: str, dest_root: Path) -> None:
-    src = _engine_root() / rel_path
+    src = bundled_file(rel_path)  # the source tree, or a pip install's share/mesh-engine
     dest = dest_root / rel_path
-    if not src.is_file():
-        _LOG.warning("Engine starter asset missing: %s", src)
+    if src is None:
+        _LOG.warning("Engine starter asset missing: %s (not bundled with this install)", rel_path)
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dest)
 
 
 def _engine_input_bindings() -> dict[str, Any]:
+    config = bundled_file("config.json")
     try:
-        data = json.loads((_engine_root() / "config.json").read_text(encoding="utf-8"))
+        if config is None:
+            raise OSError("config.json is not bundled with this install")
+        data = json.loads(config.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         _LOG.warning("Engine config.json unreadable; new project gets no input_bindings")
         return {}
@@ -211,8 +211,8 @@ def create_project(root: Path, name: str, template_id: str = "blank") -> None:
 
     apply_template(root, template_id)
     for rel_path in _STARTER_FILES:
-        if rel_path == _LEGACY_PLACEHOLDER and template_id == "hd2d_rpg":
-            continue  # the HD-2D starter uses only Mesh's own art
+        if rel_path == _LEGACY_PLACEHOLDER and not _names_legacy_placeholder(root):
+            continue  # no template uses it: new projects get only Mesh's own art (and pip installs don't ship it)
         _copy_engine_asset(rel_path, root)
     # The monster game was a test project; only its own template ships its data.
     if template_id == "monster":

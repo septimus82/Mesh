@@ -25,6 +25,7 @@ from typing import Any, Callable
 import engine.optional_arcade as optional_arcade
 from engine import projects
 from engine.project_templates import Template, list_templates
+from engine.repo_root import bundled_file
 from engine.studio_ui import (
     C_ACCENT,
     C_BG,
@@ -327,9 +328,9 @@ class Launcher:
 
     def _preview(self, template: Template) -> Any:
         if template.id not in self._previews:
-            path = ENGINE_ROOT / template.preview
+            path = bundled_file(template.preview)  # the source tree, or a pip install's share/mesh-engine
             arcade = optional_arcade.arcade
-            self._previews[template.id] = arcade.load_texture(path) if path.is_file() else arcade.Texture.create_empty(
+            self._previews[template.id] = arcade.load_texture(path) if path is not None else arcade.Texture.create_empty(
                 f"mesh-template-{template.id}", (CARD_W, CARD_H))
         return self._previews[template.id]
 

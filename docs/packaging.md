@@ -1,0 +1,95 @@
+# Packaging: what a pip-installed Mesh carries
+
+A wheel only contains files inside its Python packages (`engine`, `mesh_cli`); `MANIFEST.in` lists the source
+distribution's data, and none of it reached the wheel. Since Milestone 16 Stage 6B a pip-installed Mesh carries exactly
+the engine's own files that installed workflows need, and nothing else. It was ported and extended from the earlier
+packaging change (PR #345), which was built on an older `main`.
+
+## What an installed engine reads from itself (measured)
+
+A game's content resolves only inside its project (since `643970a`). The engine reads its own files in these
+places, all through one lookup (`engine.repo_root.bundled_file` / `bundled_dir`):
+
+| Reader | What it reads |
+|---|---|
+| `project_scaffold.create_project` / `ensure_starter_files` | The starter files every new project gets, and `config.json` for the default input bindings |
+| `project_templates` (HD-2D RPG: `engine.hd2d.starter_village`) | The HD-2D starter kit (installed into the project's model catalogue), the HD-2D characters, ground textures, interface sounds |
+| `project_scaffold` (monster template) | The monster data, battle sounds and music |
+| `paths.resolve_engine_bundled_path` | `assets/data/monster_*` (the one fallback content isolation keeps) |
+| `studio_ui` | Mesh Studio's branding and button icons |
+| `launcher` | The template pictures |
+| The `engine` package itself | `engine/schemas/*.json`, the schemas every scene, prefab, entity, cutscene and config is validated against (`[tool.setuptools.package-data]`; before Stage 6B a pip-installed Mesh couldn't create a project at all without them) |
+
+**How it was measured:** every template's project was created from the source tree, and each file in it was matched
+by content to the engine file it came from. Then the wheel was installed into a clean environment outside any
+repository, where creating projects, Mesh Studio, play and export were all exercised
+(`tooling/hd2d_install_acceptance.py`). It now finds everything it uses.
+
+## The allow-list
+
+`pyproject.toml`'s `[tool.setuptools.data-files]` names **176 files** (0.99 MB) by path, so nothing goes in by accident.
+pip installs them under `<prefix>/share/mesh-engine/`, the conventional place for an application's shared data.
+
+| Group | Files | Size |
+|---|---|---|
+| `config.json` | 1 | 35 KB |
+| Monster data (`assets/data/monster_*.json`) | 3 | 2 KB |
+| Sounds (`attack`, `die`, `hit`, `ui_*`) and music (`dungeon_theme`) | 8 | 468 KB |
+| Sprites: starter hero, villager, sign; HD-2D hero, villager, merchant; door | 7 | 12 KB |
+| Starter tileset | 2 | 9 KB |
+| Launcher template pictures | 2 | 10 KB |
+| HD-2D starter kit: 14 models, 14 previews, 2 textures, catalogue, provenance | 32 | 272 KB |
+| Mesh Studio branding, with its notice | 10 | 122 KB |
+| Mesh Studio icons: PNGs, the Lucide SVGs, `NOTICE.md` and the ISC `LICENSE` | 110 | 61 KB |
+| `assets/NOTICE.md`: provenance and licence of every bundled file | 1 | 2 KB |
+
+**Licences:** see `assets/NOTICE.md`.
+
+- Everything is Mesh's own work, except two groups:
+  - **The branding** is © MeshMind Studios and not covered by the code licence (`assets/branding/NOTICE.md`).
+  - **The icons** are Lucide's, under ISC. The licence text is shipped with them, as ISC requires.
+- **Never bundled:** `animated_player.png`, `sproutling.png` and `shelltide.png`, whose provenance is unverified.
+  - No template's new project uses `animated_player.png`, so new projects no longer get it, from a checkout or an
+    install. An older project that names it still does.
+  - The developer-only monster template names the other two. In a pip install its creatures fall back to the
+    placeholder (PR #311) until they are replaced with Mesh's own art.
+
+**Size:** the wheel is 2.55 MB without the bundled files and **3.24 MB** with them. `packs/` is not bundled, and
+isn't needed.
+
+**To bundle another file:**
+
+1. Check its licence.
+2. Add it to `assets/NOTICE.md` and to `[tool.setuptools.data-files]`.
+3. `tests/test_wheel_bundles_engine_data.py` then expects it.
+
+## Exporting a game from an installed Mesh (issue #357)
+
+`mesh export build`, run in a project folder, writes a standalone game to `dist/bundle`:
+
+- the project's `main.py`, `config.json`, `packs/` and every file in its `assets/`;
+- the installed `engine` package as its runtime;
+- `bundle_manifest.json`, with each file's hash and no path of the maker's machine.
+
+It runs with `python main.py` wherever Mesh's dependencies (arcade, pillow, jsonschema) are installed, without Mesh.
+It replaces only an earlier bundle or an empty folder, never other files.
+
+The exporter and the asset manifest moved from the repository's `tooling/` into the package
+(`engine.tooling.export_bundle`, `engine.tooling.asset_manifest`). The names in `tooling/` remain for repository
+scripts.
+
+**Still repository-only (#357):**
+
+- `mesh campaign` and `mesh replays` (`tooling.campaign_replay`);
+- the main menu's web demo export and preview (`tooling.release_web_demo`, `tooling.web_preview`). The menu shows
+  those items only where the tools exist, and the HD-2D renderer's desktop shaders are not a web target.
+- developer gates (`mypy_gate`, `ruff_gate` and others).
+
+## Tests
+
+| Test | What it checks |
+|---|---|
+| `tests/test_wheel_bundles_engine_data.py` (slow; builds a wheel) | The wheel bundles exactly the allow-list, plus the schemas. Installed in a clean environment and run from an empty folder with no repository on `sys.path`, the engine creates a blank and an HD-2D RPG project with nothing missing: the starter files, input bindings, the 14-model kit and no unverified sprite. |
+| `tests/test_bundled_data_roots.py` (fast) | The source tree comes first, then an install's `share/mesh-engine`, for files and folders |
+| `tests/test_export_bundle.py` (fast) | A project exports as a standalone game; an export never replaces a folder that isn't an earlier bundle |
+| `tooling/hd2d_install_acceptance.py` (manual, hidden windows) | The whole HD-2D workflow from a clean install, including running the exported game with Mesh's dependencies only. Evidence: `docs/reviews/milestone16_stage6b_distribution.md`. |

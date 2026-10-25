@@ -8,10 +8,10 @@ arcade.gui (through ``optional_arcade``), so they look and behave the same.
 from __future__ import annotations
 
 import time
-from pathlib import Path
 from typing import Any
 
 import engine.optional_arcade as optional_arcade
+from engine.repo_root import bundled_dir
 
 gui = optional_arcade.gui()
 
@@ -71,7 +71,7 @@ S_CARD_MISSING = button_style(C_DANGER, C_DANGER_TEXT, border=C_DANGER_EDGE, siz
 
 # MeshMind Studios brand assets (assets/branding/NOTICE.md): the mark beside "Mesh Studio", the wordmark as the
 # publisher's credit, and the app icon. A copy of Mesh without them still runs, unbranded.
-BRANDING = Path(__file__).resolve().parents[1] / "assets" / "branding"
+BRANDING = bundled_dir("assets/branding")  # the source tree, or a pip install's share/mesh-engine
 _BRAND_TEXTURES: dict[str, Any] = {}
 
 
@@ -86,7 +86,7 @@ def brand_texture(name: str) -> Any | None:
 # Icons (Milestone 15 Stage 3): Lucide (ISC licence; assets/icons/lucide/LICENSE), drawn white by
 # tooling/make_icons.py and tinted with the button's own text colour, so selected, disabled, hover and danger
 # states need nothing of their own. A button's icon comes from its label, in this one table.
-ICONS = Path(__file__).resolve().parents[1] / "assets" / "icons"
+ICONS = bundled_dir("assets/icons")
 ICON_SIZE, ICON_GAP = 16, 6
 BUTTON_ICONS = {
     "Play (F4)": "play", "Stop (F4)": "square", "Save": "save", "Undo": "undo-2", "Redo": "redo-2", "Flags": "flag",

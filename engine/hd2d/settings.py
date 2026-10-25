@@ -42,6 +42,9 @@ class Structure:
     rotation: float = 0.0  # degrees, about the vertical axis
     scale: float = 1.0
     id: str = ""  # stable within the scene ("structure<index>" when not given): names its floors ("outpost/deck")
+    # In play, the part of it between the camera and the followed character (above that character's floor) is not
+    # drawn, so a house never hides the player behind or inside it (renderer.CUTAWAY_RADIUS). Opt-in, per structure.
+    cutaway: bool = False
 
 
 @dataclass(frozen=True)
@@ -155,7 +158,7 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
         where = f"settings.hd2d.structures[{i}]"
         if not isinstance(item, dict):
             raise Hd2dSettingsError(f"{where} must be an object")
-        extra = set(item) - {"id", "model", "x", "y", "elevation", "rotation", "scale"}
+        extra = set(item) - {"id", "model", "x", "y", "elevation", "rotation", "scale", "cutaway"}
         if extra:
             raise Hd2dSettingsError(f"{where} has unknown keys: {', '.join(sorted(extra))}")
         model = item.get("model")
@@ -168,9 +171,12 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
         if sid in seen:
             raise Hd2dSettingsError(f"{where}.id '{sid}' is used twice; structure ids must be unique in a scene")
         seen.add(sid)
+        cutaway = item.get("cutaway", False)
+        if not isinstance(cutaway, bool):
+            raise Hd2dSettingsError(f"{where}.cutaway must be true or false (got {cutaway!r})")
         structures.append(Structure(model, _number(item, "x", where, 0.0), _number(item, "y", where, 0.0),
                                     _number(item, "elevation", where, 0.0), _number(item, "rotation", where, 0.0),
-                                    _number(item, "scale", where, 1.0, 0.01, 100.0), sid))
+                                    _number(item, "scale", where, 1.0, 0.01, 100.0), sid, cutaway))
     ground = None
     if raw.get("ground") is not None:
         g = raw["ground"]

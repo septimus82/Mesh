@@ -49,6 +49,19 @@ def test_a_building_is_picked_and_moved(run: dict) -> None:
     assert move["shop"]["x"] == (24 + 4 + 1) * 32.0, "dragged 1 m east"
 
 
+def test_a_structure_is_picked_and_turned(run: dict) -> None:
+    turn = run["turn_structure"]
+    assert turn["picked"] == "crate_1" and turn["crate"]["rotation"] == 90.0
+    assert turn["see_through"] is True and turn["see_through_undone"] is None, "See-through on, then undone"
+
+
+def test_a_starter_model_is_browsed_and_placed(run: dict) -> None:
+    place = run["place_model"]
+    assert any(label.startswith("Lamp post") for label in place["listed"]), "the kit is in the catalogue"
+    assert place["placed"] and place["structure"]["model"] == "assets/models/lamp_post.glb"
+    assert (place["structure"]["x"], place["structure"]["y"]) == (22.0 * 32, 11.0 * 32)
+
+
 def test_a_person_is_placed_on_a_raised_floor_by_clicking_in_3d(run: dict) -> None:
     place = run["place_person"]
     assert "Nobody could stand there" in place["refused_message"], "a click into the fence is refused"

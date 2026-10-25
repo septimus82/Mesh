@@ -47,7 +47,8 @@ def test_creates_scaffolded_project(project: Path) -> None:
     # The starter scene has no lights; lighting on renders a near-black screen.
     assert cfg["lighting_enabled"] is False
     assert (project / "packs/core_regions/worlds/main.json").is_file()
-    assert (project / "assets/sprites/animated_player.png").is_file()
+    assert (project / "assets/sprites/starter_hero.png").is_file()
+    assert not (project / "assets/sprites/animated_player.png").exists(), "no template uses the legacy sheet"
 
 
 def test_refuses_to_overwrite_without_force(tmp_path: Path) -> None:

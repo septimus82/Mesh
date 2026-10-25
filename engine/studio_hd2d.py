@@ -1002,6 +1002,10 @@ class Hd2dView:
                              "Dragging moves it in 0.5 m steps", width=half, style=S_ACTIVE if self.snap else S_BUTTON))
         row.add(self._button("Delete", self.remove, "Take it out of the room (Delete)", width=half))
         rows.add(row)
+        rows.add(self._button(f"See-through in play: {'On' if st.cutaway else 'Off'}",
+                              lambda: self.set_fields("See-through changed.", cutaway=not st.cutaway),
+                              "In play, open a window in it where it would hide the player (a house, not a bridge)",
+                              width=width, style=S_ACTIVE if st.cutaway else S_BUTTON))
         rows.add(studio._label("Drag it on the map to move it.", color=C_MUTED, size=10, width=width))
 
     def toggle_snap(self) -> None:

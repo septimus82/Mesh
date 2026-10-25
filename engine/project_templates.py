@@ -252,10 +252,10 @@ def _apply_adventure(root: Path) -> None:
 def _apply_hd2d_rpg(root: Path) -> None:
     """The HD-2D starter village (engine.hd2d.starter_village)."""
     from .hd2d import starter_village  # noqa: PLC0415  # only this template loads the 3D code
-    from .project_scaffold import _engine_root  # noqa: PLC0415
+    from .repo_root import bundled_file  # noqa: PLC0415
 
     _write_person_prefab(root)
-    starter_village.build(root, _engine_root(), _person_entity("Person", "Hello!"), _sign_entity(""), _walking,
+    starter_village.build(root, bundled_file, _person_entity("Person", "Hello!"), _sign_entity(""), _walking,
                           _blank_scene())
 
 

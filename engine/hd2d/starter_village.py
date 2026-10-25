@@ -26,7 +26,7 @@ import json
 import math
 import shutil
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from engine import json_io
 from engine import project_ops as ops
@@ -130,17 +130,25 @@ def _talker(entity: dict[str, Any], name: str, lines: str) -> dict[str, Any]:
     return out
 
 
-def build(root: Path, engine_root: Path, person: dict[str, Any], sign: dict[str, Any],
+def build(root: Path, bundled: Callable[[str], Path | None], person: dict[str, Any], sign: dict[str, Any],
           walking: Any, blank_scene: dict[str, Any]) -> None:
-    """Write the village into the new project at ``root`` (its base files are already there). ``person`` and
-    ``sign`` are the template's Person and Sign entities, ``walking(entity, sheet)`` sets up a walking sheet and
-    ``blank_scene`` is a start room with the player."""
+    """Write the village into the new project at ``root`` (its base files are already there). ``bundled(rel)`` finds
+    one of Mesh's own files (engine.repo_root.bundled_file: the source tree or a pip install's share/mesh-engine).
+    ``person`` and ``sign`` are the template's Person and Sign entities, ``walking(entity, sheet)`` sets up a walking
+    sheet and ``blank_scene`` is a start room with the player."""
     from engine.hd2d import catalog  # noqa: PLC0415  # only the HD-2D template loads the 3D code
 
-    catalog.install_kit(root, engine_root / KIT)
+    def engine_file(rel: str) -> Path:
+        found = bundled(rel)
+        if found is None:
+            raise FileNotFoundError(f"This Mesh installation has no {rel}, which the HD-2D starter needs "
+                                    "(see docs/packaging.md)")
+        return found
+
+    catalog.install_kit(root, engine_file(f"{KIT}/catalog.json").parent)
     for rel in (GRASS, f"{KIT}/textures/dirt.png", HD_HERO, HD_VILLAGER, HD_MERCHANT, *UI_SOUNDS):
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(engine_root / rel, root / rel)
+        shutil.copyfile(engine_file(rel), root / rel)
     person = walking(person, HD_VILLAGER)
     prefabs_path = root / "assets" / "prefabs.json"  # Mesh Studio's Person object: the same style
     prefabs = json.loads(prefabs_path.read_text(encoding="utf-8"))
@@ -157,6 +165,8 @@ def build(root: Path, engine_root: Path, person: dict[str, Any], sign: dict[str,
     village["settings"]["lighting_shadow_softness"] = "soft"
     for sid, model, x, y, turn in VILLAGE:
         village = _place(village, sid, model, x, y, turn)
+    for sid in ("cottage", "shop"):  # see-through where they would hide the player behind or inside them
+        village = ops.set_structure(village, sid, cutaway=True)
     village["lights"] = [{"id": "sky", "type": "ambient", "color": "#9aa6d0", "mode": "soft"}]
     for x in (13.5, 18.5):
         village = _lamp(village, x, 5.0, 2.5, "#ffb060", 224)

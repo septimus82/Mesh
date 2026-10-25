@@ -41,14 +41,19 @@ def _write(path: Path, data: Any) -> None:
     path.write_text(json.dumps(data, indent=2, default=str) + "\n", encoding="utf-8")
 
 
-def check(out: Path) -> dict[str, Any]:
+def check(out: Path, project: Path | None = None) -> dict[str, Any]:
+    """The workflow; ``project``: an HD-2D RPG project already made (as ``mesh new --template hd2d_rpg`` makes it),
+    else one is made (timed) in OUT/project."""
     from engine.project_scaffold import create_project
 
     out.mkdir(parents=True, exist_ok=True)
-    project = out / "project"
-    t = time.perf_counter()
-    create_project(project, "Mesh Village", "hd2d_rpg")
-    report: dict[str, Any] = {"steps": [], "timings": {"create_project_ms": round((time.perf_counter() - t) * 1000)}}
+    created_ms = None
+    if project is None:
+        project = out / "project"
+        t = time.perf_counter()
+        create_project(project, "Mesh Village", "hd2d_rpg")
+        created_ms = round((time.perf_counter() - t) * 1000)
+    report: dict[str, Any] = {"steps": [], "timings": {"create_project_ms": created_ms}}
 
     def step(name: str, **facts: Any) -> None:
         report["steps"].append({"step": name, **facts})
@@ -71,6 +76,19 @@ def check(out: Path) -> dict[str, Any]:
         shop = d.structure("shop")
         d.picture(out / "02_shop_moved.png")
         step("move_building", picked=picked, shop=shop)
+
+        # select a crate (click its top) and turn it a quarter
+        d.click(*d.screen((24.5, 9.0, 1.0)))
+        crate_picked = view.structure
+        d.button("Turn +90")
+        crate = d.structure("crate_1")
+        d.picture(out / "02b_crate_turned.png")
+        d.button("See-through in play", prefix=True)  # the cutaway, then undone
+        see_through = (d.structure("crate_1") or {}).get("cutaway")
+        d.key(k.Z, ctrl)
+        see_through_undone = (d.structure("crate_1") or {}).get("cutaway")
+        step("turn_structure", picked=crate_picked, crate=crate, see_through=see_through,
+             see_through_undone=see_through_undone)
 
         # choose Person, click into the fence (refused), then on the west plateau (2 m up)
         d.key(k.ESCAPE)
@@ -110,6 +128,24 @@ def check(out: Path) -> dict[str, Any]:
         d.button("Done")
         step("modify_light", lamp=lamp, renderer_lamps=d.renderer.stats()["lamps"])
 
+        # browse the model catalogue (the starter kit) and place a lamp post beside the path
+        d.key(k.ESCAPE)
+        d.button("Models...")
+        kit_listed = [t for t in d.labels() if t.startswith(("Lamp post", "Cottage", "Bridge"))]
+        d.button("Lamp post", prefix=True)
+        d.button("Place in scene")
+        spot = d.screen((22.0, 11.0, 0.0))  # open grass east of the path, clear of the walk below
+        left, right, bottom, top = view._rect()
+        assert left < spot[0] < right and bottom < spot[1] < top, f"the lamp post's spot is off the 3D view ({spot})"
+        d.window.dispatch_event("on_mouse_motion", *spot, 0, 0)
+        d.frame()
+        d.click(*spot)
+        post_id = view.structure
+        post = d.structure(post_id) if post_id else None
+        d.picture(out / "05b_lamp_post_placed.png")
+        d.key(k.ESCAPE)
+        step("place_model", listed=kit_listed, placed=post_id, structure=post)
+
         # an AI proposes a sign on the east plateau; the person accepts in the review panel
         proposal = studio.ai.stage_proposal_payload({"title": "A sign for the hill", "source": "a test AI", "changes": [
             {"op": "place_prefab", "prefab": "sign", "x": 31.0 * PX, "y": 24.5 * PX + 12.0, "elevation": 64}]})
@@ -135,9 +171,10 @@ def check(out: Path) -> dict[str, Any]:
         d.frame(10)
         reopened = {"shop": d.structure("shop"), "person": next((dict(e) for e in studio.project.scene()["entities"]
                                                                  if e.get("id") == new_id), None),
-                    "lamp": dict(studio.project.scene()["lights"][1])}
+                    "lamp": dict(studio.project.scene()["lights"][1]), "crate": d.structure("crate_1"),
+                    "post": d.structure(post_id) if post_id else None}
         step("save_reopen", saved_message=saved, same=reopened["shop"] == shop and reopened["person"] == person
-             and reopened["lamp"] == lamp)
+             and reopened["lamp"] == lamp and reopened["crate"] == crate and reopened["post"] == post)
         studio_frames = []
         for _ in range(40):
             t = time.perf_counter()
