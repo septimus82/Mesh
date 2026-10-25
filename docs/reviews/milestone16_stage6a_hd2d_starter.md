@@ -179,6 +179,7 @@ suppressed) introduces `bundled_file()` / `share/mesh-engine` for exactly this.
 | Fast tier | 4,543 passed, 0 failed |
 | Ruff gate, mypy gate, type-ignore ratchet | ok (no new `type: ignore`) |
 | #359's replay goldens | untouched |
+| CI on #362 at `74f6eef` (push `40212121360`, PR `40212122684`) | **Green on Linux and Windows.** Full pytest: 9,653 passed, 0 failed, 108 skipped (CI doesn't set `MESH_GL_SMOKE`, so the GL-gated suites skip there and pass locally). verify-all and the enforced step budgets pass on both OSes. The baseline diff has 0 regressions. `arcade3-canary` and `web-smoke` pass. |
 
 **Defects found and fixed on the way:**
 
