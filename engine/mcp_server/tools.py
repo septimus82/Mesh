@@ -841,10 +841,11 @@ def authoring_operations() -> dict[str, Any]:
 
 
 def read_project(root: str = ".") -> dict[str, Any]:
-    """Every room of the project with its objects and map.
+    """Every room of the project with its objects and map, and its Blender ``models`` (HD-2D structures).
 
     If Mesh Studio has it open, this is what the person sees right now (unsaved edits included)
-    plus a ``revision`` to pass to propose_changes as ``base_revision``.
+    plus a ``revision`` to pass to propose_changes as ``base_revision``. Place a model with
+    {"op": "place_structure", "model": "<its id>", "x": ..., "y": ...}; models are imported by the person.
     """
     from engine import authoring_session
 

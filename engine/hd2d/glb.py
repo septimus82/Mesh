@@ -128,6 +128,16 @@ def _normal_matrix(m: Matrix) -> Matrix:
     return cof  # (inverse)^T == cofactor / det
 
 
+def _json_chunk(chunk: bytes, where: object) -> dict:
+    try:
+        doc = json.loads(chunk)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise GlbError(f"{where}: its glTF description is damaged (a cut-off or corrupted file?)") from exc
+    if not isinstance(doc, dict):
+        raise GlbError(f"{where}: its glTF description isn't an object")
+    return doc
+
+
 class _Reader:
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -147,7 +157,7 @@ class _Reader:
             size, kind = struct.unpack_from("<I4s", data, offset)
             chunk = data[offset + 8: offset + 8 + size]
             if kind == b"JSON":
-                self.doc = json.loads(chunk)
+                self.doc = _json_chunk(chunk, path)
             elif kind == b"BIN\x00":
                 self.bin = chunk
             offset += 8 + size
@@ -203,7 +213,8 @@ class _Reader:
                 raise self.fail(f"image {i} can't be decoded ({exc})") from exc
         out: list[Material] = []
         for mat in doc.get("materials", []):
-            ref = mat.get("pbrMetallicRoughness", {}).get("baseColorTexture")
+            pbr = mat.get("pbrMetallicRoughness", {})
+            ref = pbr.get("baseColorTexture")
             image, nearest, repeat = None, True, True
             if ref is not None:
                 tex = doc["textures"][ref["index"]]
@@ -211,8 +222,20 @@ class _Reader:
                 sampler = doc.get("samplers", [{}])[tex["sampler"]] if "sampler" in tex else {}
                 nearest = sampler.get("magFilter", GL_NEAREST) == GL_NEAREST
                 repeat = GL_CLAMP_TO_EDGE not in (sampler.get("wrapS"), sampler.get("wrapT"))
+            elif isinstance(pbr.get("baseColorFactor"), list) and len(pbr["baseColorFactor"]) == 4:
+                # A flat Blender colour (no texture): one texel of it, so it isn't drawn grey.
+                r, g, b, a = (min(max(float(c), 0.0), 1.0) for c in pbr["baseColorFactor"])
+                image = Image.new("RGBA", (1, 1), _srgb_byte(r, g, b, a))
             out.append(Material(str(mat.get("name", f"material{len(out)}")), image, nearest, repeat))
         return out or [Material("default", None)]
+
+
+def _srgb_byte(r: float, g: float, b: float, a: float) -> tuple[int, int, int, int]:
+    """glTF's linear base colour as the sRGB bytes a texture would hold (alpha stays linear)."""
+    def enc(c: float) -> int:
+        return round(255 * (12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055))
+
+    return enc(r), enc(g), enc(b), round(255 * a)
 
 
 def _transform(m: Matrix, p: tuple[float, ...]) -> tuple[float, float, float]:
@@ -280,7 +303,17 @@ def contained(root: str | Path, rel: str) -> bool:
 
 
 def load_glb(path: str | Path) -> Model:
-    """A GLB file as a Model (Z-up metres). Raises GlbError, naming the file and the problem."""
+    """A GLB file as a Model (Z-up metres). Raises GlbError, naming the file and the problem: a file that isn't
+    well-formed glTF (a missing or wrong-typed key, an index out of range) included, never another exception."""
+    try:
+        return _load_glb(path)
+    except GlbError:
+        raise
+    except (KeyError, IndexError, TypeError, ValueError, AttributeError, struct.error, RecursionError) as exc:
+        raise GlbError(f"{path}: malformed glTF ({type(exc).__name__}: {exc}); re-export it from Blender") from exc
+
+
+def _load_glb(path: str | Path) -> Model:
     reader = _Reader(Path(path))
     doc = reader.doc or {}
     materials = reader.materials()
@@ -328,3 +361,139 @@ def load_glb(path: str | Path) -> Model:
     if not model.parts:
         raise reader.fail("contains no meshes")
     return model
+
+
+# ---------------------------------------------------------------------------------------------- importing (Stage 5B)
+GL_LINEAR = 9729
+_HARMLESS_EXTENSIONS = ("KHR_materials_",)  # PBR extras Blender writes; Mesh's lighting doesn't use them
+
+
+def split_glb(data: bytes) -> tuple[dict, bytes]:
+    """A GLB's JSON document and binary chunk. Raises GlbError if it isn't a GLB."""
+    if len(data) < 20 or data[:4] != b"glTF":
+        raise GlbError("not a GLB file (export from Blender as glTF Binary, .glb)")
+    doc, binary, offset = None, b"", 12
+    while offset + 8 <= len(data):
+        size, kind = struct.unpack_from("<I4s", data, offset)
+        chunk = data[offset + 8: offset + 8 + size]
+        if kind == b"JSON":
+            doc = _json_chunk(chunk, "the GLB")
+        elif kind == b"BIN\x00":
+            binary = chunk
+        offset += 8 + size
+    if not isinstance(doc, dict):
+        raise GlbError("the GLB has no JSON chunk")
+    return doc, binary
+
+
+def join_glb(doc: dict, binary: bytes) -> bytes:
+    """A GLB from its JSON document and binary chunk (each padded to 4 bytes, as glTF requires)."""
+    text = json.dumps(doc, separators=(",", ":")).encode("utf-8")
+    text += b" " * (-len(text) % 4)
+    chunks = struct.pack("<I4s", len(text), b"JSON") + text
+    if binary:
+        binary += b"\0" * (-len(binary) % 4)
+        chunks += struct.pack("<I4s", len(binary), b"BIN\x00") + binary
+    return struct.pack("<4sII", b"glTF", 2, 12 + len(chunks)) + chunks
+
+
+def sharpen_textures(data: bytes) -> tuple[bytes, list[str]]:
+    """``data`` with every material texture sampled NEAREST (pixel art stays sharp), and the names of the materials
+    whose texture was smooth (Blender's default "Linear" interpolation). Only the JSON chunk changes."""
+    doc, binary = split_glb(data)
+    samplers = doc.setdefault("samplers", [])
+    textures = doc.get("textures", [])
+    changed: list[str] = []
+    for mat in doc.get("materials", []):
+        ref = (mat.get("pbrMetallicRoughness") or {}).get("baseColorTexture")
+        if not isinstance(ref, dict) or not 0 <= ref.get("index", -1) < len(textures):
+            continue
+        tex = textures[ref["index"]]
+        sampler = samplers[tex["sampler"]] if isinstance(tex.get("sampler"), int) and tex["sampler"] < len(samplers) else {}
+        if sampler.get("magFilter", GL_NEAREST) == GL_NEAREST:  # what the renderer goes by (it has no mipmaps)
+            continue
+        sharp = {**sampler, "magFilter": GL_NEAREST, "minFilter": GL_NEAREST}
+        if sharp not in samplers:
+            samplers.append(sharp)
+        tex["sampler"] = samplers.index(sharp)
+        changed.append(str(mat.get("name", "material")))
+    return (join_glb(doc, binary) if changed else data), changed
+
+
+@dataclass
+class Report:
+    """What a GLB holds, for a person deciding whether to import it: facts, plus warnings (it works, but...)."""
+
+    triangles: int
+    parts: int
+    size_m: tuple[float, float, float]
+    materials: list[tuple[str, tuple[int, int] | None, bool]]  # (name, texture size or None, sharp)
+    colliders: list[tuple[str, str]]  # (node, kind)
+    warnings: list[str] = field(default_factory=list)
+
+    @property
+    def collision(self) -> dict[str, int]:
+        return {kind: sum(1 for _n, k in self.colliders if k == kind) for kind in COLLISION_KINDS}
+
+    @property
+    def floors(self) -> list[str]:
+        """The walkable colliders' node names: each placed copy's floors are ``<structure id>/<name>``."""
+        return [name for name, kind in self.colliders if kind != "wall"]
+
+    def lines(self) -> list[str]:
+        x, y, z = self.size_m
+        out = [f"{x:.1f} x {y:.1f} m, {z:.1f} m high; {self.triangles} triangles in {self.parts} part(s)."]
+        textured = [f"{name} ({s[0]}x{s[1]}{'' if sharp else ', smooth'})" for name, s, sharp in self.materials if s]
+        flat = [name for name, s, _sharp in self.materials if s is None]
+        if textured:
+            out.append("Textures: " + ", ".join(textured) + ".")
+        if flat:
+            out.append("Flat colour: " + ", ".join(flat) + ".")
+        counts = self.collision
+        if self.colliders:
+            out.append("Collision: " + ", ".join(f"{n} {kind}" for kind, n in counts.items() if n) + ".")
+        else:
+            out.append("No collision: characters walk through it (add mesh_collision objects in Blender).")
+        return out + self.warnings
+
+
+def inspect_glb(path: str | Path) -> tuple[Model, Report]:
+    """Read ``path`` as the game will (``load_glb``; raises GlbError) and report on it."""
+    model = load_glb(path)
+    doc, _binary = split_glb(Path(path).read_bytes())
+    lo, hi = model.bounds()
+    seen: dict[str, Material] = {}
+    for part in model.parts:
+        seen.setdefault(part.material.name, part.material)
+    materials = [(m.name, None if m.image is None or m.image.size == (1, 1) else m.image.size, m.nearest)
+                 for m in seen.values()]
+    warnings: list[str] = []
+    smooth = [name for name, size, sharp in materials if size and not sharp]
+    if smooth:
+        warnings.append(f"Smooth (Linear) texture filtering on {', '.join(smooth)}: pixel art will blur. Keep pixels "
+                        f"sharp fixes the copy; in Blender, set the Image Texture node to Closest.")
+    big = [name for name, size, _s in materials if size and max(size) > 1024]
+    if big:
+        warnings.append(f"Large textures ({', '.join(big)}): HD-2D pixel art is usually 16-256 px per surface.")
+    required = [e for e in doc.get("extensionsRequired", []) if not e.startswith(_HARMLESS_EXTENSIONS)]
+    if required:
+        raise GlbError(f"{path}: needs glTF extension(s) Mesh doesn't read: {', '.join(required)} (turn off "
+                       f"compression such as Draco when exporting)")
+    if "KHR_texture_transform" in doc.get("extensionsUsed", []):
+        warnings.append("Uses texture transforms (UV offset/scale in the material): Mesh ignores them; apply them "
+                        "to the UVs instead.")
+    ignored = [(key, len(doc.get(key, []))) for key in ("cameras",) if doc.get(key)]
+    lights = len(((doc.get("extensions") or {}).get("KHR_lights_punctual") or {}).get("lights", []))
+    if lights:
+        ignored.append(("lights", lights))
+    if ignored:
+        warnings.append("Ignored: " + ", ".join(f"{n} {key}" for key, n in ignored) + " (Mesh lights and frames "
+                        "rooms itself; add lamps in Mesh Studio).")
+    if any("COLOR_0" in prim.get("attributes", {}) for mesh in doc.get("meshes", []) for prim in mesh.get("primitives", [])):
+        warnings.append("Vertex colours are ignored: paint them into a texture.")
+    size = (hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2])
+    if max(size) > 200:
+        warnings.append(f"It is {max(size):.0f} m across: check Blender's unit scale (Mesh reads metres).")
+    report = Report(sum(len(p.indices) // 3 for p in model.parts), len(model.parts), size, materials,
+                    [(c.node, c.kind) for c in model.colliders], warnings)
+    return model, report

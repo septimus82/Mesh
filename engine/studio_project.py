@@ -429,11 +429,53 @@ class Project:
         image.save(folder / f"{candidate}.png")
         return f"assets/sprites/{candidate}.png"
 
+    # --- HD-2D models (engine.hd2d.catalog: copied in straight away, like pictures; not part of undo) ----------
+    def model_assets(self) -> list[Any]:
+        """The project's Blender models: the catalogue's, then any other .glb, as ``ModelAsset``s."""
+        from engine.hd2d import catalog  # noqa: PLC0415
+
+        listed: list[Any] = self._catalog_call(catalog.assets, self.root)
+        return listed
+
+    def import_model(self, source: Path | str, **fields: Any) -> Any:
+        """Copy a Blender .glb into ``assets/models/`` with its preview and catalogue entry (``name``, ``category``,
+        ``notes``, ``license``, ``pixels``). Returns the ``ModelAsset``; raises OpError and writes nothing if refused."""
+        from engine.hd2d import catalog  # noqa: PLC0415
+
+        return self._catalog_call(catalog.import_model, self.root, source, **fields)
+
+    def plan_reimport(self, ref: str, source: Path | str | None = None) -> Any:
+        """What reimporting model ``ref`` would change, judged against every room as edited now. Writes nothing."""
+        from engine.hd2d import catalog  # noqa: PLC0415
+
+        return self._catalog_call(catalog.plan_reimport, self.root, ref, source, rooms=self.all_documents()["rooms"])
+
+    def reimport_model(self, ref: str, source: Path | str | None = None) -> Any:
+        """Replace model ``ref``'s file with a new export; every placed copy keeps its id and place."""
+        from engine.hd2d import catalog  # noqa: PLC0415
+
+        return self._catalog_call(catalog.reimport_model, self.root, ref, source, rooms=self.all_documents()["rooms"])
+
+    def set_model_properties(self, ref: str, **fields: Any) -> Any:
+        from engine.hd2d import catalog  # noqa: PLC0415
+
+        return self._catalog_call(catalog.set_properties, self.root, ref, **fields)
+
+    @staticmethod
+    def _catalog_call(func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+        from engine.hd2d.catalog import CatalogError  # noqa: PLC0415
+
+        try:
+            return func(*args, **kwargs)
+        except CatalogError as err:
+            raise ops.OpError(str(err)) from err
+
     def images(self) -> list[str]:
-        """Every picture under ``assets/`` (tilesets aside), project-relative, sprites first."""
+        """Every picture under ``assets/`` (tilesets aside), project-relative, sprites first. Model previews are the
+        model browser's, not pictures to give objects."""
         assets = self.root / "assets"
         found = [p for p in assets.rglob("*") if p.suffix.lower() in self.IMAGE_TYPES and "tilesets" not in p.parts
-                 and "templates" not in p.parts] if assets.is_dir() else []
+                 and "templates" not in p.parts and "models" not in p.parts] if assets.is_dir() else []
         rel = [p.relative_to(self.root).as_posix() for p in found]
         return sorted(rel, key=lambda r: (not r.startswith("assets/sprites/"), r.lower()))
 

@@ -1935,9 +1935,10 @@ def unique_structure_id(scene: Doc, base: str) -> str:
 
 def place_structure(scene: Doc, model: str, x: float, y: float, elevation: float = 0.0, rotation: float = 0.0,
                     scale: float = 1.0, structure_id: str | None = None) -> tuple[Doc, str]:
-    """Place a copy of an imported Blender model (a project-relative .glb) in this HD-2D room, at (x, y) px on the
-    ground (32 px = 1 m), ``elevation`` px up, turned ``rotation`` degrees. Its collision and floors come with the
-    model. Returns the new structure's id (unique in the room; from the model's name unless given)."""
+    """Place a copy of an imported Blender model (its id from the project's models, or its project-relative .glb)
+    in this HD-2D room, at (x, y) px on the ground (32 px = 1 m), ``elevation`` px up, turned ``rotation`` degrees.
+    Its collision and floors come with the model. Returns the new structure's id (unique in the room; from the
+    model's name unless given)."""
     out = copy.deepcopy(scene)
     hd2d = _hd2d_block(out)
     if not isinstance(model, str) or not model.lower().endswith(".glb"):

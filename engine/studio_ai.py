@@ -88,7 +88,8 @@ class StudioAIHost:
         self._remember(self.project.revision, docs)
         rooms = {key: {"label": label, "path": path, "room": docs["rooms"][key]} for key, label, path in self.project.rooms()}
         return {"ok": True, "mode": "live_studio", "revision": self.project.revision, "current_room": self.project.current,
-                "unsaved": self.project.is_dirty, "world": docs["world"], "rooms": rooms}
+                "unsaved": self.project.is_dirty, "world": docs["world"], "rooms": rooms,
+                "models": authoring.models(self.project)}
 
     def _remember(self, revision: int, docs: Doc) -> None:
         self._snapshots[revision] = docs

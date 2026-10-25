@@ -63,7 +63,17 @@ class Rows:
         self.anchors[name] = len(self.items)
 
 
+class LazyRow:
+    """A right-panel row of a known height whose widgets are made only if it is shown: a long list (the model
+    browser) costs what fits on screen, not what is in it (an arcade button takes milliseconds to make)."""
+
+    def __init__(self, height: float, make: Any) -> None:
+        self.height, self.make = height, make
+
+
 def row_height(widget: Any) -> float:
+    if isinstance(widget, LazyRow):
+        return widget.height
     if isinstance(widget, gui.UIBoxLayout):
         kids = list(widget.children)
         if not kids:
@@ -91,6 +101,10 @@ def _guess_frame(size: tuple[int, int] | None) -> tuple[int, int]:
 def _on_screen(widget: Any) -> bool:
     """Whether a preview slot is in the shown panel (rows scrolled out of view never get laid out)."""
     return getattr(widget, "parent", None) is not None
+
+
+# Panels whose pictures (``_thumbs``) are drawn: the inspector, the picture picker and the 3D model panels.
+_PICTURE_PANELS = ("inspect", "pick_image", "structures", "import_model", "reimport_model")
 
 
 def _short(text: str, limit: int) -> str:
@@ -1138,7 +1152,7 @@ class InspectorMixin:
     def _draw_previews(self) -> None:
         a = optional_arcade.arcade
         for space, path in self._thumbs:
-            if self.panel not in ("inspect", "pick_image") or space.width <= 1 or not _on_screen(space):
+            if self.panel not in _PICTURE_PANELS or space.width <= 1 or not _on_screen(space):
                 continue
             image = self._image(path)
             if image is None:
