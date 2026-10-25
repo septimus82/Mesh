@@ -193,7 +193,8 @@ jobs:
       contents: read
       pull-requests: write
     strategy:
-      fail-fast: true
+      # Each OS reports its own result: with fail-fast a Windows failure cancelled Linux (and vice versa) and hid it.
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
         python: ["3.11"]
@@ -238,6 +239,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb
+
+      # windows-latest has only Microsoft's OpenGL 1.1 driver; the window tests need OpenGL 3.3. Mesa's software
+      # renderer gives Windows what Xvfb + Mesa give Linux.
+      - name: Install Mesa OpenGL (Windows)
+        if: runner.os == 'Windows'
+        uses: ssciwr/setup-mesa-dist-win@v2
 
       - name: Compile Python sources
         run: |
