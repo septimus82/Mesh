@@ -5,6 +5,11 @@
 Writes assets/sprites/starter_hero.png, starter_villager.png (4 x 4 sheets of 32 x 48 frames: rows down, left,
 right, up; columns stand, step, stand, other step) and starter_sign.png (32 x 32). Deterministic: rerunning
 rewrites the same pixels. Provenance: docs/starter_art.md.
+
+Also the HD-2D character style (Milestone 16 visual direction; ``hd2d_hero.png``, ``hd2d_villager.png``,
+``hd2d_merchant.png``): the same figures, frames and animation, drawn to sit in a lit 3D scene: muted colours taken
+from the HD-2D kit's textures, three tones lit from the upper left (the engine's default sun), outlines in a darker
+shade of what they edge instead of near-black, and feet on the frame's bottom row so they touch the ground.
 """
 
 from __future__ import annotations
@@ -30,6 +35,18 @@ MERCHANT = {"hair": (60, 40, 30, 255), "body": (128, 64, 120, 255), "shade": (96
             "accent": (236, 226, 200, 255), "legs": (64, 58, 70, 255), "boots": (52, 36, 26, 255),
             "hat": (172, 120, 70, 255)}
 
+# The HD-2D style's colours: saturation and lightness within the kit's textures (plaster, timber, slate, grass).
+HD_SKIN, HD_EYE = (224, 184, 150, 255), (48, 36, 44, 255)
+HERO_HD = {"hair": (108, 66, 40, 255), "body": (66, 94, 142, 255), "shade": (50, 72, 112, 255),
+           "accent": (158, 66, 54, 255), "legs": (68, 64, 78, 255), "boots": (86, 60, 42, 255), "hat": None,
+           "skin": HD_SKIN, "eye": HD_EYE}
+VILLAGER_HD = {"hair": (140, 136, 128, 255), "body": (98, 126, 72, 255), "shade": (76, 98, 56, 255),
+               "accent": (214, 202, 172, 255), "legs": (106, 82, 60, 255), "boots": (72, 54, 40, 255),
+               "hat": (196, 160, 94, 255), "skin": HD_SKIN, "eye": HD_EYE}
+MERCHANT_HD = {"hair": (64, 46, 36, 255), "body": (118, 72, 104, 255), "shade": (92, 54, 82, 255),
+               "accent": (218, 206, 184, 255), "legs": (72, 64, 72, 255), "boots": (58, 42, 32, 255),
+               "hat": (158, 114, 74, 255), "skin": HD_SKIN, "eye": HD_EYE}
+
 
 def _rect(d: ImageDraw.ImageDraw, x0: int, y0: int, x1: int, y1: int, colour) -> None:
     d.rectangle((x0, y0, x1, y1), fill=colour)
@@ -50,8 +67,9 @@ def _outline(img: Image.Image) -> Image.Image:
     return out
 
 
-def _character_frame(p: dict, direction: str, step: int) -> Image.Image:
+def _character_frame(p: dict, direction: str, step: int, *, outline: bool = True) -> Image.Image:
     """One frame; ``step`` is 0 (standing), 1 or -1 (which leg is forward)."""
+    skin, eye_colour = p.get("skin", SKIN), p.get("eye", EYE)
     img = Image.new("RGBA", (FW, FH), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     bob = 1 if step else 0  # the body dips on a step
@@ -88,14 +106,14 @@ def _character_frame(p: dict, direction: str, step: int) -> Image.Image:
     if side:
         ax = 15 + (2 if direction == "right" else -2) * swing
         _rect(d, ax, top + 14, ax + 2, top + 22, p["body"])
-        _rect(d, ax, top + 23, ax + 2, top + 24, SKIN)
+        _rect(d, ax, top + 23, ax + 2, top + 24, skin)
     else:
         for ax, s in ((8, swing), (22, -swing)):
             _rect(d, ax, top + 14 + s, ax + 1, top + 22 + s, p["body"])
-            _rect(d, ax, top + 23 + s, ax + 1, top + 24 + s, SKIN)
+            _rect(d, ax, top + 23 + s, ax + 1, top + 24 + s, skin)
     # head
     hx0, hx1 = (11, 20) if side else (10, 21)
-    _rect(d, hx0, top, hx1, top + 12, SKIN)
+    _rect(d, hx0, top, hx1, top + 12, skin)
     if direction == "up":
         _rect(d, hx0, top - 1, hx1, top + 10, p["hair"])
     elif side:
@@ -103,28 +121,61 @@ def _character_frame(p: dict, direction: str, step: int) -> Image.Image:
         _rect(d, hx0, top - 1, hx1, top + 2, p["hair"])
         _rect(d, back_x, top - 1, back_x + 3, top + 8, p["hair"])
         eye = hx1 - 3 if direction == "right" else hx0 + 2
-        _rect(d, eye, top + 5, eye, top + 7, EYE)
+        _rect(d, eye, top + 5, eye, top + 7, eye_colour)
     else:
         _rect(d, hx0, top - 1, hx1, top + 3, p["hair"])
         _rect(d, hx0, top + 3, hx0 + 1, top + 7, p["hair"])
         _rect(d, hx1 - 1, top + 3, hx1, top + 7, p["hair"])
-        _rect(d, 13, top + 5, 13, top + 7, EYE)
-        _rect(d, 18, top + 5, 18, top + 7, EYE)
+        _rect(d, 13, top + 5, 13, top + 7, eye_colour)
+        _rect(d, 18, top + 5, 18, top + 7, eye_colour)
     if p["hat"]:
         _rect(d, hx0 - 2, top + 1, hx1 + 2, top + 2, p["hat"])  # brim
         _rect(d, hx0 + 1, top - 3, hx1 - 1, top + 1, p["hat"])
         _rect(d, hx0 + 1, top, hx1 - 1, top, p["accent"])  # band
-    return _outline(img)
+    return _outline(img) if outline else img
 
 
-def character_sheet(palette: dict) -> Image.Image:
+def _scaled(c: tuple, k: float, toward: tuple = (0, 0, 0), t: float = 0.0) -> tuple:
+    return tuple(round(min(255, c[i] * k * (1 - t) + toward[i] * t)) for i in range(3)) + (255,)
+
+
+def _hd_frame(p: dict, direction: str, step: int) -> Image.Image:
+    """One frame in the HD-2D style: the starter figure, 2 px lower (feet on the bottom row), shaded and outlined."""
+    flat = _character_frame(p, direction, step, outline=False)
+    img = Image.new("RGBA", (FW, FH), (0, 0, 0, 0))
+    img.paste(flat, (0, 2))
+    w, h = img.size
+    raw = img.tobytes()  # RGBA, row by row
+    src = {(i % w, i // w): tuple(raw[i * 4:i * 4 + 4]) for i in range(w * h)}
+    out = dict(src)
+    opaque = {xy for xy, c in src.items() if c[3]}
+    for x, y in opaque:
+        c = src[x, y]
+        if (x + 1, y) not in opaque or y >= h - 2:  # the side away from the light, and where the feet meet the ground
+            out[x, y] = _scaled(c, 0.74, (40, 44, 72), 0.12)
+        elif (x - 1, y) not in opaque or (x, y - 1) not in opaque:  # lit edges: up and to the left
+            out[x, y] = _scaled(c, 1.0, (255, 236, 200), 0.2)
+    for y in range(h):  # outlines: a darker shade of what they edge
+        for x in range(w):
+            if (x, y) in opaque:
+                continue
+            near = next(((x + dx, y + dy) for dx, dy in ((0, 1), (-1, 0), (1, 0), (0, -1)) if (x + dx, y + dy) in opaque), None)
+            if near is not None:
+                out[x, y] = _scaled(out[near], 0.45, (24, 18, 30), 0.25)
+    frame = Image.new("RGBA", (w, h))
+    frame.putdata([out[i % w, i // w] for i in range(w * h)])
+    return frame
+
+
+def character_sheet(palette: dict, *, hd: bool = False) -> Image.Image:
     sheet = Image.new("RGBA", (FW * 4, FH * 4), (0, 0, 0, 0))
+    draw = _hd_frame if hd else _character_frame
     for row, direction in enumerate(DIRECTIONS):
         for col, step in enumerate((0, 1, 0, -1)):
-            if direction == "left":
-                frame = _character_frame(palette, "right", step).transpose(Image.Transpose.FLIP_LEFT_RIGHT)
-            else:
-                frame = _character_frame(palette, direction, step)
+            if direction == "left" and not hd:
+                frame = draw(palette, "right", step).transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            else:  # the HD style's light comes from the left, so its left-facing frames are drawn, not mirrored
+                frame = draw(palette, direction, step)
             sheet.paste(frame, (col * FW, row * FH))
     return sheet
 
@@ -148,7 +199,10 @@ def main() -> None:
     character_sheet(VILLAGER).save(out / "starter_villager.png")
     sign().save(out / "starter_sign.png")
     character_sheet(MERCHANT).save(out / "starter_merchant.png")
-    print("wrote starter_hero.png, starter_villager.png, starter_sign.png, starter_merchant.png")
+    for name, palette in (("hero", HERO_HD), ("villager", VILLAGER_HD), ("merchant", MERCHANT_HD)):
+        character_sheet(palette, hd=True).save(out / f"hd2d_{name}.png")
+    print("wrote starter_hero.png, starter_villager.png, starter_sign.png, starter_merchant.png, "
+          "hd2d_hero.png, hd2d_villager.png, hd2d_merchant.png")
 
 
 if __name__ == "__main__":
