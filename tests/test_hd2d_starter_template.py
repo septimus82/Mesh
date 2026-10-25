@@ -48,7 +48,8 @@ def test_the_project_has_the_kit_and_only_mesh_art(project: Path) -> None:
     assert all(a.catalogued and not a.missing and a.source == {"kit": "Mesh HD-2D starter kit 1",
                                                                 "sha256": a.source["sha256"]} for a in listed.values())
     sprites = sorted(p.name for p in (project / "assets" / "sprites").iterdir())
-    assert sprites == ["door.png", "starter_hero.png", "starter_merchant.png", "starter_sign.png", "starter_villager.png"]
+    assert sprites == ["door.png", "hd2d_hero.png", "hd2d_merchant.png", "hd2d_villager.png", "starter_hero.png",
+                       "starter_sign.png", "starter_villager.png"]
     assert not (project / "assets" / "sprites" / "animated_player.png").exists(), "no unverified legacy art"
 
 
@@ -155,3 +156,25 @@ def test_a_click_ray_finds_the_nearest_floor(project: Path) -> None:
     up = world.walkable_hit((x, y, 1.0), (0.0, 0.0, -1.0))
     assert up is not None and up[1] == "ground", "from under the deck: the ground"
     assert world.walkable_hit((x, y, 10.0), (0.0, 0.0, 1.0)) is None, "looking up: nothing"
+
+
+def test_the_template_follows_the_hd2d_visual_standard(project: Path) -> None:
+    """docs/reviews/milestone16_hd2d_visual_direction.md: a long-lens camera at a fixed angle that never shows past
+    the room, the art at an exact 2x outdoors and 3x indoors (720 lines), the sun from the south-west, and the
+    characters (and Studio's Person) in the HD-2D style."""
+    import math
+
+    village, inside = _rooms(project).values()
+    for scene, pitch, view, bounds in ((village, 30.0, 11.25, [0.0, 0.0, 1280.0, 1408.0]),
+                                       (inside, 55.0, 7.5, [144.0, 96.0, 368.0, 288.0])):
+        camera = parse_hd2d(scene["settings"]["hd2d"]).camera
+        assert (camera.pitch, camera.fov, camera.ortho, camera.follow) == (pitch, 12.0, False, "player")
+        assert 2 * camera.distance * math.tan(math.radians(camera.fov / 2)) == pytest.approx(view, abs=0.01)
+        assert camera.bounds == tuple(bounds)
+    assert village["settings"]["hd2d"]["sun"]["direction"] == [-0.45, -0.55, 0.70], "walls facing the camera lit"
+    sheets = {(e.get("name"), e.get("sprite")) for e in village["entities"] + inside["entities"]
+              if e.get("tag") == "npc"}  # the player is a thin reference to the player prefab, below
+    prefabs = json.loads((project / "assets" / "prefabs.json").read_text(encoding="utf-8"))
+    sheets |= {(p["id"], p["entity"].get("sprite")) for p in prefabs if p.get("id") in ("person", "player")}
+    assert all(sheet and "/hd2d_" in sheet for _name, sheet in sheets), sheets
+    assert {name for name, _sheet in sheets} >= {"Elder", "Mara", "Tomas", "person", "player"}

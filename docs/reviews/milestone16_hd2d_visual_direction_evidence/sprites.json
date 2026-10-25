@@ -1,0 +1,411 @@
+{
+  "camera": {
+    "pitch": 30.0,
+    "fov": 12.0,
+    "ortho": false,
+    "distance": 53.518,
+    "follow": "player"
+  },
+  "old": {
+    "spots": {
+      "establishing": {
+        "feet_m": [
+          20.0,
+          15.03
+        ],
+        "elevation_m": 0.0,
+        "floor": "ground",
+        "room": "start.json",
+        "background_pct": 0.0,
+        "player_height_px": 84,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          321.1
+        ],
+        "camera_target_m": [
+          20.0,
+          14.87,
+          0.8
+        ]
+      },
+      "stairs": {
+        "feet_m": [
+          15.0,
+          19.64
+        ],
+        "elevation_m": 1.57,
+        "floor": "stairs_west/col_stairs",
+        "room": "start.json",
+        "background_pct": 19.4,
+        "player_height_px": 84,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          321.1
+        ],
+        "camera_target_m": [
+          15.0,
+          19.48,
+          2.37
+        ]
+      },
+      "bridge": {
+        "feet_m": [
+          20.0,
+          24.02
+        ],
+        "elevation_m": 2.0,
+        "floor": "bridge/col_deck",
+        "room": "start.json",
+        "background_pct": 37.4,
+        "player_height_px": 84,
+        "player_visible_pct": 91.3,
+        "player_screen_px": [
+          640.1,
+          321.0
+        ],
+        "camera_target_m": [
+          20.0,
+          23.86,
+          2.8
+        ]
+      },
+      "npc": {
+        "feet_m": [
+          26.88,
+          24.02
+        ],
+        "elevation_m": 2.0,
+        "floor": "plateau_east_2/col_platform",
+        "room": "start.json",
+        "background_pct": 37.4,
+        "player_height_px": 84,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.1,
+          321.0
+        ],
+        "camera_target_m": [
+          26.87,
+          23.86,
+          2.8
+        ]
+      },
+      "under_bridge": {
+        "feet_m": [
+          20.0,
+          24.02
+        ],
+        "elevation_m": 0.0,
+        "floor": "ground",
+        "room": "start.json",
+        "background_pct": 23.6,
+        "player_height_px": 84,
+        "player_visible_pct": 87.6,
+        "player_screen_px": [
+          640.0,
+          321.1
+        ],
+        "camera_target_m": [
+          20.0,
+          23.86,
+          0.8
+        ]
+      },
+      "cottage": {
+        "feet_m": [
+          11.48,
+          8.47
+        ],
+        "elevation_m": 0.0,
+        "floor": "ground",
+        "room": "start.json",
+        "background_pct": 1.0,
+        "player_height_px": 84,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          639.9,
+          321.0
+        ],
+        "camera_target_m": [
+          11.49,
+          8.31,
+          0.8
+        ]
+      },
+      "behind_cottage": {
+        "feet_m": [
+          10.0,
+          14.88
+        ],
+        "elevation_m": 0.0,
+        "floor": "ground",
+        "room": "start.json",
+        "background_pct": 3.0,
+        "player_height_px": 84,
+        "player_visible_pct": 0.0,
+        "player_screen_px": [
+          639.9,
+          321.0
+        ],
+        "camera_target_m": [
+          10.0,
+          14.72,
+          0.8
+        ]
+      },
+      "inside": {
+        "feet_m": [
+          6.4,
+          4.04
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 84,
+        "player_visible_pct": 0.0,
+        "player_screen_px": [
+          640.0,
+          321.0
+        ],
+        "camera_target_m": [
+          6.4,
+          3.88,
+          0.9
+        ]
+      },
+      "inside_east": {
+        "feet_m": [
+          8.04,
+          4.04
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 84,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.1,
+          321.0
+        ],
+        "camera_target_m": [
+          8.04,
+          3.88,
+          0.9
+        ]
+      }
+    },
+    "walk": {
+      "frames": 331,
+      "camera_rise_m": 2.0,
+      "player_screen_y_range_px": [
+        321.0,
+        353.4
+      ]
+    }
+  },
+  "new": {
+    "spots": {
+      "establishing": {
+        "feet_m": [
+          20.0,
+          15.03
+        ],
+        "elevation_m": 0.0,
+        "floor": "ground",
+        "room": "start.json",
+        "background_pct": 0.0,
+        "player_height_px": 84,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          321.1
+        ],
+        "camera_target_m": [
+          20.0,
+          14.87,
+          0.8
+        ]
+      },
+      "stairs": {
+        "feet_m": [
+          15.0,
+          19.64
+        ],
+        "elevation_m": 1.57,
+        "floor": "stairs_west/col_stairs",
+        "room": "start.json",
+        "background_pct": 19.4,
+        "player_height_px": 84,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          321.1
+        ],
+        "camera_target_m": [
+          15.0,
+          19.48,
+          2.37
+        ]
+      },
+      "bridge": {
+        "feet_m": [
+          20.0,
+          24.02
+        ],
+        "elevation_m": 2.0,
+        "floor": "bridge/col_deck",
+        "room": "start.json",
+        "background_pct": 37.4,
+        "player_height_px": 84,
+        "player_visible_pct": 91.3,
+        "player_screen_px": [
+          640.1,
+          321.0
+        ],
+        "camera_target_m": [
+          20.0,
+          23.86,
+          2.8
+        ]
+      },
+      "npc": {
+        "feet_m": [
+          26.88,
+          24.02
+        ],
+        "elevation_m": 2.0,
+        "floor": "plateau_east_2/col_platform",
+        "room": "start.json",
+        "background_pct": 37.4,
+        "player_height_px": 84,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.1,
+          321.0
+        ],
+        "camera_target_m": [
+          26.87,
+          23.86,
+          2.8
+        ]
+      },
+      "under_bridge": {
+        "feet_m": [
+          20.0,
+          24.02
+        ],
+        "elevation_m": 0.0,
+        "floor": "ground",
+        "room": "start.json",
+        "background_pct": 23.6,
+        "player_height_px": 84,
+        "player_visible_pct": 87.6,
+        "player_screen_px": [
+          640.0,
+          321.1
+        ],
+        "camera_target_m": [
+          20.0,
+          23.86,
+          0.8
+        ]
+      },
+      "cottage": {
+        "feet_m": [
+          11.48,
+          8.47
+        ],
+        "elevation_m": 0.0,
+        "floor": "ground",
+        "room": "start.json",
+        "background_pct": 1.0,
+        "player_height_px": 84,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          639.9,
+          321.0
+        ],
+        "camera_target_m": [
+          11.49,
+          8.31,
+          0.8
+        ]
+      },
+      "behind_cottage": {
+        "feet_m": [
+          10.0,
+          14.88
+        ],
+        "elevation_m": 0.0,
+        "floor": "ground",
+        "room": "start.json",
+        "background_pct": 3.0,
+        "player_height_px": 84,
+        "player_visible_pct": 0.0,
+        "player_screen_px": [
+          639.9,
+          321.0
+        ],
+        "camera_target_m": [
+          10.0,
+          14.72,
+          0.8
+        ]
+      },
+      "inside": {
+        "feet_m": [
+          6.4,
+          4.04
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 84,
+        "player_visible_pct": 0.0,
+        "player_screen_px": [
+          640.0,
+          321.0
+        ],
+        "camera_target_m": [
+          6.4,
+          3.88,
+          0.9
+        ]
+      },
+      "inside_east": {
+        "feet_m": [
+          8.04,
+          4.04
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 84,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.1,
+          321.0
+        ],
+        "camera_target_m": [
+          8.04,
+          3.88,
+          0.9
+        ]
+      }
+    },
+    "walk": {
+      "frames": 331,
+      "camera_rise_m": 2.0,
+      "player_screen_y_range_px": [
+        321.0,
+        353.4
+      ]
+    }
+  }
+}

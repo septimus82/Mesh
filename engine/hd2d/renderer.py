@@ -180,6 +180,29 @@ class Camera:
         return _mul(proj, _look_at(self.eye(), self.target))
 
 
+def fit_view(camera: Camera, goal: tuple[float, float, float], floor: float,
+             bounds: tuple[float, float, float, float], aspect: float) -> tuple[float, float, float]:
+    """``goal`` (the follow camera's target, m) moved so the picture of the floor at height ``floor`` (m) stays inside
+    ``bounds`` (m: x0, y0, x1, y1), and centred on them along an axis where they are narrower than the picture.
+    Unchanged when the picture reaches the horizon (there is no edge of the floor to keep to)."""
+    probe = Camera(camera.pitch, camera.fov, camera.distance, camera.ortho, camera.yaw)
+    probe.target = goal
+    xs, ys = [], []
+    for nx, ny in ((-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)):
+        origin, d = probe.ray(nx, ny, aspect)
+        if d[2] >= -1e-6:
+            return goal
+        t = (floor - origin[2]) / d[2]
+        xs.append(origin[0] + d[0] * t - goal[0])
+        ys.append(origin[1] + d[1] * t - goal[1])
+
+    def fit(c: float, lo: float, hi: float, a: float, b: float) -> float:  # a, b: the picture's extent about c
+        return (lo + hi - a - b) / 2 if hi - lo <= b - a else min(max(c, lo - a), hi - b)
+
+    x0, y0, x1, y1 = bounds
+    return fit(goal[0], x0, x1, min(xs), max(xs)), fit(goal[1], y0, y1, min(ys), max(ys)), goal[2]
+
+
 class Hd2dRenderer:
     def __init__(self, window: Any, settings: Hd2dSettings, resolve: Callable[[str], Path], *, batched: bool = True,
                  models: dict[str, Model] | None = None, live: Iterable[str] = ()) -> None:
@@ -213,6 +236,7 @@ class Hd2dRenderer:
         self._blit = self._geometry(array("f", [-1, -1, 1, -1, -1, 1, 1, 1]), "2f", ["in_pos"], mode=ctx.TRIANGLE_STRIP)
         cam = settings.camera
         self.camera = Camera(cam.pitch, cam.fov, cam.distance, cam.ortho)
+        self._aspect = 16 / 9  # the game picture's, from the last frame drawn with the game's camera
         self._camera_ready = False
         self.draw_calls = 0
         self.static: list[tuple[Any, Any, tuple[float, ...]]] = []  # (geometry, texture, model matrix)
@@ -562,6 +586,11 @@ class Hd2dRenderer:
         cam = self.settings.camera
         goal = (sprite.center_x / PIXELS_PER_METRE, sprite.bottom / PIXELS_PER_METRE,
                 self.elevation_of(sprite) / PIXELS_PER_METRE + cam.height)
+        if cam.bounds is not None:
+            ground = self.settings.ground
+            floor = ground.elevation / PIXELS_PER_METRE if ground is not None else goal[2] - cam.height
+            x0, y0, x1, y1 = (v / PIXELS_PER_METRE for v in cam.bounds)
+            goal = fit_view(self.camera, goal, floor, (x0, y0, x1, y1), self._aspect)
         if not self._camera_ready:
             self.camera.target, self._camera_ready = goal, True
             return
@@ -581,6 +610,8 @@ class Hd2dRenderer:
         if camera is None and not self._camera_ready:
             self.update(0.0)
         cam = camera or self.camera
+        if camera is None:
+            self._aspect = size[0] / max(1, size[1])
         self.last_vp = cam.view_projection(size[0] / max(1, size[1]))
         vp = _column_major(self.last_vp)
         self.draw_calls = 0

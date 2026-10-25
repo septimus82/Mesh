@@ -5,7 +5,8 @@ scene (x east, y north); 32 px is one metre in the 3D world.
         "structures": [{"id": "outpost", "model": "assets/models/stone_outpost.glb", "x": 384, "y": 256, "elevation": 0,
                         "rotation": 0, "scale": 1.0}],
         "ground": {"texture": "assets/textures/grass.png", "from": [0, 0], "to": [768, 512], "elevation": 0},
-        "camera": {"pitch": 32, "fov": 30, "distance": 15, "ortho": false, "follow": "player", "height": 0.8},
+        "camera": {"pitch": 32, "fov": 30, "distance": 15, "ortho": false, "follow": "player", "height": 0.8,
+                   "bounds": [0, 0, 768, 512]},
         "sun": [-0.45, -0.55, 0.7], "ambient": 0.55,
         "shadows": true, "shadow_resolution": 2048, "sky": "#76a0d6"
     }}
@@ -59,6 +60,9 @@ class CameraSettings:
     ortho: bool = False
     follow: str = "player"  # entity tag the camera follows
     height: float = 0.8  # metres above the followed entity's feet
+    # px (x0, y0, x1, y1): the follow camera never shows past these edges of the room, and centres on them where
+    # they are smaller than the picture (a small interior stays still). None: it simply follows.
+    bounds: tuple[float, float, float, float] | None = None
 
 
 Rgb = tuple[float, float, float]
@@ -129,6 +133,15 @@ def _pair(block: dict, key: str, where: str, default: tuple[float, float]) -> tu
     return float(value[0]), float(value[1])
 
 
+def _bounds(value: Any, where: str) -> tuple[float, float, float, float] | None:
+    if value is None:
+        return None
+    if not (isinstance(value, (list, tuple)) and len(value) == 4 and all(_finite(v) for v in value)
+            and value[2] > value[0] and value[3] > value[1]):
+        raise Hd2dSettingsError(f"{where} must be [x0, y0, x1, y1] in px with x1 > x0 and y1 > y0 (got {value!r})")
+    return float(value[0]), float(value[1]), float(value[2]), float(value[3])
+
+
 def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> Hd2dSettings:
     """``settings.hd2d`` as Hd2dSettings. Raises Hd2dSettingsError naming the bad key."""
     if not isinstance(raw, dict):
@@ -176,7 +189,8 @@ def parse_hd2d(raw: Any, *, map_size_px: tuple[float, float] | None = None) -> H
     where = "settings.hd2d.camera"
     camera = CameraSettings(_number(c, "pitch", where, 32.0, 5.0, 89.0), _number(c, "fov", where, 30.0, 5.0, 120.0),
                             _number(c, "distance", where, 15.0, 1.0, 500.0), bool(c.get("ortho", False)),
-                            str(c.get("follow", "player")), _number(c, "height", where, 0.8, -10.0, 50.0))
+                            str(c.get("follow", "player")), _number(c, "height", where, 0.8, -10.0, 50.0),
+                            _bounds(c.get("bounds"), f"{where}.bounds"))
     sun_raw = raw.get("sun", [-0.45, -0.55, 0.70])
     sun_block = sun_raw if isinstance(sun_raw, dict) else {"direction": sun_raw}
     extra = set(sun_block) - {"direction", "color", "intensity"}
