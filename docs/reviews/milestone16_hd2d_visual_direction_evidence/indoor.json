@@ -1,0 +1,232 @@
+{
+  "in_6a": {
+    "label": "Stage 6A indoor (55 deg, 30 deg FOV, 10 m, follows)",
+    "camera": {
+      "pitch": 55.0,
+      "fov": 30.0,
+      "distance": 10.0,
+      "ortho": false
+    },
+    "spots": {
+      "door": {
+        "feet_m": [
+          8.0,
+          4.5
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 183,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          321.9
+        ],
+        "camera_target_m": [
+          8.0,
+          4.31,
+          0.9
+        ]
+      },
+      "east": {
+        "feet_m": [
+          8.0,
+          6.38
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 183,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          321.9
+        ],
+        "camera_target_m": [
+          8.0,
+          6.19,
+          0.9
+        ]
+      }
+    }
+  },
+  "in_45": {
+    "label": "Narrow FOV 45 deg, 11.25 m, bounds",
+    "camera": {
+      "pitch": 45.0,
+      "fov": 12.0,
+      "ortho": false,
+      "distance": 53.518,
+      "bounds": [
+        144.0,
+        96.0,
+        368.0,
+        288.0
+      ]
+    },
+    "spots": {
+      "door": {
+        "feet_m": [
+          8.0,
+          4.5
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 82,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          331.5
+        ],
+        "camera_target_m": [
+          8.0,
+          4.34,
+          0.9
+        ]
+      },
+      "east": {
+        "feet_m": [
+          8.0,
+          6.38
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 82,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          414.0
+        ],
+        "camera_target_m": [
+          8.0,
+          4.34,
+          0.9
+        ]
+      }
+    }
+  },
+  "in_55": {
+    "label": "Narrow FOV 55 deg, 11.25 m, bounds",
+    "camera": {
+      "pitch": 55.0,
+      "fov": 12.0,
+      "ortho": false,
+      "distance": 53.518,
+      "bounds": [
+        144.0,
+        96.0,
+        368.0,
+        288.0
+      ]
+    },
+    "spots": {
+      "door": {
+        "feet_m": [
+          8.0,
+          4.5
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 82,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          308.9
+        ],
+        "camera_target_m": [
+          8.0,
+          4.92,
+          0.9
+        ]
+      },
+      "east": {
+        "feet_m": [
+          8.0,
+          6.38
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 84,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          405.5
+        ],
+        "camera_target_m": [
+          8.0,
+          4.92,
+          0.9
+        ]
+      }
+    }
+  },
+  "in_55_close": {
+    "label": "Narrow FOV 55 deg, 7.5 m (3x), bounds",
+    "camera": {
+      "pitch": 55.0,
+      "fov": 12.0,
+      "ortho": false,
+      "distance": 35.679,
+      "bounds": [
+        144.0,
+        96.0,
+        368.0,
+        288.0
+      ]
+    },
+    "spots": {
+      "door": {
+        "feet_m": [
+          8.0,
+          4.5
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 124,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          270.2
+        ],
+        "camera_target_m": [
+          8.0,
+          5.09,
+          0.9
+        ]
+      },
+      "east": {
+        "feet_m": [
+          8.0,
+          6.38
+        ],
+        "elevation_m": 0.1,
+        "floor": "room/col_floor",
+        "room": "cottage.json",
+        "background_pct": 0.0,
+        "player_height_px": 127,
+        "player_visible_pct": 100.0,
+        "player_screen_px": [
+          640.0,
+          414.7
+        ],
+        "camera_target_m": [
+          8.0,
+          5.09,
+          0.9
+        ]
+      }
+    }
+  }
+}
