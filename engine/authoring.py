@@ -167,6 +167,12 @@ def _bind(func: Callable[..., Any], args: Doc, scene: Doc, room: str, project: P
             value = [tuple(cell) for cell in value]
         elif key == "anchor" and isinstance(value, list):
             value = tuple(value)
+        elif key == "model" and isinstance(value, str):  # an HD-2D structure's .glb: it must exist and be usable
+            from engine.hd2d.glb import model_problem  # noqa: PLC0415
+
+            problem = model_problem(project.root, value)
+            if problem:
+                raise ChangeError(index, name, problem)
         bound[key] = value
     missing = [p.name for p in params.values()
                if p.default is inspect.Parameter.empty and p.name not in bound and p.name not in _IMPLICIT]
@@ -317,8 +323,29 @@ def summarize(before: Doc, after: Doc) -> list[str]:
         tiles = [p for p in changes_between(old.get("tilemap") or {}, room.get("tilemap") or {}) if "tiles" in p]
         if tiles:
             lines.append(f"{label}: repaints {len(tiles)} tile(s)")
+        lines += _structure_lines(label, ops.structures(old), ops.structures(room))
     if world_b.get("start_scene") != world_a.get("start_scene") and world_b:
         lines.append(f"Start room: {world_b.get('start_scene')} -> {world_a.get('start_scene')}")
+    return lines
+
+
+def _structure_lines(label: str, before: list[Doc], after: list[Doc]) -> list[str]:
+    """HD-2D structures (``settings.hd2d.structures``) in words, metres and degrees (32 px = 1 m)."""
+    def where(s: Doc) -> str:
+        text = f"({float(s.get('x', 0)) / 32:.1f} m, {float(s.get('y', 0)) / 32:.1f} m"
+        if s.get("elevation"):
+            text += f", {float(s['elevation']) / 32:.1f} m up"
+        if s.get("rotation"):
+            text += f", turned {float(s['rotation']):g} degrees"
+        return text + ")"
+
+    olds = {s.get("id"): s for s in before if isinstance(s, dict)}
+    news = {s.get("id"): s for s in after if isinstance(s, dict)}
+    lines = [f"{label}: places structure '{sid}' ({s.get('model')}) at {where(s)}" for sid, s in news.items()
+             if sid not in olds]
+    lines += [f"{label}: moves structure '{sid}' {where(olds[sid])} -> {where(s)}" for sid, s in news.items()
+              if sid in olds and olds[sid] != s]
+    lines += [f"{label}: removes structure '{sid}'" for sid in olds if sid not in news]
     return lines
 
 

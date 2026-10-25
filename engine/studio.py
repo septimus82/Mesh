@@ -27,6 +27,7 @@ from engine.prefabs import get_prefab_manager
 from engine.route_check import route_problems
 from engine.scene_loader import document_key
 from engine.studio_ai import Proposal, StudioAIHost
+from engine.studio_hd2d import Hd2dView
 from engine.studio_inspector import InspectorMixin, Rows, row_height
 from engine.studio_project import Project
 from engine.studio_ui import (
@@ -175,6 +176,7 @@ class Studio(InspectorMixin):
         self.play_flags_open = False
         self._play_flags_seen: Any = None
         self._init_inspector()
+        self.hd2d = Hd2dView(self)  # the 3D view, used only while the open room is HD-2D
         self.ai = StudioAIHost(self)  # outside tools (AI over MCP, scripts) propose; the person decides
         if not os.environ.get("MESH_STUDIO_NO_AI_BRIDGE"):
             self.ai.start()
@@ -289,6 +291,7 @@ class Studio(InspectorMixin):
                 sprite.visible, sprite.alpha = True, 110
         if recenter:
             self._center_on_room()
+        self.hd2d.room_loaded(recenter)
         self.window.set_caption(f"Mesh Studio - {self.project.label(self.project.current)}")
 
     def _center_on_room(self) -> None:
@@ -328,6 +331,10 @@ class Studio(InspectorMixin):
         self._rebuild()
         if ok:
             self._say(ok)
+        if self.hd2d.newly_buried:  # an HD-2D change left someone inside a structure: say so (it's allowed)
+            names = ", ".join(self.hd2d.newly_buried[:3])
+            self._say(f"{ok + ' ' if ok else ''}Careful: {names} can't stand there now (inside a structure). "
+                      "Move them, or the structure.", ok=False)
 
     def _entity(self, entity_id: str | None) -> dict[str, Any] | None:
         if not entity_id:
@@ -400,6 +407,8 @@ class Studio(InspectorMixin):
             elif self.tab == "dialogue":
                 self.tab = "look"
         self.selected = entity_id
+        if entity_id is not None:
+            self.hd2d.structure = None
         self.panel = "inspect"
         self._rebuild()
 
@@ -967,7 +976,10 @@ class Studio(InspectorMixin):
             box.add(self._button(label, partial(self.switch_room, key), width=width, style=style, icon="map"))
         box.add(self._button("+ New room", self._open_new_room, width=width))
         box.add(gui.UISpace(height=10))
-        box.add(self._map_section(width))
+        if self.hd2d.active:
+            self.hd2d.view_section(box, width)
+        else:
+            box.add(self._map_section(width))
         box.add(gui.UISpace(height=10))
         box.add(self._label("Objects", bold=True, size=12))
         if not self.prefabs:
@@ -1292,7 +1304,9 @@ class Studio(InspectorMixin):
             self._say(proposal.message or f"Not applied: {result.get('reason')}", ok=False)
             return
         made = list(proposal.created.values())
-        if made:
+        if made and ops.find_structure(self.project.scene(), str(made[0])) is not None:
+            self.hd2d.structure, self.selected = str(made[0]), None  # an HD-2D structure the AI placed
+        elif made:
             self.selected = made[0]
         if not self.ai.pending():
             self.panel = "inspect"  # nothing else waiting: show what was made
@@ -1429,6 +1443,10 @@ class Studio(InspectorMixin):
             self._ai_panel(rows, width)
         elif self.panel == "preview":
             self._preview_panel(rows, width)
+        elif self.panel == "structures" and self.hd2d.active:
+            self.hd2d.models_panel(rows, width)
+        elif self.hd2d.active and self.hd2d.structure is not None and self.hd2d.find(self.hd2d.structure) is not None:
+            self.hd2d.inspector(rows, width)
         else:
             entity = self._entity(self.selected)
             if entity is None:
@@ -1861,7 +1879,10 @@ class Studio(InspectorMixin):
         self._apply_camera()
         w.camera.use()
         lighting = getattr(w, "lighting", None)
-        if lighting is not None and lighting.enabled:  # the room as the game will light it, as the game draws it
+        if self.hd2d.active:  # an HD-2D room: the 3D world the game draws, seen with the editor's camera
+            w.camera_controller.use_gui_camera()
+            self.hd2d.draw()
+        elif lighting is not None and lighting.enabled:  # the room as the game will light it, as the game draws it
             with lighting.begin():
                 w.scene_controller.draw()
             w.camera_controller.use_gui_camera()
@@ -1869,16 +1890,31 @@ class Studio(InspectorMixin):
             w.camera.use()
         else:
             w.scene_controller.draw()
-        self._draw_canvas()
-        self._draw_world_overlay()
+        if not self.hd2d.active:
+            self._draw_canvas()
+            self._draw_world_overlay()
         w.camera_controller.use_gui_camera()
         self._draw_panels()
         self.ui.draw()
         self._draw_sheet()
         self._draw_import_preview()
         self._draw_previews()
+        self._draw_tooltip()
         self._dump_layout()
         return True
+
+    def _draw_tooltip(self) -> None:
+        """A short tip beside the hovered button (the 3D view's buttons have them)."""
+        tip = self.hd2d.tooltip(*self.mouse) if self.hd2d.active and self.mouse else None
+        if not tip:
+            return
+        arcade = optional_arcade.arcade
+        text = arcade.Text(tip, 0, 0, C_TEXT, 10, font_name=FONT)
+        x = min(self.mouse[0] + 14, self.window.width - text.content_width - 12)
+        y = self.mouse[1] - 26
+        arcade.draw_lrbt_rectangle_filled(x - 6, x + text.content_width + 6, y - 5, y + text.content_height + 3, C_RAISED)
+        text.x, text.y = x, y
+        text.draw()
 
     def _dump_layout(self) -> None:
         """Write what is on screen, and where, for automated GUI tests (MESH_STUDIO_LAYOUT=path)."""
@@ -2338,8 +2374,11 @@ class Studio(InspectorMixin):
             k = optional_arcade.arcade.key
             dx = bool(self.keys & {k.RIGHT, k.D}) - bool(self.keys & {k.LEFT, k.A})
             dy = bool(self.keys & {k.UP, k.W}) - bool(self.keys & {k.DOWN, k.S})
-            self.cam[0] += dx * PAN_SPEED * delta_time / self.zoom
-            self.cam[1] += dy * PAN_SPEED * delta_time / self.zoom
+            if self.hd2d.active:
+                self.hd2d.pan_keys(dx, dy, delta_time)
+            else:
+                self.cam[0] += dx * PAN_SPEED * delta_time / self.zoom
+                self.cam[1] += dy * PAN_SPEED * delta_time / self.zoom
         lighting = getattr(self.window, "lighting", None)
         if lighting is not None:
             lighting.update(delta_time)  # flicker shows while editing; nothing else of the game runs
@@ -2378,6 +2417,8 @@ class Studio(InspectorMixin):
                 self.copy_selected()
             else:
                 self.paste_here()
+        elif self.hd2d.active and self.hd2d.key(symbol):
+            pass  # the 3D view's: Q / E turn, Home resets, F frames, Delete / Esc for a structure
         elif k.A <= symbol <= k.Z and symbol not in (k.W, k.A, k.S, k.D) and self._fields:
             # Typing with no box chosen went nowhere (and W A S D moved the view): say how to type.
             self._say("To type, click a box first. (W A S D and the arrow keys move the view.)", ok=False)
@@ -2454,6 +2495,8 @@ class Studio(InspectorMixin):
 
     def on_mouse_motion(self, x: float, y: float, dx: float, dy: float) -> bool:
         self.mouse = (x, y)
+        if self.hd2d.active and self._in_map(x, y):
+            self.hd2d.hover(x, y)  # a structure being placed follows the mouse
         return self.mode == "edit"
 
     def on_mouse_scroll(self, x: float, y: float, scroll_x: float, scroll_y: float) -> bool:
@@ -2476,7 +2519,10 @@ class Studio(InspectorMixin):
             self.sheet_scroll[axis] = int(min(max(self.sheet_scroll[axis] + step, 0), max(0, limit)))
             return True
         if self._in_map(x, y):
-            self.zoom = max(0.25, min(2.5, self.zoom * (1.1 ** scroll_y)))  # 0.25: fitted big maps
+            if self.hd2d.active:
+                self.hd2d.zoom(scroll_y)
+            else:
+                self.zoom = max(0.25, min(2.5, self.zoom * (1.1 ** scroll_y)))  # 0.25: fitted big maps
         return True
 
     def on_mouse_press(self, x: float, y: float, button: int, modifiers: int) -> bool:
@@ -2499,6 +2545,8 @@ class Studio(InspectorMixin):
         for field, _, _ in self._fields:
             field.deactivate()
         wx, wy = self._to_world(x, y)
+        if self.hd2d.active:  # in 3D, a click on the map means the ground under the mouse
+            wx, wy = self.hd2d.ground_px(x, y) or (wx, wy)
         if button == optional_arcade.arcade.MOUSE_BUTTON_MIDDLE:
             self.panning = True
         elif button == optional_arcade.arcade.MOUSE_BUTTON_RIGHT:
@@ -2534,6 +2582,8 @@ class Studio(InspectorMixin):
             if self.tool == "light":
                 self.place_light(wx, wy)
                 return True
+            if self.hd2d.active and self.panel != "lighting" and self.hd2d.press(x, y):
+                return True  # picked in 3D: a structure (or an object), and a drag may start
             handle = self._handle_at(x, y)
             if handle is not None and "light" in handle:
                 self.light = handle["light"]
@@ -2563,7 +2613,11 @@ class Studio(InspectorMixin):
         if self.mode == "play":
             return False
         self.mouse = (x, y)
-        if self.panning:
+        if self.panning and self.hd2d.active:
+            self.hd2d.pan_pixels(dx, dy)
+        elif self.hd2d.dragging:
+            self.hd2d.drag_to(x, y)
+        elif self.panning:
             self.cam[0] -= dx / self.zoom
             self.cam[1] -= dy / self.zoom
         elif self.sheet_drag is not None:
@@ -2596,6 +2650,9 @@ class Studio(InspectorMixin):
         if self.mode == "play":
             return False
         self.panning = False
+        if self.hd2d.dragging:
+            self.hd2d.release()
+            return True
         if self.sheet_drag is not None:
             cells, self.sheet_drag = self.sheet_drag, None
             self._pick_from_sheet(*cells)

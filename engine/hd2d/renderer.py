@@ -16,7 +16,7 @@ from __future__ import annotations
 import math
 from array import array
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 from PIL import Image
 
@@ -79,6 +79,16 @@ BLIT_FS = """
 uniform sampler2D u_tex; in vec2 v_uv; out vec4 f_color;
 void main() { f_color = texture(u_tex, v_uv); }
 """
+LINE_VS = """
+#version 330
+uniform mat4 u_vp; in vec3 in_pos;
+void main() { gl_Position = u_vp * vec4(in_pos, 1.0); }
+"""
+LINE_FS = """
+#version 330
+uniform vec4 u_colour; out vec4 f_color;
+void main() { f_color = u_colour; }
+"""
 IDENTITY = (1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0)
 
 
@@ -124,15 +134,45 @@ def _placement(x: float, y: float, z: float, rotation_deg: float, scale: float) 
 
 
 class Camera:
-    """A fixed-angle camera looking north and down at a followed point (metres)."""
+    """A camera looking down at a point (metres) from ``pitch`` degrees above the horizon. The game's looks north
+    (yaw 0); Mesh Studio's editing camera can turn about the vertical axis (yaw, degrees clockwise from north)."""
 
-    def __init__(self, pitch: float, fov: float, distance: float, ortho: bool) -> None:
-        self.pitch, self.fov, self.distance, self.ortho = pitch, fov, distance, ortho
+    def __init__(self, pitch: float, fov: float, distance: float, ortho: bool, yaw: float = 0.0) -> None:
+        self.pitch, self.fov, self.distance, self.ortho, self.yaw = pitch, fov, distance, ortho, yaw
         self.target = (0.0, 0.0, 0.0)
+
+    def forward(self) -> tuple[float, float]:
+        """The horizontal direction it looks (unit)."""
+        return math.sin(math.radians(self.yaw)), math.cos(math.radians(self.yaw))
+
+    def right(self) -> tuple[float, float, float]:
+        fx, fy = self.forward()
+        return (fy, -fx, 0.0)
 
     def eye(self) -> tuple[float, float, float]:
         p = math.radians(self.pitch)
-        return (self.target[0], self.target[1] - math.cos(p) * self.distance, self.target[2] + math.sin(p) * self.distance)
+        fx, fy = self.forward()
+        back = math.cos(p) * self.distance
+        return (self.target[0] - fx * back, self.target[1] - fy * back, self.target[2] + math.sin(p) * self.distance)
+
+    def ray(self, ndc_x: float, ndc_y: float, aspect: float) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+        """The world ray (origin, unit direction) through a point of the picture (-1 .. 1 across and up)."""
+        eye, t = self.eye(), self.target
+        f = [t[i] - eye[i] for i in range(3)]
+        n = math.sqrt(sum(v * v for v in f)) or 1.0
+        f = [v / n for v in f]
+        s = [f[1], -f[0], 0.0]  # f x up(0, 0, 1)
+        n = math.sqrt(s[0] ** 2 + s[1] ** 2) or 1.0
+        s = [s[0] / n, s[1] / n, 0.0]
+        u = [s[1] * f[2] - s[2] * f[1], s[2] * f[0] - s[0] * f[2], s[0] * f[1] - s[1] * f[0]]
+        half_h = math.tan(math.radians(self.fov) / 2)
+        if self.ortho:
+            hh, hw = self.distance * half_h, self.distance * half_h * aspect
+            origin = tuple(eye[i] + s[i] * ndc_x * hw + u[i] * ndc_y * hh for i in range(3))
+            return (origin[0], origin[1], origin[2]), (f[0], f[1], f[2])
+        d = [f[i] + s[i] * ndc_x * half_h * aspect + u[i] * ndc_y * half_h for i in range(3)]
+        n = math.sqrt(sum(v * v for v in d)) or 1.0
+        return eye, (d[0] / n, d[1] / n, d[2] / n)
 
     def view_projection(self, aspect: float) -> list[list[float]]:
         proj = _orthographic(self.distance * math.tan(math.radians(self.fov) / 2), aspect, 0.1, 500.0) if self.ortho \
@@ -141,10 +181,14 @@ class Camera:
 
 
 class Hd2dRenderer:
-    def __init__(self, window: Any, settings: Hd2dSettings, resolve: Callable[[str], Path], *, batched: bool = True) -> None:
+    def __init__(self, window: Any, settings: Hd2dSettings, resolve: Callable[[str], Path], *, batched: bool = True,
+                 models: dict[str, Model] | None = None, live: Iterable[str] = ()) -> None:
+        """``models``: already-read models to reuse (Mesh Studio rebuilding after an edit). ``live``: structure ids
+        kept out of the static batches and drawn with a transform that can change every frame (the one being
+        edited; ``set_live``)."""
         import engine.optional_arcade as optional_arcade  # noqa: PLC0415  # the engine's one arcade import route
 
-        self.models: dict[str, Model] = {}  # read (and validated) first: a bad file fails before any GL work
+        self.models: dict[str, Model] = dict(models or {})  # read (and validated) first: a bad file fails before GL work
         for structure in settings.structures:
             if structure.model not in self.models:
                 self.models[structure.model] = load_glb(resolve(structure.model))
@@ -156,6 +200,9 @@ class Hd2dRenderer:
         self.sprite_prog = ctx.program(vertex_shader=SPRITE_VS, fragment_shader=SPRITE_FS)
         self.shadow_prog = ctx.program(vertex_shader=SPRITE_VS, fragment_shader=SHADOW_FS)
         self.blit_prog = ctx.program(vertex_shader=BLIT_VS, fragment_shader=BLIT_FS)
+        self.line_prog = ctx.program(vertex_shader=LINE_VS, fragment_shader=LINE_FS)
+        self._lines: tuple[Any, Any] | None = None  # Mesh Studio's overlay lines: (geometry, reused buffer)
+        self.last_vp: list[list[float]] | None = None
         self._buffers: list[Any] = []
         self._textures: list[Any] = []
         self._fbo: Any = None
@@ -169,7 +216,17 @@ class Hd2dRenderer:
         self._camera_ready = False
         self.draw_calls = 0
         self.static: list[tuple[Any, Any, tuple[float, ...]]] = []  # (geometry, texture, model matrix)
-        self._build_structures()
+        self._parts: dict[tuple[str, int], Any] = {}  # (model, part) -> its geometry in its own space (live drawing)
+        self._materials: dict[tuple[str, str], Any] = {}
+        self.live: dict[str, tuple[str, tuple[float, ...]]] = {}  # id -> (model, matrix)
+        self.preview: tuple[str, tuple[float, ...]] | None = None  # a model about to be placed (Mesh Studio)
+        live_ids = set(live)
+        for st in settings.structures:
+            if st.id in live_ids:
+                self.live[st.id] = (st.model, _column_major(_placement(st.x / PIXELS_PER_METRE, st.y / PIXELS_PER_METRE,
+                                                                       st.elevation / PIXELS_PER_METRE, st.rotation, st.scale)))
+        self._static_buffers: list[Any] = []
+        self._build_structures(skip=live_ids)
         self.ground = self._build_ground(resolve) if settings.ground is not None else None
         self.lighting = Lighting(ctx, self.arcade, settings, *self.world_box())
 
@@ -228,11 +285,19 @@ class Hd2dRenderer:
             cache[key] = self._texture(image, nearest=part.material.nearest, repeat=part.material.repeat)
         return cache[key]
 
-    def _build_structures(self) -> None:
-        textures: dict[tuple[str, str], Any] = {}
+    def _build_structures(self, skip: set[str] | None = None) -> None:
+        first = len(self._buffers)
+        try:
+            self._build_batches(skip)
+        finally:  # the buffers made here are the static batch's (set_live_ids frees and remakes them; batched only)
+            self._static_buffers = self._buffers[first:] if self.batched else []
+
+    def _build_batches(self, skip: set[str] | None) -> None:
+        textures = self._materials
+        structures = [st for st in self.settings.structures if st.id not in (skip or set())]
         if not self.batched:  # one shared buffer per model part, drawn once per instance with its placement
-            shared: dict[tuple[str, int], Any] = {}
-            for st in self.settings.structures:
+            shared = self._parts
+            for st in structures:
                 matrix = _column_major(_placement(st.x / PIXELS_PER_METRE, st.y / PIXELS_PER_METRE,
                                                   st.elevation / PIXELS_PER_METRE, st.rotation, st.scale))
                 for i, part in enumerate(self.models[st.model].parts):
@@ -243,7 +308,7 @@ class Hd2dRenderer:
                     self.triangles += len(part.indices) // 3
             return
         merged: dict[int, tuple[Any, array, array]] = {}  # texture id -> (texture, vertices, indices)
-        for st in self.settings.structures:
+        for st in structures:
             m = _placement(st.x / PIXELS_PER_METRE, st.y / PIXELS_PER_METRE, st.elevation / PIXELS_PER_METRE,
                            st.rotation, st.scale)
             for part in self.models[st.model].parts:
@@ -299,6 +364,15 @@ class Hd2dRenderer:
             part.delete()
         self._fbo, self._fbo_parts = None, []
 
+    def gl_objects(self) -> list[Any]:
+        """Every GPU object this renderer holds right now (to check that ``release`` freed them all)."""
+        light = self.lighting
+        objects = (list(self._buffers) + list(self._textures) + list(self._sprite_textures.values()) + list(self._fbo_parts)
+                   + [self._fbo] + list(self._dynamic[1:] if self._dynamic else []) + list(self._lines[1:] if self._lines else [])
+                   + [self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog]
+                   + list(light._targets) + [light.caster, light.lamp_caster, light.sprite_caster, light.probe_prog])
+        return [o for o in objects if o is not None]
+
     def release(self) -> None:
         """Free every GPU object this renderer made (scene change, window close)."""
         self._release_fbo()
@@ -306,13 +380,16 @@ class Hd2dRenderer:
             for buffer in self._dynamic[1:]:
                 buffer.delete()
             self._dynamic = None
+        if self._lines is not None:
+            self._lines[1].delete()
+            self._lines = None
         for texture in list(self._sprite_textures.values()) + self._textures:
             texture.delete()
         for buffer in self._buffers:
             buffer.delete()
         self._buffers, self._textures, self._sprite_textures, self.static = [], [], {}, []
         self.ground = None
-        for program in (self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog):
+        for program in (self.mesh_prog, self.sprite_prog, self.shadow_prog, self.blit_prog, self.line_prog):
             program.delete()
         self.lighting.release()
 
@@ -349,7 +426,8 @@ class Hd2dRenderer:
         verts.extend(corners)
         idx.extend((base, base + 1, base + 2, base + 2, base + 1, base + 3))
 
-    def _sprite_quads(self, sprites: list[Any], shadows: bool) -> tuple[array, array, list[tuple[Any, int, int]]]:
+    def _sprite_quads(self, sprites: list[Any], shadows: bool,
+                      right: tuple[float, float, float] = (1.0, 0.0, 0.0)) -> tuple[array, array, list[tuple[Any, int, int]]]:
         """This frame's sprite geometry: ground shadows first (texture None), then upright billboards at each
         sprite's feet (its bottom edge on the map), facing the camera and stretched by 1 / cos(pitch) so they keep
         their drawn proportions; grouped by texture as (texture, first index, index count) ranges."""
@@ -375,8 +453,9 @@ class Hd2dRenderer:
                 x, y = sprite.center_x / PIXELS_PER_METRE, sprite.bottom / PIXELS_PER_METRE
                 z = self.elevation_of(sprite) / PIXELS_PER_METRE
                 u0, u1 = (1.0, 0.0) if getattr(sprite, "scale_x", 1.0) < 0 else (0.0, 1.0)
-                self._quad(verts, idx, (x - half, y, z, u0, 1.0, x + half, y, z, u1, 1.0,
-                                        x - half, y, z + h, u0, 0.0, x + half, y, z + h, u1, 0.0))
+                rx, ry = right[0] * half, right[1] * half  # across the picture, facing the camera
+                self._quad(verts, idx, (x - rx, y - ry, z, u0, 1.0, x + rx, y + ry, z, u1, 1.0,
+                                        x - rx, y - ry, z + h, u0, 0.0, x + rx, y + ry, z + h, u1, 0.0))
             ranges.append((tex, first, len(idx) - first))
         return verts, idx, ranges
 
@@ -396,6 +475,77 @@ class Hd2dRenderer:
         self._dynamic[1].write(verts.tobytes())
         self._dynamic[2].write(idx.tobytes())
         return self._dynamic[0]
+
+    # ------------------------------------------------------------------ structures being edited (Mesh Studio)
+    def _model_draws(self, model: str, matrix: tuple[float, ...]) -> list[tuple[Any, Any, tuple[float, ...]]]:
+        out = []
+        for i, part in enumerate(self.models[model].parts):
+            if (model, i) not in self._parts:
+                self._parts[(model, i)] = self._geometry(part.vertices, "3f 3f 2f", ["in_pos", "in_nrm", "in_uv"],
+                                                         part.indices)
+            out.append((self._parts[(model, i)], self._material_texture(model, part, self._materials), matrix))
+        return out
+
+    def live_draws(self) -> list[tuple[Any, Any, tuple[float, ...]]]:
+        draws = [d for model, matrix in self.live.values() for d in self._model_draws(model, matrix)]
+        if self.preview is not None:
+            draws += self._model_draws(*self.preview)
+        return draws
+
+    def set_live_ids(self, ids: Iterable[str]) -> None:
+        """Make these structures live (drawn on their own, movable) and batch the rest again. Mesh Studio calls it
+        when a drag starts; the next load of the room (the edit committed) builds plain static batches."""
+        ids = set(ids)
+        if ids == set(self.live) or not self.batched:
+            return
+        for buffer in self._static_buffers:
+            buffer.delete()
+        gone = {id(b) for b in self._static_buffers}
+        self._buffers = [b for b in self._buffers if id(b) not in gone]
+        self.static, self.triangles = [], 0
+        self.live = {st.id: (st.model, _column_major(_placement(st.x / PIXELS_PER_METRE, st.y / PIXELS_PER_METRE,
+                                                                st.elevation / PIXELS_PER_METRE, st.rotation, st.scale)))
+                     for st in self.settings.structures if st.id in ids}
+        self._build_structures(skip=ids)
+        self.lighting.invalidate()
+
+    def set_live(self, structure_id: str, x: float, y: float, elevation: float, rotation: float, scale: float) -> None:
+        """Move a live structure (px, degrees) for this and later frames; its shadows follow."""
+        model = self.live[structure_id][0]
+        self.live[structure_id] = (model, _column_major(_placement(x / PIXELS_PER_METRE, y / PIXELS_PER_METRE,
+                                                                   elevation / PIXELS_PER_METRE, rotation, scale)))
+        self.lighting.invalidate()
+
+    def set_preview(self, model: str | None, x: float = 0.0, y: float = 0.0, elevation: float = 0.0,
+                    rotation: float = 0.0, scale: float = 1.0) -> None:
+        """Show ``model`` (already read into ``models``) where it would be placed, or nothing (None)."""
+        self.preview = None if model is None else (model, _column_major(_placement(
+            x / PIXELS_PER_METRE, y / PIXELS_PER_METRE, elevation / PIXELS_PER_METRE, rotation, scale)))
+        self.lighting.invalidate()
+
+    # ------------------------------------------------------------------ overlay lines (Mesh Studio)
+    def draw_lines(self, vp: tuple[float, ...], points: list[tuple[float, float, float]],
+                   colour: tuple[float, float, float, float], *, through: bool = False) -> None:
+        """Line segments (pairs of world points, metres) in one colour, depth-tested unless ``through``."""
+        if not points:
+            return
+        ctx = self.ctx
+        data = array("f", [c for p in points for c in p])
+        if self._lines is None or self._lines[1].size < len(data) * 4:
+            if self._lines is not None:
+                self._lines[1].delete()
+            buffer = ctx.buffer(reserve=12 * max(256, len(points) * 2))
+            self._lines = (ctx.geometry([self.arcade.gl.BufferDescription(buffer, "3f", ["in_pos"])], mode=ctx.LINES),
+                           buffer)
+        self._lines[1].write(data.tobytes())
+        self.line_prog["u_vp"] = vp
+        self.line_prog["u_colour"] = colour
+        if through:
+            ctx.disable(ctx.DEPTH_TEST)
+        with ctx.enabled(ctx.BLEND):  # faint lines are see-through
+            self._lines[0].render(self.line_prog, vertices=len(points))
+        if through:
+            ctx.enable(ctx.DEPTH_TEST)
 
     # ------------------------------------------------------------------ per frame
     def followed(self) -> Any | None:
@@ -418,26 +568,32 @@ class Hd2dRenderer:
         k = 1.0 - math.exp(-8.0 * max(0.0, delta_time))  # smooth follow, frame-rate independent
         self.camera.target = tuple(t + (g - t) * k for t, g in zip(self.camera.target, goal))
 
-    def draw(self, *, solid: Any | None = None, read: bool = False) -> Any:
+    def draw(self, *, solid: Any | None = None, read: bool = False, camera: Camera | None = None,
+             viewport: tuple[int, int, int, int] | None = None, overlay: Callable[[tuple[float, ...]], None] | None = None) -> Any:
         """Draw the world into the active framebuffer. ``solid``: draw only that sprite, flat red, against the
-        world's depth (for measuring what of it is visible); ``read``: return the rendered pixels (RGB bytes)."""
+        world's depth (for measuring what of it is visible); ``read``: return the rendered pixels (RGB bytes).
+        Mesh Studio's editing view passes its own ``camera``, the ``viewport`` (x, y, w, h) of its canvas, and an
+        ``overlay`` drawn in the world with its depth (selection boxes, the grid); the game's camera is untouched."""
         ctx = self.ctx
         previous = ctx.active_framebuffer
-        size = (int(previous.size[0]), int(previous.size[1]))
+        size = (int(viewport[2]), int(viewport[3])) if viewport else (int(previous.size[0]), int(previous.size[1]))
         fbo = self._target_fbo(size)
-        if not self._camera_ready:
+        if camera is None and not self._camera_ready:
             self.update(0.0)
-        vp = _column_major(self.camera.view_projection(size[0] / max(1, size[1])))
+        cam = camera or self.camera
+        self.last_vp = cam.view_projection(size[0] / max(1, size[1]))
+        vp = _column_major(self.last_vp)
         self.draw_calls = 0
         ctx.disable(ctx.CULL_FACE)
         lighting = self.lighting
         # This frame's characters first: the sun's shadow pass needs them before the scene is drawn. With real
         # shadows on, no painted blob under them (their shadows fall from the sun); off, Stage 2's soft blob.
         sprites = [solid] if solid is not None else self._sprites()
-        verts, idx, ranges = self._sprite_quads(sprites, shadows=solid is None and not lighting.enabled)
+        verts, idx, ranges = self._sprite_quads(sprites, shadows=solid is None and not lighting.enabled, right=cam.right())
         geometry_sprites = self._upload_dynamic(verts, idx) if sprites else None
+        live = self.live_draws()
         if solid is None:
-            lighting.render_shadows(self.static, geometry_sprites, ranges)  # the ground receives, never casts
+            lighting.render_shadows(self.static + live, geometry_sprites, ranges)  # the ground receives, never casts
         fbo.use()
         fbo.clear(color=(118, 160, 214, 255), depth=1.0)
         ctx.enable(ctx.DEPTH_TEST)
@@ -445,7 +601,7 @@ class Hd2dRenderer:
         mp["u_vp"] = vp
         mp["u_tex"] = 0
         lighting.bind(mp)
-        statics = ([(self.ground[0], self.ground[1], IDENTITY)] if self.ground else []) + self.static
+        statics = ([(self.ground[0], self.ground[1], IDENTITY)] if self.ground else []) + self.static + live
         for geometry, texture, matrix in statics:
             mp["u_model"] = matrix
             texture.use(0)
@@ -473,12 +629,20 @@ class Hd2dRenderer:
                     texture.use(0)
                     geometry.render(sp, first=first, vertices=count)
                 self.draw_calls += 1
+        if overlay is not None and solid is None:
+            overlay(vp)
         ctx.disable(ctx.DEPTH_TEST)
         pixels = fbo.read(components=3) if read else None
         previous.use()
         self._fbo_parts[0].use(0)
         with ctx.enabled_only():
-            self._blit.render(self.blit_prog)
+            if viewport:
+                full = ctx.viewport
+                ctx.viewport = viewport
+                self._blit.render(self.blit_prog)
+                ctx.viewport = full
+            else:
+                self._blit.render(self.blit_prog)
         return pixels
 
     def visible_pixels(self, sprite: Any) -> int:
