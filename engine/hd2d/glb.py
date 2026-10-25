@@ -128,6 +128,16 @@ def _normal_matrix(m: Matrix) -> Matrix:
     return cof  # (inverse)^T == cofactor / det
 
 
+def _json_chunk(chunk: bytes, where: object) -> dict:
+    try:
+        doc = json.loads(chunk)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise GlbError(f"{where}: its glTF description is damaged (a cut-off or corrupted file?)") from exc
+    if not isinstance(doc, dict):
+        raise GlbError(f"{where}: its glTF description isn't an object")
+    return doc
+
+
 class _Reader:
     def __init__(self, path: Path) -> None:
         self.path = path
@@ -147,7 +157,7 @@ class _Reader:
             size, kind = struct.unpack_from("<I4s", data, offset)
             chunk = data[offset + 8: offset + 8 + size]
             if kind == b"JSON":
-                self.doc = json.loads(chunk)
+                self.doc = _json_chunk(chunk, path)
             elif kind == b"BIN\x00":
                 self.bin = chunk
             offset += 8 + size
@@ -293,7 +303,17 @@ def contained(root: str | Path, rel: str) -> bool:
 
 
 def load_glb(path: str | Path) -> Model:
-    """A GLB file as a Model (Z-up metres). Raises GlbError, naming the file and the problem."""
+    """A GLB file as a Model (Z-up metres). Raises GlbError, naming the file and the problem: a file that isn't
+    well-formed glTF (a missing or wrong-typed key, an index out of range) included, never another exception."""
+    try:
+        return _load_glb(path)
+    except GlbError:
+        raise
+    except (KeyError, IndexError, TypeError, ValueError, AttributeError, struct.error, RecursionError) as exc:
+        raise GlbError(f"{path}: malformed glTF ({type(exc).__name__}: {exc}); re-export it from Blender") from exc
+
+
+def _load_glb(path: str | Path) -> Model:
     reader = _Reader(Path(path))
     doc = reader.doc or {}
     materials = reader.materials()
@@ -357,7 +377,7 @@ def split_glb(data: bytes) -> tuple[dict, bytes]:
         size, kind = struct.unpack_from("<I4s", data, offset)
         chunk = data[offset + 8: offset + 8 + size]
         if kind == b"JSON":
-            doc = json.loads(chunk)
+            doc = _json_chunk(chunk, "the GLB")
         elif kind == b"BIN\x00":
             binary = chunk
         offset += 8 + size
