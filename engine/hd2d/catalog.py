@@ -27,6 +27,7 @@ import io
 import json
 import os
 import posixpath
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -223,18 +224,48 @@ def inspect_source(root: str | Path, source: str | Path, *, name: str = "", pixe
 
 
 # ------------------------------------------------------------------------------------------------- writing
+def _inside(root: Path, rel: str) -> None:
+    """Refuse a write whose folder or file, links followed, lies outside the project."""
+    if not contained(root, posixpath.dirname(rel) or ".") or not contained(root, rel):
+        raise CatalogError(f"{rel} leads outside the project (a link?); nothing was written.")
+
+
+def _stage(target: Path, data: bytes) -> Path:
+    """``data`` in a new file beside ``target``, created exclusively under a unique name (never an existing file),
+    with the permissions ``target`` has or a new file would get."""
+    fd, name = tempfile.mkstemp(dir=target.parent, prefix=f".{target.name}.", suffix=".mesh-staged")
+    temp = Path(name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
+        if target.is_file():
+            mode = target.stat().st_mode & 0o777
+        else:
+            umask = os.umask(0)
+            os.umask(umask)
+            mode = 0o666 & ~umask
+        os.chmod(temp, mode)
+    except BaseException:
+        temp.unlink(missing_ok=True)
+        raise
+    return temp
+
+
 def _commit(root: Path, writes: dict[str, bytes]) -> None:
-    """Write every file in ``writes`` (project-relative -> bytes) or none of them."""
+    """Write every file in ``writes`` (project-relative -> bytes) or none of them. Each is staged in its own
+    exclusively created file beside its target, the models among them read back, and only then swapped in; any
+    failure restores what was replaced, removes what was new, and removes only the staging files made here."""
     staged: dict[str, Path] = {}
     replaced: dict[str, bytes] = {}
     created: list[str] = []
     try:
+        for rel in writes:
+            _inside(root, rel)  # before any folder is made: a link out of the project is never written through
         for rel, data in writes.items():
             target = root / rel
             target.parent.mkdir(parents=True, exist_ok=True)
-            temp = target.with_name(f".{target.name}.mesh-staged")
-            temp.write_bytes(data)
-            staged[rel] = temp
+            _inside(root, rel)
+            staged[rel] = _stage(target, data)
         for rel, temp in staged.items():
             if rel.endswith(".glb"):
                 load_glb(temp)  # what was written is what the game will read
@@ -290,7 +321,8 @@ def import_model(root: str | Path, source: str | Path, *, name: str = "", catego
                  license: str = "", pixels: str = "sharp") -> ModelAsset:
     """Copy a Blender .glb into the project's model catalogue (``assets/models/<id>.glb``) with its preview, and
     return it. Refused (nothing written) if Mesh can't read it, it is already imported, or the place is unsafe.
-    A .glb already inside the project is catalogued where it is, not copied."""
+    A .glb already inside the project is catalogued where it is if it needs no change; if "Keep pixels sharp"
+    changes it, the sharp copy is a new managed model and the original file is left as it was."""
     base = Path(root)
     found = inspect_source(base, source, name=name, pixels=pixels)
     if found.problem or found.model is None or found.report is None:
@@ -307,8 +339,11 @@ def import_model(root: str | Path, source: str | Path, *, name: str = "", catego
     if already is not None and already.catalogued:
         raise CatalogError(f"{inside} is already in the catalogue.")
     asset_id = found.asset_id
-    rel = _check_destination(base, inside or f"{MODELS_DIR}/{asset_id}.glb")
-    if inside is None and (base / rel).exists():
+    # A model already in the project is catalogued where it is only if it is used as it is; one that "Keep pixels
+    # sharp" changes becomes a separate managed copy, so importing never rewrites the creator's file.
+    in_place = inside is not None and data == original
+    rel = _check_destination(base, inside if in_place and inside else f"{MODELS_DIR}/{asset_id}.glb")
+    if not in_place and (base / rel).exists():
         raise CatalogError(f"{rel} already exists; it won't be overwritten.")  # _taken_ids should prevent this
     preview = f"{PREVIEWS_DIR}/{asset_id}.png"
     doc = _read_catalog(base)
@@ -319,7 +354,7 @@ def import_model(root: str | Path, source: str | Path, *, name: str = "", catego
                         **({"sharpened": found.sharpened} if found.sharpened and pixels == "sharp" else {})}}
     doc["models"] = [*doc["models"], entry]
     writes = {preview: _preview_bytes(found.model), CATALOG: _catalog_bytes(doc)}
-    if inside is None or data != original:
+    if not in_place:
         writes[rel] = data
     _commit(base, writes)
     asset = find(base, asset_id)

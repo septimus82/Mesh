@@ -341,3 +341,111 @@ def test_damaged_glbs_are_refused_with_a_reason_never_another_error(tmp_path: Pa
             assert str(path) in str(err)
             outcomes["refused"] += 1
     assert outcomes["refused"] > 50
+
+
+# ------------------------------------------------------------------------------------------------- Stage 5B hardening
+def _junction(link: Path, outside: Path) -> None:
+    try:
+        os.symlink(outside, link, target_is_directory=True)
+    except OSError:
+        if sys.platform != "win32":
+            raise
+        import _winapi
+
+        _winapi.CreateJunction(str(outside), str(link))
+
+
+@pytest.mark.parametrize("pixels", ["sharp", "as exported"])
+def test_importing_a_project_file_never_changes_it(root: Path, pixels: str) -> None:
+    """A smooth-textured .glb already in the project: as exported it is catalogued where it is; with Keep pixels
+    sharp the sharp version is a separate managed model. Either way the creator's file keeps its bytes."""
+    local = root / "art" / "stairs.glb"
+    local.parent.mkdir()
+    local.write_bytes(STAIRS.read_bytes())
+    asset = catalog.import_model(root, local, pixels=pixels)
+    assert local.read_bytes() == STAIRS.read_bytes(), "the source file is untouched"
+    if pixels == "sharp":
+        assert asset.model == "assets/models/stairs.glb"
+        assert set(_samplers(root / asset.model)) == {glb.GL_NEAREST}
+    else:
+        assert asset.model == "art/stairs.glb" and not (root / catalog.MODELS_DIR / "stairs.glb").exists()
+
+
+def test_a_sharp_import_of_a_model_in_the_models_folder_gets_its_own_file(root: Path) -> None:
+    (root / catalog.MODELS_DIR).mkdir(parents=True)
+    existing = root / catalog.MODELS_DIR / "stairs.glb"
+    existing.write_bytes(STAIRS.read_bytes())
+    asset = catalog.import_model(root, existing)
+    assert existing.read_bytes() == STAIRS.read_bytes()
+    assert asset.model == "assets/models/stairs_2.glb", "the name is taken by the creator's file"
+
+
+def test_staging_never_touches_an_unrelated_file_of_the_old_staging_name(root: Path) -> None:
+    catalog.import_model(root, COTTAGE)
+    old_style = root / catalog.MODELS_DIR / ".cottage.glb.mesh-staged"
+    old_style.write_bytes(b"someone else's file")
+    catalog.reimport_model(root, "cottage", COTTAGE_V2)
+    assert old_style.read_bytes() == b"someone else's file"
+    leftovers = [p.name for p in (root / catalog.MODELS_DIR).rglob("*.mesh-staged") if p != old_style]
+    assert leftovers == []
+
+
+@pytest.mark.parametrize("where", ["staging", "validation", "replacement"])
+def test_a_failure_at_any_stage_leaves_the_project_as_it_was(root: Path, monkeypatch: pytest.MonkeyPatch, where: str) -> None:
+    import tempfile
+
+    catalog.import_model(root, COTTAGE)
+    (root / catalog.MODELS_DIR / ".cottage.glb.mesh-staged").write_bytes(b"unrelated")
+    before = _files(root)
+    calls: list[int] = []
+    if where == "staging":
+        real_mkstemp = tempfile.mkstemp
+
+        def mkstemp(*args, **kwargs):  # noqa: ANN002, ANN003, ANN202 - tempfile.mkstemp's signature
+            calls.append(1)
+            if len(calls) == 2:
+                raise OSError("no space for the second staged file (test)")
+            return real_mkstemp(*args, **kwargs)
+
+        monkeypatch.setattr(catalog.tempfile, "mkstemp", mkstemp)
+    elif where == "validation":
+        def broken(path):  # noqa: ANN001, ANN202
+            raise glb.GlbError(f"{path}: staged copy unreadable (test)")
+
+        monkeypatch.setattr(catalog, "load_glb", broken)
+        monkeypatch.setattr(catalog, "plan_reimport", catalog.plan_reimport)  # planning uses the real reader below
+    else:
+        real_replace = os.replace
+
+        def replace(src, dst):  # noqa: ANN001, ANN202
+            calls.append(1)
+            if len(calls) == 2:
+                raise OSError("replace failed (test)")
+            real_replace(src, dst)
+
+        monkeypatch.setattr(os, "replace", replace)
+    if where == "validation":
+        plan = catalog.plan_reimport(root, "cottage", COTTAGE_V2)  # checked with the real reader first
+        monkeypatch.setattr(catalog, "plan_reimport", lambda *a, **k: plan)
+    with pytest.raises((OSError, glb.GlbError)):
+        catalog.reimport_model(root, "cottage", COTTAGE_V2)
+    assert _files(root) == before, "byte-identical, unrelated staging-named file included; no staged files left"
+
+
+@pytest.mark.parametrize("linked", ["assets", "assets/models/previews"])
+def test_no_write_goes_through_a_link_out_of_the_project(root: Path, tmp_path: Path, linked: str) -> None:
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    if linked == "assets/models/previews":
+        catalog.import_model(root, STAIRS)
+        before = _files(root)
+        (root / linked).rename(root / "previews_moved")
+        _junction(root / linked, outside)
+        with pytest.raises(CatalogError, match="outside the project"):
+            catalog.reimport_model(root, "stairs", STAIRS)
+        assert (root / catalog.MODELS_DIR / "stairs.glb").read_bytes() == before["assets/models/stairs.glb"]
+    else:
+        _junction(root / linked, outside)
+        with pytest.raises(CatalogError, match="outside the project"):
+            catalog.import_model(root, COTTAGE)
+    assert list(outside.iterdir()) == [], "nothing written outside"
