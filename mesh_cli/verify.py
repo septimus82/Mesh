@@ -2231,6 +2231,27 @@ def _build_verify_all_payload(args: argparse.Namespace):
                     if trace_budget_error:
                         print(f"[Mesh][Verify] {trace_budget_error}", file=sys.stderr)
 
+    if artifacts_dir is not None:
+        missing_metric_artifacts = _missing_required_verify_metric_artifacts(artifacts_dir)
+        if missing_metric_artifacts:
+            overall_ok = False
+            if exit_code == 0:
+                exit_code = 1
+            print(
+                "[Mesh][Verify] missing required metric artifacts: "
+                + ", ".join(missing_metric_artifacts),
+                file=sys.stderr,
+            )
+
+    # The outcome is settled now. Write the verify-all summary before the reports derived from it (verify_report,
+    # release notes, verify_summary, index), so they describe this run; it is rewritten at the end to list them too.
+    if artifacts_dir is not None:
+        with suppress_stdout():
+            _write_verify_all_summary_artifact(
+                artifacts_dir,
+                _verify_all_payload(overall_ok, steps, pytest_fast_metrics, artifacts_dir_json, artifacts_written),
+            )
+
     # --report-json-artifact: write verify_report.json to artifacts dir
     if artifacts_dir is not None and getattr(args, "report_json_artifact", False):
         try:
@@ -2339,34 +2360,27 @@ def _build_verify_all_payload(args: argparse.Namespace):
             _log_swallow("VFYC-032", "blanket exception fallback", once=False)
             pass  # best-effort; keep exit code unchanged
 
-    if artifacts_dir is not None:
-        missing_metric_artifacts = _missing_required_verify_metric_artifacts(artifacts_dir)
-        if missing_metric_artifacts:
-            overall_ok = False
-            if exit_code == 0:
-                exit_code = 1
-            print(
-                "[Mesh][Verify] missing required metric artifacts: "
-                + ", ".join(missing_metric_artifacts),
-                file=sys.stderr,
-            )
+    payload = _verify_all_payload(overall_ok, steps, pytest_fast_metrics, artifacts_dir_json, artifacts_written)
 
-    payload = {
+    if artifacts_dir is not None:
+        # Always write the verify-all summary artifact (even on failure). This final copy also lists the reports
+        # derived from the first one.
+        with suppress_stdout():
+            _write_verify_all_summary_artifact(artifacts_dir, payload)
+
+    return payload, exit_code
+
+
+def _verify_all_payload(overall_ok, steps, pytest_fast_metrics, artifacts_dir_json, artifacts_written) -> dict:
+    return {
         "ok": bool(overall_ok),
         "steps": steps,
         "pytest_fast": pytest_fast_metrics,
         "artifacts": {
             "dir": artifacts_dir_json,
-            "written": artifacts_written,
+            "written": dict(artifacts_written),
         },
     }
-
-    if artifacts_dir is not None:
-        # Always write the verify-all summary artifact (even on failure).
-        with suppress_stdout():
-            _write_verify_all_summary_artifact(artifacts_dir, payload)
-
-    return payload, exit_code
 
 
 def register(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:

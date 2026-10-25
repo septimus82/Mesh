@@ -336,6 +336,7 @@ jobs:
           mode = "none"
           improvements = 0
           changed = 0
+          informational = 0
           regressions = 0
           items: list[dict[str, object]] = []
 
@@ -348,18 +349,17 @@ jobs:
                   regressions = int(counts.get("regressions", 0) or 0)
                   improvements = int(counts.get("improvements", 0) or 0)
                   changed = int(counts.get("changed", 0) or 0)
-                improvements_list = payload.get("improvements", [])
-                changed_list = payload.get("changed", [])
-                if isinstance(improvements_list, list):
-                  items.extend([it for it in improvements_list if isinstance(it, dict)])
-                if isinstance(changed_list, list):
-                  items.extend([it for it in changed_list if isinstance(it, dict)])
+                  informational = int(counts.get("informational", 0) or 0)
+                for key in ("improvements", "changed", "informational"):
+                  listed = payload.get(key, [])
+                  if isinstance(listed, list):
+                    items.extend([it for it in listed if isinstance(it, dict)])
             except Exception:
               pass
 
           if regressions > 0:
             mode = "regression"
-          elif improvements > 0 or changed > 0:
+          elif improvements > 0 or changed > 0 or informational > 0:
             mode = "delta"
           else:
             mode = "none"
@@ -369,7 +369,7 @@ jobs:
           if mode == "delta":
             summary_lines.append("## Mesh CI baseline diff")
             summary_lines.append("")
-            summary_lines.append(f"No regressions. Improvements: {improvements}, Changed: {changed}")
+            summary_lines.append(f"No regressions. Improvements: {improvements}, Changed: {changed}, Informational: {informational}")
             summary_lines.append("")
             summary_lines.append("Top changes:")
             summary_lines.append("")
@@ -382,7 +382,7 @@ jobs:
             comment_lines.append("<!-- mesh-baseline-diff -->")
             comment_lines.append("## Mesh baseline diff (CI)")
             comment_lines.append("")
-            comment_lines.append(f"No regressions. Improvements: {improvements}, Changed: {changed}")
+            comment_lines.append(f"No regressions. Improvements: {improvements}, Changed: {changed}, Informational: {informational}")
             comment_lines.append("")
             comment_lines.append("Top changes:")
             comment_lines.append("")
@@ -403,6 +403,7 @@ jobs:
             fh.write(f"regressions={regressions}\n")
             fh.write(f"improvements={improvements}\n")
             fh.write(f"changed={changed}\n")
+            fh.write(f"informational={informational}\n")
           PY
 
       - name: Baseline diff delta to Step Summary (Linux)
