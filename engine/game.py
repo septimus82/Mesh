@@ -988,6 +988,10 @@ class GameWindow(engine.optional_arcade.arcade.Window):
         if callable(stop_live_bridge):
             stop_live_bridge()
         self._stop_asset_hot_reload_watcher()
+        if getattr(self, "hd2d_renderer", None) is not None:  # free its GPU objects while the context still exists
+            from engine.hd2d.runtime import release  # noqa: PLC0415
+
+            release(self)
         arcade = engine.optional_arcade.arcade
         try:
             active = arcade.get_window() if callable(getattr(arcade, "get_window", None)) else None

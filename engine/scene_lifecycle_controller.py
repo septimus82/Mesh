@@ -8,6 +8,7 @@ from typing import Any, cast
 from engine import optional_arcade
 from engine.background_layers import parse_background_layers, parse_foreground_layers
 from engine.depth_tint_model import parse_depth_tint_settings
+from engine.hd2d.runtime import configure_scene as configure_hd2d_scene
 from engine.parallax_model import parse_background_planes
 from engine.scene_lifecycle_model import SceneLoadInputs, build_scene_load_plan
 from engine.scene_runtime import room_memory
@@ -244,6 +245,7 @@ def load_scene(controller: Any, scene_path: str) -> dict[str, Any]:
     controller.window.world_width = controller.scene_settings.get("world_width")
     controller.window.world_height = controller.scene_settings.get("world_height")
     configure_scene_lighting(controller.window, scene, controller.scene_settings, scene_path)
+    configure_hd2d_scene(controller.window, controller.scene_settings)
 
     # Handle music
     music_path = controller.scene_settings.get("music")

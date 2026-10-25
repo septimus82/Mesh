@@ -177,6 +177,7 @@ _AUTHORED_ENTITY_FIELDS = {
     "depth_z",
     "dialogue",
     "dialogue_lines",
+    "elevation",  # HD-2D height (engine.hd2d): without it a loaded NPC on a platform drops to the ground
     "encounter_cost",
     "encounter_group",
     "flip_x",
