@@ -23,6 +23,7 @@ from engine.editor.creator_mode.creator_proposal_status import (
     unavailable_creator_proposal_status,
 )
 from engine.editor.editor_dock_controller import EditorDockController
+from tests._shared_python import run_python
 
 pytestmark = pytest.mark.fast
 
@@ -243,28 +244,26 @@ def test_handoff_module_imports_without_arcade() -> None:
 
 
 def test_handoff_module_does_not_import_real_bridge_modules() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; "
-                "from engine.editor.creator_mode.creator_proposal_handoff "
-                "import build_creator_proposal_handoff; "
-                "blocked = ["
-                "'engine.editor.proposal_inbox', "
-                "'engine.editor.live_session_bridge', "
-                "'engine.editor.editor_live_ops_controller'"
-                "]; "
-                "print(any(name in sys.modules for name in blocked))"
-            ),
+    output = run_python(
+        (
+            "import sys; "
+            "from engine.editor.creator_mode.creator_proposal_handoff "
+            "import build_creator_proposal_handoff; "
+            "blocked = ["
+            "'engine.editor.proposal_inbox', "
+            "'engine.editor.live_session_bridge', "
+            "'engine.editor.editor_live_ops_controller'"
+            "]; "
+            "print(any(name in sys.modules for name in blocked))"
+        ),
+        watch=[
+            'engine.editor.proposal_inbox',
+            'engine.editor.live_session_bridge',
+            'engine.editor.editor_live_ops_controller',
         ],
-        capture_output=True,
-        check=True,
-        text=True,
     )
 
-    assert result.stdout.strip() == "False"
+    assert output.strip() == "False"
 
 
 def test_render_shows_use_ai_proposals_when_handoff_available() -> None:

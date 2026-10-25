@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import dataclasses
-import subprocess
-import sys
 from copy import deepcopy
 
 import pytest
 
 from engine.editor.creator_mode import CreatorDoorPlanRequest, build_creator_door_plan
+from tests._shared_python import run_python
 
 pytestmark = pytest.mark.fast
 
@@ -192,22 +191,15 @@ def test_operation_payload_contains_friendly_intent_fields() -> None:
 
 
 def test_creator_door_plan_import_does_not_require_arcade() -> None:
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            (
-                "import sys; "
-                "sys.modules['arcade'] = None; "
-                "from engine.editor.creator_mode.creator_door_plan import build_creator_door_plan; "
-                "print(callable(build_creator_door_plan))"
-            ),
-        ],
-        capture_output=True,
-        check=True,
-        text=True,
+    output = run_python(
+        (
+            "import sys; "
+            "from engine.editor.creator_mode.creator_door_plan import build_creator_door_plan; "
+            "print(callable(build_creator_door_plan))"
+        ),
+        without_arcade=True,
     )
 
-    assert result.stdout.strip() == "True"
+    assert output.strip() == "True"
 
 
