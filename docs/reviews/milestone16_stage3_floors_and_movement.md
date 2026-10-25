@@ -272,3 +272,30 @@ The same x and y with different heights restore correctly, because the floor is 
   - The check script only writes into its output folder and never deletes there.
   - Cleanup removed only the exact files this task created, after listing them.
 - No visible windows, no OS input, no focus taken.
+
+## Review follow-up (before merge): tunnelling
+
+The owner's review asked whether destination-only height checks can tunnel. **They could. The defect was confirmed
+by tests, then fixed.**
+
+- **The defect.** A single long move was checked only at its destination. It passed through:
+  - a 5 cm wall, at 3 m and 8 m steps;
+  - a 10 cm railing with floor beyond it;
+  - a 1 m gap between two platforms of equal height.
+
+  Normal walking moves 2.5 px a frame, so the playthrough never showed it. But the game loop doesn't clamp
+  `delta_time`, so a hitch of half a second is a 2.3 m step.
+- **The fix**, in `World.move`: long moves are split into steps no longer than half the footprint's smaller side
+  (0.19 m for the player). Every wall, railing or gap on the way then either overlaps some step's footprint or leaves
+  it without support. A normal frame is still one step, so its cost is unchanged.
+- **New `tests/test_hd2d_world_tunnelling.py`** (fast, 16 tests), covering:
+  - thin walls at 0.5 / 1 / 3 / 8 m steps;
+  - railings and gaps at 1 / 3 m;
+  - a 6 m move off a platform edge;
+  - standing height where floors overlap (0, 0.3, 1.8, 2.0 m, and 1.0 m refused);
+  - characters on different floors at the same x/y: a solid character on the bridge doesn't block one walking
+    under it, while one on the same floor does;
+  - `PlayerController` using the unchanged 2D sweep when the room has no HD-2D world, or only a mock;
+  - `PlayerController` moving through the world in an HD-2D room.
+- **Results:** fast tier 4,413 passed, 0 failed. HD-2D GPU tests 10/10, so Stage 2 and Stage 3 are unchanged. Type
+  gate and ruff gate ok.

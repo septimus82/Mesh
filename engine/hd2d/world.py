@@ -163,7 +163,20 @@ class World:
     # ------------------------------------------------------------------ moving a sprite
     def move(self, sprite: Any, delta: tuple[float, float], solids: Iterable[Any] | None) -> None:
         """Move ``sprite`` by ``delta`` (px) as far as the floors, walls and its level's 2D solids allow, and set its
-        elevation to the floor it ends on (``mesh_entity_data["elevation"]``, px; saved with the game)."""
+        elevation to the floor it ends on (``mesh_entity_data["elevation"]``, px; saved with the game).
+
+        Long moves (a slow frame) go in steps no longer than half the footprint's smaller side, so every wall,
+        railing and gap on the way is met by some step: nothing is tunnelled through. A normal frame is one step."""
+        from engine.physics_runtime import _sprite_to_aabb  # noqa: PLC0415
+
+        box = _sprite_to_aabb(sprite)
+        longest = max(abs(delta[0]), abs(delta[1]))
+        steps = max(1, math.ceil(longest / max(1.0, min(box.w, box.h) / 2)))
+        solids = list(solids or ())
+        for _ in range(steps):
+            self._step(sprite, (delta[0] / steps, delta[1] / steps), solids)
+
+    def _step(self, sprite: Any, delta: tuple[float, float], solids: list[Any]) -> None:
         from engine.physics_runtime import _sprite_to_aabb, move_entity_with_physics  # noqa: PLC0415
 
         box = _sprite_to_aabb(sprite)
@@ -178,7 +191,7 @@ class World:
             self._settle(sprite, x, y, z, hw, hh)
             return
         start = (sprite.center_x, sprite.center_y)
-        level = [s for s in solids or () if s is not sprite and abs(elevation_of(s) - z) < BODY]
+        level = [s for s in solids if s is not sprite and abs(elevation_of(s) - z) < BODY]
         move_entity_with_physics(sprite, (dx, dy), level)  # the scene's 2D solids on this level
         moved = (sprite.center_x - start[0]) / PIXELS_PER_METRE, (sprite.center_y - start[1]) / PIXELS_PER_METRE
         if not self._settle(sprite, x + moved[0], y + moved[1], z, hw, hh):
