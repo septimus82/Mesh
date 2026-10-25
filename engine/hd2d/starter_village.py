@@ -165,6 +165,8 @@ def build(root: Path, bundled: Callable[[str], Path | None], person: dict[str, A
     village["settings"]["lighting_shadow_softness"] = "soft"
     for sid, model, x, y, turn in VILLAGE:
         village = _place(village, sid, model, x, y, turn)
+    for sid in ("cottage", "shop"):  # see-through where they would hide the player behind or inside them
+        village = ops.set_structure(village, sid, cutaway=True)
     village["lights"] = [{"id": "sky", "type": "ambient", "color": "#9aa6d0", "mode": "soft"}]
     for x in (13.5, 18.5):
         village = _lamp(village, x, 5.0, 2.5, "#ffb060", 224)

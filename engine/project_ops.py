@@ -1976,8 +1976,10 @@ def place_structure(scene: Doc, model: str, x: float, y: float, elevation: float
 
 
 def set_structure(scene: Doc, structure_id: str, x: Any = _UNSET, y: Any = _UNSET, elevation: Any = _UNSET,
-                  rotation: Any = _UNSET, scale: Any = _UNSET) -> Doc:
-    """Move, raise, turn or resize a placed structure (px, degrees); settings left out stay as they are."""
+                  rotation: Any = _UNSET, scale: Any = _UNSET, cutaway: Any = _UNSET) -> Doc:
+    """Move, raise, turn or resize a placed structure (px, degrees); settings left out stay as they are.
+    ``cutaway`` (true/false): in play, the part of it between the camera and the player is not drawn, so a house never
+    hides the player behind or inside it."""
     out = copy.deepcopy(scene)
     _hd2d_block(out)
     entry = find_structure(out, structure_id)
@@ -1990,6 +1992,13 @@ def set_structure(scene: Doc, structure_id: str, x: Any = _UNSET, y: Any = _UNSE
         if key == "rotation":
             number %= 360.0
         entry[key] = round(number, 2)
+    if cutaway is not _UNSET:
+        if not isinstance(cutaway, bool):
+            raise OpError(f"A structure's cutaway must be true or false (got {cutaway!r}).")
+        if cutaway:
+            entry["cutaway"] = True
+        else:
+            entry.pop("cutaway", None)
     return _checked_structures(out)
 
 

@@ -173,6 +173,8 @@ def test_the_template_follows_the_hd2d_visual_standard(project: Path) -> None:
         assert 2 * camera.distance * math.tan(math.radians(camera.fov / 2)) == pytest.approx(view, abs=0.01)
         assert camera.bounds == tuple(bounds)
     assert village["settings"]["hd2d"]["sun"]["direction"] == [-0.45, -0.55, 0.70], "walls facing the camera lit"
+    cut = {st.id for st in parse_hd2d(village["settings"]["hd2d"]).structures if st.cutaway}
+    assert cut == {"cottage", "shop"}, "houses are see-through around the player; bridges and hills are not"
     sheets = {(e.get("name"), e.get("sprite")) for e in village["entities"] + inside["entities"]
               if e.get("tag") == "npc"}  # the player is a thin reference to the player prefab, below
     prefabs = json.loads((project / "assets" / "prefabs.json").read_text(encoding="utf-8"))

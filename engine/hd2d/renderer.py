@@ -40,9 +40,19 @@ void main() {
 MESH_FS = """
 #version 330
 uniform sampler2D u_tex;
+// Cutaway (structures marked "cutaway", in play): not drawn within u_cut_at.w metres of the line from the camera
+// (u_cut_eye) to the followed character's chest (u_cut_at.xyz), in front of the character and above u_cut_floor.
+uniform int u_cut; uniform vec4 u_cut_at; uniform vec3 u_cut_eye; uniform float u_cut_floor;
 in vec3 v_nrm; in vec2 v_uv; in vec3 v_world; out vec4 f_color;
 """ + LIGHTING_GLSL + """
 void main() {
+    if (u_cut == 1 && u_cut_at.w > 0.0 && v_world.z > u_cut_floor) {
+        vec3 sight = u_cut_at.xyz - u_cut_eye;
+        float reach = length(sight);
+        vec3 dir = sight / reach;
+        float along = dot(v_world - u_cut_eye, dir);
+        if (along < reach - 0.2 && distance(v_world, u_cut_eye + dir * along) < u_cut_at.w) discard;
+    }
     vec4 c = texture(u_tex, v_uv);
     f_color = vec4(c.rgb * light_at(v_world, normalize(v_nrm), false), 1.0);
 }
@@ -131,6 +141,10 @@ def _placement(x: float, y: float, z: float, rotation_deg: float, scale: float) 
     """A structure's model matrix: scale, turn about the vertical axis, move (metres)."""
     c, s = math.cos(math.radians(rotation_deg)), math.sin(math.radians(rotation_deg))
     return [[c * scale, -s * scale, 0.0, x], [s * scale, c * scale, 0.0, y], [0.0, 0.0, scale, z], [0.0, 0.0, 0.0, 1.0]]
+
+
+CUTAWAY_RADIUS = 1.3  # m: how wide the opening is that cutaway structures leave around the line to the player
+CUTAWAY_HEIGHT = 0.9  # m above the player's feet: where that line ends (about the chest)
 
 
 class Camera:
@@ -240,6 +254,7 @@ class Hd2dRenderer:
         self._camera_ready = False
         self.draw_calls = 0
         self.static: list[tuple[Any, Any, tuple[float, ...]]] = []  # (geometry, texture, model matrix)
+        self._cutaway: set[int] = set()  # ids of the static draws drawn with the cutaway (_build_batches)
         self._parts: dict[tuple[str, int], Any] = {}  # (model, part) -> its geometry in its own space (live drawing)
         self._materials: dict[tuple[str, str], Any] = {}
         self.live: dict[str, tuple[str, tuple[float, ...]]] = {}  # id -> (model, matrix)
@@ -319,6 +334,7 @@ class Hd2dRenderer:
     def _build_batches(self, skip: set[str] | None) -> None:
         textures = self._materials
         structures = [st for st in self.settings.structures if st.id not in (skip or set())]
+        self._cutaway = set()
         if not self.batched:  # one shared buffer per model part, drawn once per instance with its placement
             shared = self._parts
             for st in structures:
@@ -329,15 +345,17 @@ class Hd2dRenderer:
                         shared[(st.model, i)] = self._geometry(part.vertices, "3f 3f 2f", ["in_pos", "in_nrm", "in_uv"],
                                                                part.indices)
                     self.static.append((shared[(st.model, i)], self._material_texture(st.model, part, textures), matrix))
+                    if st.cutaway:
+                        self._cutaway.add(id(self.static[-1]))
                     self.triangles += len(part.indices) // 3
             return
-        merged: dict[int, tuple[Any, array, array]] = {}  # texture id -> (texture, vertices, indices)
+        merged: dict[tuple[int, bool], tuple[Any, array, array]] = {}  # (texture id, cutaway) -> (texture, vertices, indices)
         for st in structures:
             m = _placement(st.x / PIXELS_PER_METRE, st.y / PIXELS_PER_METRE, st.elevation / PIXELS_PER_METRE,
                            st.rotation, st.scale)
             for part in self.models[st.model].parts:
                 texture = self._material_texture(st.model, part, textures)
-                _, verts, idx = merged.setdefault(id(texture), (texture, array("f"), array("I")))
+                _, verts, idx = merged.setdefault((id(texture), st.cutaway), (texture, array("f"), array("I")))
                 base = len(verts) // 8
                 v = part.vertices
                 for i in range(0, len(v), 8):
@@ -349,12 +367,14 @@ class Hd2dRenderer:
                                   v[i + 6], v[i + 7]))
                 idx.extend(j + base for j in part.indices)
                 self.triangles += len(part.indices) // 3
-        for texture, verts, idx in merged.values():
+        for (_, cutaway), (texture, verts, idx) in merged.items():
             # normals were rotated (and scaled uniformly): renormalise
             for i in range(0, len(verts), 8):
                 length = math.sqrt(verts[i + 3] ** 2 + verts[i + 4] ** 2 + verts[i + 5] ** 2) or 1.0
                 verts[i + 3], verts[i + 4], verts[i + 5] = verts[i + 3] / length, verts[i + 4] / length, verts[i + 5] / length
             self.static.append((self._geometry(verts, "3f 3f 2f", ["in_pos", "in_nrm", "in_uv"], idx), texture, IDENTITY))
+            if cutaway:
+                self._cutaway.add(id(self.static[-1]))
 
     def _build_ground(self, resolve: Callable[[str], Path]) -> tuple[Any, Any]:
         g = self.settings.ground
@@ -579,6 +599,19 @@ class Hd2dRenderer:
                 return sprite
         return None
 
+    def _bind_cutaway(self, program: Any, game_camera: Camera | None) -> None:
+        """The cutaway's line of sight: the game's camera to its followed character (none in Mesh Studio, or when no
+        structure is marked cutaway)."""
+        sprite = self.followed() if game_camera is not None and self._cutaway else None
+        if sprite is None or game_camera is None:
+            program["u_cut_at"] = (0.0, 0.0, 0.0, 0.0)
+            return
+        floor = self.elevation_of(sprite) / PIXELS_PER_METRE
+        program["u_cut_at"] = (sprite.center_x / PIXELS_PER_METRE, sprite.bottom / PIXELS_PER_METRE,
+                               floor + CUTAWAY_HEIGHT, CUTAWAY_RADIUS)
+        program["u_cut_eye"] = game_camera.eye()
+        program["u_cut_floor"] = floor + 0.05
+
     def update(self, delta_time: float) -> None:
         sprite = self.followed()
         if sprite is None:
@@ -633,7 +666,10 @@ class Hd2dRenderer:
         mp["u_tex"] = 0
         lighting.bind(mp)
         statics = ([(self.ground[0], self.ground[1], IDENTITY)] if self.ground else []) + self.static + live
-        for geometry, texture, matrix in statics:
+        self._bind_cutaway(mp, cam if camera is None else None)
+        for draw in statics:
+            geometry, texture, matrix = draw
+            mp["u_cut"] = 1 if id(draw) in self._cutaway else 0
             mp["u_model"] = matrix
             texture.use(0)
             geometry.render(mp)
