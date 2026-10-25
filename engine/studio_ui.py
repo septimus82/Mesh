@@ -203,8 +203,12 @@ def set_app_icon(window: Any) -> None:
     """Mesh Studio's icon (the brain-and-network mark) on ``window``'s title bar and taskbar button."""
     import pyglet  # noqa: PLC0415
 
-    images = [pyglet.image.load(str(path)) for size in (16, 24, 32, 48, 64, 256)
-              if (path := BRANDING / f"mesh_studio_icon_{size}.png").is_file()]
+    images = []
+    for size in (16, 24, 32, 48, 64, 256):
+        path = BRANDING / f"mesh_studio_icon_{size}.png"
+        if path.is_file():
+            with path.open("rb") as handle:  # pyglet's decoders can leave a file they open themselves unclosed
+                images.append(pyglet.image.load(str(path), file=handle))
     if images:
         window.set_icon(*images)
 
