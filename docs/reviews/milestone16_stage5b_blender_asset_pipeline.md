@@ -10,6 +10,35 @@ window through Studio's own events, with models exported by Blender
 The goal: **Blender → export GLB → import into Mesh Studio → preview → place → edit → play**, for ordinary
 creators, without hand-editing JSON or copying files.
 
+## Owner review: import-safety hardening (before merge)
+
+The owner accepted Stage 5B subject to two fixes, both made in `engine/hd2d/catalog.py` (commit `5577aee`):
+
+1. **A project file is never rewritten by an import.**
+   - **What was wrong:** importing a .glb already inside the project with "Keep pixels sharp" wrote the sharpened
+     bytes back over that file.
+   - **Now:** a model used as it is gets catalogued where it is. If sharpening changes it, the sharp version becomes a
+     separate managed model in `assets/models/` (`stairs_2.glb` when the name is taken), and the original keeps its
+     bytes.
+   - **Reimport** may still replace the managed model, as an explicit action with its report and rollback.
+2. **Exclusive staging files.**
+   - **What was wrong:** staging used a predictable `.<name>.mesh-staged` path, which could overwrite, and then
+     delete, an unrelated file of that name.
+   - **Now:** each file is staged with `tempfile.mkstemp` beside its target: created exclusively under a unique name,
+     with the target's permissions. Only files made by the import are removed.
+   - **Links:** every write's folder and file are checked, links followed, before any folder is made and again
+     afterwards. A write through `assets/` or `assets/models/previews` pointing outside the project is refused, and
+     nothing is written outside.
+
+**Tests.** Nine new cases (`tests/test_hd2d_catalog.py`, 34 passing):
+- project-local and external sources, sharp and as exported;
+- a failure during staging, validation or replacement leaves the project byte-identical, including an unrelated
+  staging-named file;
+- links out of the project are refused.
+
+Six of the new cases fail against the previous catalogue. All GPU suites pass (102 passed, 1 skipped), and so do the
+type and ruff gates.
+
 ## Part A: the repository health checkpoint, finalised
 
 - **#358 merged** into `redesign/visual-editor` as **`5a759cf`**.
