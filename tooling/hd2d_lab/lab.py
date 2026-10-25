@@ -97,7 +97,8 @@ def look_at(eye: np.ndarray, target: np.ndarray, up=(0.0, 0.0, 1.0)) -> np.ndarr
 
 def _image(path: Path) -> Image.Image:
     with Image.open(path) as img:
-        return img.convert("RGBA")
+        converted: Image.Image = img.convert("RGBA")
+        return converted
 
 
 def _mat(m: np.ndarray) -> tuple[float, ...]:
@@ -327,7 +328,7 @@ def main(out: Path, ortho: bool = False) -> dict:
     import pyglet
 
     _init = pyglet.window.Window.__init__
-    pyglet.window.Window.__init__ = lambda self, *a, **k: _init(self, *a, **{**k, "visible": False})
+    setattr(pyglet.window.Window, "__init__", lambda self, *a, **k: _init(self, *a, **{**k, "visible": False}))
     import engine.optional_arcade  # noqa: F401  # DPI-unaware first, as Mesh runs
 
     out.mkdir(parents=True, exist_ok=True)

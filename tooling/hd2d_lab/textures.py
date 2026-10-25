@@ -16,6 +16,7 @@ SIZE = 32
 
 def _noise(img: Image.Image, rng: random.Random, colours: list[tuple[int, int, int]], amount: int) -> None:
     px = img.load()
+    assert px is not None
     for _ in range(amount):
         x, y = rng.randrange(img.width), rng.randrange(img.height)
         px[x, y] = (*rng.choice(colours), 255)
@@ -71,6 +72,7 @@ def grass(seed: int = 19) -> Image.Image:
     img = Image.new("RGBA", (SIZE, SIZE), (74, 128, 64, 255))
     _noise(img, rng, [(64, 116, 56), (86, 142, 72), (58, 104, 50)], 260)
     px = img.load()
+    assert px is not None
     for _ in range(10):
         x, y = rng.randrange(1, SIZE - 1), rng.randrange(2, SIZE)
         px[x, y - 1] = px[x, y - 2] = (98, 160, 80, 255)
