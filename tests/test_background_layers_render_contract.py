@@ -389,6 +389,7 @@ def test_scene_controller_draw_composites_background_layer(tmp_path: Path) -> No
         controller._outline_settings = object()
         controller._tilemap_background_layers = []
         controller._tilemap_foreground_layers = []
+        controller._foreground_layers = []  # parallax canopies (drawn after the entities), none here
         controller._tilemap_draw_layers = []
         controller._tilemap_batcher = None
         controller.tilemap_instance = None
